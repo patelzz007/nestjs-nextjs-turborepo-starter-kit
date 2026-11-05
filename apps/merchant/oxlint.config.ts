@@ -13,7 +13,7 @@ export default composeConfigs(nextJsConfig, {
 		clientOnlyWidgetsConfig(CLIENT_ONLY_WIDGETS),
 		{
 			files: ["**/*.ts", "**/*.tsx"],
-			excludeFiles: ["lib/env/env.client.ts", "lib/env/env.server.ts", "lib/env/env.runtime.ts"],
+			excludeFiles: ["lib/env/env.client.ts", "lib/env/env.server.ts", "lib/env/env.runtime.ts", "e2e/browser-env.e2e.ts"],
 			rules: {
 				"no-restricted-properties": [
 					"error",
@@ -25,6 +25,11 @@ export default composeConfigs(nextJsConfig, {
 					},
 				],
 			},
+		},
+		// The browser suite reads its own env (e2e/browser-env.e2e.ts, the same boundary as admin's); turbo.json does not list those keys.
+		{
+			files: ["e2e/**"],
+			rules: { "turbo/no-undeclared-env-vars": "off" },
 		},
 	],
 });

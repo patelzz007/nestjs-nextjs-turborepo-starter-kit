@@ -356,3 +356,17 @@ describe("GitHub pull-request query keys", () => {
 		expect(githubPullRequestsRootKey()).toEqual([GITHUB_PULL_REQUESTS_QUERY_ROOT]);
 	});
 });
+
+describe("passkey sign-in (ADR 080)", () => {
+	it("sends the admin and merchant client type on both steps of a passwordless sign-in, as their password sign-ins do", () => {
+		expect(apiRouter.auth.adminLoginPasskeyOptions.baseOptions).toStrictEqual(apiRouter.auth.adminLogin.baseOptions);
+		expect(apiRouter.auth.adminLoginPasskey.baseOptions).toStrictEqual(apiRouter.auth.adminLogin.baseOptions);
+		expect(apiRouter.auth.merchantLoginPasskeyOptions.baseOptions).toStrictEqual(apiRouter.auth.merchantLogin.baseOptions);
+		expect(apiRouter.auth.merchantLoginPasskey.baseOptions).toStrictEqual(apiRouter.auth.merchantLogin.baseOptions);
+		expect(apiRouter.auth.loginPasskey.baseOptions).toBeUndefined();
+	});
+
+	it("keys the passkey list under auth, so adding, renaming or removing one reloads it", () => {
+		expect(apiRouter.auth.passkeys.queryKey(undefined)).toEqual(["auth", "passkeys"]);
+	});
+});

@@ -11,7 +11,7 @@ export interface FileOwnerFields {
 }
 
 /** Categories whose files belong to a person (their avatar, the pictures they attach to GitHub comments, their kanban task attachments), not to a tenant. */
-const USER_OWNED_CATEGORIES: ReadonlySet<FileCategory> = new Set<FileCategory>(["USER_AVATAR", "GITHUB_COMMENT_IMAGE", "KANBAN_TASK_ATTACHMENT"]);
+const USER_OWNED_CATEGORIES: ReadonlySet<FileCategory> = new Set<FileCategory>(["USER_AVATAR", "GITHUB_COMMENT_IMAGE", "KANBAN_TASK_ATTACHMENT", "PLATFORM_BROADCAST_IMAGE"]);
 
 /**
  * The category rules every upload request must meet before a row or a ticket

@@ -252,7 +252,9 @@ const ACTIVE_CASES: readonly ActiveCase[] = [
 	{ pathname: "/catalog/products/new", expected: ["Catalog", "Products"] },
 	{ pathname: "/catalog/products/42/edit", expected: ["Catalog", "Products"] },
 	{ pathname: "/catalog/categories/7", expected: ["Catalog", "Categories"] },
-	{ pathname: "/settings/access", expected: ["Settings", "Access control"] },
+	// Settings is one link (5.13): every settings section lights it alone.
+	{ pathname: "/settings/access", expected: ["Settings"] },
+	{ pathname: "/settings/feature-flags", expected: ["Settings"] },
 	{ pathname: "/components", expected: ["Components", "Gallery"] },
 	{ pathname: "/components/kanban", expected: ["Components", "Gallery"] },
 	{ pathname: "/components/kanban-board", expected: ["Components", "Kanban"] },

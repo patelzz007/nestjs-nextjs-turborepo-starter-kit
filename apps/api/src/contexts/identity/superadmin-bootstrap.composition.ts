@@ -27,6 +27,7 @@ import { NodeOperatorIdentity } from "./infrastructure/adapters/operator-identit
 import { UuidIdGenerator } from "./infrastructure/adapters/uuid-id-generator";
 import { IdentityIntegrationEventsMapper } from "./infrastructure/outbox/identity-integration-events.mapper";
 import { IdentityScopeFactory } from "./infrastructure/persistence/identity-scope.factory";
+import { breachedPasswordCheckFor } from "./infrastructure/security/breached-password.adapters";
 import { CryptoService } from "./infrastructure/security/crypto.service";
 import { createPasswordReader, type BootstrapStreams, type PasswordReader } from "./presentation/cli/password-reader";
 import type { PasswordSource } from "./presentation/cli/superadmin-bootstrap.args";
@@ -91,6 +92,7 @@ export function createSuperAdminBootstrap(config: TypedConfigService, prisma: Pr
 		new UuidIdGenerator(),
 		new NodeOperatorIdentity(),
 		clock,
+		breachedPasswordCheckFor(config.auth.passwordBreachCheck),
 	);
 	return {
 		bootstrap: (input: BootstrapSuperAdminInput): Promise<BootstrapOutcome> =>

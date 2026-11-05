@@ -59,6 +59,8 @@ export interface ActivePushDevice {
 	readonly platform: PushPlatform;
 	readonly surface: NotificationSurface;
 	readonly tokenCiphertext: string;
+	/** The Firebase Installation ID, encrypted (Android, enhancement 5.3); null when unknown. */
+	readonly installationIdCiphertext: string | null;
 	readonly deviceLabel: string | null;
 }
 
@@ -189,7 +191,7 @@ export interface NotificationStore {
 		outcome: { readonly status: NotificationDeliveryStatus; readonly providerMessageId: string | null },
 		now: number,
 	): Promise<void>;
-	/** ADR 070 retention, soft-deleting: read inbox rows after 90 days, unread after 365, deliveries after 180. */
+	/** Retention, soft-deleting: inbox rows, deliveries and notifications after the record retention (ten years, platform/domain/record-retention.ts). */
 	applyRetention(now: number): Promise<{ readonly inApp: number; readonly deliveries: number; readonly notifications: number }>;
 	/** Devices whose session ended (signed out, revoked) stop receiving push (ADR 070). */
 	revokeDevicesOfEndedSessions(now: number): Promise<number>;

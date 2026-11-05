@@ -3,7 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { FileInUseAsRewardImageError, KybEvidenceRetainedError } from "../../../domain/errors/files.errors";
+import { FileInUseAsBroadcastImageError, FileInUseAsRewardImageError, KybEvidenceRetainedError } from "../../../domain/errors/files.errors";
 import type { FilesScope } from "../../files-scope";
 import { fileNotFound } from "../../file-not-found";
 import { FileReferenceGuardRegistry, type FileDeletionScopePolicy, type FileReferenceBlock, type FileReferenceSubject } from "../../ports/file-reference.port";
@@ -58,5 +58,7 @@ function throwIfBlocked(block: FileReferenceBlock | null): void {
 			throw new KybEvidenceRetainedError();
 		case "REWARD_IMAGE":
 			throw new FileInUseAsRewardImageError();
+		case "BROADCAST_IMAGE":
+			throw new FileInUseAsBroadcastImageError();
 	}
 }

@@ -230,13 +230,14 @@ export function Drawer({ open, onOpen, onClose, panel, accessibilityLabel, close
 				accessibilityElementsHidden={!open}
 				importantForAccessibility={open ? "yes" : "no-hide-descendants"}
 				pointerEvents={open ? "auto" : "none"}
-				className={`absolute inset-y-0 left-0 overflow-hidden rounded-r-3xl border-r border-border bg-card shadow-2xl ${isShown ? "" : "hidden"}`}
+				className={`absolute inset-y-0 left-0 overflow-hidden rounded-r-3xl border-r border-border bg-background shadow-2xl ${isShown ? "" : "hidden"}`}
 				style={[panelFrame, panelStyle]}
 				{...panelResponder.panHandlers}
 				testID={testID === undefined ? undefined : `${testID}-panel`}>
 				{/* The screen reader's escape gesture reaches the nearest handler up from the focused element. */}
 				<View className="flex-1" onAccessibilityEscape={onClose} testID={testID === undefined ? undefined : `${testID}-content`}>
-					{panel}
+					{/* Fully closed, the menu keeps its state but its updates wait (a theme change restyles only what shows). */}
+					<React.Activity mode={isShown ? "visible" : "hidden"}>{panel}</React.Activity>
 				</View>
 			</StyledAnimatedView>
 		</View>

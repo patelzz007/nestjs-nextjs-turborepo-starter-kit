@@ -138,3 +138,29 @@ describe("buildSidebarView", () => {
 		expect(view.noResults).toBe(false);
 	});
 });
+
+describe("buildSidebarView section keys (enhancement 5.12)", () => {
+	const ITEM: SidebarMenuItemLike = { id: "a", title: "A", url: "/a" };
+
+	it("orders sections by their stable key, so a saved order holds whatever language the titles are in", () => {
+		const view = buildSidebarView({
+			menu: {
+				sections: [
+					{ title: "Utama", key: "Main", items: [ITEM] },
+					{ title: "Platform", key: "Platform", items: [{ ...ITEM, id: "b", url: "/b" }] },
+				],
+				bottomItems: [],
+			},
+			pathname: "/",
+			sectionOrder: ["Platform", "Main"],
+			searchQuery: "",
+		});
+		expect(view.sections.map((section) => section.title)).toStrictEqual(["Platform", "Utama"]);
+		expect(view.sectionKeys).toStrictEqual(["Platform", "Main"]);
+	});
+
+	it("keys a section by its title when it has no key of its own", () => {
+		const view = buildSidebarView({ menu: { sections: [{ title: "Main", items: [ITEM] }], bottomItems: [] }, pathname: "/", sectionOrder: null, searchQuery: "" });
+		expect(view.sectionKeys).toStrictEqual(["Main"]);
+	});
+});

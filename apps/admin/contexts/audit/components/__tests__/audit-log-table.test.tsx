@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import * as React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import {
@@ -12,10 +13,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AuditLogView from "../audit-log-table";
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
+import { accessibilityViolations } from "@workspace/ui/testing/axe";
 
 const { listQuery, detailQuery, changeQuery, changesQuery } = vi.hoisted(() => ({ listQuery: vi.fn(), detailQuery: vi.fn(), changeQuery: vi.fn(), changesQuery: vi.fn() }));
 
 // The live stream is its own boundary (lib/notifications/audit-trail-live.test.ts): here it is connected.
+/** The saved-views menu is its own smart component with its own tests (contexts/saved-views); the table only places it. */
+function SavedViewsMenuStub(): React.JSX.Element {
+	return <span>saved views</span>;
+}
+
+vi.mock("@/contexts/saved-views", () => ({ SavedViewsMenu: SavedViewsMenuStub }));
+
 vi.mock("@/contexts/notifications/lib/audit-trail-live", () => ({
 	useAuditTrailLive: (): string => "open",
 }));
@@ -123,6 +132,23 @@ afterEach((): void => {
 });
 
 describe("AuditLogView", () => {
+	it("has no serious accessibility problems (enhancement 3.2)", async () => {
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+	});
+
+	it("says the total is a lower bound when the API capped its count", () => {
+		listQuery.mockReturnValue({
+			data: { data: [ROW], meta: { ...META, total: 10_000, totalIsCapped: true } },
+			isLoading: false,
+			isFetching: false,
+			error: null,
+			refetch: (): Promise<void> => Promise.resolve(),
+		});
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
+		expect(screen.getByText(/^10,000\+ entries/u)).toBeTruthy();
+	});
+
 	it("says the log is live, so new activity needs no refresh", () => {
 		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
@@ -151,7 +177,7 @@ describe("AuditLogView", () => {
 		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 2, limit: 50, sort: "occurredAt", filter: { outcome: { eq: "FAILED" }, method: { eq: "PATCH" } } }, expect.anything());
-		expect(screen.getByRole("combobox", { name: "Outcome" }).textContent).toContain("Failed");
+		expect(screen.getByRole("combobox", { name: /^Outcome:/u }).textContent).toContain("Failed");
 	});
 
 	it("shows an id filter from a detail-page link as a chip, and removes it on request", async () => {

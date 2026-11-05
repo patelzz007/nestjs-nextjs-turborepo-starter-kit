@@ -124,6 +124,13 @@ What the implementation settled that the interview left open, and where it diffe
   RabbitMQ client yet) and Kafka consumer lag is reported as "not measured".
 - **The create-reward scenario became `merchant-rewards`** (list and read a merchant's rewards):
   creating a reward needs an image upload, which a load test should not generate by the thousand.
+- **The Load Test tenant's rewards keep the reward invariants.** A published reward shows at least one
+  READY image, so each provisioned reward shows the tenant's load-test picture — drawn in memory and
+  stored through the files context's `ServerFileIngest` (the same checks, scan and renditions as an
+  upload; stored once, found again by its bytes), outside the provisioning transaction. Provisioned
+  rewards are marked in `Reward.metadata` (`loadTestRewardSlot`), not told apart by `createdBy`
+  (the audit capture fills it); the purge keeps exactly those. Staff accounts are sized per run,
+  ⌈virtual users ÷ `MAX_ACTIVE_SESSIONS_PER_USER`⌉, so no account holds more sessions than a user may.
 - **Load-test traffic keys.** Each run gets a key (`X-Load-Test-Key`) that gives its requests their
   own rate-limit bucket for the run's length, instead of switching throttling off.
 - **Backup download step-up** reuses the MFA step-up window of the session: an operator who signed in

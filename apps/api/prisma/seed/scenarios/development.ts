@@ -7,6 +7,11 @@ import { EXTRA_SEED_USER_EMAILS, generateAdditionalSeedData } from "../extra-use
 import { useSeedRandom } from "../helpers";
 import { seedAnalyticsHistory } from "../analytics-history";
 import { seedCustomerBans } from "../customer-bans";
+import { seedAccountErasures } from "../account-erasures";
+import { seedSavedViews } from "../saved-views";
+import { seedFeatureFlags } from "../feature-flags";
+import { seedAuditRetention } from "../audit-retention";
+import { seedPayments } from "../payments";
 import { seedNotificationsDemo } from "../notifications-demo";
 import { alignCustomerAccountAges } from "../customer-account-age";
 import { SeededRandom } from "../prng";
@@ -20,6 +25,7 @@ import { seedTenantReviewStates } from "../tenant-review-states";
 import { seedHttpAuditTrail } from "../http-audit";
 import { seedGithubAccountLinks } from "../github-account-links";
 import { seedGithubWebhooks } from "../github-webhooks";
+import { seedWebhooks } from "../webhooks";
 import { seedOwnProfileHistory } from "../own-profile";
 import { seedAnalyticsIngest } from "../analytics-ingest";
 import { seedPlatformRecords } from "../platform-records";
@@ -66,7 +72,7 @@ const NON_CUSTOMER_SEED_EMAILS: readonly string[] = ["superadmin@example.com", "
  * touched. Demo data is drawn from the `--seed` PRNG stream (deterministic).
  */
 async function cleanVolatileSeedRows(primaryUsers: readonly User[]): Promise<void> {
-	const extraUsers = await prisma.user.findMany({ where: { email: { in: [...EXTRA_SEED_USER_EMAILS] } }, select: { id: true } });
+	const extraUsers = await prisma.user.findMany({ where: { email: { in: [...EXTRA_SEED_USER_EMAILS] }, isDeleted: false }, select: { id: true } });
 	const userId = { in: [...primaryUsers.map((user) => user.id), ...extraUsers.map((user) => user.id)] };
 	await prisma.passwordResetToken.deleteMany({ where: { userId } });
 	await prisma.refreshToken.deleteMany({ where: { userId } });
@@ -174,6 +180,19 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog("Seeding merchant customer bans (one active, one lifted)...");
 	const customerBans = await seedCustomerBans(Date.now());
 	seedLog(`✅ ${String(customerBans)} customer bans`);
+	seedLog("Seeding payments (Billplz, CHIP and the fake gateway, every status)...");
+	const payments = await seedPayments(Date.now());
+	seedLog(`✅ ${String(payments.payments)} payments with ${String(payments.events)} events`);
+	seedLog("Seeding audit retention (legal holds, the retention run log)...");
+	const retention = await seedAuditRetention(Date.now());
+	seedLog(`✅ ${String(retention.holds)} legal holds, ${String(retention.runs)} retention runs`);
+	seedLog('Seeding account erasures (one in each state, and a "Deleted user" tombstone)...');
+	const erasures = await seedAccountErasures(Date.now());
+	seedLog(`✅ ${String(erasures.requests)} erasure requests`);
+	seedLog("Seeding saved views on admin lists (own, shared, removed)...");
+	seedLog(`✅ ${String(await seedSavedViews(Date.now()))} saved views`);
+	seedLog("Seeding feature flag settings...");
+	seedLog(`✅ ${String(await seedFeatureFlags(Date.now()))} feature flag settings`);
 	const alignedAccounts = await alignCustomerAccountAges(
 		options.seed,
 		allUsers.map((user) => user.id),
@@ -240,6 +259,14 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog("Seeding GitHub live updates (one repository on, one turned off, two deliveries)...");
 	const githubWebhooks = await seedGithubWebhooks({ adminId: adminUser.id, superAdminId: superAdminUser.id }, Date.now());
 	seedLog(`✅ ${String(githubWebhooks.subscriptions)} live-update subscriptions, ${String(githubWebhooks.deliveries)} webhook deliveries`);
+
+	seedLog("Seeding webhooks (the received-webhook log; outgoing endpoints, events and deliveries)...");
+	const webhooks = await seedWebhooks(Date.now());
+	seedLog(
+		webhooks.outbound === "seeded"
+			? `✅ ${String(webhooks.received)} received webhooks; ${String(webhooks.endpoints)} outgoing endpoints, ${String(webhooks.events)} events, ${String(webhooks.deliveries)} deliveries`
+			: `✅ ${String(webhooks.received)} received webhooks; ⚠️ outgoing webhooks skipped: WEBHOOK_SECRET_ENCRYPTION_KEYS is not set (run \`pnpm tools secrets:generate\`)`,
+	);
 
 	seedLog("Seeding the operations console (servers, metric history, alerts, backups, load tests)...");
 	const developerUser = requireRow(

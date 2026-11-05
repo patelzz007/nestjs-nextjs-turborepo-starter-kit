@@ -2,6 +2,7 @@ import { seedReferenceData } from "../reference-data";
 import type { SeedRunOptions, SeedScenario } from "../seed-options";
 import { runDevelopmentScenario } from "./development";
 import { runEnterpriseScenario } from "./enterprise";
+import { runMinimalScenario } from "./minimal";
 import { seedLog } from "../seed-log";
 
 type ScenarioRunner = (options: SeedRunOptions) => Promise<void>;
@@ -25,6 +26,7 @@ run \`pnpm db:reset\` first if you need a truly empty database.
  */
 export const SEED_SCENARIO_RUNNERS: Readonly<Record<SeedScenario, ScenarioRunner>> = {
 	empty: runEmptyScenario,
+	minimal: runMinimalScenario,
 	development: runDevelopmentScenario,
 	enterprise: runEnterpriseScenario,
 };

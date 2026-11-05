@@ -7,14 +7,15 @@ export const ROUTES = {
 	updateRequired: "/update-required",
 	/** The app lock, over a signed-in session. */
 	lock: "/lock",
-	onboarding: "/onboarding",
-	signIn: "/sign-in",
-	signUp: "/sign-up",
-	forgotPassword: "/forgot-password",
-	verifyDevice: "/verify-device",
-	twoFactor: "/two-factor",
-	enrollTwoFactor: "/enroll-two-factor",
-	verifyEmail: "/verify-email",
+	// In front of the auth wall: the auth folder (app/auth).
+	onboarding: "/auth/onboarding",
+	signIn: "/auth/sign-in",
+	signUp: "/auth/sign-up",
+	forgotPassword: "/auth/forgot-password",
+	verifyDevice: "/auth/verify-device",
+	twoFactor: "/auth/two-factor",
+	enrollTwoFactor: "/auth/enroll-two-factor",
+	verifyEmail: "/auth/verify-email",
 	home: "/",
 	analytics: "/analytics",
 	search: "/search",
@@ -42,6 +43,8 @@ export const ROUTES = {
 	devices: "/settings/devices",
 	appearance: "/settings/appearance",
 	appLock: "/settings/app-lock",
+	/** The app's language (ADR 076): this device's choice, saved on the profile too. */
+	language: "/settings/language",
 	twoFactorSetup: "/settings/two-factor",
 	/** The UI kit's live gallery (@workspace/ui-native), opened from the drawer's Developer section. */
 	components: "/settings/components",

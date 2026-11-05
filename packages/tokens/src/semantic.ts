@@ -43,6 +43,12 @@ export const LIGHT_THEME: Theme = {
 	 */
 	"shell-frame": paletteColor("neutral", "40"),
 	"shell-panel": paletteColor("neutral", "50"),
+	/*
+	 * The phone app's content sheet: the curved surface under its page header, one subtle step off the header in
+	 * every theme (about 0.02 OKLCH lightness, as light's #F1F4F9 header over its neutral-25 sheet): two surfaces you
+	 * can tell apart without a jarring edge. Cards still lift off it.
+	 */
+	sheet: paletteColor("neutral", "25"),
 	primary: paletteColor("brand", "800"),
 	"primary-foreground": paletteColor("neutral", "0"),
 	secondary: paletteColor("neutral", "100"),
@@ -159,7 +165,8 @@ export const LIGHT_THEME: Theme = {
  * neutral surface (ink-850); cards lift off it (ink-750); popovers and menus
  * float above cards (ink-700). Borders use a darker step (ink-650) for clear
  * chrome dividers. Accent colour is reserved for the active nav pill and actions
- * (slate on admin; web and merchant re-map their pill to blue / green). An inset
+ * (web and merchant re-map their pill to blue / green; the admin panel replaces this whole theme with the
+ * phone's graphite, ADMIN_THEME_OVERRIDES in admin-theme.ts). An inset
  * shell's frame steps below the page surface (ink-950). No drop
  * shadows to speak of — depth comes from lightness plus a faint top-edge
  * highlight on cards; only floating layers keep a deep shadow.
@@ -175,6 +182,7 @@ export const DARK_THEME: Theme = {
 	/* Inset shell, dark: the frame steps down below the page surface; the panel is the page surface, cards lift off it. */
 	"shell-frame": paletteColor("ink", "950"),
 	"shell-panel": paletteColor("ink", "850"),
+	sheet: paletteColor("ink", "800"),
 	primary: paletteColor("brand", "100"),
 	"primary-foreground": paletteColor("brand", "950"),
 	secondary: paletteColor("ink", "700"),
@@ -280,6 +288,8 @@ export const NORD_THEME: Theme = {
 	/* nord0 darkened 15% toward black: the inset shell's frame sits below the page, as in the dark theme. */
 	"shell-frame": hex("#272c36"),
 	"shell-panel": paletteColor("nord", "0"),
+	/* nord0 lifted 40% toward nord1: a step off the nord0 header, still under the nord1 cards. */
+	sheet: hex("#333a47"),
 	primary: paletteColor("vivid", "9"),
 	"primary-foreground": paletteColor("nord", "0"),
 	secondary: paletteColor("nord", "2"),

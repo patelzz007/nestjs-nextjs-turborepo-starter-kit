@@ -49,6 +49,16 @@ export function fail(status: number, code: string, message: string, details?: Da
 	return { kind: "response", status, body: { success: false, error: { code, message, ...(details === undefined ? {} : { details }) }, meta: META } };
 }
 
+/** No answer at all (no connection, the API unreachable): `fetch` fails as React Native's does, with a TypeError. */
+export interface StubUnreachable {
+	readonly kind: "unreachable";
+}
+
+export const UNREACHABLE: StubUnreachable = { kind: "unreachable" };
+
+/** The message React Native's `fetch` fails with when there is no connection. */
+const NETWORK_FAILURE_MESSAGE = "Network request failed";
+
 /** One recorded request. */
 export interface StubCall {
 	readonly method: string;
@@ -57,7 +67,10 @@ export interface StubCall {
 	readonly body: string | null;
 }
 
-export type StubHandler = (call: StubCall) => StubResponse;
+/** What one call is answered with: a response, or no answer at all. */
+export type StubAnswer = StubResponse | StubUnreachable;
+
+export type StubHandler = (call: StubCall) => StubAnswer;
 
 /** A route whose answer depends on the request or on earlier calls. */
 export interface DynamicStubRoute {
@@ -65,7 +78,7 @@ export interface DynamicStubRoute {
 	readonly handle: StubHandler;
 }
 
-export type StubRoute = StubResponse | DynamicStubRoute;
+export type StubRoute = StubResponse | StubUnreachable | DynamicStubRoute;
 
 export function dynamic(handle: StubHandler): DynamicStubRoute {
 	return { kind: "dynamic", handle };
@@ -95,7 +108,8 @@ function matchesRouteKey(call: StubCall, key: string): boolean {
 
 /**
  * Replaces `fetch`. Routes are keyed "POST /auth/login" (without the version
- * prefix) and answer a fixed response (`ok` / `fail`) or a `dynamic` one; an
+ * prefix) and answer a fixed response (`ok` / `fail`), no answer at all
+ * (`UNREACHABLE`: fetch fails as with no connection), or a `dynamic` one; an
  * unknown route answers 404 so a test never hangs on it. A key with a query
  * string matches only that query; a key without one matches any query (the
  * recorded call keeps it, so a test can still check what was asked).
@@ -113,8 +127,10 @@ export function stubApi(routes: Readonly<Record<string, StubRoute>>): ApiStub {
 		};
 		calls.push(call);
 		const route = routes[`${call.method} ${call.path}`] ?? routes[`${call.method} ${path}`];
-		const answer: StubResponse =
-			route === undefined ? fail(404, "NOT_FOUND", `No stub for ${call.method} ${call.path}`) : route.kind === "dynamic" ? route.handle(call) : route;
+		const answer: StubAnswer = route === undefined ? fail(404, "NOT_FOUND", `No stub for ${call.method} ${call.path}`) : route.kind === "dynamic" ? route.handle(call) : route;
+		if (answer.kind === "unreachable") {
+			return Promise.reject(new TypeError(NETWORK_FAILURE_MESSAGE));
+		}
 		return Promise.resolve(new Response(JSON.stringify(answer.body), { status: answer.status, headers: { "content-type": "application/json" } }));
 	});
 	globalThis.fetch = fetchStub;

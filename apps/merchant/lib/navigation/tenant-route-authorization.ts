@@ -22,10 +22,16 @@ export const TenantPageRouteSchema = z.enum([
 	"/broadcasts/new",
 	"/broadcasts/[broadcastId]",
 	"/broadcasts/[broadcastId]/edit",
+	"/payments",
+	"/payments/new",
+	"/payments/[paymentId]",
 	"/redemptions",
 	"/analytics",
 	"/terminals",
 	"/api-keys",
+	"/webhooks",
+	"/webhooks/[endpointId]",
+	"/webhooks/[endpointId]/edit",
 	"/settings",
 	"/settings/team",
 	"/settings/team/roles",
@@ -83,6 +89,16 @@ const BANNED_CUSTOMERS_DENIAL: TenantPageDenialCopy = {
 	description: "Only members who manage rewards can see and lift customer bans. Contact your store owner if you need access.",
 };
 
+const WEBHOOKS_DENIAL: TenantPageDenialCopy = {
+	title: "Webhook access required",
+	description: "Webhooks send your store's events to your own systems. Only members allowed to manage webhooks (owners, by default) can set them up.",
+};
+
+const PAYMENTS_DENIAL: TenantPageDenialCopy = {
+	title: "Payments are for owners and managers",
+	description: "Your role can't take or refund payments. Contact your store owner if you need access.",
+};
+
 const BROADCASTS_DENIAL: TenantPageDenialCopy = {
 	title: "Broadcasts are for owners and managers",
 	description: "Your role can't write messages to the store's customers. Contact your store owner if you need access.",
@@ -119,6 +135,12 @@ export const ORG_PAGE_RULES: Readonly<Record<TenantPageRoute, TenantPageRule>> =
 	"/broadcasts/[broadcastId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
 	// PUT /tenants/:tenantSlug/broadcasts/:broadcastId (merchant:manage_broadcasts).
 	"/broadcasts/[broadcastId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
+	// GET /tenants/:tenantSlug/payments (merchant:manage_payments).
+	"/payments": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.managePayments] }, denial: PAYMENTS_DENIAL },
+	// POST /tenants/:tenantSlug/payments (merchant:manage_payments).
+	"/payments/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.managePayments] }, denial: PAYMENTS_DENIAL },
+	// GET /tenants/:tenantSlug/payments/:paymentId and its refund (merchant:manage_payments).
+	"/payments/[paymentId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.managePayments] }, denial: PAYMENTS_DENIAL },
 	// GET /t/:tenantSlug/redemptions (merchant:view_redemptions).
 	"/redemptions": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRedemptions] } },
 	// GET /t/:tenantSlug/analytics (merchant:view_analytics).
@@ -127,6 +149,10 @@ export const ORG_PAGE_RULES: Readonly<Record<TenantPageRoute, TenantPageRule>> =
 	"/terminals": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageApiKeys] } },
 	// /t/:tenantSlug/api-keys (merchant:manage_api_keys).
 	"/api-keys": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageApiKeys] } },
+	// /tenants/:tenantSlug/webhooks/** (merchant:manage_webhooks, ADR 082).
+	"/webhooks": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageWebhooks] }, denial: WEBHOOKS_DENIAL },
+	"/webhooks/[endpointId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageWebhooks] }, denial: WEBHOOKS_DENIAL },
+	"/webhooks/[endpointId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageWebhooks] }, denial: WEBHOOKS_DENIAL },
 	// Settings index: reachable when at least one settings page is.
 	"/settings": {
 		kind: "capability",

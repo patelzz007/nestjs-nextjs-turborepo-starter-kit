@@ -44,8 +44,19 @@ export interface NewPushDevice {
 	readonly surface: NotificationSurface;
 	readonly tokenCiphertext: string;
 	readonly tokenHash: string;
+	readonly installationIdCiphertext: string | null;
 	readonly deviceLabel: string | null;
 	readonly appVersion: string | null;
+}
+
+/** What registering again refreshes on a device the person already has. */
+export interface PushDeviceTouch {
+	readonly deviceSessionId: string;
+	readonly surface: NotificationSurface;
+	readonly deviceLabel: string | null;
+	readonly appVersion: string | null;
+	/** Reported again on every registration: an updated app starts reporting it (enhancement 5.3). */
+	readonly installationIdCiphertext: string | null;
 }
 
 /** The person's own notification data and the admin readers (ADR 070), on one transaction. */
@@ -83,11 +94,7 @@ export interface NotificationAccountStore {
 	/** The same token from the same person refreshes its row instead of adding one. */
 	findDeviceByTokenHash(tokenHash: string): Promise<{ readonly id: string; readonly userId: string } | null>;
 	insertDevice(device: NewPushDevice, now: number): Promise<void>;
-	touchDevice(
-		deviceId: string,
-		update: { readonly deviceSessionId: string; readonly surface: NotificationSurface; readonly deviceLabel: string | null; readonly appVersion: string | null },
-		now: number,
-	): Promise<void>;
+	touchDevice(deviceId: string, update: PushDeviceTouch, now: number): Promise<void>;
 	revokeDevice(deviceId: string, userId: string | null, reason: string, now: number): Promise<boolean>;
 	device(deviceId: string): Promise<PushDeviceResponse | null>;
 

@@ -63,6 +63,13 @@ function ReferrerPickerStub({ id, value, onChange }: ReferrerPickerStubProps): R
 
 vi.mock("../referrer-picker", () => ({ ReferrerPicker: ReferrerPickerStub }));
 
+/** The saved-views menu is its own smart component with its own tests (contexts/saved-views); the table only places it. */
+function SavedViewsMenuStub(): React.JSX.Element {
+	return <span>saved views</span>;
+}
+
+vi.mock("@/contexts/saved-views", () => ({ SavedViewsMenu: SavedViewsMenuStub }));
+
 const PATH = "/users";
 const NEXT_CURSOR = "eyJhdCI6MSwiaWQiOiJ1In0";
 
@@ -126,7 +133,7 @@ describe("UsersAllTable URL state", () => {
 			expect.objectContaining({ placeholderData: keepPreviousData }),
 		);
 		expect(screen.getByDisplayValue("jane")).toBeDefined();
-		expect(screen.getByRole("combobox", { name: "Account status" }).textContent).toContain("Locked");
+		expect(screen.getByRole("combobox", { name: /^Account status:/u }).textContent).toContain("Locked");
 	});
 
 	it("ignores invalid params instead of sending them", () => {
@@ -173,7 +180,7 @@ describe("UsersAllTable URL state", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
-		const trigger = screen.getByRole("combobox", { name: "Account status" });
+		const trigger = screen.getByRole("combobox", { name: /^Account status:/u });
 		fireEvent.pointerDown(trigger, { pointerType: "mouse", button: 0 });
 		fireEvent.mouseDown(trigger, { button: 0 });
 		fireEvent.click(trigger);
@@ -231,7 +238,7 @@ describe("UsersAllTable URL state", () => {
 			{ page: 1, limit: 20, filter: { referrerId: { eq: PICKED_REFERRER_ID }, referralStatus: { eq: "not_redeemed" } } },
 			expect.anything(),
 		);
-		expect(screen.getByRole("combobox", { name: "Referral status" }).textContent).toContain("Not redeemed");
+		expect(screen.getByRole("combobox", { name: /^Referral status:/u }).textContent).toContain("Not redeemed");
 	});
 
 	it("writes the referrer chosen in the Referred by picker to the URL and resets to page 1", async () => {

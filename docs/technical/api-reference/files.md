@@ -1,7 +1,7 @@
 ---
 title: "API reference — Files and object storage"
 description: "Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback."
-order: 8
+order: 11
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -37,7 +37,7 @@ Get file metadata
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" \| "BROADCAST_IMAGE" \| "PLATFORM_BROADCAST_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -171,7 +171,7 @@ Complete a direct upload after browser upload
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" \| "BROADCAST_IMAGE" \| "PLATFORM_BROADCAST_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -526,7 +526,7 @@ Create a browser upload ticket
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `category` | "PRODUCT_IMAGE" \| "USER_AVATAR" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" | yes |  |
+| `category` | "PRODUCT_IMAGE" \| "USER_AVATAR" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" \| "PLATFORM_BROADCAST_IMAGE" | yes |  |
 | `checksumSha256` | string | yes | exactly 64 characters |
 | `fileName` | string | yes | length 1–255 |
 | `mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
@@ -618,7 +618,7 @@ Create a browser upload ticket for a tenant-owned file
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `assetType` | "LOGO" \| "BANNER" | no |  |
-| `category` | "STORE_LOGO" \| "STORE_BANNER" \| "REWARD_IMAGE" \| "MERCHANT_KYB" | yes |  |
+| `category` | "STORE_LOGO" \| "STORE_BANNER" \| "REWARD_IMAGE" \| "MERCHANT_KYB" \| "BROADCAST_IMAGE" | yes |  |
 | `checksumSha256` | string | yes | exactly 64 characters |
 | `fileName` | string | yes | length 1–255 |
 | `mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |

@@ -6,6 +6,10 @@ export * from "./authorization/index";
 export * from "./runtime/index";
 export * from "./cache/index";
 export * from "./zod";
+export * from "./contexts/payments/index";
+export * from "./contexts/privacy/index";
+export * from "./contexts/saved-views/index";
+export * from "./contexts/feature-flags/index";
 export { buildMerchantSubmittedKybFields } from "./lib/merchant-kyb";
 export { assertNever } from "./lib/assert-never";
 export type { Prettify, ToDiscoUnion } from "./lib/disco-union";
@@ -26,6 +30,8 @@ export { DEFAULT_FILE_NAME_SEGMENT_MAX_LENGTH, safeFileNameSegment } from "./lib
 export { LIST_SLOT_INDEX, type ListSlotIndex, type ListSlotKey } from "./lib/named-list-index";
 export { newRowId, ROW_ID_ENTROPY_BYTES, rowIdFrom, RowIdError } from "./lib/row-id";
 export { maskEmailAddress, maskPhone } from "./lib/mask-contact";
+export { formatMessage, type MessageValue, type MessageValues } from "./lib/i18n/message-format";
+export { catalogIssues, catalogMessages, MessageCatalogSchema, type MessageCatalog, type MessageCatalogEntry } from "./lib/i18n/message-catalog";
 // Values and types in separate statements: with the types among the values in one list, tsrs 0.20
 // emitted a truncated dist/index.js (it stopped mid-list), which broke every consumer of the build.
 export {
@@ -61,3 +67,4 @@ export * from "./lib/qr/index";
 export * from "./lib/pdf/index";
 export * from "./lib/image-resize/index";
 export * from "./lib/network-quality/index";
+export * from "./lib/navigation-menu/index";

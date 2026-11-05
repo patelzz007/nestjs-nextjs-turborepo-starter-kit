@@ -24,7 +24,7 @@ import { ReviseRewardHandler } from "../commands/revise-reward/revise-reward.han
 import { SubmitRewardForReviewCommand } from "../commands/submit-reward-for-review/submit-reward-for-review.command";
 import { SubmitRewardForReviewHandler } from "../commands/submit-reward-for-review/submit-reward-for-review.handler";
 import type { RewardsScope } from "../rewards-scope";
-import { fakeRewardsScope, SequentialIds, type FakeRewardsScope } from "./fakes/rewards-scope.fakes";
+import { fakeRewardsScope, SequentialIds, type FakeRewardsScope, RecordingMerchantDisplay } from "./fakes/rewards-scope.fakes";
 import { apiKeyActor, API_KEY_ID, MERCHANT_USER_ID, userActor } from "./reward-test-actors";
 
 const IMAGE_ID = "66666666-6666-4666-8666-666666666666";
@@ -68,7 +68,7 @@ function harness(activeStores: readonly string[] = []): Harness {
 describe("CreateRewardHandler (D02)", () => {
 	it("creates the reward through the unit of work as the caller, locking its images, and returns its view", async () => {
 		const h = harness();
-		const handler = new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock);
+		const handler = new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay());
 		const actor = userActor();
 
 		const response = await handler.execute(new CreateRewardCommand(actor, createInput()));
@@ -83,7 +83,7 @@ describe("CreateRewardHandler (D02)", () => {
 
 	it("creates the referrer child in the same aggregate when referrals are on", async () => {
 		const h = harness();
-		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock).execute(
+		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(
 			new CreateRewardCommand(userActor(), createInput({ referralsEnabled: true, referralPoolTotal: 3 })),
 		);
 		const [rewardId] = h.scope.rewards.added;
@@ -93,9 +93,9 @@ describe("CreateRewardHandler (D02)", () => {
 	it("writes nothing when the caller may not manage rewards", async () => {
 		const h = harness();
 		h.access.deny("merchant:manage_rewards");
-		await expect(new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock).execute(new CreateRewardCommand(userActor(), createInput()))).rejects.toThrow(
-			AuthorizationDeniedError,
-		);
+		await expect(
+			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(new CreateRewardCommand(userActor(), createInput())),
+		).rejects.toThrow(AuthorizationDeniedError);
 		expect(h.scope.rewards.added).toEqual([]);
 		expect(h.uow.committed).toEqual([]);
 	});
@@ -103,7 +103,7 @@ describe("CreateRewardHandler (D02)", () => {
 	it("rolls back on an image that is not one of the tenant's ready reward images", async () => {
 		const h = harness();
 		await expect(
-			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock).execute(
+			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(
 				new CreateRewardCommand(userActor(), createInput({ imageFileIds: ["77777777-7777-4777-8777-777777777777"] })),
 			),
 		).rejects.toThrow(RewardImagesInvalidError);
@@ -115,12 +115,14 @@ describe("CreateRewardHandler (D02)", () => {
 		const limited = harness([STORE_A, STORE_B]);
 		limited.access.grantLocations([STORE_A]);
 		await expect(
-			new CreateRewardHandler(limited.uow, limited.access, new SequentialIds(), limited.clock).execute(new CreateRewardCommand(userActor(), createInput())),
+			new CreateRewardHandler(limited.uow, limited.access, new SequentialIds(), limited.clock, new RecordingMerchantDisplay()).execute(
+				new CreateRewardCommand(userActor(), createInput()),
+			),
 		).rejects.toThrow(RewardLocationForbiddenError);
 
 		const all = harness([STORE_A, STORE_B]);
 		await expect(
-			new CreateRewardHandler(all.uow, all.access, new SequentialIds(), all.clock).execute(
+			new CreateRewardHandler(all.uow, all.access, new SequentialIds(), all.clock, new RecordingMerchantDisplay()).execute(
 				new CreateRewardCommand(userActor(), createInput({ locationScopeType: "SELECTED", locationIds: [STORE_A, "77777777-7777-4777-8777-777777777777"] })),
 			),
 		).rejects.toThrow(RewardLocationInvalidError);
@@ -132,7 +134,7 @@ describe("ReviseRewardHandler (D03)", () => {
 	it("saves the edit with a compare-and-set, the referrer child included, recording who replaced the images", async () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT", { referrer: referrerRow("DRAFT") }));
-		await new ReviseRewardHandler(h.uow, h.access, h.clock).execute(
+		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
 			new ReviseRewardCommand(userActor(), {
 				tenantId: TENANT_ID,
 				rewardId: REWARD_ID,
@@ -152,7 +154,7 @@ describe("ReviseRewardHandler (D03)", () => {
 	it("records the API key as the editor for a machine call", async () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT"));
-		await new ReviseRewardHandler(h.uow, h.access, h.clock).execute(
+		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
 			new ReviseRewardCommand(apiKeyActor(TENANT_ID), { tenantId: TENANT_ID, rewardId: REWARD_ID, imageFileIds: [IMAGE_ID] }),
 		);
 		expect(h.scope.rewards.imageReplacements).toEqual([{ actorId: API_KEY_ID, at: NOW }]);
@@ -161,7 +163,9 @@ describe("ReviseRewardHandler (D03)", () => {
 	it("does not lock images when the edit leaves them alone", async () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT"));
-		await new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }));
+		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+			new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
+		);
 		expect(h.scope.imageFiles.locks).toEqual([]);
 	});
 
@@ -169,14 +173,16 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT", { tenantId: OTHER_TENANT_ID }));
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" })),
+			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
+			),
 		).rejects.toThrow(RewardNotFoundError);
 
 		const limited = harness();
 		limited.access.grantLocations([STORE_A]);
 		limited.scope.rewards.seed(rewardState("DRAFT", { locationScope: RewardLocationScope.selected([STORE_B]) }));
 		await expect(
-			new ReviseRewardHandler(limited.uow, limited.access, limited.clock).execute(
+			new ReviseRewardHandler(limited.uow, limited.access, limited.clock, new RecordingMerchantDisplay()).execute(
 				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
 			),
 		).rejects.toThrow(RewardNotFoundError);
@@ -187,7 +193,9 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("PUBLISHED"));
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" })),
+			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
+			),
 		).rejects.toThrow(RewardNotEditableError);
 		expect(h.uow.rolledBack).toHaveLength(1);
 	});
@@ -196,7 +204,9 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("PENDING_REVIEW")).forceConflictOnNextSave();
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" })),
+			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
+			),
 		).rejects.toThrow(ConflictError);
 		expect(h.scope.rewards.rows.get(REWARD_ID)?.title).toBe("Free coffee");
 	});
@@ -206,7 +216,7 @@ describe("SubmitRewardForReviewHandler (D04)", () => {
 	it("submits the reward and its child together", async () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT", { referrer: referrerRow("DRAFT") }));
-		const response = await new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(
+		const response = await new SubmitRewardForReviewHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
 			new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }),
 		);
 		expect(response.status).toBe("PENDING_REVIEW");
@@ -217,7 +227,9 @@ describe("SubmitRewardForReviewHandler (D04)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("PENDING_REVIEW"));
 		await expect(
-			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID })),
+			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+				new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }),
+			),
 		).rejects.toThrow(RewardNotDraftError);
 	});
 
@@ -225,7 +237,9 @@ describe("SubmitRewardForReviewHandler (D04)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT")).forceConflictOnNextSave();
 		await expect(
-			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID })),
+			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+				new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }),
+			),
 		).rejects.toThrow(ConflictError);
 	});
 });
@@ -239,7 +253,7 @@ describe("who a reward is for", () => {
 		const h = harness();
 		h.scope.customers.add(alice);
 
-		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock).execute(
+		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(
 			new CreateRewardCommand(userActor(), createInput({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE] })),
 		);
 
@@ -252,7 +266,7 @@ describe("who a reward is for", () => {
 		h.scope.customers.add(alice);
 
 		await expect(
-			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock).execute(
+			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(
 				new CreateRewardCommand(userActor(), createInput({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE, STRANGER] })),
 			),
 		).rejects.toThrow(RewardAudienceInvalidError);
@@ -263,7 +277,7 @@ describe("who a reward is for", () => {
 		const h = harness();
 		h.scope.customers.add(alice);
 		h.scope.rewards.seed(rewardState("DRAFT"));
-		const revise = new ReviseRewardHandler(h.uow, h.access, h.clock);
+		const revise = new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay());
 
 		await revise.execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE] }));
 		expect(h.scope.rewards.rows.get(REWARD_ID)?.audience.equals(RewardAudience.selected([ALICE]))).toBe(true);

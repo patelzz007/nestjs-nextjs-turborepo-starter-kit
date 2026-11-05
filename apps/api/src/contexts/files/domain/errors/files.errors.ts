@@ -71,6 +71,15 @@ export class FileOwnerUnresolvedError extends DomainError {
 }
 
 /** A live reward still shows this image. */
+/** A picture a broadcast still shows (enhancement 5.4) isn't deleted: the broadcast would lose it. */
+export class FileInUseAsBroadcastImageError extends DomainError {
+	public readonly code: DomainErrorCode = "FILE_IN_USE_AS_BROADCAST_IMAGE";
+
+	public constructor() {
+		super("This picture is in a broadcast. Remove it from the broadcast first.");
+	}
+}
+
 export class FileInUseAsRewardImageError extends DomainError {
 	public readonly code: DomainErrorCode = "FILE_IN_USE_AS_REWARD_IMAGE";
 

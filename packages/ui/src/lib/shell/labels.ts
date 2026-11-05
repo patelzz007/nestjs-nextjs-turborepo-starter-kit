@@ -6,12 +6,10 @@
  * packs (`lib/labels/en.ts`, …); components read them with `useUiKitLabels`.
  */
 
-/** Accessible names of the topbar's search triggers. */
+/** The topbar's search trigger. */
 export interface AppShellTopbarSearchLabels {
-	/** The icon-only trigger shown below `md`. */
+	/** Its word and accessible name, "Search": shown from `sm` up, read (not shown) on a phone. */
 	readonly mobileAriaLabel: string;
-	/** The wide trigger shown at `md`+. */
-	readonly desktopAriaLabel: string;
 }
 
 export interface AppShellProfileDropdownLabels {

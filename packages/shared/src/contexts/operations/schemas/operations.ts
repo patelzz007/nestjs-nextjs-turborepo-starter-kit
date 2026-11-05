@@ -627,9 +627,27 @@ export type OpsBackupSchedule = z.output<typeof OpsBackupScheduleSchema>;
 /** Changing the backup schedule (a closed request body). */
 export const OpsBackupScheduleInputSchema = OpsBackupScheduleSchema.strict();
 
+/** One weekly restore drill (enhancement 2.6): the latest backup restored into a throwaway database and checked. */
+export const OpsRestoreDrillSchema = z.object({
+	id: z.string(),
+	backupId: z.string(),
+	startedAt: EpochMsSchema,
+	finishedAt: EpochMsSchema,
+	outcome: z.enum(["PASSED", "FAILED"]),
+	tablesChecked: z.number().int().nonnegative(),
+	rowsRestored: z.number().int().nonnegative(),
+	failures: z.array(z.string()),
+	migration: z.string().nullable(),
+});
+export type OpsRestoreDrill = z.output<typeof OpsRestoreDrillSchema>;
+
 /** The Backups screen in one read. */
 export const OpsBackupListSchema = z.object({
 	backups: z.array(OpsBackupSchema),
+	/** The most recent restore drills, newest first (empty where drills aren't set up). */
+	restoreDrills: z.array(OpsRestoreDrillSchema),
+	/** Whether the weekly restore drill is set up here (`RESTORE_DRILL_DATABASE_URL`). */
+	restoreDrillConfigured: z.boolean(),
 	schedule: OpsBackupScheduleSchema,
 	timeZone: z.string(),
 	nextScheduledAt: EpochMsSchema,

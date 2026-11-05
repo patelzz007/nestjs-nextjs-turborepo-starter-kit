@@ -28,6 +28,14 @@ export class PrismaUserProfileRepository implements UserProfileRepository {
 	}
 
 	public async save(profile: UserProfile): Promise<void> {
+		const language = profile.chosenLanguage;
+		if (language !== null) {
+			// The latest choice wins: no version check, and the version stays (see UserProfile.chooseLanguage).
+			const chosen = await this.db.user.updateMany({ where: { id: profile.userId, isDeleted: false }, data: { locale: language, updatedAt: nowEpochMs() } });
+			if (chosen.count !== 1) {
+				throw new ProfileNotFoundError(profile.userId);
+			}
+		}
 		const changes = profile.changes;
 		if (changes === null) {
 			return;

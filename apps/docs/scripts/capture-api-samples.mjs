@@ -41,7 +41,7 @@
  * keys and one-time secrets are replaced by `<redacted: …>` markers; every email
  * address outside the documentation/demo domains (e.g. the developer's
  * EMAIL_FROM_ADDRESS / EMAIL_TEST_TO) is rewritten to example.com
- * (src/lib/api-reference/sample-privacy.ts — its test guards the committed file); arrays are cut
+ * (packages/docs-renderer/src/api-reference/sample-privacy.ts — its test guards the committed file); arrays are cut
  * to their first two items and very long strings are shortened (see `sanitize`).
  */
 
@@ -51,7 +51,7 @@ import { crc32, deflateSync } from "node:zlib";
 import { resolve } from "node:path";
 import { stripVTControlCharacters } from "node:util";
 
-import { neutralizeEmailAddresses } from "../src/lib/api-reference/sample-privacy.ts";
+import { neutralizeEmailAddresses } from "@workspace/docs-renderer/api-reference/sample-privacy";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../../..");
 const OUTPUT_FILE = resolve(REPO_ROOT, "docs/generated/api-samples.json");

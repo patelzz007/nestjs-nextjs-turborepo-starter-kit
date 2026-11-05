@@ -25,5 +25,16 @@ export default defineConfig({
 	projects: [
 		{ name: "sign-in", testMatch: "**/sign-in.setup.ts" },
 		{ name: "browser", testMatch: "**/*.browser.ts", dependencies: ["sign-in"], use: { storageState: SIGNED_IN_STATE_PATH } },
+		// The UI kit's visual regression (`pnpm test:visual`, enhancement 3.8): screenshots are per platform, and
+		// the committed ones are Linux's, CI's renderer (`pnpm test:visual:update` renders them in Docker).
+		// Text is drawn with greyscale antialiasing only: Chromium otherwise picks sub-pixel (coloured) antialiasing
+		// per layer, by whether the layer happens to be opaque, so the same page could change pixels between runs.
+		{
+			name: "visual",
+			testMatch: "**/*.visual.ts",
+			dependencies: ["sign-in"],
+			use: { storageState: SIGNED_IN_STATE_PATH, launchOptions: { args: ["--disable-lcd-text"] } },
+		},
 	],
+	snapshotPathTemplate: "{testDir}/__screenshots__/{platform}/{arg}{ext}",
 });

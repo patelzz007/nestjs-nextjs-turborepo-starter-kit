@@ -15,10 +15,18 @@ export type CredentialChangeReason =
 	| "account_unlocked"
 	| "mfa_recovery_completed"
 	| "account_banned"
-	| "account_unbanned";
+	| "account_unbanned"
+	| "account_erased";
 
 /** Why device sessions were revoked (drives the after-commit cross-instance invalidation). */
-export type SessionRevocationReason = "session_revoked" | "logout_all_devices" | "refresh_token_reuse" | "session_limit" | "rbac_mutation" | "account_banned";
+export type SessionRevocationReason =
+	| "session_revoked"
+	| "logout_all_devices"
+	| "refresh_token_reuse"
+	| "session_limit"
+	| "rbac_mutation"
+	| "account_banned"
+	| "account_erasure";
 
 /** `session.action` action a session event reports (the existing outbox payload, ADR 015). */
 export type SessionActionName = "refresh" | "logout-device" | "logout-all" | "revoke-device";

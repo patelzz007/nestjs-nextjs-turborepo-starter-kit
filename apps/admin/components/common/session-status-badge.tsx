@@ -135,9 +135,9 @@ export const SessionStatusView = React.memo(function SessionStatusView({
 			{refreshed ? (
 				<span className="font-semibold text-success">{compact ? "Refreshed" : "· Refreshed just now"}</span>
 			) : formatted === null ? (
-				<span className="text-muted-foreground/80">{compact ? "—" : "· Token expiry unknown"}</span>
+				<span className="text-muted-foreground">{compact ? "—" : "· Token expiry unknown"}</span>
 			) : (
-				<span className="text-muted-foreground/80 tabular-nums" title={`Token expires in ${formatted}`}>
+				<span className="text-muted-foreground tabular-nums" title={`Token expires in ${formatted}`}>
 					{compact ? formatted : `· Token expires in ${formatted}`}
 				</span>
 			)}

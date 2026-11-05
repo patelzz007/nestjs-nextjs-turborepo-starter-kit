@@ -89,7 +89,24 @@ export interface KanbanCsvProblem {
 	readonly message: string;
 }
 
-export type KanbanCsvImport = { readonly kind: "ready"; readonly tasks: CreateKanbanTaskInput[] } | { readonly kind: "invalid"; readonly problems: KanbanCsvProblem[] };
+/** One row read, with the file line it came from (so the server's per-row report can name it too). */
+export interface KanbanCsvTask {
+	readonly line: number;
+	readonly task: CreateKanbanTaskInput;
+}
+
+/**
+ * What a file holds (enhancement 5.8): the rows that read cleanly and every row (or the file itself) refused, with
+ * why. Both at once, so the good rows can import while the bad ones are skipped and listed.
+ */
+export interface KanbanCsvImport {
+	readonly tasks: readonly KanbanCsvTask[];
+	readonly problems: readonly KanbanCsvProblem[];
+}
+
+function fileRefused(message: string): KanbanCsvImport {
+	return { tasks: [], problems: [{ line: 1, message }] };
+}
 
 /** One data row read: the task it describes, or why it cannot be imported. */
 type KanbanCsvRow = { readonly ok: true; readonly task: CreateKanbanTaskInput } | { readonly ok: false; readonly message: string };
@@ -160,28 +177,29 @@ function readRow(cells: readonly string[], headers: readonly string[], columns: 
 	return { ok: true, task: parsed.data };
 }
 
-/** The items a CSV file describes for one board's `columns`, or every problem that stops it from importing. */
+/** The items a CSV file describes for one board's `columns`, and every row it refuses. */
 export function readKanbanCsv(text: string, columns: readonly KanbanColumn[], board: KanbanBoardKind): KanbanCsvImport {
 	const [header, ...rows] = parseCsv(text);
 	if (header === undefined || rows.length === 0) {
-		return { kind: "invalid", problems: [{ line: 1, message: "The file needs a header row and at least one task." }] };
+		return fileRefused("The file needs a header row and at least one task.");
 	}
 	const headers = header.map((name) => name.trim().toLowerCase());
 	if (!headers.includes("title")) {
-		return { kind: "invalid", problems: [{ line: 1, message: 'The header row needs a "title" column.' }] };
+		return fileRefused('The header row needs a "title" column.');
 	}
 	if (rows.length > BULK_MUTATION_MAX_ITEMS) {
-		return { kind: "invalid", problems: [{ line: 1, message: `Import at most ${String(BULK_MUTATION_MAX_ITEMS)} tasks at a time.` }] };
+		return fileRefused(`Import at most ${String(BULK_MUTATION_MAX_ITEMS)} tasks at a time.`);
 	}
-	const tasks: CreateKanbanTaskInput[] = [];
+	const tasks: KanbanCsvTask[] = [];
 	const problems: KanbanCsvProblem[] = [];
 	rows.forEach((cells, index): void => {
 		const row = readRow(cells, headers, columns, board);
+		const line = index + FIRST_DATA_LINE;
 		if (row.ok) {
-			tasks.push(row.task);
+			tasks.push({ line, task: row.task });
 		} else {
-			problems.push({ line: index + FIRST_DATA_LINE, message: row.message });
+			problems.push({ line, message: row.message });
 		}
 	});
-	return problems.length > 0 ? { kind: "invalid", problems } : { kind: "ready", tasks };
+	return { tasks, problems };
 }

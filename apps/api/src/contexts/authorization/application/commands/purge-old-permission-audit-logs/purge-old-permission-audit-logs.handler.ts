@@ -4,15 +4,13 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
+import { RECORD_RETENTION_MS } from "../../../../../platform/domain/record-retention";
 import type { AuthorizationScope } from "../../authorization-scope";
 import { AUDIT_LOG_RETENTION_OPERATION, AUTHORIZATION_UNIT_OF_WORK } from "../../ports/authorization.tokens";
 import { PurgeOldPermissionAuditLogsCommand } from "./purge-old-permission-audit-logs.command";
 
-/** Days → ms, for the retention window below. */
-const MS_PER_DAY: number = 24 * 60 * 60 * 1000;
-
-/** Permission audit rows are retained for 90 days, then soft-deleted (never hard-deleted). */
-export const PERMISSION_AUDIT_RETENTION_MS: number = 90 * MS_PER_DAY;
+/** Permission audit rows are kept for the platform's record retention (ten years), then soft-deleted (never hard-deleted). */
+export const PERMISSION_AUDIT_RETENTION_MS: number = RECORD_RETENTION_MS;
 
 /** One UPDATE on the `createdAt` index, under `maintenance.audit_log_retention`. */
 @CommandHandler(PurgeOldPermissionAuditLogsCommand)

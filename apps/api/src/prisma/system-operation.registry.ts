@@ -222,12 +222,44 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		"SuperAdmin: queue a backup, pin or unpin one, delete one, or change the backup schedule, after the DATABASE_BACKUP permission check",
 		tables("OpsBackup", "OpsSettings", "User"),
 	),
+	"operations.backup.restore_drill": runtime(
+		"Weekly: restore the latest backup into a throwaway database, check it, drop it, and record the drill (enhancement 2.6)",
+		tables("OpsBackup", "OpsRestoreDrill"),
+	),
+	"operations.status.public_read": runtime(
+		"Anyone, signed in or not: the public status page's incidents and their updates (enhancement 4.5), never who posted them",
+		tables("StatusIncident", "StatusIncidentUpdate"),
+	),
+	"operations.status.read": runtime(
+		"Staff: the status page's incidents with their updates and who posted them, after the STATUS_INCIDENT permission check",
+		tables("StatusIncident", "StatusIncidentUpdate", "User"),
+	),
+	"operations.status.write": runtime(
+		"Staff: open a status-page incident or post an update on one (resolving it with the last), after the STATUS_INCIDENT permission check",
+		tables("StatusIncident", "StatusIncidentUpdate"),
+	),
+	"saved_views.shared.read": runtime(
+		"Platform staff: the saved list views other staff shared (enhancement 5.10), with their owners' names, after the admin-access check",
+		tables("SavedListView", "User"),
+	),
+	"feature_flags.read": runtime(
+		"Admin staff: the feature flags' settings (to evaluate them), and with FEATURE_FLAG:LIST who last changed each and the per-store settings with their stores' names (enhancements 5.6, 5.11)",
+		tables("FeatureFlagSetting", "FeatureFlagStoreOverride", "User", "Tenant", "Location"),
+	),
+	"feature_flags.write": runtime(
+		"Staff with FEATURE_FLAG:UPDATE: change a feature flag's setting or a store's own setting of one, with a reason; the branch is checked to be the merchant's (enhancements 5.6, 5.11)",
+		tables("FeatureFlagSetting", "FeatureFlagStoreOverride", "Tenant", "Location"),
+	),
+	"feature_flags.evaluate": runtime(
+		"A till or POS integration: whether a store flag is on at its own store (the deployment's setting and the store's own), nothing else (enhancement 5.11)",
+		tables("FeatureFlagSetting", "FeatureFlagStoreOverride"),
+	),
 	"operations.backup.run": runtime(
 		"BullMQ worker: take a queued backup (or queue the scheduled one) and record how it went; prune backups past their retention",
 		tables("OpsBackup", "OpsSettings"),
 	),
 	"load_test.write": runtime(
-		"Start, abort or configure a load test after the LOAD_TEST permission check; provision the Load Test tenant, its store, roles, rewards and load-test users on first use",
+		"Start, abort or configure a load test after the LOAD_TEST permission check; provision the Load Test tenant, its store, roles, rewards (each showing the tenant's READY load-test picture, locked like any reward image) and load-test users on first use",
 		tables(
 			"LoadTestRun",
 			"OpsSettings",
@@ -242,6 +274,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 			"MembershipLocationScope",
 			"Reward",
 			"RewardLocationScope",
+			"RewardImage",
+			"StoredFile",
 			"RewardLegalAcceptance",
 			"TenantMerchantProfile",
 		),
@@ -251,7 +285,7 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("LoadTestRun", "LoadTestPoint", "LoadTestStepStat", "OpsServer", "OpsServerSample"),
 	),
 	"load_test.purge": runtime(
-		"SuperAdmin: HARD-delete what load tests created — the load-test users' sessions, claims and their redemptions, sales, challenges and notifications, and the rewards they created (the users, their store, roles and legal acceptances stay for the next run) — inside the Load Test tenant only (ADR 068, exception 2)",
+		"SuperAdmin: HARD-delete what load tests created — the load-test users' sessions, claims and their redemptions, sales, challenges and notifications, and every reward of the tenant except the provisioned ones (the users, their store, roles, legal acceptances, the provisioned rewards and the picture they show stay for the next run) — inside the Load Test tenant only (ADR 068, exception 2)",
 		tables(
 			"Tenant",
 			"User",
@@ -323,8 +357,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"queue.storage.delete": runtime("BullMQ worker: delete a stored object from object storage and purge its CDN copies (no database access)", NO_TABLES),
 	"queue.rewards.auto_publish": runtime(
-		"BullMQ worker: publish scheduled rewards",
-		tables("Reward", "RewardImage", "RewardLocationScope", "Location", "RewardAuditLog", "RewardNotification", "OutboxEvent"),
+		"BullMQ worker: publish scheduled rewards, and tell each tenant's owners (its slug and owners read in the same transaction)",
+		tables("Reward", "RewardImage", "RewardLocationScope", "Location", "RewardAuditLog", "RewardNotification", "OutboxEvent", "Tenant", "Membership"),
 	),
 	"queue.claims.expire_pending": runtime(
 		"BullMQ worker: expire pending reward claims",
@@ -369,8 +403,20 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("TenantCustomer", "User", "Reward", "RewardAudienceMember", "RewardImage", "RewardLocationScope", "Location"),
 	),
 	"rewards.admin_review": runtime(
-		"Review a consumer reward across tenants: the moderation queue, the decision, its audit row, the owners' notice and the image download",
-		tables("Reward", "RewardImage", "StoredFile", "FileVariant", "RewardLocationScope", "Location", "RewardAuditLog", "RewardNotification", "OutboxEvent"),
+		"Review a consumer reward across tenants: the moderation queue, the decision, its audit row, the owners' notice (the tenant's slug and owners, read in the decision's transaction) and the image download",
+		tables(
+			"Reward",
+			"RewardImage",
+			"StoredFile",
+			"FileVariant",
+			"RewardLocationScope",
+			"Location",
+			"RewardAuditLog",
+			"RewardNotification",
+			"OutboxEvent",
+			"Tenant",
+			"Membership",
+		),
 	),
 	"reporting.platform_analytics.read": runtime(
 		"Read platform-wide sales and reward analytics for an admin",
@@ -378,10 +424,58 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"maintenance.permission_expiry": runtime("Cron: revoke expired temporary permissions", tables("UserPermission", "User", "UserRole", "PermissionAuditLog", "RefreshToken")),
 	"maintenance.audit_log_retention": runtime("Cron: purge permission audit rows past retention", tables("PermissionAuditLog")),
+	"privacy.account.erasure.request": runtime(
+		"Ask for (or cancel) an account's erasure after the route's checks (the person with their password, or support with platform:manage_users and a reason): record the request, end the person's sessions, check what blocks it (ADR 077)",
+		tables("AccountErasure", "User", "RefreshToken", "Membership", "MfaRecoveryRequest", "PaymentIntent"),
+	),
+	"privacy.account.erase": runtime(
+		"Cron: carry out erasures past their 30-day grace (ADR 077): every context erases its own rows, the person is masked in kept records (app_mask_erased_person), and the account becomes the tombstone",
+		tables(
+			"AccountErasure",
+			"SavedListView",
+			"User",
+			"RefreshToken",
+			"PasswordResetToken",
+			"PasswordHistory",
+			"BackupCode",
+			"TwoFactorPendingSetup",
+			"TwoFactorLoginChallenge",
+			"WebAuthnCredential",
+			"WebAuthnChallenge",
+			"UserAvatar",
+			"UserPreference",
+			"UserRole",
+			"UserPermission",
+			"MfaRecoveryRequest",
+			"GithubAccountLink",
+			"Membership",
+			"TenantInvitation",
+			"TenantAccessRequest",
+			"RewardAudienceMember",
+			"RewardOtpChallenge",
+			"RewardNotification",
+			"RewardReferral",
+			"SignupReferralCode",
+			"KanbanTaskWatcher",
+			"InAppNotification",
+			"NotificationPreference",
+			"NotificationSchedule",
+			"PushDevice",
+			"PaymentIntent",
+		),
+	),
+	"maintenance.audit_record_retention": runtime(
+		"Cron: remove AuditLog / DataChangeLog rows past the ten-year retention through app_purge_audit_batch (ADR 078), skipping legal holds, and record each run",
+		tables("AuditLegalHold", "RetentionRun"),
+	),
 	"maintenance.password_reset_token_cleanup": runtime("Cron: delete expired password reset tokens", tables("PasswordResetToken")),
+	"maintenance.web_authn_challenge_cleanup": runtime(
+		"Cron: soft-delete WebAuthn ceremony challenges an hour past their five-minute expiry (ADR 080), one set-based update",
+		tables("WebAuthnChallenge"),
+	),
 	"maintenance.mfa_recovery_unlock": runtime(
-		"Cron: apply due MFA recovery unlocks",
-		tables("MfaRecoveryRequest", "MfaRecoveryAuditLog", "User", "BackupCode", "TwoFactorPendingSetup", "EmailLog", "OutboxEvent"),
+		"Cron: apply due MFA recovery unlocks: clear the second factor, retire the backup codes and remove the account's passkeys (ADR 080)",
+		tables("MfaRecoveryRequest", "MfaRecoveryAuditLog", "User", "BackupCode", "TwoFactorPendingSetup", "WebAuthnCredential", "EmailLog", "OutboxEvent"),
 	),
 	"maintenance.authorization_change_sweep": runtime(
 		"Every instance, every few seconds: read the recent User.authorizationChangedAt stamps to drop cached authorization an after-commit invalidation missed",
@@ -427,15 +521,30 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"auth.login.record_failure": runtime("Count a failed password sign-in and, on lockout, request the account-locked email", tables("User", "EmailLog", "OutboxEvent")),
 	"auth.login.clear_lockout": runtime("Clear a successful password sign-in's failed-attempt counter", tables("User")),
-	"auth.login.open_challenge": runtime("Open the two-factor challenge for a password that matched", tables("TwoFactorLoginChallenge")),
+	"auth.login.open_challenge": runtime(
+		"Open the two-factor challenge for a password that matched, and read whether the account has a passkey it may use instead of a code",
+		tables("TwoFactorLoginChallenge", "WebAuthnCredential"),
+	),
 	"auth.login.request_device_code": runtime("Read the account and request the new-device login code email", tables("User", "EmailLog", "OutboxEvent")),
 	"auth.login.complete_mfa": runtime(
-		"Consume a passed second factor, record the TOTP step or used backup code, clear the lockout, and stamp MFA assurance",
-		tables("User", "TwoFactorLoginChallenge", "TwoFactorPendingSetup", "BackupCode"),
+		"Consume a passed second factor, record the TOTP step, used backup code or passkey use (its single-use WebAuthn challenge and signature counter), clear the lockout, and stamp MFA assurance",
+		tables("User", "TwoFactorLoginChallenge", "TwoFactorPendingSetup", "BackupCode", "WebAuthnCredential", "WebAuthnChallenge"),
 	),
 	"auth.login.record_mfa_failure": runtime(
 		"Count a wrong authenticator code and, once the challenge is exhausted, count the failed sign-in and request the lockout email",
 		tables("User", "TwoFactorLoginChallenge", "EmailLog", "OutboxEvent"),
+	),
+	"auth.login.passkey_options": runtime(
+		"Read an open two-factor login challenge and the account's live passkeys, and store the single-use WebAuthn challenge of a passkey second factor (ADR 080)",
+		tables("TwoFactorLoginChallenge", "WebAuthnCredential", "WebAuthnChallenge"),
+	),
+	"auth.passkey.sign_in_options": runtime(
+		"Store the single-use WebAuthn challenge of a passwordless sign-in, which names no account yet (ADR 080)",
+		tables("WebAuthnChallenge"),
+	),
+	"auth.passkey.sign_in": runtime(
+		"A passwordless sign-in (ADR 080): consume its WebAuthn challenge, find the passkey by credential id before any account is known, record its use (compare-and-set on the signature counter), clear the lockout and stamp MFA assurance",
+		tables("WebAuthnChallenge", "WebAuthnCredential", "User"),
 	),
 	"auth.session.issue": runtime("Lock the account, record MFA assurance when required, and store the new session while sweeping expired ones", tables("User", "RefreshToken")),
 	"auth.password_reset.request": runtime(
@@ -759,14 +868,38 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		"Record a GitHub webhook delivery and announce its change (bypass-only github_webhook_deliveries) — only after the delivery's signature is verified; also prunes old deliveries",
 		tables("GithubWebhookDelivery"),
 	),
+	"webhooks.inbound.record": runtime(
+		"Log a webhook a provider sent (bypass-only ReceivedWebhook, ADR 081): record a refused request, claim a verified delivery by its id, record its outcome — before and after its owning context's own operation; also prunes rows past the retention",
+		tables("ReceivedWebhook"),
+	),
+	"webhooks.inbound.read": runtime(
+		"Read the received-webhook log for the admin viewer (bypass-only ReceivedWebhook, ADR 081) — only after the AUDIT_LOG permission check",
+		tables("ReceivedWebhook"),
+	),
+	"webhooks.outbound.sweep": routinePoller(
+		"Outgoing webhooks (ADR 082), every few seconds: fan new events out to the subscribed active endpoints of their tenant (one delivery each) and claim the deliveries that are due",
+		tables("WebhookEvent", "WebhookEndpoint", "WebhookDelivery"),
+	),
+	"webhooks.outbound.deliver": runtime(
+		"Outgoing webhooks (ADR 082): send one delivery — read its event and endpoint, record the attempt, move the endpoint's failure count, and when it turns itself off tell the tenant's owners",
+		tables("WebhookDelivery", "WebhookEvent", "WebhookEndpoint", "Tenant", "Membership", "Notification"),
+	),
+	"webhooks.outbound.retention": runtime(
+		"Outgoing webhooks (ADR 082), daily: purge events past the retention window with their deliveries",
+		tables("WebhookEvent", "WebhookDelivery"),
+	),
 	"files.delete": runtime(
 		"Soft-delete a stored file and the binding rows that reference it, after the caller's permission check (product images and kanban task attachments are bypass-only); a released kanban attachment is recorded in its item's history under the deleting user",
-		tables("StoredFile", "FileVariant", "ProductImage", "KanbanTaskAttachment", "KanbanTaskActivity", "User"),
+		tables("StoredFile", "FileVariant", "ProductImage", "KanbanTaskAttachment", "KanbanTaskActivity", "User", "Broadcast"),
 	),
 	"files.authorization": runtime("Resolve the caller's tenant membership role to authorize a file operation", tables("Membership", "Tenant", "StoredFile")),
 	"files.scan_verdict.apply": runtime(
 		"Apply a malware-scan verdict to an uploaded file (state transition, resource binding) together with every category listener's reaction (e.g. KYB review status) in one transaction",
 		tables("StoredFile", "FileVariant", "TenantAsset", "UserAvatar", "Product", "ProductImage", "Tenant", "TenantMerchantProfile", "TenantKybFile"),
+	),
+	"files.server_ingest": runtime(
+		"Record and claim for scanning a file whose bytes the server itself produced (a load-test reward picture), for a context that already authorized it, and find an earlier ingest of the same bytes so it is reused",
+		tables("StoredFile"),
 	),
 	"files.local_object.read": runtime("Read a stored file for a signed local-storage download or upload ticket", tables("StoredFile")),
 	"files.local_variant.read": runtime("Read a public file's rendition for local storage", tables("StoredFile", "FileVariant")),
@@ -805,6 +938,7 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 			"TenantCustomerBan",
 			"Broadcast",
 			"StoredFile",
+			"FileVariant",
 			"EmailLog",
 			"OutboxEvent",
 		),
@@ -848,7 +982,7 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"broadcasts.write": runtime(
 		"Tenant owners/managers or platform staff: write, schedule, approve and cancel broadcasts (ADR 073)",
-		tables("Broadcast", "Tenant", "TenantRateLimitOverride", "NotificationDelivery", "BroadcastReport"),
+		tables("Broadcast", "Tenant", "TenantRateLimitOverride", "NotificationDelivery", "BroadcastReport", "StoredFile", "FileVariant"),
 	),
 	"broadcasts.audience": runtime(
 		"Count and resolve a broadcast's audience: tenant customers with consent, platform users (ADR 073)",
@@ -878,6 +1012,16 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("BroadcastReport", "Broadcast", "TenantBroadcastStrike", "Tenant", "InAppNotification"),
 	),
 	"rate_limits.overrides": runtime("Platform staff: read and set tenant rate-limit overrides (ADR 071)", tables("TenantRateLimitOverride", "Tenant")),
+	"payments.intent.create": runtime(
+		"A tenant's owner or manager asks for a payment (after the route's merchant:manage_payments check): the payment, its checkout event, the idempotent replay lookup",
+		tables("PaymentIntent", "PaymentEvent", "Tenant"),
+	),
+	"payments.callback.apply": runtime(
+		"A gateway's callback, after its signature was verified: find the payment by the gateway's id, apply the status, record the event",
+		tables("PaymentIntent", "PaymentEvent"),
+	),
+	"payments.reconcile": runtime("Job: ask the gateway about payments still pending after a while, and apply what it says", tables("PaymentIntent", "PaymentEvent")),
+	"payments.refund": runtime("A tenant's owner or manager refunds a paid payment (after the route's merchant:manage_payments check)", tables("PaymentIntent", "PaymentEvent")),
 };
 
 /** True when `name` is an allowlisted operation. */

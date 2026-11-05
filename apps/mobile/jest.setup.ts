@@ -8,7 +8,8 @@
 // library (expo-image-picker) are fakes each test can fill, as are the file
 // picker (expo-document-picker) and the share sheet (expo-sharing); live streams (expo/fetch)
 // stay open and quiet until a test sends a frame; the camera
-// (expo-camera) reads whatever QR code a test hands it. React Native's idle callbacks run on the next
+// (expo-camera) reads whatever QR code a test hands it; the phone's passkeys (react-native-passkey) answer
+// what a test queues. React Native's idle callbacks run on the next
 // timer tick (test/idle-callbacks.ts). Every query client a test creates is disposed after
 // the test, so no cache timer keeps the worker alive.
 
@@ -28,6 +29,7 @@ import * as mockImagePicker from "./test/expo-image-picker-fake";
 import * as mockSharing from "./test/expo-sharing-fake";
 import * as mockNetwork from "./test/network-fake";
 import * as mockNotifications from "./test/expo-notifications-fake";
+import * as mockPasskey from "./test/react-native-passkey-fake";
 import { installIdleCallbacks } from "./test/idle-callbacks";
 import { disposeTrackedQueryClients } from "./test/query-clients";
 import { memorySecureStore as mockSecureStore } from "./test/secure-store-memory";
@@ -58,6 +60,7 @@ jest.mock("expo-camera", () => mockCamera);
 jest.mock("expo/fetch", () => mockExpoFetch);
 // Push permission, the device token and push taps are the OS's (test/expo-notifications-fake.ts).
 jest.mock("expo-notifications", () => mockNotifications);
+jest.mock("react-native-passkey", () => mockPasskey);
 // The keyboard is the OS's: keyboard-controller's own Jest stand-in (its provider and views render plain).
 jest.mock("react-native-keyboard-controller", () => jest.requireActual<typeof KeyboardController>("react-native-keyboard-controller/jest"));
 // Reanimated's worklet runtime is native; its own Jest stand-in runs worklets on the JS thread,
@@ -74,6 +77,7 @@ beforeEach(() => {
 	mockSharing.reset();
 	mockNotifications.reset();
 	mockExpoFetch.reset();
+	mockPasskey.reset();
 });
 
 // Query clients' garbage-collection timers must not outlive the test (test/query-clients.ts).

@@ -11,7 +11,9 @@ import { revokedBySystem } from "../../../domain/value-objects/session-revoker.v
 import type { IdentityScope } from "../../identity-scope";
 import type { AuthFlowSubjectPort } from "../../ports/auth-flow.port";
 import type { CredentialCryptoPort } from "../../ports/credential-crypto.port";
-import { AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, IDENTITY_UNIT_OF_WORK, PASSWORD_RESET_COMPLETE_OPERATION } from "../../ports/identity.tokens";
+import { BREACHED_PASSWORD_CHECK, AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, IDENTITY_UNIT_OF_WORK, PASSWORD_RESET_COMPLETE_OPERATION } from "../../ports/identity.tokens";
+import type { BreachedPasswordCheckPort } from "../../ports/breached-password.port";
+import { assertPasswordNotBreached } from "../../services/password-breach.policy";
 import { matchesRecentPassword } from "../../services/password-reuse.checker";
 import { ResetPasswordCommand } from "./reset-password.command";
 
@@ -32,11 +34,13 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
 		@Inject(CREDENTIAL_CRYPTO) private readonly crypto: CredentialCryptoPort,
 		@Inject(AUTH_FLOW_SUBJECT) private readonly flowSubject: AuthFlowSubjectPort,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(BREACHED_PASSWORD_CHECK) private readonly breachCheck: BreachedPasswordCheckPort,
 	) {}
 
 	public async execute(command: ResetPasswordCommand): Promise<ResetPasswordResponse> {
 		const { actor, input } = command;
 		const tokenDigest: string = this.crypto.hashTokenDigest(input.token);
+		await assertPasswordNotBreached(this.breachCheck, input.password);
 		const newPasswordHash: string = await this.crypto.hash(input.password);
 
 		const userId: string = await this.uow.runSystemOperation(PASSWORD_RESET_COMPLETE_OPERATION, actor, async (scope: IdentityScope): Promise<string> => {

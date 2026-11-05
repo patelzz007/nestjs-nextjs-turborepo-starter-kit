@@ -5,6 +5,7 @@ import type { NotificationAccountStore } from "./ports/notification-account-stor
 import type { NotificationStore } from "./ports/notification-store.port";
 import type { NotifyTransactionalPort } from "./ports/notify.port";
 import type { BroadcastStore } from "./ports/broadcast-store.port";
+import type { BroadcastImageFilesPort } from "./ports/broadcast-image-files.port";
 
 /** Everything one notifications unit of work touches, bound to ONE transaction. */
 export interface NotificationsScope {
@@ -17,6 +18,8 @@ export interface NotificationsScope {
 	readonly accountStore: NotificationAccountStore;
 	/** Broadcasts, their audiences and reports (ADR 073). */
 	readonly broadcasts: BroadcastStore;
+	/** The pictures broadcast bodies name (enhancement 5.4): locked on save, addressed when answered. */
+	readonly broadcastImages: BroadcastImageFilesPort;
 	readonly events: TransactionalEventCollector;
 }
 

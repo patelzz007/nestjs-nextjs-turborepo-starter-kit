@@ -109,5 +109,5 @@ A ```` ```carousel ```` fence lists two to twelve images, one `![alt](url)` per 
 `ratio` is width/height (or a single number) for every slide, and defaults to 16/9. URLs must be
 site paths or `https://`. The build renders the web `ImageCarousel` to HTML, so the images show
 before any JavaScript runs. Pages that have one then load React and Embla, and hydrate the gallery
-into the live component (`apps/docs/src/lib/media/`, `src/scripts/media-islands.ts`). Pages
+into the live component (`packages/docs-renderer/src/media/`, `apps/docs/src/browser/islands.ts`). Pages
 without one never download them.

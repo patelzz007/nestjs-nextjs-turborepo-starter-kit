@@ -51,6 +51,12 @@ export const PULSE: PulseMotion = {
 	easing: Easing.bezierFn(0.4, 0, 0.6, 1),
 };
 
+/**
+ * A selection mark appearing or going (a checkbox's tick, a radio's dot): a quick pop, so a tap
+ * reads as answered at once. Arriving springs out from the centre; going is a shorter shrink.
+ */
+export const TOGGLE_MARK_MS = { enter: 160, exit: 110 };
+
 /** One header control swapping for another (the menu button for a back button): a short, plain fade, in ms. */
 export const CONTROL_SWAP_MS = 180;
 
@@ -98,6 +104,15 @@ export const LAUNCH_MOTION = {
 	lightCycleMs: 2400,
 	lightDelayMs: 900,
 } satisfies Readonly<Record<string, number | WithSpringConfig>>;
+
+/**
+ * A sheet rising from the bottom edge and its backdrop fading with it (BottomSheet, the date range
+ * picker): the scanner's curves, a little quicker, since a sheet covers less of the screen.
+ */
+export const SHEET_MOTION = {
+	enter: { duration: 320, easing: EMPHASIZED_ENTER_EASING, reduceMotion: ReduceMotion.System } satisfies WithTimingConfig,
+	exit: { duration: 220, easing: Easing.in(Easing.cubic), reduceMotion: ReduceMotion.System } satisfies WithTimingConfig,
+};
 
 /**
  * The full-screen QR scanner (QrScanner) arriving and leaving: the live camera and everything over it

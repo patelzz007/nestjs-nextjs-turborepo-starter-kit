@@ -198,7 +198,7 @@ export function CommentCard({ comment, action, isPullRequestAuthor = false, show
 	// Each picture loads from where the API listed it — signed in, for one GitHub shows only to signed-in readers.
 	const images = useGithubPictureLoader(comment.images);
 	return (
-		<View className="overflow-hidden rounded-xl border border-border bg-card" testID={`comment-${comment.id}`}>
+		<View className="overflow-hidden rounded-2xl border border-border bg-card" testID={`comment-${comment.id}`}>
 			<View className="min-h-11 flex-row items-center gap-2 border-b border-border bg-muted px-3 py-2">
 				{showAvatar ? <Avatar name={login} imageUrl={comment.author?.avatarUrl ?? null} size="sm" /> : null}
 				<Text className="flex-1 font-sans text-sm text-muted-foreground" numberOfLines={2}>
@@ -271,7 +271,7 @@ interface ReviewCommentCardProps {
 export function ReviewCommentCard({ comment, nowMs, onShowEdits }: ReviewCommentCardProps): React.JSX.Element {
 	const lines = React.useMemo(() => parsePatch(comment.diffHunk).slice(-REVIEW_COMMENT_CONTEXT_LINES), [comment.diffHunk]);
 	return (
-		<View className="overflow-hidden rounded-xl border border-border bg-card">
+		<View className="overflow-hidden rounded-2xl border border-border bg-card">
 			<Text numberOfLines={1} className="border-b border-border bg-muted px-3 py-2 font-mono text-xs text-foreground">
 				{comment.path}
 			</Text>

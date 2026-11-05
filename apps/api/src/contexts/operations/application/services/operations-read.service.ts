@@ -50,6 +50,10 @@ import type { OperationsReads } from "../ports/operations-reads.port";
 import type { OpsLiveStore } from "../ports/ops-live-store.port";
 import type { OpsServerRecord } from "../ports/operations-repositories.port";
 import { toServerDetail, toServerSummary } from "./ops-server-view";
+import type { RestoreDrillPort } from "../ports/restore-drill.port";
+
+/** How many recent restore drills the Backups screen shows. */
+const RESTORE_DRILLS_SHOWN = 5;
 
 export interface OperationsReadDeps {
 	readonly reads: OperationsReads;
@@ -58,6 +62,8 @@ export interface OperationsReadDeps {
 	readonly clock: Clock;
 	readonly dump: DatabaseDumpPort;
 	readonly backupStorage: BackupStoragePort;
+	/** Whether the weekly restore drill is set up (enhancement 2.6). */
+	readonly restoreDrill: Pick<RestoreDrillPort, "availability">;
 	readonly loadTesting: { readonly enabled: boolean; readonly allowProduction: boolean; readonly isProduction: boolean; readonly queueAvailable: boolean };
 }
 
@@ -164,9 +170,15 @@ export class OperationsReadService {
 
 	public async backups(actor: ActorContext): Promise<OpsBackupList> {
 		const now: EpochMs = this.deps.clock.now();
-		const { backups, settings } = await this.deps.reads.read(actor, async (scope) => ({ backups: await scope.backups.list(), settings: await scope.settings.get() }));
+		const { backups, settings, drills } = await this.deps.reads.read(actor, async (scope) => ({
+			backups: await scope.backups.list(),
+			settings: await scope.settings.get(),
+			drills: await scope.restoreDrills.recent(RESTORE_DRILLS_SHOWN),
+		}));
 		return {
 			backups: backups.map(toBackup),
+			restoreDrills: drills.map((drill) => ({ ...drill, failures: [...drill.failures] })),
+			restoreDrillConfigured: this.deps.restoreDrill.availability().ready,
 			schedule: settings.backup,
 			timeZone: PLATFORM_DISPLAY_REGION.timeZone,
 			nextScheduledAt: nextScheduledBackupAt(settings.backup.backupHour, PLATFORM_DISPLAY_REGION.timeZone, now),

@@ -16,6 +16,7 @@ import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseS
  */
 
 const PROFILE_URL = `${API_VERSION_PREFIX}/auth/profile`;
+const LANGUAGE_URL = `${API_VERSION_PREFIX}/auth/profile/language`;
 const ME_URL = `${API_VERSION_PREFIX}/auth/me`;
 const SUPER_ADMIN_EMAIL = "superadmin@example.com";
 /** A seed customer no other e2e suite signs in as (its name is restored after the suite). */
@@ -86,6 +87,15 @@ describe("Own profile (e2e, real Postgres + RLS + audit trail)", () => {
 		return app.inject({ method: "PATCH", url: PROFILE_URL, headers: mutationHeaders(headers), payload });
 	}
 
+	async function putLanguage(headers: Record<string, string>, payload: object): Promise<InjectResponse> {
+		return app.inject({ method: "PUT", url: LANGUAGE_URL, headers: mutationHeaders(headers), payload });
+	}
+
+	async function storedLocale(): Promise<string> {
+		const result = await pool.query<{ locale: string }>('SELECT locale FROM public."User" WHERE id = $1', [targetId]);
+		return z.string().parse(result.rows.at(0)?.locale);
+	}
+
 	async function currentProfile(): Promise<OwnProfile> {
 		const response = await getProfile(sessionHeaders(target));
 		expect(response.statusCode, response.body).toBe(HTTP_OK);
@@ -111,6 +121,10 @@ describe("Own profile (e2e, real Postgres + RLS + audit trail)", () => {
 	afterAll(async () => {
 		// Leave the seed account as it was — through the API itself, never a raw write.
 		const profile = await currentProfile();
+		if (profile.language !== "en") {
+			const restored = await putLanguage(sessionHeaders(target), { language: "en" });
+			expect(restored.statusCode, restored.body).toBe(HTTP_OK);
+		}
 		if (profile.fullName !== originalFullName) {
 			const restored = await patchProfile(sessionHeaders(target), { version: profile.version, fullName: originalFullName });
 			expect(restored.statusCode, restored.body).toBe(HTTP_OK);
@@ -195,6 +209,33 @@ describe("Own profile (e2e, real Postgres + RLS + audit trail)", () => {
 			expect(response.statusCode, JSON.stringify(payload)).toBe(HTTP_BAD_REQUEST);
 		}
 		expect(await storedProfile()).toEqual(stored);
+	});
+
+	describe("the person's language (enhancement 5.2)", () => {
+		it("saves it on the account in one audited transaction, without moving the profile version", async () => {
+			const before = await currentProfile();
+
+			const response = await putLanguage(sessionHeaders(target), { language: "zh-Hans" });
+
+			expect(response.statusCode, response.body).toBe(HTTP_OK);
+			const saved = parseSuccessEnvelope(response, OwnProfileSchema).data;
+			expect(saved).toMatchObject({ language: "zh-Hans", version: before.version });
+			expect(await storedLocale()).toBe("zh-Hans");
+			expect((await currentProfile()).language).toBe("zh-Hans");
+			expect(await auditRows(response)).toEqual([expect.objectContaining({ outcome: "SUCCEEDED", responseStatus: HTTP_OK, actorUserId: targetId })]);
+		});
+
+		it("refuses a language the apps don't ship, and a choice made while impersonating", async () => {
+			expect((await putLanguage(sessionHeaders(target), { language: "zh-Hant" })).statusCode).toBe(HTTP_BAD_REQUEST);
+			const locale = await storedLocale();
+
+			const token = await impersonationToken();
+			const response = await putLanguage({ authorization: `Bearer ${token}`, "x-forwarded-for": uniqueClientIp(), "user-agent": USER_AGENT }, { language: "ta" });
+
+			expect(response.statusCode, response.body).toBe(HTTP_FORBIDDEN);
+			expect(ApiErrorResponseSchema.parse(response.json()).error.code).toBe(OWN_PROFILE_ERROR_CODES.PROFILE_UPDATE_DURING_IMPERSONATION);
+			expect(await storedLocale()).toBe(locale);
+		});
 	});
 
 	describe("during impersonation", () => {

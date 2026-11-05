@@ -39,6 +39,15 @@ export const operationsRoutes = {
 	liftRateLimitPenalty: "/admin/operations/rate-limits/penalties/lift",
 	cache: "/admin/operations/cache",
 	flushCache: "/admin/operations/cache/flush",
+	queues: "/admin/operations/queues",
+	queueFailedJobs: "/admin/operations/queues/:queueName/failed",
+	retryQueueJob: "/admin/operations/queues/:queueName/jobs/:jobId/retry",
+	discardQueueJob: "/admin/operations/queues/:queueName/jobs/:jobId/discard",
+	/** The public status page (enhancement 4.5): no sign-in. */
+	publicStatus: "/operations/status",
+	statusIncidents: "/admin/operations/status/incidents",
+	statusIncident: "/admin/operations/status/incidents/:incidentId",
+	statusIncidentUpdates: "/admin/operations/status/incidents/:incidentId/updates",
 	/** Where a server agent reports — authenticated by the server's own token, not a session. */
 	agentReport: "/operations/agent/report",
 } satisfies Record<string, RouteTree>;

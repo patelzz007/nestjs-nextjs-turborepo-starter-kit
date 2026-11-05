@@ -1,35 +1,33 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { DOC_ICONS, docIcon, ICONS, iconSvg, SECTION_ICONS, sectionIcon } from "../icons";
+import { DOC_ICONS, docIcon, GithubMark, iconComponent, ICONS, SECTION_ICONS, sectionIcon } from "../icons";
 
-describe("iconSvg", () => {
-	it("renders a decorative, sized SVG with the icon's children", () => {
-		const svg = iconSvg("search", 20, "text-brand");
+describe("icon registry", () => {
+	it("should render a registered lucide icon as a sized SVG", () => {
+		const svg = renderToStaticMarkup(createElement(iconComponent("search"), { size: 20, "aria-hidden": "true" }));
 		expect(svg).toMatch(/^<svg [^>]*width="20" height="20"/);
-		expect(svg).toContain('aria-hidden="true"');
-		expect(svg).toContain('class="text-brand"');
 		expect(svg).toContain("<circle ");
 	});
 
-	it("omits the class attribute when none is given and escapes attribute values", () => {
-		expect(iconSvg("x")).not.toContain("class=");
-		expect(iconSvg("x", 16, 'a"b')).toContain('class="a&quot;b"');
-	});
-
-	it("renders the local GitHub mark as a filled path", () => {
-		expect(iconSvg("github")).toContain('fill="currentColor"');
+	it("should render the local GitHub mark as a filled, decorative path at the default size", () => {
+		const svg = renderToStaticMarkup(createElement(GithubMark));
+		expect(svg).toContain('fill="currentColor"');
+		expect(svg).toContain('aria-hidden="true"');
+		expect(svg).toContain('width="16"');
 	});
 });
 
 describe("icon lookups", () => {
-	it("uses mapped icons and falls back for unknown ids", () => {
+	it("should use mapped icons and fall back for unknown ids", () => {
 		expect(docIcon("technical/database")).toBe("database");
 		expect(docIcon("not-a-guide")).toBe("fileText");
 		expect(sectionIcon("Decisions")).toBe("archive");
 		expect(sectionIcon("Unknown")).toBe("layoutDashboard");
 	});
 
-	it("only maps to registered icons", () => {
+	it("should only map to registered icons", () => {
 		const registered = new Set(Object.keys(ICONS));
 		for (const name of [...Object.values(DOC_ICONS), ...Object.values(SECTION_ICONS)]) {
 			expect(registered.has(name)).toBe(true);

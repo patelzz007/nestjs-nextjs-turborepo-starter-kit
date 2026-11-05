@@ -4,6 +4,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { SystemCommandDispatcher } from "../../../../platform/application/system-command-dispatcher";
 import { PurgeOldPermissionAuditLogsCommand } from "../../application/commands/purge-old-permission-audit-logs/purge-old-permission-audit-logs.command";
 import { AUDIT_LOG_RETENTION_OPERATION } from "../../application/ports/authorization.tokens";
+import { RECORD_RETENTION_YEARS } from "../../../../platform/domain/record-retention";
 import { authorizationSystemActor } from "../../application/services/rbac-actor";
 
 /** Hourly: soft-delete permission audit rows past retention (one UPDATE on the `createdAt` index). */
@@ -18,7 +19,7 @@ export class AuditLogRetentionCron {
 		const actor = authorizationSystemActor(AUDIT_LOG_RETENTION_OPERATION, "cron", "Soft-delete permission audit rows past retention");
 		const retired: number = await this.dispatcher.dispatch(new PurgeOldPermissionAuditLogsCommand(actor), { kind: "cron", name: "permission-audit-log-retention" });
 		if (retired > 0) {
-			this.logger.log(`Soft-deleted ${String(retired)} authorization audit logs older than 90 days`);
+			this.logger.log(`Soft-deleted ${String(retired)} authorization audit logs older than ${String(RECORD_RETENTION_YEARS)} years`);
 		}
 	}
 }

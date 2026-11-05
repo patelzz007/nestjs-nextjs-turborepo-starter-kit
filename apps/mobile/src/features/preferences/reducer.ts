@@ -16,6 +16,8 @@ export function preferencesReducer(state: PreferencesState, action: PreferencesA
 			return { ...state, appLock: { ...state.appLock, enabled: false } };
 		case "[ Preferences ] App Lock Timeout Changed":
 			return { ...state, appLock: { ...state.appLock, timeoutMs: action.timeoutMs } };
+		case "[ Preferences ] Language Changed":
+			return { ...state, language: action.language };
 		case "[ Preferences ] Onboarding Completed":
 			return { ...state, onboardingCompleted: true };
 		case "[ Preferences ] Onboarding Reset":

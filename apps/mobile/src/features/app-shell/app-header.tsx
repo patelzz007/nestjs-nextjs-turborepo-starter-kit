@@ -4,8 +4,8 @@
 // with back. The header collapses with the page's scrolling (src/lib/page-header-scroll.tsx) into a
 // slim bar that keeps the menu, the title and notifications. The app draws edge to edge and the
 // header is the page's colour, so the status bar's icons follow the app's theme: dark on a light
-// page, light on a dark one. Beside notifications, the connection and session pills, compact (in full
-// in the drawer). The bell carries the unread count, live (contexts/notifications).
+// page, light on a dark one. Search opens the command palette (ADR 079); the connection and session
+// pills live in the drawer. The bell carries the unread count, live (contexts/notifications).
 
 import { useGlobalSearchParams, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -20,8 +20,10 @@ import { useUnreadNotifications } from "../../contexts/notifications";
 import { usePageHeaderProgress, type PageHeaderScroll } from "../../lib/page-header-scroll";
 import { ROUTES } from "../../runtime/routes";
 import { useAppDrawerCommands } from "../app-drawer/facade";
-import { NetworkStatusPill, SessionStatusPill } from "../app-status/status-pills";
+import { useLabels } from "../language/use-app-language";
 import { screenHeadingOf } from "../navigation/app-screens";
+import { AppCommandPalette } from "../navigation/app-command-palette";
+import { NAVIGATION_LABELS } from "../navigation/navigation-labels";
 import { isTabRoot } from "../navigation/drawer-destinations";
 import { headerTitleDriftOf } from "../navigation/header-transition";
 
@@ -56,10 +58,20 @@ export function AppHeader({ scroll, onHeightChange, onCollapseDistanceChange }: 
 		router.back();
 	}, [router]);
 	const openNotifications = React.useCallback((): void => {
-		router.push(ROUTES.notifications);
+		// `withAnchor`: the Settings tab's first screen goes underneath, as the drawer opens its screens, so
+		// "back" and a press on the Settings tab land on Settings, not on a stack holding only Notifications.
+		router.push(ROUTES.notifications, { withAnchor: true });
 	}, [router]);
+	const [paletteOpen, setPaletteOpen] = React.useState(false);
+	const openPalette = React.useCallback((): void => {
+		setPaletteOpen(true);
+	}, []);
+	const closePalette = React.useCallback((): void => {
+		setPaletteOpen(false);
+	}, []);
 	const unreadNotifications = useUnreadNotifications();
-	const heading = screenHeadingOf(pathname, params);
+	const navigationLabels = useLabels(NAVIGATION_LABELS);
+	const heading = screenHeadingOf(pathname, params, navigationLabels);
 	const progress = usePageHeaderProgress(scroll);
 
 	return (
@@ -74,13 +86,8 @@ export function AppHeader({ scroll, onHeightChange, onCollapseDistanceChange }: 
 				onMenu={drawer.opened}
 				onBack={goBack}
 				onNotifications={openNotifications}
+				onSearch={openPalette}
 				notificationCount={unreadNotifications}
-				trailing={
-					<>
-						<NetworkStatusPill compact testID="app-header-network" />
-						<SessionStatusPill compact testID="app-header-session" />
-					</>
-				}
 				topInset={insets.top}
 				progress={progress}
 				collapseDistance={scroll.collapseDistance}
@@ -88,6 +95,7 @@ export function AppHeader({ scroll, onHeightChange, onCollapseDistanceChange }: 
 				onCollapseDistanceChange={onCollapseDistanceChange}
 				testID="app-header"
 			/>
+			<AppCommandPalette visible={paletteOpen} onClose={closePalette} />
 		</>
 	);
 }

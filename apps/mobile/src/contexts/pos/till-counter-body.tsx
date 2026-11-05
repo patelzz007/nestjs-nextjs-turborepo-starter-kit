@@ -32,22 +32,27 @@ import * as React from "react";
 import { Text, View } from "react-native";
 
 import { errorMessageOf } from "../../lib/error-messages";
+import { useToast } from "../../features/toast/facade";
 import { useIdempotencyKeys } from "../../lib/idempotency-keys";
 import { formatDateTime } from "../../lib/time-format";
 import { checkoutExchange, validateExchange, type ApiExchange } from "./api-exchange";
+import { MAX_QUEUED_CHECKOUTS, wasUnanswered, type QueuedCheckout } from "./checkout-queue";
 import { formatBillAmount, parseBillAmount } from "./bill-amount";
 import { INVALID_REASON_LABELS, REWARD_TYPE_LABELS, TILL_COPY, TILL_SCANNER_LABELS } from "./labels";
 import type { PairedTerminal } from "./paired-terminal";
 import { offerDetails } from "./offer-terms";
 import { classifyScannedCode, TILL_CODE_LENGTH } from "./scanned-code";
 import { TillApiExchange } from "./till-api-exchange";
+import { useCheckoutQueue, type CheckoutQueue, type SentCheckout } from "./use-checkout-queue";
 import { useTillApi } from "./use-till-api";
 
 /** Where the counter is: waiting for a code, showing a checked code, or done. */
 type CounterStep =
 	| { readonly step: "ready" }
 	| { readonly step: "preview"; readonly code: RedemptionCode; readonly preview: RedemptionPreviewResponse }
-	| { readonly step: "redeemed"; readonly receipt: RedemptionCheckoutResponse };
+	| { readonly step: "redeemed"; readonly receipt: RedemptionCheckoutResponse }
+	/** Saved on the till for the connection (6.4): its key, so the step follows that redemption when it is sent. */
+	| { readonly step: "queued"; readonly idempotencyKey: string };
 
 const READY: CounterStep = { step: "ready" };
 
@@ -80,13 +85,45 @@ export function TillCounterBody({ terminal }: TillCounterProps): React.JSX.Eleme
 		setRedeemExchange(null);
 		backToReady();
 	}, [backToReady]);
+	const showQueued = React.useCallback((idempotencyKey: string): void => {
+		setCounter({ step: "queued", idempotencyKey });
+	}, []);
+	// The saved redemption the counter shows, read when the queue reports a send (outside render).
+	const shownQueuedKey = React.useRef<string | null>(null);
+	React.useEffect((): void => {
+		shownQueuedKey.current = counter.step === "queued" ? counter.idempotencyKey : null;
+	}, [counter]);
+	const toast = useToast();
+	const announceSent = React.useCallback(
+		({ request, response }: SentCheckout): void => {
+			const receipt = response.data;
+			const bill = formatBillAmount(receipt.billTotalMinor, receipt.currency);
+			for (const redemption of receipt.redemptions) {
+				toast.success(TILL_COPY.queueSent(redemption.rewardTitle, bill));
+			}
+			// The redemption the counter shows as saved went through: its receipt, with the send that did it under it
+			// (not the attempt that got no answer).
+			if (shownQueuedKey.current === request.idempotencyKey) {
+				setRedeemExchange(checkoutExchange(terminal.credentials, request, { ok: true, body: response }));
+				setCounter({ step: "redeemed", receipt });
+			}
+		},
+		[terminal.credentials, toast],
+	);
+	const queue = useCheckoutQueue(till, { onSent: announceSent });
+	// The redemption the counter is showing as saved was refused: the counter is ready again, the refusal listed.
+	const queuedKey = counter.step === "queued" ? counter.idempotencyKey : null;
+	const refusedHere = queue.entries.some((entry): boolean => entry.request.idempotencyKey === queuedKey && entry.refusal !== null);
+	const shown: CounterStep = refusedHere ? READY : counter;
+	const queueCard = queue.entries.length === 0 ? null : <QueuedCheckouts queue={queue} />;
 
 	const exchangeCard = exchange === null ? null : <TillApiExchange exchange={exchange} />;
-	switch (counter.step) {
+	switch (shown.step) {
 		case "ready":
 			return (
 				<View className="gap-4">
 					<CodeEntry till={till} credentials={terminal.credentials} onChecked={showPreview} onExchange={setExchange} />
+					{queueCard}
 					{exchangeCard}
 				</View>
 			);
@@ -96,20 +133,35 @@ export function TillCounterBody({ terminal }: TillCounterProps): React.JSX.Eleme
 					<Checkout
 						till={till}
 						credentials={terminal.credentials}
-						code={counter.code}
-						preview={counter.preview}
+						code={shown.code}
+						preview={shown.preview}
 						onRedeemed={showReceipt}
+						onQueued={showQueued}
+						onKeep={queue.keep}
 						onExchange={setRedeemExchange}
 						onCancel={startOver}
 					/>
+					{queueCard}
 					{redeemExchange === null ? null : <TillApiExchange exchange={redeemExchange} title={TILL_COPY.checkoutExchangeTitle} testID="till-checkout-exchange" />}
 					{exchangeCard}
+				</View>
+			);
+		case "queued":
+			return (
+				<View className="gap-4">
+					<Card title={TILL_COPY.queuedTitle}>
+						<View className="gap-4">
+							<Alert tone="warning" message={TILL_COPY.queuedMessage} />
+							<Button label={TILL_COPY.next} icon={ScanQrCodeIcon} onPress={startOver} />
+						</View>
+					</Card>
+					{queueCard}
 				</View>
 			);
 		case "redeemed":
 			return (
 				<View className="gap-4">
-					<Receipt receipt={counter.receipt} onNext={startOver} />
+					<Receipt receipt={shown.receipt} onNext={startOver} />
 					{redeemExchange === null ? null : <TillApiExchange exchange={redeemExchange} title={TILL_COPY.checkoutExchangeTitle} testID="till-checkout-exchange" />}
 				</View>
 			);
@@ -254,32 +306,57 @@ interface CheckoutProps {
 	/** What the redeem call sent and what came back, success or not. */
 	readonly onExchange: (exchange: ApiExchange) => void;
 	readonly onCancel: () => void;
+	/** The checkout got no answer and the till kept it, to send when the connection is back. */
+	readonly onQueued: (idempotencyKey: string) => void;
+	/** Keeps a checkout that got no answer (false: the till already holds as many as it can). */
+	readonly onKeep: CheckoutQueue["keep"];
 }
 
+/** What a redeem press came to: redeemed now, kept for the connection, or not kept (the queue is full). */
+type CheckoutOutcome =
+	| { readonly kind: "redeemed"; readonly receipt: RedemptionCheckoutResponse }
+	| { readonly kind: "queued"; readonly idempotencyKey: string }
+	| { readonly kind: "queueFull" };
+
 /** The checked code: what it is and gives, whether it can be redeemed, and the bill to redeem it on. */
-function Checkout({ till, credentials, code, preview, onRedeemed, onExchange, onCancel }: CheckoutProps): React.JSX.Element {
+function Checkout({ till, credentials, code, preview, onRedeemed, onExchange, onCancel, onQueued, onKeep }: CheckoutProps): React.JSX.Element {
 	const currency = DEFAULT_SALE_CURRENCY;
 	const [billText, setBillText] = React.useState("");
 	const [billProblem, setBillProblem] = React.useState<string | null>(null);
 	const idempotencyKeys = useIdempotencyKeys();
 
 	const checkout = useMutation({
-		mutationFn: async (billTotalMinor: number): Promise<RedemptionCheckoutResponse> => {
+		mutationFn: async (billTotalMinor: number): Promise<CheckoutOutcome> => {
 			const idempotencyKey = idempotencyKeys.keyFor(JSON.stringify({ code, billTotalMinor, currency }));
 			const request = { idempotencyKey, billTotalMinor, currency, codes: [code] };
 			try {
 				const receipt = await till.checkout.mutate(request);
 				onExchange(checkoutExchange(credentials, request, { ok: true, body: receipt }));
 				idempotencyKeys.spend();
-				return receipt.data;
+				return { kind: "redeemed", receipt: receipt.data };
 			} catch (error: unknown) {
-				if (error instanceof Error) {
-					onExchange(checkoutExchange(credentials, request, { ok: false, error }));
+				if (!(error instanceof Error)) {
+					throw error;
 				}
-				throw error;
+				onExchange(checkoutExchange(credentials, request, { ok: false, error }));
+				// No answer at all (no connection): kept with its key, sent when the connection is back (6.4).
+				if (!wasUnanswered(error)) {
+					throw error;
+				}
+				if (!(await onKeep(request, preview.rewardTitle))) {
+					return { kind: "queueFull" };
+				}
+				idempotencyKeys.spend();
+				return { kind: "queued", idempotencyKey };
 			}
 		},
-		onSuccess: onRedeemed,
+		onSuccess: (outcome: CheckoutOutcome): void => {
+			if (outcome.kind === "redeemed") {
+				onRedeemed(outcome.receipt);
+			} else if (outcome.kind === "queued") {
+				onQueued(outcome.idempotencyKey);
+			}
+		},
 	});
 
 	const changeBill = React.useCallback((text: string): void => {
@@ -319,6 +396,7 @@ function Checkout({ till, credentials, code, preview, onRedeemed, onExchange, on
 					<Alert tone="error" message={preview.invalidReason === null ? TILL_COPY.notRedemptionCode : INVALID_REASON_LABELS[preview.invalidReason]} />
 				)}
 				{checkout.isError ? <Alert tone="error" message={errorMessageOf(checkout.error)} /> : null}
+				{checkout.data?.kind === "queueFull" ? <Alert tone="error" message={TILL_COPY.queueFull(MAX_QUEUED_CHECKOUTS)} /> : null}
 				{preview.valid ? (
 					<>
 						<TextField
@@ -360,5 +438,46 @@ function Receipt({ receipt, onNext }: ReceiptProps): React.JSX.Element {
 				<Button label={TILL_COPY.next} icon={ScanQrCodeIcon} onPress={onNext} />
 			</View>
 		</Card>
+	);
+}
+
+interface QueuedCheckoutsProps {
+	readonly queue: CheckoutQueue;
+}
+
+/** The checkouts the till keeps for the connection, and any the API refused once sent (6.4). */
+function QueuedCheckouts({ queue }: QueuedCheckoutsProps): React.JSX.Element {
+	return (
+		<Card title={TILL_COPY.queueTitle} testID="till-checkout-queue">
+			<View className="gap-3">
+				{queue.entries.map((entry: QueuedCheckout): React.JSX.Element => (
+					<QueuedCheckoutRow key={entry.request.idempotencyKey} entry={entry} onDismiss={queue.dismiss} />
+				))}
+				<Button label={TILL_COPY.queueSendNow} variant="secondary" onPress={queue.sendNow} loading={queue.sending} />
+			</View>
+		</Card>
+	);
+}
+
+interface QueuedCheckoutRowProps {
+	readonly entry: QueuedCheckout;
+	readonly onDismiss: CheckoutQueue["dismiss"];
+}
+
+/** One kept checkout: waiting to be sent, or refused by the API (dismissed once the cashier has seen it). */
+function QueuedCheckoutRow({ entry, onDismiss }: QueuedCheckoutRowProps): React.JSX.Element {
+	const { idempotencyKey, billTotalMinor, currency } = entry.request;
+	const dismiss = React.useCallback((): void => {
+		onDismiss(idempotencyKey);
+	}, [idempotencyKey, onDismiss]);
+	return (
+		<View className="gap-2">
+			<Alert
+				tone={entry.refusal === null ? "warning" : "error"}
+				title={entry.rewardTitle}
+				message={entry.refusal === null ? TILL_COPY.queueWaiting(formatBillAmount(billTotalMinor, currency)) : TILL_COPY.queueRefused(entry.refusal)}
+			/>
+			{entry.refusal === null ? null : <Button label={TILL_COPY.queueDismiss(entry.rewardTitle)} variant="secondary" onPress={dismiss} />}
+		</View>
 	);
 }

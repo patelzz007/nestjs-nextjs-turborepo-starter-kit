@@ -1,14 +1,17 @@
 import { buildPosPairingQrPayload, RedemptionCheckoutSchema, type RedemptionCheckoutInput } from "@workspace/shared";
 import { act, fireEvent, screen, waitFor } from "expo-router/testing-library";
+import { z } from "zod";
 
-import { dynamic, fail, ok, stubApi } from "../../../../../test/api-stub";
+import { dynamic, fail, ok, stubApi, UNREACHABLE, type StubAnswer } from "../../../../../test/api-stub";
 import { createTestRuntime, renderInApp } from "../../../../../test/app-harness";
 import { cameraPermissionRequests, isReadingQrCodes, readQrCode, setCameraPermission, setPhotoQrCode } from "../../../../../test/expo-camera-fake";
 import { pickNext } from "../../../../../test/expo-image-picker-fake";
 import { testAccessToken } from "../../../../../test/jwt";
+import { OFFLINE_STATE, ONLINE_STATE, setState as setNetworkState } from "../../../../../test/network-fake";
 import { memorySecureStore } from "../../../../../test/secure-store-memory";
 import TillScreen from "../../../../app/(app)/settings/till";
 import { pairedTerminalOf, savePairedTerminal } from "../../../../contexts/pos";
+import { checkoutRetryDelayMs, MAX_QUEUED_CHECKOUTS, parseCheckoutQueue, serializeCheckoutQueue, type QueuedCheckout } from "../../../../contexts/pos/checkout-queue";
 import { SECURE_STORE_ENTRIES } from "../../../../lib/secure-store";
 
 const PAIRED = {
@@ -385,5 +388,209 @@ describe("Till — redeeming", () => {
 
 		expect(await screen.findByText("Pair this phone as a till")).toBeOnTheScreen();
 		expect(memorySecureStore.peek(SECURE_STORE_ENTRIES.tillApiKey.key)).toBeNull();
+	});
+
+	describe("offline (enhancement 6.4)", () => {
+		/** Scans the customer's code and enters a RM 25.50 bill, ready to redeem. */
+		async function readyToRedeem(): Promise<void> {
+			await renderPairedTill();
+			await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
+			await scan(TOKEN);
+			await fireEvent.changeText(await screen.findByLabelText("Bill total"), "25.50");
+		}
+
+		function storedQueue(): readonly QueuedCheckout[] {
+			// Secure Store keeps every value as JSON: the queue's own JSON is stored as a JSON string.
+			const raw = memorySecureStore.peek(SECURE_STORE_ENTRIES.tillCheckoutQueue.key);
+			return parseCheckoutQueue(raw === null ? null : z.string().parse(JSON.parse(raw)));
+		}
+
+		it("keeps a checkout that got no answer, with its key, and sends it when the connection is back", async () => {
+			const answers: StubAnswer[] = [UNREACHABLE];
+			const api = stubApi({
+				"POST /integration/redemptions/validate": preview(),
+				"POST /integration/redemptions/checkout": dynamic((call) => answers.shift() ?? receipt(2550, CheckoutBodySchema.parse(call.body).idempotencyKey)),
+			});
+			await readyToRedeem();
+
+			await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+
+			expect(await screen.findByText("Saved on this till")).toBeOnTheScreen();
+			expect(screen.getByText("RM 25.50 bill · waiting to send")).toBeOnTheScreen();
+			expect(storedQueue()).toHaveLength(1);
+
+			await act(async (): Promise<void> => {
+				setNetworkState(OFFLINE_STATE);
+				await Promise.resolve();
+			});
+			await act(async (): Promise<void> => {
+				setNetworkState(ONLINE_STATE);
+				await Promise.resolve();
+			});
+
+			expect(await screen.findByText("Free flat white redeemed on a RM 25.50 bill (sent when the connection came back).")).toBeOnTheScreen();
+			await waitFor(() => {
+				expect(screen.queryByTestId("till-checkout-queue")).toBeNull();
+			});
+			const [first, second] = api.callsTo("POST /integration/redemptions/checkout").map((call) => CheckoutBodySchema.parse(call.body).idempotencyKey);
+			expect(second).toBe(first);
+			expect(storedQueue()).toStrictEqual([]);
+		});
+
+		it("tries again by itself when the first send after reconnecting gets no answer (mobile data came up before Wi-Fi)", async () => {
+			// Seen on a phone (2026-11-05): leaving airplane mode, Android made mobile data the default network a third of
+			// a second before Wi-Fi, the app counted as online, and the send to the API's Wi-Fi-only address got no answer.
+			const answers: StubAnswer[] = [UNREACHABLE, UNREACHABLE];
+			const api = stubApi({
+				"POST /integration/redemptions/validate": preview(),
+				"POST /integration/redemptions/checkout": dynamic((call) => answers.shift() ?? receipt(2550, CheckoutBodySchema.parse(call.body).idempotencyKey)),
+			});
+			await readyToRedeem();
+			await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+			await screen.findByText("Saved on this till");
+
+			jest.useFakeTimers();
+			try {
+				await act(async (): Promise<void> => {
+					setNetworkState(OFFLINE_STATE);
+					await Promise.resolve();
+				});
+				await act(async (): Promise<void> => {
+					setNetworkState(ONLINE_STATE);
+					await Promise.resolve();
+				});
+				expect(api.callsTo("POST /integration/redemptions/checkout")).toHaveLength(2);
+				expect(screen.getByText("RM 25.50 bill · waiting to send")).toBeOnTheScreen();
+
+				await act(async (): Promise<void> => {
+					await jest.advanceTimersByTimeAsync(checkoutRetryDelayMs(0));
+				});
+			} finally {
+				jest.useRealTimers();
+			}
+
+			expect(await screen.findByText("Free flat white redeemed on a RM 25.50 bill (sent when the connection came back).")).toBeOnTheScreen();
+			const keys = api.callsTo("POST /integration/redemptions/checkout").map((call) => CheckoutBodySchema.parse(call.body).idempotencyKey);
+			expect(keys).toHaveLength(3);
+			expect(new Set(keys).size).toBe(1);
+			expect(storedQueue()).toStrictEqual([]);
+		});
+
+		it("stops trying again while the phone is offline", async () => {
+			const api = stubApi({ "POST /integration/redemptions/validate": preview(), "POST /integration/redemptions/checkout": UNREACHABLE });
+			await readyToRedeem();
+			await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+			await screen.findByText("Saved on this till");
+
+			jest.useFakeTimers();
+			try {
+				await act(async (): Promise<void> => {
+					setNetworkState(OFFLINE_STATE);
+					await Promise.resolve();
+				});
+				await act(async (): Promise<void> => {
+					setNetworkState(ONLINE_STATE);
+					await Promise.resolve();
+				});
+				await act(async (): Promise<void> => {
+					setNetworkState(OFFLINE_STATE);
+					await Promise.resolve();
+				});
+				const before = api.callsTo("POST /integration/redemptions/checkout").length;
+				await act(async (): Promise<void> => {
+					await jest.advanceTimersByTimeAsync(checkoutRetryDelayMs(Number.MAX_SAFE_INTEGER));
+				});
+				expect(api.callsTo("POST /integration/redemptions/checkout")).toHaveLength(before);
+			} finally {
+				jest.useRealTimers();
+			}
+		});
+
+		it("turns the saved notice into the receipt once its redemption is sent (seen on a phone, 2026-11-05)", async () => {
+			const answers: StubAnswer[] = [UNREACHABLE];
+			stubApi({
+				"POST /integration/redemptions/validate": preview(),
+				"POST /integration/redemptions/checkout": dynamic((call) => answers.shift() ?? receipt(2550, CheckoutBodySchema.parse(call.body).idempotencyKey)),
+			});
+			await readyToRedeem();
+			await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+			await screen.findByText("Saved on this till");
+
+			await fireEvent.press(screen.getByRole("button", { name: "Send now" }));
+
+			expect(await screen.findByText("Redeemed")).toBeOnTheScreen();
+			expect(screen.queryByText("Saved on this till")).toBeNull();
+			expect(screen.queryByText(/There's no connection/u)).toBeNull();
+			// What the till sent and got back is the send that went through, not the attempt with no connection.
+			const response = screen.getByTestId("till-checkout-exchange-response-body");
+			expect(response).not.toHaveTextContent(/Network request failed/u);
+			expect(response).toHaveTextContent(/"saleId"/u);
+		});
+
+		it("leaves the saved notice for the ready screen when its redemption is refused, the refusal listed", async () => {
+			const answers: StubAnswer[] = [UNREACHABLE, fail(409, "CLAIM_ALREADY_REDEEMED", "This reward was already redeemed")];
+			stubApi({
+				"POST /integration/redemptions/validate": preview(),
+				"POST /integration/redemptions/checkout": dynamic((call) => answers.shift() ?? receipt(2550, CheckoutBodySchema.parse(call.body).idempotencyKey)),
+			});
+			await readyToRedeem();
+			await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+			await screen.findByText("Saved on this till");
+
+			await fireEvent.press(screen.getByRole("button", { name: "Send now" }));
+
+			expect(await screen.findByText("Not redeemed: This reward was already redeemed")).toBeOnTheScreen();
+			expect(screen.queryByText("Saved on this till")).toBeNull();
+			expect(screen.getByRole("button", { name: "Check code" })).toBeOnTheScreen();
+		});
+
+		it("lists a kept checkout the API refused when sent, until the cashier dismisses it", async () => {
+			const answers: StubAnswer[] = [UNREACHABLE, fail(409, "CLAIM_ALREADY_REDEEMED", "This reward was already redeemed")];
+			stubApi({
+				"POST /integration/redemptions/validate": preview(),
+				"POST /integration/redemptions/checkout": dynamic((call) => answers.shift() ?? receipt(2550, CheckoutBodySchema.parse(call.body).idempotencyKey)),
+			});
+			await readyToRedeem();
+			await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+			await screen.findByText("Saved on this till");
+
+			await fireEvent.press(screen.getByRole("button", { name: "Send now" }));
+
+			expect(await screen.findByText("Not redeemed: This reward was already redeemed")).toBeOnTheScreen();
+			await fireEvent.press(screen.getByRole("button", { name: "Dismiss Free flat white" }));
+			await waitFor(() => {
+				expect(screen.queryByTestId("till-checkout-queue")).toBeNull();
+			});
+		});
+
+		it("never keeps a checkout the API answered: its refusal shows at once", async () => {
+			stubApi({
+				"POST /integration/redemptions/validate": preview(),
+				"POST /integration/redemptions/checkout": fail(422, "MIN_SPEND_NOT_MET", "The bill is under the minimum spend"),
+			});
+			await readyToRedeem();
+			await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+
+			expect(await screen.findByText("The bill is under the minimum spend")).toBeOnTheScreen();
+			expect(screen.queryByText("Saved on this till")).toBeNull();
+			expect(storedQueue()).toStrictEqual([]);
+		});
+
+		it("keeps no more than it can hold, and says so", async () => {
+			const full: readonly QueuedCheckout[] = Array.from({ length: MAX_QUEUED_CHECKOUTS }, (_unused: undefined, index: number): QueuedCheckout => ({
+				request: { idempotencyKey: `0a1b2c3d-4e5f-4a6b-8c7d-00000000000${String(index)}`, billTotalMinor: 1000, currency: "MYR", codes: [{ token: TOKEN }] },
+				rewardTitle: "Free flat white",
+				queuedAtMs: CLAIM_EXPIRES_AT,
+				refusal: "Already used",
+			}));
+			memorySecureStore.seed(SECURE_STORE_ENTRIES.tillCheckoutQueue.key, JSON.stringify(serializeCheckoutQueue(full)));
+			stubApi({ "POST /integration/redemptions/validate": preview(), "POST /integration/redemptions/checkout": UNREACHABLE });
+			await readyToRedeem();
+			await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+
+			expect(
+				await screen.findByText(`This till already holds ${String(MAX_QUEUED_CHECKOUTS)} redemptions waiting for the connection. Reconnect before redeeming more.`),
+			).toBeOnTheScreen();
+		});
 	});
 });

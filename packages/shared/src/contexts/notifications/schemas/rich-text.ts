@@ -122,8 +122,12 @@ export interface RichTextHorizontalRule extends RichTextJsonObject {
 
 export interface RichTextImage extends RichTextJsonObject {
 	readonly type: "image";
-	/** A scanned file from the files context, never an external URL. */
-	readonly attrs: { readonly fileId: string; readonly alt: string };
+	/**
+	 * A scanned file from the files context, never an external URL. `src` is filled by the SERVER in what it
+	 * answers (the file's public address); a request carrying one is refused, so no one can point a broadcast
+	 * at an outside image.
+	 */
+	readonly attrs: { readonly fileId: string; readonly alt: string; readonly src?: string | undefined };
 }
 
 export interface RichTextCallToAction extends RichTextJsonObject {
@@ -182,7 +186,10 @@ function richTextBlockSchema(closure: Closure): z.ZodType<RichTextBlock> {
 	});
 	const imageSchema: z.ZodType<RichTextImage> = richNode(closure, {
 		type: z.literal("image"),
-		attrs: richNode(closure, { fileId: z.uuid(), alt: z.string().max(IMAGE_ALT_MAX_LENGTH) }),
+		attrs:
+			closure === "request"
+				? richNode(closure, { fileId: z.uuid(), alt: z.string().max(IMAGE_ALT_MAX_LENGTH) })
+				: richNode(closure, { fileId: z.uuid(), alt: z.string().max(IMAGE_ALT_MAX_LENGTH), src: z.url({ protocol: /^https?$/u }).optional() }),
 	});
 	const callToActionSchema: z.ZodType<RichTextCallToAction> = richNode(closure, {
 		type: z.literal("callToAction"),

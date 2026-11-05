@@ -133,6 +133,8 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/audit-logs", needs(PERMISSION.AUDIT_LOG.LIST)],
 	["/audit-logs/[id]", needsAll(PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST)],
 	["/audit-logs/changes/[id]", needsAll(PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST)],
+	["/webhooks/received", needs(PERMISSION.AUDIT_LOG.LIST)],
+	["/webhooks/received/[id]", needs(PERMISSION.AUDIT_LOG.READ)],
 	["/catalog/products", needs(PERMISSION.PRODUCT.LIST)],
 	["/catalog/products/new", needsAll(PERMISSION.PRODUCT.CREATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ)],
 	["/catalog/products/[id]", needs(PERMISSION.PRODUCT.READ)],
@@ -166,9 +168,17 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	// Rate limiting and the distributed cache (ADR 071, 072).
 	["/operations/rate-limits", needs(PERMISSION.RATE_LIMIT.LIST)],
 	["/operations/cache", needs(PERMISSION.CACHE.READ)],
+	// Background job queues (enhancement 4.4).
+	["/operations/queues", needs(PERMISSION.BACKGROUND_JOB.LIST)],
+	// The public status page's incidents (enhancement 4.5).
+	["/operations/status", needs(PERMISSION.STATUS_INCIDENT.LIST)],
+	["/operations/status/[id]", needs(PERMISSION.STATUS_INCIDENT.LIST)],
+	["/operations/status/new", needs(PERMISSION.STATUS_INCIDENT.CREATE)],
 	["/rewards/review", needs(PERMISSION.REWARD.APPROVE)],
 	["/rewards/review/[id]", needs(PERMISSION.REWARD.APPROVE)],
 	["/settings/access", needs(PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ)],
+	// Runtime feature flags (enhancement 5.6).
+	["/settings/feature-flags", needs(PERMISSION.FEATURE_FLAG.LIST)],
 ]);
 
 const SAMPLE_PARAM = "sample-id";

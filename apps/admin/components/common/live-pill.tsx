@@ -13,11 +13,11 @@ export interface LivePillProps {
  */
 export function LivePill({ state, openTitle }: LivePillProps): React.JSX.Element {
 	const meta: Readonly<Record<LiveState, { readonly label: string; readonly dot: string; readonly text: string; readonly title: string }>> = {
-		open: { label: "Live", dot: "bg-success", text: "text-success", title: openTitle },
+		open: { label: "Live", dot: "bg-success", text: "text-success-foreground", title: openTitle },
 		connecting: {
 			label: "Connecting…",
 			dot: "bg-warning",
-			text: "text-warning",
+			text: "text-warning-foreground",
 			title: "Connecting to the live stream — updates resume automatically once connected.",
 		},
 		closed: {

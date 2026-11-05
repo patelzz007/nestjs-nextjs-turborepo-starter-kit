@@ -44,6 +44,7 @@ const PROFILE: OwnProfile = {
 	email: "ali@example.com",
 	fullName: "Ali Hassan",
 	avatar: null,
+	language: "en",
 	version: 1,
 	createdAt: epochMs(1_788_000_000_000),
 	updatedAt: epochMs(1_788_000_000_000),

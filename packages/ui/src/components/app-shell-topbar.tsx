@@ -17,8 +17,6 @@ export interface AppShellTopbarSearchProps {
 	readonly onOpen: () => void;
 	/** Per-usage accessible name of the icon-only trigger; defaults to the `appShellTopbarSearch` family's `mobileAriaLabel`. */
 	readonly mobileAriaLabel?: string;
-	/** Per-usage accessible name of the wide trigger; defaults to the `appShellTopbarSearch` family's `desktopAriaLabel`. */
-	readonly desktopAriaLabel?: string;
 }
 
 export interface AppShellTopbarProps {
@@ -32,6 +30,9 @@ export interface AppShellTopbarProps {
 
 /** The key that (with ⌘ / Ctrl) opens the command palette. */
 const COMMAND_PALETTE_SHORTCUT_KEY = "k";
+
+/** The same shortcut for assistive tech (`aria-keyshortcuts`): what the listener below accepts. */
+export const SEARCH_SHORTCUTS = "Meta+K Control+K";
 
 /** Registers ⌘K / Ctrl+K while the palette is closed. */
 export function useCommandPaletteShortcut(commandOpen: boolean, onOpen: () => void): void {
@@ -61,7 +62,7 @@ const TOPBAR_KBD_CLASS =
  * the ref reaches it — so the cluster's flex layout is unchanged.
  */
 export const AppShellTopbarSearch = React.forwardRef<HTMLDivElement, AppShellTopbarSearchProps>(function AppShellTopbarSearch(
-	{ placeholder, onOpen, mobileAriaLabel, desktopAriaLabel },
+	{ placeholder, onOpen, mobileAriaLabel },
 	ref,
 ): React.JSX.Element {
 	const labels = useUiKitLabels("appShellTopbarSearch");
@@ -82,10 +83,12 @@ export const AppShellTopbarSearch = React.forwardRef<HTMLDivElement, AppShellTop
 				size="sm"
 				onClick={onOpen}
 				className="hidden h-9 w-40 min-w-0 shrink gap-2 rounded-lg border-border/60 bg-muted/40 px-3 font-normal text-muted-foreground shadow-xs hover:border-border/80 hover:bg-muted/60 md:flex lg:w-44 xl:w-56 2xl:w-64"
-				aria-label={desktopAriaLabel ?? labels.desktopAriaLabel}>
-				<Search className="size-4 shrink-0" />
+				aria-keyshortcuts={SEARCH_SHORTCUTS}>
+				{/* Named by its visible placeholder (WCAG 2.5.3: the name contains what is shown); the shortcut is
+				    announced through aria-keyshortcuts, not read out as "command K". */}
+				<Search className="size-4 shrink-0" aria-hidden="true" />
 				<span className="truncate">{placeholder}</span>
-				<span className="ms-auto flex shrink-0 items-center gap-1">
+				<span className="ms-auto flex shrink-0 items-center gap-1" aria-hidden="true">
 					<kbd className={TOPBAR_KBD_CLASS}>⌘</kbd>
 					<kbd className={TOPBAR_KBD_CLASS}>K</kbd>
 				</span>

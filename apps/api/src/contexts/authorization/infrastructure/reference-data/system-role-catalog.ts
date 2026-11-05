@@ -77,7 +77,10 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "BROADCAST", ["LIST", "READ", "CREATE", "UPDATE", "PUBLISH", "APPROVE", "DELETE"]) ||
 			matchesAny(p, "BROADCAST_REPORT", ["LIST", "UPDATE"]) ||
 			matchesAny(p, "RATE_LIMIT", ["LIST"]) ||
-			matches(p, "READ", "CACHE"),
+			matches(p, "READ", "CACHE") ||
+			matches(p, "LIST", "BACKGROUND_JOB") ||
+			matchesAny(p, "STATUS_INCIDENT", ["LIST", "CREATE", "UPDATE"]) ||
+			matches(p, "LIST", "FEATURE_FLAG"),
 	},
 	{
 		name: PLATFORM_DEVELOPER_ROLE_NAME,
@@ -88,6 +91,9 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "LOAD_TEST", ["CREATE", "READ", "UPDATE", "LIST"]) ||
 			matchesAny(p, "RATE_LIMIT", ["LIST", "UPDATE"]) ||
 			matchesAny(p, "CACHE", ["READ", "DELETE"]) ||
+			matchesAny(p, "BACKGROUND_JOB", ["LIST", "UPDATE", "DELETE"]) ||
+			matchesAny(p, "STATUS_INCIDENT", ["LIST", "CREATE", "UPDATE"]) ||
+			matchesAny(p, "FEATURE_FLAG", ["LIST", "UPDATE"]) ||
 			matches(p, "LIST", "NOTIFICATION"),
 	},
 	{

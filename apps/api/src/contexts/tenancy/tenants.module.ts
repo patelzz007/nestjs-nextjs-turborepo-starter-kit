@@ -1,4 +1,6 @@
 import { Inject, Module, type OnModuleInit } from "@nestjs/common";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { tenancyEraser, tenantOwnershipBlocker } from "./infrastructure/personal-data/tenancy-erasure";
 import type { Prisma } from "@prisma/client";
 
 import { TypedConfigService } from "../../config/typed-config.service";
@@ -252,10 +254,14 @@ export class TenantsModule implements OnModuleInit {
 	public constructor(
 		@Inject(InTransactionEventRegistry) private readonly inTransactionHandlers: InTransactionEventRegistry<Prisma.TransactionClient>,
 		@Inject(TENANTS_SCOPE_FACTORY) private readonly scopes: TenantsScopeFactory,
+		private readonly erasure: PersonalDataErasureRegistry,
+		private readonly erasureTransactions: TenantTransactionService,
 	) {}
 
 	/** KYB review follows the files context's scan verdicts, inside the verdict's own transaction (mechanism 1). Registered exactly once. */
 	public onModuleInit(): void {
+		this.erasure.registerEraser(tenancyEraser(this.erasureTransactions));
+		this.erasure.registerBlocker(tenantOwnershipBlocker(this.erasureTransactions));
 		this.inTransactionHandlers.register(bindInTransactionHandler(new ReconcileKybOnFileVerdict(), this.scopes));
 	}
 }

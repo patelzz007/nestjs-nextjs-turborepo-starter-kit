@@ -77,6 +77,8 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 	],
 	[ROUTES.emails.log, [{ endpoint: "GET /notifications/email-log", permission: PERMISSION.EMAIL.LIST }]],
 	[ROUTES.auditLogs.list, [{ endpoint: "GET /admin/audit-trail", permission: PERMISSION.AUDIT_LOG.LIST }]],
+	[ROUTES.webhooks.received, [{ endpoint: "GET /admin/webhooks/received", permission: PERMISSION.AUDIT_LOG.LIST }]],
+	[ROUTE_PATTERNS.webhooks.receivedDetail, [{ endpoint: "GET /admin/webhooks/received/:id", permission: PERMISSION.AUDIT_LOG.READ }]],
 	[
 		ROUTE_PATTERNS.auditLogs.detail,
 		[

@@ -78,13 +78,9 @@ const TAB_LABEL_WIDTH: Readonly<Record<RewardStatusGroupId, string>> = { live: "
 /** Every tab's height: 44px touch targets on phones, the toolbar's 40px from `sm` up. */
 const TAB_HEIGHT_CLASS = "h-11 sm:h-10";
 
-/** "Live, 3 rewards" — what a screen reader says for a tab (the visual count is a bare number). */
-function tabAccessibleName(group: RewardStatusGroup): string {
-	return `${group.title}, ${rewardCountLabel(group.count)}`;
-}
-
-function rewardCountLabel(count: number): string {
-	return `${formatCount(count, PLATFORM_DISPLAY_REGION.locale)} reward${count === 1 ? "" : "s"}`;
+/** The word a screen reader says after a tab's count ("Live 3 rewards"): the visual count is a bare number. */
+function rewardsWord(count: number): string {
+	return count === 1 ? "reward" : "rewards";
 }
 
 export interface MerchantRewardsCatalogSkeletonProps {
@@ -305,7 +301,6 @@ function RewardStatusTab({ group, onWarm }: RewardStatusTabProps): React.JSX.Ele
 			value={group.id}
 			onPointerEnter={handleWarm}
 			onFocus={handleWarm}
-			aria-label={tabAccessibleName(group)}
 			data-group={group.id}
 			className={cn(
 				"group/tab flex-none gap-2 rounded-md px-3 font-medium hover:bg-muted/60 focus-visible:ring-inset",
@@ -313,7 +308,9 @@ function RewardStatusTab({ group, onWarm }: RewardStatusTabProps): React.JSX.Ele
 				"after:rounded-full after:bg-primary group-data-horizontal/tabs:after:inset-x-2 group-data-horizontal/tabs:after:bottom-0",
 			)}>
 			<span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT_CLASS[group.tone])} />
-			{group.title}
+			{/* Its name is what it shows, "Live 3", then "rewards", as one phrase for screen readers (WCAG 2.5.3, label
+			    in name): the shown words stay in the name, with the spaces a reader keeps. */}
+			<span aria-hidden="true">{group.title}</span>
 			<span
 				aria-hidden="true"
 				className={cn(
@@ -323,6 +320,7 @@ function RewardStatusTab({ group, onWarm }: RewardStatusTabProps): React.JSX.Ele
 				)}>
 				{formatCount(count, PLATFORM_DISPLAY_REGION.locale)}
 			</span>
+			<span className="sr-only">{`${group.title} ${formatCount(count, PLATFORM_DISPLAY_REGION.locale)} ${rewardsWord(count)}`}</span>
 		</TabsTrigger>
 	);
 }

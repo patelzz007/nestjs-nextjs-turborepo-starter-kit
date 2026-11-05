@@ -33,6 +33,47 @@ describe("TimelineRailItem", () => {
 		expect(screen.getByTestId("last-content")).toHaveProp("className", expect.not.stringContaining("pb-5"));
 	});
 
+	it("draws a connector below each node but the last, and never one above the first (ReUI's timeline)", async () => {
+		await render(
+			<>
+				<TimelineRailItem node={<TimelineRailIcon icon={TagIcon} />} testID="first">
+					<Text>Opened</Text>
+				</TimelineRailItem>
+				<TimelineRailItem node={<TimelineRailIcon icon={TagIcon} />} isLast testID="last">
+					<Text>Merged</Text>
+				</TimelineRailItem>
+			</>,
+		);
+
+		expect(screen.getByTestId("first-connector", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.queryByTestId("last-connector", { includeHiddenElements: true })).toBeNull();
+		// The connector comes after the node in its column: it starts below the node, so none shows above it.
+		const column = screen.getByTestId("first-connector", { includeHiddenElements: true }).parent;
+		expect(column?.children.at(-1)).toBe(screen.getByTestId("first-connector", { includeHiddenElements: true }));
+	});
+
+	it("centres the node on a list row, with the connector halves joining it to its neighbours only", async () => {
+		await render(
+			<>
+				<TimelineRailItem node={<TimelineRailIcon icon={TagIcon} testID="first-node" />} align="center" isFirst testID="first">
+					<Text>fix: the first commit</Text>
+				</TimelineRailItem>
+				<TimelineRailItem node={<TimelineRailIcon icon={TagIcon} />} align="center" isLast testID="last">
+					<Text>feat: the last commit</Text>
+				</TimelineRailItem>
+			</>,
+		);
+
+		const column = screen.getByTestId("first-node", { includeHiddenElements: true }).parent;
+		expect(column?.props.className).toContain("justify-center");
+		// Nothing above the first node, nothing below the last; the halves between them are drawn.
+		expect(screen.getByTestId("first-connector-above", { includeHiddenElements: true })).toHaveProp("className", expect.stringContaining("bg-transparent"));
+		expect(screen.getByTestId("first-connector", { includeHiddenElements: true })).toHaveProp("className", expect.stringContaining("bg-border"));
+		expect(screen.getByTestId("last-connector-above", { includeHiddenElements: true })).toHaveProp("className", expect.stringContaining("bg-border"));
+		expect(screen.getByTestId("last-connector", { includeHiddenElements: true })).toHaveProp("className", expect.stringContaining("bg-transparent"));
+		expect(screen.getByTestId("first-content")).toHaveProp("className", expect.stringContaining("pb-0"));
+	});
+
 	it("centres a compact entry on its node, and has a dense size", async () => {
 		await render(
 			<TimelineRailItem node={<TimelineRailIcon icon={TagIcon} />} compact size="sm" testID="entry">

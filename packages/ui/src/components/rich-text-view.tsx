@@ -10,9 +10,8 @@ import * as React from "react";
 // button; the call-to-action shows its real domain beside the button.
 
 export interface RichTextViewProps {
+	/** A body as the API answers it: each picture carries its address (`src`); one without isn't shown. */
 	readonly document: RichTextDocument;
-	/** The address of an image the body holds (a Files id); undefined hides the image. */
-	readonly imageUrl?: ((fileId: string) => string | undefined) | undefined;
 	readonly className?: string;
 }
 
@@ -66,22 +65,21 @@ function plainText(inlines: readonly RichTextInline[]): string {
 
 interface BlockProps {
 	readonly block: RichTextBlock;
-	readonly imageUrl: ((fileId: string) => string | undefined) | undefined;
 }
 
-function ListItems({ items, imageUrl }: { readonly items: readonly RichTextListItem[]; readonly imageUrl: BlockProps["imageUrl"] }): React.JSX.Element {
+function ListItems({ items }: { readonly items: readonly RichTextListItem[] }): React.JSX.Element {
 	return (
 		<>
 			{positioned(items, "li").map(({ id, item }): React.JSX.Element => (
 				<li key={id} className="[&>*+*]:mt-1">
-					<Blocks blocks={item.content} imageUrl={imageUrl} />
+					<Blocks blocks={item.content} />
 				</li>
 			))}
 		</>
 	);
 }
 
-function TableRows({ rows, imageUrl }: { readonly rows: readonly RichTextTableRow[]; readonly imageUrl: BlockProps["imageUrl"] }): React.JSX.Element {
+function TableRows({ rows }: { readonly rows: readonly RichTextTableRow[] }): React.JSX.Element {
 	return (
 		<>
 			{positioned(rows, "tr").map(({ id: rowId, item: row }): React.JSX.Element => (
@@ -93,7 +91,7 @@ function TableRows({ rows, imageUrl }: { readonly rows: readonly RichTextTableRo
 								key={cellId}
 								scope={cell.type === "tableHeader" ? "col" : undefined}
 								className={cn("border border-border px-2 py-1 align-top", cell.type === "tableHeader" && "bg-muted text-start font-medium")}>
-								<Blocks blocks={cell.content} imageUrl={imageUrl} />
+								<Blocks blocks={cell.content} />
 							</Cell>
 						);
 					})}
@@ -103,7 +101,7 @@ function TableRows({ rows, imageUrl }: { readonly rows: readonly RichTextTableRo
 	);
 }
 
-function Block({ block, imageUrl }: BlockProps): React.JSX.Element | null {
+function Block({ block }: BlockProps): React.JSX.Element | null {
 	switch (block.type) {
 		case "paragraph":
 			return (
@@ -137,25 +135,25 @@ function Block({ block, imageUrl }: BlockProps): React.JSX.Element | null {
 		case "bulletList":
 			return (
 				<ul className="list-disc ps-5">
-					<ListItems items={block.content} imageUrl={imageUrl} />
+					<ListItems items={block.content} />
 				</ul>
 			);
 		case "orderedList":
 			return (
 				<ol className="list-decimal ps-5" start={block.attrs?.start}>
-					<ListItems items={block.content} imageUrl={imageUrl} />
+					<ListItems items={block.content} />
 				</ol>
 			);
 		case "blockquote":
 			return (
 				<blockquote className="border-s-2 border-border ps-3 text-muted-foreground">
-					<Blocks blocks={block.content} imageUrl={imageUrl} />
+					<Blocks blocks={block.content} />
 				</blockquote>
 			);
 		case "horizontalRule":
 			return <hr className="border-border" />;
 		case "image": {
-			const src = imageUrl?.(block.attrs.fileId);
+			const src = block.attrs.src;
 			return src === undefined ? null : <img src={src} alt={block.attrs.alt} className="h-auto max-w-full rounded-md" loading="lazy" />;
 		}
 		case "callToAction":
@@ -176,7 +174,7 @@ function Block({ block, imageUrl }: BlockProps): React.JSX.Element | null {
 				<div className="overflow-x-auto" role="region" aria-label="Table">
 					<table className="w-full border-collapse text-sm">
 						<tbody>
-							<TableRows rows={block.content} imageUrl={imageUrl} />
+							<TableRows rows={block.content} />
 						</tbody>
 					</table>
 				</div>
@@ -184,21 +182,21 @@ function Block({ block, imageUrl }: BlockProps): React.JSX.Element | null {
 	}
 }
 
-function Blocks({ blocks, imageUrl }: { readonly blocks: readonly RichTextBlock[]; readonly imageUrl: BlockProps["imageUrl"] }): React.JSX.Element {
+function Blocks({ blocks }: { readonly blocks: readonly RichTextBlock[] }): React.JSX.Element {
 	return (
 		<>
 			{positioned(blocks, "b").map(({ id, item }): React.JSX.Element => (
-				<Block key={id} block={item} imageUrl={imageUrl} />
+				<Block key={id} block={item} />
 			))}
 		</>
 	);
 }
 
 /** A broadcast body as customers read it in the app. */
-export function RichTextView({ document, imageUrl, className }: RichTextViewProps): React.JSX.Element {
+export function RichTextView({ document, className }: RichTextViewProps): React.JSX.Element {
 	return (
 		<div data-slot="rich-text-view" className={cn("text-sm leading-relaxed text-foreground [&>*+*]:mt-3", className)}>
-			<Blocks blocks={document.content} imageUrl={imageUrl} />
+			<Blocks blocks={document.content} />
 		</div>
 	);
 }

@@ -10,9 +10,10 @@ Shared record for every app in this monorepo. Each app adds only what differs in
 
 web
 
-The Next.js apps (web, admin, merchant) and the Astro docs site are web. The Expo app
-(`apps/mobile`, iOS + Android) uses **one shared design language** on both operating systems,
-matching the web apps' brand, not per-OS conventions (confirmed 2026-10-27).
+The Next.js apps (web, admin, merchant) and the TanStack Start docs site are web. The Expo app
+(`apps/mobile`, iOS + Android) uses **one shared design language** on both operating systems, not
+per-OS conventions (confirmed 2026-10-27); since 2026-11-05 it is the app's own generic system,
+not the web apps' brand (ADR 079, `apps/mobile/PRODUCT.md`).
 
 ## Users
 

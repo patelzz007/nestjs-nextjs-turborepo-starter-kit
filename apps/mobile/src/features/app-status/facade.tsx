@@ -31,7 +31,7 @@ import { useNetworkReading } from "../../lib/use-network-reading";
 import { useNow } from "../../lib/use-now";
 import { useRisingEdge } from "../../lib/use-rising-edge";
 import { useReadyRuntime } from "../../runtime/runtime-context";
-import { connectivityOf, sessionIndicatorOf, type SessionIndicator } from "./indicators";
+import { connectivityOf, sessionIndicatorOf, type Connectivity, type SessionIndicator } from "./indicators";
 import { apiPingProbe } from "./network-probe";
 import { didTokenRotate } from "./session-countdown";
 
@@ -107,6 +107,24 @@ export function AppStatusProvider({ children }: AppStatusProviderProps): React.J
 	);
 }
 
+/**
+ * How long an automatic connection test may wait for the JS thread to be idle before it runs anyway, in ms.
+ * Startup settles well within it; a phone that never idles still gets a reading.
+ */
+export const NETWORK_TEST_IDLE_TIMEOUT_MS = 5_000;
+
+/**
+ * Runs an automatic connection test once the JS thread is idle. A round trip is timed on this thread, so a
+ * test fired while the app is still starting (restoring the session, its first requests, the first render)
+ * counted that work as latency: the ping read badly after every reload until a manual re-test.
+ */
+export function whenJsThreadIdle(run: () => void): () => void {
+	const handle = requestIdleCallback(run, { timeout: NETWORK_TEST_IDLE_TIMEOUT_MS });
+	return (): void => {
+		cancelIdleCallback(handle);
+	};
+}
+
 /** The connection test's monitor for this provider's lifetime, fed the device's connectivity and foreground state. */
 function useNetworkStatusMonitor(apiBaseUrl: string, isOnline: boolean, isActive: boolean): NetworkStatus {
 	const [monitor] = React.useState<NetworkQualityMonitor>(
@@ -117,6 +135,7 @@ function useNetworkStatusMonitor(apiBaseUrl: string, isOnline: boolean, isActive
 				clock: (): number => Date.now(),
 				online: isOnline,
 				visible: isActive,
+				scheduleTest: whenJsThreadIdle,
 			}),
 	);
 	React.useEffect((): (() => void) => {
@@ -162,6 +181,14 @@ export class MissingAppStatusProviderError extends Error {
 		super("The app status is missing — render inside AppStatusProvider (src/app/(app)/_layout.tsx)");
 		this.name = "MissingAppStatusProviderError";
 	}
+}
+
+/**
+ * Whether the device is online, from its own network reading: for a screen that only needs to know it can't reach
+ * the API (the inbox read from memory, the till's queue). Needs no provider; the pills' quality test is not run.
+ */
+export function useConnectivity(): Connectivity {
+	return connectivityOf(useNetworkReading());
 }
 
 export function useNetworkStatus(): NetworkStatus {

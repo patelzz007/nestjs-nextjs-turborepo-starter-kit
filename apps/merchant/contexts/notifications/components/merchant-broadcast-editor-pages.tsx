@@ -195,33 +195,61 @@ interface MerchantEditBroadcastFormProps {
 	readonly allowance: BroadcastWeeklyAllowance | undefined;
 }
 
-function MerchantEditBroadcastForm({ tenantSlug, broadcast, timeZone, allowance }: MerchantEditBroadcastFormProps): React.JSX.Element {
+/** `items` in runs of at most `size`, in order. */
+export function chunksOf<TItem>(items: readonly TItem[], size: number): readonly (readonly TItem[])[] {
+	return Array.from({ length: Math.ceil(items.length / size) }, (_unused, index): readonly TItem[] => items.slice(index * size, (index + 1) * size));
+}
+
+/** Looks up one page of a draft's picked people by id and hands their names up (renders nothing). */
+function PickedCustomersLookup({
+	tenantSlug,
+	ids,
+	chunk,
+	onFound,
+}: {
+	readonly tenantSlug: string;
+	readonly ids: readonly string[];
+	readonly chunk: number;
+	readonly onFound: (chunk: number, options: readonly CustomerPickerOption[]) => void;
+}): null {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
-	const { save, isSaving, savingIntent } = useSaveBroadcast(tenantSlug, broadcast.id);
-	const [initialValues] = React.useState((): BroadcastComposerValues => broadcastComposerValuesOf(broadcast, timeZone, format(new Date(), "yyyy-MM-dd")));
-	// The picked people's names, from the largest page of the store's customers (anyone beyond it shows as "Customer" until found by search).
-	const customersQuery = api.tenantNotifications.broadcastCustomers.useQuery(
-		{ tenantSlug, page: 1, limit: LIST_MAX_LIMIT },
-		{ enabled: initialValues.customerIds.length > 0 },
-	);
-	const initialCustomers = React.useMemo(
-		(): readonly CustomerPickerOption[] =>
-			(customersQuery.data?.data ?? [])
-				.filter((customer) => initialValues.customerIds.includes(customer.userId))
-				.map((customer): CustomerPickerOption => ({
+	const query = api.tenantNotifications.broadcastCustomers.useQuery({ tenantSlug, page: 1, limit: LIST_MAX_LIMIT, ids: [...ids] });
+	const customers = query.data?.data;
+	React.useEffect((): void => {
+		if (customers !== undefined) {
+			onFound(
+				chunk,
+				customers.map((customer): CustomerPickerOption => ({
 					userId: customer.userId,
 					fullName: customer.fullName,
 					maskedEmail: customer.maskedEmail,
 					detail: "",
 					unavailableReason: null,
 				})),
-		[customersQuery.data, initialValues.customerIds],
-	);
+			);
+		}
+	}, [chunk, customers, onFound]);
+	return null;
+}
+
+function MerchantEditBroadcastForm({ tenantSlug, broadcast, timeZone, allowance }: MerchantEditBroadcastFormProps): React.JSX.Element {
+	const { can } = useAuthorization();
+	const { save, isSaving, savingIntent } = useSaveBroadcast(tenantSlug, broadcast.id);
+	const [initialValues] = React.useState((): BroadcastComposerValues => broadcastComposerValuesOf(broadcast, timeZone, format(new Date(), "yyyy-MM-dd")));
+	// The picked people's names, looked up by id one page at a time (enhancement 5.5): every picked person is named.
+	const chunks = React.useMemo((): readonly (readonly string[])[] => chunksOf(initialValues.customerIds, LIST_MAX_LIMIT), [initialValues.customerIds]);
+	const [found, setFound] = React.useState<ReadonlyMap<number, readonly CustomerPickerOption[]>>(new Map());
+	const handleFound = React.useCallback((chunk: number, options: readonly CustomerPickerOption[]): void => {
+		setFound((current) => new Map(current).set(chunk, options));
+	}, []);
+	const initialCustomers = React.useMemo((): readonly CustomerPickerOption[] => [...found.values()].flat(), [found]);
 	const detailHref = tenantRoutes(tenantSlug).broadcasts.detail(broadcast.id);
 
 	return (
 		<div className="flex flex-col gap-6">
+			{chunks.map((ids, chunk): React.JSX.Element => (
+				<PickedCustomersLookup key={ids.join(",")} tenantSlug={tenantSlug} ids={ids} chunk={chunk} onFound={handleFound} />
+			))}
 			<MerchantPageHeader title="Edit broadcast" description="Nothing goes out until you send it." />
 			<MerchantBroadcastComposer
 				tenantSlug={tenantSlug}

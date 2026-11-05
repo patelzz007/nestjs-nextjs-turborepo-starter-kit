@@ -80,7 +80,14 @@ describe("Reference data sync (integration, scratch database)", () => {
 		const report = await runSync();
 
 		expect(report.totalChanges).toBeGreaterThan(0);
-		expect(report.sections.map((entry) => entry.section)).toEqual(["permissions", "system-roles", "role-permissions", "platform-capabilities", "merchant-capabilities"]);
+		expect(report.sections.map((entry) => entry.section)).toEqual([
+			"permissions",
+			"system-roles",
+			"role-permissions",
+			"owner-role-copies",
+			"platform-capabilities",
+			"merchant-capabilities",
+		]);
 		expect(await count('SELECT count(*)::int AS n FROM "Permission"')).toBe(getPermissionDefinitions().length);
 		expect(await count(`SELECT count(*)::int AS n FROM "Role" WHERE "isSystem" AND NOT "isDeleted"`)).toBe(SYSTEM_ROLE_CATALOG.length);
 		expect(await count(`SELECT count(*)::int AS n FROM "CapabilityDefinition" WHERE scope = 'MERCHANT' AND "permissionId" IS NULL`)).toBe(MERCHANT_CAPABILITY_CATALOG.length);
@@ -99,6 +106,30 @@ describe("Reference data sync (integration, scratch database)", () => {
 		for (const audit of audits) {
 			expect(audit).toMatchObject({ action: "REFERENCE_DATA_SYNCED", actorKind: "SYSTEM_OPERATION", actorId: REFERENCE_DATA_SYNC_OPERATION });
 		}
+	});
+
+	it("gives every existing tenant's Owner a permission the templates gained, and leaves its Manager to the tenant", async () => {
+		const inserted = await pool.query(`INSERT INTO "Tenant" (id, slug, "displayName") VALUES (uuidv7(), 'owner-sync', 'Owner Sync') RETURNING id`);
+		const [{ id: tenantId }] = z.tuple([z.object({ id: z.string() })]).parse(inserted.rows);
+		// The tenant's copies as they were made before the templates gained their newest permissions: one grant each.
+		for (const templateKey of ["OWNER", "MANAGER"]) {
+			await pool.query(
+				`WITH copy AS (INSERT INTO "Role" (id, name, kind, "tenantId", "templateKey") VALUES (uuidv7(), $1, 'TENANT', $2, $3) RETURNING id)
+				 INSERT INTO "RolePermission" (id, "roleId", "permissionId")
+				 SELECT uuidv7(), copy.id, (SELECT id FROM "Permission" WHERE action = 'READ' AND resource = 'TENANT' AND scope = 'GLOBAL') FROM copy`,
+				[`${templateKey} copy`, tenantId, templateKey],
+			);
+		}
+		const grantsOf = (templateKey: string, kind: string): Promise<number> =>
+			count(
+				`SELECT count(*)::int AS n FROM "RolePermission" rp JOIN "Role" r ON r.id = rp."roleId" WHERE r.kind = '${kind}' AND r."templateKey" = '${templateKey}' AND NOT rp."isDeleted"${kind === "TENANT" ? ` AND r."tenantId" = '${tenantId}'` : ""}`,
+			);
+
+		const report = await runSync();
+
+		expect(report.sections.find((entry) => entry.section === "owner-role-copies")?.change.created).toBe((await grantsOf("OWNER", "TEMPLATE")) - 1);
+		expect(await grantsOf("OWNER", "TENANT")).toBe(await grantsOf("OWNER", "TEMPLATE"));
+		expect(await grantsOf("MANAGER", "TENANT")).toBe(1);
 	});
 
 	it("is idempotent: a second run reports zero changes and writes nothing at all", async () => {

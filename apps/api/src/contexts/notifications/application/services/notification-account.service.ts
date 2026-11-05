@@ -40,6 +40,7 @@ import type { NotificationsScope } from "../notifications-scope";
 import type { PushSender } from "../ports/channel-senders.port";
 import type { InAppSignalPort } from "../ports/in-app-signal.port";
 import type { PushTokenCipher } from "../ports/push-token-cipher.port";
+import { encryptInstallationId, pushAddressOf } from "./push-address";
 
 export const NOTIFICATIONS_INBOX_OPERATION = "notifications.inbox";
 export const NOTIFICATIONS_PREFERENCES_OPERATION = "notifications.preferences";
@@ -278,7 +279,17 @@ export class NotificationAccountService {
 			const store = scope.accountStore;
 			const existing = await store.findDeviceByTokenHash(tokenHash);
 			if (existing !== null && existing.userId === user.userId) {
-				await store.touchDevice(existing.id, { deviceSessionId: user.sessionId, surface: input.surface, deviceLabel: input.deviceLabel, appVersion: input.appVersion }, now);
+				await store.touchDevice(
+					existing.id,
+					{
+						deviceSessionId: user.sessionId,
+						surface: input.surface,
+						deviceLabel: input.deviceLabel,
+						appVersion: input.appVersion,
+						installationIdCiphertext: encryptInstallationId(this.cipher, input.installationId, existing.id),
+					},
+					now,
+				);
 				return existing.id;
 			}
 			if (existing !== null) {
@@ -299,6 +310,7 @@ export class NotificationAccountService {
 					surface: input.surface,
 					tokenCiphertext: this.cipher.encrypt(input.token, id),
 					tokenHash,
+					installationIdCiphertext: encryptInstallationId(this.cipher, input.installationId, id),
 					deviceLabel: input.deviceLabel,
 					appVersion: input.appVersion,
 				},
@@ -369,7 +381,7 @@ export class NotificationAccountService {
 			return Promise.all(active.map(async (device) => ({ device, badge: await scope.accountStore.unreadCount(userId, device.surface) })));
 		});
 		for (const { device, badge } of devices) {
-			await this.push.sendSilentSync({ platform: device.platform, token: this.cipher.decrypt(device.tokenCiphertext, device.id), deviceId: device.id, badge });
+			await this.push.sendSilentSync({ platform: device.platform, ...pushAddressOf(this.cipher, device), deviceId: device.id, badge });
 		}
 	}
 }

@@ -1,27 +1,11 @@
-import { BadRequestException, Controller, ForbiddenException, Get, Headers, Inject, Logger, Post, Req, ServiceUnavailableException } from "@nestjs/common";
-import { CommandBus } from "@nestjs/cqrs";
+import { Controller, Get, Inject, Post, Req } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
 import { ApiBody, ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { Resend } from "resend";
-import { z } from "zod";
 import type { FastifyRequest } from "fastify";
 
-import {
-	EmailWebhookInfoResponseSchema,
-	EmailWebhookReceivedResponseSchema,
-	NonEmptyStringSchema,
-	ResendDeliveryDetailSchema,
-	ResendWebhookEventSchema,
-	ResendWebhookHeadersSchema,
-	StringValueSchema,
-	type EmailLogStatus,
-	type EmailWebhookInfoResponse,
-	type EmailWebhookReceivedResponse,
-	type ResendWebhookEvent,
-} from "@workspace/shared";
+import { EmailWebhookInfoResponseSchema, EmailWebhookReceivedResponseSchema, type EmailWebhookInfoResponse, type EmailWebhookReceivedResponse } from "@workspace/shared";
 
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
-import { TypedConfigService } from "../../../../config/typed-config.service";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
 import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { SkipMutationIntent } from "../../../../platform/presentation/http/security/decorators/skip-mutation-intent.decorator";
@@ -29,75 +13,31 @@ import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { ApplyEmailDeliveryEventCommand } from "../../application/commands/apply-email-delivery-event/apply-email-delivery-event.command";
+import { inboundWebhookRequest } from "../../../webhooks/inbound/public-api";
 import { EMAIL_LOG_WRITE_OPERATION } from "../../application/notifications-scope";
-import type { DeliveryEventRecordResult } from "../../domain/repositories/email-log.repository";
-import { EMAIL_LOG_ID_TAG } from "../../domain/value-objects/email-log-id-tag.value-object";
+import { NOTIFICATION_WEBHOOK_RECEPTION } from "../../application/ports/notifications.tokens";
+import type { NotificationWebhookReception } from "../../application/services/notification-webhook-reception";
 import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
 
-/** Bound on the bounce / complaint reason stored as the row's `error` (the event column is VarChar(300)). */
-const DELIVERY_DETAIL_MAX_LENGTH = 300;
-/**
- * Event type → EmailLog status. Delivery events we don't track return
- * `undefined` and are ignored. A switch (not a Record) keeps the lookup
- * honest — a Record<string, …> would claim every key is known.
- *
- * The tracking events (`email.opened` / `email.clicked`) are deliberately NOT
- * here — open/click tracking was removed from the system, so they are
- * acknowledged and ignored (only delivery outcomes update the log).
- */
-function webhookStatusFor(eventType: string): EmailLogStatus | undefined {
-	switch (eventType) {
-		case "email.sent":
-			return "sent";
-		case "email.delivered":
-			return "delivered";
-		case "email.bounced":
-			return "bounced";
-		case "email.complained":
-			return "complained";
-		case "email.failed":
-			return "failed";
-		default:
-			return undefined;
-	}
-}
+const RECEIVED: EmailWebhookReceivedResponse = { received: true };
 
 /**
- * Receives Resend's delivery + tracking webhooks and updates the matching
- * `EmailLog` row:
+ * Receives Resend's delivery webhooks and updates the matching `EmailLog` row, through the shared inbound
+ * receiver (ADR 081): the signature (Standard Webhooks, `RESEND_WEBHOOK_SECRET`) is checked over the raw body,
+ * each `webhook-id` is applied once, and every request lands in the received-webhook log.
  *
- * - Delivery events (`email.delivered` / `email.bounced` / `email.complained`
- *   / `email.failed`) flip the row's `status`; bounce/complaint details are
- *   captured into `error` so the admin sees WHY it bounced.
- * - Tracking events (`email.opened` / `email.clicked`) are acknowledged and
- *   ignored — open/click tracking was deliberately removed from the system.
+ * - Delivery events (`email.delivered` / `email.bounced` / `email.complained` / `email.failed`) move the row's
+ *   status; bounce and complaint reasons become its `error`, so the admin sees WHY it bounced.
+ * - Tracking events (`email.opened` / `email.clicked`) are recorded and change nothing: open/click tracking
+ *   was deliberately removed from the system.
  *
- * The route is PUBLIC (Resend cannot send cookies) but the signature is
- * verified via `resend.webhooks.verify()` — requests without a valid
- * `RESEND_WEBHOOK_SECRET` signature get a 403. The POST runs as `email.log.write`
- * because `EmailLog` SELECT/UPDATE are bypass-only policies.
+ * The route is PUBLIC (Resend cannot send cookies); an unsigned request gets a 403, a server with no secret a
+ * 503 (so Resend retries). The POST runs as `email.log.write` because `EmailLog` SELECT/UPDATE are bypass-only.
  */
-/** The one CommandBus capability the webhook uses (the bus satisfies it). */
-export interface DeliveryEventDispatch {
-	execute(command: ApplyEmailDeliveryEventCommand): Promise<DeliveryEventRecordResult>;
-}
-
 @ApiTags("Email Webhook")
 @Controller("notifications/email-webhook")
 export class EmailWebhookController {
-	/** Resend SDK instance (signature verification); `null` when RESEND_API_KEY is unset. */
-	private readonly resend: Resend | null;
-
-	private readonly logger: Logger = new Logger(EmailWebhookController.name);
-
-	public constructor(
-		private readonly config: TypedConfigService,
-		@Inject(CommandBus) private readonly commandBus: DeliveryEventDispatch,
-	) {
-		const apiKey: string | null = this.config.email.resendApiKey;
-		this.resend = apiKey === null ? null : new Resend(apiKey);
-	}
+	public constructor(@Inject(NOTIFICATION_WEBHOOK_RECEPTION) private readonly reception: Pick<NotificationWebhookReception, "receiveResend">) {}
 
 	/**
 	 * Browsers (and accidental GETs) hit this and see a friendly explanation
@@ -186,146 +126,8 @@ export class EmailWebhookController {
 	})
 	// 200 (not 201) on purpose: Resend treats any 2xx as delivered, and the route has always answered 200.
 	@ZodResponse(EmailWebhookReceivedResponseSchema, { description: "Webhook accepted" })
-	public async receive(
-		@Req() req: RawBodyRequest<FastifyRequest>,
-		@Headers() headers: Record<string, string | undefined>,
-		@CurrentActor({ allowAnonymous: true }) actor: ActorContext,
-	): Promise<EmailWebhookReceivedResponse> {
-		const secret: string | null = this.config.email.resendWebhookSecret;
-		const resend: Resend | null = this.resend;
-		if (secret === null || resend === null) {
-			// Not configured: the event cannot be verified, so it must not be
-			// acknowledged either — 503 makes Resend retry it once the secret is
-			// set, instead of the delivery outcome being silently lost.
-			this.logger.error("Resend webhook received but RESEND_WEBHOOK_SECRET / RESEND_API_KEY is not configured — answered 503 so Resend retries");
-			throw new ServiceUnavailableException("The email delivery webhook is not configured on this server (RESEND_WEBHOOK_SECRET / RESEND_API_KEY).");
-		}
-
-		const rawBody: string = this.readRawBody(req);
-
-		const readWebhookHeader = (name: string): string | undefined => {
-			const direct = NonEmptyStringSchema.safeParse(headers[name]);
-			if (direct.success) {
-				return direct.data;
-			}
-			const svixName: string = name.replace("webhook-", "svix-");
-			const svix = NonEmptyStringSchema.safeParse(headers[svixName]);
-			return svix.success ? svix.data : undefined;
-		};
-
-		const parsedHeaders = ResendWebhookHeadersSchema.safeParse({
-			id: readWebhookHeader("webhook-id"),
-			timestamp: readWebhookHeader("webhook-timestamp"),
-			signature: readWebhookHeader("webhook-signature"),
-		});
-		if (!parsedHeaders.success) {
-			// Name exactly which of the three signature headers were absent/empty
-			// (under either naming scheme) so the failure is debuggable.
-			const missing: readonly string[] = ["id", "timestamp", "signature"].filter((suffix: string): boolean => readWebhookHeader(`webhook-${suffix}`) === undefined);
-			// Log the sender + which signature-ish headers DID arrive: a genuine
-			// Resend delivery always carries one of the two naming schemes, so
-			// this line proves whether the delivery is real (and which names it
-			// used) or a browser/curl probe.
-			const userAgent: string = NonEmptyStringSchema.safeParse(req.headers["user-agent"]).data ?? "(none)";
-			const remoteIp: string = NonEmptyStringSchema.safeParse(req.ip).data ?? "(unknown)";
-			const signatureHeadersSeen: string = Object.keys(req.headers)
-				.filter((headerName: string): boolean => /id|signature|timestamp/i.test(headerName))
-				.join(", ");
-			this.logger.warn(
-				`Webhook rejected: missing signature header(s) ${missing.map((suffix: string): string => `webhook-${suffix}/svix-${suffix}`).join(", ")} — UA=${userAgent} ip=${remoteIp} signature-ish headers seen: ${signatureHeadersSeen || "(none)"}`,
-			);
-			throw new ForbiddenException(
-				`Missing webhook signature header(s): ${missing.map((suffix: string): string => `webhook-${suffix}/svix-${suffix}`).join(", ")}. Resend signs every webhook with these headers — a browser/curl request without them is rejected by design.`,
-			);
-		}
-		// Verify the signature FIRST — the ONLY thing that can make this a 403.
-		// Keeping this in its own try/catch means a later DB failure propagates
-		// as a 500 (handled by the global filter), never as a misleading
-		// "Invalid webhook signature" that leaks the DB error to a public route.
-		let resendEvent: ResendWebhookEvent;
-		try {
-			const verified = resend.webhooks.verify({
-				payload: rawBody,
-				headers: parsedHeaders.data,
-				webhookSecret: secret,
-			});
-			resendEvent = ResendWebhookEventSchema.parse(verified);
-		} catch (cause) {
-			if (cause instanceof z.ZodError) {
-				// Correctly signed but not a shape we understand: reject loudly (Resend
-				// retries and the failure is visible) instead of acknowledging and dropping it.
-				this.logger.error(`Signed webhook payload failed schema validation: ${cause.message}`);
-				throw new BadRequestException("Webhook payload does not match the expected Resend event shape.");
-			}
-			const rawReason: string = cause instanceof Error ? cause.message : "unexpected verification error";
-			const reason: string = /too old|too new|matching signature|missing required header/i.test(rawReason) ? rawReason : "unexpected verification error";
-			this.logger.warn(`Webhook signature verification failed: ${rawReason}`);
-			const hint: string = /too old|too new/i.test(reason)
-				? "webhook-timestamp is outside the 5-minute window — the signature expired while you were copying it into Swagger. Re-run the script and paste faster (within 5 minutes)."
-				: "the signature does not match the body bytes — the body in the request must be byte-identical to the one that was signed. Swagger's pretty-printed example is NOT byte-identical; paste the single-line body exactly as the script printed it.";
-			throw new ForbiddenException(`Invalid webhook signature (${reason}). ${hint}`);
-		}
-		const eventType: string = resendEvent.type;
-		const emailId: string = resendEvent.data.email_id;
-		const taggedEmailLogId = z.uuid().safeParse(resendEvent.data.tags?.[EMAIL_LOG_ID_TAG]);
-		const result = await this.commandBus.execute(
-			new ApplyEmailDeliveryEventCommand(actor, {
-				webhookId: parsedHeaders.data.id,
-				eventType,
-				resendId: emailId,
-				taggedEmailLogId: taggedEmailLogId.success ? taggedEmailLogId.data : undefined,
-				// Tracking events (opened / clicked / forwarded / delayed) map to no status: recorded as `ignored`.
-				status: webhookStatusFor(eventType),
-				// Bounce / complaint reasons become the row's `error`, so the admin log shows WHY.
-				detail: this.extractDeliveryDetail(eventType, resendEvent),
-				occurredAt: Date.parse(resendEvent.created_at),
-			}),
-		);
-		if (result.kind === "duplicate") {
-			this.logger.log(`Webhook ${parsedHeaders.data.id} already recorded — redelivery ignored`);
-		} else if (result.outcome === "unmatched") {
-			// Signed event for an email this system never sent (sent from the Resend
-			// dashboard / another app on the same account). Recorded, nothing applied.
-			this.logger.log(`Webhook for unknown "resendId" ${emailId} (${eventType}) — recorded as unmatched`);
-		} else if (result.outcome === "stale") {
-			// Older than (or a regression of) what the row already shows — recorded, not applied.
-			this.logger.log(`Webhook ${eventType} for "resendId" ${emailId} is older than the row's latest outcome — recorded as stale`);
-		}
-		return { received: true };
-	}
-
-	private readRawBody(req: RawBodyRequest<FastifyRequest>): string {
-		const raw = req.rawBody;
-		const asString = StringValueSchema.safeParse(raw);
-		if (asString.success) {
-			return asString.data;
-		}
-		if (Buffer.isBuffer(raw)) {
-			return raw.toString("utf8");
-		}
-		return JSON.stringify(req.body ?? {});
-	}
-
-	/**
-	 * Pull a short human-readable reason out of `email.bounced` /
-	 * `email.complained` events (e.g. `permanent — 550 5.1.1 user unknown`),
-	 * capped so it never bloats the `error` column. Delivery events without a
-	 * reason return `undefined`.
-	 */
-	private extractDeliveryDetail(eventType: string, event: ResendWebhookEvent): string | undefined {
-		const data = event.data;
-		const rawDetail = eventType === "email.bounced" ? data.bounce : eventType === "email.complained" ? data.complaint : undefined;
-		if (rawDetail === undefined) {
-			return undefined;
-		}
-		const parsed = ResendDeliveryDetailSchema.safeParse(rawDetail);
-		if (!parsed.success) {
-			return undefined;
-		}
-		const d = parsed.data;
-		const kind = d.bounce_type ?? d.complaint_type ?? d.type ?? "";
-		const message = d.message ?? d.reason ?? "";
-		const parts = [kind, message].filter((p): p is string => p.length > 0);
-		return parts.length > 0 ? parts.join(" — ").slice(0, DELIVERY_DETAIL_MAX_LENGTH) : undefined;
+	public async receive(@Req() req: RawBodyRequest<FastifyRequest>, @CurrentActor({ allowAnonymous: true }) actor: ActorContext): Promise<EmailWebhookReceivedResponse> {
+		await this.reception.receiveResend(actor, inboundWebhookRequest(req.rawBody, req.headers));
+		return RECEIVED;
 	}
 }

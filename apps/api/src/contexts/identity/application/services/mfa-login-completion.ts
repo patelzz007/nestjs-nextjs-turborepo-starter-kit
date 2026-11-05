@@ -19,11 +19,12 @@ import type { PendingSignInMethod } from "./pending-sign-in";
 type MfaLoginResult = LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse;
 
 /** The second factor that completed a login challenge. */
-export type MfaLoginMethod = "totp" | "backup_code";
+export type MfaLoginMethod = "totp" | "backup_code" | "passkey";
 
 const MFA_LOGIN_SIGN_IN_METHOD: Readonly<Record<MfaLoginMethod, PendingSignInMethod>> = {
 	totp: "PASSWORD_TOTP",
 	backup_code: "PASSWORD_BACKUP_CODE",
+	passkey: "PASSWORD_PASSKEY",
 };
 
 /** What one completion loaded in its transaction. */

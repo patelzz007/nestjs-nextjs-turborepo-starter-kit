@@ -4,6 +4,8 @@
 
 import type { LoadTestJob } from "@workspace/shared";
 
+import type { ActorContext } from "../../../../platform/application/actor-context";
+
 export interface LoadTestQueuePort {
 	/** Whether the runner's queue exists here (it needs Redis). */
 	readonly available: boolean;
@@ -22,6 +24,16 @@ export interface LoadTestTrafficPort {
 	issue(key: string, ttlMs: number): Promise<void>;
 }
 
+/**
+ * The Load Test tenant's reward picture: a READY reward image of that tenant, stored once and shown
+ * by every provisioned reward (a published reward always shows at least one READY image).
+ */
+export interface LoadTestRewardImagePort {
+	/** Its file id, stored on first use for `uploadedById`. Writes object storage: never call it inside a transaction. */
+	ensure(actor: ActorContext, tenantId: string, uploadedById: string): Promise<string>;
+}
+
 export const LOAD_TEST_QUEUE = Symbol("LOAD_TEST_QUEUE");
+export const LOAD_TEST_REWARD_IMAGE = Symbol("LOAD_TEST_REWARD_IMAGE");
 export const LOAD_TEST_TRAFFIC = Symbol("LOAD_TEST_TRAFFIC");
 export const LOAD_TEST_PASSWORDS = Symbol("LOAD_TEST_PASSWORDS");

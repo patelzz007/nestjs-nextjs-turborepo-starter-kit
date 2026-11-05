@@ -1,7 +1,8 @@
 # ============================================================================
 # One droplet (or Linode, Vultr instance, Hetzner server) of the platform — ADR 068, phase 4.
 # PostgreSQL and Redis are the provider's managed services; this file runs the platform's own
-# processes. See docs/technical/operations/deploying-to-a-droplet.md.
+# processes, all in Docker. The default Droplet setup (ADR 075) runs the apps under pm2 instead, with only
+# the data services in Docker: see docs/technical/operations/digitalocean-deployment.md.
 #
 #   docker compose -f deploy/droplet/compose.yml up -d --build                          # the platform
 #   docker compose -f deploy/droplet/compose.yml --profile agent up -d server-agent      # its server agent

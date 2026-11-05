@@ -1,0 +1,126 @@
+{
+	"capturedFrom": "Astro 7 build, src/lib/search.ts, limit 8",
+	"entries": 2794,
+	"results": {
+		"tenant": [
+			"/docs/technical/api-reference/merchant-tenants#tenant-access",
+			"/docs/technical/api-reference/merchant-tenants#tenant-analytics",
+			"/docs/technical/frontend/routing#tenant-and-store-context-merchant",
+			"/docs/technical/api-reference/merchant-tenants#tenant-api-keys",
+			"/docs/adr/014-org-scoped-rewardhub#tenant-boundary",
+			"/docs/technical/api-reference/merchant-tenants#tenant-customer-bans",
+			"/docs/adr/073-broadcasts-and-tenant-customers#tenant-customers",
+			"/docs/technical/operations/multi-tenancy-runbook#tenant-deletion"
+		],
+		"rls": [
+			"/docs/technical/database/rls-coverage",
+			"/docs/technical/messaging#rls",
+			"/docs/adr/007-tenancy-and-rls-bypass#rls-bypass-matrix",
+			"/docs/technical/starter-kit-production-roadmap#rls-scope-matrix-memorize-for-incidents",
+			"/docs/adr/007-tenancy-and-rls-bypass",
+			"/docs/adr/010-rls-transaction-contract",
+			"/docs/adr/017-unified-request-context",
+			"/docs/adr/067-unified-authorization-model"
+		],
+		"prisma migration": [
+			"/docs/architecture/ddd-cqrs-migration-plan#55-prismabaserepository-platforminfrastructurepersistenceprisma-baserepositoryts",
+			"/docs/architecture/ddd-cqrs-migration-plan#62-prisma-model-ownership",
+			"/docs/adr/078-migration-governance-and-audit-retention",
+			"/docs/technical/database",
+			"/docs/architecture/ddd-cqrs-migration-gaps",
+			"/docs/architecture/ddd-cqrs-migration-plan",
+			"/docs/adr/002-explicit-junction-tables",
+			"/docs/adr/008-canonical-organization-tenant"
+		],
+		"kafka outbox": [
+			"/docs/adr/015-transactional-outbox-and-inbox",
+			"/docs/adr/024-confluent-kafka-client",
+			"/docs/adr/017-unified-request-context",
+			"/docs/adr/rabbitmq-placeholder",
+			"/docs/technical/api/routes",
+			"/docs/technical/architecture",
+			"/docs/adr/README",
+			"/docs/technical/security/data-classification"
+		],
+		"audit log": [
+			"/docs/technical/operations/observability#audit-log",
+			"/docs/user-guide/09-platform-administration#audit-log",
+			"/docs/technical/api-reference/access-control#audit-log",
+			"/docs/adr/025-global-http-audit-log",
+			"/docs/technical/operations/observability",
+			"/docs/architecture/ddd-cqrs-migration-plan#78-files-notifications-catalog-reference-data-audit-reporting-integrations-github",
+			"/docs/technical/api-reference/access-control#get-apiv1adminaudit-logs",
+			"/docs/technical/api-reference/access-control#get-apiv1adminaudit-logsid"
+		],
+		"feature flags": [
+			"/docs/technical/feature-flags",
+			"/docs/technical/api-reference/feature-flags#feature-flags",
+			"/docs/technical/api-reference/feature-flags",
+			"/docs/technical/api-reference/feature-flags#get-apiv1adminfeature-flags",
+			"/docs/technical/api-reference/feature-flags#get-apiv1adminfeature-flagskeyoverrides",
+			"/docs/technical/api-reference/feature-flags#get-apiv1adminfeature-flagssettings",
+			"/docs/technical/api-reference/feature-flags#get-apiv1adminfeature-flagsstores",
+			"/docs/technical/api-reference/feature-flags#post-apiv1adminfeature-flagskeyoverridesoverrideidremove"
+		],
+		"code block": [
+			"/docs/technical/frontend/qr-codes",
+			"/docs/user-guide/06-pos-checkout",
+			"/docs/user-guide/07-referrals",
+			"/docs/adr/015-transactional-outbox-and-inbox",
+			"/docs/adr/018-strict-typescript-and-as-const-ban",
+			"/docs/adr/025-global-http-audit-log",
+			"/docs/adr/035-signup-referrals",
+			"/docs/adr/037-mobile-typefaces"
+		],
+		"superadmin": [
+			"/docs/technical/starter-kit-production-roadmap#superadmin",
+			"/docs/technical/operations/superadmin-bootstrap",
+			"/docs/user-guide/11-operations-console#backups-superadmin",
+			"/docs/user-guide/10-account-and-security#impersonation-superadmin-only",
+			"/docs/user-guide/11-operations-console#registering-a-server-superadmin",
+			"/docs/user-guide/12-notifications-and-broadcasts#sending-a-broadcast-yourself-superadmin-admin",
+			"/docs/technical/operations/superadmin-bootstrap#after-it-succeeds",
+			"/docs/technical/operations/superadmin-bootstrap#before-you-run-it"
+		],
+		"pos checkout": [
+			"/docs/user-guide/06-pos-checkout",
+			"/docs/technical/api-reference/pos#post-apiv1integrationredemptionscheckout",
+			"/docs/technical/pos-integration#checkout",
+			"/docs/user-guide/06-pos-checkout#checkout-at-the-counter-cashier",
+			"/docs/technical/pos-integration",
+			"/docs/user-guide/06-pos-checkout#a-phone-as-the-till-mobile-app",
+			"/docs/user-guide/06-pos-checkout#afterwards",
+			"/docs/user-guide/06-pos-checkout#pair-a-till-owner-or-merchant-admin"
+		],
+		"fastify": [
+			"/docs/technical/api/http-server#fastify-specific-traps",
+			"/docs/adr/027-fastify-http-adapter",
+			"/docs/technical/api/http-server",
+			"/blog/fastify-migration",
+			"/docs/technical/api/http-server#adapter-options",
+			"/docs/adr/027-fastify-http-adapter#alternatives-considered",
+			"/docs/adr/027-fastify-http-adapter#consequences",
+			"/docs/adr/027-fastify-http-adapter#context"
+		],
+		"epoch": [
+			"/blog/epoch-timestamps",
+			"/docs/adr/028-epoch-millisecond-timestamps",
+			"/docs/adr/028-epoch-millisecond-timestamps#alternatives-considered",
+			"/docs/adr/028-epoch-millisecond-timestamps#consequences",
+			"/docs/adr/028-epoch-millisecond-timestamps#context",
+			"/docs/adr/028-epoch-millisecond-timestamps#decision",
+			"/docs/adr/028-epoch-millisecond-timestamps#status",
+			"/docs/technical/adding-a-feature"
+		],
+		"webhook signature": [
+			"/blog/email-webhooks",
+			"/docs/adr/012-system-operations",
+			"/docs/adr/020-payments-provider-port",
+			"/docs/adr/027-fastify-http-adapter",
+			"/docs/technical/api/README",
+			"/docs/technical/api-reference/payments",
+			"/docs/technical/tooling/api-scripts",
+			"/docs/architecture/context-map"
+		]
+	}
+}

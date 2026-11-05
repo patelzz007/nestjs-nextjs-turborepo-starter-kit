@@ -14,6 +14,9 @@ export const FILES_DELETE_OPERATION: SystemOperationName = "files.delete";
 /** The verdict transaction (transition, renditions and every owner's in-transaction reaction). */
 export const FILES_SCAN_VERDICT_OPERATION: SystemOperationName = "files.scan_verdict.apply";
 
+/** Recording and claiming a file whose bytes the server produced (`ServerFileIngest`), and finding an earlier ingest of them. */
+export const FILES_SERVER_INGEST_OPERATION: SystemOperationName = "files.server_ingest";
+
 /** Background jobs, one operation per queue. */
 export const STORAGE_CLEANUP_OPERATION: SystemOperationName = "queue.storage.cleanup";
 export const STORAGE_DELETE_OPERATION: SystemOperationName = "queue.storage.delete";

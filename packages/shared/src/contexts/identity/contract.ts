@@ -37,9 +37,25 @@ import {
 	InitiateMfaRecoverySchema,
 	MfaRecoveryStatusResponseSchema,
 } from "./schemas/mfa-recovery";
-import { OwnProfileSchema, UpdateOwnProfileSchema } from "./schemas/profile";
+import { OwnProfileSchema, SetOwnLanguageSchema, UpdateOwnProfileSchema } from "./schemas/profile";
 import { SetUserPreferenceSchema, UserPreferencePathSchema, UserPreferenceSchema, UserPreferencesSchema } from "./schemas/user-preferences";
 import { SessionStatusSchema } from "./schemas/session-status";
+import {
+	CompletePasskeyRegistrationSchema,
+	LoginPasskeySecondFactorSchema,
+	LoginPasswordlessPasskeySchema,
+	PasskeyAppAssociationsSchema,
+	PasskeyAuthenticationOptionsResponseSchema,
+	PasskeyListSchema,
+	PasskeyMessageResponseSchema,
+	PasskeyPathSchema,
+	PasskeyRegistrationOptionsResponseSchema,
+	PasskeySchema,
+	PasskeySecondFactorOptionsSchema,
+	PasswordlessPasskeyOptionsSchema,
+	RenamePasskeySchema,
+	StartPasskeyRegistrationSchema,
+} from "./schemas/passkeys";
 import {
 	BackupCodesRemainingResponseSchema,
 	EnableTwoFactorSchema,
@@ -73,6 +89,8 @@ export const authContract = {
 	profile: defineContract({ method: "GET", path: authRoutes.profile, input: z.undefined(), response: singleResponse(OwnProfileSchema) }),
 	/** Edit the signed-in user's own profile — 409 CONFLICT when `version` is stale; refused during impersonation. */
 	updateProfile: defineContract({ method: "PATCH", path: authRoutes.profile, input: UpdateOwnProfileSchema, response: singleResponse(OwnProfileSchema) }),
+	/** Save the signed-in person's language (5.2); refused during impersonation. */
+	setLanguage: defineContract({ method: "PUT", path: authRoutes.profileLanguage, input: SetOwnLanguageSchema, response: singleResponse(OwnProfileSchema) }),
 	/** The signed-in user's remembered choices (board grouping, …) the registry still accepts. */
 	preferences: defineContract({ method: "GET", path: authRoutes.preferences, input: z.undefined(), response: singleResponse(UserPreferencesSchema) }),
 	/** Remember one choice — 400 when the key does not accept the value. */
@@ -215,6 +233,65 @@ export const authContract = {
 		path: authRoutes.twoFactorVerifyBackupCode,
 		input: VerifyBackupCodeSchema,
 		response: singleResponse(VerifyBackupCodeResponseSchema),
+	}),
+	/** The signed-in account's passkeys, newest first (never a public key). */
+	passkeys: defineContract({ method: "GET", path: authRoutes.passkeys, input: z.undefined(), response: singleResponse(PasskeyListSchema) }),
+	/** The Android and iOS apps allowed to use this site's passkeys (assetlinks.json, apple-app-site-association). */
+	passkeyAppAssociations: defineContract({
+		access: "public",
+		method: "GET",
+		path: authRoutes.passkeyAppAssociations,
+		input: z.undefined(),
+		response: singleResponse(PasskeyAppAssociationsSchema),
+	}),
+	/** Start adding a passkey: needs the password again; answers the `navigator.credentials.create()` options. */
+	passkeyRegistrationOptions: defineContract({
+		method: "POST",
+		path: authRoutes.passkeyRegistrationOptions,
+		input: StartPasskeyRegistrationSchema,
+		response: singleResponse(PasskeyRegistrationOptionsResponseSchema),
+	}),
+	/** Finish adding a passkey with the browser's attestation; refused during impersonation. */
+	passkeyRegistration: defineContract({
+		method: "POST",
+		path: authRoutes.passkeyRegistration,
+		input: CompletePasskeyRegistrationSchema,
+		response: singleResponse(PasskeySchema),
+	}),
+	renamePasskey: defineContract({ method: "PATCH", path: authRoutes.passkey, input: RenamePasskeySchema, response: singleResponse(PasskeySchema) }),
+	/** Remove a passkey (soft delete); it can no longer sign in. */
+	removePasskey: defineContract({ method: "DELETE", path: authRoutes.passkey, input: PasskeyPathSchema, response: singleResponse(PasskeyMessageResponseSchema) }),
+	/** The options of a passkey second factor, for the `tempToken` a password sign-in answered. */
+	loginPasskeySecondFactorOptions: defineContract({
+		access: "public",
+		method: "POST",
+		path: authRoutes.loginPasskeySecondFactorOptions,
+		input: PasskeySecondFactorOptionsSchema,
+		response: singleResponse(PasskeyAuthenticationOptionsResponseSchema),
+	}),
+	/** Complete a password sign-in with a passkey (instead of a TOTP or backup code). */
+	loginPasskeySecondFactor: defineContract({
+		access: "public",
+		method: "POST",
+		path: authRoutes.loginPasskeySecondFactor,
+		input: LoginPasskeySecondFactorSchema,
+		response: singleResponse(LoginClientResponseSchema),
+	}),
+	/** The options of a passwordless sign-in (no account named: the passkey names it). */
+	loginPasskeyOptions: defineContract({
+		access: "public",
+		method: "POST",
+		path: authRoutes.loginPasskeyOptions,
+		input: PasswordlessPasskeyOptionsSchema,
+		response: singleResponse(PasskeyAuthenticationOptionsResponseSchema),
+	}),
+	/** Sign in with a passkey alone (it proves possession and user verification, ADR 080). */
+	loginPasskey: defineContract({
+		access: "public",
+		method: "POST",
+		path: authRoutes.loginPasskey,
+		input: LoginPasswordlessPasskeySchema,
+		response: singleResponse(LoginClientResponseSchema),
 	}),
 	mfaRecoveryInitiate: defineContract({
 		method: "POST",

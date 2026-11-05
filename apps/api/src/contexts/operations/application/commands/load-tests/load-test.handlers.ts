@@ -8,11 +8,12 @@ import { randomBytes } from "node:crypto";
 
 import { Inject } from "@nestjs/common";
 import { CommandHandler, type ICommandHandler } from "@nestjs/cqrs";
-import { API_VERSION_PREFIX, LOAD_TEST_READ_ENDPOINTS, type LoadTestCaps, type LoadTestPurgeResult, type LoadTestRun } from "@workspace/shared";
+import { API_VERSION_PREFIX, LOAD_TEST_READ_ENDPOINTS, type LoadTestCaps, type LoadTestPurgeResult, type LoadTestRun, type StartLoadTestInput } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../../../config/typed-config.service";
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
+import { MAX_ACTIVE_SESSIONS_PER_USER } from "../../../../identity/public-api";
 import {
 	LoadTestAlreadyRunningError,
 	LoadTestEndpointInvalidError,
@@ -22,14 +23,16 @@ import {
 	LoadTestPurgeBlockedError,
 } from "../../../domain/errors/operations.errors";
 import { loadTestAvailability } from "../../../domain/policies/load-test-availability.policy";
-import { assertWithinCaps } from "../../../domain/policies/load-test.policy";
+import { assertWithinCaps, loadTestStaffCount } from "../../../domain/policies/load-test.policy";
 import type { OperationsScope } from "../../operations-scope";
 import {
 	LOAD_TEST_PASSWORDS,
 	LOAD_TEST_QUEUE,
+	LOAD_TEST_REWARD_IMAGE,
 	LOAD_TEST_TRAFFIC,
 	type LoadTestPasswordPort,
 	type LoadTestQueuePort,
+	type LoadTestRewardImagePort,
 	type LoadTestTrafficPort,
 } from "../../ports/load-test.ports";
 import type { LoadTestRunRecord } from "../../ports/operations-repositories.port";
@@ -80,6 +83,16 @@ export function loadTestStopKey(runId: string): string {
 	return `load-test:${runId}`;
 }
 
+/** The run fits the caps in force and no other run is queued or running. */
+async function assertCanStart(scope: OperationsScope, input: StartLoadTestInput): Promise<void> {
+	const { loadTestCaps } = await scope.settings.get();
+	assertWithinCaps(input, loadTestCaps);
+	const active = await scope.loadTests.findActive();
+	if (active !== null) {
+		throw new LoadTestAlreadyRunningError(active.id);
+	}
+}
+
 @CommandHandler(StartLoadTestCommand)
 export class StartLoadTestHandler implements ICommandHandler<StartLoadTestCommand, LoadTestRun> {
 	public constructor(
@@ -87,6 +100,7 @@ export class StartLoadTestHandler implements ICommandHandler<StartLoadTestComman
 		@Inject(LOAD_TEST_QUEUE) private readonly queue: LoadTestQueuePort,
 		@Inject(LOAD_TEST_PASSWORDS) private readonly passwords: LoadTestPasswordPort,
 		@Inject(LOAD_TEST_TRAFFIC) private readonly traffic: LoadTestTrafficPort,
+		@Inject(LOAD_TEST_REWARD_IMAGE) private readonly rewardImages: LoadTestRewardImagePort,
 		@Inject(OPS_LIVE_STORE) private readonly live: OpsLiveStore,
 		private readonly config: TypedConfigService,
 	) {}
@@ -94,8 +108,10 @@ export class StartLoadTestHandler implements ICommandHandler<StartLoadTestComman
 	/**
 	 * Refuses unless load testing is on, the run fits the caps, it names a read endpoint (for a
 	 * single-endpoint test) and no other run is queued or running; then provisions the Load Test
-	 * tenant with one load-test customer per virtual user and a fresh password, records the run and
-	 * hands it to the load runner.
+	 * tenant with one load-test customer per virtual user, enough staff that none carries more
+	 * sessions than a user may keep, and a fresh password, records the run and hands it to the load
+	 * runner. Three steps, so object storage is never written inside a transaction: the tenant (the
+	 * rewards' picture belongs to it), the picture, then everything else with the run.
 	 */
 	public async execute({ actor, input }: StartLoadTestCommand): Promise<LoadTestRun> {
 		const { loadTesting } = this.config.operations;
@@ -113,14 +129,20 @@ export class StartLoadTestHandler implements ICommandHandler<StartLoadTestComman
 		}
 		const userId: string = actingUserIdOf(actor);
 		const credentials = await this.passwords.issue();
+		const tenantId: string = await this.uow.runSystemOperation(LOAD_TEST_WRITE_OPERATION, actor, async (scope) => {
+			await assertCanStart(scope, input);
+			return scope.loadTestTenant.ensureTenant();
+		});
+		const rewardImageFileId: string = await this.rewardImages.ensure(actor, tenantId, userId);
 		const { run, tenant } = await this.uow.runSystemOperation(LOAD_TEST_WRITE_OPERATION, actor, async (scope) => {
-			const { loadTestCaps } = await scope.settings.get();
-			assertWithinCaps(input, loadTestCaps);
-			const active = await scope.loadTests.findActive();
-			if (active !== null) {
-				throw new LoadTestAlreadyRunningError(active.id);
-			}
-			const provisioned = await scope.loadTestTenant.provision({ customers: input.virtualUsers, passwordHash: credentials.hash });
+			// Checked again: the caps or another start may have changed while the picture was stored.
+			await assertCanStart(scope, input);
+			const provisioned = await scope.loadTestTenant.provision({
+				customers: input.virtualUsers,
+				staff: loadTestStaffCount(input.virtualUsers, MAX_ACTIVE_SESSIONS_PER_USER),
+				passwordHash: credentials.hash,
+				rewardImageFileId,
+			});
 			const created = await scope.loadTests.create({ ...input, requestedById: userId });
 			return { run: created, tenant: provisioned };
 		});

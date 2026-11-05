@@ -10,6 +10,8 @@
 // "Review changes" beside "Comment" (both posted to GitHub). "View on GitHub"
 // is a compact pill in the header.
 
+import FileDiffIcon from "lucide-react-native/icons/file-diff";
+import GitCommitHorizontalIcon from "lucide-react-native/icons/git-commit-horizontal";
 import { useQueryClient } from "@tanstack/react-query";
 import type { GithubActor, GithubLabel, GithubPullRequestDetail, GithubPullRequestParams } from "@workspace/shared";
 import { useRouter } from "expo-router";
@@ -23,6 +25,7 @@ import { Alert } from "@workspace/ui-native/components/alert";
 import { Button } from "@workspace/ui-native/components/button";
 import { Card } from "@workspace/ui-native/components/card";
 import { LineCounts } from "../../../components/line-counts";
+import { ListGroup } from "@workspace/ui-native/components/list-group";
 import { ListRow } from "@workspace/ui-native/components/list-row";
 import { Screen } from "../../../components/screen";
 import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
@@ -156,7 +159,7 @@ function PullRequestView({ detail, nowMs }: PullRequestViewProps): React.JSX.Ele
 				<Text selectable className="font-sans text-sm text-muted-foreground">
 					{pullRequestReference(detail)}
 				</Text>
-				<Text selectable accessibilityRole="header" className="font-heading text-2xl leading-8 text-foreground">
+				<Text selectable accessibilityRole="header" className="font-sans-bold text-2xl leading-8 tracking-tight text-foreground">
 					{detail.title}
 				</Text>
 				<View className="flex-row items-center gap-2">
@@ -195,16 +198,17 @@ function PullRequestView({ detail, nowMs }: PullRequestViewProps): React.JSX.Ele
 				</View>
 			)}
 
-			<View className="rounded-xl border border-border bg-card px-4">
+			<ListGroup>
 				<ListRow
+					icon={GitCommitHorizontalIcon}
 					label={COMMITS_TITLE}
 					value={formatCount(detail.commitCount)}
 					onPress={openCommits}
 					accessibilityHint="Shows the pull request's commits"
 					testID="pull-request-commits-row"
 				/>
-				<View className="h-px bg-border" />
 				<ListRow
+					icon={FileDiffIcon}
 					label={FILES_CHANGED_TITLE}
 					value={filesChangedLabel(detail.changedFiles)}
 					detail={<LineCounts additions={formatCount(detail.additions)} deletions={formatCount(detail.deletions)} testID="pull-request-line-counts" />}
@@ -213,7 +217,7 @@ function PullRequestView({ detail, nowMs }: PullRequestViewProps): React.JSX.Ele
 					accessibilityHint="Shows the changed files and their diffs"
 					testID="pull-request-files-row"
 				/>
-			</View>
+			</ListGroup>
 
 			<Subheading>Conversation</Subheading>
 			<View>

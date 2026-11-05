@@ -96,6 +96,14 @@ describe("CodeBlock rendering", () => {
 		expect(row(container, 1).hasAttribute("data-highlighted")).toBe(false);
 	});
 
+	it("styles every row with the one shared row class, so a block's HTML does not repeat the styling per line", (): void => {
+		const { container, unmount } = render(<CodeBlock lines={LINES} language="ts" />);
+		expect(rows(container).map((element) => element.className)).toEqual(["code-block-line", "code-block-line", "code-block-line"]);
+		unmount();
+		const selectable = render(<CodeBlock code={"a\nb"} language="txt" selectable />);
+		expect(rows(selectable.container).map((element) => element.className)).toEqual(["code-block-line cursor-pointer", "code-block-line cursor-pointer"]);
+	});
+
 	it("renders plain code when highlighting is off, and names the region from the language", (): void => {
 		const { container } = render(<CodeBlock code={"a\nb"} language="tsx" highlight={false} />);
 		expect(rows(container).map((element) => element.textContent)).toEqual(["a", "b"]);

@@ -1,7 +1,7 @@
 ---
 title: "API reference — Kanban boards"
 description: "The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments."
-order: 15
+order: 20
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -494,6 +494,7 @@ Live items of either board, by type and title (a parent or link picker), paginat
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1202,6 +1203,7 @@ An item's history, newest first (paginated)
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1564,6 +1566,7 @@ A task's comments, newest first (paginated)
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -2756,6 +2759,61 @@ Create several items on one board at once (a CSV import), each at the bottom of 
 | `data.columns[].⟨shape 2⟩ title` | string | yes |  |
 | `data.columns[].⟨shape 2⟩ version` | integer | yes | Optimistic-lock token: send it back with a column move or edit |
 | `data.columns[].⟨shape 2⟩ wipLimit` | integer \| null | yes | Soft work-in-progress limit on stories and tasks (subtasks never count), or null for none |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/kanban/tasks/import/dry-run
+
+Dry-run an import: which rows the board would refuse right now and why, writing nothing
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `CREATE:KANBAN_TASK`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `KanbanController_previewImport` · [source](../../../apps/api/src/contexts/kanban/presentation/http/kanban.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `board` | "PLANNING" \| "EXECUTION" | yes |  |
+| `tasks` | object[] | yes | 1–100 items |
+| `tasks[].assigneeId` | string (uuid) \| null | no | default `null` |
+| `tasks[].columnId` | string (uuid) | yes |  |
+| `tasks[].description` | string | yes | at most 2000 characters |
+| `tasks[].dueAt` | integer \| null | no | default `null` |
+| `tasks[].labels` | string[] | no | 0–8 items; default `[]` |
+| `tasks[].parentId` | string (uuid) \| null | no | default `null` |
+| `tasks[].priority` | "HIGH" \| "MEDIUM" \| "LOW" | yes |  |
+| `tasks[].progress` | integer | yes | range 0–100 |
+| `tasks[].startAt` | integer \| null | no | default `null` |
+| `tasks[].storyPoints` | 1 \| 2 \| 3 \| 5 \| 8 \| 13 \| 21 \| null | no | default `null` |
+| `tasks[].team` | "BACKEND" \| "DATA" \| "DESIGN" \| "PLATFORM" \| "PRODUCT" \| "QA" \| "SECURITY" | yes |  |
+| `tasks[].title` | string | yes |  |
+| `tasks[].type` | "EPIC" \| "FEATURE" \| "STORY" \| "TASK" \| "SUBTASK" | yes |  |
+
+**Response 200 OK** (`application/json`) — The rows that would import, and each refused row with its reason
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.importable` | integer | yes |  |
+| `data.problems` | object[] | yes |  |
+| `data.problems[].code` | string | yes | Stable machine-readable error code (SCREAMING_SNAKE_CASE); at most 64 characters; pattern `^[A-Z][A-Z0-9_]*$` |
+| `data.problems[].message` | string | yes | at least 1 characters |
+| `data.problems[].row` | integer | yes |  |
+| `data.rows` | integer | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 

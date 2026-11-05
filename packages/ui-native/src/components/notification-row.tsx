@@ -29,7 +29,7 @@ export const notificationRowVariants = cva("flex-row items-center rounded-xl pe-
 	defaultVariants: { unread: false },
 });
 
-export const notificationRowMessageVariants = cva("font-sans text-base leading-snug", {
+export const notificationRowMessageVariants = cva("font-sans text-sm leading-snug", {
 	variants: {
 		unread: { true: "text-foreground", false: "text-muted-foreground" },
 	},
@@ -38,13 +38,16 @@ export const notificationRowMessageVariants = cva("font-sans text-base leading-s
 
 export const notificationRowTimeVariants = cva("", {
 	variants: {
-		unread: { true: "font-sans-semibold text-primary", false: "" },
+		unread: { true: "text-primary", false: "" },
 	},
 	defaultVariants: { unread: false },
 });
 
+/** The title and message share two lines: a list row is a preview, the opened notice shows it all. */
+const MESSAGE_LINES = 2;
+
 /** The corner glyph's solid fill per tone, and its glyph's colour on it. */
-export const notificationRowBadgeVariants = cva("absolute -right-1 -bottom-1 size-7 items-center justify-center rounded-full border-2 border-background", {
+export const notificationRowBadgeVariants = cva("absolute -right-1 -bottom-1 size-5 items-center justify-center rounded-full border-2 border-background", {
 	variants: {
 		tone: {
 			brand: "bg-primary",
@@ -142,15 +145,15 @@ export const NotificationRow = React.memo(
 					accessibilityHint={accessibilityHint}
 					onPress={onPress}
 					testID={testID === undefined ? undefined : `${testID}-open`}
-					className="flex-1 flex-row items-center gap-3 py-2.5 ps-3 active:opacity-70">
+					className="flex-1 flex-row items-center gap-3 py-2 ps-3 active:opacity-70">
 					<Leading sender={sender} icon={icon} tone={tone} />
 					<View className="flex-1 gap-0.5">
-						<Text numberOfLines={3} className={notificationRowMessageVariants({ unread })}>
+						<Text numberOfLines={MESSAGE_LINES} className={notificationRowMessageVariants({ unread })}>
 							<Text className="font-sans-semibold text-foreground">{title}</Text> {body}
 						</Text>
 						<RelativeTime value={createdAt} now={now} locale={locale} labels={SHORT_RELATIVE_TIME_LABELS} size="sm" className={notificationRowTimeVariants({ unread })} />
 					</View>
-					{unread ? <View className="size-3 rounded-full bg-primary" testID={testID === undefined ? undefined : `${testID}-unread`} /> : null}
+					{unread ? <View className="size-2.5 rounded-full bg-primary" testID={testID === undefined ? undefined : `${testID}-unread`} /> : null}
 				</Pressable>
 				{trailing}
 			</View>
@@ -168,16 +171,16 @@ interface LeadingProps {
 function Leading({ sender, icon, tone }: LeadingProps): React.JSX.Element {
 	if (sender === null) {
 		return (
-			<View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className={cn(iconTileVariants({ tone, size: "lg" }), "size-14 rounded-full")}>
-				<Icon icon={icon} size="lg" colorClassName={iconTileGlyphVariants({ tone })} />
+			<View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className={cn(iconTileVariants({ tone, size: "md" }), "size-11 rounded-full")}>
+				<Icon icon={icon} size="md" colorClassName={iconTileGlyphVariants({ tone })} />
 			</View>
 		);
 	}
 	return (
 		<View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-			<Avatar name={sender.name} imageUrl={sender.imageUrl} size="lg" />
+			<Avatar name={sender.name} imageUrl={sender.imageUrl} size="row" />
 			<View className={notificationRowBadgeVariants({ tone })}>
-				<Icon icon={icon} size="sm" colorClassName={BADGE_GLYPH_COLOR[tone]} />
+				<Icon icon={icon} size="xs" colorClassName={BADGE_GLYPH_COLOR[tone]} />
 			</View>
 		</View>
 	);

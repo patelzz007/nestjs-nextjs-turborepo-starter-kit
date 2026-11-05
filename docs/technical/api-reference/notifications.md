@@ -1,7 +1,7 @@
 ---
 title: "API reference — Notifications: inbox, preferences, push devices and broadcasts"
 description: "One inbox per app (live over SSE), the preference matrix with quiet hours and digest, marketing consent, push device registration, one-click unsubscribe, Twilio callbacks, the delivery log and catalog for staff, and a tenant's own delivery log and broadcasts."
-order: 10
+order: 13
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -116,6 +116,7 @@ The caller's inbox on one surface, newest first (`filter[readAt][isNull]=true` =
 | `data[].richBody.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data[].richBody.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data[].richBody.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data[].richBody.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data[].richBody.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data[].richBody.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data[].richBody.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -138,6 +139,7 @@ The caller's inbox on one surface, newest first (`filter[readAt][isNull]=true` =
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -486,6 +488,7 @@ Register this app install for push (bound to the signed-in session); 503 when pu
 | --- | --- | --- | --- |
 | `appVersion` | string \| null | yes | length 1–32 |
 | `deviceLabel` | string \| null | yes | length 1–120 |
+| `installationId` | string \| null | no | pattern `^[c-f][A-Za-z0-9_-]{21}$`; default `null` |
 | `platform` | "IOS" \| "ANDROID" | yes |  |
 | `surface` | "CUSTOMER" \| "MERCHANT" \| "ADMIN" | yes |  |
 | `token` | string | yes | length 1–4096 |
@@ -827,6 +830,7 @@ Every delivery on every channel, newest first (masked destinations)
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -969,6 +973,7 @@ Addresses and numbers nothing is sent to (bounces, complaints, STOP, unsubscribe
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1123,6 +1128,7 @@ The tenant's deliveries, newest first (masked destinations)
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1325,6 +1331,7 @@ Reports from recipients, newest first, with the tenant's strikes in the last 90 
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1481,6 +1488,7 @@ Platform broadcasts, newest first
 | `data[].body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data[].body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data[].body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data[].body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data[].body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data[].body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data[].body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -1525,6 +1533,7 @@ Platform broadcasts, newest first
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1721,6 +1730,7 @@ Write a platform notice (a draft); 400 names any link that may not be sent
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -1866,6 +1876,7 @@ One broadcast with its results per channel
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -2105,6 +2116,7 @@ Edit a draft; 409 for any other status
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -2252,6 +2264,7 @@ Approve a notice to every user (never your own); 403 for the author
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -2399,6 +2412,7 @@ Cancel before sending; 409 once it is sending or sent
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -2546,6 +2560,7 @@ Schedule a draft (a notice to every user waits for a second staff member's appro
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -2786,6 +2801,7 @@ The tenant's broadcasts, newest first
 | `data[].body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data[].body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data[].body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data[].body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data[].body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data[].body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data[].body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -2830,6 +2846,7 @@ The tenant's broadcasts, newest first
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -3030,6 +3047,7 @@ Write a broadcast to the tenant's customers (a draft); 400 names any link that m
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -3174,6 +3192,7 @@ One broadcast with its results per channel
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -3412,6 +3431,7 @@ Edit a draft; 409 for any other status
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -3558,6 +3578,7 @@ Cancel before sending; 409 once it is sending or sent
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -3704,6 +3725,7 @@ Schedule a draft; 409 when the weekly allowance is used up or broadcasting is of
 | `data.body.content[].⟨shape 8⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 8⟩ attrs.alt` | string | yes | at most 200 characters |
 | `data.body.content[].⟨shape 8⟩ attrs.fileId` | string (uuid) | yes |  |
+| `data.body.content[].⟨shape 8⟩ attrs.src` | string (uri) | no |  |
 | `data.body.content[].⟨shape 8⟩ type` | "image" | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs` | object | yes |  |
 | `data.body.content[].⟨shape 9⟩ attrs.href` | string | yes | at most 2048 characters |
@@ -3857,6 +3879,7 @@ The tenant's customers, to pick recipients by hand (name and masked email; who c
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: lastClaimedAt |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 | `reachableOnly` | query | boolean \| "true" \| "false" | no |  |
+| `ids` | query | string | no |  |
 
 **Response 200 OK** (`application/json`) — One page of customers
 
@@ -3877,6 +3900,7 @@ The tenant's customers, to pick recipients by hand (name and masked email; who c
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)

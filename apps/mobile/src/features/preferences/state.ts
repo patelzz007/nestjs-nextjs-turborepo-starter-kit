@@ -1,3 +1,5 @@
+import type { AppLanguage } from "@workspace/shared";
+
 import { APP_LOCK_TIMEOUT_ONE_MINUTE_MS, type AppLockTimeoutMs, type ThemePreference } from "../../lib/secure-store";
 
 /**
@@ -11,13 +13,16 @@ export interface PreferencesState {
 		readonly enabled: boolean;
 		readonly timeoutMs: AppLockTimeoutMs;
 	};
+	/** The language this device chose (Settings → Language); `null` until it chooses: the phone's language applies (ADR 076). */
+	readonly language: AppLanguage | null;
 	/** The first-launch walkthrough was finished or skipped; it never shows again on this device. */
 	readonly onboardingCompleted: boolean;
 }
 
-/** Defaults (§9.7, §11.2): follow the OS; app lock off; 60 s timeout; onboarding not seen yet. */
+/** Defaults (§9.7, §11.2): follow the OS; app lock off; 60 s timeout; the phone's language; onboarding not seen yet. */
 export const DEFAULT_PREFERENCES: PreferencesState = {
 	theme: "system",
 	appLock: { enabled: false, timeoutMs: APP_LOCK_TIMEOUT_ONE_MINUTE_MS },
+	language: null,
 	onboardingCompleted: false,
 };

@@ -7,7 +7,11 @@ import * as React from "react";
 
 import { PUSH_TRANSITION } from "../../../lib/screen-transitions";
 
-const SCREEN_OPTIONS = { headerShown: false, animation: PUSH_TRANSITION } satisfies React.ComponentProps<typeof Stack>["screenOptions"];
+/**
+ * `freezeOnBlur`: a screen out of sight (under the one on top, or in another tab) does not re-render
+ * until it is shown again. A theme change then restyles only what is on screen at once (6.7).
+ */
+const SCREEN_OPTIONS = { headerShown: false, animation: PUSH_TRANSITION, freezeOnBlur: true } satisfies React.ComponentProps<typeof Stack>["screenOptions"];
 
 /** The profile is always the stack's first screen, even when a commit is opened directly: going back from it lands on the profile. */
 const PROFILE_STACK_SETTINGS = { anchor: "index" };

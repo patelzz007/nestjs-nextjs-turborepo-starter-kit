@@ -4,7 +4,7 @@ import type { NextResponse } from "next/server";
 
 import { isAccessTokenExpired, resolveProxySessionRefresh, shouldAttemptProxyRefresh } from "@workspace/client/lib/contexts/identity/edge/proxy-refresh";
 
-import { proxy, resetWebProxyRefreshCooldownForTests } from "../proxy";
+import { config, proxy, resetWebProxyRefreshCooldownForTests } from "../proxy";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 // `next/server` is intentionally NOT mocked: real NextRequest/NextResponse
@@ -446,5 +446,39 @@ describe("web proxy server-side refresh", () => {
 		expect(response.status).toBe(307);
 		expect(redirectLocation(response)).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+});
+
+describe("proxy security headers", () => {
+	it("sends a nonce CSP and refuses framing on pages and redirects alike", async () => {
+		for (const response of [await runProxy({ pathname: "/" }), await runProxy({ pathname: "/auth/login" })]) {
+			const policy = response.headers.get("Content-Security-Policy") ?? "";
+			expect(policy).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/]+=*' 'strict-dynamic'/u);
+			expect(policy).toContain("frame-ancestors 'none'");
+			expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+			expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+		}
+	});
+
+	it("uses a fresh nonce for every request", async () => {
+		const first = (await runProxy({ pathname: "/auth/login" })).headers.get("Content-Security-Policy");
+		const second = (await runProxy({ pathname: "/auth/login" })).headers.get("Content-Security-Policy");
+		expect(first).not.toBe(second);
+	});
+});
+
+describe("web proxy matcher", () => {
+	const [matcher = ""] = config.matcher;
+	// Next.js anchors a matcher to the whole path, as here.
+	const runs = (pathname: string): boolean => new RegExp(`^${matcher}$`, "u").test(pathname);
+
+	it("leaves the passkey app-association files to anyone (no session, no login redirect)", () => {
+		expect(runs("/.well-known/assetlinks.json")).toBe(false);
+		expect(runs("/.well-known/apple-app-site-association")).toBe(false);
+	});
+
+	it("still runs on the app's pages", () => {
+		expect(runs("/dashboard")).toBe(true);
+		expect(runs("/auth/login")).toBe(true);
 	});
 });

@@ -10,6 +10,7 @@ import { type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, t
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState, type ControlState } from "../lib/control-state";
 import type { ValueHandler } from "../lib/value-handler";
+import { ToggleMark, ToggleMarkScope } from "./toggle-mark";
 
 /** The group: its rows stacked. */
 export const radioGroupVariants = cva("", {
@@ -23,11 +24,11 @@ export const radioGroupVariants = cva("", {
 });
 
 /** One option's pressable row. */
-export const radioItemVariants = cva("min-h-11 flex-row items-center gap-3 py-2 active:opacity-80", {
+export const radioItemVariants = cva("min-h-12 flex-row items-center gap-3 py-2.5 active:opacity-80", {
 	variants: {
 		variant: {
 			default: "",
-			card: "rounded-xl border border-border bg-card px-3.5",
+			card: "rounded-2xl border border-border bg-card px-4",
 		},
 		selected: { true: "", false: "" },
 		disabled: { true: "opacity-60", false: "" },
@@ -142,7 +143,10 @@ const RadioRow = React.memo(function RadioRow({
 			onFocus={onFocus}
 			onBlur={onBlur}
 			className={radioItemVariants({ variant, selected, disabled: option.disabled === true && !groupInactive })}>
-			<View className={radioIndicatorVariants({ size, selected, state })}>{selected ? <View className={radioDotVariants({ size })} /> : null}</View>
+			{/* The dot pops in when chosen (toggle-mark.tsx); the one shown at first stays still. */}
+			<ToggleMarkScope className={radioIndicatorVariants({ size, selected, state })}>
+				{selected ? <ToggleMark className={radioDotVariants({ size })} /> : null}
+			</ToggleMarkScope>
 			<View className="flex-1 gap-0.5">
 				<Text className={radioLabelVariants({ size })}>{option.label}</Text>
 				{option.description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{option.description}</Text>}

@@ -1,0 +1,72 @@
+{
+	"run": {
+		"name": "Nightly CI baseline",
+		"shape": "CONSTANT",
+		"virtualUsers": 20,
+		"requestsPerSecond": 5,
+		"durationSeconds": 120,
+		"mixWeights": {
+			"sign-in": 10,
+			"browse-marketplace": 50,
+			"claim-reward": 20,
+			"merchant-dashboard": 15,
+			"merchant-rewards": 5
+		}
+	},
+	"total": {
+		"p95Ms": 2030,
+		"maxErrorPercent": 1
+	},
+	"groups": {
+		"auth": {
+			"description": "Signing in (a password check) and reading the session",
+			"steps": [
+				"login",
+				"session"
+			],
+			"p95Ms": 6390,
+			"maxErrorPercent": 1,
+			"minRequests": 80
+		},
+		"marketplace": {
+			"description": "The customer marketplace: the reward list, its second page and one reward",
+			"steps": [
+				"marketplace",
+				"marketplace-page-2",
+				"reward"
+			],
+			"p95Ms": 1850,
+			"maxErrorPercent": 1,
+			"minRequests": 400
+		},
+		"claims": {
+			"description": "Claiming a reward (a write) and the customer's claims",
+			"steps": [
+				"claim",
+				"my-claims"
+			],
+			"p95Ms": 2860,
+			"maxErrorPercent": 1,
+			"minRequests": 100
+		},
+		"merchant": {
+			"description": "The merchant panel: tenant context, rewards, one reward and analytics",
+			"steps": [
+				"tenant-context",
+				"rewards",
+				"analytics",
+				"tenant-rewards",
+				"tenant-reward"
+			],
+			"p95Ms": 4330,
+			"maxErrorPercent": 1,
+			"minRequests": 150
+		}
+	},
+	"calibration": {
+		"measuredOn": "2026-11-03",
+		"source": "PROVISIONAL: one run on a developer laptop (Apple Silicon) that was also running the full dev stack, not on the CI runner; recalibrate from the first nightly artifact",
+		"factor": 2,
+		"provisional": true
+	}
+}

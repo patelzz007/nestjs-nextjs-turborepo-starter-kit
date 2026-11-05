@@ -10,7 +10,13 @@ import {
 	type Envelope,
 	type LoginClientResponse,
 	type LoginInput,
+	type LoginPasskeySecondFactorInput,
+	type LoginPasswordlessPasskeyInput,
 	type LoginTwoFactorInput,
+	type PasskeyAuthenticationOptionsResponse,
+	type PasskeyAuthenticationResponse,
+	type PasskeySecondFactorOptionsInput,
+	type PasswordlessPasskeyOptionsInput,
 	type UserResponse,
 	type VerifyBackupCodeLoginInput,
 	type VerifyLoginInput,
@@ -22,6 +28,7 @@ import { ApiError } from "../../../../api/use-api";
 import { LoginForm } from "../login-form";
 
 type LoginAnswer = Promise<Envelope<LoginClientResponse>>;
+type PasskeyOptionsAnswer = Promise<Envelope<PasskeyAuthenticationOptionsResponse>>;
 
 const mocks = vi.hoisted(() => ({
 	login: vi.fn<(input: LoginInput) => LoginAnswer>(),
@@ -30,6 +37,16 @@ const mocks = vi.hoisted(() => ({
 	loginTwoFactor: vi.fn<(input: LoginTwoFactorInput) => LoginAnswer>(),
 	loginBackupCode: vi.fn<(input: VerifyBackupCodeLoginInput) => LoginAnswer>(),
 	verifyLogin: vi.fn<(input: VerifyLoginInput) => LoginAnswer>(),
+	loginPasskeyOptions: vi.fn<(input: PasswordlessPasskeyOptionsInput) => PasskeyOptionsAnswer>(),
+	loginPasskey: vi.fn<(input: LoginPasswordlessPasskeyInput) => LoginAnswer>(),
+	adminLoginPasskeyOptions: vi.fn<(input: PasswordlessPasskeyOptionsInput) => PasskeyOptionsAnswer>(),
+	adminLoginPasskey: vi.fn<(input: LoginPasswordlessPasskeyInput) => LoginAnswer>(),
+	merchantLoginPasskeyOptions: vi.fn<(input: PasswordlessPasskeyOptionsInput) => PasskeyOptionsAnswer>(),
+	merchantLoginPasskey: vi.fn<(input: LoginPasswordlessPasskeyInput) => LoginAnswer>(),
+	loginPasskeySecondFactorOptions: vi.fn<(input: PasskeySecondFactorOptionsInput) => PasskeyOptionsAnswer>(),
+	loginPasskeySecondFactor: vi.fn<(input: LoginPasskeySecondFactorInput) => LoginAnswer>(),
+	browserSupportsWebAuthn: vi.fn<() => boolean>(),
+	startAuthentication: vi.fn<() => Promise<PasskeyAuthenticationResponse>>(),
 	authLogin: vi.fn<(user: UserResponse, meta: ApiResponseMeta) => void>(),
 	push: vi.fn<(href: string) => void>(),
 	replace: vi.fn<(href: string) => void>(),
@@ -43,6 +60,18 @@ vi.mock("next/navigation", () => ({
 		refresh: mocks.refresh,
 	}),
 }));
+
+// The browser's WebAuthn: none by default (as in jsdom); a test that signs in with a passkey turns it on.
+vi.mock("@simplewebauthn/browser", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@simplewebauthn/browser")>()),
+	browserSupportsWebAuthn: mocks.browserSupportsWebAuthn,
+	startAuthentication: mocks.startAuthentication,
+}));
+
+/** A mutation procedure of the faked API: `useMutation` answers `mutateAsync`. */
+function fakeMutation<TMutate>(mutateAsync: TMutate): { readonly useMutation: () => { readonly mutateAsync: TMutate; readonly isPending: boolean } } {
+	return { useMutation: () => ({ mutateAsync, isPending: false }) };
+}
 
 vi.mock("../../index", () => {
 	const api = {
@@ -63,6 +92,14 @@ vi.mock("../../index", () => {
 			verifyLogin: {
 				useMutation: (): { readonly mutateAsync: typeof mocks.verifyLogin; readonly isPending: boolean } => ({ mutateAsync: mocks.verifyLogin, isPending: false }),
 			},
+			loginPasskeyOptions: fakeMutation(mocks.loginPasskeyOptions),
+			loginPasskey: fakeMutation(mocks.loginPasskey),
+			adminLoginPasskeyOptions: fakeMutation(mocks.adminLoginPasskeyOptions),
+			adminLoginPasskey: fakeMutation(mocks.adminLoginPasskey),
+			merchantLoginPasskeyOptions: fakeMutation(mocks.merchantLoginPasskeyOptions),
+			merchantLoginPasskey: fakeMutation(mocks.merchantLoginPasskey),
+			loginPasskeySecondFactorOptions: fakeMutation(mocks.loginPasskeySecondFactorOptions),
+			loginPasskeySecondFactor: fakeMutation(mocks.loginPasskeySecondFactor),
 		},
 	};
 	return {
@@ -82,7 +119,7 @@ function successAnswer(user: UserResponse = userFixture()): Envelope<LoginClient
 }
 
 function twoFactorPendingAnswer(): Envelope<LoginClientResponse> {
-	return envelopeFixture<LoginClientResponse>({ requiresTwoFactor: true, tempToken: TEMP_TOKEN, message: "Two-factor code required" }, LOGIN_META);
+	return envelopeFixture<LoginClientResponse>({ requiresTwoFactor: true, tempToken: TEMP_TOKEN, message: "Two-factor code required", passkeyAvailable: false }, LOGIN_META);
 }
 
 function fillCredentials(): void {
@@ -104,6 +141,7 @@ async function reachTwoFactorStep(): Promise<void> {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mocks.browserSupportsWebAuthn.mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -413,5 +451,106 @@ describe("LoginForm restricted enrollment", () => {
 		expect(mocks.merchantLogin).toHaveBeenCalledWith({ email: EMAIL, password: PASSWORD });
 		expect(mocks.login).not.toHaveBeenCalled();
 		expect(mocks.authLogin).toHaveBeenCalledWith(user, LOGIN_META);
+	});
+});
+
+const CHALLENGE_ID = "019b76da-a810-7000-8000-00000000c0de";
+const PASSKEY_OPTIONS: PasskeyAuthenticationOptionsResponse = {
+	challengeId: CHALLENGE_ID,
+	options: { challenge: "Y2hhbGxlbmdl", rpId: "localhost", userVerification: "required" },
+};
+const ASSERTION: PasskeyAuthenticationResponse = {
+	id: "Y3JlZC0x",
+	rawId: "Y3JlZC0x",
+	response: { clientDataJSON: "Y2xpZW50", authenticatorData: "YXV0aA", signature: "c2ln", userHandle: "dXNlcg" },
+	clientExtensionResults: {},
+	type: "public-key",
+};
+
+function passkeyOptionsAnswer(): Envelope<PasskeyAuthenticationOptionsResponse> {
+	return envelopeFixture<PasskeyAuthenticationOptionsResponse>(PASSKEY_OPTIONS, LOGIN_META);
+}
+
+describe("LoginForm passkeys (ADR 080)", () => {
+	it("offers no passkey sign-in where the browser has no WebAuthn", () => {
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
+
+		expect(screen.queryByRole("button", { name: "Sign in with a passkey" })).toBeNull();
+	});
+
+	it("signs in with a passkey alone: options, the device's assertion, then the answer's session", async () => {
+		mocks.browserSupportsWebAuthn.mockReturnValue(true);
+		mocks.loginPasskeyOptions.mockResolvedValue(passkeyOptionsAnswer());
+		mocks.startAuthentication.mockResolvedValue(ASSERTION);
+		const user = userFixture();
+		mocks.loginPasskey.mockResolvedValue(successAnswer(user));
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(await screen.findByRole("button", { name: "Sign in with a passkey" }));
+
+		await waitFor((): void => {
+			expect(mocks.authLogin).toHaveBeenCalledWith(user, LOGIN_META);
+		});
+		expect(mocks.loginPasskeyOptions).toHaveBeenCalledWith({});
+		expect(mocks.loginPasskey).toHaveBeenCalledWith({ challengeId: CHALLENGE_ID, response: ASSERTION });
+		expect(mocks.push).toHaveBeenCalledWith("/hello");
+		expect(mocks.login).not.toHaveBeenCalled();
+	});
+
+	it("uses the admin's own passkey sign-in, and its admin-access gate", async () => {
+		mocks.browserSupportsWebAuthn.mockReturnValue(true);
+		mocks.adminLoginPasskeyOptions.mockResolvedValue(passkeyOptionsAnswer());
+		mocks.startAuthentication.mockResolvedValue(ASSERTION);
+		mocks.adminLoginPasskey.mockResolvedValue(successAnswer(userFixture({ hasAdminAccess: false })));
+		render(<LoginForm mode="admin" />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(await screen.findByRole("button", { name: "Sign in with a passkey" }));
+
+		expect(await screen.findByText("Admin access required. This account does not have administrator privileges.")).toBeDefined();
+		expect(mocks.loginPasskey).not.toHaveBeenCalled();
+		expect(mocks.authLogin).not.toHaveBeenCalled();
+	});
+
+	it("says so in plain words when the person closes the device's prompt, and signs nothing in", async () => {
+		mocks.browserSupportsWebAuthn.mockReturnValue(true);
+		mocks.loginPasskeyOptions.mockResolvedValue(passkeyOptionsAnswer());
+		// A browser's DOMException is an Error named NotAllowedError; jsdom's DOMException does not extend Error, so the same shape is built here.
+		mocks.startAuthentication.mockRejectedValue(Object.assign(new Error("The operation either timed out or was not allowed."), { name: "NotAllowedError" }));
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(await screen.findByRole("button", { name: "Sign in with a passkey" }));
+
+		expect(await screen.findByText("The passkey prompt was closed before it finished. Try again when you're ready.")).toBeDefined();
+		expect(mocks.loginPasskey).not.toHaveBeenCalled();
+		expect(mocks.authLogin).not.toHaveBeenCalled();
+	});
+
+	it("finishes a password sign-in with a passkey when the account has one", async () => {
+		mocks.browserSupportsWebAuthn.mockReturnValue(true);
+		mocks.login.mockResolvedValue(
+			envelopeFixture<LoginClientResponse>({ requiresTwoFactor: true, tempToken: TEMP_TOKEN, message: "Two-factor code required", passkeyAvailable: true }, LOGIN_META),
+		);
+		mocks.loginPasskeySecondFactorOptions.mockResolvedValue(passkeyOptionsAnswer());
+		mocks.startAuthentication.mockResolvedValue(ASSERTION);
+		const user = userFixture();
+		mocks.loginPasskeySecondFactor.mockResolvedValue(successAnswer(user));
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
+		submitCredentials();
+
+		fireEvent.click(await screen.findByRole("button", { name: "Use a passkey instead" }));
+
+		await waitFor((): void => {
+			expect(mocks.authLogin).toHaveBeenCalledWith(user, LOGIN_META);
+		});
+		expect(mocks.loginPasskeySecondFactorOptions).toHaveBeenCalledWith({ tempToken: TEMP_TOKEN });
+		expect(mocks.loginPasskeySecondFactor).toHaveBeenCalledWith({ tempToken: TEMP_TOKEN, challengeId: CHALLENGE_ID, response: ASSERTION });
+		expect(mocks.loginTwoFactor).not.toHaveBeenCalled();
+	});
+
+	it("offers no passkey at the second step to an account without one", async () => {
+		mocks.browserSupportsWebAuthn.mockReturnValue(true);
+		await reachTwoFactorStep();
+
+		expect(screen.queryByRole("button", { name: "Use a passkey instead" })).toBeNull();
 	});
 });

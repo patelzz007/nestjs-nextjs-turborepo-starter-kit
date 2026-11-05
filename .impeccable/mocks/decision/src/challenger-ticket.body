@@ -1,0 +1,15 @@
+<style>
+body{background:#e9ecf2;color:#1b2a52;font-family:Geist,sans-serif}
+.hd{display:flex;justify-content:space-between;padding:52px 20px 0}.hd svg{width:22px;height:22px;stroke:#1b2a52;fill:none;stroke-width:2}
+h1{font:700 30px "Bricolage Grotesque";margin:12px 20px 16px;text-transform:uppercase;letter-spacing:.04em}
+.cp{margin:0 20px;background:#fafaf7;border-radius:14px;display:flex;overflow:hidden;box-shadow:0 1px 0 #d6dae3}
+.main{flex:1;padding:16px;border-right:2px dashed #c9cfdb}.stub{width:92px;padding:16px 10px;text-align:center}
+.f{font:600 10px Geist;letter-spacing:.12em;color:#7a8296;text-transform:uppercase}.v{font:600 16px Geist;margin:2px 0 10px}
+.stamp{display:inline-block;border:2px solid #c8322b;color:#c8322b;font:700 12px Geist;letter-spacing:.1em;padding:4px 6px;transform:rotate(-8deg);border-radius:4px}
+.n{font:700 34px "Geist Mono";color:#4b3b8f}
+.cp2{margin:14px 20px 0}
+</style>
+<div class="hd"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 3 7 3 7H3s3-1 3-7"/></svg></div>
+<h1>Home</h1>
+<div class="cp"><div class="main"><div class="f">Passenger</div><div class="v">Admin User</div><div class="f">Email</div><div class="v">admin@example.com</div><span class="stamp">VERIFIED</span></div><div class="stub"><div class="f">Codes</div><div class="n">07</div></div></div>
+<div class="cp cp2"><div class="main"><div class="f">Discover · 1 of 4</div><div class="v">See your activity</div><div style="font-size:13px;color:#5b6378">Spending, visits and rewards over the last week, month or quarter.</div></div><div class="stub"><div class="f">Range</div><div class="n" style="font-size:24px">7D</div></div></div>

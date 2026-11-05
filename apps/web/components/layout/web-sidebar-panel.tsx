@@ -29,6 +29,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
+import { useTranslatedSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
+import { USER_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 
 export interface WebSidebarPanelProps {
 	readonly userName: string | null;
@@ -60,7 +62,9 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 	const searchQuery = useSidebarSearchQuery();
 	const { setSearchQuery, setItemExpanded, followLink, moveSectionUp, moveSectionDown } = useSidebarCommands();
 
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(USER_SIDEBAR_MENU, capabilities), [capabilities]);
+	// In the language on screen (5.12); ids and the saved section order stay the English ones.
+	const menu = useTranslatedSidebarMenu(USER_SIDEBAR_MENU, USER_SIDEBAR_LABELS);
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(menu, capabilities), [capabilities, menu]);
 	const pinnedUrls = useCommandPalettePinnedUrls();
 
 	const view = React.useMemo(() => buildSidebarView({ menu: filteredMenu, pathname, sectionOrder, searchQuery }), [filteredMenu, pathname, sectionOrder, searchQuery]);

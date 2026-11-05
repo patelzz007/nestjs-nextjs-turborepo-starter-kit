@@ -20,7 +20,9 @@ export const CAPABILITY_LABELS: Readonly<Record<MerchantCapability, string>> = {
 	"merchant:manage_verification": "Business verification",
 	"merchant:view_notifications": "See what the business sent customers",
 	"merchant:manage_broadcasts": "Write and schedule announcements",
+	"merchant:manage_payments": "Take and refund payments",
 	"merchant:publish_broadcasts": "Approve announcements",
+	"merchant:manage_webhooks": "Send events to the business's own systems",
 };
 
 /** Whether `role` gives `capability` (its permission is among the role's). */

@@ -62,7 +62,7 @@ describe("Card", () => {
 				<BodyText>{BODY}</BodyText>
 			</Card>,
 		);
-		expect(String(screen.getByTestId("card").props.className).split(" ")).toContain("p-3");
+		expect(String(screen.getByTestId("card").props.className).split(" ")).toContain("p-4");
 	});
 
 	it("forwards the ref of every part", async () => {

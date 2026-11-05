@@ -15,7 +15,7 @@ function dependencies(overrides: Partial<PreferencesStoreDependencies> = {}): Pr
 
 describe("preferencesReducer", () => {
 	it("defaults to System, lock off, 60 s, onboarding not seen yet (§9.7, §11.2, ADR 041)", () => {
-		expect(DEFAULT_PREFERENCES).toEqual({ theme: "system", appLock: { enabled: false, timeoutMs: 60_000 }, onboardingCompleted: false });
+		expect(DEFAULT_PREFERENCES).toEqual({ theme: "system", appLock: { enabled: false, timeoutMs: 60_000 }, language: null, onboardingCompleted: false });
 	});
 
 	it("applies each change", () => {
@@ -23,9 +23,10 @@ describe("preferencesReducer", () => {
 			preferencesActions.themeChanged("dark"),
 			preferencesActions.appLockTurnedOn(),
 			preferencesActions.appLockTimeoutChanged(0),
+			preferencesActions.languageChanged("ms"),
 			preferencesActions.onboardingCompleted(),
 		].reduce(preferencesReducer, DEFAULT_PREFERENCES);
-		expect(changed).toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 0 }, onboardingCompleted: true });
+		expect(changed).toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 0 }, language: "ms", onboardingCompleted: true });
 		expect(preferencesReducer(changed, preferencesActions.onboardingReset()).onboardingCompleted).toBe(false);
 		expect(preferencesReducer(changed, preferencesActions.appLockTurnedOff()).appLock).toEqual({ enabled: false, timeoutMs: 0 });
 		expect(preferencesReducer(changed, preferencesActions.restored(DEFAULT_PREFERENCES))).toEqual(DEFAULT_PREFERENCES);
@@ -53,7 +54,7 @@ describe("theme persistence (§10.9)", () => {
 		await waitFor(() => {
 			expect(memorySecureStore.peek("prefs.theme")).toBe(JSON.stringify("dark"));
 		});
-		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: false, timeoutMs: 60_000 }, onboardingCompleted: false });
+		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: false, timeoutMs: 60_000 }, language: null, onboardingCompleted: false });
 	});
 
 	it("reports a failed save and keeps the preference for this run", async () => {
@@ -79,8 +80,31 @@ describe("loadPreferences", () => {
 		memorySecureStore.seed("prefs.appLock.enabled", JSON.stringify(true));
 		memorySecureStore.seed("prefs.appLock.timeoutMs", "not-json");
 
-		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 60_000 }, onboardingCompleted: false });
+		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 60_000 }, language: null, onboardingCompleted: false });
 		expect(memorySecureStore.peek("prefs.appLock.timeoutMs")).toBe("60000");
+	});
+
+	it("reads the chosen language, and treats a missing, corrupt or unreadable one as no choice (ADR 076)", async () => {
+		memorySecureStore.seed("prefs.language", JSON.stringify("ta"));
+		await expect(loadPreferences()).resolves.toMatchObject({ language: "ta" });
+
+		memorySecureStore.seed("prefs.language", JSON.stringify("fr"));
+		await expect(loadPreferences()).resolves.toMatchObject({ language: null });
+
+		memorySecureStore.getItemAsync.mockImplementation((key: string): Promise<string | null> =>
+			key === "prefs.language" ? Promise.reject(new Error("keychain")) : Promise.resolve(null),
+		);
+		await expect(loadPreferences()).resolves.toMatchObject({ language: null });
+	});
+});
+
+describe("savePreferences — the language (ADR 076)", () => {
+	it("keeps a chosen language and removes it when there is none", async () => {
+		await savePreferences({ ...DEFAULT_PREFERENCES, language: "zh-Hans" });
+		expect(memorySecureStore.peek("prefs.language")).toBe(JSON.stringify("zh-Hans"));
+
+		await savePreferences(DEFAULT_PREFERENCES);
+		expect(memorySecureStore.peek("prefs.language")).toBeNull();
 	});
 });
 

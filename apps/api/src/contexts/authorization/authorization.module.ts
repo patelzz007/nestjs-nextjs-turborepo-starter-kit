@@ -1,4 +1,6 @@
-import { Global, Module } from "@nestjs/common";
+import { Global, Module, type OnModuleInit } from "@nestjs/common";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { authorizationEraser } from "./infrastructure/personal-data/authorization-erasure";
 import type { Prisma } from "@prisma/client";
 
 import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
@@ -264,4 +266,14 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		SystemCommandModule,
 	],
 })
-export class AuthorizationModule {}
+export class AuthorizationModule implements OnModuleInit {
+	public constructor(
+		private readonly erasure: PersonalDataErasureRegistry,
+		private readonly erasureTransactions: TenantTransactionService,
+	) {}
+
+	/** Registers this context's part of account erasure (ADR 077). */
+	public onModuleInit(): void {
+		this.erasure.registerEraser(authorizationEraser(this.erasureTransactions));
+	}
+}

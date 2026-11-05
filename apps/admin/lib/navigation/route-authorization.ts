@@ -142,6 +142,8 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	// GET /admin/audit-logs/:id (READ AUDIT_LOG) — one complete record, payloads included —
 	// plus GET /admin/data-changes (LIST AUDIT_LOG): the rows the request changed.
 	{ prefix: ROUTE_PATTERNS.auditLogs.detail, authorization: { permissions: [PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST], mode: "all" } },
+	// GET /admin/webhooks/received/:id (READ AUDIT_LOG) — one received webhook, its allowlisted headers included.
+	{ prefix: ROUTE_PATTERNS.webhooks.receivedDetail, authorization: { permissions: [PERMISSION.AUDIT_LOG.READ] } },
 	// GET /admin/merchants/:tenantId + /lifecycle (LIST MERCHANT_ORG); suspend, reinstate and appeal
 	// review are shown only with SUSPEND / REACTIVATE / REJECT MERCHANT_ORG.
 	{ prefix: ROUTE_PATTERNS.merchants.detail, authorization: { permissions: [PERMISSION.MERCHANT_ORG.LIST] } },
@@ -178,6 +180,13 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	// GET /admin/operations/load-tests/:runId (READ LOAD_TEST); the comparison reads two runs
 	{ prefix: ROUTE_PATTERNS.operations.compare, authorization: { permissions: [PERMISSION.LOAD_TEST.READ] } },
 	{ prefix: ROUTE_PATTERNS.operations.loadTest, authorization: { permissions: [PERMISSION.LOAD_TEST.READ] } },
+	// The status page (enhancement 4.5): open an incident (POST …/status/incidents, CREATE STATUS_INCIDENT); one incident is the list's LIST.
+	{ prefix: ROUTES.operations.newStatusIncident, authorization: { permissions: [PERMISSION.STATUS_INCIDENT.CREATE] } },
+	// GET /admin/roles (LIST ROLE) · GET /admin/permissions (LIST PERMISSION) · POST /admin/permissions/check (READ PERMISSION):
+	// a settings section, not a sidebar item (Settings is one link, enhancement 5.13), so its rule is its own.
+	{ prefix: ROUTES.settings.access, authorization: { permissions: [PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ], mode: "any" } },
+	// GET /admin/feature-flags (LIST FEATURE_FLAG): a settings section, not a sidebar item (enhancement 5.6).
+	{ prefix: ROUTES.settings.featureFlags, authorization: { permissions: [PERMISSION.FEATURE_FLAG.LIST] } },
 	// GET + PATCH /sample-category/:id (READ + UPDATE)
 	{ prefix: ROUTE_PATTERNS.catalog.categories.edit, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ, PERMISSION.SAMPLE_CATEGORY.UPDATE], mode: "all" } },
 ];

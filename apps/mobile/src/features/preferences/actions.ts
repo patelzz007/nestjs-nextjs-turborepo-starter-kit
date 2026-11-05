@@ -1,3 +1,5 @@
+import type { AppLanguage } from "@workspace/shared";
+
 import type { AppLockTimeoutMs, ThemePreference } from "../../lib/secure-store";
 import type { PreferencesState } from "./state";
 
@@ -7,6 +9,7 @@ export type PreferencesAction =
 	| { readonly type: "[ Preferences ] App Lock Turned On" }
 	| { readonly type: "[ Preferences ] App Lock Turned Off" }
 	| { readonly type: "[ Preferences ] App Lock Timeout Changed"; readonly timeoutMs: AppLockTimeoutMs }
+	| { readonly type: "[ Preferences ] Language Changed"; readonly language: AppLanguage }
 	| { readonly type: "[ Preferences ] Onboarding Completed" }
 	| { readonly type: "[ Preferences ] Onboarding Reset" };
 
@@ -16,6 +19,7 @@ export const preferencesActions = {
 	appLockTurnedOn: (): PreferencesAction => ({ type: "[ Preferences ] App Lock Turned On" }),
 	appLockTurnedOff: (): PreferencesAction => ({ type: "[ Preferences ] App Lock Turned Off" }),
 	appLockTimeoutChanged: (timeoutMs: AppLockTimeoutMs): PreferencesAction => ({ type: "[ Preferences ] App Lock Timeout Changed", timeoutMs }),
+	languageChanged: (language: AppLanguage): PreferencesAction => ({ type: "[ Preferences ] Language Changed", language }),
 	onboardingCompleted: (): PreferencesAction => ({ type: "[ Preferences ] Onboarding Completed" }),
 	/** Development builds only (Settings → About): onboarding shows again at the next sign-out. */
 	onboardingReset: (): PreferencesAction => ({ type: "[ Preferences ] Onboarding Reset" }),

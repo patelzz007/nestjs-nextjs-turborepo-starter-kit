@@ -9,8 +9,9 @@ import { MerchantRootProvider } from "@/lib/session/root-provider";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
-import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-provider";
-import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
+import { nonceProps, readSecurityNonce } from "@workspace/client/lib/security/security-nonce";
+import { AppLanguageProvider } from "@workspace/client/lib/i18n/app-language-provider";
+import { readRequestLanguage } from "@workspace/client/lib/i18n/request-language";
 import { Toaster } from "@workspace/ui/components/toast";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { geistMono } from "@workspace/ui/fonts/geist-mono";
@@ -31,22 +32,29 @@ export default async function RootLayout({ children }: { readonly children: Reac
 	// The session the server renders for: the auth store starts from it, so nothing that depends on
 	// who is signed in pops in after load. Without one (a guest, an outage) the browser's check settles it.
 	const serverSession = serverRenderedSessionOf(await loadMerchantServerSession());
+	// The CSP nonce proxy.ts set for this request: next-themes' inline anti-flash script must carry it.
+	const nonce = await readSecurityNonce();
+	// ADR 076: the `lang` cookie, then the browser's Accept-Language, then English.
+	const language = await readRequestLanguage();
 
 	return (
-		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="merchant-app">
+		<AppDocumentShell
+			lang={language}
+			htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)}
+			bodyClassName="merchant-app">
 			<ReduxDevToolsGuard />
-			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
+			<AppLanguageProvider language={language}>
 				<UrlStateProvider>
 					<QueryProvider>
 						<MerchantRootProvider serverSession={serverSession}>
-							<ThemeProvider>
+							<ThemeProvider {...nonceProps(nonce)}>
 								{children}
 								<Toaster position="top-right" />
 							</ThemeProvider>
 						</MerchantRootProvider>
 					</QueryProvider>
 				</UrlStateProvider>
-			</UiKitLanguageProvider>
+			</AppLanguageProvider>
 		</AppDocumentShell>
 	);
 }

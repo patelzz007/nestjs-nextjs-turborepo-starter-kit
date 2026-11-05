@@ -3,12 +3,13 @@
  * RSS), the GitHub repository ("Edit this page"), and outbound app links.
  *
  * Override the origins with `PUBLIC_SITE_URL`, `PUBLIC_ADMIN_URL` and
- * `PUBLIC_API_DOCS_URL` in `apps/docs/.env`; the defaults are the local dev
+ * `PUBLIC_API_DOCS_URL` in `apps/docs/.env` (`envPrefix` in vite.config.ts); the defaults are the local dev
  * ports so everything works out of the box.
  */
 export const SITE_NAME = "Monorepo Docs";
 export const SITE_TITLE = "Monorepo Learning Center";
 export const SITE_DESCRIPTION = "Guides for the monorepo — setup, architecture, authorization, tooling, and roadmaps.";
+export const BLOG_DESCRIPTION = "Engineering notes on how and why the monorepo is built the way it is.";
 
 export const GITHUB_REPO = "patelzz007/nestjs-nextjs-turborepo-starter-kit";
 export const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
@@ -31,9 +32,10 @@ export interface HeaderTab {
 }
 
 export const HEADER_TABS: readonly HeaderTab[] = [
-	{ label: "Learning Center", href: "/", activePaths: ["/", "/docs"] },
+	{ label: "Guides", href: "/", activePaths: ["/", "/docs"] },
 	{ label: "Blog", href: "/blog", activePaths: ["/blog"] },
-	{ label: "API Reference", href: API_DOCS_URL, activePaths: [] },
+	{ label: "Endpoints", href: "/endpoints", activePaths: ["/endpoints"] },
+	{ label: "Swagger", href: API_DOCS_URL, activePaths: [] },
 	{ label: "Admin", href: ADMIN_URL, activePaths: [] },
 ];
 
@@ -60,4 +62,14 @@ export function isTabActive(tab: HeaderTab, pathname: string): boolean {
 /** "Edit this page" URL for a file under a repo-root content folder (`docs` or `blog`). */
 export function githubEditUrl(folder: "docs" | "blog", filePath: string): string {
 	return `${GITHUB_URL}/blob/${GITHUB_BRANCH}/${folder}/${filePath}`;
+}
+
+/** `robots.txt`: every page may be indexed, and the sitemap (written by the Start build) lists them. */
+export function robotsTxt(siteUrl: string): string {
+	return `User-agent: *\nAllow: /\n\nSitemap: ${new URL("/sitemap.xml", siteUrl).href}\n`;
+}
+
+/** Absolute URL of a site path (canonical links, Open Graph); absolute URLs are returned unchanged. */
+export function absoluteUrl(pathOrUrl: string, siteUrl: string = SITE_URL): string {
+	return new URL(pathOrUrl, siteUrl).href;
 }

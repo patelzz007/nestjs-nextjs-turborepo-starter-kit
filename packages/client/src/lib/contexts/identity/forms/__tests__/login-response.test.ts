@@ -54,6 +54,7 @@ describe("isLoginRestrictedEnrollment", () => {
 			requiresTwoFactor: true,
 			tempToken: "pending-token",
 			message: "Enter your 2FA code.",
+			passkeyAvailable: false,
 		});
 
 		expect(isLoginRestrictedEnrollment(response)).toBe(false);

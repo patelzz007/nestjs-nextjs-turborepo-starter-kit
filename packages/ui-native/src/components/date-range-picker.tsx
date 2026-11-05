@@ -18,10 +18,13 @@ import XIcon from "lucide-react-native/icons/x";
 import { cva } from "class-variance-authority";
 import * as React from "react";
 import { Modal, Pressable, Text, View, type ViewInstance } from "react-native";
+import Animated from "react-native-reanimated";
+import { withUniwind } from "uniwind";
 
 import { calendarDayMsOf, calendarMonthOf, pickRangeDay, rangeDayRoleOf, type CalendarMonth, type DateRangeDraft, type RangeDayRole } from "../lib/calendar";
 import { cn } from "../lib/cn";
 import { playSelectionFeedback } from "../lib/haptics";
+import { useSheetMotion } from "../lib/use-sheet-motion";
 import { Button } from "./button";
 import { CalendarMonthGrid } from "./calendar-month-grid";
 import { CalendarNavigator } from "./calendar-navigator";
@@ -70,17 +73,30 @@ export const dateRangeStatusVariants = cva("font-sans text-sm", {
 	defaultVariants: { state: "default" },
 });
 
+const StyledAnimatedView = withUniwind(Animated.View);
+
 /** The close button's glyph is 24 pt in a 44 pt circle; 8 pt more on each side eases the corner reach. */
 const CLOSE_HIT_SLOP = 8;
 
 export const DateRangePicker = React.memo(
 	React.forwardRef<ViewInstance, DateRangePickerProps>(function DateRangePicker({ visible, onClose, ...props }, ref): React.JSX.Element {
+		// The backdrop fades and the sheet slides from one value, and the Modal stays up until both are away
+		// (lib/use-sheet-motion): the Modal's own slide would carry the backdrop off with the window.
+		const { presented, opening, backdropStyle, sheetStyle, measureSheet } = useSheetMotion(visible);
 		return (
-			<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+			<Modal visible={presented} transparent animationType="none" onRequestClose={onClose}>
 				<View ref={ref} className="flex-1 justify-end">
-					<Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} className="absolute inset-0 bg-scrim opacity-50" />
-					{/* Mounted only while open, so every opening starts from `initialRange`. */}
-					{visible ? <PickerSheet {...props} onClose={onClose} /> : null}
+					<StyledAnimatedView
+						pointerEvents="box-none"
+						className="absolute inset-0 bg-scrim"
+						style={backdropStyle}
+						testID={props.testID === undefined ? undefined : `${props.testID}-backdrop`}>
+						<Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} className="flex-1" />
+					</StyledAnimatedView>
+					<StyledAnimatedView onLayout={measureSheet} style={sheetStyle}>
+						{/* A fresh sheet for every opening, so each starts from `initialRange`; it stays while it slides away. */}
+						{presented ? <PickerSheet key={opening} {...props} onClose={onClose} /> : null}
+					</StyledAnimatedView>
 				</View>
 			</Modal>
 		);

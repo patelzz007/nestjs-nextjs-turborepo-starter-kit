@@ -1,6 +1,7 @@
 import { EmailVerificationGateDialog } from "@/contexts/identity/components/email-verification-gate-dialog";
 import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import { SecuritySettingsPanel } from "@workspace/client/lib/contexts/identity/mfa/security-settings-panel";
+import { PrivacySettingsSections } from "@workspace/client/lib/contexts/privacy";
 import { SettingsSectionHeader } from "@workspace/ui/components/settings-shell";
 import * as React from "react";
 
@@ -27,7 +28,9 @@ export default async function MerchantAccountPage({ params }: MerchantAccountPag
 		<>
 			<EmailVerificationGateDialog />
 			<SettingsSectionHeader title="Security" description="Verify your email, manage your password, and configure two-factor authentication." />
-			<SecuritySettingsPanel />
+			<SecuritySettingsPanel>
+				<PrivacySettingsSections />
+			</SecuritySettingsPanel>
 		</>
 	);
 }

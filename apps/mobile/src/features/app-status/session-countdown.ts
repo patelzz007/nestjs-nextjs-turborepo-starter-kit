@@ -8,7 +8,6 @@
 
 const MS_PER_SECOND = 1_000;
 const SECONDS_PER_MINUTE = 60;
-const MINUTES_PER_HOUR = 60;
 
 /** The minutes after an hour and the seconds after a minute always show two digits ("1h 05m", "4m 09s"). */
 const PADDED_WIDTH = 2;
@@ -34,15 +33,9 @@ function padded(value: number): string {
 	return String(value).padStart(PADDED_WIDTH, "0");
 }
 
-/**
- * "14m 32s". `compact` shortens an hour or more to "2h 05m", so a long-lived
- * token still fits the corner pill.
- */
-export function formatTimeLeft(totalSeconds: number, compact: boolean): string {
+/** "14m 32s" (and "150m 00s" for a long-lived token: the drawer's pill has the room). */
+export function formatTimeLeft(totalSeconds: number): string {
 	const minutes = Math.floor(totalSeconds / SECONDS_PER_MINUTE);
 	const seconds = totalSeconds % SECONDS_PER_MINUTE;
-	if (compact && minutes >= MINUTES_PER_HOUR) {
-		return `${String(Math.floor(minutes / MINUTES_PER_HOUR))}h ${padded(minutes % MINUTES_PER_HOUR)}m`;
-	}
 	return `${String(minutes)}m ${padded(seconds)}s`;
 }

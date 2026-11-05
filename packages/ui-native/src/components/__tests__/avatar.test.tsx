@@ -4,7 +4,7 @@ import type { ViewInstance } from "react-native";
 
 import { AVATAR_POINTS, Avatar, initialsOf, type AvatarSize } from "../avatar";
 
-const SIZES: readonly AvatarSize[] = ["sm", "md", "lg"];
+const SIZES: readonly AvatarSize[] = ["sm", "md", "row", "lg"];
 
 function classNameOf(testID: string): string {
 	return String(screen.getByTestId(testID).props.className);
@@ -44,10 +44,10 @@ describe("Avatar", () => {
 		expect(classNameOf("avatar")).not.toContain("rounded-full");
 	});
 
-	it("inverts its colours on a primary surface", async () => {
+	it("is a soft grey disc with ink initials, and inverts its colours on a primary surface", async () => {
 		const view = await render(<Avatar name="Alex" imageUrl={null} testID="avatar" />);
-		expect(classNameOf("avatar")).toContain("bg-primary");
-		expect(screen.getByText("A")).toHaveProp("className", expect.stringContaining("text-primary-foreground"));
+		expect(classNameOf("avatar")).toContain("bg-muted");
+		expect(screen.getByText("A")).toHaveProp("className", expect.stringContaining("text-foreground"));
 
 		await view.rerender(<Avatar name="Alex" imageUrl={null} tone="inverse" testID="avatar" />);
 		expect(classNameOf("avatar")).toContain("bg-primary-foreground");

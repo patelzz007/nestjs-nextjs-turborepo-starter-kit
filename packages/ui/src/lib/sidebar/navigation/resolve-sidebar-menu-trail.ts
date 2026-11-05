@@ -20,7 +20,10 @@ export interface SidebarMenuTrailNode {
 }
 
 export interface SidebarMenuTrailSection {
+	/** What the section is called on screen (in the reader's language). */
 	readonly title: string;
+	/** Its stable identity (the English title), the same in every language; defaults to the title. */
+	readonly key?: string | undefined;
 	readonly items: readonly SidebarMenuTrailNode[];
 }
 
@@ -96,9 +99,15 @@ function collectMenuRoots(menu: SidebarMenuTrailData): SidebarMenuRoots {
 	return { roots, sectionOf };
 }
 
-/** `Section ›` context crumb in front of an item of a multi-item section (never the `Main` catch-all). */
+/** The catch-all section, whose items never get a section crumb (by its stable key: its title is translated). */
+const CATCH_ALL_SECTION_KEY = "Main";
+
+/**
+ * `Section ›` context crumb in front of an item of a multi-item section (never the `Main` catch-all). An item
+ * named like its section on screen gets none either, so a trail never reads "Rewards › Rewards".
+ */
 function shouldPrependSectionTitle(section: SidebarMenuTrailSection, item: SidebarMenuTrailNode): boolean {
-	return section.items.length > 1 && item.title !== section.title && section.title !== "Main";
+	return section.items.length > 1 && item.title !== section.title && (section.key ?? section.title) !== CATCH_ALL_SECTION_KEY;
 }
 
 /**

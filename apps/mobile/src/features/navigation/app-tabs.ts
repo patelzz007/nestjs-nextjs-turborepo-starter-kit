@@ -1,7 +1,8 @@
 // The (app) group's tabs, in the order the tab bar shows them: one entry per
 // route file directly inside src/app/(app). The tabs layout declares its
-// screens from this list and the tab bar takes each tab's title and icon from
-// it, so a tab is added, renamed or reordered here and nowhere else.
+// screens from this list and the tab bar takes each tab's icon from it, so a
+// tab is added or reordered here and nowhere else. Its title, in every
+// language, is its heading in navigation-labels.ts (keyed by `name`).
 
 import ChartColumnIcon from "lucide-react-native/icons/chart-column";
 import HouseIcon from "lucide-react-native/icons/house";
@@ -17,18 +18,17 @@ export type AppTabName = "index" | "analytics" | "search" | "profile" | "setting
 
 export interface AppTab {
 	readonly name: AppTabName;
-	readonly title: string;
 	readonly icon: LucideIcon;
 	/** Where the tab lives (the drawer links to it). */
 	readonly route: AppRoute;
 }
 
 export const APP_TABS: readonly AppTab[] = [
-	{ name: "index", title: "Home", icon: HouseIcon, route: ROUTES.home },
-	{ name: "analytics", title: "Analytics", icon: ChartColumnIcon, route: ROUTES.analytics },
-	{ name: "search", title: "Search", icon: SearchIcon, route: ROUTES.search },
-	{ name: "profile", title: "Profile", icon: UserIcon, route: ROUTES.profile },
-	{ name: "settings", title: "Settings", icon: SettingsIcon, route: ROUTES.settings },
+	{ name: "index", icon: HouseIcon, route: ROUTES.home },
+	{ name: "analytics", icon: ChartColumnIcon, route: ROUTES.analytics },
+	{ name: "search", icon: SearchIcon, route: ROUTES.search },
+	{ name: "profile", icon: UserIcon, route: ROUTES.profile },
+	{ name: "settings", icon: SettingsIcon, route: ROUTES.settings },
 ];
 
 const APP_TABS_BY_NAME: ReadonlyMap<string, AppTab> = new Map(APP_TABS.map((tab: AppTab): [string, AppTab] => [tab.name, tab]));

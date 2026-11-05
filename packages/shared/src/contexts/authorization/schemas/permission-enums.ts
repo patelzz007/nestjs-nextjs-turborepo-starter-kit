@@ -82,6 +82,10 @@ export const PermissionResourceSchema = z.enum([
 	"BROADCAST_REPORT",
 	"RATE_LIMIT",
 	"CACHE",
+	"BACKGROUND_JOB",
+	"STATUS_INCIDENT",
+	"FEATURE_FLAG",
+	"WEBHOOK",
 ]);
 export type PermissionResource = z.output<typeof PermissionResourceSchema>;
 

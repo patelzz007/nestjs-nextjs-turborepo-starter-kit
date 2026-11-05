@@ -1,89 +1,53 @@
 // ============================================
 // e2e/sign-in.e2e.ts - signing the browser suite in as the seeded admin
 // ============================================
-// The browser suite signs in once per run (`sign-in.setup.ts`) and every spec
-// reuses the saved session (`SIGNED_IN_STATE_PATH`). The API asks for an emailed six-digit
-// code when the sign-in comes from a device it does not recognise yet (login
-// verification, `new-device` mode) — a fresh Playwright browser usually is one —
-// so the helper reads the newest sign-in code from the local Mailpit inbox
-// (AGENTS.md → "Reading emails while testing locally") and enters it, exactly
-// as a person would. It finds the email by its `login-verification` tag, not by
-// recipient: a developer's `EMAIL_TEST_TO` sends every email to their own inbox.
-// Mailpit is only asked once the page actually shows the code prompt: a run
-// against an API with `LOGIN_VERIFICATION_MODE=disabled` (CI) never needs an
-// inbox, so it must not depend on one being reachable.
+// The browser suite signs in once per run (`sign-in.setup.ts`) and every spec reuses the saved session
+// (`SIGNED_IN_STATE_PATH`). The sign-in itself (including the emailed code on a new device) is the shared
+// `@workspace/client/testing/browser-sign-in`, used by the merchant suite too. A long suite uses `signedInTest`,
+// which keeps the session fresh across tests.
 
-import { expect, type Page } from "@playwright/test";
-import { JsonValueSchema, type JsonValue } from "@workspace/shared";
-import { z } from "zod";
+import { test, type BrowserContext, type Page } from "@playwright/test";
+import { signInThroughLoginPage } from "@workspace/client/testing/browser-sign-in";
 
 import { adminBrowserE2eEnv } from "./browser-env.e2e";
 
 /** Where the signed-in session (cookies) is saved for the specs; git-ignored, rewritten every run. */
 export const SIGNED_IN_STATE_PATH = "e2e/.auth/admin.json";
 
-/** How long the emailed code may take to arrive, and how often the inbox is asked. */
-const CODE_POLL_ATTEMPTS = 50;
-const CODE_POLL_INTERVAL_MS = 200;
-
-const SearchResponseSchema = z.object({ messages: z.array(z.object({ ID: z.string(), Created: z.iso.datetime({ offset: true }) }).loose()) }).loose();
-const MessageSchema = z.object({ Text: z.string() }).loose();
-const CODE_PATTERN = /\b(?<code>\d{6})\b/;
-
-async function getJson(path: string): Promise<JsonValue> {
-	const response = await fetch(`${adminBrowserE2eEnv.ADMIN_E2E_MAILPIT_URL}${path}`);
-	if (!response.ok) {
-		throw new Error(`Mailpit answered ${String(response.status)} for ${path} — is it running (\`pnpm mailpit\`)?`);
-	}
-	return JsonValueSchema.parse(await response.json());
-}
-
-/** The Mailpit tag the API puts on a sign-in verification email. */
-const LOGIN_VERIFICATION_TAG = "login-verification";
-
-/** The id of the newest sign-in verification email Mailpit received at or after `sinceMs`, or `null` when there is none yet. */
-async function newestCodeEmailIdSince(sinceMs: number): Promise<string | null> {
-	const query = new URLSearchParams({ query: `tag:${LOGIN_VERIFICATION_TAG}`, limit: "1" });
-	const [newest] = SearchResponseSchema.parse(await getJson(`/api/v1/search?${query.toString()}`)).messages;
-	if (newest === undefined || Date.parse(newest.Created) < sinceMs) {
-		return null;
-	}
-	return newest.ID;
-}
-
-/** The six-digit code of the first sign-in verification email received since `requestedAtMs` (a requested code invalidates older ones). */
-async function emailedCode(requestedAtMs: number): Promise<string> {
-	for (let attempt = 0; attempt < CODE_POLL_ATTEMPTS; attempt += 1) {
-		const newestId = await newestCodeEmailIdSince(requestedAtMs);
-		if (newestId !== null) {
-			const message = MessageSchema.parse(await getJson(`/api/v1/message/${encodeURIComponent(newestId)}`));
-			const code = CODE_PATTERN.exec(message.Text)?.groups?.code;
-			if (code !== undefined) {
-				return code;
-			}
-		}
-		await new Promise<void>((resolve: () => void): void => {
-			setTimeout(resolve, CODE_POLL_INTERVAL_MS);
-		});
-	}
-	throw new Error("No sign-in code reached Mailpit");
-}
-
 /** Signs the seeded admin in and lands on `pathname` (the login page's `?redirect=`). */
-export async function signIn(page: Page, pathname: string): Promise<void> {
-	await page.goto(`/auth/login?redirect=${pathname}`);
-	await page.getByLabel("Email").fill(adminBrowserE2eEnv.ADMIN_E2E_EMAIL);
-	await page.getByLabel("Password", { exact: true }).fill(adminBrowserE2eEnv.ADMIN_E2E_PASSWORD);
-	const requestedAtMs = Date.now();
-	await page.getByRole("button", { name: "Sign in" }).click();
-
-	const codeInput = page.getByRole("textbox", { name: "Verification code" });
-	const landed = page.waitForURL((url: URL) => url.pathname === pathname).then((): boolean => true);
-	const challenged = codeInput.waitFor().then((): boolean => false);
-	if (!(await Promise.race([landed, challenged]))) {
-		await codeInput.fill(await emailedCode(requestedAtMs));
-		await page.getByRole("button", { name: "Verify sign-in" }).click();
-		await landed;
-	}
-	await expect(page).toHaveURL((url: URL) => url.pathname === pathname);
+export function signIn(page: Page, pathname: string): Promise<void> {
+	return signInThroughLoginPage(page, pathname, {
+		email: adminBrowserE2eEnv.ADMIN_E2E_EMAIL,
+		password: adminBrowserE2eEnv.ADMIN_E2E_PASSWORD,
+		mailpitUrl: adminBrowserE2eEnv.ADMIN_E2E_MAILPIT_URL,
+	});
 }
+
+/** A saved session: the cookies and storage a context holds. */
+type SessionState = Awaited<ReturnType<BrowserContext["storageState"]>>;
+
+/** The worker's latest session: unset until a test has run, then that test's cookies (refreshed ones included). */
+interface WorkerSession {
+	latest: SessionState | undefined;
+}
+
+interface SignedInWorkerFixtures {
+	readonly workerSession: WorkerSession;
+}
+
+/**
+ * A test that starts from the worker's latest session rather than the one saved at sign-in. The API rotates the
+ * refresh token on every refresh and revokes the whole session when an old one is replayed (token reuse), so a
+ * suite that outlives the access token (CI's is 15 minutes) must carry each test's refreshed cookies into the
+ * next test, as one browser would; replaying the sign-in's cookies would sign every later test out.
+ */
+export const signedInTest = test.extend<object, SignedInWorkerFixtures>({
+	workerSession: [{ latest: undefined }, { scope: "worker" }],
+	storageState: async ({ storageState, workerSession }, provide): Promise<void> => {
+		await provide(workerSession.latest ?? storageState);
+	},
+	context: async ({ context, workerSession }, provide): Promise<void> => {
+		await provide(context);
+		workerSession.latest = await context.storageState();
+	},
+});

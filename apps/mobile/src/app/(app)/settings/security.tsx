@@ -7,19 +7,22 @@
 
 import { useForm } from "@tanstack/react-form";
 import { ChangePasswordSchema, type ChangePasswordInput } from "@workspace/shared";
+import SmartphoneIcon from "lucide-react-native/icons/smartphone";
 import { useRouter } from "expo-router";
 import * as React from "react";
+import { View } from "react-native";
 
 import { Badge } from "@workspace/ui-native/components/badge";
 import { Alert } from "@workspace/ui-native/components/alert";
 import { Button } from "@workspace/ui-native/components/button";
 import { Card } from "@workspace/ui-native/components/card";
+import { ListGroup } from "@workspace/ui-native/components/list-group";
 import { ListRow } from "@workspace/ui-native/components/list-row";
 import { Screen } from "../../../components/screen";
 import { ErrorState, LoadingState } from "@workspace/ui-native/components/empty";
 import { MutedText } from "@workspace/ui-native/components/text";
 import { TextField } from "@workspace/ui-native/components/text-field";
-import { backupCodesNotice, SignOutEverywhere } from "../../../contexts/identity";
+import { backupCodesNotice, PasskeysSection, SignOutEverywhere } from "../../../contexts/identity";
 import { useSessionCommands } from "../../../features/session/facade";
 import { useToast } from "../../../features/toast/facade";
 import { useApi } from "../../../lib/api-context";
@@ -75,10 +78,13 @@ export default function SecurityScreen(): React.JSX.Element {
 					</>
 				)}
 			</Card>
-			<Card title="Devices">
-				<ListRow label="Signed-in devices" description="See and sign out the devices on your account" onPress={openDevices} />
+			<PasskeysSection />
+			<View className="gap-3">
+				<ListGroup title="Devices">
+					<ListRow icon={SmartphoneIcon} label="Signed-in devices" description="See and sign out the devices on your account" onPress={openDevices} />
+				</ListGroup>
 				<SignOutEverywhere />
-			</Card>
+			</View>
 		</Screen>
 	);
 }

@@ -7,6 +7,7 @@ import type {
 	MfaRecoveryStatusResponse,
 	OwnProfile,
 	PaginatedServiceResult,
+	Passkey,
 	Session,
 	SessionListQuery,
 	UserPreferences,
@@ -51,6 +52,8 @@ export interface IdentityReadPort {
 	/** One page of the active (live, unexpired) sessions with every device detail; `isCurrent` from `currentSessionId`. */
 	listActiveSessions(actor: ActorContext, userId: string, currentSessionId: string | null, query: SessionListQuery): Promise<PaginatedServiceResult<Session>>;
 	countUnusedBackupCodes(actor: ActorContext, userId: string): Promise<number>;
+	/** The account's live passkeys, newest first (ADR 080). */
+	listPasskeys(actor: ActorContext, userId: string): Promise<readonly Passkey[]>;
 	unusedBackupCodeHashes(actor: ActorContext, userId: string): Promise<readonly string[]>;
 	latestMfaRecovery(actor: ActorContext, userId: string): Promise<MfaRecoveryStatusResponse | null>;
 	listMfaRecoveries(actor: ActorContext, query: AdminMfaRecoveryListQuery): Promise<PaginatedServiceResult<AdminMfaRecoveryRequest>>;

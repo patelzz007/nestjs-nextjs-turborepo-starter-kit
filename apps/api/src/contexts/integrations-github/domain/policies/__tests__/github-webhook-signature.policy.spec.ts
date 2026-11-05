@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { githubWebhookSignature, isValidGithubWebhookSignature } from "../github-webhook-signature.policy";
+import { githubSignatureVerifier, githubWebhookSignature } from "../github-webhook-signature.policy";
 
 const SECRET = "It's a Secret to Everybody";
 const BODY = Buffer.from("Hello, World!");
+
+/** The verdict GitHub's verifier gives `rawBody` signed with `header`. */
+function verdictOf(secret: string, rawBody: Buffer, header: string | undefined): string {
+	return githubSignatureVerifier(secret).verify({ rawBody, headers: { "x-hub-signature-256": header } }).verdict;
+}
 
 describe("GitHub webhook signatures", () => {
 	it("matches GitHub's documented example", () => {
@@ -12,18 +17,18 @@ describe("GitHub webhook signatures", () => {
 	});
 
 	it("accepts GitHub's signature of exactly these bytes", () => {
-		expect(isValidGithubWebhookSignature(SECRET, BODY, githubWebhookSignature(SECRET, BODY))).toBe(true);
-		expect(isValidGithubWebhookSignature(SECRET, BODY, githubWebhookSignature(SECRET, BODY).toUpperCase().replace("SHA256=", "sha256="))).toBe(true);
+		expect(verdictOf(SECRET, BODY, githubWebhookSignature(SECRET, BODY))).toBe("VALID");
+		expect(verdictOf(SECRET, BODY, githubWebhookSignature(SECRET, BODY).toUpperCase().replace("SHA256=", "sha256="))).toBe("VALID");
 	});
 
 	it("refuses another body, another secret, a missing, malformed or truncated header", () => {
 		const signature = githubWebhookSignature(SECRET, BODY);
 
-		expect(isValidGithubWebhookSignature(SECRET, Buffer.from("Hello, World?"), signature)).toBe(false);
-		expect(isValidGithubWebhookSignature("another secret", BODY, signature)).toBe(false);
-		expect(isValidGithubWebhookSignature(SECRET, BODY, undefined)).toBe(false);
-		expect(isValidGithubWebhookSignature(SECRET, BODY, signature.replace("sha256=", "sha1="))).toBe(false);
-		expect(isValidGithubWebhookSignature(SECRET, BODY, signature.slice(0, -2))).toBe(false);
-		expect(isValidGithubWebhookSignature(SECRET, BODY, `sha256=${"z".repeat(64)}`)).toBe(false);
+		expect(verdictOf(SECRET, Buffer.from("Hello, World?"), signature)).toBe("INVALID");
+		expect(verdictOf("another secret", BODY, signature)).toBe("INVALID");
+		expect(verdictOf(SECRET, BODY, undefined)).toBe("MISSING");
+		expect(verdictOf(SECRET, BODY, signature.replace("sha256=", "sha1="))).toBe("INVALID");
+		expect(verdictOf(SECRET, BODY, signature.slice(0, -2))).toBe("INVALID");
+		expect(verdictOf(SECRET, BODY, `sha256=${"z".repeat(64)}`)).toBe("INVALID");
 	});
 });

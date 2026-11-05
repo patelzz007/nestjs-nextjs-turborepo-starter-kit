@@ -19,8 +19,9 @@ import { loadWebServerSession } from "@/contexts/identity/lib/server-session";
 import { WEB_UI_PREFERENCES_DEVTOOLS_NAME, WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
-import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-provider";
-import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
+import { nonceProps, readSecurityNonce } from "@workspace/client/lib/security/security-nonce";
+import { AppLanguageProvider } from "@workspace/client/lib/i18n/app-language-provider";
+import { readRequestLanguage } from "@workspace/client/lib/i18n/request-language";
 import { Toaster } from "@workspace/ui/components/toast";
 import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
 import { BRAND_NAME } from "@workspace/tokens";
@@ -42,16 +43,20 @@ export default async function RootLayout({
 	// it, so nothing that depends on who is signed in pops in after load. Guests have none.
 	const sessionActive = await hasServerSession();
 	const serverSession = await loadWebServerSession(sessionActive);
+	// The CSP nonce proxy.ts set for this request: next-themes' inline anti-flash script must carry it.
+	const nonce = await readSecurityNonce();
+	// ADR 076: the `lang` cookie, then the browser's Accept-Language, then English.
+	const language = await readRequestLanguage();
 
 	return (
-		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="web-app">
+		<AppDocumentShell lang={language} htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="web-app">
 			<ReduxDevToolsGuard />
-			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
+			<AppLanguageProvider language={language}>
 				<UrlStateProvider>
 					<QueryProvider>
 						<WebClientAuthWrapper sessionActive={sessionActive} serverSession={serverSession}>
 							<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={serverSession?.permissions}>
-								<ThemeProvider>
+								<ThemeProvider {...nonceProps(nonce)}>
 									{/* Root, not the /dashboard shell: the public landing page renders the rewards catalog too. */}
 									<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
 										<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
@@ -63,7 +68,7 @@ export default async function RootLayout({
 						</WebClientAuthWrapper>
 					</QueryProvider>
 				</UrlStateProvider>
-			</UiKitLanguageProvider>
+			</AppLanguageProvider>
 		</AppDocumentShell>
 	);
 }

@@ -4,12 +4,14 @@
 // Shows who is signed in, and "Discover": a carousel of cards pointing to parts of the app worth a
 // first look (features/home-highlights). Products replace this screen with their own.
 
+import InfoIcon from "lucide-react-native/icons/info";
 import * as React from "react";
 import { View } from "react-native";
 
 import { Avatar } from "@workspace/ui-native/components/avatar";
 import { Alert } from "@workspace/ui-native/components/alert";
 import { Card } from "@workspace/ui-native/components/card";
+import { IconTile } from "@workspace/ui-native/components/icon-tile";
 import { Screen } from "../../components/screen";
 import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
 import { ErrorState } from "@workspace/ui-native/components/empty";
@@ -51,9 +53,16 @@ export default function HomeScreen(): React.JSX.Element {
 			)}
 			{notice === null ? null : <Alert tone="warning" message={notice} />}
 			<HomeHighlights />
-			<Card title="This is the starter shell">
-				<BodyText>Sign-in, profile, settings, security and devices work end to end. Build your product&apos;s screens on top of it.</BodyText>
-				<MutedText>See apps/mobile/README.md for how the app is put together and where new features go.</MutedText>
+			{/* About this kit: an info glyph beside the note (ADR 079). */}
+			<Card>
+				<View className="flex-row gap-4">
+					<IconTile icon={InfoIcon} size="sm" />
+					<View className="flex-1 gap-2">
+						<Subheading>This is the starter shell</Subheading>
+						<BodyText>Sign-in, profile, settings, security and devices work end to end. Build your product&apos;s screens on top of it.</BodyText>
+						<MutedText>See apps/mobile/README.md for how the app is put together and where new features go.</MutedText>
+					</View>
+				</View>
 			</Card>
 		</Screen>
 	);

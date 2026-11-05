@@ -21,11 +21,6 @@ import {
 export const PUSH_BODY_MAX_LENGTH = 240;
 const ELLIPSIS = "…";
 
-export interface RichTextRenderOptions {
-	/** The public URL of a scanned image file; null when it may not be shown (unscanned, failed, gone). */
-	readonly imageUrl: (fileId: string) => string | null;
-}
-
 const HTML_ESCAPES: Readonly<Record<string, string>> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 
 export function escapeHtml(value: string): string {
@@ -71,7 +66,7 @@ function cellHtml(cell: RichTextTableCell): string {
 	return `<${tag} style="${CELL_STYLE}${weight}">${cell.content.map((paragraph) => inlinesHtml(paragraph.content ?? [])).join("<br>")}</${tag}>`;
 }
 
-function blockHtml(block: RichTextBlock, options: RichTextRenderOptions): string {
+function blockHtml(block: RichTextBlock): string {
 	switch (block.type) {
 		case "paragraph":
 			return `<p style="${TEXT_STYLE}">${inlinesHtml(block.content ?? [])}</p>`;
@@ -84,15 +79,16 @@ function blockHtml(block: RichTextBlock, options: RichTextRenderOptions): string
 		case "bulletList":
 		case "orderedList": {
 			const tag = block.type === "bulletList" ? "ul" : "ol";
-			return `<${tag} style="margin: 0 0 16px 0; padding-left: 22px;">${block.content.map((item) => `<li style="margin: 0 0 6px 0;">${item.content.map((child) => blockHtml(child, options)).join("")}</li>`).join("")}</${tag}>`;
+			return `<${tag} style="margin: 0 0 16px 0; padding-left: 22px;">${block.content.map((item) => `<li style="margin: 0 0 6px 0;">${item.content.map((child) => blockHtml(child)).join("")}</li>`).join("")}</${tag}>`;
 		}
 		case "blockquote":
-			return `<blockquote style="margin: 0 0 16px 0; padding: 4px 0 4px 14px; border-left: 3px solid #d1d5db; color: #4b5563;">${block.content.map((child) => blockHtml(child, options)).join("")}</blockquote>`;
+			return `<blockquote style="margin: 0 0 16px 0; padding: 4px 0 4px 14px; border-left: 3px solid #d1d5db; color: #4b5563;">${block.content.map((child) => blockHtml(child)).join("")}</blockquote>`;
 		case "horizontalRule":
 			return '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">';
 		case "image": {
-			const url = options.imageUrl(block.attrs.fileId);
-			return url === null
+			// The server fills `src` with the picture's public address; one without it (gone, not ready) is left out.
+			const url = block.attrs.src;
+			return url === undefined
 				? ""
 				: `<p style="margin: 0 0 16px 0;"><img src="${escapeHtml(url)}" alt="${escapeHtml(block.attrs.alt)}" style="max-width: 100%; height: auto; border-radius: 8px;"></p>`;
 		}
@@ -104,8 +100,8 @@ function blockHtml(block: RichTextBlock, options: RichTextRenderOptions): string
 }
 
 /** Email HTML: safe to insert into the email shell. */
-export function renderRichTextHtml(document: RichTextDocument, options: RichTextRenderOptions): string {
-	return document.content.map((block: RichTextBlock): string => blockHtml(block, options)).join("");
+export function renderRichTextHtml(document: RichTextDocument): string {
+	return document.content.map((block: RichTextBlock): string => blockHtml(block)).join("");
 }
 
 function inlinesText(inlines: readonly RichTextInline[]): string {

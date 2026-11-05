@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  A production-grade <strong>NestJS + Next.js + Expo</strong> monorepo: one NestJS API on Fastify, three Next.js apps, an Astro docs site and an Expo mobile app, all typed end to end by one set of Zod schemas. It ships with a complete reference product (a multi-tenant rewards platform) so every pattern is shown working, not described.
+  A production-grade <strong>NestJS + Next.js + Expo</strong> monorepo: one NestJS API on Fastify, three Next.js apps, a TanStack Start docs site and an Expo mobile app, all typed end to end by one set of Zod schemas. It ships with a complete reference product (a multi-tenant rewards platform) so every pattern is shown working, not described.
 </p>
 
 <p align="center">
@@ -119,7 +119,7 @@ Customers browse local rewards, claim them and redeem them in store with a QR co
 </tr>
 <tr>
 <td width="50%"><img src="./docs/images/readme/web-landing-dark.webp" alt="Landing page in dark mode" /><br /><sub>Landing page in dark mode</sub></td>
-<td width="50%"><img src="./docs/images/readme/web-landing-dark.webp" alt="Landing page in dark mode" /><br /><sub>Landing page in dark mode</sub></td>
+<td width="50%"></td>
 </tr>
 </table>
 
@@ -217,7 +217,7 @@ Each business works inside its own tenant (`/t/<tenant>/…`): rewards, redempti
 </tr>
 <tr>
 <td width="50%"><img src="./docs/images/readme/merchant-login.webp" alt="Merchant sign-in" /><br /><sub>Merchant sign-in</sub></td>
-<td width="50%"><img src="./docs/images/readme/merchant-login.webp" alt="Merchant sign-in" /><br /><sub>Merchant sign-in</sub></td>
+<td width="50%"></td>
 </tr>
 </table>
 
@@ -225,7 +225,7 @@ Each business works inside its own tenant (`/t/<tenant>/…`): rewards, redempti
 
 ### Docs: the documentation site (`:3002`)
 
-The Astro site renders `docs/` and `blog/`: guides, the user guide, the generated API reference and every ADR, with search.
+The TanStack Start docs site renders `docs/` and `blog/`, every page pre-rendered: guides, the user guide, the generated API reference and every ADR, with search and an endpoint explorer.
 
 <p align="center"><img src="./docs/images/readme/docs-home.webp" alt="Learning Center home" width="100%" /></p>
 
@@ -252,7 +252,7 @@ The Astro site renders `docs/` and `blog/`: guides, the user guide, the generate
 </tr>
 <tr>
 <td width="50%"><img src="./docs/images/readme/docs-blog.webp" alt="Engineering blog" /><br /><sub>Engineering blog</sub></td>
-<td width="50%"><img src="./docs/images/readme/docs-blog.webp" alt="Engineering blog" /><br /><sub>Engineering blog</sub></td>
+<td width="50%"></td>
 </tr>
 </table>
 
@@ -260,38 +260,45 @@ The Astro site renders `docs/` and `blog/`: guides, the user guide, the generate
 
 ### Mobile: the Expo app (iOS and Android)
 
-The same API and the same Zod contract, on the phone: sign-in with demo accounts, a home with highlights, analytics, the till's QR scanner, an in-app PDF viewer with search, and four themes. Captured from a release APK on an Android emulator.
+The same API and the same Zod contract, on the phone: a home with highlights, a drawer built from JSON and gated by capability, search across every screen, analytics, the inbox, GitHub, the servers, the till's QR scanner, the live UI kit and four themes. Captured from a development build on an Android phone by a Maestro flow (`pnpm --filter @workspace/mobile screenshots:device`).
 
 <table>
 <tr>
-<td width="25%"><img src="./docs/images/readme/mobile-onboarding.webp" alt="Onboarding" /><br /><sub>Onboarding</sub></td>
-<td width="25%"><img src="./docs/images/readme/mobile-sign-in.webp" alt="Sign in" /><br /><sub>Sign in</sub></td>
 <td width="25%"><img src="./docs/images/readme/mobile-home.webp" alt="Home" /><br /><sub>Home</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-drawer.webp" alt="The drawer: account, sections, live status" /><br /><sub>The drawer: account, sections, live status</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-command-palette.webp" alt="Search: jump to any screen" /><br /><sub>Search: jump to any screen</sub></td>
 <td width="25%"><img src="./docs/images/readme/mobile-analytics.webp" alt="Analytics" /><br /><sub>Analytics</sub></td>
 </tr>
 </table>
 
 <details>
-<summary><strong>More mobile screens (11)</strong></summary>
+<summary><strong>More mobile screens (15)</strong></summary>
 <br />
 
 <table>
 <tr>
-<td width="25%"><img src="./docs/images/readme/mobile-profile.webp" alt="Profile" /><br /><sub>Profile</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-profile.webp" alt="Profile and GitHub contributions" /><br /><sub>Profile and GitHub contributions</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-pull-requests.webp" alt="GitHub pull requests" /><br /><sub>GitHub pull requests</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-notifications.webp" alt="The inbox" /><br /><sub>The inbox</sub></td>
 <td width="25%"><img src="./docs/images/readme/mobile-settings.webp" alt="Settings" /><br /><sub>Settings</sub></td>
-<td width="25%"><img src="./docs/images/readme/mobile-security.webp" alt="Security" /><br /><sub>Security</sub></td>
-<td width="25%"><img src="./docs/images/readme/mobile-devices.webp" alt="Signed-in devices" /><br /><sub>Signed-in devices</sub></td>
 </tr>
 <tr>
+<td width="25%"><img src="./docs/images/readme/mobile-security.webp" alt="Security" /><br /><sub>Security</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-devices.webp" alt="Signed-in devices" /><br /><sub>Signed-in devices</sub></td>
 <td width="25%"><img src="./docs/images/readme/mobile-till.webp" alt="Till: pair this phone as a POS" /><br /><sub>Till: pair this phone as a POS</sub></td>
-<td width="25%"><img src="./docs/images/readme/mobile-pdf.webp" alt="PDF viewer" /><br /><sub>PDF viewer</sub></td>
-<td width="25%"><img src="./docs/images/readme/mobile-pdf-search.webp" alt="PDF search with highlights" /><br /><sub>PDF search with highlights</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-servers.webp" alt="Operations: the servers" /><br /><sub>Operations: the servers</sub></td>
+</tr>
+<tr>
+<td width="25%"><img src="./docs/images/readme/mobile-components.webp" alt="The UI kit, live" /><br /><sub>The UI kit, live</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-appearance.webp" alt="Appearance: four themes" /><br /><sub>Appearance: four themes</sub></td>
 <td width="25%"><img src="./docs/images/readme/mobile-home-dark.webp" alt="Home, dark theme" /><br /><sub>Home, dark theme</sub></td>
+<td width="25%"><img src="./docs/images/readme/mobile-drawer-dark.webp" alt="The drawer, dark theme" /><br /><sub>The drawer, dark theme</sub></td>
 </tr>
 <tr>
 <td width="25%"><img src="./docs/images/readme/mobile-analytics-dark.webp" alt="Analytics, dark theme" /><br /><sub>Analytics, dark theme</sub></td>
 <td width="25%"><img src="./docs/images/readme/mobile-settings-dark.webp" alt="Settings, dark theme" /><br /><sub>Settings, dark theme</sub></td>
 <td width="25%"><img src="./docs/images/readme/mobile-home-nord.webp" alt="Home, Nord theme" /><br /><sub>Home, Nord theme</sub></td>
+<td width="25%"></td>
 </tr>
 </table>
 
@@ -304,7 +311,7 @@ The same API and the same Zod contract, on the phone: sign-in with demo accounts
 | **API** | `@workspace/api` | `8080` | NestJS 12 on Fastify: every endpoint, authentication, authorization, Prisma, queues, the outbox. Swagger at `/v1/docs`. |
 | **Web** | `@workspace/web` | `3000` | The customer app: public landing, sign-up, wallet, rewards, referrals and activity. |
 | **Admin** | `@workspace/admin` | `3001` | The platform panel: users, merchants, catalogue, rewards review, audit log, emails, operations console, settings. |
-| **Docs** | `@workspace/docs` | `3002` | The Astro documentation site for `docs/` and the blog. |
+| **Docs** | `@workspace/docs` | `3002` | The documentation site for `docs/` and the blog (TanStack Start, pre-rendered). |
 | **Merchant** | `@workspace/merchant` | `3003` | The merchant portal: dashboard, rewards, redemptions, stores, terminals, API keys, team and roles. |
 | **Mobile** | `@workspace/mobile` | `8081` (Metro) | The Expo (SDK 58) app for iOS and Android: sign-in, app lock, the till's QR scanner, an in-app PDF viewer, analytics and settings. |
 | **Analytics consumer** | `@workspace/analytics-consumer` | — | A Kafka consumer that turns outbox events into analytics rows, with an inbox for exactly-once handling. |
@@ -330,7 +337,7 @@ Shared packages keep every surface consistent:
 | **API** | [NestJS](https://nestjs.com) 12 on [Fastify](https://fastify.dev), CQRS, domain-driven bounded contexts |
 | **Web apps** | [Next.js](https://nextjs.org) 16 (App Router), [React](https://react.dev) 19, [Tailwind CSS](https://tailwindcss.com) 4, shadcn/ui and ReUI |
 | **Mobile** | [Expo](https://expo.dev) SDK 58, React Native 0.88, Expo Router, Uniwind, Reanimated |
-| **Docs** | [Astro](https://astro.build) |
+| **Docs** | [TanStack Start](https://tanstack.com/start) + Router, Query, Table and Pacer; the Markdown pipeline in `packages/docs-renderer` |
 | **Contracts and validation** | [Zod](https://zod.dev) 4, shared by the API, the browser and the phone |
 | **Data fetching and forms** | [TanStack](https://tanstack.com) Query, Form, Table and Virtual; Zustand; nuqs for URL state |
 | **Database** | [PostgreSQL](https://www.postgresql.org) 18 with row-level security, [Prisma](https://www.prisma.io) 7 |
@@ -526,11 +533,14 @@ grouped and described, and `pnpm tools <name>` runs one.
 | `pnpm setup` | Install dependencies and build `@workspace/shared` |
 | `pnpm setup:db` | First-time database: build shared, generate, deploy migrations, apply RLS, seed |
 | `pnpm dev` | Start every dev server (Turbo) |
+| `pnpm dev:stack` | Start just the API (`:8080`), web (`:3000`) and admin (`:3001`): the usual working set, lighter than everything |
 | `pnpm dev:web` / `dev:admin` / `dev:merchant` / `dev:api` / `dev:mobile` | Start one app |
 | `pnpm build` | Build every workspace |
 | `pnpm format` / `lint` / `typecheck` / `test` | Format and the quality checks across the monorepo |
 | `pnpm test:e2e` | The API and analytics-consumer end-to-end suites |
 | `pnpm ci:local` | Run what CI runs, locally, including the browser suites |
+| `pnpm scaffold:context <name>` | Start a new bounded context in the API: a compiling query slice with its module, port and passing tests, then the remaining steps (model, RLS, reader, contract, controller, registration) |
+| `pnpm certify:check` | Check the new-developer certification exercise in every layer, then run the full gate (`docs/technical/certification-exercise.md`) |
 | `pnpm db:migrate` / `db:migrate:create` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database ([database guide](./docs/technical/database.md)) |
 | `pnpm db:seed -- --scenario empty\|development\|enterprise [--seed <n>]` | Seed a specific dataset |
 | `pnpm docker:up` / `docker:down` | The local infrastructure |
@@ -561,7 +571,7 @@ apps/
 ├── web/                  Customer app (Next.js)
 ├── admin/                Platform admin panel (Next.js)
 ├── merchant/             Merchant portal (Next.js)
-├── docs/                 Documentation site (Astro)
+├── docs/                 Documentation site (TanStack Start)
 ├── mobile/               Expo app (Expo Router, Uniwind, local native modules)
 ├── analytics-consumer/   Kafka consumer → analytics
 ├── aws-infrastructure/   CDK stack for object storage
@@ -575,6 +585,7 @@ packages/
 ├── ui/                   Web UI kit (presentational only)
 ├── ui-native/            Mobile UI kit
 ├── tokens/               Design tokens and the brand mark
+├── docs-renderer/        The docs' Markdown pipeline and API reference generator
 ├── messaging/            Redis, BullMQ, Kafka, RabbitMQ wiring
 ├── tooling/              ci:local and repository checks
 ├── oxlint-config/        Lint presets and custom rules
@@ -590,6 +601,10 @@ Day to day the app runs in Expo Go. For an installable app (an APK for testers, 
 an iOS build, or a test APK that talks to the API on your machine over Wi-Fi or your phone's hotspot),
 follow [Building installable apps](./docs/technical/mobile/building-installable-apps.md). The same
 guide is kept identical in the companion Expo boilerplate repository.
+
+To ship a JavaScript fix to installed phones without a store release (over-the-air updates with EAS), follow
+[Over-the-air updates with EAS](./docs/technical/mobile/over-the-air-updates.md): first-time setup, every
+command, and a step-by-step first test.
 
 ## Working with AI coding agents
 

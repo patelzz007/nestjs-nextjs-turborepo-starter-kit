@@ -16,6 +16,7 @@ import type { NotificationRenderContext } from "../../domain/catalog/notificatio
 import type { NotificationsScope } from "../notifications-scope";
 import type { ChannelSendResult, PushMessage, PushSender, SmsMessage, SmsSender } from "../ports/channel-senders.port";
 import type { PushTokenCipher } from "../ports/push-token-cipher.port";
+import { pushAddressOf } from "./push-address";
 
 export const NOTIFICATIONS_DELIVER_OPERATION = "notifications.deliver";
 
@@ -140,7 +141,7 @@ export class ChannelDelivery {
 				deliveryId,
 				deviceId: device.id,
 				platform: device.platform,
-				token: this.deps.cipher.decrypt(device.tokenCiphertext, device.id),
+				...pushAddressOf(this.deps.cipher, device),
 				// A sensitive notification never shows its content on a lock screen (ADR 070).
 				title: type.sensitive ? this.deps.renderContext.appName : rendering.title,
 				body: type.sensitive ? "You have a new security message." : rendering.body,

@@ -30,6 +30,10 @@ import {
 	type PlatformBroadcastValues,
 	type PlatformSurface,
 } from "@/contexts/notifications/lib/platform-broadcast-composer";
+import { useBroadcastPictureUpload, type BroadcastPictureTarget } from "@workspace/client/lib/features/broadcasts/use-broadcast-picture-upload";
+
+/** Platform notices take the staff member's own picture uploads. */
+const PLATFORM_PICTURES: BroadcastPictureTarget = { kind: "platform" };
 
 const PLATFORM_COPY: BroadcastComposerCopy = {
 	titlePlaceholder: "e.g. Planned maintenance on Sunday night",
@@ -83,6 +87,8 @@ export function PlatformBroadcastComposer({
 		(values: PlatformBroadcastValues, now: number): BroadcastDraftResult => toPlatformBroadcastDraft(values, senderTimeZone, now),
 		[senderTimeZone],
 	);
+	// The platform's picture (enhancement 5.4): the staff member's own PLATFORM_BROADCAST_IMAGE upload.
+	const picture = useBroadcastPictureUpload(PLATFORM_PICTURES);
 	const renderAudience = React.useCallback(
 		(slot: BroadcastAudienceSlot<PlatformBroadcastValues>): React.ReactNode => <PlatformAudienceFields slot={slot} senderTimeZone={senderTimeZone} />,
 		[senderTimeZone],
@@ -98,6 +104,7 @@ export function PlatformBroadcastComposer({
 			savingIntent={savingIntent}
 			onSave={onSave}
 			cancel={cancel}
+			picture={picture}
 		/>
 	);
 }

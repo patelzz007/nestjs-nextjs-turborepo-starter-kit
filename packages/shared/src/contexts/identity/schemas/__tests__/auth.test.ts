@@ -67,7 +67,7 @@ describe("LoginClientResponseSchema (every variant round-trips intact)", () => {
 	});
 
 	it("keeps a 2FA-pending result", () => {
-		const payload: LoginClientResponse = { requiresTwoFactor: true, tempToken: "pending-token", message: "Enter your 2FA code." };
+		const payload: LoginClientResponse = { requiresTwoFactor: true, tempToken: "pending-token", message: "Enter your 2FA code.", passkeyAvailable: true };
 
 		expect(LoginClientResponseSchema.parse(payload)).toEqual(payload);
 	});

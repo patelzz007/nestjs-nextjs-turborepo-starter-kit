@@ -16,6 +16,10 @@
 -- a brand-new cluster it must exist before anything else runs; the apply plan
 -- (`assertRlsRoleDependencies`) rejects any file that uses a role before the
 -- file that creates it.
+-- A helper that calls another names it schema-qualified (`public.app_…`): SQL function bodies resolve
+-- names through the CALLER's search_path, so a caller with a strict path (a trigger pinned to
+-- `pg_catalog`) would otherwise fail with "function app_… does not exist". Qualifying, rather than a
+-- `SET search_path` clause, keeps these functions inlinable into the policies that call them per row.
 -- Idempotent (IF NOT EXISTS / CREATE OR REPLACE) — safe to re-run.
 -- ============================================================================
 
@@ -63,7 +67,7 @@ $$;
 CREATE OR REPLACE FUNCTION app_rls_bypass() RETURNS boolean
 LANGUAGE sql STABLE AS $$
   SELECT COALESCE(NULLIF(current_setting('app.rls_bypass', true), ''), 'false')::boolean
-     AND app_system_operation() IS NOT NULL;
+     AND public.app_system_operation() IS NOT NULL;
 $$;
 
 CREATE OR REPLACE FUNCTION app_current_user_id() RETURNS text
@@ -78,5 +82,5 @@ $$;
 
 CREATE OR REPLACE FUNCTION app_owns(owner_id text) RETURNS boolean
 LANGUAGE sql STABLE AS $$
-  SELECT app_current_user_id() IS NOT NULL AND app_current_user_id() = owner_id;
+  SELECT public.app_current_user_id() IS NOT NULL AND public.app_current_user_id() = owner_id;
 $$;

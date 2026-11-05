@@ -2,15 +2,18 @@ import { preferenceCellStateOf, type NotificationCategory, type NotificationPref
 
 import type { NotificationSettingsLabels } from "./notification-settings-labels";
 
-/** The line under a channel's checkbox: why it is kept on or not available; nothing for an ordinary one. */
-export function channelNoteOf(category: NotificationCategory, cell: NotificationPreferenceCell, labels: NotificationSettingsLabels): string | null {
+/**
+ * The subtitle under a channel's checkbox, never empty: why it is kept on, what to do to have it, or (for an
+ * ordinary channel, or one unavailable for no stated reason) what the channel is.
+ */
+export function channelNoteOf(category: NotificationCategory, cell: NotificationPreferenceCell, labels: NotificationSettingsLabels): string {
 	switch (preferenceCellStateOf(cell)) {
 		case "locked":
 			return labels.locked[category];
 		case "unavailable":
-			return cell.reason === null ? null : labels.unavailable[cell.reason];
+			return cell.reason === null ? labels.channelDescriptions[cell.channel] : labels.unavailable[cell.reason];
 		case "on":
 		case "off":
-			return null;
+			return labels.channelDescriptions[cell.channel];
 	}
 }

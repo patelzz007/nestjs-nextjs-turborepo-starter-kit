@@ -1,70 +1,92 @@
 // ============================================
 // root-navigator.tsx - the root guard (docs/technical/mobile/mobile-app.md §9.6)
 // ============================================
-// Exactly ONE route group is reachable per session state; Expo Router's
-// protected screens redirect away from every other one. Screens never decide
+// Exactly ONE root screen is reachable per session state. Screens never decide
 // where to go after authentication — they report what happened to the session
 // store, and this guard moves the app.
 //
-// | State           | Routes allowed                 |
-// | ConfigError     | config-error only              |
-// | UpgradeRequired | update-required only           |
-// | SignedOut       | onboarding only, until it is done (ADR 041); then (auth) only |
-// | Locked          | lock only                      |
-// | SignedIn        | (app) only ((auth) enrollment screens while the session is restricted) |
+// | State           | Root screen                    |
+// | ConfigError     | config-error                   |
+// | UpgradeRequired | update-required                |
+// | SignedOut       | auth/onboarding, until it is done (ADR 041); then auth/sign-in |
+// | Locked          | lock                           |
+// | Restricted      | auth/enroll-two-factor or auth/verify-email (the step it must finish) |
+// | SignedIn        | (app)                          |
+//
+// The root stack always declares every root screen, and every route file is wrapped in
+// `withRootGate`: shown while the session's root route is one it belongs to, otherwise replaced
+// by a redirect to the screen that route opens on. The auth folder (`/auth/…`) serves four routes —
+// onboarding, signed out and the two enrollment steps — and each of its screens is gated to its own. Expo Router's protected screens
+// (`Stack.Protected`) are not used: their guards change the navigator's screen list with the
+// session (each change a ROUTE_NAMES_CHANGED action, unhandled when it lands on a navigator
+// that is leaving), and a nested stack's guards re-ran their route clean-up on every render
+// of a redirected route, a loop React stopped as "Maximum update depth exceeded"
+// (seen on a phone whose session had ended while the app was closed).
 
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import * as React from "react";
 
 import { ROOT_TRANSITION } from "../lib/screen-transitions";
 import type { AppRootRoute } from "./root-route";
 import { ROUTES, type AppRoute } from "./routes";
 
+/** A root route with a screen (`starting` shows the launch screen instead of the navigator). */
+export type GatedRootRoute = Exclude<AppRootRoute, "starting">;
+
 export interface RootStackProps {
-	readonly route: Exclude<AppRootRoute, "starting">;
+	readonly route: GatedRootRoute;
 }
 
-const SCREEN_OPTIONS = { headerShown: false, animation: ROOT_TRANSITION } satisfies React.ComponentProps<typeof Stack>["screenOptions"];
+/** A root-level stack: no header, screens fade in and out (the auth folder's stack uses it too). */
+export const ROOT_SCREEN_OPTIONS = { headerShown: false, animation: ROOT_TRANSITION } satisfies React.ComponentProps<typeof Stack>["screenOptions"];
+
+/** A root screen the person may not swipe away from: there is nothing behind it to go back to. */
+export const PINNED = { gestureEnabled: false } satisfies React.ComponentProps<typeof Stack.Screen>["options"];
 
 /**
- * The screen each state opens on. A guard that turns a URL away sends it here,
- * explicitly: Expo Router's own fallback is the first allowed group's path, and
- * for the pathless (auth) group that is `/` — a URL it has no screen for, so the
- * signed-out app showed "Unmatched Route". Inside (auth), a restricted session's
- * guards turn `/sign-in` away in turn, to the enrollment step it must finish.
+ * The screen each root route opens on, where a root screen of another route redirects.
+ * Explicit: the auth folder has no screen at `/auth`.
  */
-const ROOT_ROUTE_ENTRY = {
+export const ROOT_ROUTE_ENTRY = {
 	"config-error": ROUTES.configError,
 	"update-required": ROUTES.updateRequired,
 	lock: ROUTES.lock,
 	onboarding: ROUTES.onboarding,
 	auth: ROUTES.signIn,
+	"enroll-two-factor": ROUTES.enrollTwoFactor,
+	"verify-email": ROUTES.verifyEmail,
 	app: ROUTES.home,
-} satisfies Record<RootStackProps["route"], AppRoute>;
+} satisfies Record<GatedRootRoute, AppRoute>;
 
-/** The navigator with every group guarded by the current root route. */
+const RootRouteContext = React.createContext<GatedRootRoute | null>(null);
+
+/** The root navigator: every root screen, the session's root route for their gates. */
 export function RootStack({ route }: RootStackProps): React.JSX.Element {
-	const entry = ROOT_ROUTE_ENTRY[route];
 	return (
-		<Stack screenOptions={SCREEN_OPTIONS}>
-			<Stack.Protected redirectTo={entry} guard={route === "config-error"}>
+		<RootRouteContext value={route}>
+			<Stack screenOptions={ROOT_SCREEN_OPTIONS}>
 				<Stack.Screen name="config-error" />
-			</Stack.Protected>
-			<Stack.Protected redirectTo={entry} guard={route === "update-required"}>
-				<Stack.Screen name="update-required" options={{ gestureEnabled: false }} />
-			</Stack.Protected>
-			<Stack.Protected redirectTo={entry} guard={route === "lock"}>
-				<Stack.Screen name="lock" options={{ gestureEnabled: false }} />
-			</Stack.Protected>
-			<Stack.Protected redirectTo={entry} guard={route === "onboarding"}>
-				<Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-			</Stack.Protected>
-			<Stack.Protected redirectTo={entry} guard={route === "auth"}>
-				<Stack.Screen name="(auth)" />
-			</Stack.Protected>
-			<Stack.Protected redirectTo={entry} guard={route === "app"}>
+				<Stack.Screen name="update-required" options={PINNED} />
+				<Stack.Screen name="lock" options={PINNED} />
+				<Stack.Screen name="auth" />
 				<Stack.Screen name="(app)" />
-			</Stack.Protected>
-		</Stack>
+			</Stack>
+		</RootRouteContext>
 	);
+}
+
+/**
+ * `Screen` (a route file's screen or layout, which take no props), a root screen of `owners`: shown while the session's root route is one of them, otherwise a redirect to
+ * the screen the current route opens on. Outside a {@link RootStack} (a screen rendered on its own) there is no
+ * root route, and the screen is shown.
+ */
+export function withRootGate(owners: readonly GatedRootRoute[], Screen: () => React.JSX.Element): () => React.JSX.Element {
+	function GatedRootScreen(): React.JSX.Element {
+		const route = React.use(RootRouteContext);
+		if (route !== null && !owners.includes(route)) {
+			return <Redirect href={ROOT_ROUTE_ENTRY[route]} />;
+		}
+		return <Screen />;
+	}
+	return GatedRootScreen;
 }

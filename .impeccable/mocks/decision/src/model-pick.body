@@ -1,0 +1,26 @@
+<style>
+body{background:#f1f4f9;color:#0a1a3a;font-family:Geist,sans-serif}
+.hd{display:flex;justify-content:space-between;align-items:center;padding:52px 20px 0}
+.ib{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center}
+.ib svg{width:22px;height:22px;stroke:#0a1a3a;fill:none;stroke-width:2;stroke-linecap:round}
+h1{font:700 34px "Bricolage Grotesque";margin:8px 20px 14px;letter-spacing:-.01em}
+.card{margin:0 20px;height:210px;border-radius:24px;background:linear-gradient(135deg,#0e4fb8,#0a2a66);color:#fff;padding:20px;position:relative;overflow:hidden}
+.card:after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;border:34px solid rgba(255,200,61,.9)}
+.lbl{font:600 11px Geist;letter-spacing:.1em;text-transform:uppercase;opacity:.75}
+.nm{font:600 22px "Bricolage Grotesque";margin-top:6px}
+.num{position:absolute;left:20px;bottom:20px;font:500 15px "Geist Mono";letter-spacing:.12em;opacity:.9}
+.chip{position:absolute;right:20px;bottom:18px;background:#ffc83d;color:#0a1a3a;font:700 12px Geist;padding:6px 10px;border-radius:999px}
+.sh{display:flex;justify-content:space-between;margin:26px 20px 8px}.sh b{font:600 18px "Bricolage Grotesque"}.sh span{color:#0e4fb8;font:600 14px Geist}
+.list{margin:0 20px;background:#f9fafc;border-radius:18px}
+.row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #e4e8ef}.row:last-child{border:0}
+.ic{width:36px;height:36px;border-radius:10px;background:#e3ecfb}
+.rt{flex:1}.rt b{display:block;font:600 15px Geist}.rt i{font-style:normal;font-size:13px;color:#5b6577}
+.amt{font:600 15px "Geist Mono"}
+</style>
+<div class="hd"><div class="ib"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></div><div class="ib"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 3 7 3 7H3s3-1 3-7"/></svg></div></div>
+<h1>Home</h1>
+<div class="card"><div class="lbl">Signed in</div><div class="nm">Admin User</div><div style="opacity:.8;font-size:13px;margin-top:2px">admin@example.com</div><div class="num">2FA · ON</div><div class="chip">7 backup codes</div></div>
+<div class="sh"><b>Discover</b><span>See all</span></div>
+<div class="list"><div class="row"><div class="ic"></div><div class="rt"><b>See your activity</b><i>Last 7 days</i></div><div class="amt">RM 248</div></div>
+<div class="row"><div class="ic" style="background:#dff3e6"></div><div class="rt"><b>Lock the app</b><i>Face, fingerprint or passcode</i></div><div class="amt">Off</div></div>
+<div class="row"><div class="ic" style="background:#fdebd8"></div><div class="rt"><b>Read a PDF</b><i>Page by page, right here</i></div><div class="amt">›</div></div></div>

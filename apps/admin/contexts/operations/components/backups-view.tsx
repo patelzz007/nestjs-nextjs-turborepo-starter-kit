@@ -5,7 +5,7 @@
 
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { OPS_BACKUP_LAST_HOUR, type OpsBackup, type OpsBackupSchedule, type OpsBackupStatus } from "@workspace/shared";
+import { OPS_BACKUP_LAST_HOUR, type OpsBackup, type OpsBackupSchedule, type OpsBackupStatus, type OpsRestoreDrill } from "@workspace/shared";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -213,6 +213,49 @@ function isFinishedBackup(backup: OpsBackup): boolean {
 	return backup.status === "SUCCEEDED" || backup.status === "FAILED";
 }
 
+/** The weekly restore drills (enhancement 2.6): the latest backup restored into a throwaway database and checked. */
+export function RestoreDrillsCard({ drills, configured }: { readonly drills: readonly OpsRestoreDrill[]; readonly configured: boolean }): React.JSX.Element {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Restore drills</CardTitle>
+				<CardDescription>
+					Every week the latest backup is restored into a throwaway database, checked (every table, row-level security, the migration, real rows) and dropped: proof the
+					backups can be restored.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				{!configured ? (
+					<p className="text-sm text-muted-foreground">Not set up here: set RESTORE_DRILL_DATABASE_URL to a login that may create and drop databases on this server.</p>
+				) : drills.length === 0 ? (
+					<p className="text-sm text-muted-foreground">No drill has run yet. The first one runs within the hour.</p>
+				) : (
+					<ul className="divide-y divide-border" aria-label="Restore drills">
+						{drills.map((drill): React.JSX.Element => (
+							<li key={drill.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
+								<div className="flex flex-wrap items-center gap-3">
+									<StatusBadge tone={drill.outcome === "PASSED" ? "success" : "danger"}>{drill.outcome === "PASSED" ? "Passed" : "Failed"}</StatusBadge>
+									<span className="text-sm text-foreground">{formatDateTimeShort(drill.startedAt)}</span>
+									<span className="text-xs text-muted-foreground tabular-nums">
+										{drill.tablesChecked} tables, {drill.rowsRestored.toLocaleString("en-MY")} rows{drill.migration === null ? "" : `, migration ${drill.migration}`}
+									</span>
+								</div>
+								{drill.failures.length === 0 ? null : (
+									<ul className="list-disc ps-5 text-sm text-destructive">
+										{drill.failures.map((failure): React.JSX.Element => (
+											<li key={failure}>{failure}</li>
+										))}
+									</ul>
+								)}
+							</li>
+						))}
+					</ul>
+				)}
+			</CardContent>
+		</Card>
+	);
+}
+
 export function BackupsView(): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
@@ -241,7 +284,8 @@ export function BackupsView(): React.JSX.Element {
 				<div>
 					<h1 className="text-2xl font-semibold tracking-tight">Backups</h1>
 					<p className="text-sm text-muted-foreground">
-						A complete copy of the database (pg_dump, custom format) in private, encrypted storage. Restore with the runbook, never from here.
+						A complete copy of the database (pg_dump, custom format) in private, encrypted storage. Restore with the runbook, never from here; the weekly drill below proves a
+						backup restores.
 					</p>
 				</div>
 				<Button type="button" disabled={create.isPending || active || data?.storageConfigured === false} onClick={handleCreate}>
@@ -259,6 +303,7 @@ export function BackupsView(): React.JSX.Element {
 				<ScheduleForm key={JSON.stringify(data.schedule)} schedule={data.schedule} timeZone={data.timeZone} nextScheduledAt={data.nextScheduledAt} />
 			)}
 			<DataTable columns={BACKUP_COLUMNS} data={data?.backups ?? []} actions={actions} isLoading={list.isLoading} emptyState={BACKUPS_EMPTY} persistKey="ops-backups" />
+			{data === undefined ? null : <RestoreDrillsCard drills={data.restoreDrills} configured={data.restoreDrillConfigured} />}
 		</div>
 	);
 }

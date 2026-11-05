@@ -14,8 +14,9 @@ const APP_DIR: string = resolve(fileURLToPath(new URL("..", import.meta.url)));
 /**
  * Routes that deliberately have no `loading.tsx`: client pages with static
  * content (their own Suspense fallbacks are shaped skeletons), the legacy
- * verify-email path, which only redirects, and the unsubscribe page (a client
- * page that waits on nothing until the person confirms).
+ * verify-email path, which only redirects, the unsubscribe page (a client
+ * page that waits on nothing until the person confirms), and the status page
+ * (a client page that shows its own skeleton while the status loads).
  */
 const ROUTES_WITHOUT_LOADING: readonly string[] = [
 	"auth/forgot-password",
@@ -24,6 +25,7 @@ const ROUTES_WITHOUT_LOADING: readonly string[] = [
 	"auth/verify-email",
 	"auth/verify-email/[token]",
 	"unsubscribe",
+	"status",
 ];
 
 /** Whether `directory` or a folder above it (up to `app/`) has a `loading.tsx` — the boundary Next.js would show. */

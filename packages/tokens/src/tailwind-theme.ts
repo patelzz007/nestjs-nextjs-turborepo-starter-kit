@@ -120,6 +120,7 @@ export const TAILWIND_THEME: TailwindTheme = {
 		"topbar",
 		"shell-frame",
 		"shell-panel",
+		"sheet",
 		"tier-bronze",
 		"tier-bronze-soft",
 		"tier-silver",

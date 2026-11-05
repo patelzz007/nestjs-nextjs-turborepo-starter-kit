@@ -5,6 +5,12 @@ import type { ViewInstance } from "react-native";
 import { Button } from "../button";
 
 describe("Button", () => {
+	it("sets its label in Bricolage Grotesque, the one place that face appears (font-button)", async () => {
+		await render(<Button label="Save changes" onPress={jest.fn()} />);
+
+		expect(screen.getByText("Save changes")).toHaveProp("className", expect.stringContaining("font-button"));
+	});
+
 	it("is an accessible button that reports presses", async () => {
 		const onPress = jest.fn();
 		await render(<Button label="Save" onPress={onPress} accessibilityHint="Saves your profile" />);

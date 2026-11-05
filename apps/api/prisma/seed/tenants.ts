@@ -141,10 +141,10 @@ async function upsertSeedTenant(input: SeedTenant, adminUser: User, now: bigint)
 			reviewedByUserId: reviewed ? input.owner.id : null,
 			reviewedAt: reviewed ? now : null,
 		};
-		// Keyed by (tenant, code) — the natural key — so rows from runs that predate the fixed
-		// ids (same code, random id) are reconciled in place instead of colliding on the unique index.
+		// Keyed by the fixed id: `(tenantId, code)` is unique among live stores only, and PostgreSQL can't
+		// `ON CONFLICT` on that partial index. Restoring a soft-deleted seeded store keeps its id.
 		await prisma.location.upsert({
-			where: { tenantId_code: { tenantId: input.id, code: location.code } },
+			where: { id: location.id },
 			create: { id: location.id, tenantId: input.id, ...data },
 			update: { ...data, isDeleted: false, deletedAt: null },
 		});

@@ -48,6 +48,10 @@ const PRODUCTION: TestEnv = { NODE_ENV: "production", REDIS_URL: "redis://cache.
 const DEPLOYED_PRODUCTION: TestEnv = {
 	...PRODUCTION,
 	APP_URL: "https://app.example.com",
+	ADMIN_APP_URL: "https://admin.example.com",
+	MERCHANT_APP_URL: "https://merchant.example.com",
+	// ADR 080: every client app is on the passkey RP ID or a subdomain of it.
+	WEBAUTHN_RP_ID: "example.com",
 	EMAIL_MODE: "send",
 	RESEND_API_KEY: "re_test_only_key",
 	RESEND_WEBHOOK_SECRET: "whsec_test_only_secret",
@@ -62,6 +66,19 @@ const DEPLOYED_PRODUCTION: TestEnv = {
 	CACHE_ENCRYPTION_KEYS: '{"1":"AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="}',
 };
 
+/** The three client apps on localhost, as the TEST-ONLY fixture has them (the passkey RP ID `localhost`). */
+const LOCALHOST_APPS: TestEnv = {
+	APP_URL: "http://localhost:3000",
+	ADMIN_APP_URL: "http://localhost:3001",
+	MERCHANT_APP_URL: "http://localhost:3003",
+	WEBAUTHN_RP_ID: "localhost",
+};
+
+/** The three client apps hosted under `domain`, the passkey RP ID they share (ADR 080). */
+function hostedApps(domain: string): TestEnv {
+	return { APP_URL: `https://${domain}`, ADMIN_APP_URL: `https://admin.${domain}`, MERCHANT_APP_URL: `https://merchant.${domain}` };
+}
+
 /** The S3 public-delivery pair (CloudFront origin bucket + CDN host) every s3 deployment needs. */
 const S3_PUBLIC_DELIVERY: TestEnv = {
 	STORAGE_PUBLIC_CONTAINER: "app-public-origin-bucket",
@@ -73,7 +90,7 @@ describe("API env schema", () => {
 	it("parses the TEST-ONLY fixture into the grouped config", () => {
 		const config = parse();
 
-		expect(config.runtime).toEqual({ nodeEnv: "test", isProduction: false, isDevelopment: false, isTest: true, appName: "hello-world" });
+		expect(config.runtime).toEqual({ nodeEnv: "test", isProduction: false, isDevelopment: false, isTest: true, appName: "Starter Test" });
 		expect(config.http.corsOrigins).toEqual(["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"]);
 		expect(config.clientApps).toEqual({ webUrl: "http://localhost:3000", adminUrl: "http://localhost:3001", merchantUrl: "http://localhost:3003" });
 		expect(config.auth.bcryptSaltRounds).toBe(10);
@@ -85,11 +102,11 @@ describe("API env schema", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("is off under tests and on everywhere else, in logs/transactions for 30 days, in the server's time zone", () => {
+		it("is off under tests and on everywhere else, in logs/transactions for the ten-year record retention, in the server's time zone", () => {
 			vi.stubEnv("TZ", "Asia/Kuala_Lumpur");
 			expect(parse().observability.transactionLog).toBeNull();
-			expect(parse({ NODE_ENV: "development" }).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30, timeZone: "Asia/Kuala_Lumpur" });
-			expect(parse(PRODUCTION).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30, timeZone: "Asia/Kuala_Lumpur" });
+			expect(parse({ NODE_ENV: "development" }).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 3653, timeZone: "Asia/Kuala_Lumpur" });
+			expect(parse(PRODUCTION).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 3653, timeZone: "Asia/Kuala_Lumpur" });
 		});
 
 		it("follows TRANSACTION_LOG_ENABLED, TRANSACTION_LOG_DIR, TRANSACTION_LOG_RETENTION_DAYS and TRANSACTION_LOG_TIME_ZONE when set", () => {
@@ -110,7 +127,7 @@ describe("API env schema", () => {
 			expect(captureEnvError({ TRANSACTION_LOG_TIME_ZONE: "Malaysia/Somewhere" }).variables).toEqual(["TRANSACTION_LOG_TIME_ZONE"]);
 			expect(parse({ TRANSACTION_LOG_ENABLED: "true", TRANSACTION_LOG_DIR: " " }).observability.transactionLog).toEqual({
 				directory: "logs/transactions",
-				retentionDays: 30,
+				retentionDays: 3653,
 				timeZone: "UTC",
 			});
 		});
@@ -121,7 +138,7 @@ describe("API env schema", () => {
 
 		expect(config.http).toMatchObject({ host: "127.0.0.1", port: 8080, publicUrl: "http://127.0.0.1:8080", trustedProxies: [], shutdownTimeoutMs: 15_000 });
 		expect(config.database).toMatchObject({ poolMax: 10, idleTimeoutMs: 30_000, allowExitOnIdle: true });
-		expect(config.auth).toMatchObject({ jwtAccessExpiry: "15m", jwtRefreshExpiry: "7d", twoFactorIssuer: "hello-world", loginVerificationMode: "disabled" });
+		expect(config.auth).toMatchObject({ jwtAccessExpiry: "15m", jwtRefreshExpiry: "7d", twoFactorIssuer: "Starter Test", loginVerificationMode: "disabled" });
 		expect(config.rateLimits).toEqual({
 			throttleDefaultLimit: 300,
 			throttleStrictLimit: 30,
@@ -427,7 +444,7 @@ describe("API env schema", () => {
 		it("refuses Mailpit on every deployed environment, whatever its NODE_ENV", () => {
 			const issue = { variable: "EMAIL_PROVIDER", problem: "must be resend on a deployed environment (the local Mailpit inbox is only allowed when APP_URL is localhost)" };
 			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, EMAIL_PROVIDER: "mailpit" }).issues).toEqual([issue]);
-			expect(captureEnvError({ NODE_ENV: "development", APP_URL: "https://dev.example.com", EMAIL_PROVIDER: "mailpit" }).issues).toEqual([issue]);
+			expect(captureEnvError({ NODE_ENV: "development", ...hostedApps("dev.example.com"), EMAIL_PROVIDER: "mailpit" }).issues).toEqual([issue]);
 		});
 
 		it("requires the cache key ring and a TLS, password-protected Redis on a deployed production environment (ADR 072)", () => {
@@ -455,7 +472,15 @@ describe("API env schema", () => {
 			const local = parse({ ...PRODUCTION, APP_URL: "http://localhost:3000", EMAIL_TEST_TO: "dev@example.com" });
 			expect(local.runtime.isProduction).toBe(true);
 			expect(local.email.testTo).toBe("dev@example.com");
-			expect(parse({ ...PRODUCTION, APP_URL: "http://127.0.0.1:3000", EMAIL_TEST_TO: "dev@example.com" }).email.testTo).toBe("dev@example.com");
+			expect(
+				parse({
+					...PRODUCTION,
+					APP_URL: "http://127.0.0.1:3000",
+					ADMIN_APP_URL: "http://127.0.0.1:3001",
+					MERCHANT_APP_URL: "http://127.0.0.1:3003",
+					EMAIL_TEST_TO: "dev@example.com",
+				}).email.testTo,
+			).toBe("dev@example.com");
 		});
 
 		it("forbids log-only and noop email on a deployed production environment", () => {
@@ -492,7 +517,7 @@ describe("API env schema", () => {
 			const keys: TestEnv = { AWS_ACCESS_KEY_ID: "AKIATESTONLY", AWS_SECRET_ACCESS_KEY: "test-only-secret" };
 
 			expect(parse(keys).storage.provider).toBe("local");
-			expect(parse({ ...DEPLOYED_PRODUCTION, ...keys, APP_URL: "http://localhost:3000" }).storage.provider).toBe("s3");
+			expect(parse({ ...DEPLOYED_PRODUCTION, ...keys, ...LOCALHOST_APPS }).storage.provider).toBe("s3");
 		});
 
 		it("boots S3 on a deployed production environment with no AWS keys at all (default credential chain)", () => {
@@ -726,5 +751,39 @@ describe("resolveLogLevel", () => {
 	it("always honours an explicitly configured LOG_LEVEL", () => {
 		expect(resolveLogLevel("debug", "production")).toBe("debug");
 		expect(resolveLogLevel("error", "development")).toBe("error");
+	});
+});
+
+describe("payments config (ADR 020)", () => {
+	const BILLPLZ = { BILLPLZ_API_KEY: "billplz-api-key-0000000000000000", BILLPLZ_COLLECTION_ID: "col_1", BILLPLZ_X_SIGNATURE_KEY: "billplz-x-signature-key-00000000" };
+	const CHIP = {
+		CHIP_SECRET_KEY: "chip-secret-key-00000000000000000",
+		CHIP_BRAND_ID: "brand-1",
+		CHIP_PUBLIC_KEY: "-----BEGIN PUBLIC KEY-----\\nMIIB\\n-----END PUBLIC KEY-----",
+	};
+
+	it("has no gateway until one is configured", () => {
+		expect(parse({ PAYMENTS_FAKE_SECRET: undefined }).payments).toStrictEqual({ billplz: null, chip: null, fakeSecret: null });
+	});
+
+	it("turns a gateway on when all of its settings are set (Billplz sandboxed outside production, the CHIP key's \\n made line breaks)", () => {
+		const payments = parse({ ...BILLPLZ, ...CHIP }).payments;
+		expect(payments.billplz).toStrictEqual({ apiKey: BILLPLZ.BILLPLZ_API_KEY, collectionId: "col_1", xSignatureKey: BILLPLZ.BILLPLZ_X_SIGNATURE_KEY, sandbox: true });
+		expect(payments.chip?.publicKeyPem).toBe("-----BEGIN PUBLIC KEY-----\nMIIB\n-----END PUBLIC KEY-----");
+		expect(parse({ ...BILLPLZ, BILLPLZ_SANDBOX: "false" }).payments.billplz?.sandbox).toBe(false);
+	});
+
+	it("refuses a half-configured gateway, naming what is missing", () => {
+		expect(captureEnvError({ BILLPLZ_API_KEY: BILLPLZ.BILLPLZ_API_KEY }).variables).toEqual(["BILLPLZ_COLLECTION_ID", "BILLPLZ_X_SIGNATURE_KEY"]);
+		expect(captureEnvError({ CHIP_SECRET_KEY: CHIP.CHIP_SECRET_KEY, CHIP_BRAND_ID: "brand-1" }).variables).toEqual(["CHIP_PUBLIC_KEY"]);
+	});
+
+	it("refuses Billplz's sandbox on a deployed production server", () => {
+		expect(captureEnvError({ ...DEPLOYED_PRODUCTION, ...BILLPLZ, BILLPLZ_SANDBOX: "true" }).variables).toContain("BILLPLZ_SANDBOX");
+	});
+
+	it("keeps the fake gateway out of production", () => {
+		expect(parse({ PAYMENTS_FAKE_SECRET: "fake-secret-0000000000000000000000" }).payments.fakeSecret).toBe("fake-secret-0000000000000000000000");
+		expect(captureEnvError({ ...PRODUCTION, PAYMENTS_FAKE_SECRET: "fake-secret-0000000000000000000000" }).variables).toContain("PAYMENTS_FAKE_SECRET");
 	});
 });

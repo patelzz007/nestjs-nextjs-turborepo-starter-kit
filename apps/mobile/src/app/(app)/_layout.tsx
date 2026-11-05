@@ -10,30 +10,48 @@ import type { BottomTabBarProps } from "expo-router/tabs";
 import * as React from "react";
 
 import { AppShell } from "../../features/app-shell/app-shell";
+import { withRootGate } from "../../runtime/root-navigator";
 import { AppTabBar } from "../../features/navigation/app-tab-bar";
+import { FreezeHiddenTab } from "../../features/navigation/freeze-hidden-tab";
 import { APP_TABS, type AppTab } from "../../features/navigation/app-tabs";
+import { useLabels } from "../../features/language/use-app-language";
+import { NAVIGATION_LABELS } from "../../features/navigation/navigation-labels";
 import { TAB_TRANSITION_SPEC, tabSceneStyle } from "../../lib/screen-transitions";
 
 /**
- * `popToTopOnBlur`: leaving a tab resets its stack, so coming back to Settings
- * shows Settings — not the sub-screen (Appearance, Security, …) last open there.
+ * Leaving a tab resets its stack (features/navigation/reset-tab-stack), so coming back to
+ * Settings shows Settings — not the sub-screen (Appearance, Security, …) last open there. A tab out of sight is
+ * frozen (`screenLayout`): it does not re-render until shown again, so a theme change restyles only the tab on screen (6.7).
  */
 type TabScreenOptions = React.ComponentProps<typeof Tabs>["screenOptions"];
+type TabLayoutProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>["screenLayout"]>>[0];
 
-const SCREEN_OPTIONS = { headerShown: false, popToTopOnBlur: true, transitionSpec: TAB_TRANSITION_SPEC, sceneStyleInterpolator: tabSceneStyle } satisfies TabScreenOptions;
+const SCREEN_OPTIONS = {
+	headerShown: false,
+	transitionSpec: TAB_TRANSITION_SPEC,
+	sceneStyleInterpolator: tabSceneStyle,
+} satisfies TabScreenOptions;
 
 function renderTabBar(props: BottomTabBarProps): React.JSX.Element {
 	return <AppTabBar {...props} />;
 }
 
-export default function AppTabsLayout(): React.JSX.Element {
+/** Every tab is frozen while out of sight, once its stack has been reset (features/navigation/freeze-hidden-tab). */
+function renderTabLayout({ children }: TabLayoutProps): React.JSX.Element {
+	return <FreezeHiddenTab>{children}</FreezeHiddenTab>;
+}
+
+function AppTabsLayout(): React.JSX.Element {
+	const { headings } = useLabels(NAVIGATION_LABELS);
 	return (
 		<AppShell>
-			<Tabs screenOptions={SCREEN_OPTIONS} tabBar={renderTabBar}>
+			<Tabs screenOptions={SCREEN_OPTIONS} tabBar={renderTabBar} screenLayout={renderTabLayout}>
 				{APP_TABS.map((tab: AppTab): React.JSX.Element => (
-					<Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.title }} />
+					<Tabs.Screen key={tab.name} name={tab.name} options={{ title: headings[tab.name].title }} />
 				))}
 			</Tabs>
 		</AppShell>
 	);
 }
+
+export default withRootGate(["app"], AppTabsLayout);

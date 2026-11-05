@@ -32,6 +32,17 @@
 //   read as disabled on a button; surfaces and text stay exact Nord. Numbered
 //   after their source: vivid-8 (frost cyan), vivid-9 (frost blue), vivid-14
 //   (aurora green).
+// - gray: pure greys, zero chroma — the mobile app's own surfaces and text in light and dark
+//   (mobile-theme.ts, ADR 079). Named by lightness: 10 the lightest surface, 975 the deepest chrome.
+//   400 and 700 are the light theme's auth-panel greys; dark mode reads the graphite scale.
+// - dusk: the mobile Nord theme's editor slate, sampled from the owner's reference (ADR 079): a cool
+//   blue-grey page and surfaces, soft Snow-Storm-like text, and one steel-blue accent. Secondary text is
+//   lifted from the reference's #848890 to #a3aab7 so it keeps 4.5:1 on the raised surfaces; 25 (#e6e9f0)
+//   and 200 (#b8bfcb) are the sharper text and secondary text the theme reads in at a glance.
+// - graphite: the mobile dark theme (owner's pick, 2026-11-05, "Option 1 · Neutral, a touch cool"): greys
+//   leaning faintly blue so cards read as a lifted layer — #151619 chrome < #1c1d20 page < #292b2f cards <
+//   #313337 raised < #3a3c40 hairlines (#46494f inputs); #f0f1f4 ink, softened off pure white, and #a9adb6
+//   secondary text (6.3:1 on a card).
 
 import type { Palette } from "./schema";
 import { hex, oklch } from "./value";
@@ -140,5 +151,45 @@ export const PALETTE: Palette = {
 		"8": oklch(0.795, 0.118, 217.5),
 		"9": oklch(0.717, 0.112, 248.7),
 		"14": oklch(0.788, 0.142, 131.1),
+	},
+	gray: {
+		"10": oklch(0.993, 0, 0),
+		"25": oklch(0.985, 0, 0),
+		"50": oklch(0.965, 0, 0),
+		"100": oklch(0.943, 0, 0),
+		"200": oklch(0.912, 0, 0),
+		"300": oklch(0.87, 0, 0),
+		"400": hex("#a4a4a4"),
+		"500": oklch(0.6, 0, 0),
+		"600": oklch(0.51, 0, 0),
+		"700": hex("#4a4a4a"),
+		"900": oklch(0.205, 0, 0),
+	},
+	dusk: {
+		"25": hex("#e6e9f0"),
+		"50": hex("#d6dae4"),
+		"100": hex("#c0c5cf"),
+		"200": hex("#b8bfcb"),
+		"300": hex("#a3aab7"),
+		"600": hex("#4a5162"),
+		"700": hex("#3b4150"),
+		"750": hex("#343a47"),
+		"800": hex("#303540"),
+		"900": hex("#2b2d36"),
+		"950": hex("#262830"),
+		accent: hex("#8aa4c8"),
+		"accent-soft": hex("#2f3a4b"),
+		/** Link text in the Nord theme: the accent a step lighter, 4.6:1 on its popover and muted surfaces (the accent itself is 4.47:1, short of AA for text; it stays for the ring and charts, which need 3:1). */
+		"accent-link": hex("#8da7ca"),
+	},
+	graphite: {
+		"25": hex("#f0f1f4"),
+		"400": hex("#a9adb6"),
+		"700": hex("#46494f"),
+		"750": hex("#3a3c40"),
+		"800": hex("#313337"),
+		"850": hex("#292b2f"),
+		"950": hex("#1c1d20"),
+		"975": hex("#151619"),
 	},
 };

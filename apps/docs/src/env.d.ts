@@ -1,11 +1,9 @@
-/// <reference types="astro/client" />
+/// <reference types="vite/client" />
 
+/** Build-time settings (`envPrefix` in vite.config.ts); every one is optional, the defaults are the local dev ports. */
 interface ImportMetaEnv {
-	/** Public origin of the docs site, e.g. `https://docs.example.com` (canonical URLs, sitemap, RSS). */
 	readonly PUBLIC_SITE_URL?: string;
-	/** Admin panel origin, linked from the header. */
 	readonly PUBLIC_ADMIN_URL?: string;
-	/** API Swagger UI, linked from the header. */
 	readonly PUBLIC_API_DOCS_URL?: string;
 }
 

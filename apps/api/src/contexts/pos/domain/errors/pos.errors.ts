@@ -22,6 +22,7 @@ export const PosDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"API_KEY_LOCATION_REQUIRED",
 	"MERCHANT_PROFILE_NOT_FOUND",
 	"TENANT_NOT_ACTIVE",
+	"TILL_REDEMPTION_DISABLED",
 ]);
 
 export type PosDomainErrorCode = (typeof PosDomainErrorCodeSchema)["options"][number];
@@ -191,5 +192,14 @@ export class TenantNotActiveError extends DomainError {
 
 	public constructor() {
 		super("This merchant is not active");
+	}
+}
+
+/** Redeeming at this store's tills is switched off (the `till-redemption` store flag, enhancement 5.11). */
+export class TillRedemptionDisabledError extends DomainError {
+	public readonly code: PosDomainErrorCode = "TILL_REDEMPTION_DISABLED";
+
+	public constructor(public readonly locationId: string | null) {
+		super("Redeeming rewards at this store's tills is switched off. Ask the store owner or platform support.", { locationId });
 	}
 }

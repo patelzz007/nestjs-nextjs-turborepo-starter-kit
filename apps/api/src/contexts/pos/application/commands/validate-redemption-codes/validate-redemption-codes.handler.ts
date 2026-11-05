@@ -4,13 +4,14 @@ import type { RedemptionPreviewResponse } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { PosCodeLockedError, RedemptionCodeNotFoundError } from "../../../domain/errors/pos.errors";
+import { PosCodeLockedError, RedemptionCodeNotFoundError, TillRedemptionDisabledError } from "../../../domain/errors/pos.errors";
 import { redemptionInvalidReason } from "../../../domain/policies/redemption-eligibility.policy";
 import { redemptionOfferOf } from "../../../domain/policies/redemption-offer.policy";
 import type { PosScope } from "../../pos-scope";
 import { POS_UNIT_OF_WORK } from "../../ports/pos.tokens";
 import { RedemptionCodeResolver, type CodeResolution } from "../../services/redemption-code-resolver";
 import { ValidateRedemptionCodesCommand } from "./validate-redemption-codes.command";
+import { TILL_REDEMPTION_GATE, type TillRedemptionGate } from "../../ports/till-redemption.port";
 
 type ValidationOutcome = Exclude<CodeResolution, { readonly kind: "resolved" }> | { readonly kind: "preview"; readonly preview: RedemptionPreviewResponse };
 
@@ -25,10 +26,15 @@ export class ValidateRedemptionCodesHandler implements ICommandHandler<ValidateR
 		@Inject(POS_UNIT_OF_WORK) private readonly uow: UnitOfWork<PosScope>,
 		private readonly resolver: RedemptionCodeResolver,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(TILL_REDEMPTION_GATE) private readonly gate: TillRedemptionGate,
 	) {}
 
 	public async execute(command: ValidateRedemptionCodesCommand): Promise<RedemptionPreviewResponse> {
 		const { actor, point, input } = command;
+		// Redemption switched off at this store (5.11): refused before a code is even looked at.
+		if (!(await this.gate.isOpen(point))) {
+			throw new TillRedemptionDisabledError(point.locationId);
+		}
 		const outcome = await this.uow.run(actor, async (scope: PosScope): Promise<ValidationOutcome> => {
 			const now = this.clock.now();
 			const resolution = await this.resolver.resolve(scope, point, [input], now);

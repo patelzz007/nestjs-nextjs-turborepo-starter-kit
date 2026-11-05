@@ -1,4 +1,6 @@
 import { Module, type OnModuleInit, type Provider } from "@nestjs/common";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { rewardsEraser } from "./infrastructure/personal-data/rewards-erasure";
 import type { Prisma } from "@prisma/client";
 
 import { getApiConfig } from "../../config/api-config";
@@ -27,7 +29,16 @@ import { ReviseRewardHandler } from "./application/commands/revise-reward/revise
 import { SubmitRewardForReviewHandler } from "./application/commands/submit-reward-for-review/submit-reward-for-review.handler";
 import { RecordRewardReviewAuditHandler } from "./application/event-handlers/in-transaction/record-reward-review-audit.in-transaction-handler";
 import type { LegalAcceptanceReadPort, RewardImageDeliveryPort, RewardReadPort } from "./application/ports/reward-read.port";
-import { LEGAL_ACCEPTANCE_READS, REWARD_ID_GENERATOR, REWARD_IMAGE_DELIVERY, REWARD_READS, REWARDS_UNIT_OF_WORK, type IdGenerator } from "./application/ports/rewards.tokens";
+import {
+	LEGAL_ACCEPTANCE_READS,
+	REWARD_ID_GENERATOR,
+	REWARD_IMAGE_DELIVERY,
+	REWARD_MERCHANT_DISPLAY,
+	REWARD_READS,
+	REWARDS_UNIT_OF_WORK,
+	type IdGenerator,
+} from "./application/ports/rewards.tokens";
+import type { RewardMerchantDisplayPort } from "./application/ports/reward-merchant-display.port";
 import { GetLegalAcceptanceStatusHandler } from "./application/queries/get-legal-acceptance-status/get-legal-acceptance-status.handler";
 import { GetRewardAudienceHandler } from "./application/queries/get-reward-audience/get-reward-audience.handler";
 import { GetTenantRewardHandler } from "./application/queries/get-tenant-reward/get-tenant-reward.handler";
@@ -46,6 +57,7 @@ import { UuidIdGenerator } from "./infrastructure/adapters/uuid-id-generator";
 import { RewardsQueueModule } from "./infrastructure/queue/rewards-queue.module";
 import { RewardsIntegrationEventsMapper } from "./infrastructure/outbox/rewards-integration-events.mapper";
 import { TenantDisplayAdapter } from "./infrastructure/adapters/tenant-display.adapter";
+import { TenantMerchantDisplayAdapter } from "./infrastructure/adapters/tenant-merchant-display.adapter";
 import { RewardsFileRegistrations } from "./infrastructure/persistence/rewards-file-registrations";
 import { PrismaLegalAcceptanceReadRepository } from "./infrastructure/persistence/prisma-legal-acceptance.read-repository";
 import { PrismaRewardReadRepository } from "./infrastructure/persistence/prisma-reward.read-repository";
@@ -117,6 +129,11 @@ const QUERY_HANDLERS: readonly Provider[] = [
 				new PrismaRewardReadRepository(session, new TenantDisplayAdapter(tenants), publicUrls.resolve),
 		},
 		{
+			provide: REWARD_MERCHANT_DISPLAY,
+			inject: [TENANT_READ],
+			useFactory: (tenants: TenantReadPort): RewardMerchantDisplayPort => new TenantMerchantDisplayAdapter(new TenantDisplayAdapter(tenants)),
+		},
+		{
 			provide: REWARD_IMAGE_DELIVERY,
 			inject: [RewardsReadSession, StoredFileAccess],
 			useFactory: (session: RewardsReadSession, files: StoredFileAccess): RewardImageDeliveryPort => new RewardImageDeliveryAdapter(session, files),
@@ -138,10 +155,13 @@ export class RewardsModule implements OnModuleInit {
 		private readonly inTransactionHandlers: InTransactionEventRegistry<Prisma.TransactionClient>,
 		private readonly mappers: IntegrationEventMapperRegistry,
 		private readonly scopes: RewardsScopeFactory,
+		private readonly erasure: PersonalDataErasureRegistry,
+		private readonly erasureTransactions: TenantTransactionService,
 	) {}
 
 	/** Registers the review-decision audit row (M1) and the `reward.platform` outbox mapper (M3). */
 	public onModuleInit(): void {
+		this.erasure.registerEraser(rewardsEraser(this.erasureTransactions));
 		this.inTransactionHandlers.register(bindInTransactionHandler(new RecordRewardReviewAuditHandler(), this.scopes));
 		this.mappers.register(new RewardsIntegrationEventsMapper());
 	}

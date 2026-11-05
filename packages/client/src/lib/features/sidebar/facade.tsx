@@ -105,8 +105,8 @@ export interface SidebarCommands {
 	readonly toggle: () => void;
 	readonly open: () => void;
 	readonly close: () => void;
-	readonly moveSectionUp: (title: string, allTitles: readonly string[]) => void;
-	readonly moveSectionDown: (title: string, allTitles: readonly string[]) => void;
+	readonly moveSectionUp: (key: string, allKeys: readonly string[]) => void;
+	readonly moveSectionDown: (key: string, allKeys: readonly string[]) => void;
 	/** Records a manual expand/collapse of `itemId` on the page at `pathname`. */
 	readonly setItemExpanded: (pathname: string, itemId: string, expanded: boolean) => void;
 	/**
@@ -139,11 +139,11 @@ export function useSidebarCommands(): SidebarCommands {
 			close: (): void => {
 				dispatch(sidebarActions.collapsed());
 			},
-			moveSectionUp: (title: string, allTitles: readonly string[]): void => {
-				dispatch(sidebarActions.sectionMoved(title, -1, allTitles));
+			moveSectionUp: (key: string, allKeys: readonly string[]): void => {
+				dispatch(sidebarActions.sectionMoved(key, -1, allKeys));
 			},
-			moveSectionDown: (title: string, allTitles: readonly string[]): void => {
-				dispatch(sidebarActions.sectionMoved(title, 1, allTitles));
+			moveSectionDown: (key: string, allKeys: readonly string[]): void => {
+				dispatch(sidebarActions.sectionMoved(key, 1, allKeys));
 			},
 			setItemExpanded: (pathname: string, itemId: string, expanded: boolean): void => {
 				dispatch(sidebarActions.itemExpansionChanged(pathname, itemId, expanded));

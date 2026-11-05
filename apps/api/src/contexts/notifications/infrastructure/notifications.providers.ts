@@ -179,7 +179,6 @@ export function notificationProviders(
 						clock,
 						renderContext,
 						unsubscribe,
-						richText: { imageUrl: (): string | null => null },
 						settings: {
 							pushEnabled: config.notifications.pushProvider !== "none",
 							smsEnabled: config.notifications.smsProvider !== "none",

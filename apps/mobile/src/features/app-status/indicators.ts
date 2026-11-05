@@ -2,8 +2,7 @@
 // indicators.ts - what the status pills say
 // ============================================
 // Pure: the connectivity and session states the AppStatusProvider derives, and
-// how the session reads in a pill — compact in the screens' top-right corner,
-// full in the app drawer. The same states and copy as the admin sidebar's
+// how the session reads in the app drawer's pill. The same states and copy as the admin sidebar's
 // SessionStatusBadge. The connection's quality pill and sheet: network-indicators.ts.
 
 import { ApiError } from "@workspace/api-client";
@@ -80,8 +79,7 @@ export function sessionIndicatorOf({ session, error, nowMs, rotatedAtMs }: Sessi
 /** What a StatusBadge shows (src/components/status-pill.tsx). */
 export interface StatusPillContent {
 	readonly icon: LucideIcon;
-	/** `null`: the icon alone (compact). */
-	readonly label: string | null;
+	readonly label: string;
 	readonly accessibilityLabel: string;
 	readonly tone: StatusBadgeTone;
 	readonly emphasized: boolean;
@@ -93,32 +91,32 @@ export interface StatusPillContent {
 /** A pill with no highlight, no breathing and proportional digits — each state turns on what it needs. */
 export const QUIET_PILL: Pick<StatusPillContent, "emphasized" | "pulsing" | "tabularLabel"> = { emphasized: false, pulsing: false, tabularLabel: false };
 
-const FAILURE_LABELS: Readonly<Record<SessionCheckFailure, { readonly compact: string; readonly full: string; readonly spoken: string }>> = {
-	expired: { compact: "Expired", full: "Session expired", spoken: "Session expired, please sign in again" },
-	unreachable: { compact: "Check failed", full: "Session check failed", spoken: "Session check failed, network or server error" },
+const FAILURE_LABELS: Readonly<Record<SessionCheckFailure, { readonly full: string; readonly spoken: string }>> = {
+	expired: { full: "Session expired", spoken: "Session expired, please sign in again" },
+	unreachable: { full: "Session check failed", spoken: "Session check failed, network or server error" },
 };
 
-export function sessionPillContent(indicator: SessionIndicator, compact: boolean): StatusPillContent {
+export function sessionPillContent(indicator: SessionIndicator): StatusPillContent {
 	switch (indicator.status) {
 		case "checking":
 			return {
 				...QUIET_PILL,
 				icon: ShieldIcon,
-				label: compact ? "Checking…" : "Checking session…",
+				label: "Checking session…",
 				accessibilityLabel: "Session status: checking",
 				tone: "neutral",
 				pulsing: true,
 			};
 		case "failed": {
 			const labels = FAILURE_LABELS[indicator.failure];
-			return { ...QUIET_PILL, icon: ShieldXIcon, label: compact ? labels.compact : labels.full, accessibilityLabel: labels.spoken, tone: "destructive" };
+			return { ...QUIET_PILL, icon: ShieldXIcon, label: labels.full, accessibilityLabel: labels.spoken, tone: "destructive" };
 		}
 		case "verified": {
 			if (indicator.refreshed) {
 				return {
 					...QUIET_PILL,
 					icon: ShieldCheckIcon,
-					label: compact ? "Refreshed" : "Token refreshed just now",
+					label: "Token refreshed just now",
 					accessibilityLabel: "Session verified, token refreshed just now",
 					tone: "success",
 					emphasized: true,
@@ -128,19 +126,18 @@ export function sessionPillContent(indicator: SessionIndicator, compact: boolean
 				return {
 					...QUIET_PILL,
 					icon: ShieldCheckIcon,
-					label: compact ? "Verified" : "Token expiry unknown",
+					label: "Token expiry unknown",
 					accessibilityLabel: "Session verified, token expiry unknown",
 					tone: "success",
 				};
 			}
-			const timeLeft = formatTimeLeft(indicator.secondsLeft, compact);
+			const timeLeft = formatTimeLeft(indicator.secondsLeft);
 			return {
 				...QUIET_PILL,
 				icon: ShieldCheckIcon,
-				label: compact ? timeLeft : `Token expires in ${timeLeft}`,
+				label: `Token expires in ${timeLeft}`,
 				accessibilityLabel: `Session verified, token expires in ${timeLeft}`,
 				tone: "success",
-				tabularLabel: compact,
 			};
 		}
 	}

@@ -81,7 +81,7 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 	const klTenantId = TENANT_SEED_IDS.klTenant;
 	// Demo Product 001 (product seed ids are 1-based).
 	const productId = buildProductSeedId(1);
-	const admin = requireRow((await prisma.user.findUnique({ where: { email: "admin@example.com" } })) ?? undefined, "user admin@example.com");
+	const admin = requireRow((await prisma.user.findUnique({ where: { email: "admin@example.com", isDeleted: false } })) ?? undefined, "user admin@example.com");
 
 	// ── Onboarding: invite accepted, KYB evidence submitted twice (window consumed by the second), review approved ──
 	const acceptedAt = daysAgo(20);

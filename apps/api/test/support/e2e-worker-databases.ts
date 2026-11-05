@@ -59,6 +59,16 @@ export function withDatabaseName(url: string, database: string): string {
 }
 
 /**
+ * This worker's `DATABASE_SESSION_URL`: the same session (direct) server, on the worker's own database copy
+ * (enhancement 2.5). Behind a transaction-mode pooler the listeners and advisory locks use this URL, so it must
+ * follow `DATABASE_URL` to the copy, or a worker's locks and notifications would land in another database.
+ * Unset, it stays unset (the API then uses `DATABASE_URL`).
+ */
+export function workerSessionDatabaseUrl(sessionUrl: string | undefined, workerUrl: string): string | undefined {
+	return sessionUrl === undefined || sessionUrl.length === 0 ? undefined : withDatabaseName(sessionUrl, databaseNameOf(workerUrl));
+}
+
+/**
  * The name of worker `worker`'s copy of `source`: `<source>_e2e_<runTag>_w<worker>`,
  * the source part shortened so the whole name fits Postgres's 63 bytes.
  */

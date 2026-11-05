@@ -3,7 +3,7 @@ import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { Job, Queue } from "bullmq";
 
 import { EmptyQueuePayloadSchema, MessageEnvelopeSchema, type MessageEnvelope } from "@workspace/messaging";
-import { KafkaProducerNotConnectedError, KafkaProducerService } from "@workspace/messaging/nest";
+import { KafkaProducerNotConnectedError, KafkaProducerService, MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { QUEUE_NAMES, nowEpochMs, type KafkaTopic, type PlatformEventMessage } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -84,7 +84,7 @@ export class OutboxQueueScheduler implements OnModuleInit {
 	}
 }
 
-@Processor(QUEUE_NAMES.outboxPublish)
+@Processor(QUEUE_NAMES.outboxPublish, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class OutboxPublishProcessor extends WorkerHost {
 	private readonly logger: Logger = new Logger(OutboxPublishProcessor.name);

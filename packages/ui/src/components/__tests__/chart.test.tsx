@@ -121,3 +121,20 @@ describe("chart parts forward refs (rule 20)", () => {
 		expect(container.querySelector("style")).toBeNull();
 	});
 });
+
+describe("ChartContainer's accessible name", () => {
+	it("is a named figure when a caller names it, and a plain container otherwise", () => {
+		render(
+			<>
+				<ChartContainer config={CONFIG} aria-label="CPU history">
+					<svg />
+				</ChartContainer>
+				<ChartContainer config={CONFIG} data-testid="unnamed">
+					<svg />
+				</ChartContainer>
+			</>,
+		);
+		expect(screen.getByRole("figure", { name: "CPU history" })).toBeTruthy();
+		expect(screen.getByTestId("unnamed").getAttribute("role")).toBeNull();
+	});
+});

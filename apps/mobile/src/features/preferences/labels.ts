@@ -1,5 +1,12 @@
-// Display labels of the preference values (one place, so Settings and its sub-screens agree).
+// ============================================
+// labels.ts - the preferences' words in every shipped language (ADR 076)
+// ============================================
+// The preference values' names (one place, so Settings, the drawer and the sub-screens agree), the
+// Appearance and Language screens' copy, and the toasts that confirm a change. Malay, Chinese and Tamil
+// reuse the web UI kit's words where it says the same thing (System, Light, Dark, Nord).
 
+import type { RadioOption } from "@workspace/ui-native/components/radio-group";
+import type { LabelPack } from "../language/label-pack";
 import {
 	APP_LOCK_TIMEOUT_FIVE_MINUTES_MS,
 	APP_LOCK_TIMEOUT_IMMEDIATELY_MS,
@@ -7,34 +14,134 @@ import {
 	type AppLockTimeoutMs,
 	type ThemePreference,
 } from "../../lib/secure-store";
-import type { RadioOption } from "@workspace/ui-native/components/radio-group";
 
-export const THEME_OPTIONS: readonly RadioOption<ThemePreference>[] = [
-	{ value: "system", label: "System", description: "Follow the device's light or dark setting" },
-	{ value: "light", label: "Light" },
-	{ value: "dark", label: "Dark" },
-	{ value: "nord", label: "Nord", description: "A dark theme in Nord's arctic blues" },
-];
+export interface PreferencesLabels {
+	readonly themes: Readonly<Record<ThemePreference, string>>;
+	/** The line under the themes that need one. */
+	readonly themeDescriptions: { readonly system: string; readonly nord: string };
+	readonly appearance: { readonly description: string; readonly theme: string };
+	readonly language: { readonly description: string; readonly label: string };
+	/** The app lock's timeouts, as the radio options name them. */
+	readonly appLockTimeouts: Readonly<Record<AppLockTimeoutMs, string>>;
+	/** Confirmations of preference changes, shown as a toast. */
+	readonly messages: {
+		readonly themeChanged: (themeName: string) => string;
+		readonly languageChanged: (languageName: string) => string;
+		readonly appLockTurnedOn: string;
+		readonly appLockTurnedOff: string;
+		readonly appLockTimeoutChanged: Readonly<Record<AppLockTimeoutMs, string>>;
+	};
+}
 
-export const THEME_LABELS: Readonly<Record<ThemePreference, string>> = { system: "System", light: "Light", dark: "Dark", nord: "Nord" };
-
-export const APP_LOCK_TIMEOUT_OPTIONS: readonly RadioOption<AppLockTimeoutMs>[] = [
-	{ value: APP_LOCK_TIMEOUT_IMMEDIATELY_MS, label: "Immediately" },
-	{ value: APP_LOCK_TIMEOUT_ONE_MINUTE_MS, label: "After 1 minute" },
-	{ value: APP_LOCK_TIMEOUT_FIVE_MINUTES_MS, label: "After 5 minutes" },
-];
-
-/** How long the app waits before locking, in words that finish "The app will lock …". */
-const APP_LOCK_TIMEOUT_PHRASES: Readonly<Record<AppLockTimeoutMs, string>> = {
-	[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "immediately",
-	[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "after 1 minute",
-	[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "after 5 minutes",
+const EN: PreferencesLabels = {
+	themes: { system: "System", light: "Light", dark: "Dark", nord: "Nord" },
+	themeDescriptions: { system: "Follow the device's light or dark setting", nord: "A dark theme in Nord's arctic blues" },
+	appearance: { description: "Choose how the app looks on this device.", theme: "Theme" },
+	language: { description: "Choose the language the app uses on this device.", label: "Language" },
+	appLockTimeouts: {
+		[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "Immediately",
+		[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "After 1 minute",
+		[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "After 5 minutes",
+	},
+	messages: {
+		themeChanged: (themeName: string): string => `Theme set to ${themeName}.`,
+		languageChanged: (languageName: string): string => `Language set to ${languageName}.`,
+		appLockTurnedOn: "App lock turned on.",
+		appLockTurnedOff: "App lock turned off.",
+		appLockTimeoutChanged: {
+			[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "The app will lock immediately.",
+			[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "The app will lock after 1 minute.",
+			[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "The app will lock after 5 minutes.",
+		},
+	},
 };
 
-/** Confirmations of preference changes, shown as a toast. */
-export const PREFERENCE_MESSAGES = {
-	themeChanged: (theme: ThemePreference): string => `Theme set to ${THEME_LABELS[theme]}.`,
-	appLockTurnedOn: "App lock turned on.",
-	appLockTurnedOff: "App lock turned off.",
-	appLockTimeoutChanged: (timeoutMs: AppLockTimeoutMs): string => `The app will lock ${APP_LOCK_TIMEOUT_PHRASES[timeoutMs]}.`,
+const MS: PreferencesLabels = {
+	themes: { system: "Sistem", light: "Cerah", dark: "Gelap", nord: "Nord" },
+	themeDescriptions: { system: "Ikut tetapan cerah atau gelap peranti", nord: "Tema gelap dalam warna biru artik Nord" },
+	appearance: { description: "Pilih rupa aplikasi pada peranti ini.", theme: "Tema" },
+	language: { description: "Pilih bahasa yang digunakan aplikasi pada peranti ini.", label: "Bahasa" },
+	appLockTimeouts: {
+		[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "Serta-merta",
+		[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "Selepas 1 minit",
+		[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "Selepas 5 minit",
+	},
+	messages: {
+		themeChanged: (themeName: string): string => `Tema ditetapkan kepada ${themeName}.`,
+		languageChanged: (languageName: string): string => `Bahasa ditetapkan kepada ${languageName}.`,
+		appLockTurnedOn: "Kunci aplikasi dihidupkan.",
+		appLockTurnedOff: "Kunci aplikasi dimatikan.",
+		appLockTimeoutChanged: {
+			[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "Aplikasi akan dikunci serta-merta.",
+			[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "Aplikasi akan dikunci selepas 1 minit.",
+			[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "Aplikasi akan dikunci selepas 5 minit.",
+		},
+	},
 };
+
+const ZH_HANS: PreferencesLabels = {
+	themes: { system: "跟随系统", light: "浅", dark: "深", nord: "Nord" },
+	themeDescriptions: { system: "跟随设备的浅色或深色设置", nord: "采用 Nord 北极蓝色调的深色主题" },
+	appearance: { description: "选择应用在此设备上的外观。", theme: "主题" },
+	language: { description: "选择应用在此设备上使用的语言。", label: "语言" },
+	appLockTimeouts: {
+		[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "立即",
+		[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "1 分钟后",
+		[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "5 分钟后",
+	},
+	messages: {
+		themeChanged: (themeName: string): string => `主题已设为${themeName}。`,
+		languageChanged: (languageName: string): string => `语言已设为${languageName}。`,
+		appLockTurnedOn: "应用锁已开启。",
+		appLockTurnedOff: "应用锁已关闭。",
+		appLockTimeoutChanged: {
+			[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "应用将立即锁定。",
+			[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "应用将在 1 分钟后锁定。",
+			[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "应用将在 5 分钟后锁定。",
+		},
+	},
+};
+
+const TA: PreferencesLabels = {
+	themes: { system: "சாதனம்", light: "வெளிர்", dark: "அடர்", nord: "Nord" },
+	themeDescriptions: { system: "சாதனத்தின் வெளிர் அல்லது அடர் அமைப்பைப் பின்பற்று", nord: "Nord-இன் ஆர்க்டிக் நீல நிறங்களில் ஓர் அடர் தீம்" },
+	appearance: { description: "இந்தச் சாதனத்தில் செயலி எப்படித் தோன்ற வேண்டும் எனத் தேர்ந்தெடுங்கள்.", theme: "தீம்" },
+	language: { description: "இந்தச் சாதனத்தில் செயலி பயன்படுத்தும் மொழியைத் தேர்ந்தெடுங்கள்.", label: "மொழி" },
+	appLockTimeouts: {
+		[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "உடனடியாக",
+		[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "1 நிமிடத்திற்குப் பிறகு",
+		[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "5 நிமிடங்களுக்குப் பிறகு",
+	},
+	messages: {
+		themeChanged: (themeName: string): string => `தீம் ${themeName} என அமைக்கப்பட்டது.`,
+		languageChanged: (languageName: string): string => `மொழி ${languageName} என அமைக்கப்பட்டது.`,
+		appLockTurnedOn: "செயலிப் பூட்டு இயக்கப்பட்டது.",
+		appLockTurnedOff: "செயலிப் பூட்டு முடக்கப்பட்டது.",
+		appLockTimeoutChanged: {
+			[APP_LOCK_TIMEOUT_IMMEDIATELY_MS]: "செயலி உடனடியாகப் பூட்டப்படும்.",
+			[APP_LOCK_TIMEOUT_ONE_MINUTE_MS]: "செயலி 1 நிமிடத்திற்குப் பிறகு பூட்டப்படும்.",
+			[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS]: "செயலி 5 நிமிடங்களுக்குப் பிறகு பூட்டப்படும்.",
+		},
+	},
+};
+
+export const PREFERENCES_LABELS: LabelPack<PreferencesLabels> = { en: EN, ms: MS, "zh-Hans": ZH_HANS, ta: TA };
+
+/** The Appearance screen's choices, in `labels`' language. */
+export function themeOptionsOf(labels: PreferencesLabels): readonly RadioOption<ThemePreference>[] {
+	return [
+		{ value: "system", label: labels.themes.system, description: labels.themeDescriptions.system },
+		{ value: "light", label: labels.themes.light },
+		{ value: "dark", label: labels.themes.dark },
+		{ value: "nord", label: labels.themes.nord, description: labels.themeDescriptions.nord },
+	];
+}
+
+/** The app lock's timeout choices, in `labels`' language. */
+export function appLockTimeoutOptionsOf(labels: PreferencesLabels): readonly RadioOption<AppLockTimeoutMs>[] {
+	return [
+		{ value: APP_LOCK_TIMEOUT_IMMEDIATELY_MS, label: labels.appLockTimeouts[APP_LOCK_TIMEOUT_IMMEDIATELY_MS] },
+		{ value: APP_LOCK_TIMEOUT_ONE_MINUTE_MS, label: labels.appLockTimeouts[APP_LOCK_TIMEOUT_ONE_MINUTE_MS] },
+		{ value: APP_LOCK_TIMEOUT_FIVE_MINUTES_MS, label: labels.appLockTimeouts[APP_LOCK_TIMEOUT_FIVE_MINUTES_MS] },
+	];
+}

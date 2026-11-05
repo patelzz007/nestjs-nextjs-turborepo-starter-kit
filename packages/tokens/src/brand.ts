@@ -11,6 +11,8 @@
 // Coordinates are in a 24 × 24 box: a regular hexagon of radius 10.5 around
 // the centre, each face pulled 12% towards its own middle to open the gaps.
 
+import { PROJECT_DISPLAY_NAME } from "./project-identity";
+
 export type BrandMarkFacetName = "top" | "left" | "right";
 
 export interface BrandMarkFacet {
@@ -23,10 +25,10 @@ export interface BrandMarkFacet {
 
 /**
  * The product's display name: page titles, auth screens, copyright lines, the brand row — every place an app
- * names itself. One value, so renaming the product is one change (the mobile app's store name is
- * `MOBILE_APP_NAME`, set per build in apps/mobile/app.config.ts).
+ * names itself. It comes from project.json (`displayName`), so renaming the product is one change there plus
+ * `pnpm project:sync` (the mobile app's store name defaults to it too, and `MOBILE_APP_NAME` overrides it per build).
  */
-export const BRAND_NAME = "Starter";
+export const BRAND_NAME: string = PROJECT_DISPLAY_NAME;
 
 /** Side of the square the mark is drawn in. */
 export const BRAND_MARK_SIZE = 24;

@@ -217,7 +217,7 @@ lost message.
 - **Audit.** Preference, consent and quiet-hour changes, device registration and revocation, retries,
   test sends and suppression lifts go through the request audit. Deliveries store masked
   destinations (`+60••••6789`, `j•••@example.com`).
-- **Retention.** In-app rows: soft-deleted 90 days after read, 365 days if unread. Deliveries: 180 days.
+- **Retention.** ~~In-app rows: soft-deleted 90 days after read, 365 days if unread. Deliveries: 180 days.~~ **Changed 2026-11-03:** every record, in-app rows and deliveries included, is kept for ten years (`apps/api/src/platform/domain/record-retention.ts`), then soft-deleted.
   Sensitive deliveries: metadata only, 30 days. Consent events are kept for the life of the account
   (proof of consent).
 

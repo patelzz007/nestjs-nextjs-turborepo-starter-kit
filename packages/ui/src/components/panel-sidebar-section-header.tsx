@@ -17,33 +17,38 @@ const SECTION_COLOR_MAP: Record<PanelSectionColor, string> = {
 };
 
 export interface PanelSidebarSectionHeaderProps {
+	/** What the section is called on screen. */
 	readonly title: string;
+	/** Its stable identity, what moving it reorders (the same in every language). */
+	readonly sectionKey: string;
 	/** Id of the title element, so the section's list can be named by it (`aria-labelledby`). */
 	readonly titleId?: string;
 	readonly index: number;
 	readonly isLast: boolean;
 	readonly isSearching: boolean;
 	readonly isActiveSection: boolean;
-	readonly allTitles: readonly string[];
+	/** Every section's key, in the order shown. */
+	readonly allKeys: readonly string[];
 	readonly color?: PanelSectionColor | undefined;
 	readonly moveUpTitle: string;
 	readonly moveDownTitle: string;
 	readonly moveUpAriaLabel: string;
 	readonly moveDownAriaLabel: string;
-	readonly onMoveSectionUp: (title: string, allTitles: readonly string[]) => void;
-	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
+	readonly onMoveSectionUp: (key: string, allKeys: readonly string[]) => void;
+	readonly onMoveSectionDown: (key: string, allKeys: readonly string[]) => void;
 }
 
 /** Section label with a coloured dot and reorder controls (buttons, or Alt+↑ / Alt+↓ while one is focused). */
 export const PanelSidebarSectionHeader = React.forwardRef<HTMLDivElement, PanelSidebarSectionHeaderProps>(function PanelSidebarSectionHeader(
 	{
 		title,
+		sectionKey,
 		titleId,
 		index,
 		isLast,
 		isSearching,
 		isActiveSection,
-		allTitles,
+		allKeys,
 		color,
 		moveUpTitle,
 		moveDownTitle,
@@ -55,12 +60,12 @@ export const PanelSidebarSectionHeader = React.forwardRef<HTMLDivElement, PanelS
 	ref,
 ): React.JSX.Element {
 	const handleMoveUp = React.useCallback((): void => {
-		onMoveSectionUp(title, allTitles);
-	}, [onMoveSectionUp, title, allTitles]);
+		onMoveSectionUp(sectionKey, allKeys);
+	}, [onMoveSectionUp, sectionKey, allKeys]);
 
 	const handleMoveDown = React.useCallback((): void => {
-		onMoveSectionDown(title, allTitles);
-	}, [onMoveSectionDown, title, allTitles]);
+		onMoveSectionDown(sectionKey, allKeys);
+	}, [onMoveSectionDown, sectionKey, allKeys]);
 
 	const handleKeyDown = React.useCallback(
 		(event: React.KeyboardEvent<HTMLElement>): void => {
@@ -69,14 +74,14 @@ export const PanelSidebarSectionHeader = React.forwardRef<HTMLDivElement, PanelS
 			}
 			if (event.key === "ArrowUp") {
 				event.preventDefault();
-				onMoveSectionUp(title, allTitles);
+				onMoveSectionUp(sectionKey, allKeys);
 			}
 			if (event.key === "ArrowDown") {
 				event.preventDefault();
-				onMoveSectionDown(title, allTitles);
+				onMoveSectionDown(sectionKey, allKeys);
 			}
 		},
-		[onMoveSectionUp, onMoveSectionDown, title, allTitles],
+		[onMoveSectionUp, onMoveSectionDown, sectionKey, allKeys],
 	);
 
 	return (

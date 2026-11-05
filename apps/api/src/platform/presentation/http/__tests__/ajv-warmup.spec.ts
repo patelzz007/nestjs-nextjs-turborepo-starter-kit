@@ -2,6 +2,8 @@ import Ajv from "ajv";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { CompletePasskeyRegistrationSchema } from "@workspace/shared";
+
 import { AJV_WARMUP_BATCH_SIZE, warmupAjvValidators } from "../ajv-warmup";
 import { ZodValidationPipe } from "../validation/pipes/zod-validation.pipe";
 
@@ -43,5 +45,13 @@ describe("warmupAjvValidators", () => {
 
 		expect(new ZodValidationPipe(schema).transform({ field0: "value" })).toEqual({ field0: "value" });
 		expect(compile).not.toHaveBeenCalled();
+	});
+
+	it("checks a request on its input side, so a schema with a transform (a passkey's reported transports) compiles and validates", () => {
+		const pipe = new ZodValidationPipe(CompletePasskeyRegistrationSchema);
+		expect(() => {
+			ZodValidationPipe.warmup(CompletePasskeyRegistrationSchema);
+		}).not.toThrow();
+		expect(() => pipe.transform({ challengeId: "not-a-uuid" })).toThrow();
 	});
 });

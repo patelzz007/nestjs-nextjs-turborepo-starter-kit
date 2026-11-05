@@ -3,17 +3,20 @@
 // ============================================
 // Every 10 s: this instance's heartbeat. Every minute: the collection (dependencies, alert rules)
 // on whichever instance wins the minute's lock. Every hour: the history rollup and retention, and
-// the backup schedule. Each tick never rejects: a failure is logged and the next tick retries.
+// the backup schedule and the weekly restore drill. Each tick never rejects: a failure is logged and the next tick retries.
 
 import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { OPS_HOUR_MS, OPS_MINUTE_MS, OPS_SAMPLE_INTERVAL_MS, CaughtValueSchema } from "@workspace/shared";
 
 import type { BackupRunner } from "../application/services/backup-runner";
+import type { RestoreDrillService } from "../application/services/restore-drill.service";
+import { RESTORE_DRILL_SERVICE } from "../application/ports/restore-drill.port";
+import { systemActor } from "../../../platform/application/actor-context";
 import type { HistoryMaintainer } from "../application/services/history-maintainer";
 import type { InstanceReporter } from "../application/services/instance-reporter";
 import type { OperationsMonitor } from "../application/services/operations-monitor";
-import { BACKUP_RUNNER, HISTORY_MAINTAINER, INSTANCE_REPORTER, OPERATIONS_MONITOR } from "../application/ports/operations.tokens";
+import { BACKUP_RUNNER, HISTORY_MAINTAINER, INSTANCE_REPORTER, OPERATIONS_MONITOR, OPS_RESTORE_DRILL_OPERATION } from "../application/ports/operations.tokens";
 import { caughtErrorLogFields } from "../../../platform/application/errors/caught-error-log";
 
 const HEARTBEAT_INTERVAL_ID = "operations.heartbeat";
@@ -33,6 +36,7 @@ export class OperationsScheduler implements OnModuleInit, OnApplicationShutdown 
 		@Inject(OPERATIONS_MONITOR) private readonly monitor: OperationsMonitor,
 		@Inject(HISTORY_MAINTAINER) private readonly maintainer: HistoryMaintainer,
 		@Inject(BACKUP_RUNNER) private readonly backups: BackupRunner,
+		@Inject(RESTORE_DRILL_SERVICE) private readonly drills: RestoreDrillService,
 	) {}
 
 	public onModuleInit(): void {
@@ -61,6 +65,8 @@ export class OperationsScheduler implements OnModuleInit, OnApplicationShutdown 
 	private async hourly(): Promise<void> {
 		await this.maintainer.maintain();
 		await this.backups.scheduledCheck();
+		// Enhancement 2.6: a weekly restore drill, queued once per week however many instances ask.
+		await this.drills.scheduleIfDue(systemActor(OPS_RESTORE_DRILL_OPERATION, "cron", null, "Queue the weekly restore drill when it is due", null));
 	}
 
 	private every(id: string, intervalMs: number, work: () => Promise<void>): void {

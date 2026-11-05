@@ -82,41 +82,42 @@ describe("sessionIndicatorOf", () => {
 
 describe("sessionPillContent", () => {
 	it("breathes while checking", () => {
-		expect(sessionPillContent({ status: "checking" }, true)).toMatchObject({ icon: ShieldIcon, label: "Checking…", tone: "neutral", pulsing: true });
-		expect(sessionPillContent({ status: "checking" }, false)).toMatchObject({ label: "Checking session…" });
+		expect(sessionPillContent({ status: "checking" })).toMatchObject({ icon: ShieldIcon, label: "Checking session…", tone: "neutral", pulsing: true });
 	});
 
-	it("names the failure, shortly when compact and in full for screen readers", () => {
-		expect(sessionPillContent({ status: "failed", failure: "unreachable" }, true)).toMatchObject({
+	it("names the failure, with a fuller sentence for screen readers", () => {
+		expect(sessionPillContent({ status: "failed", failure: "unreachable" })).toMatchObject({
 			icon: ShieldXIcon,
-			label: "Check failed",
+			label: "Session check failed",
 			accessibilityLabel: "Session check failed, network or server error",
 			tone: "destructive",
 		});
-		expect(sessionPillContent({ status: "failed", failure: "expired" }, false)).toMatchObject({
+		expect(sessionPillContent({ status: "failed", failure: "expired" })).toMatchObject({
 			label: "Session expired",
 			accessibilityLabel: "Session expired, please sign in again",
 		});
 	});
 
-	it("shows the countdown — bare and fixed-width when compact, as a sentence in full", () => {
+	it("shows the countdown as a sentence", () => {
 		const indicator: SessionIndicator = { status: "verified", secondsLeft: 872, refreshed: false };
-		expect(sessionPillContent(indicator, true)).toMatchObject({
+		expect(sessionPillContent(indicator)).toMatchObject({
 			icon: ShieldCheckIcon,
-			label: "14m 32s",
+			label: "Token expires in 14m 32s",
 			accessibilityLabel: "Session verified, token expires in 14m 32s",
 			tone: "success",
-			tabularLabel: true,
+			tabularLabel: false,
 		});
-		expect(sessionPillContent(indicator, false)).toMatchObject({ label: "Token expires in 14m 32s", tabularLabel: false });
 	});
 
 	it("highlights a silent refresh", () => {
-		expect(sessionPillContent({ status: "verified", secondsLeft: 900, refreshed: true }, true)).toMatchObject({ label: "Refreshed", emphasized: true, tone: "success" });
-		expect(sessionPillContent({ status: "verified", secondsLeft: 900, refreshed: true }, false)).toMatchObject({ label: "Token refreshed just now" });
+		expect(sessionPillContent({ status: "verified", secondsLeft: 900, refreshed: true })).toMatchObject({
+			label: "Token refreshed just now",
+			emphasized: true,
+			tone: "success",
+		});
 	});
 
 	it("says when the token has no expiry", () => {
-		expect(sessionPillContent({ status: "verified", secondsLeft: null, refreshed: false }, false)).toMatchObject({ label: "Token expiry unknown" });
+		expect(sessionPillContent({ status: "verified", secondsLeft: null, refreshed: false })).toMatchObject({ label: "Token expiry unknown" });
 	});
 });

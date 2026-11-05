@@ -3,13 +3,14 @@ import { renderRouter, screen, waitFor } from "expo-router/testing-library";
 import * as SplashScreen from "expo-splash-screen";
 import * as React from "react";
 
-import { createTestRuntime, markerScreen, SlotLayout } from "../../../test/app-harness";
+import { createTestRuntime, markerScreen, gatedMarkerScreen, gatedSlotLayout } from "../../../test/app-harness";
 import { testAccessToken } from "../../../test/jwt";
 import { memorySecureStore } from "../../../test/secure-store-memory";
 import { preferencesActions } from "../../features/preferences/actions";
 import { sessionActions } from "../../features/session/actions";
 import { AppShell } from "../app-shell";
 import type { ReadyAppRuntime } from "../app-runtime";
+import AuthFolderLayout from "../../app/auth/_layout";
 
 jest.mock("expo-splash-screen", () => ({ hideAsync: jest.fn(() => Promise.resolve()), preventAutoHideAsync: jest.fn(() => Promise.resolve()) }));
 jest.mock("expo-local-authentication", () => ({
@@ -28,13 +29,14 @@ async function renderShell(runtime: ReadyAppRuntime, fontsReady = true): Promise
 	await renderRouter(
 		{
 			_layout: shellLayout(runtime, fontsReady),
-			"config-error": markerScreen("config-error screen"),
-			onboarding: markerScreen("onboarding screen"),
-			"update-required": markerScreen("update-required screen"),
-			lock: markerScreen("lock screen"),
-			"(auth)/_layout": SlotLayout,
-			"(auth)/sign-in": markerScreen("sign-in screen"),
-			"(app)/_layout": SlotLayout,
+			"config-error": gatedMarkerScreen(["config-error"], "config-error screen"),
+			"auth/_layout": AuthFolderLayout,
+			"auth/onboarding": gatedMarkerScreen(["onboarding"], "onboarding screen"),
+			"update-required": gatedMarkerScreen(["update-required"], "update-required screen"),
+			lock: gatedMarkerScreen(["lock"], "lock screen"),
+			"auth/(forms)/_layout": gatedSlotLayout(["auth", "enroll-two-factor", "verify-email"]),
+			"auth/(forms)/sign-in": gatedMarkerScreen(["auth"], "sign-in screen"),
+			"(app)/_layout": gatedSlotLayout(["app"]),
 			"(app)/index": markerScreen("home screen"),
 		},
 		{ initialUrl: "/" },

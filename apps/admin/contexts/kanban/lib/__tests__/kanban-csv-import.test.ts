@@ -22,39 +22,45 @@ describe("parseCsv", () => {
 describe("readKanbanCsv", () => {
 	it("reads a row's type, labels, points and dates, defaulting the type to the board's main level", () => {
 		const result = readKanbanCsv('title,type,labels,points,start\nEstimated,story,"api, ui",5,2026-06-01', COLUMNS, "EXECUTION");
-		expect(result).toMatchObject({ kind: "ready", tasks: [{ type: "STORY", labels: ["api", "ui"], storyPoints: 5, startAt: new Date(2026, 5, 1).getTime() }] });
-		expect(readKanbanCsv("title\nPlanned", COLUMNS, "PLANNING")).toMatchObject({ kind: "ready", tasks: [{ type: "FEATURE" }] });
+		expect(result).toMatchObject({
+			problems: [],
+			tasks: [{ line: 2, task: { type: "STORY", labels: ["api", "ui"], storyPoints: 5, startAt: new Date(2026, 5, 1).getTime() } }],
+		});
+		expect(readKanbanCsv("title\nPlanned", COLUMNS, "PLANNING")).toMatchObject({ problems: [], tasks: [{ task: { type: "FEATURE" } }] });
 	});
 
 	it("refuses a task (it needs its story) and a level the board does not hold", () => {
-		expect(readKanbanCsv("title,type\nStep,task", COLUMNS, "EXECUTION").kind).toBe("invalid");
-		expect(readKanbanCsv("title,type\nThing,subtask", COLUMNS, "EXECUTION").kind).toBe("invalid");
+		expect(readKanbanCsv("title,type\nStep,task", COLUMNS, "EXECUTION")).toMatchObject({ tasks: [], problems: [{ line: 2 }] });
+		expect(readKanbanCsv("title,type\nThing,subtask", COLUMNS, "EXECUTION")).toMatchObject({ tasks: [], problems: [{ line: 2 }] });
 	});
 
 	it("maps every row onto the create contract, matching columns by title and defaulting the rest", () => {
 		const result = readKanbanCsv("Title,Priority,Team,Column,Due,Progress\nShip,high,qa,building,2026-06-14,40\nPlan,,,,,", COLUMNS, "EXECUTION");
 
 		expect(result).toEqual({
-			kind: "ready",
+			problems: [],
 			tasks: [
-				{ ...NEW_ITEM, columnId: DOING_ID, title: "Ship", priority: "HIGH", team: "QA", dueAt: new Date(2026, 5, 14).getTime(), progress: 40 },
-				{ ...NEW_ITEM, columnId: TODO_ID, title: "Plan", priority: "MEDIUM", team: "PRODUCT", dueAt: null, progress: 0 },
+				{ line: 2, task: { ...NEW_ITEM, columnId: DOING_ID, title: "Ship", priority: "HIGH", team: "QA", dueAt: new Date(2026, 5, 14).getTime(), progress: 40 } },
+				{ line: 3, task: { ...NEW_ITEM, columnId: TODO_ID, title: "Plan", priority: "MEDIUM", team: "PRODUCT", dueAt: null, progress: 0 } },
 			],
 		});
 	});
 
-	it("reports every row it refuses, by line, and imports none", () => {
-		const result = readKanbanCsv("title,priority,column,due\n,low,,\nOk,urgent,,\nOk,low,Nowhere,\nOk,low,,soon", COLUMNS, "EXECUTION");
+	it("reports every row it refuses, by line, beside the rows that read cleanly (enhancement 5.8)", () => {
+		const result = readKanbanCsv("title,priority,column,due\n,low,,\nOk,urgent,,\nOk,low,Nowhere,\nGood,low,,\nOk,low,,soon", COLUMNS, "EXECUTION");
 
-		expect(result.kind).toBe("invalid");
-		expect(result.kind === "invalid" ? result.problems.map((problem) => problem.line) : []).toEqual([2, 3, 4, 5]);
+		expect(result.problems.map((problem) => problem.line)).toEqual([2, 3, 4, 6]);
+		expect(result.tasks.map(({ line, task }) => [line, task.title])).toEqual([[5, "Good"]]);
 	});
 
 	it("needs a header with a title column, at least one row, and at most the bulk limit", () => {
-		expect(readKanbanCsv("", COLUMNS, "EXECUTION").kind).toBe("invalid");
-		expect(readKanbanCsv("name\nx", COLUMNS, "EXECUTION").kind).toBe("invalid");
-		expect(readKanbanCsv(`title\n${Array.from({ length: BULK_MUTATION_MAX_ITEMS + 1 }, (_, index) => `Task ${String(index)}`).join("\n")}`, COLUMNS, "EXECUTION").kind).toBe(
-			"invalid",
-		);
+		expect(readKanbanCsv("", COLUMNS, "EXECUTION")).toMatchObject({ tasks: [], problems: [{ line: 1 }] });
+		expect(readKanbanCsv("name\nx", COLUMNS, "EXECUTION")).toMatchObject({ tasks: [], problems: [{ line: 1 }] });
+		expect(
+			readKanbanCsv(`title\n${Array.from({ length: BULK_MUTATION_MAX_ITEMS + 1 }, (_, index) => `Task ${String(index)}`).join("\n")}`, COLUMNS, "EXECUTION"),
+		).toMatchObject({
+			tasks: [],
+			problems: [{ line: 1 }],
+		});
 	});
 });

@@ -7,6 +7,8 @@ import {
 	DocsMetaSchema,
 	findNeighbours,
 	findSection,
+	guideIdFromPath,
+	sidebarSections,
 	MORE_GUIDES_SECTION,
 	sectionSlug,
 	TILE_TONES,
@@ -106,5 +108,31 @@ describe("learning-center helpers", () => {
 		expect(tileTone(0)).toBe(1);
 		expect(tileTone(TILE_TONES - 1)).toBe(TILE_TONES);
 		expect(tileTone(TILE_TONES)).toBe(1);
+	});
+});
+
+describe("guideIdFromPath", () => {
+	it("should read the guide id from a guide's path, decoded", () => {
+		expect(guideIdFromPath("/docs/technical/database")).toBe("technical/database");
+		expect(guideIdFromPath("/docs/My%20Guide")).toBe("My Guide");
+	});
+
+	it("should be null off the guides and on the guide index", () => {
+		expect(guideIdFromPath("/blog/epoch")).toBeNull();
+		expect(guideIdFromPath("/docs/")).toBeNull();
+		expect(guideIdFromPath("/docs")).toBeNull();
+	});
+});
+
+describe("sidebarSections", () => {
+	it("should keep only what the guide tree draws", () => {
+		const [section] = sidebarSections([
+			{
+				title: "API",
+				icon: "fileCode",
+				items: [{ id: "technical/api/README", title: "API conventions", description: "Long text", href: "/docs/technical/api/README", icon: "fileCode" }],
+			},
+		]);
+		expect(section).toEqual({ title: "API", items: [{ id: "technical/api/README", title: "API conventions", icon: "fileCode" }] });
 	});
 });

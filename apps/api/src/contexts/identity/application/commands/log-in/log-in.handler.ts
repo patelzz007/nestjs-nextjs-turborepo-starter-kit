@@ -1,13 +1,6 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, type ICommandHandler } from "@nestjs/cqrs";
-import type {
-	EpochMs,
-	LoginRestrictedEnrollmentResponse,
-	LoginServiceResponse,
-	LoginTwoFactorPendingResponse,
-	LoginVerificationPendingResponse,
-	UserPermissions,
-} from "@workspace/shared";
+import type { EpochMs, LoginRestrictedEnrollmentResponse, LoginServiceResponse, LoginTwoFactorPendingResponse, LoginVerificationPendingResponse } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import { USER_GRANTS_READ, type UserGrantsReadPort } from "../../../../../platform/application/ports/authorization.port";
@@ -33,8 +26,8 @@ import {
 	LOGIN_FAILURE_OPERATION,
 	LOGIN_LOCKOUT_RESET_OPERATION,
 } from "../../ports/identity.tokens";
+import { assertAdminPanelSignIn } from "../../services/admin-panel-sign-in";
 import { LoginVerificationGate } from "../../services/login-verification.gate";
-import { hasAdminAccess } from "../../services/user-response.assembler";
 import { LogInCommand } from "./log-in.command";
 
 /** Hashed for every login so an unknown email costs the same time as a wrong password (no account enumeration by timing). */
@@ -80,12 +73,7 @@ export class LogInHandler implements ICommandHandler<LogInCommand, LoginResult> 
 		}
 
 		// Admin panel sign-in: uniform INVALID_CREDENTIALS for an account without dashboard access (no capability probing).
-		if (input.clientType === "admin" && !account.isSuperAdmin) {
-			const permissions: UserPermissions = await this.grants.getUserPermissionDetails(account.id);
-			if (!hasAdminAccess(account, permissions)) {
-				throw new InvalidCredentialsError();
-			}
-		}
+		await assertAdminPanelSignIn(input.clientType, account, this.grants);
 
 		if (!account.twoFactorEnabled) {
 			await this.uow.runSystemOperation(LOGIN_LOCKOUT_RESET_OPERATION, actor, (scope) => scope.accounts.resetLockout(account.id, now));
@@ -111,7 +99,11 @@ export class LogInHandler implements ICommandHandler<LogInCommand, LoginResult> 
 			},
 			now,
 		);
-		await this.uow.runSystemOperation(LOGIN_CHALLENGE_OPERATION, actor, (scope) => scope.challenges.add(challenge));
+		// The second step may use a passkey instead of a code when the account has one (ADR 080).
+		const passkeyCount: number = await this.uow.runSystemOperation(LOGIN_CHALLENGE_OPERATION, actor, async (scope: IdentityScope): Promise<number> => {
+			await scope.challenges.add(challenge);
+			return scope.passkeys.countLive(account.id);
+		});
 		const state = challenge.snapshot;
 		const tempToken: string = await this.tokens.signChallengeRef({
 			sub: state.userId,
@@ -121,7 +113,7 @@ export class LogInHandler implements ICommandHandler<LogInCommand, LoginResult> 
 			deviceInfo: state.deviceInfo,
 			ipAddress: state.ipAddress,
 		});
-		return { requiresTwoFactor: true, tempToken, message: "Two-factor authentication required" };
+		return { requiresTwoFactor: true, tempToken, message: "Two-factor authentication required", passkeyAvailable: passkeyCount > 0 };
 	}
 
 	/** D19: one atomic statement counts the failure and takes the lock; the attempt that locked it sends the notice. */

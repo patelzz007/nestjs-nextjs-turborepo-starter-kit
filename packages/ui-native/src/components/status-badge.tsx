@@ -25,11 +25,11 @@ const StyledAnimatedView = withUniwind(Animated.View);
 export const statusBadgeVariants = cva("flex-row items-center gap-1.5 self-start rounded-full border py-1", {
 	variants: {
 		tone: {
-			neutral: "border-border bg-muted",
-			info: "border-info/30 bg-info-soft",
-			success: "border-success/30 bg-success-soft",
-			warning: "border-warning/30 bg-warning-soft",
-			destructive: "border-destructive/30 bg-destructive-soft",
+			neutral: "border-transparent bg-muted",
+			info: "border-transparent bg-info-soft",
+			success: "border-transparent bg-success-soft",
+			warning: "border-transparent bg-warning-soft",
+			destructive: "border-transparent bg-destructive-soft",
 		},
 		/** The tone's full-strength border: a change that just happened. */
 		emphasized: { true: "", false: "" },

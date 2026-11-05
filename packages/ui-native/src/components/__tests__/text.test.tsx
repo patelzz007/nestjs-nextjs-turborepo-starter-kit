@@ -34,7 +34,7 @@ describe("Text roles", () => {
 			</>,
 		);
 
-		expect(screen.getByText("Body")).toHaveProp("className", expect.stringContaining("font-sans text-base text-foreground"));
+		expect(screen.getByText("Body")).toHaveProp("className", expect.stringContaining("font-sans text-base leading-6 text-foreground"));
 		expect(screen.getByText("Muted")).toHaveProp("className", expect.stringContaining("text-muted-foreground"));
 		expect(screen.getByText("Email")).toHaveProp("className", expect.stringContaining("font-sans-medium"));
 		expect(screen.getByText("Required")).toHaveProp("className", expect.stringContaining("text-destructive-foreground"));

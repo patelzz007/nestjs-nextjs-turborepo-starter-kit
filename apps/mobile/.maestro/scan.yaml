@@ -1,0 +1,12 @@
+# The till (scan and redeem reward codes) opens from Settings: pairing first, or the paired till.
+appId: ${APP_ID}
+name: Till scan
+tags: [smoke]
+---
+- runFlow: subflows/signed-in.yaml
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "Till"
+- tapOn: "Till"
+- assertVisible: "Pair this phone as a till|This till"
+- back

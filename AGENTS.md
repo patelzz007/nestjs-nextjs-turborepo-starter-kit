@@ -35,7 +35,7 @@ pnpm run format
 pnpm run lint
 pnpm run typecheck
 pnpm run test
-pnpm run test e2e
+pnpm run test:e2e
 pnpm run ci:local
 ```
 

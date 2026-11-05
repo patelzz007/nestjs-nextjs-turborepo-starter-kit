@@ -14,49 +14,19 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { useRender } from "@base-ui/react/use-render";
 import { hasGlobalConstructor } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/button";
-import { Checkbox } from "@workspace/ui/components/checkbox";
-import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@workspace/ui/components/context-menu";
 import { ScrollArea, ScrollBar } from "@workspace/ui/components/scroll-area";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@workspace/ui/components/tooltip";
+import { TooltipProvider } from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { format } from "date-fns";
-import { ChevronLeftIcon, ChevronRightIcon, GripVerticalIcon, MinusIcon, PlusIcon } from "lucide-react";
+import { MinusIcon, PlusIcon } from "lucide-react";
 import * as React from "react";
-
-import {
-	isSameOccurrenceList,
-	resolveTimelineLines,
-	useGantt,
-	useGanttNow,
-	useGanttSelector,
-	useGanttSettings,
-	useGanttViewConfig,
-	type GanttColumn,
-	type GanttColumnContext,
-	type GanttLineStroke,
-	type UseGanttSelectorOptions,
-} from "./gantt";
-import { GanttBar } from "./gantt-bar";
-import { cancelActiveGanttGestures, GANTT_DEFAULT_COLOR, markGestureEnd, useGanttGestures, useGanttGestureTeardown, wasRecentDrag } from "./gantt-dnd";
+import { resolveTimelineLines, useGantt, useGanttNow, useGanttSelector, useGanttSettings, useGanttViewConfig, type GanttColumn } from "./gantt";
+import { cancelActiveGanttGestures, markGestureEnd, useGanttGestureTeardown } from "./gantt-dnd";
 import { resolveSnapMinutes } from "./gantt-gesture-math";
-import { localeOptions } from "./gantt-i18n";
-import {
-	buildDependencyPath,
-	clampNumber,
-	FRACTION_EPSILON,
-	getDayKey,
-	MS_PER_MINUTE,
-	getRangeKey,
-	reorderResources,
-	resolveEventBaseline,
-	toZoned,
-	type GanttLaneMemo,
-} from "./gantt-lib";
-import { DEFAULT_ROW_ALIGN, resolveScheduleMode, type GanttInstance } from "./gantt-store";
-import type { GanttData, GanttDateRange, GanttDragKind, GanttEvent, GanttOccurrence, GanttResourceReorder, GanttScale, GanttSegment, GanttState } from "./gantt-types";
+import { clampNumber, FRACTION_EPSILON, getRangeKey, reorderResources, toZoned } from "./gantt-lib";
+import type { GanttDateRange, GanttEvent, GanttOccurrence, GanttResourceReorder, GanttScale, GanttState } from "./gantt-types";
 import {
 	applyDraftLane,
 	AUTO_LABEL_MIN_REM,
@@ -77,292 +47,94 @@ import {
 	hasUniformUnits,
 	LANE_GAP_REM,
 	LANE_HEIGHT_REM,
-	laneBlockRem,
-	laneTopRem,
-	lowestFreeLane,
 	MAX_INTERVAL_MIN,
 	MIN_INTERVAL_MIN,
 	MIN_ROW_HEIGHT_REM,
 	resolveCenterTarget,
 	resolveHintStop,
-	resolveLabelPlacement,
 	ROW_PADDING_REM,
-	type DependencyEdge,
 	type HintStop,
 	type RowWindow,
 	type TimelineRow,
 	type TimelineRowBars,
 	type UnitFraction,
 } from "./gantt-view-layout";
+import {
+	CHROME_STYLE,
+	COLUMN_ALIGN_CLASS,
+	columnWidthStyle,
+	GanttCustomDragLayer,
+	GanttDependencyLayer,
+	GanttNowMark,
+	GanttOffscreenChips,
+	GanttZoomButton,
+	LOADING_STYLE,
+	NO_COLUMNS,
+	PERIOD_KEY_FORMAT,
+	scaleAttribute,
+	SCROLLBAR_STYLE,
+	STICKY_HEADER_STYLE,
+	stickyTrackHeaderStyle,
+} from "./gantt-view-chrome";
+import { GanttTimelineRow, GanttTreeRow } from "./gantt-view-rows";
+import {
+	readAxisWidth,
+	DEFAULT_OVERSCAN_ROWS,
+	DEFAULT_TREE_PANEL,
+	DEFAULT_VIRTUALIZATION_THRESHOLD,
+	DEFAULT_ZOOM,
+	DEFAULT_ZOOM_MAX,
+	DEFAULT_ZOOM_MIN,
+	DEFAULT_ZOOM_STEP,
+	DOM_DELTA_LINE,
+	DOM_DELTA_PAGE,
+	DRAFT_SELECTOR_OPTIONS,
+	GANTT_LAYER,
+	INFINITE_EDGE_PX,
+	MAX_SEAT_ATTEMPTS,
+	MIN_TIMELINE_WIDTH_PX,
+	OCCURRENCES_SELECTOR_OPTIONS,
+	OFF_DAY_BODY_CLASS,
+	OFF_DAY_CLASS,
+	PAN_ACTIVATION_PX,
+	type PendingRestore,
+	RANGE_SELECTOR_OPTIONS,
+	REORDER_CARET_OFFSET_PX,
+	REORDER_FALLBACK_GRAB_PX,
+	REORDER_FALLBACK_ROW_PX,
+	type ReorderState,
+	SCROLL_SLACK_PX,
+	SPLITTER_KEY_STEP_PX,
+	TOOLTIP_DELAY_MS,
+	TOOLTIP_TIMEOUT_MS,
+	USER_SCROLL_WINDOW_MS,
+	WHEEL_LINE_PX,
+	WHEEL_PAGE_PX,
+	WHEEL_ZOOM_EPSILON,
+	WHEEL_ZOOM_RATE,
+	ZOOM_DECIMALS,
+	ZOOM_STEP_DECIMALS,
+	createLaneMemory,
+	flexStyle,
+	getPaneViewport,
+	getScrollStart,
+	isElement,
+	lineStyle,
+	readLiveAxis,
+	readRemPx,
+	rem,
+	selectDraftLayout,
+	setScrollStart,
+	spanStyle,
+	strokeClass,
+	trackPoint,
+	useIdList,
+	useTodayKey,
+	wheelUnitPx,
+} from "./gantt-view-shared";
 
 /* -------------------------------------------------------------------------- */
 /*                                  Constants                                 */
-/* -------------------------------------------------------------------------- */
-
-const DEFAULT_TREE_PANEL = { width: 288, minWidth: 180, maxWidth: 640, resizable: true, nameColumnWidth: 208 };
-const DEFAULT_COLUMN_WIDTH_PX = 96;
-const DEFAULT_ZOOM = 1;
-const DEFAULT_ZOOM_MIN = 0.5;
-const DEFAULT_ZOOM_MAX = 3;
-const DEFAULT_ZOOM_STEP = 0.25;
-/** Wheel/pinch zoom sensitivity: zoom × e^(−deltaY × this). */
-const WHEEL_ZOOM_RATE = 0.002;
-/** Below this change a wheel zoom is a no-op and the browser keeps the gesture. */
-const WHEEL_ZOOM_EPSILON = 1e-4;
-const ZOOM_DECIMALS = 4;
-const ZOOM_STEP_DECIMALS = 2;
-/** Wheel deltaMode line / page units → px. */
-const WHEEL_LINE_PX = 16;
-const WHEEL_PAGE_PX = 400;
-const DOM_DELTA_LINE = 1;
-const DOM_DELTA_PAGE = 2;
-const MIN_TIMELINE_WIDTH_PX = 200;
-const INFINITE_EDGE_PX = 160;
-/** Scroll events this long after the last user gesture still count as user scrolling. */
-const USER_SCROLL_WINDOW_MS = 1200;
-/** A track within this many px of the pane width has nothing to scroll. */
-const SCROLL_SLACK_PX = 8;
-/** Splitter keyboard step (px). */
-const SPLITTER_KEY_STEP_PX = 16;
-/** Header / canvas pan activates after this much travel (px). */
-const PAN_ACTIVATION_PX = 4;
-/** Indent per tree level (rem). */
-const TREE_INDENT_REM = 0.875;
-/** Pending-layout retries before centring gives up waiting for a measured pane. */
-const MAX_SEAT_ATTEMPTS = 20;
-/** Root font size fallback (px per rem) before the document is measured. */
-const FALLBACK_REM_PX = 16;
-const DEFAULT_VIRTUALIZATION_THRESHOLD = 60;
-const DEFAULT_OVERSCAN_ROWS = 8;
-/** Smallest rendered bar width (% of the track) so a sliver stays visible. */
-const MIN_BAR_WIDTH_PERCENT = 0.5;
-const PERCENT = 100;
-/** Dependency route clearance, arrowhead size and stroke (rem / px). */
-const DEPENDENCY_CLEARANCE_REM = 0.625;
-const DEPENDENCY_ARROW_REM = 0.375;
-const DEPENDENCY_STROKE_PX = 1.5;
-/** Offscreen chips: header clearance, bottom clearance, jump inset and zoom-control dodge (px). */
-const CHIP_HEADER_CLEARANCE_PX = 10;
-const CHIP_BOTTOM_CLEARANCE_PX = 16;
-const CHIP_JUMP_INSET_PX = 24;
-const CHIP_EDGE_TOLERANCE_PX = 2;
-const CHIP_ZOOM_BAND_PX = 8;
-const CHIP_ZOOM_SHIFT_PX = 28;
-const TOOLTIP_DELAY_MS = 600;
-const TOOLTIP_TIMEOUT_MS = 300;
-/** Reorder caret sits this far above the insertion line (px). */
-const REORDER_CARET_OFFSET_PX = 4;
-/** Fallback grab offset / row height for a reorder whose row was not measured (px). */
-const REORDER_FALLBACK_GRAB_PX = 8;
-const REORDER_FALLBACK_ROW_PX = 40;
-
-/** In-gantt stacking: the gantt root is an isolated stacking context, so these stay local. */
-const GANTT_LAYER = { nowLine: 10, bar: 10, stickyHeader: 30, hint: 30, chips: 30, ghost: 40, chrome: 40, loading: 50, reorder: 60 };
-
-const OFF_DAY_CLASS = "bg-muted/40";
-const OFF_DAY_BODY_CLASS =
-	"bg-muted/25 bg-[repeating-linear-gradient(135deg,transparent,transparent_5px,color-mix(in_oklab,var(--color-border)_35%,transparent)_5px,color-mix(in_oklab,var(--color-border)_35%,transparent)_6px)]";
-const DASHED_LINE_CLASS = "bg-[repeating-linear-gradient(to_bottom,var(--color-border)_0,var(--color-border)_3px,transparent_3px,transparent_6px)]";
-
-const ROW_STATIC_MARK = "";
-
-/* -------------------------------------------------------------------------- */
-/*                                Style helpers                               */
-/* -------------------------------------------------------------------------- */
-
-type GanttStyle = React.CSSProperties & Partial<Record<"--gantt-event-color" | "--gantt-ghost-height", string>>;
-
-function percent(fraction: number): string {
-	return `${String(fraction * PERCENT)}%`;
-}
-
-function rem(value: number): string {
-	return `${String(value)}rem`;
-}
-
-function spanStyle(start: number, width: number): React.CSSProperties {
-	return { insetInlineStart: percent(start), width: percent(width) };
-}
-
-function lineStyle(fraction: number): React.CSSProperties {
-	return { insetInlineStart: `calc(${percent(fraction)} - 1px)` };
-}
-
-function flexStyle(weight: number): React.CSSProperties {
-	return { flex: `${String(weight)} 0 0px` };
-}
-
-/** A lane-height square centred on an instant, clamped into the row box (a milestone). */
-function milestoneInset(from: number, laneHeightRem: number): string {
-	return `clamp(0rem, ${percent(from)} - ${rem(laneHeightRem / 2)}, 100% - ${rem(laneHeightRem)})`;
-}
-
-function windowStyle(from: number, to: number, isMilestone: boolean, laneHeightRem: number, top: number, height: number, color: string | undefined): GanttStyle {
-	return {
-		"--gantt-event-color": color ?? GANTT_DEFAULT_COLOR,
-		insetInlineStart: isMilestone ? milestoneInset(from, laneHeightRem) : percent(from),
-		width: isMilestone ? rem(laneHeightRem) : `${String(Math.max((to - from) * PERCENT, MIN_BAR_WIDTH_PERCENT))}%`,
-		top: rem(top),
-		height: rem(height),
-	};
-}
-
-function strokeClass(stroke: GanttLineStroke | null): string {
-	return stroke === "dashed" ? DASHED_LINE_CLASS : "bg-border";
-}
-
-/* -------------------------------------------------------------------------- */
-/*                               DOM utilities                                */
-/* -------------------------------------------------------------------------- */
-
-/** The pane's scrollable viewport (custom ScrollArea or native host). */
-function getPaneViewport(pane: HTMLElement | null): HTMLElement | null {
-	return pane?.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]") ?? null;
-}
-
-/** Distance scrolled from the inline-start edge (RTL reports negative). */
-function getScrollStart(viewport: HTMLElement): number {
-	return Math.abs(viewport.scrollLeft);
-}
-
-function setScrollStart(viewport: HTMLElement, value: number): void {
-	viewport.scrollLeft = getComputedStyle(viewport).direction === "rtl" ? -value : value;
-}
-
-interface LiveAxis {
-	readonly startMs: number;
-	readonly endMs: number;
-}
-
-/** The axis range as rendered (the DOM may lag React by a frame during growth). */
-function readLiveAxis(viewport: HTMLElement): LiveAxis | null {
-	const axis = viewport.querySelector<HTMLElement>("[data-gantt-axis]");
-	const startMs = Number(axis?.dataset.ganttRangeStart);
-	const endMs = Number(axis?.dataset.ganttRangeEnd);
-	return axis === null || Number.isNaN(startMs) || Number.isNaN(endMs) ? null : { startMs, endMs };
-}
-
-/** Pointer x against an element's TIME axis: the 0..1 fraction and the pixel-snapped offset (RTL mirrored). */
-function trackPoint(element: HTMLElement, clientX: number): { readonly fraction: number; readonly offset: number } {
-	const rect = element.getBoundingClientRect();
-	const isRtl = getComputedStyle(element).direction === "rtl";
-	const offset = isRtl ? rect.right - clientX : clientX - rect.left;
-	const snapped = isRtl ? rect.right - Math.round(clientX) : Math.round(clientX) - rect.left;
-	return { fraction: rect.width > 0 ? offset / rect.width : 0, offset: snapped };
-}
-
-function wheelUnitPx(event: WheelEvent, pageHeight: number): number {
-	if (event.deltaMode === DOM_DELTA_LINE) {
-		return WHEEL_LINE_PX;
-	}
-	return event.deltaMode === DOM_DELTA_PAGE ? pageHeight : 1;
-}
-
-function readRemPx(): number {
-	const size = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
-	return Number.isFinite(size) && size > 0 ? size : FALLBACK_REM_PX;
-}
-
-function isElement(target: EventTarget | null): target is Element {
-	return target instanceof Element;
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                   Hooks                                    */
-/* -------------------------------------------------------------------------- */
-
-function readServerTodayKey(): null {
-	return null;
-}
-
-/** Today's zoned day key: re-renders only at the midnight rollover, never on the 30s now tick. */
-function useTodayKey(instance: GanttInstance, timeZone: string): string | null {
-	const getSnapshot = (): string => getDayKey(new Date(instance.internals.getNowMs()), timeZone);
-	return React.useSyncExternalStore(instance.internals.subscribeNow, getSnapshot, readServerTodayKey);
-}
-
-interface LaneMemory {
-	readonly read: () => ReadonlyMap<string, GanttLaneMemo>;
-	readonly write: (lanes: ReadonlyMap<string, GanttLaneMemo>) => void;
-}
-
-/**
- * Lane memory across layout passes. The pass is idempotent (feeding its own
- * output back produces the same assignment), so a StrictMode double render is
- * a no-op.
- */
-function createLaneMemory(): LaneMemory {
-	let lanes: ReadonlyMap<string, GanttLaneMemo> = new Map();
-	return {
-		read(): ReadonlyMap<string, GanttLaneMemo> {
-			return lanes;
-		},
-		write(next: ReadonlyMap<string, GanttLaneMemo>): void {
-			lanes = next;
-		},
-	};
-}
-
-function isSameRange(a: GanttDateRange, b: GanttDateRange): boolean {
-	return getRangeKey(a) === getRangeKey(b);
-}
-
-const RANGE_SELECTOR_OPTIONS: UseGanttSelectorOptions<GanttData, GanttDateRange> = { isEqual: isSameRange };
-const OCCURRENCES_SELECTOR_OPTIONS: UseGanttSelectorOptions<GanttData, readonly GanttOccurrence[]> = { isEqual: isSameOccurrenceList };
-
-interface DraftLayout {
-	readonly resourceId: string;
-	readonly startMs: number;
-	readonly endMs: number;
-}
-
-function selectDraftLayout(state: GanttState): DraftLayout | null {
-	const draft = state.slotDraft;
-	return draft?.resourceId === undefined ? null : { resourceId: draft.resourceId, startMs: draft.start.getTime(), endMs: draft.end.getTime() };
-}
-
-function isSameDraftLayout(a: DraftLayout | null, b: DraftLayout | null): boolean {
-	return a === b || (a !== null && b !== null && a.resourceId === b.resourceId && a.startMs === b.startMs && a.endMs === b.endMs);
-}
-
-const DRAFT_SELECTOR_OPTIONS: UseGanttSelectorOptions<GanttData, DraftLayout | null> = { isEqual: isSameDraftLayout };
-
-/** Controlled-or-uncontrolled id list (selected rows, collapsed groups). */
-function useIdList(
-	controlled: readonly string[] | undefined,
-	initial: readonly string[] | undefined,
-	onChange: ((ids: readonly string[]) => void) | undefined,
-): [readonly string[], (next: readonly string[]) => void] {
-	const [internal, setInternal] = React.useState<readonly string[]>(initial ?? []);
-	const value = controlled ?? internal;
-	const setValue = React.useCallback(
-		(next: readonly string[]): void => {
-			if (controlled === undefined) {
-				setInternal(next);
-			}
-			onChange?.(next);
-		},
-		[controlled, onChange],
-	);
-	return [value, setValue];
-}
-
-interface ReorderState {
-	readonly resourceId: string;
-	/** Insertion offset (px) within the tree pane. */
-	readonly top: number;
-	readonly valid: boolean;
-	readonly proposal: GanttResourceReorder | null;
-}
-
-interface PendingRestore {
-	readonly ms: number;
-	readonly align: "start" | "center";
-	readonly offsetPx?: number | undefined;
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                  GanttView                                 */
 /* -------------------------------------------------------------------------- */
 
 export const ganttViewVariants = cva("flex min-h-0 flex-1 flex-col overflow-hidden", {
@@ -732,25 +504,14 @@ export const GanttView = React.forwardRef<HTMLDivElement, GanttViewProps>(functi
 			const isSlide = manageRef.current.userTook && instance.internals.didAnchorSlide();
 			manageRef.current = isSlide ? { key, buffered: manageRef.current.buffered, userTook: true } : { key, buffered: false, userTook: false };
 		}
-		let waiter: ResizeObserver | null = null;
 		const run = (): void => {
-			waiter?.disconnect();
-			waiter = null;
 			const viewport = getPaneViewport(timelinePaneRef.current);
 			const axisNode = viewport?.querySelector("[data-gantt-axis]") ?? null;
 			if (manageRef.current.userTook || viewport === null || axisNode === null) {
 				return;
 			}
 			if (viewport.clientWidth === 0) {
-				// deferred mount (hidden tab): resume on the frame the pane gains a size
-				if (hasGlobalConstructor("ResizeObserver")) {
-					waiter = new ResizeObserver((): void => {
-						if (viewport.clientWidth > 0) {
-							run();
-						}
-					});
-					waiter.observe(viewport);
-				}
+				// deferred mount (hidden tab): the size watcher below runs this again once the pane has a size
 				return;
 			}
 			// pre-buffer once; the re-run after the range grows lands the centre
@@ -766,11 +527,23 @@ export const GanttView = React.forwardRef<HTMLDivElement, GanttViewProps>(functi
 				return;
 			}
 			const target = resolveCenterTarget(initialCenter, anchorMs, instance.internals.getNowMs(), instance.getState().activeRange);
-			setScrollStart(viewport, Math.max(0, fractionOfRange(target, rangeStartMs, rangeEndMs) * viewport.scrollWidth - viewport.clientWidth / 2));
+			setScrollStart(viewport, Math.max(0, fractionOfRange(target, rangeStartMs, rangeEndMs) * readAxisWidth(viewport) - viewport.clientWidth / 2));
 		};
+		// Until the user takes over, the target stays centred through every change of the pane's size: a hidden tab
+		// gaining one, the web fonts arriving (the tree panel's width, so the timeline's, follows its text), a sidebar
+		// folding, the window resizing. Centring once at mount left it off by half of any later change.
+		const viewport = getPaneViewport(timelinePaneRef.current);
+		const watcher = viewport !== null && hasGlobalConstructor("ResizeObserver") ? new ResizeObserver(run) : null;
+		if (viewport !== null && watcher !== null) {
+			watcher.observe(viewport);
+			const axisNode = viewport.querySelector("[data-gantt-axis]");
+			if (axisNode !== null) {
+				watcher.observe(axisNode);
+			}
+		}
 		run();
 		return (): void => {
-			waiter?.disconnect();
+			watcher?.disconnect();
 		};
 	}, [scale, anchorMs, initialCenter, scrollbars, isInfiniteScroll, rangeKey, rangeStartMs, rangeEndMs, instance]);
 
@@ -818,7 +591,7 @@ export const GanttView = React.forwardRef<HTMLDivElement, GanttViewProps>(functi
 			extendLockRef.current = true;
 			manageRef.current.userTook = true;
 			// anchor the leading edge as an instant, from the LIVE axis range
-			pendingRestoreRef.current = { ms: live.startMs + (getScrollStart(viewport) / viewport.scrollWidth) * (live.endMs - live.startMs), align: "start" };
+			pendingRestoreRef.current = { ms: live.startMs + (getScrollStart(viewport) / readAxisWidth(viewport)) * (live.endMs - live.startMs), align: "start" };
 			if (!instance.internals.extendRange(direction)) {
 				pendingRestoreRef.current = null;
 				extendLockRef.current = false;
@@ -873,7 +646,7 @@ export const GanttView = React.forwardRef<HTMLDivElement, GanttViewProps>(functi
 			if (live === null) {
 				return;
 			}
-			const fraction = (getScrollStart(viewport) + viewport.clientWidth / 2) / Math.max(1, viewport.scrollWidth);
+			const fraction = (getScrollStart(viewport) + viewport.clientWidth / 2) / Math.max(1, readAxisWidth(viewport));
 			const centerMs = live.startMs + fraction * (live.endMs - live.startMs);
 			fineCenterRef.current = centerMs;
 			const center = new Date(centerMs);
@@ -919,7 +692,7 @@ export const GanttView = React.forwardRef<HTMLDivElement, GanttViewProps>(functi
 				}
 				pendingRestoreRef.current = null;
 				const offset = pending.offsetPx ?? (pending.align === "center" ? viewport.clientWidth / 2 : 0);
-				setScrollStart(viewport, Math.max(0, fractionOfRange(pending.ms, rangeStartMs, rangeEndMs) * viewport.scrollWidth - offset));
+				setScrollStart(viewport, Math.max(0, fractionOfRange(pending.ms, rangeStartMs, rangeEndMs) * readAxisWidth(viewport) - offset));
 			}
 			extendLockRef.current = false;
 		};
@@ -940,7 +713,7 @@ export const GanttView = React.forwardRef<HTMLDivElement, GanttViewProps>(functi
 		}
 		const offsetPx = clientX === null ? viewport.clientWidth / 2 : trackPoint(viewport, clientX).offset;
 		pendingRestoreRef.current = {
-			ms: live.startMs + ((getScrollStart(viewport) + offsetPx) / viewport.scrollWidth) * (live.endMs - live.startMs),
+			ms: live.startMs + ((getScrollStart(viewport) + offsetPx) / readAxisWidth(viewport)) * (live.endMs - live.startMs),
 			align: clientX === null ? "center" : "start",
 			offsetPx: clientX === null ? undefined : offsetPx,
 		};
@@ -1567,1061 +1340,3 @@ export const GanttView = React.forwardRef<HTMLDivElement, GanttViewProps>(functi
 		state: { slot: "gantt-view" },
 	});
 });
-
-const NO_COLUMNS: readonly GanttColumn[] = [];
-
-const PERIOD_KEY_FORMAT: Readonly<Record<GanttScale, string>> = { day: "yyyy-MM-dd", week: "RRRR-'W'II", month: "yyyy-MM", quarter: "yyyy-qqq", year: "yyyy" };
-
-const COLUMN_ALIGN_CLASS: Readonly<Record<"start" | "center" | "end", string>> = { start: "", center: "justify-center", end: "justify-end" };
-
-const STICKY_HEADER_STYLE: React.CSSProperties = { zIndex: GANTT_LAYER.stickyHeader };
-const CHROME_STYLE: React.CSSProperties = { zIndex: GANTT_LAYER.chrome };
-const SCROLLBAR_STYLE: React.CSSProperties = { zIndex: GANTT_LAYER.chrome };
-const LOADING_STYLE: React.CSSProperties = { zIndex: GANTT_LAYER.loading };
-const CONTENT_LAYER_STYLE: React.CSSProperties = { contentVisibility: "auto" };
-const HIDDEN_STYLE: React.CSSProperties = { visibility: "hidden" };
-
-function scaleAttribute(scale: GanttScale): Readonly<Record<"data-scale", GanttScale>> {
-	return { "data-scale": scale };
-}
-
-function stickyTrackHeaderStyle(trackWidth: string): React.CSSProperties {
-	return { minWidth: trackWidth, zIndex: GANTT_LAYER.stickyHeader };
-}
-
-function columnWidthStyle(column: GanttColumn): React.CSSProperties {
-	return { width: column.width ?? DEFAULT_COLUMN_WIDTH_PX };
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                 Sub-parts                                  */
-/* -------------------------------------------------------------------------- */
-
-interface GanttZoomButtonProps {
-	readonly label: string;
-	readonly isEnabled: boolean;
-	readonly onClick: () => void;
-	readonly edge: "top" | "bottom";
-	readonly children: React.ReactNode;
-}
-
-/** aria-disabled (not disabled) so the not-allowed cursor still shows at the zoom limits. */
-function GanttZoomButton({ label, isEnabled, onClick, edge, children }: GanttZoomButtonProps): React.JSX.Element {
-	return (
-		<Tooltip>
-			<TooltipTrigger
-				render={
-					<Button
-						variant="ghost"
-						size="icon-xs"
-						aria-label={label}
-						aria-disabled={isEnabled ? undefined : true}
-						className={cn(
-							"size-5! text-muted-foreground hover:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent",
-							edge === "top" ? "rounded-b-none" : "rounded-t-none border-t",
-						)}
-						onClick={onClick}
-					/>
-				}>
-				{children}
-			</TooltipTrigger>
-			<TooltipContent side="left">{label}</TooltipContent>
-		</Tooltip>
-	);
-}
-
-interface GanttNowMarkProps {
-	readonly kind: "line" | "dot";
-	readonly nowMs: number | null;
-	readonly rangeStartMs: number;
-	readonly rangeEndMs: number;
-}
-
-/** The now-line (body) or its dot cap (header). Hidden until the client has read the clock. */
-function GanttNowMark({ kind, nowMs, rangeStartMs, rangeEndMs }: GanttNowMarkProps): React.JSX.Element | null {
-	if (nowMs === null || nowMs < rangeStartMs || nowMs >= rangeEndMs) {
-		return null;
-	}
-	const style: React.CSSProperties = { insetInlineStart: percent(fractionOfRange(nowMs, rangeStartMs, rangeEndMs)), zIndex: GANTT_LAYER.nowLine };
-	return kind === "line" ? (
-		<div data-slot="gantt-now-indicator" className="absolute inset-y-0 w-px bg-linear-to-b from-destructive/80 via-destructive/45 to-destructive/15" style={style} />
-	) : (
-		<span aria-hidden data-slot="gantt-now-dot" className="absolute -bottom-0.75 size-1.5 -translate-x-1/2 rounded-full bg-destructive" style={style} />
-	);
-}
-
-/** Consumer-owned drag/resize indicators: React content, engine-positioned wrapper. */
-function GanttCustomDragLayer(): React.JSX.Element | null {
-	const viewConfig = useGanttViewConfig();
-	const drag = useGanttSelector((state: GanttState): GanttState["drag"] => state.drag);
-	if (drag === null) {
-		return null;
-	}
-	const renderIndicator = drag.kind === "move" ? viewConfig.renderDragPreview : viewConfig.renderResizeIndicator;
-	if (renderIndicator === undefined) {
-		return null;
-	}
-	return (
-		<div
-			data-slot={drag.kind === "move" ? "gantt-drag-overlay" : "gantt-resize-indicator"}
-			data-custom=""
-			className="pointer-events-none fixed top-0 left-0 z-popover will-change-transform"
-			style={HIDDEN_STYLE}>
-			{renderIndicator({
-				occurrence: drag.occurrence,
-				kind: drag.kind,
-				start: drag.proposedStart,
-				end: drag.proposedEnd,
-				valid: drag.valid,
-				baseline: resolveEventBaseline(drag.occurrence.event),
-			})}
-		</div>
-	);
-}
-
-interface DragLink {
-	readonly eventId: string;
-	readonly startMs: number;
-	readonly endMs: number;
-}
-
-function selectDragLink(state: GanttState): DragLink | null {
-	return state.drag === null ? null : { eventId: state.drag.occurrence.eventId, startMs: state.drag.proposedStart.getTime(), endMs: state.drag.proposedEnd.getTime() };
-}
-
-function isSameDragLink(a: DragLink | null, b: DragLink | null): boolean {
-	return a === b || (a !== null && b !== null && a.eventId === b.eventId && a.startMs === b.startMs && a.endMs === b.endMs);
-}
-
-const DRAG_LINK_OPTIONS: UseGanttSelectorOptions<GanttData, DragLink | null> = { isEqual: isSameDragLink };
-
-interface GanttDependencyLayerProps {
-	readonly edges: readonly DependencyEdge[];
-	readonly totalRem: number;
-	readonly trackRemWidth: number;
-	readonly rangeStartMs: number;
-	readonly rangeEndMs: number;
-	readonly laneHeightRem: number;
-	readonly laneGapRem: number;
-}
-
-/**
- * The dependency-arrow overlay: one SVG whose user unit is 1rem at the track's
- * natural width, stretched to the row width. While a gesture is in flight the
- * dragged event's endpoints follow the proposed range.
- */
-const GanttDependencyLayer = React.memo(function GanttDependencyLayer({
-	edges,
-	totalRem,
-	trackRemWidth,
-	rangeStartMs,
-	rangeEndMs,
-	laneHeightRem,
-	laneGapRem,
-}: GanttDependencyLayerProps): React.JSX.Element {
-	const viewConfig = useGanttViewConfig();
-	const dragLink = useGanttSelector(selectDragLink, DRAG_LINK_OPTIONS);
-	const liveX = (ms: number): number => fractionOfRange(ms, rangeStartMs, rangeEndMs) * trackRemWidth;
-	const style: React.CSSProperties = { height: rem(totalRem) };
-	return (
-		<svg
-			aria-hidden
-			data-slot="gantt-dependencies"
-			className={cn("pointer-events-none absolute start-0 top-0 w-full overflow-visible text-muted-foreground/70 rtl:-scale-x-100", viewConfig.classNames?.dependencies)}
-			style={style}
-			viewBox={`0 0 ${String(trackRemWidth)} ${String(totalRem)}`}
-			preserveAspectRatio="none">
-			{edges.map((edge: DependencyEdge): React.JSX.Element => {
-				const isDragged = dragLink !== null && (edge.fromId === dragLink.eventId || edge.toId === dragLink.eventId);
-				const fromX = dragLink !== null && edge.fromId === dragLink.eventId ? liveX(dragLink.endMs) : edge.fromX;
-				const toX = dragLink !== null && edge.toId === dragLink.eventId ? liveX(dragLink.startMs) : edge.toX;
-				const geometry = buildDependencyPath(
-					{ x: fromX, y: edge.fromY },
-					{ x: toX, y: edge.toY },
-					{ clearance: DEPENDENCY_CLEARANCE_REM, laneStep: laneHeightRem / 2 + laneGapRem, arrowSize: DEPENDENCY_ARROW_REM },
-				);
-				return (
-					<g key={edge.key} data-slot="gantt-dependency" data-dragging={isDragged ? "" : undefined} className={isDragged ? "opacity-50" : undefined}>
-						<path d={geometry.line} fill="none" stroke="currentColor" strokeWidth={DEPENDENCY_STROKE_PX} vectorEffect="non-scaling-stroke" />
-						<path d={geometry.arrow} fill="currentColor" />
-					</g>
-				);
-			})}
-		</svg>
-	);
-});
-
-interface GanttTreeRowProps {
-	readonly row: TimelineRow;
-	readonly rowIndex: number;
-	readonly heightRem: number;
-	readonly bandRem: number;
-	readonly columns: readonly GanttColumn[];
-	readonly nameWidth: number;
-	readonly isDimmed: boolean;
-	readonly isSelected: boolean;
-	readonly onSelectedChange?: ((id: string, isChecked: boolean) => void) | undefined;
-	readonly onGripPointerDown?: ((event: React.PointerEvent<HTMLElement>, row: TimelineRow) => void) | undefined;
-	readonly onToggle: (row: TimelineRow) => void;
-}
-
-/** Chrome clicks (chevron, checkbox, grip) are their own actions, not row clicks. */
-function isChromeClick(target: EventTarget): boolean {
-	return isElement(target) && target.closest("button, [role=checkbox]") !== null;
-}
-
-/** Memoized: only rows whose props actually changed re-render. */
-const GanttTreeRow = React.memo(function GanttTreeRow({
-	row,
-	rowIndex,
-	heightRem,
-	bandRem,
-	columns,
-	nameWidth,
-	isDimmed,
-	isSelected,
-	onSelectedChange,
-	onGripPointerDown,
-	onToggle,
-}: GanttTreeRowProps): React.JSX.Element {
-	const settings = useGanttSettings();
-	const viewConfig = useGanttViewConfig();
-	const context = React.useMemo(
-		(): GanttColumnContext => ({ resource: row.resource, depth: row.depth, isGroup: row.isGroup, collapsed: row.collapsed }),
-		[row.resource, row.depth, row.isGroup, row.collapsed],
-	);
-	const isAlignStart = viewConfig.rowAlign === DEFAULT_ROW_ALIGN;
-	const onResourceClick = settings.onResourceClick;
-	const onResourceDoubleClick = settings.onResourceDoubleClick;
-	const handleClick = React.useCallback(
-		(event: React.MouseEvent<HTMLElement>): void => {
-			if (!isChromeClick(event.target)) {
-				onResourceClick?.(context, event);
-			}
-		},
-		[onResourceClick, context],
-	);
-	const handleDoubleClick = React.useCallback(
-		(event: React.MouseEvent<HTMLElement>): void => {
-			if (!isChromeClick(event.target)) {
-				onResourceDoubleClick?.(context, event);
-			}
-		},
-		[onResourceDoubleClick, context],
-	);
-	const handleGrip = React.useCallback(
-		(event: React.PointerEvent<HTMLElement>): void => {
-			onGripPointerDown?.(event, row);
-		},
-		[onGripPointerDown, row],
-	);
-	const handleToggle = React.useCallback((): void => {
-		onToggle(row);
-	}, [onToggle, row]);
-	const handleChecked = React.useCallback(
-		(isChecked: boolean): void => {
-			onSelectedChange?.(row.resource.id, isChecked);
-		},
-		[onSelectedChange, row.resource.id],
-	);
-	const rowStyle = React.useMemo((): React.CSSProperties => ({ height: rem(heightRem) }), [heightRem]);
-	const nameStyle = React.useMemo((): React.CSSProperties => ({ width: nameWidth }), [nameWidth]);
-	const bandStyle = React.useMemo((): React.CSSProperties => ({ height: rem(bandRem) }), [bandRem]);
-	const indentStyle = React.useMemo((): React.CSSProperties => ({ width: rem(row.depth * TREE_INDENT_REM) }), [row.depth]);
-	const menu = viewConfig.renderResourceMenu?.(context);
-
-	const rowNode = (
-		<div
-			role="treeitem"
-			tabIndex={-1}
-			aria-label={row.resource.title}
-			aria-level={row.depth + 1}
-			aria-expanded={row.isGroup ? !row.collapsed : undefined}
-			aria-selected={row.isGroup ? undefined : isSelected}
-			data-slot="gantt-row-group"
-			data-gantt-row-id={row.resource.id}
-			data-gantt-row-index={rowIndex}
-			data-selected={isSelected ? "" : undefined}
-			className={cn("group/gantt-row flex border-b data-hover:bg-muted/40 data-selected:bg-primary/5 data-selected:data-hover:bg-primary/5", isDimmed && "opacity-50")}
-			style={rowStyle}
-			onClick={onResourceClick === undefined ? undefined : handleClick}
-			onDoubleClick={onResourceDoubleClick === undefined ? undefined : handleDoubleClick}>
-			<div className="flex h-full w-full min-w-0">
-				<div
-					data-slot="gantt-tree-cell"
-					className={cn("flex shrink-0 ps-3 pe-3", isAlignStart ? "items-start" : "items-center", row.isGroup && "font-medium")}
-					style={nameStyle}>
-					<div className="flex w-full min-w-0 items-center" style={bandStyle}>
-						{onGripPointerDown === undefined ? null : (
-							<button
-								type="button"
-								data-slot="gantt-row-grip"
-								aria-label={settings.i18n.labels.reorder}
-								className="-ms-1.5 me-1.5 flex w-3.5 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground/60 opacity-0 group-hover/gantt-row:opacity-100 group-data-hover/gantt-row:opacity-100 hover:text-foreground focus-visible:opacity-100 pointer-coarse:opacity-100"
-								onPointerDown={handleGrip}>
-								<GripVerticalIcon aria-hidden className="size-3" />
-							</button>
-						)}
-						<span aria-hidden className="shrink-0" style={indentStyle} />
-						<span className="me-1 flex w-5 shrink-0 items-center justify-start">
-							{row.isGroup ? (
-								<Button
-									variant="ghost"
-									size="icon-xs"
-									aria-expanded={!row.collapsed}
-									aria-label={row.resource.title}
-									className={cn(
-										"size-5! aria-expanded:bg-transparent!",
-										row.collapsed ? "text-foreground" : "text-muted-foreground hover:text-foreground! aria-expanded:text-muted-foreground!",
-									)}
-									onClick={handleToggle}>
-									<ChevronRightIcon aria-hidden className={cn("size-3.5 motion-safe:transition-transform rtl:rotate-180", !row.collapsed && "rotate-90 rtl:rotate-90")} />
-								</Button>
-							) : viewConfig.rowCheckboxes && onSelectedChange !== undefined ? (
-								<Checkbox
-									data-slot="gantt-row-checkbox"
-									checked={isSelected}
-									onCheckedChange={handleChecked}
-									aria-label={row.resource.title}
-									className={cn(
-										"size-3.5 opacity-0 group-hover/gantt-row:opacity-100 group-data-hover/gantt-row:opacity-100 focus-visible:opacity-100 motion-safe:transition-opacity",
-										isSelected && "opacity-100",
-									)}
-								/>
-							) : null}
-						</span>
-						{viewConfig.renderResourceLabel?.(context) ?? <span className="truncate">{row.resource.title}</span>}
-					</div>
-				</div>
-				{columns.map((column: GanttColumn): React.JSX.Element => (
-					<div
-						key={column.id}
-						data-slot="gantt-tree-column-cell"
-						data-column={column.id}
-						className={cn("flex shrink-0 px-2", isAlignStart ? "items-start" : "items-center", column.className)}
-						style={columnWidthStyle(column)}>
-						<div className={cn("flex w-full min-w-0 items-center", COLUMN_ALIGN_CLASS[column.align ?? "start"])} style={bandStyle}>
-							{column.render?.(context)}
-						</div>
-					</div>
-				))}
-				<div className="min-w-0 flex-1" />
-			</div>
-		</div>
-	);
-
-	if (menu === undefined || menu === null) {
-		return rowNode;
-	}
-	return (
-		<ContextMenu>
-			<ContextMenuTrigger render={rowNode} />
-			<ContextMenuContent data-slot="gantt-resource-menu" className="min-w-44">
-				{menu}
-			</ContextMenuContent>
-		</ContextMenu>
-	);
-});
-
-interface GhostSnapshot {
-	readonly from: number;
-	readonly to: number;
-	readonly color?: string | undefined;
-	readonly valid: boolean;
-	readonly title: string;
-	readonly kind: GanttDragKind;
-	readonly occurrenceKey: string;
-	readonly milestone: boolean;
-}
-
-interface DraftSnapshot {
-	readonly from: number;
-	readonly to: number;
-	readonly startMs: number;
-	readonly endMs: number;
-}
-
-interface GanttTimelineRowProps {
-	readonly row: TimelineRow;
-	readonly rowIndex: number;
-	readonly bars: TimelineRowBars | undefined;
-	readonly rangeStartMs: number;
-	readonly rangeEndMs: number;
-	readonly trackWidth: string;
-	readonly trackRemWidth: number;
-	readonly rowBorder: GanttLineStroke | null;
-	readonly isSelected: boolean;
-	readonly resolveStop: (fraction: number) => HintStop | null;
-	readonly isPanning: boolean;
-	readonly laneHeightRem: number;
-	readonly laneGapRem: number;
-	readonly minRowRem: number;
-	readonly ghostHeightRem: number;
-	readonly autoLabelMinRem: number;
-	readonly dependencySourceIds: ReadonlySet<string>;
-}
-
-const NO_SEGMENTS: readonly GanttSegment[] = [];
-
-/** The drag-create / hint slot for a snapped unit (never zero-length). */
-function slotForStop(stop: HintStop, resourceId: string): { readonly start: Date; readonly end: Date; readonly allDay: boolean; readonly resourceId: string } {
-	return { start: new Date(stop.ms), end: new Date(Math.max(stop.endMs, stop.ms + 1)), allDay: false, resourceId };
-}
-
-const GanttTimelineRow = React.memo(function GanttTimelineRow({
-	row,
-	rowIndex,
-	bars,
-	rangeStartMs,
-	rangeEndMs,
-	trackWidth,
-	trackRemWidth,
-	rowBorder,
-	isSelected,
-	resolveStop,
-	isPanning,
-	laneHeightRem,
-	laneGapRem,
-	minRowRem,
-	ghostHeightRem,
-	autoLabelMinRem,
-	dependencySourceIds,
-}: GanttTimelineRowProps): React.JSX.Element {
-	const instance = useGantt();
-	const settings = useGanttSettings();
-	const viewConfig = useGanttViewConfig();
-	const gestures = useGanttGestures();
-	const resourceId = row.resource.id;
-	const segments = bars?.segments ?? NO_SEGMENTS;
-	// parents aggregate their subtree; they take no direct scheduling gestures
-	const isSchedulable = !row.isGroup || viewConfig.parentScheduling;
-	const heightRem = bars?.heightRem ?? minRowRem;
-	const laneCount = bars?.laneCount ?? 1;
-	const isSingleTrack = resolveScheduleMode(row.resource, viewConfig.scheduleMode) === "single";
-	const laneOffsetRem = bars?.laneOffsetRem ?? (minRowRem - laneHeightRem) / 2;
-	const fractionOf = (ms: number): number => fractionOfRange(ms, rangeStartMs, rangeEndMs);
-
-	const [hintStop, setHintStop] = React.useState<HintStop | null>(null);
-	const isHintSuppressed = useGanttSelector((state: GanttState): boolean => hintStop !== null && (state.drag !== null || state.slotDraft !== null));
-	const canSchedule = useGanttSelector((state: GanttState): boolean => state.interactions.selectSlot);
-	const hintFreeLane = hintStop === null ? 0 : lowestFreeLane(segments, hintStop.ms, hintStop.endMs);
-	const hintLane = bars?.scheduleMode === "single" ? 0 : hintFreeLane;
-	const hintTopRem = Math.min(laneTopRem(laneOffsetRem, hintLane, laneHeightRem, laneGapRem) + laneHeightRem / 2, Math.max(heightRem - laneHeightRem / 2, laneHeightRem / 2));
-	const isHintVisible = hintStop !== null && hintFreeLane < laneCount && !isHintSuppressed && !isPanning;
-	const hintLabel = viewConfig.dragCreate ? settings.i18n.labels.scheduleHintDrag : settings.i18n.labels.scheduleHint;
-	const onSlotClick = settings.onSlotClick;
-	const onSelectSlot = settings.onSelectSlot;
-	const showHint = viewConfig.displayScheduleHint && isSchedulable && canSchedule && !isPanning && (onSelectSlot !== undefined || onSlotClick !== undefined);
-
-	const dragTarget = useGanttSelector((state: GanttState): "valid" | "invalid" | null => {
-		const drag = state.drag;
-		if (drag?.proposedResourceId !== resourceId) {
-			return null;
-		}
-		return drag.valid ? "valid" : "invalid";
-	});
-	const ghost = useGanttSelector(
-		(state: GanttState): GhostSnapshot | null => {
-			const drag = state.drag;
-			if (drag?.proposedResourceId !== resourceId) {
-				return null;
-			}
-			return {
-				from: fractionOf(drag.proposedStart.getTime()),
-				to: fractionOf(drag.proposedEnd.getTime()),
-				color: drag.occurrence.event.color,
-				valid: drag.valid,
-				title: drag.occurrence.event.title,
-				kind: drag.kind,
-				occurrenceKey: drag.occurrence.key,
-				milestone: drag.proposedEnd.getTime() === drag.proposedStart.getTime(),
-			};
-		},
-		{ isEqual: isSameGhost },
-	);
-	const draft = useGanttSelector(
-		(state: GanttState): DraftSnapshot | null => {
-			const slotDraft = state.slotDraft;
-			if (slotDraft?.resourceId !== resourceId) {
-				return null;
-			}
-			const startMs = slotDraft.start.getTime();
-			const endMs = slotDraft.end.getTime();
-			return { from: fractionOf(startMs), to: fractionOf(endMs), startMs, endMs };
-		},
-		{ isEqual: isSameDraft },
-	);
-	const draftLane = bars?.draftLane ?? 0;
-	const draftTopRem = Math.min(laneTopRem(laneOffsetRem, draftLane, laneHeightRem, laneGapRem), Math.max(heightRem - laneHeightRem, 0));
-	const draftLabel =
-		draft === null
-			? ""
-			: settings.i18n.functions.formatEventTime(
-					toZoned(new Date(draft.startMs), settings.timeZone),
-					toZoned(new Date(draft.endMs), settings.timeZone),
-					false,
-					settings.locale,
-				);
-
-	/** The row's create contract: onSlotClick if wired, else a ready-made slot through onSelectSlot. */
-	const createAt = React.useCallback(
-		(stop: HintStop, event: React.MouseEvent<HTMLElement>): void => {
-			if (onSlotClick !== undefined) {
-				onSlotClick({ date: new Date(stop.ms), allDay: false, resourceId }, event);
-				return;
-			}
-			onSelectSlot?.(slotForStop(stop, resourceId));
-		},
-		[onSlotClick, onSelectSlot, resourceId],
-	);
-	const canSelectSlot = settings.canSelectSlot;
-	const isStopAllowed = React.useCallback(
-		(stop: HintStop | null): stop is HintStop => stop !== null && (canSelectSlot?.(slotForStop(stop, resourceId)) ?? true),
-		[canSelectSlot, resourceId],
-	);
-
-	const handlePointerDown = React.useCallback(
-		(event: React.PointerEvent<HTMLDivElement>): void => {
-			// opt-in drag-create owns presses on empty schedulable track; otherwise the press pans
-			const isOnTrack = event.target === event.currentTarget || (isElement(event.target) && event.target.closest("[data-slot=gantt-schedule-hint]") !== null);
-			if (!viewConfig.dragCreate || event.button !== 0 || !isSchedulable || !canSchedule || !isOnTrack || onSelectSlot === undefined) {
-				return;
-			}
-			// validate BEFORE claiming the press: a vetoed slot falls through to the pan
-			if (!isStopAllowed(resolveStop(trackPoint(event.currentTarget, event.clientX).fraction))) {
-				return;
-			}
-			event.stopPropagation();
-			gestures.beginCreate(event);
-		},
-		[viewConfig.dragCreate, isSchedulable, canSchedule, onSelectSlot, isStopAllowed, resolveStop, gestures],
-	);
-	const handlePointerMove = React.useCallback(
-		(event: React.PointerEvent<HTMLDivElement>): void => {
-			const state = instance.getState();
-			const isInteracting = state.drag !== null || state.slotDraft !== null;
-			// EMPTY TRACK ONLY: a bar under the pointer means there is no empty slot here
-			if (!showHint || event.pointerType !== "mouse" || isInteracting || event.target !== event.currentTarget) {
-				setHintStop(null);
-				return;
-			}
-			const { fraction, offset } = trackPoint(event.currentTarget, event.clientX);
-			// the dot follows the pointer freely, written as a CSS variable (no per-frame React)
-			event.currentTarget.style.setProperty("--gantt-hint-x", `${String(offset)}px`);
-			const stop = resolveStop(fraction);
-			const next = isStopAllowed(stop) ? stop : null;
-			setHintStop((previous: HintStop | null): HintStop | null => (previous?.index === next?.index ? previous : next));
-		},
-		[instance, showHint, resolveStop, isStopAllowed],
-	);
-	const handlePointerLeave = React.useCallback((): void => {
-		setHintStop(null);
-	}, []);
-	const handleClick = React.useCallback(
-		(event: React.MouseEvent<HTMLDivElement>): void => {
-			// with dragCreate a press that never moved committed nothing: treat it as a create at the slot
-			if (!viewConfig.dragCreate || event.target !== event.currentTarget || !isSchedulable || !canSchedule || wasRecentDrag()) {
-				return;
-			}
-			const stop = resolveStop(trackPoint(event.currentTarget, event.clientX).fraction);
-			if (!isStopAllowed(stop)) {
-				return;
-			}
-			createAt(stop, event);
-			setHintStop(null);
-		},
-		[viewConfig.dragCreate, isSchedulable, canSchedule, resolveStop, isStopAllowed, createAt],
-	);
-	const handleHintPointerDown = React.useCallback(
-		(event: React.PointerEvent<HTMLButtonElement>): void => {
-			if (!viewConfig.dragCreate) {
-				event.stopPropagation();
-			}
-		},
-		[viewConfig.dragCreate],
-	);
-	const handleHintClick = React.useCallback(
-		(event: React.MouseEvent<HTMLButtonElement>): void => {
-			event.stopPropagation();
-			if (hintStop === null || wasRecentDrag()) {
-				return;
-			}
-			createAt(hintStop, event);
-			setHintStop(null);
-		},
-		[hintStop, createAt],
-	);
-
-	const ghostLane = ghost === null ? 0 : (segments.find((segment: GanttSegment): boolean => segment.occurrence.key === ghost.occurrenceKey)?.column ?? 0);
-	const ghostTopRem = laneTopRem(laneOffsetRem, ghostLane, laneHeightRem, laneGapRem) + (laneHeightRem - ghostHeightRem) / 2;
-	const rowStyle: React.CSSProperties = { height: rem(heightRem), minWidth: trackWidth };
-
-	return (
-		<div
-			data-gantt-row=""
-			data-gantt-resource={resourceId}
-			data-gantt-row-id={resourceId}
-			data-gantt-row-static={isSchedulable ? undefined : ROW_STATIC_MARK}
-			data-gantt-bar-min={bars?.extent?.from}
-			data-gantt-bar-max={bars?.extent?.to}
-			data-gantt-bar-color={bars?.extent?.color}
-			data-gantt-bar-label={bars?.extent?.label}
-			data-gantt-bar-start-ms={bars?.extent?.startMs}
-			data-drop-target={dragTarget ?? undefined}
-			data-selected={isSelected ? "" : undefined}
-			role="presentation"
-			className={cn(
-				"relative w-full min-w-0 data-hover:bg-muted/30 data-selected:bg-primary/5 data-selected:data-hover:bg-primary/5",
-				isHintVisible && "cursor-crosshair",
-				rowBorder !== null && "border-b",
-				rowBorder === "dashed" && "border-dashed",
-				dragTarget === "valid" && "bg-muted/40",
-				dragTarget === "invalid" && "bg-destructive/10",
-			)}
-			style={rowStyle}
-			onPointerDown={handlePointerDown}
-			onPointerMove={handlePointerMove}
-			onPointerLeave={handlePointerLeave}
-			onClick={handleClick}>
-			<div className="pointer-events-none absolute inset-0" style={CONTENT_LAYER_STYLE}>
-				{bars?.rowBaseline === null || bars?.rowBaseline === undefined ? null : (
-					<div
-						data-slot="gantt-row-baseline"
-						data-milestone={bars.rowBaseline.baseline.milestone ? "" : undefined}
-						data-variance={bars.rowBaseline.variance ?? undefined}
-						aria-hidden
-						className={cn("absolute", bars.rowBaseline.baseline.milestone ? "flex items-center justify-center" : "px-px", viewConfig.classNames?.baseline)}
-						style={windowStyle(
-							fractionOf(rangeStartMs + bars.rowBaseline.startMin * MS_PER_MINUTE),
-							fractionOf(rangeStartMs + bars.rowBaseline.endMin * MS_PER_MINUTE),
-							bars.rowBaseline.baseline.milestone,
-							laneHeightRem,
-							laneOffsetRem,
-							laneBlockRem(laneCount, laneHeightRem, laneGapRem),
-							row.resource.color,
-						)}>
-						{viewConfig.renderRowBaseline?.({
-							resource: row.resource,
-							start: bars.rowBaseline.baseline.start,
-							end: bars.rowBaseline.baseline.end,
-							milestone: bars.rowBaseline.baseline.milestone,
-							variance: bars.rowBaseline.variance,
-						}) ??
-							(bars.rowBaseline.baseline.milestone ? (
-								<span className="size-2.5 rotate-45 rounded-xs border border-(--gantt-event-color)/60 bg-(--gantt-event-color)/15" />
-							) : (
-								<span className="relative block h-full w-full rounded-sm border border-(--gantt-event-color)/25 bg-(--gantt-event-color)/6" />
-							))}
-					</div>
-				)}
-				{bars?.baselines.map((plan: TimelineRowBars["baselines"][number]): React.JSX.Element => (
-					<div
-						key={`baseline-${plan.event.id}`}
-						data-slot="gantt-baseline"
-						data-milestone={plan.baseline.milestone ? "" : undefined}
-						data-variance={plan.variance}
-						aria-hidden
-						className={cn("absolute", plan.baseline.milestone ? "flex items-center justify-center" : "px-px", viewConfig.classNames?.baseline)}
-						style={windowStyle(
-							fractionOf(rangeStartMs + plan.startMin * MS_PER_MINUTE),
-							fractionOf(rangeStartMs + plan.endMin * MS_PER_MINUTE),
-							plan.baseline.milestone,
-							laneHeightRem,
-							laneTopRem(laneOffsetRem, plan.lane, laneHeightRem, laneGapRem),
-							laneHeightRem,
-							plan.event.color,
-						)}>
-						{viewConfig.renderBaseline?.({
-							event: plan.event,
-							start: plan.baseline.start,
-							end: plan.baseline.end,
-							milestone: plan.baseline.milestone,
-							variance: plan.variance,
-						}) ??
-							(plan.baseline.milestone ? (
-								<span className="size-2 rotate-45 rounded-xs border border-(--gantt-event-color)/60 bg-(--gantt-event-color)/15" />
-							) : (
-								<span className="relative block h-full w-full rounded-sm border border-(--gantt-event-color)/40 bg-(--gantt-event-color)/10" />
-							))}
-					</div>
-				))}
-				{segments.map((segment: GanttSegment, segmentIndex: number): React.JSX.Element | null => {
-					const from = fractionOf(rangeStartMs + (segment.startMin ?? 0) * MS_PER_MINUTE);
-					const to = fractionOf(rangeStartMs + (segment.endMin ?? 0) * MS_PER_MINUTE);
-					const isMilestone = segment.occurrence.end.getTime() === segment.occurrence.start.getTime();
-					if (to <= from && !isMilestone) {
-						return null;
-					}
-					const lane = segment.column ?? 0;
-					const placement = resolveLabelPlacement({
-						mode: viewConfig.barLabel,
-						isMilestone,
-						from,
-						to,
-						barRemWidth: isMilestone ? laneHeightRem : (to - from) * trackRemWidth,
-						autoLabelMinRem,
-					});
-					const style: React.CSSProperties = {
-						...windowStyle(from, to, isMilestone, laneHeightRem, laneTopRem(laneOffsetRem, lane, laneHeightRem, laneGapRem), laneHeightRem, segment.occurrence.event.color),
-						// one track means every lane is 0, so paint order keeps overlapping bars reachable
-						zIndex: segment.occurrence.event.zIndex ?? GANTT_LAYER.bar + (isSingleTrack ? segmentIndex : lane),
-					};
-					return (
-						<div
-							key={segment.occurrence.key}
-							data-drag-kind={ghost?.occurrenceKey === segment.occurrence.key ? ghost.kind : undefined}
-							data-milestone={isMilestone ? "" : undefined}
-							data-lane={lane}
-							data-lane-count={laneCount}
-							className="group/gantt-seg pointer-events-auto absolute px-px data-[drag-kind=move]:opacity-0"
-							style={style}>
-							<GanttBar segment={segment} labelOutside={placement !== "inside"} rowTitle={row.resource.title} className="h-full" />
-							{placement === "inside" ? null : (
-								<span
-									data-slot="gantt-bar-label"
-									data-placement={placement}
-									aria-hidden
-									className={cn(
-										"pointer-events-none absolute top-1/2 max-w-60 -translate-y-1/2 truncate font-medium text-foreground group-data-[drag-kind^=resize]/gantt-seg:opacity-0",
-										placement === "after" ? (dependencySourceIds.has(segment.occurrence.eventId) ? "start-full ms-4" : "start-full ms-2") : "end-full me-2",
-									)}>
-									{segment.occurrence.event.title}
-								</span>
-							)}
-						</div>
-					);
-				})}
-				{bars?.summary === null || bars?.summary === undefined || segments.length > 0 ? null : (
-					<GanttSummaryStrip resource={row.resource} summary={bars.summary} rangeStartMs={rangeStartMs} rangeEndMs={rangeEndMs} />
-				)}
-				{ghost === null ? null : (
-					<div
-						data-slot="gantt-drag-ghost"
-						data-kind={ghost.kind}
-						data-milestone={ghost.milestone ? "" : undefined}
-						data-drop-invalid={ghost.valid ? undefined : ""}
-						className={cn(
-							"pointer-events-none absolute h-(--gantt-ghost-height) rounded-sm border border-dashed font-medium",
-							!ghost.valid && "border-destructive bg-destructive/10 text-destructive",
-							ghost.valid && ghost.kind === "move" && "border-(--gantt-event-color)/50 bg-(--gantt-event-color)/8",
-							ghost.valid && ghost.kind !== "move" && "border-(--gantt-event-color)/70 bg-(--gantt-event-color)/22 text-foreground",
-							ghost.milestone && "flex items-center justify-center rounded-none border-0 bg-transparent",
-						)}
-						style={ghostStyle(ghost, laneHeightRem, ghostTopRem, ghostHeightRem)}>
-						{ghost.milestone ? (
-							<span
-								className={cn(
-									"size-2.5 rotate-45 rounded-xs border border-dashed",
-									ghost.valid ? "border-(--gantt-event-color)/70 bg-(--gantt-event-color)/10" : "border-destructive bg-destructive/10",
-								)}
-							/>
-						) : null}
-						{ghost.kind === "move" ? null : (
-							<span className="pointer-events-none absolute start-full top-1/2 ms-2 max-w-60 -translate-y-1/2 truncate whitespace-nowrap">{ghost.title}</span>
-						)}
-					</div>
-				)}
-				{draft === null ? null : (
-					<div
-						data-slot="gantt-slot-draft"
-						data-lane={draftLane}
-						className="pointer-events-none absolute overflow-hidden rounded-sm border border-dashed border-primary bg-background"
-						style={draftStyle(draft, draftTopRem, laneHeightRem)}>
-						<span aria-hidden className="absolute inset-0 bg-primary/15" />
-					</div>
-				)}
-			</div>
-			{draft === null || draftLabel === "" ? null : (
-				<div data-slot="gantt-slot-draft-label" className="pointer-events-none absolute" style={draftLabelStyle(draft, draftTopRem, laneHeightRem)}>
-					<span className="absolute start-full top-1/2 ms-2 inline-flex w-max -translate-y-1/2 items-center rounded-md bg-foreground px-2 py-1 text-xs font-medium whitespace-nowrap text-background">
-						{draftLabel}
-						<span aria-hidden className="absolute start-0 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[1px] bg-foreground" />
-					</span>
-				</div>
-			)}
-			{isHintVisible ? (
-				<div data-slot="gantt-schedule-hint" className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rtl:translate-x-1/2" style={hintStyle(hintTopRem)}>
-					{viewConfig.renderScheduleHint === undefined ? (
-						<>
-							<button
-								type="button"
-								data-slot="gantt-schedule-hint-tile"
-								aria-label={hintLabel}
-								className="pointer-events-none block size-5 rounded-full border-2 border-primary bg-transparent ring-1 ring-background/80"
-								onPointerDown={handleHintPointerDown}
-								onClick={handleHintClick}
-							/>
-							<span
-								data-slot="gantt-schedule-hint-bubble"
-								className={cn(
-									"absolute start-1/2 inline-flex w-max -translate-x-1/2 items-center rounded-md bg-foreground px-2 py-1 text-xs font-medium whitespace-nowrap text-background",
-									rowIndex === 0 ? "top-full mt-2" : "bottom-full mb-2",
-								)}>
-								{hintLabel}
-								<span aria-hidden className={cn("absolute start-1/2 size-2.5 -translate-x-1/2 rotate-45 rounded-xs bg-foreground", rowIndex === 0 ? "-top-1" : "-bottom-1")} />
-							</span>
-						</>
-					) : (
-						viewConfig.renderScheduleHint({ start: new Date(hintStop.ms), end: new Date(Math.max(hintStop.endMs, hintStop.ms + 1)), resource: row.resource })
-					)}
-				</div>
-			) : null}
-		</div>
-	);
-});
-
-function isSameGhost(a: GhostSnapshot | null, b: GhostSnapshot | null): boolean {
-	return a === b || (a !== null && b !== null && a.from === b.from && a.to === b.to && a.valid === b.valid && a.kind === b.kind && a.occurrenceKey === b.occurrenceKey);
-}
-
-function isSameDraft(a: DraftSnapshot | null, b: DraftSnapshot | null): boolean {
-	return a === b || (a !== null && b !== null && a.startMs === b.startMs && a.endMs === b.endMs && a.from === b.from && a.to === b.to);
-}
-
-function ghostStyle(ghost: GhostSnapshot, laneHeightRem: number, topRem: number, ghostHeightRem: number): GanttStyle {
-	return {
-		insetInlineStart: ghost.milestone ? milestoneInset(ghost.from, laneHeightRem) : percent(ghost.from),
-		width: ghost.milestone ? rem(laneHeightRem) : `${String(Math.max((ghost.to - ghost.from) * PERCENT, MIN_BAR_WIDTH_PERCENT))}%`,
-		top: rem(topRem),
-		zIndex: GANTT_LAYER.ghost,
-		"--gantt-ghost-height": rem(ghostHeightRem),
-		"--gantt-event-color": ghost.color ?? GANTT_DEFAULT_COLOR,
-	};
-}
-
-function draftStyle(draft: DraftSnapshot, topRem: number, laneHeightRem: number): React.CSSProperties {
-	return {
-		insetInlineStart: percent(draft.from),
-		width: `${String(Math.max((draft.to - draft.from) * PERCENT, MIN_BAR_WIDTH_PERCENT))}%`,
-		top: rem(topRem),
-		height: rem(laneHeightRem),
-		zIndex: GANTT_LAYER.ghost,
-	};
-}
-
-function draftLabelStyle(draft: DraftSnapshot, topRem: number, laneHeightRem: number): React.CSSProperties {
-	return { insetInlineStart: percent(draft.to), top: rem(topRem), height: rem(laneHeightRem), zIndex: GANTT_LAYER.ghost };
-}
-
-function hintStyle(topRem: number): React.CSSProperties {
-	return { insetInlineStart: "var(--gantt-hint-x, 50%)", top: rem(topRem), zIndex: GANTT_LAYER.hint };
-}
-
-interface GanttSummaryStripProps {
-	readonly resource: TimelineRow["resource"];
-	readonly summary: NonNullable<TimelineRowBars["summary"]>;
-	readonly rangeStartMs: number;
-	readonly rangeEndMs: number;
-}
-
-/** Parent rollup: the descendant envelope with duration-weighted progress. */
-function GanttSummaryStrip({ resource, summary, rangeStartMs, rangeEndMs }: GanttSummaryStripProps): React.JSX.Element {
-	const viewConfig = useGanttViewConfig();
-	const settings = useGanttSettings();
-	const span = rangeEndMs - rangeStartMs;
-	const style: React.CSSProperties = { insetInlineStart: percent(summary.from), width: `${String(Math.max((summary.to - summary.from) * PERCENT, MIN_BAR_WIDTH_PERCENT))}%` };
-	const progressStyle: React.CSSProperties = { width: `${String(summary.progress ?? 0)}%` };
-	return (
-		<div data-slot="gantt-summary" aria-hidden className="pointer-events-none absolute top-1/2 -translate-y-1/2" style={style}>
-			{viewConfig.renderSummary === undefined ? (
-				<>
-					<span aria-hidden className="absolute start-0 top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-muted-foreground/50" />
-					<span aria-hidden className="absolute end-0 top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-muted-foreground/50" />
-					<div className="relative h-1.5 overflow-hidden rounded-full bg-muted-foreground/20">
-						{summary.progress === null ? null : (
-							<div data-slot="gantt-summary-progress" className="absolute inset-y-0 start-0 rounded-full bg-muted-foreground/50" style={progressStyle} />
-						)}
-					</div>
-					{summary.progress === null ? null : (
-						<span className="absolute start-full top-1/2 ms-2 -translate-y-1/2 whitespace-nowrap text-muted-foreground">
-							{settings.i18n.labels.summaryProgress(summary.progress)}
-						</span>
-					)}
-				</>
-			) : (
-				viewConfig.renderSummary({
-					resource,
-					start: new Date(rangeStartMs + summary.from * span),
-					end: new Date(rangeStartMs + summary.to * span),
-					progress: summary.progress,
-				})
-			)}
-		</div>
-	);
-}
-
-interface OffscreenChip {
-	readonly id: string;
-	readonly side: "start" | "end";
-	readonly top: number;
-	readonly color?: string | undefined;
-	readonly label: string;
-	readonly startMs: number | null;
-	/** Distance from the inline start that brings the bar back into view. */
-	readonly target: number;
-}
-
-function isSameChipList(a: readonly OffscreenChip[], b: readonly OffscreenChip[]): boolean {
-	return (
-		a.length === b.length &&
-		a.every((chip: OffscreenChip, index: number): boolean => {
-			const other = b.at(index);
-			return chip.id === other?.id && chip.side === other.side && chip.top === other.top && chip.target === other.target;
-		})
-	);
-}
-
-interface GanttOffscreenChipsProps {
-	readonly paneRef: React.RefObject<HTMLDivElement | null>;
-	readonly occurrences: readonly GanttOccurrence[];
-	readonly refreshKey: string;
-}
-
-/**
- * Edge chips for rows whose bars sit entirely outside the visible timeline;
- * clicking scrolls the bar back into view and focuses it. Geometry is read
- * from the rows' data attributes, so scrolling never re-renders the grid.
- */
-function GanttOffscreenChips({ paneRef, occurrences, refreshKey }: GanttOffscreenChipsProps): React.JSX.Element | null {
-	const [chips, setChips] = React.useState<readonly OffscreenChip[]>([]);
-	React.useEffect((): (() => void) | undefined => {
-		const pane = paneRef.current;
-		const viewport = getPaneViewport(pane);
-		if (pane === null || viewport === null) {
-			return undefined;
-		}
-		let frame = 0;
-		const measure = (): void => {
-			frame = 0;
-			setChips((previous: readonly OffscreenChip[]): readonly OffscreenChip[] => {
-				const next = measureOffscreenChips(pane, viewport);
-				return isSameChipList(previous, next) ? previous : next;
-			});
-		};
-		const schedule = (): void => {
-			if (frame === 0) {
-				frame = requestAnimationFrame(measure);
-			}
-		};
-		viewport.addEventListener("scroll", schedule);
-		const observer = hasGlobalConstructor("ResizeObserver") ? new ResizeObserver(schedule) : null;
-		observer?.observe(viewport);
-		schedule();
-		return (): void => {
-			viewport.removeEventListener("scroll", schedule);
-			observer?.disconnect();
-			if (frame !== 0) {
-				cancelAnimationFrame(frame);
-			}
-			pane.querySelector<HTMLElement>("[data-slot=gantt-zoom]")?.style.removeProperty("--gantt-zoom-shift");
-		};
-	}, [paneRef, occurrences, refreshKey]);
-
-	if (chips.length === 0) {
-		return null;
-	}
-	return (
-		<div data-slot="gantt-offscreen-chips" className="pointer-events-none absolute inset-0 overflow-hidden" style={CHIPS_LAYER_STYLE}>
-			<TooltipProvider delay={TOOLTIP_DELAY_MS} closeDelay={0} timeout={TOOLTIP_TIMEOUT_MS}>
-				{chips.map((chip: OffscreenChip): React.JSX.Element => (
-					<GanttOffscreenChip key={`${chip.id}-${chip.side}`} chip={chip} paneRef={paneRef} />
-				))}
-			</TooltipProvider>
-		</div>
-	);
-}
-
-const CHIPS_LAYER_STYLE: React.CSSProperties = { zIndex: GANTT_LAYER.chips };
-
-function measureOffscreenChips(pane: HTMLElement, viewport: HTMLElement): OffscreenChip[] {
-	const paneRect = pane.getBoundingClientRect();
-	const header = viewport.querySelector<HTMLElement>("[data-slot=gantt-timeline-header]");
-	const headerBottom = header === null ? 0 : header.getBoundingClientRect().bottom - paneRect.top;
-	const trackWidth = viewport.scrollWidth;
-	const visibleStart = getScrollStart(viewport);
-	const visibleEnd = visibleStart + viewport.clientWidth;
-	// the zoom control glides inward while an end chip occupies its band (the chips' position IS their meaning)
-	const zoomElement = pane.querySelector<HTMLElement>("[data-slot=gantt-zoom]");
-	const zoomRect = zoomElement?.getBoundingClientRect();
-	let isChipInZoomBand = false;
-	const next: OffscreenChip[] = [];
-	for (const rowElement of viewport.querySelectorAll<HTMLElement>("[data-gantt-row]")) {
-		const from = Number.parseFloat(rowElement.dataset.ganttBarMin ?? "");
-		const to = Number.parseFloat(rowElement.dataset.ganttBarMax ?? "");
-		if (Number.isNaN(from) || Number.isNaN(to)) {
-			continue;
-		}
-		const rect = rowElement.getBoundingClientRect();
-		const top = rect.top - paneRect.top + rect.height / 2;
-		if (top < headerBottom + CHIP_HEADER_CLEARANCE_PX || top > paneRect.height - CHIP_BOTTOM_CLEARANCE_PX) {
-			continue;
-		}
-		const startPx = from * trackWidth;
-		const endPx = to * trackWidth;
-		const startMs = Number.parseFloat(rowElement.dataset.ganttBarStartMs ?? "");
-		const base = {
-			id: rowElement.dataset.ganttRowId ?? "",
-			top: Math.round(top),
-			color: rowElement.dataset.ganttBarColor,
-			label: rowElement.dataset.ganttBarLabel ?? "",
-			startMs: Number.isNaN(startMs) ? null : startMs,
-		};
-		if (endPx <= visibleStart + CHIP_EDGE_TOLERANCE_PX) {
-			next.push({ ...base, side: "start", target: startPx - CHIP_JUMP_INSET_PX });
-		} else if (startPx >= visibleEnd - CHIP_EDGE_TOLERANCE_PX) {
-			if (zoomRect !== undefined && top >= zoomRect.top - paneRect.top - CHIP_ZOOM_BAND_PX && top <= zoomRect.bottom - paneRect.top + CHIP_ZOOM_BAND_PX) {
-				isChipInZoomBand = true;
-			}
-			next.push({ ...base, side: "end", target: endPx - viewport.clientWidth + CHIP_JUMP_INSET_PX });
-		}
-	}
-	zoomElement?.style.setProperty("--gantt-zoom-shift", `${String(isChipInZoomBand ? CHIP_ZOOM_SHIFT_PX : 0)}px`);
-	return next;
-}
-
-interface GanttOffscreenChipProps {
-	readonly chip: OffscreenChip;
-	readonly paneRef: React.RefObject<HTMLDivElement | null>;
-}
-
-function GanttOffscreenChip({ chip, paneRef }: GanttOffscreenChipProps): React.JSX.Element {
-	const settings = useGanttSettings();
-	const handleClick = React.useCallback((): void => {
-		const viewport = getPaneViewport(paneRef.current);
-		if (viewport === null) {
-			return;
-		}
-		const target = Math.max(0, chip.target);
-		viewport.scrollTo({ left: getComputedStyle(viewport).direction === "rtl" ? -target : target, behavior: "smooth" });
-		// hand keyboard focus to the bar the chip promised (the chip unmounts)
-		const row = [...viewport.querySelectorAll<HTMLElement>("[data-gantt-row-id]")].find((element: HTMLElement): boolean => element.dataset.ganttRowId === chip.id);
-		row?.querySelector<HTMLElement>("[data-slot=gantt-bar]")?.focus({ preventScroll: true });
-	}, [chip, paneRef]);
-	const style: React.CSSProperties = chip.side === "start" ? { top: chip.top, insetInlineStart: "0.5rem" } : { top: chip.top, insetInlineEnd: "0.875rem" };
-	const dotStyle: GanttStyle = { "--gantt-event-color": chip.color ?? GANTT_DEFAULT_COLOR };
-	return (
-		<Tooltip>
-			<TooltipTrigger
-				render={
-					<button
-						type="button"
-						data-slot="gantt-offscreen-chip"
-						data-side={chip.side}
-						aria-label={settings.i18n.labels.jumpToBar(chip.label)}
-						className="pointer-events-auto absolute flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border bg-background text-muted-foreground shadow-xs hover:text-foreground"
-						style={style}
-						onClick={handleClick}
-					/>
-				}>
-				{chip.side === "start" ? <ChevronLeftIcon aria-hidden className="size-3 rtl:rotate-180" /> : <ChevronRightIcon aria-hidden className="size-3 rtl:rotate-180" />}
-				<span aria-hidden className="absolute -end-px -top-px size-1.5 rounded-full bg-(--gantt-event-color) ring-1 ring-background" style={dotStyle} />
-			</TooltipTrigger>
-			<TooltipContent side={chip.side === "start" ? "right" : "left"} className="flex-col items-start gap-0">
-				<div className="font-medium">{chip.label}</div>
-				{chip.startMs === null ? null : (
-					<div className="opacity-80">{format(toZoned(new Date(chip.startMs), settings.timeZone), settings.i18n.formats.longDate, localeOptions(settings.locale))}</div>
-				)}
-			</TooltipContent>
-		</Tooltip>
-	);
-}

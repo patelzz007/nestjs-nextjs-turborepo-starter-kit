@@ -17,8 +17,10 @@ import {
 	PRODUCTION_STORAGE_PHYSICAL_DELETE_DELAY_MS,
 } from "./api-config.defaults";
 import {
+	androidApkKeyHashOrigin,
 	configuredPrivateContainer,
 	configuredPublicContainer,
+	resolveWebAuthnRpId,
 	resolveApiDocsPolicy,
 	resolveLogLevel,
 	resolveMalwareScannerConfig,
@@ -26,7 +28,7 @@ import {
 	resolveRedisNamespace,
 	resolveStorageProvider,
 } from "./api-config.derivations";
-import type { ApiConfig, TenancyConfig } from "./api-config.types";
+import type { ApiConfig, PaymentsConfig, TenancyConfig } from "./api-config.types";
 import type { ApiEnv } from "./api-env.input";
 
 // ── Grouping ───────────────────────────────────────────────────────────────
@@ -69,7 +71,13 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			shutdownTimeoutMs: env.SHUTDOWN_TIMEOUT_MS,
 		},
 		clientApps: { webUrl: env.APP_URL, adminUrl: env.ADMIN_APP_URL, merchantUrl: env.MERCHANT_APP_URL },
-		database: { url: env.DATABASE_URL, poolMax: env.DB_POOL_MAX, idleTimeoutMs: env.DB_IDLE_TIMEOUT_MS, allowExitOnIdle: !isProduction },
+		database: {
+			url: env.DATABASE_URL,
+			sessionUrl: env.DATABASE_SESSION_URL ?? env.DATABASE_URL,
+			poolMax: env.DB_POOL_MAX,
+			idleTimeoutMs: env.DB_IDLE_TIMEOUT_MS,
+			allowExitOnIdle: !isProduction,
+		},
 		auth: {
 			jwtAccessSecret: env.JWT_ACCESS_SECRET,
 			jwtAccessExpiry: env.JWT_ACCESS_EXPIRY,
@@ -79,7 +87,21 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			twoFactorPendingSecret: env.TWO_FACTOR_PENDING_SECRET,
 			twoFactorIssuer: env.TWO_FACTOR_ISSUER ?? env.APP_NAME,
 			loginVerificationMode: env.LOGIN_VERIFICATION_MODE,
+			passwordBreachCheck: env.PASSWORD_BREACH_CHECK,
 			bcryptSaltRounds: env.BCRYPT_SALT_ROUNDS,
+		},
+		passkeys: {
+			rpId: resolveWebAuthnRpId(env),
+			rpName: env.TWO_FACTOR_ISSUER ?? env.APP_NAME,
+			origins: [
+				...new Set([env.APP_URL, env.ADMIN_APP_URL, env.MERCHANT_APP_URL].map((url: string): string => new URL(url).origin)),
+				...(env.WEBAUTHN_ANDROID_CERT_FINGERPRINTS ?? []).map(androidApkKeyHashOrigin),
+			],
+			androidApp:
+				env.WEBAUTHN_ANDROID_PACKAGE_NAME === undefined || env.WEBAUTHN_ANDROID_CERT_FINGERPRINTS === undefined
+					? null
+					: { packageName: env.WEBAUTHN_ANDROID_PACKAGE_NAME, certFingerprints: env.WEBAUTHN_ANDROID_CERT_FINGERPRINTS },
+			appleAppIds: env.WEBAUTHN_APPLE_APP_IDS ?? [],
 		},
 		mfa: {
 			encryptionKeys: env.MFA_ENCRYPTION_KEYS,
@@ -207,10 +229,28 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 		operations: {
 			cloudTokens: { DIGITALOCEAN: env.DIGITALOCEAN_TOKEN ?? null, LINODE: env.LINODE_TOKEN ?? null, VULTR: env.VULTR_API_KEY ?? null, HETZNER: env.HCLOUD_TOKEN ?? null },
 			backupDatabaseUrl: env.BACKUP_DATABASE_URL ?? null,
+			restoreDrillDatabaseUrl: env.RESTORE_DRILL_DATABASE_URL ?? null,
 			pgDumpDockerImage: env.BACKUP_PG_DUMP_DOCKER_IMAGE,
 			executableSearchPath: env.PATH,
 			loadTesting: { enabled: env.LOAD_TESTING_ENABLED, allowProduction: env.LOAD_TESTING_ALLOW_PRODUCTION, targetUrl: env.LOAD_TEST_TARGET_URL ?? null },
 		},
+		payments: resolvePaymentsConfig(env, isProduction),
+		webhooks: { secretEncryptionKeys: env.WEBHOOK_SECRET_ENCRYPTION_KEYS ?? null, allowLoopbackUrls: env.WEBHOOK_ALLOW_LOOPBACK_URLS },
+		inboundWebhooks: { retentionDays: env.INBOUND_WEBHOOK_RETENTION_DAYS },
+	};
+}
+
+/** Each gateway is configured when all of its settings are set (the rules refuse a half-configured one). */
+function resolvePaymentsConfig(env: ApiEnv, isProduction: boolean): PaymentsConfig {
+	const { BILLPLZ_API_KEY: apiKey, BILLPLZ_COLLECTION_ID: collectionId, BILLPLZ_X_SIGNATURE_KEY: xSignatureKey } = env;
+	const { CHIP_SECRET_KEY: secretKey, CHIP_BRAND_ID: brandId, CHIP_PUBLIC_KEY: publicKey } = env;
+	return {
+		billplz:
+			apiKey !== undefined && collectionId !== undefined && xSignatureKey !== undefined
+				? { apiKey, collectionId, xSignatureKey, sandbox: env.BILLPLZ_SANDBOX ?? !isProduction }
+				: null,
+		chip: secretKey !== undefined && brandId !== undefined && publicKey !== undefined ? { secretKey, brandId, publicKeyPem: publicKey.replaceAll("\\n", "\n") } : null,
+		fakeSecret: isProduction ? null : (env.PAYMENTS_FAKE_SECRET ?? null),
 	};
 }
 

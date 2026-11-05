@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { highlightTerms, MAX_INDEXED_CHARACTERS, queryTerms, SearchIndexSchema, searchIndex, toPlainText, type SearchEntry } from "../search";
+import { MAX_INDEXED_CHARACTERS, queryTerms, SearchIndexSchema, searchIndex, toPlainText, type SearchEntry } from "../search";
 
 function entry(overrides: Partial<SearchEntry>): SearchEntry {
 	return { kind: "page", title: "Untitled", href: "/docs/x", context: "Guides", text: "", ...overrides };
@@ -57,11 +57,5 @@ describe("searchIndex", () => {
 describe("query helpers", () => {
 	it("splits, lowercases and de-duplicates terms", () => {
 		expect(queryTerms("  RLS rls  Prisma ")).toEqual(["rls", "prisma"]);
-	});
-
-	it("escapes HTML and marks every term", () => {
-		expect(highlightTerms("Use <RLS> and rls", ["rls"])).toBe("Use &lt;<mark>RLS</mark>&gt; and <mark>rls</mark>");
-		expect(highlightTerms("a.b", ["."])).toBe("a<mark>.</mark>b");
-		expect(highlightTerms("<x>", [])).toBe("&lt;x&gt;");
 	});
 });

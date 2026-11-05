@@ -144,8 +144,8 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 							{isRewardJustForViewer(reward) ? <Badge variant="primary-light">{JUST_FOR_YOU_LABEL}</Badge> : null}
 							{isSoldOut ? <Badge variant="destructive-light">Sold out</Badge> : null}
 							{isExpired ? <Badge variant="destructive-light">Expired</Badge> : null}
-							{isLowStock ? <Badge className="border-transparent bg-warning-soft text-warning">Almost gone</Badge> : null}
-							{isEndingSoon ? <Badge className="border-transparent bg-warning-soft text-warning">Ending soon</Badge> : null}
+							{isLowStock ? <Badge className="border-transparent bg-tone-yellow-soft text-tone-yellow">Almost gone</Badge> : null}
+							{isEndingSoon ? <Badge className="border-transparent bg-tone-yellow-soft text-tone-yellow">Ending soon</Badge> : null}
 						</div>
 						<h1 className="mt-3 text-2xl leading-tight font-semibold tracking-tight text-balance text-foreground sm:text-3xl">{reward.title}</h1>
 						<p className="mt-2 text-xl font-semibold text-primary tabular-nums">{offer}</p>

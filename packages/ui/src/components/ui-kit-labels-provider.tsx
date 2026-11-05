@@ -1,6 +1,6 @@
 "use client";
 
-import { UI_KIT_LANGUAGE_PACKS, type UiKitLanguage } from "@workspace/ui/lib/labels/language-packs";
+import { loadUiKitLanguagePack, readyUiKitLanguagePack, type UiKitLanguage } from "@workspace/ui/lib/labels/language-packs";
 import type { UiKitLabelFamily, UiKitLabels, UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import * as React from "react";
 
@@ -20,12 +20,40 @@ export function UiKitLabelsProvider({ labels, children }: UiKitLabelsProviderPro
 export interface UiKitLanguageProviderProps {
 	/** A shipped language pack by name — serializable, so a Server Component layout can choose it. */
 	readonly language: UiKitLanguage;
+	/**
+	 * How the app switches language (ADR 076): set its preference and re-render. Optional: without it the
+	 * language menu (`ShellLanguageToggle`) doesn't render, so a surface can be fixed to one language.
+	 */
+	readonly onLanguageChange?: ((language: UiKitLanguage) => void) | undefined;
 	readonly children: React.ReactNode;
 }
 
-/** `UiKitLabelsProvider` with a shipped language pack. */
-export function UiKitLanguageProvider({ language, children }: UiKitLanguageProviderProps): React.JSX.Element {
-	return <UiKitLabelsProvider labels={UI_KIT_LANGUAGE_PACKS[language]}>{children}</UiKitLabelsProvider>;
+/** The language on screen and, when the app allows it, how to change it. */
+export interface UiKitLanguageState {
+	readonly language: UiKitLanguage;
+	readonly chooseLanguage: ((language: UiKitLanguage) => void) | null;
+}
+
+const UiKitLanguageContext = React.createContext<UiKitLanguageState | null>(null);
+
+/**
+ * `UiKitLabelsProvider` with a shipped language pack, and the language for `useUiKitLanguage`. English, and
+ * any pack already loaded, is at hand; another pack is loaded on demand and waited for once (`React.use`):
+ * on the server that wait ends before the HTML is sent, so the first paint is already in the reader's language.
+ */
+export function UiKitLanguageProvider({ language, onLanguageChange, children }: UiKitLanguageProviderProps): React.JSX.Element {
+	const state = React.useMemo((): UiKitLanguageState => ({ language, chooseLanguage: onLanguageChange ?? null }), [language, onLanguageChange]);
+	const labels = readyUiKitLanguagePack(language) ?? React.use(loadUiKitLanguagePack(language));
+	return (
+		<UiKitLanguageContext.Provider value={state}>
+			<UiKitLabelsProvider labels={labels}>{children}</UiKitLabelsProvider>
+		</UiKitLanguageContext.Provider>
+	);
+}
+
+/** The language on screen and how to change it; `null` outside a `UiKitLanguageProvider` (a bare labels provider). */
+export function useUiKitLanguage(): UiKitLanguageState | null {
+	return React.useContext(UiKitLanguageContext);
 }
 
 /**

@@ -7,6 +7,8 @@ import {
 	LoginVerificationEmailTemplate,
 	PasswordChangedEmailTemplate,
 	PasswordResetEmailTemplate,
+	PasskeyAddedEmailTemplate,
+	PasskeyRemovedEmailTemplate,
 	TwoFactorDisabledEmailTemplate,
 	TwoFactorEnabledEmailTemplate,
 	VerificationEmailTemplate,
@@ -58,6 +60,14 @@ export class IdentityEmailAdapter implements IdentityEmailPort {
 
 	public async sendTwoFactorDisabledEmail(email: string): Promise<void> {
 		await this.requests.request(new TwoFactorDisabledEmailTemplate({ to: email, changedAt: nowEpochMs() }));
+	}
+
+	public async sendPasskeyAddedEmail(email: string, passkeyName: string): Promise<void> {
+		await this.requests.request(new PasskeyAddedEmailTemplate({ to: email, passkeyName, changedAt: nowEpochMs() }));
+	}
+
+	public async sendPasskeyRemovedEmail(email: string, passkeyName: string): Promise<void> {
+		await this.requests.request(new PasskeyRemovedEmailTemplate({ to: email, passkeyName, changedAt: nowEpochMs() }));
 	}
 
 	public async sendLoginVerificationEmail(email: string, verificationCode: string, deviceInfo: string, ipAddress: string): Promise<EmailSendResult> {

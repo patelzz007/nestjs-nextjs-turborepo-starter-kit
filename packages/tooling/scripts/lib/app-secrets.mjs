@@ -24,6 +24,7 @@ export const APP_SECRET_KEYS = ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "EMAI
 export const MFA_KEYS_VARIABLE = "MFA_ENCRYPTION_KEYS";
 export const REWARD_CODE_HASH_KEYS_VARIABLE = "REWARD_CODE_HASH_KEYS";
 export const GITHUB_CREDENTIAL_KEYS_VARIABLE = "GITHUB_CREDENTIAL_ENCRYPTION_KEYS";
+export const WEBHOOK_SECRET_KEYS_VARIABLE = "WEBHOOK_SECRET_ENCRYPTION_KEYS";
 
 /**
  * Every versioned key ring the generator maintains. Adding a ring = one entry
@@ -34,6 +35,7 @@ export const KEY_RINGS = [
 	{ variable: MFA_KEYS_VARIABLE, effect: "New MFA secrets are encrypted with it; stored ones still decrypt with their own version." },
 	{ variable: REWARD_CODE_HASH_KEYS_VARIABLE, effect: "New reward QR tokens / backup codes are hashed with it; existing codes still match under their own version." },
 	{ variable: GITHUB_CREDENTIAL_KEYS_VARIABLE, effect: "Newly linked GitHub tokens are encrypted with it; linked ones still decrypt with their own version." },
+	{ variable: WEBHOOK_SECRET_KEYS_VARIABLE, effect: "New webhook signing secrets are encrypted with it; stored ones still decrypt with their own version." },
 ];
 export const TENANT_MASTER_KEY = "TENANT_ENCRYPTION_MASTER_KEY";
 

@@ -4,21 +4,30 @@ import {
 	ArrowRight,
 	ArrowUpRight,
 	Bell,
+	Bookmark,
 	BookOpen,
 	Boxes,
 	ChevronDown,
 	ChevronRight,
 	CircleAlert,
 	CircleCheck,
+	CircleHelp,
 	Compass,
+	Cookie,
 	Copy,
+	CreditCard,
 	Database,
 	ExternalLink,
 	FileCode2,
 	FileText,
+	Fingerprint,
+	Flag,
 	Gauge,
 	Gift,
+	GitPullRequest,
+	Globe,
 	HardDrive,
+	HeartPulse,
 	Info,
 	KeyRound,
 	Layers,
@@ -26,6 +35,7 @@ import {
 	Lightbulb,
 	ListChecks,
 	ListTodo,
+	LogIn,
 	Mail,
 	Map,
 	Menu,
@@ -40,12 +50,15 @@ import {
 	RefreshCw,
 	Rocket,
 	Rss,
+	ScanLine,
 	ScrollText,
 	Search,
 	Send,
 	Server,
 	ShieldCheck,
 	Snowflake,
+	SquareKanban,
+	Store,
 	Sun,
 	SunMoon,
 	ThumbsDown,
@@ -53,29 +66,34 @@ import {
 	Timer,
 	TriangleAlert,
 	Users,
+	Webhook,
 	Wrench,
 	X,
 	Zap,
-} from "lucide";
+	type LucideIcon,
+	type LucideProps,
+} from "lucide-react";
+import { createElement, forwardRef, type ReactElement } from "react";
 
-/** Structural shape of a lucide icon: a list of `[tag, attributes]` SVG children. */
-export type IconNode = readonly (readonly [string, Readonly<Record<string, string | number | undefined>>])[];
+/** The GitHub mark's path in lucide's 24×24 grid (lucide no longer ships brand icons). */
+export const GITHUB_MARK_PATH =
+	"M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49v-1.7c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.3.1-2.72 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.51.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.64 1.03 2.76 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9v2.82c0 .27.18.6.69.49A10.25 10.25 0 0 0 22 12.25C22 6.58 17.52 2 12 2z";
 
-/** GitHub mark (lucide no longer ships brand icons) — a filled path in lucide's 24×24 grid. */
-const GITHUB_MARK: IconNode = [
-	[
-		"path",
-		{
-			d: "M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49v-1.7c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.3.1-2.72 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.51.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.64 1.03 2.76 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9v2.82c0 .27.18.6.69.49A10.25 10.25 0 0 0 22 12.25C22 6.58 17.52 2 12 2z",
-			fill: "currentColor",
-			stroke: "none",
-		},
-	],
-];
+/** Default glyph size (px) when a caller passes none: the site's 14px chrome text sits beside it. */
+const DEFAULT_ICON_SIZE = 16;
+
+/** The GitHub mark as a lucide-compatible icon: a filled path, same props and ref as every other icon. */
+export const GithubMark: LucideIcon = forwardRef<SVGSVGElement, LucideProps>(function GithubMark({ size = DEFAULT_ICON_SIZE, ...props }, ref): ReactElement {
+	return createElement(
+		"svg",
+		{ ref, xmlns: "http://www.w3.org/2000/svg", width: size, height: size, viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true", ...props },
+		createElement("path", { d: GITHUB_MARK_PATH }),
+	);
+});
 
 /**
- * Every icon the site renders, by name. Keeping an explicit registry means
- * only these icons are bundled and a typo in a name fails at compile time.
+ * Every icon the site renders, by name (`lucide-react`, the same set `@workspace/ui` uses). Keeping an
+ * explicit registry means only these icons are bundled and a typo in a name fails at compile time.
  */
 export const ICONS = {
 	alignLeft: AlignLeft,
@@ -83,22 +101,31 @@ export const ICONS = {
 	arrowRight: ArrowRight,
 	arrowUpRight: ArrowUpRight,
 	bell: Bell,
+	bookmark: Bookmark,
 	bookOpen: BookOpen,
 	boxes: Boxes,
 	chevronDown: ChevronDown,
 	chevronRight: ChevronRight,
 	circleAlert: CircleAlert,
 	circleCheck: CircleCheck,
+	circleHelp: CircleHelp,
 	compass: Compass,
+	cookie: Cookie,
 	copy: Copy,
+	creditCard: CreditCard,
 	database: Database,
 	externalLink: ExternalLink,
 	fileCode: FileCode2,
 	fileText: FileText,
+	fingerprint: Fingerprint,
+	flag: Flag,
 	gauge: Gauge,
 	gift: Gift,
-	github: GITHUB_MARK,
+	github: GithubMark,
+	gitPullRequest: GitPullRequest,
+	globe: Globe,
 	hardDrive: HardDrive,
+	heartPulse: HeartPulse,
 	info: Info,
 	keyRound: KeyRound,
 	layers: Layers,
@@ -106,6 +133,7 @@ export const ICONS = {
 	lightbulb: Lightbulb,
 	listChecks: ListChecks,
 	listTodo: ListTodo,
+	logIn: LogIn,
 	mail: Mail,
 	map: Map,
 	menu: Menu,
@@ -120,12 +148,15 @@ export const ICONS = {
 	refreshCw: RefreshCw,
 	rocket: Rocket,
 	rss: Rss,
+	scanLine: ScanLine,
 	scrollText: ScrollText,
 	search: Search,
 	send: Send,
 	server: Server,
 	shieldCheck: ShieldCheck,
 	snowflake: Snowflake,
+	squareKanban: SquareKanban,
+	store: Store,
 	sun: Sun,
 	sunMoon: SunMoon,
 	thumbsDown: ThumbsDown,
@@ -133,30 +164,17 @@ export const ICONS = {
 	timer: Timer,
 	triangleAlert: TriangleAlert,
 	users: Users,
+	webhook: Webhook,
 	wrench: Wrench,
 	x: X,
 	zap: Zap,
-} satisfies Readonly<Record<string, IconNode>>;
+} satisfies Readonly<Record<string, LucideIcon>>;
 
 export type IconName = keyof typeof ICONS;
 
-function escapeAttribute(value: string): string {
-	return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-}
-
-/** Renders a registered icon as an inline SVG string (decorative, hidden from assistive tech). */
-export function iconSvg(name: IconName, size = 16, className = ""): string {
-	const node: IconNode = ICONS[name];
-	const children = node
-		.map(([tag, attributes]) => {
-			const attrs = Object.entries(attributes)
-				.flatMap(([key, value]) => (value === undefined ? [] : [`${key}="${escapeAttribute(String(value))}"`]))
-				.join(" ");
-			return `<${tag} ${attrs}/>`;
-		})
-		.join("");
-	const classAttribute = className.length > 0 ? ` class="${escapeAttribute(className)}"` : "";
-	return `<svg xmlns="http://www.w3.org/2000/svg" width="${String(size)}" height="${String(size)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${classAttribute}>${children}</svg>`;
+/** The component for a registered icon name. */
+export function iconComponent(name: IconName): LucideIcon {
+	return ICONS[name];
 }
 
 /** Sidebar / card icon per guide id (`docs/<id>.md`); unmapped guides use `fileText`. */
@@ -202,6 +220,28 @@ export const DOC_ICONS: Readonly<Record<string, IconName>> = {
 	"technical/operations/transaction-log": "scrollText",
 	"technical/frontend/network-quality": "gauge",
 	"adr/README": "archive",
+	// The generated API reference: one page per group of endpoints (packages/docs-renderer/src/api-reference/pages.ts).
+	"technical/api-reference/auth-and-sessions": "keyRound",
+	"technical/api-reference/access-control": "shieldCheck",
+	"technical/api-reference/platform-admin": "layoutDashboard",
+	"technical/api-reference/merchant-tenants": "store",
+	"technical/api-reference/customer-rewards": "gift",
+	"technical/api-reference/pos": "scanLine",
+	"technical/api-reference/payments": "creditCard",
+	"technical/api-reference/webhooks": "webhook",
+	"technical/api-reference/privacy": "fingerprint",
+	"technical/api-reference/files": "hardDrive",
+	"technical/api-reference/email": "mail",
+	"technical/api-reference/notifications": "bell",
+	"technical/api-reference/geography": "globe",
+	"technical/api-reference/github": "github",
+	"technical/api-reference/github-pull-requests": "gitPullRequest",
+	"technical/api-reference/catalog-samples": "package",
+	"technical/api-reference/feature-flags": "flag",
+	"technical/api-reference/saved-views": "bookmark",
+	"technical/api-reference/kanban": "squareKanban",
+	"technical/api-reference/platform-operations": "server",
+	"technical/api-reference/system": "heartPulse",
 };
 
 /** Section icon per `meta.json` separator label; unmapped sections use `layoutDashboard`. */

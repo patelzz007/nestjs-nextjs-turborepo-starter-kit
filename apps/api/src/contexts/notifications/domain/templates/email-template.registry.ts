@@ -14,6 +14,7 @@ import {
 	SecurityAlertEmailPropsSchema,
 	TeamMemberInviteEmailPropsSchema,
 	TwoFactorStatusEmailPropsSchema,
+	PasskeyChangedEmailPropsSchema,
 	VerificationEmailPropsSchema,
 	WelcomeEmailPropsSchema,
 	BroadcastEmailPropsSchema,
@@ -39,6 +40,8 @@ import { ReferrerRewardCreditedEmailTemplate } from "./referrer-reward-credited-
 import { RewardClaimOtpEmailTemplate } from "./reward-claim-otp-email.template";
 import { SecurityAlertEmailTemplate } from "./security-alert-email.template";
 import { TwoFactorDisabledEmailTemplate } from "./two-factor-disabled-email.template";
+import { PasskeyAddedEmailTemplate } from "./passkey-added-email.template";
+import { PasskeyRemovedEmailTemplate } from "./passkey-removed-email.template";
 import { TwoFactorEnabledEmailTemplate } from "./two-factor-enabled-email.template";
 import { VerificationEmailTemplate } from "./verification-email.template";
 import { WelcomeEmailTemplate } from "./welcome-email.template";
@@ -156,6 +159,20 @@ export const EMAIL_TEMPLATE_REGISTRY: Readonly<Record<EmailTemplateKey, EmailTem
 		"Sent when a user disables authenticator-based 2FA.",
 		TwoFactorDisabledEmailTemplate,
 		TwoFactorStatusEmailPropsSchema,
+	),
+	"passkey-added": registerTemplate(
+		"passkey-added",
+		"Passkey Added",
+		"Sent when a passkey is added to an account (ADR 080).",
+		PasskeyAddedEmailTemplate,
+		PasskeyChangedEmailPropsSchema,
+	),
+	"passkey-removed": registerTemplate(
+		"passkey-removed",
+		"Passkey Removed",
+		"Sent when a passkey is removed from an account (ADR 080).",
+		PasskeyRemovedEmailTemplate,
+		PasskeyChangedEmailPropsSchema,
 	),
 	"login-verification": registerTemplate(
 		"login-verification",

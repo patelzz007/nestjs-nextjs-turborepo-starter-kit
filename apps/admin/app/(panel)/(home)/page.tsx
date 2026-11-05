@@ -1,5 +1,5 @@
-import { serverEnv } from "@/lib/env/env.server";
-import { isComponentGalleryEnabled } from "@/lib/feature-flags";
+import { COMPONENT_GALLERY_FEATURE } from "@/lib/feature-flags";
+import { isFeatureEnabled } from "@/lib/server/feature-flag-settings";
 
 import DashboardGallery from "./dashboard-gallery";
 
@@ -16,6 +16,6 @@ import DashboardGallery from "./dashboard-gallery";
  * segment's page AND every child segment, so `(panel)/loading.tsx` must stay
  * the generic fallback for the rest of the panel.
  */
-export default function PanelHomePage(): React.JSX.Element {
-	return <DashboardGallery showComponentGallery={isComponentGalleryEnabled(serverEnv)} />;
+export default async function PanelHomePage(): Promise<React.JSX.Element> {
+	return <DashboardGallery showComponentGallery={await isFeatureEnabled(COMPONENT_GALLERY_FEATURE)} />;
 }

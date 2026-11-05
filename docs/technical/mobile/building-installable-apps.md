@@ -43,7 +43,7 @@ In this guide, **`<app>`** means the app folder of the repository you are in.
 8. [Android: an AAB for Google Play](#8-android-an-aab-for-google-play)
 9. [Android: signing with your own key](#9-android-signing-with-your-own-key)
 10. [iOS](#10-ios)
-11. [EAS Build (cloud builds)](#11-eas-build-cloud-builds)
+11. [EAS Build (cloud builds)](#11-eas-build-cloud-builds), with [over-the-air updates](#111-over-the-air-updates-eas-update)
 12. [Version numbers](#12-version-numbers)
 13. [Never commit these](#13-never-commit-these)
 14. [When it fails](#14-when-it-fails)
@@ -684,9 +684,9 @@ Keep `ExportOptions.plist`, certificates and profiles **out of the repository**.
 ## 11. EAS Build (cloud builds)
 
 EAS builds in Expo's cloud, keeps your signing credentials, and can count build numbers for you; it
-is the recommended route for store releases. Neither repository is set up for it yet (no `eas.json`).
-The boilerplate's rules keep it on Expo Go and local builds, so adding EAS there is a decision for its
-maintainers.
+is the recommended route for store releases. The starter kit has `apps/mobile/eas.json` (below); it needs
+your Expo account once (`eas init`). The boilerplate's rules keep it on Expo Go and local builds, so adding
+EAS there is a decision for its maintainers.
 
 ```bash
 cd <app>
@@ -695,15 +695,28 @@ eas init                          # links the app to an Expo project
 eas build:configure               # creates eas.json, which is reviewed and committed
 ```
 
-A sensible starting `eas.json`:
+The starter kit's `eas.json` (one update channel per profile, [11.1](#111-over-the-air-updates-eas-update)). Every
+profile extends `base`, which pins the **Node.js and pnpm the repository uses** (`.nvmrc`, `packageManager`):
+EAS's Android image ships Node 22 and an older pnpm, and `pnpm install` refused the repository's
+`engines` (`ERR_PNPM_UNSUPPORTED_ENGINE`, shown by EAS only as "Unknown error … Install dependencies").
+A test (`packages/tooling/scripts/lib/__tests__/ci-local-plan.test.mjs`) keeps the pins equal to the
+repository's.
 
 ```json
 {
-	"cli": { "appVersionSource": "remote" },
+	"cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
 	"build": {
-		"development": { "developmentClient": true, "distribution": "internal" },
-		"preview": { "distribution": "internal", "android": { "buildType": "apk" } },
-		"production": { "autoIncrement": true }
+		"base": { "node": "24.22.1", "pnpm": "12.16.1", "env": { "EAS_PROJECT_ID": "<id>" } },
+		"development": { "extends": "base", "environment": "development", "developmentClient": true, "distribution": "internal", "channel": "development", "env": { "EXPO_PUBLIC_ALLOW_LAN_HTTP_API": "true", "EXPO_PUBLIC_SHOW_DEMO_ACCOUNT": "true" } },
+		"preview": {
+			"extends": "base",
+			"environment": "preview",
+			"distribution": "internal",
+			"channel": "preview",
+			"android": { "buildType": "apk" },
+			"env": { "EXPO_PUBLIC_API_URL": "http://<Mac's Wi-Fi IP>:8080", "EXPO_PUBLIC_ALLOW_LAN_HTTP_API": "true", "EXPO_PUBLIC_SHOW_DEMO_ACCOUNT": "true" }
+		},
+		"production": { "extends": "base", "environment": "production", "channel": "production", "autoIncrement": true, "env": { "EXPO_PUBLIC_SHOW_DEMO_ACCOUNT": "false" } }
 	},
 	"submit": { "production": {} }
 }
@@ -714,11 +727,58 @@ A sensible starting `eas.json`:
   build.
 - **EAS never receives `.env`** (it is git-ignored). Give each build its values in `eas.json`
   (`"env": { "EXPO_PUBLIC_API_URL": "…" }` per profile), or as EAS environment variables
-  (`eas env:create`). A starter-kit build without `EXPO_PUBLIC_API_URL` installs fine and then opens on
-  the configuration-error screen. Never set `EXPO_PUBLIC_SHOW_DEMO_ACCOUNT` or
-  `EXPO_PUBLIC_ALLOW_LAN_HTTP_API` in a `production` profile.
+  (`eas env:set`). A starter-kit build without `EXPO_PUBLIC_API_URL` installs fine and then opens on
+  the configuration-error screen.
+- **The `development` profile needs `expo-dev-client`** (in the starter kit since 2026-11-05; eas-cli refuses the
+  profile without it). It gives a debug APK with the dev launcher that loads JavaScript from Metro on your Mac.
+  Because it is installed, `pnpm --filter mobile start` opens in **development-build** mode; press `s` in Metro (or
+  run `expo start --go`) to use Expo Go instead. Release builds (`preview`, `production`) do not include the launcher.
+  The profile sets `EXPO_PUBLIC_ALLOW_LAN_HTTP_API=true` like `preview`: eas-cli computes the runtime version on your Mac
+  with `.env` (where it is `true`), and without it EAS computed a different one and stopped the build at "Configure
+  expo-updates" ("Runtime version mismatch", the diff naming `lan-http-api.ts` `enabled`).
+- **Which build is this?** The drawer's footer, the sign-in panel and Settings → About name the build type (from the
+  EAS Update channel, so one per profile; `__DEV__` is always "Development"; a release with no channel is "Local
+  release"), the version, and when its code was built (or updated over the air, or installed, for a development build),
+  in the phone's time zone (`src/lib/build-identity.ts`).
+- **Demo logins per profile** (owner, 2026-11-05): `development` and `preview` set
+  `EXPO_PUBLIC_SHOW_DEMO_ACCOUNT` to `"true"` (internal APKs keep the one-tap demo logins), and `production`
+  pins it to `"false"`, so a store build never carries the list or its passwords. A test in
+  `ci-local-plan.test.mjs` holds all three values. Never set `EXPO_PUBLIC_ALLOW_LAN_HTTP_API` in `production`.
+- **Firebase's `google-services.json` is git-ignored too**, so EAS never receives it either. Locally, `.env`'s
+  `GOOGLE_SERVICES_JSON=./google-services.json` turns on the Firebase plugins (`app.config.ts`); on EAS, without the
+  variable, they drop out, the native code differs, and the build stops with **"Runtime version mismatch"** (the
+  fingerprint diff names `google-services.json` and `@react-native-firebase/*`). Every profile names its EAS
+  environment (`"environment"`, a test checks), so upload the file once to all three:
+
+  ```bash
+  cd apps/mobile
+  export EAS_PROJECT_ID=$(grep ^EAS_PROJECT_ID= .env | cut -d= -f2)
+  pnpm dlx eas-cli@latest env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret --environment development --environment preview --environment production
+  ```
+
+  EAS then writes the file into the build and sets `GOOGLE_SERVICES_JSON` to its path, so the cloud's config equals
+  yours. `secret`: only builds read it (an update needs only its path on your machine: see over-the-air-updates.md, Step 5). Replace it (`eas env:update --variable-name GOOGLE_SERVICES_JSON --variable-environment <env> --type file --value ./google-services.json`) whenever you download a new `google-services.json`.
 - Build: `eas build --platform android --profile preview` (APK), `--profile production` (AAB), and
   `eas build --platform ios --profile production`. Submit with `eas submit`.
+
+### 11.1 Over-the-air updates (EAS Update)
+
+**The full guide, with getting started, every command and a step-by-step first test, is
+[over-the-air-updates.md](./over-the-air-updates.md).** A summary:
+
+Enhancement 6.3. A fix that changes only JavaScript (a screen, a message, a bug in a hook) reaches installed
+apps without a store release. `expo-updates` is in the app; `config-plugins/over-the-air-updates.ts` turns it
+on once `EAS_PROJECT_ID` is set.
+
+| | |
+|---|---|
+| Turning it on | `pnpm dlx eas-cli@latest init` prints the project id (its "Cannot automatically write to dynamic config" error is expected); put it in `apps/mobile/.env` and in each EAS profile's env as `EAS_PROJECT_ID`. Unset, updates are off and the app runs the JavaScript it was built with |
+| Channels | Each build listens on its profile's channel: `development`, `preview`, `production`. A preview update never reaches a store build |
+| Runtime version | The native code's **fingerprint**. An update only loads on builds of the same native code; adding a native module or bumping the SDK changes the fingerprint and needs a new store build |
+| On launch | The app checks for an update but never waits for it (`fallbackToCacheTimeout: 0`): it opens on what it has, and a downloaded update applies on the next launch |
+| Publishing | `eas update --channel preview --message "Fix the reward card"` (test on a preview build first), then `--channel production` |
+| Rolling back | `eas update:rollback` on the channel, or republish the previous update |
+| Never | Ship a change that needs new native code as an update; it is refused by the fingerprint, and the store build is the only way |
 
 ## 12. Version numbers
 
@@ -836,7 +896,8 @@ A person handed you this page to build the mobile app with them. Work this way:
 
 ## 17. Known gaps
 
-- **`eas.json`:** in neither repository yet ([11](#11-eas-build-cloud-builds)).
+- **`eas.json` (boilerplate):** not there yet; the starter kit has one ([11](#11-eas-build-cloud-builds)).
+- **EAS project (starter kit):** run `eas init` and set `EAS_PROJECT_ID` to turn on over-the-air updates ([11.1](#111-over-the-air-updates-eas-update)).
 - **Build numbers (starter kit):** `app.config.ts` sets no `android.versionCode` or `ios.buildNumber`, so
   local builds are always `1`. Use EAS remote versioning, or add both to `app.config.ts` from a
   validated `MOBILE_*` variable, when local store builds are needed.

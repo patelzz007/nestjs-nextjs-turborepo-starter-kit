@@ -30,9 +30,11 @@ const DOCUMENT: RichTextDocument = {
 	],
 };
 
-function filesAddress(fileId: string): string {
-	return `https://files.example/${fileId}`;
-}
+/** The body as the API answers it once the picture is ready: with its address. */
+const WITH_ADDRESS: RichTextDocument = {
+	...DOCUMENT,
+	content: DOCUMENT.content.map((block) => (block.type === "image" ? { ...block, attrs: { ...block.attrs, src: "https://files.example/f1" } } : block)),
+};
 
 describe("RichTextView (native)", () => {
 	it("draws the headings, marks, lists, tables and code of a broadcast", async () => {
@@ -67,11 +69,11 @@ describe("RichTextView (native)", () => {
 		expect(onCopyCode).toHaveBeenCalledWith("PROMO-123");
 	});
 
-	it("shows the image only once its address is known", async () => {
+	it("shows the image only once the API gave it an address", async () => {
 		await render(<RichTextView document={DOCUMENT} onOpenLink={jest.fn()} />);
 		expect(screen.queryByLabelText("Our latte")).toBeNull();
 
-		await screen.rerender(<RichTextView document={DOCUMENT} onOpenLink={jest.fn()} imageUrl={filesAddress} />);
+		await screen.rerender(<RichTextView document={WITH_ADDRESS} onOpenLink={jest.fn()} />);
 		expect(screen.getByLabelText("Our latte")).toBeOnTheScreen();
 	});
 });

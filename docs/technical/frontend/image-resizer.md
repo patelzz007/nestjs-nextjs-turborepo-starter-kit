@@ -120,5 +120,5 @@ pixels:
 The image keeps the shape of `width` × `height` while it is resized. Add `aspect="free"` to let the
 sides change independently. The build renders the web `ImageResizer` to HTML, so the image shows
 before any JavaScript runs. On pages that have one, the browser hydrates it into the live component
-(`apps/docs/src/lib/media/`, `src/scripts/media-islands.ts`). The image never grows wider than the
+(`packages/docs-renderer/src/media/`, `apps/docs/src/browser/islands.ts`). The image never grows wider than the
 column, and on a narrow screen it shrinks to fit. A malformed fence fails the build.

@@ -34,21 +34,13 @@ describe("didTokenRotate", () => {
 
 describe("formatTimeLeft", () => {
 	it("shows minutes and two-digit seconds", () => {
-		expect(formatTimeLeft(872, false)).toBe("14m 32s");
-		expect(formatTimeLeft(9, false)).toBe("0m 09s");
-		expect(formatTimeLeft(0, true)).toBe("0m 00s");
+		expect(formatTimeLeft(872)).toBe("14m 32s");
+		expect(formatTimeLeft(9)).toBe("0m 09s");
+		expect(formatTimeLeft(0)).toBe("0m 00s");
+		expect(formatTimeLeft(3_599)).toBe("59m 59s");
 	});
 
 	it("keeps minutes and seconds past an hour in full", () => {
-		expect(formatTimeLeft(9_000, false)).toBe("150m 00s");
-	});
-
-	it("shortens an hour or more to hours and two-digit minutes when compact", () => {
-		expect(formatTimeLeft(9_000, true)).toBe("2h 30m");
-		expect(formatTimeLeft(3_900, true)).toBe("1h 05m");
-	});
-
-	it("keeps minutes and seconds under an hour when compact", () => {
-		expect(formatTimeLeft(3_599, true)).toBe("59m 59s");
+		expect(formatTimeLeft(9_000)).toBe("150m 00s");
 	});
 });

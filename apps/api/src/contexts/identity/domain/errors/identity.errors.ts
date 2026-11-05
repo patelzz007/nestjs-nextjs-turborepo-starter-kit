@@ -94,6 +94,18 @@ export class MerchantAccessRequiredError extends DomainError {
 	}
 }
 
+/** The client-safe text of the breached-password refusal. */
+export const PASSWORD_BREACHED_MESSAGE = "This password has appeared in a data breach, so it isn't safe to use. Choose a different one.";
+
+/** The new password appears in a known data breach (Have I Been Pwned's range API). */
+export class PasswordBreachedError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.badRequest;
+
+	public constructor() {
+		super(PASSWORD_BREACHED_MESSAGE);
+	}
+}
+
 /** The new password is one of the account's last {@link PASSWORD_REUSED_MESSAGE five}. */
 export class PasswordReusedError extends DomainError {
 	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.badRequest;
@@ -330,6 +342,96 @@ export class MfaChallengeMissingError extends DomainError {
 
 	public constructor() {
 		super("Invalid MFA challenge");
+	}
+}
+
+// ── Passkeys (WebAuthn, ADR 080) ────────────────────────────────────────────
+
+/** No live passkey with that id belongs to the caller (any other account's id answers the same 404). */
+export class PasskeyNotFoundError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.notFound;
+
+	public constructor() {
+		super("Passkey not found");
+	}
+}
+
+/** The credential is already registered (to this or another account): a credential id is never reused. */
+export class PasskeyAlreadyRegisteredError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.conflict;
+
+	public constructor() {
+		super("This passkey is already registered");
+	}
+}
+
+/** The account already holds the most passkeys it may (`MAX_PASSKEYS_PER_ACCOUNT`). */
+export class PasskeyLimitReachedError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.badRequest;
+
+	public constructor(limit: number) {
+		super(`An account can hold at most ${String(limit)} passkeys. Remove one before adding another.`);
+	}
+}
+
+/** A passkey name that is empty or too long once trimmed (the boundary already refuses it; the aggregate re-checks). */
+export class PasskeyNameInvalidError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.validation;
+
+	public constructor() {
+		super("Give the passkey a name of at most 64 characters");
+	}
+}
+
+/** Adding a passkey re-checks the password; this one is wrong. */
+export class PasskeyPasswordIncorrectError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.unauthorized;
+
+	public constructor() {
+		super("Invalid password");
+	}
+}
+
+/**
+ * The browser's response failed verification: a wrong origin or RP ID, a bad signature, no user
+ * verification, an unknown or removed credential, or a signature counter that went backwards (a possibly
+ * cloned authenticator). One message for all of them: the caller learns nothing about which check failed.
+ */
+export class PasskeyVerificationFailedError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.unauthorized;
+
+	public constructor() {
+		super("The passkey could not be verified");
+	}
+}
+
+/** The ceremony's challenge is unknown, expired, already used, or was issued for another purpose or account. */
+export class PasskeyChallengeInvalidError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.unauthorized;
+
+	public constructor() {
+		super("Passkey request expired — try again");
+	}
+}
+
+/** The password sign-in names an account without a passkey, so there is nothing to ask the browser for. */
+export class NoPasskeyRegisteredError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.badRequest;
+
+	public constructor() {
+		super("No passkey is registered for this account");
+	}
+}
+
+/** Client-safe reason sent with a passkey change attempted during impersonation. */
+export const PASSKEY_CHANGE_DURING_IMPERSONATION_MESSAGE = "Passkeys cannot be added, renamed or removed during impersonation. Stop impersonating first.";
+
+/** An impersonating administrator may never add or remove a sign-in credential of the user (account takeover). */
+export class PasskeyChangeDuringImpersonationError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.forbidden;
+
+	public constructor() {
+		super(PASSKEY_CHANGE_DURING_IMPERSONATION_MESSAGE);
 	}
 }
 

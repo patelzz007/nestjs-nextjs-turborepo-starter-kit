@@ -10,6 +10,8 @@ export const authRoutes = {
 	me: "/auth/me",
 	/** The signed-in user's own profile — GET reads it, PATCH edits it. */
 	profile: "/auth/profile",
+	/** The signed-in person's language (5.2). */
+	profileLanguage: "/auth/profile/language",
 	/** The signed-in user's remembered choices — GET lists them; PUT and DELETE on `/:key` set one or reset it to the default. */
 	preferences: "/auth/preferences",
 	preference: "/auth/preferences/:key",
@@ -46,6 +48,20 @@ export const authRoutes = {
 	twoFactorRotate: "/auth/2fa/rotate",
 	twoFactorBackupCodesRemaining: "/auth/2fa/backup-codes/remaining",
 	twoFactorVerifyBackupCode: "/auth/2fa/verify-backup-code",
+	/** The signed-in account's passkeys (ADR 080): GET lists them. */
+	passkeys: "/auth/passkeys",
+	passkeyRegistrationOptions: "/auth/passkeys/registration/options",
+	passkeyRegistration: "/auth/passkeys/registration",
+	/** The native apps allowed to use this site's passkeys: the web app serves them at `/.well-known/` (public). */
+	passkeyAppAssociations: "/auth/passkeys/app-associations",
+	/** One of the account's passkeys: PATCH renames it, DELETE removes it (soft delete). */
+	passkey: "/auth/passkeys/:passkeyId",
+	/** The second step of a password sign-in with a passkey instead of a TOTP code. */
+	loginPasskeySecondFactorOptions: "/auth/login/2fa/passkey/options",
+	loginPasskeySecondFactor: "/auth/login/2fa/passkey",
+	/** A passwordless sign-in with a discoverable passkey. */
+	loginPasskeyOptions: "/auth/login/passkey/options",
+	loginPasskey: "/auth/login/passkey",
 	mfaRecoveryInitiate: "/auth/mfa/recovery",
 	mfaRecoveryStatus: "/auth/mfa/recovery/status",
 	adminMfaRecoveryReview: "/auth/admin/mfa/recovery/review",

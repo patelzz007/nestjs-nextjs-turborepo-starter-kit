@@ -101,6 +101,12 @@ describe("toBroadcastBody", () => {
 		expect(toBroadcastBody({ type: "doc", content: [{ type: "paragraph" }] })).toBeNull();
 		expect(toBroadcastBody({ type: "doc", content: [{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "x" }] }] })).toBeNull();
 	});
+
+	it("drops a loaded picture's address, keeping the picture by file id (enhancement 5.4)", () => {
+		const fileId = "0193f2c4-0000-7000-8000-0000000000c1";
+		const loaded = { type: "doc", content: [{ type: "image", attrs: { fileId, alt: "Cake", src: "https://cdn.example.com/cake.webp" } }, ...BODY.content] };
+		expect(toBroadcastBody(loaded)).toEqual({ type: "doc", content: [{ type: "image", attrs: { fileId, alt: "Cake" } }, ...BODY.content] });
+	});
 });
 
 const SAVED: BroadcastResponse = {

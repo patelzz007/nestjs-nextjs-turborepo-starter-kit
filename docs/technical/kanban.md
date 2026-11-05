@@ -118,6 +118,19 @@ the board's size: the parent chain, comment counts and a comment's files come ba
 counts, checklist tallies, "blocked" flags and the rollups (one read of the hierarchy across both boards,
 `computeRollups`) are one statement each. The e2e suite checks it.
 
+## Importing from CSV
+
+**Import CSV** on either board (enhancement 5.8). One item per row after a header row; only `title` is required.
+
+| Step | What happens |
+|---|---|
+| 1. Read | The browser reads the file and checks each row against the create contract (`CreateKanbanTaskSchema`): type, dates, priority, team, column by title. A bad row is listed by its file line; the good rows carry on |
+| 2. Dry run | The good rows go to `POST /admin/kanban/tasks/import/dry-run`. The board checks each one with **the import's own rules** (`placeImportedTask`) under the board lock, in order, so a column filling up is seen row by row: full column, missing column, other board, a parent that doesn't fit, an assignee who can't use the board. Nothing is written |
+| 3. Report | The dialog lists every row that will be skipped (from either check) by line, and how many will import |
+| 4. Import | **Import N items, skip M** sends only the good rows to `POST /admin/kanban/tasks/import`: all of them or none, so a batch never half-lands. If the board changed since the dry run (someone filled a column), the import refuses as a whole and says why; choose the file again for a fresh report |
+
+Both endpoints need `CREATE KANBAN_TASK`. Customer and reward imports were left out on purpose (Q19, 2026-11-03).
+
 ## Attachments
 
 `KANBAN_TASK_ATTACHMENT` is a private file category (PDF, JPEG, PNG, WebP; 10 MB, the single-request

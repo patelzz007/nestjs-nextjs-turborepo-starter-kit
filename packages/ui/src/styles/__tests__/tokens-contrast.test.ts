@@ -18,6 +18,8 @@ function mobileTheme(theme: string): ReadonlyMap<string, string> {
 const LIGHT = readCustomProperties(TOKENS_CSS, ":root");
 const DARK = readCustomProperties(TOKENS_CSS, ".dark", LIGHT);
 const NORD = readCustomProperties(TOKENS_CSS, ".nord", LIGHT);
+/** The admin panel's dark theme: the phone's graphite, written under `.dark .admin-app` over the shared dark theme. */
+const ADMIN_DARK = readCustomProperties(TOKENS_CSS, ".dark .admin-app", DARK);
 
 describe("design token contrast (WCAG: 4.5:1 text, 3:1 focus rings, chart series, search highlight)", () => {
 	it("the light theme meets every minimum", () => {
@@ -30,6 +32,10 @@ describe("design token contrast (WCAG: 4.5:1 text, 3:1 focus rings, chart series
 
 	it("the Nord theme meets every minimum", () => {
 		expect(findContrastViolations(NORD)).toEqual([]);
+	});
+
+	it("the admin panel's dark theme (graphite) meets every minimum", () => {
+		expect(findContrastViolations(ADMIN_DARK)).toEqual([]);
 	});
 });
 

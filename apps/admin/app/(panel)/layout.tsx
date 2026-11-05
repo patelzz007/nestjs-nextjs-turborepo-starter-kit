@@ -4,9 +4,7 @@ import * as React from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getServerUser, loadAdminServerSession } from "@/lib/auth-server";
-import { serverEnv } from "@/lib/env/env.server";
-import { resolveEnabledFeatureFlags } from "@/lib/feature-flags";
-import { loadMerchantInvitingOffered } from "@/lib/server/merchant-invite-availability";
+import { loadEnabledFeatureFlags } from "@/lib/server/feature-flag-settings";
 import { ADMIN_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
 import { ROUTES } from "@/lib/routes";
 import { redirect } from "next/navigation";
@@ -36,7 +34,7 @@ export interface PanelLayoutProps {
  */
 export default async function PanelLayout({ children }: PanelLayoutProps): Promise<React.JSX.Element> {
 	// The same per-request answer the root layout started the auth store from.
-	const [initialUser, session, cookieStore, merchantInvitesOffered] = await Promise.all([getServerUser(), loadAdminServerSession(), cookies(), loadMerchantInvitingOffered()]);
+	const [initialUser, session, cookieStore, enabledFeatureFlags] = await Promise.all([getServerUser(), loadAdminServerSession(), cookies(), loadEnabledFeatureFlags()]);
 	if (session.kind === "signed-out") {
 		redirect(ROUTES.auth.login);
 	}
@@ -45,7 +43,7 @@ export default async function PanelLayout({ children }: PanelLayoutProps): Promi
 		<DashboardShell
 			initialUser={initialUser}
 			initialSessionPermissions={session.kind === "signed-in" ? session.session.permissions : undefined}
-			enabledFeatureFlags={resolveEnabledFeatureFlags(serverEnv, { merchantInvitesOffered })}
+			enabledFeatureFlags={enabledFeatureFlags}
 			initialSidebarOpen={readSidebarOpenCookie(cookieStore, ADMIN_SIDEBAR_STORAGE_KEY)}>
 			{children}
 		</DashboardShell>

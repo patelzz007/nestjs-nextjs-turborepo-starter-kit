@@ -11,6 +11,9 @@
  * none of its own code loads that copy (since 58.1.18 its DevTools schemas are plain JSON schemas
  * and its MCP integration takes zod from `expo-mcp`), so the major bump changes nothing it runs.
  * A release that starts loading its own zod again fails here, to be re-checked against zod 4.
+ * The scoped `@firebase/firestore>@grpc/grpc-js` security override (~1.9 → 1.14): Firestore's own install
+ * resolves the overridden version, its Node build still loads, and the four grpc-js calls it makes (`Metadata`,
+ * `loadPackageDefinition`, `credentials.createSsl` / `createInsecure`) still work.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -27,6 +30,8 @@ const UUID_OVERRIDE_PATTERN = /^\s+["']?([^"'\s>]+)>uuid["']?:\s*["']?([^"'\s#]+
 const SHELL_QUOTE_OVERRIDE_PATTERN = /^\s+["']?concurrently>shell-quote["']?:\s*["']?([^"'\s#]+)["']?/m;
 /** `  "@expo/cli>zod": "4.6.7"` (quotes optional, trailing comment allowed). */
 const EXPO_CLI_ZOD_OVERRIDE_PATTERN = /^\s+["']?@expo\/cli>zod["']?:\s*["']?([^"'\s#]+)["']?/m;
+/** `  "@firebase/firestore>@grpc/grpc-js": "1.14.7"` (quotes optional, trailing comment allowed). */
+const FIRESTORE_GRPC_OVERRIDE_PATTERN = /^\s+["']?@firebase\/firestore>@grpc\/grpc-js["']?:\s*["']?([^"'\s#]+)["']?/m;
 const WORKSPACE_YAML = readFileSync(path.join(REPO_ROOT, "pnpm-workspace.yaml"), "utf8");
 
 function readUuidOverrides() {
@@ -114,5 +119,31 @@ describe("pnpm overrides: @expo/cli>zod", () => {
 			.filter((file) => file.endsWith(".js"))
 			.filter((file) => ownZodLoad.test(readFileSync(path.join(packageDir, "build", file), "utf8")));
 		expect(loaders).toEqual([]);
+	});
+});
+
+describe("pnpm overrides: @firebase/firestore>@grpc/grpc-js", () => {
+	const version = FIRESTORE_GRPC_OVERRIDE_PATTERN.exec(WORKSPACE_YAML)?.[1];
+
+	it("is declared", () => {
+		expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+	});
+
+	it("is what Firestore loads, and the grpc-js calls Firestore's Node build makes still work", () => {
+		const copies = installedCopies("@firebase/firestore");
+		expect(copies.length).toBeGreaterThan(0);
+		for (const packageDir of copies) {
+			const requireFromFirestore = createRequire(path.join(packageDir, "package.json"));
+			expect(requireFromFirestore("@grpc/grpc-js/package.json").version).toBe(version);
+			expect(typeof requireFromFirestore("@firebase/firestore").getFirestore).toBe("function");
+
+			const grpc = requireFromFirestore("@grpc/grpc-js");
+			const metadata = new grpc.Metadata();
+			metadata.set("x-goog-api-client", "gl-node");
+			expect(metadata.get("x-goog-api-client")).toEqual(["gl-node"]);
+			expect(grpc.credentials.createInsecure()).toBeTruthy();
+			expect(grpc.credentials.createSsl()).toBeTruthy();
+			expect(grpc.loadPackageDefinition({})).toEqual({});
+		}
 	});
 });

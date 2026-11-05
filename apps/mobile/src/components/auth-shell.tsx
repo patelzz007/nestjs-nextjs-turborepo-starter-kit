@@ -1,7 +1,7 @@
 // The frame around every signed-out screen (ADR 039): the brand on the dark
 // auth panel — the web sign-in's panel, from the same `auth-*` tokens — and a
 // rounded sheet below it that holds the screens. Presentational: the caller
-// gives the brand and the content (the (auth) stack).
+// gives the brand and the content (the auth/(forms) stack).
 //
 //   ┌──────────────────────────┐
 //   │          ╭───╮•          │   auth panel (dark in both themes): the
@@ -38,6 +38,8 @@ export interface AuthShellProps {
 	readonly brandName: string;
 	/** One line under the brand name. */
 	readonly tagline: string;
+	/** Small print under the tagline: which build is running and since when (hidden while compact). */
+	readonly buildLines?: readonly string[];
 	/** Folds the brand into one compact row to give the form room (while the keyboard is open). */
 	readonly compact?: boolean;
 	/** The screens. */
@@ -45,7 +47,7 @@ export interface AuthShellProps {
 	readonly testID?: string;
 }
 
-export function AuthShell({ brandName, tagline, compact = false, children, testID }: AuthShellProps): React.JSX.Element {
+export function AuthShell({ brandName, tagline, buildLines = [], compact = false, children, testID }: AuthShellProps): React.JSX.Element {
 	return (
 		<StyledSafeAreaView edges={["top", "left", "right"]} className="flex-1 bg-auth-panel" testID={testID}>
 			<StatusBar style="light" />
@@ -85,6 +87,15 @@ export function AuthShell({ brandName, tagline, compact = false, children, testI
 						{brandName}
 					</Text>
 					<Text className="max-w-xs text-center font-sans text-base text-auth-panel-muted">{tagline}</Text>
+					{buildLines.length === 0 ? null : (
+						<View className="mt-2 items-center gap-0.5" testID={testID === undefined ? undefined : `${testID}-build`}>
+							{buildLines.map((line: string): React.JSX.Element => (
+								<Text key={line} className="text-center font-sans text-xs text-auth-panel-muted">
+									{line}
+								</Text>
+							))}
+						</View>
+					)}
 				</View>
 			)}
 			<View className="flex-1 overflow-hidden rounded-t-4xl bg-card">{children}</View>

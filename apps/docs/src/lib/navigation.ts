@@ -50,9 +50,16 @@ export const MORE_GUIDES_SECTION = "More Guides";
 const HIDDEN_TAG = "superseded";
 const SEPARATOR_PATTERN = /^---\s*(?<title>.+?)\s*---$/;
 
+const DOCS_PREFIX = "/docs/";
+
 /** Public URL of a guide. Ids keep their case (`README`, `ADDING-A-FEATURE`). */
 export function docHref(id: string): string {
-	return `/docs/${id}`;
+	return `${DOCS_PREFIX}${id}`;
+}
+
+/** The guide a path shows (`/docs/technical/database` → `technical/database`), or `null` off the guides. */
+export function guideIdFromPath(pathname: string): string | null {
+	return pathname.startsWith(DOCS_PREFIX) && pathname.length > DOCS_PREFIX.length ? decodeURIComponent(pathname.slice(DOCS_PREFIX.length)) : null;
 }
 
 function toNavItem(guide: GuideSummary): NavItem {
@@ -96,6 +103,19 @@ export function buildNavSections(meta: DocsMeta, guides: readonly GuideSummary[]
 	return sections.filter((section) => section.items.length > 0).map((section) => ({ ...section, icon: sectionIcon(section.title) }));
 }
 
+/** What the guide tree draws for one guide: every page carries the tree, so it carries nothing else. */
+export type SidebarItem = Pick<NavItem, "id" | "title" | "icon">;
+
+export interface SidebarSection {
+	readonly title: string;
+	readonly items: readonly SidebarItem[];
+}
+
+/** The sections trimmed to what the guide tree draws (no descriptions or links: those are rebuilt from the id). */
+export function sidebarSections(sections: readonly NavSection[]): readonly SidebarSection[] {
+	return sections.map((section) => ({ title: section.title, items: section.items.map((item) => ({ id: item.id, title: item.title, icon: item.icon })) }));
+}
+
 /** Sidebar order as one list (drives previous / next links). */
 export function flattenNav(sections: readonly NavSection[]): readonly NavItem[] {
 	return sections.flatMap((section) => section.items);
@@ -121,10 +141,8 @@ export function findSection(sections: readonly NavSection[], id: string): NavSec
 	return sections.find((section) => section.items.some((item) => item.id === id)) ?? null;
 }
 
-/** Stable id for a content file path: `technical/authorization/overview.md` → `technical/authorization/overview`. */
-export function contentId(entryPath: string): string {
-	return entryPath.replace(/\\/g, "/").replace(/\.mdx?$/, "");
-}
+/** Stable id for a content file path; the renderer owns it (relative links resolve to the same ids). */
+export { contentId } from "@workspace/docs-renderer/markdown/content-id";
 
 /** Anchor id for a section heading on the learning-center page: `Architecture & Auth` → `architecture-auth`. */
 export function sectionSlug(title: string): string {

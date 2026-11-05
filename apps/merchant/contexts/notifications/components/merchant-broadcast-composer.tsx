@@ -12,6 +12,7 @@ import {
 import type { BroadcastDraftResult } from "@workspace/client/lib/features/broadcasts/broadcast-draft";
 import type { BroadcastDraftInput } from "@workspace/shared";
 import * as React from "react";
+import { useBroadcastPictureUpload } from "@workspace/client/lib/features/broadcasts/use-broadcast-picture-upload";
 
 export type { BroadcastSaveIntent };
 
@@ -60,6 +61,8 @@ export function MerchantBroadcastComposer({
 	cancel,
 }: MerchantBroadcastComposerProps): React.JSX.Element {
 	const toDraft = React.useCallback((values: BroadcastComposerValues, now: number): BroadcastDraftResult => toBroadcastDraft(values, storeTimeZone, now), [storeTimeZone]);
+	// The store's own picture (enhancement 5.4): uploaded to the tenant as a BROADCAST_IMAGE.
+	const picture = useBroadcastPictureUpload({ kind: "tenant", tenantSlug });
 	const renderAudience = React.useCallback(
 		({ values, onChange, error, disabled }: BroadcastAudienceSlot<BroadcastComposerValues>): React.ReactNode => (
 			<BroadcastRecipientsFields tenantSlug={tenantSlug} values={values} onChange={onChange} initialCustomers={initialCustomers} errorMessage={error} disabled={disabled} />
@@ -77,6 +80,7 @@ export function MerchantBroadcastComposer({
 			savingIntent={savingIntent}
 			onSave={onSave}
 			cancel={cancel}
+			picture={picture}
 		/>
 	);
 }

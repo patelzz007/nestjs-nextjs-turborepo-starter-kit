@@ -235,7 +235,7 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 	});
 
 	it("waits for readiness before any suite runs", () => {
-		expect(job.suites.map((step) => step.id)).toEqual(["browser:wait", "browser:web-suite", "browser:admin-suite"]);
+		expect(job.suites.map((step) => step.id)).toEqual(["browser:wait", "browser:web-suite", "browser:admin-suite", "browser:admin-visual-suite", "browser:merchant-suite"]);
 	});
 
 	it("gives the suites the workflow's base URLs and seed login", () => {
@@ -265,6 +265,7 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 			["browser:api", LOCAL_APP_PORTS.api],
 			["browser:web", LOCAL_APP_PORTS.web],
 			["browser:admin", LOCAL_APP_PORTS.admin],
+			["browser:merchant", LOCAL_APP_PORTS.merchant],
 		]);
 		expect(job.servers.find((server) => server.id === "browser:api")?.env?.PORT).toBe(String(LOCAL_APP_PORTS.api));
 		for (const server of job.servers.filter((candidate) => candidate.id !== "browser:api")) {
@@ -318,10 +319,52 @@ describe("the Node.js release", () => {
 	const nvmrc = repo(".nvmrc").trim();
 	const nodeVersionOf = (workflow) => /^\s*NODE_VERSION: "(?<version>[^"]+)"/mu.exec(workflow)?.groups?.version;
 
-	it("is the same in .nvmrc, CI, the dependency review and the engines floor", () => {
+	it("is the same in .nvmrc, CI, the dependency review, the mobile and load nightlies and the engines floor", () => {
 		expect(nvmrc).toMatch(/^\d+\.\d+\.\d+$/u);
 		expect(nodeVersionOf(WORKFLOW)).toBe(nvmrc);
 		expect(nodeVersionOf(repo(".github/workflows/dependency-review.yml"))).toBe(nvmrc);
+		expect(nodeVersionOf(repo(".github/workflows/mobile-nightly.yml"))).toBe(nvmrc);
+		expect(nodeVersionOf(repo(".github/workflows/load-nightly.yml"))).toBe(nvmrc);
 		expect(JSON.parse(repo("package.json")).engines.node).toBe(`>=${nvmrc}`);
+	});
+
+	it("is the one EAS builds the mobile app with, with the repository's own pnpm (EAS's image default is older: the install refused it)", () => {
+		const eas = JSON.parse(repo("apps/mobile/eas.json"));
+		const pnpmVersion = /^pnpm@(?<version>\d+\.\d+\.\d+)$/u.exec(JSON.parse(repo("package.json")).packageManager)?.groups?.version;
+		expect(eas.build.base).toMatchObject({ node: nvmrc, pnpm: pnpmVersion });
+		// Every other profile builds on the base, so none can run on a different Node or pnpm.
+		for (const [name, profile] of Object.entries(eas.build)) {
+			expect({ name, extends: name === "base" ? "base" : profile.extends }).toStrictEqual({ name, extends: "base" });
+		}
+	});
+
+	it("gives every EAS build profile its own EAS environment, so the build reads that environment's variables (GOOGLE_SERVICES_JSON among them)", () => {
+		const eas = JSON.parse(repo("apps/mobile/eas.json"));
+		const { base: _base, ...profiles } = eas.build;
+		expect(Object.entries(profiles).map(([name, profile]) => [name, profile.environment])).toStrictEqual([
+			["development", "development"],
+			["preview", "preview"],
+			["production", "production"],
+		]);
+	});
+
+	it("bakes the demo logins into development and preview builds and keeps them out of production (EAS never sees .env; ADR 042)", () => {
+		const eas = JSON.parse(repo("apps/mobile/eas.json"));
+		const { base: _base, ...profiles } = eas.build;
+		expect(Object.entries(profiles).map(([name, profile]) => [name, profile.env?.EXPO_PUBLIC_SHOW_DEMO_ACCOUNT])).toStrictEqual([
+			["development", "true"],
+			["preview", "true"],
+			["production", "false"],
+		]);
+	});
+
+	it("lets development and preview builds reach the API on the Mac over LAN http, as `.env` does locally (else EAS's runtime version differs from the Mac's), and never production", () => {
+		const eas = JSON.parse(repo("apps/mobile/eas.json"));
+		const { base: _base, ...profiles } = eas.build;
+		expect(Object.entries(profiles).map(([name, profile]) => [name, profile.env?.EXPO_PUBLIC_ALLOW_LAN_HTTP_API])).toStrictEqual([
+			["development", "true"],
+			["preview", "true"],
+			["production", undefined],
+		]);
 	});
 });

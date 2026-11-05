@@ -12,17 +12,23 @@ import type {
 	StorageDeleteJob,
 	StorageObjectLocator,
 } from "@workspace/shared";
-import { epochMs } from "@workspace/shared";
+import { DocumentMimeTypeSchema, epochMs } from "@workspace/shared";
 
 import { ActorContextSchema, actingUserId, systemActor, type ActorContext } from "../../../../../platform/application/actor-context";
 import { TransactionalEventCollector } from "../../../../../platform/application/events/transactional-event-collector";
-import { StoredFileAggregate, type StoredFileState, type VerifiedUpload } from "../../../domain/aggregates/stored-file.aggregate";
+import {
+	AWAITING_VERDICT_STATUSES,
+	StoredFileAggregate,
+	type StoredFileState,
+	type UploadDescription,
+	type VerifiedUpload,
+} from "../../../domain/aggregates/stored-file.aggregate";
 import type { StoredFileRepository, StoredFileSaveOutcome } from "../../../domain/repositories/stored-file.repository";
 import type { FilesScope } from "../../files-scope";
 import type { FileAccessAction, FileAccessSubject, FileActor, FileCategoryAccessRule } from "../../ports/file-category-access.port";
-import type { FileObjectStoragePort, UploadTicketRequest } from "../../ports/file-object-storage.port";
+import type { FileObjectStoragePort, ServerUploadWrite, UploadTicketRequest } from "../../ports/file-object-storage.port";
 import type { FileReferenceBlock, FileReferenceSubject } from "../../ports/file-reference.port";
-import type { StoredFileReadPort, StoredFileView } from "../../ports/stored-file-read.port";
+import type { IngestedFileContent, StoredFileReadPort, StoredFileView } from "../../ports/stored-file-read.port";
 import { StorageTaskDispatcher } from "../../ports/storage-task-dispatcher.port";
 
 export const FILE_ID = "0b7c2a5e-6f1d-4c2e-9d3a-1f2e3d4c5b6a";
@@ -55,7 +61,11 @@ export function storedFileState(overrides: Partial<StoredFileState> = {}): Store
 	};
 }
 
-export function viewOf(state: StoredFileState): StoredFileView {
+/** The view of a row; `upload` (what an upload request declared) replaces the KYB-licence defaults. */
+export function viewOf(state: StoredFileState, upload?: UploadDescription): StoredFileView {
+	const originalName = upload?.originalName ?? "licence.pdf";
+	const mimeType = upload?.mimeType ?? "application/pdf";
+	const sizeBytes = upload?.sizeBytes ?? 22;
 	return {
 		id: state.id,
 		category: state.category,
@@ -64,9 +74,9 @@ export function viewOf(state: StoredFileState): StoredFileView {
 		uploadedById: state.uploadedById,
 		tenantId: state.tenantId,
 		productId: state.productId,
-		originalName: "licence.pdf",
-		mimeType: "application/pdf",
-		sizeBytes: 22,
+		originalName,
+		mimeType,
+		sizeBytes,
 		expectedChecksum: state.expectedChecksum,
 		locator: state.original.locator,
 		publicPath: state.original.publicPath,
@@ -75,9 +85,9 @@ export function viewOf(state: StoredFileState): StoredFileView {
 			id: state.id,
 			category: state.category,
 			visibility: state.visibility,
-			originalName: "licence.pdf",
-			mimeType: "application/pdf",
-			sizeBytes: 22,
+			originalName,
+			mimeType: DocumentMimeTypeSchema.parse(mimeType),
+			sizeBytes,
 			status: state.status,
 			scanStatus: null,
 			publicUrl: null,
@@ -93,6 +103,8 @@ export class InMemoryStoredFiles implements StoredFileRepository {
 	public readonly verified: VerifiedUpload[] = [];
 	public readonly deletedBy: string[] = [];
 	public readonly locked: string[] = [];
+	/** What each request added here declared (name, type, size, checksum), by file id. */
+	public readonly uploads = new Map<string, UploadDescription>();
 	/** A concurrent writer changes the row between load and save. */
 	public raceOnNextSave = false;
 
@@ -104,6 +116,10 @@ export class InMemoryStoredFiles implements StoredFileRepository {
 
 	public add(file: StoredFileAggregate): Promise<void> {
 		this.added.push(file);
+		const change = file.pendingChange;
+		if (change.kind === "requested") {
+			this.uploads.set(file.id, change.upload);
+		}
 		this.rows.set(file.id, {
 			id: file.id,
 			category: file.category,
@@ -113,7 +129,7 @@ export class InMemoryStoredFiles implements StoredFileRepository {
 			uploadedById: file.uploadedById,
 			tenantId: file.tenantId,
 			productId: file.productId,
-			expectedChecksum: CHECKSUM,
+			expectedChecksum: change.kind === "requested" ? change.upload.expectedChecksum : CHECKSUM,
 			original: file.original,
 			renditions: [],
 		});
@@ -151,6 +167,14 @@ export class InMemoryStoredFiles implements StoredFileRepository {
 	public status(fileId: string): FileStatus | undefined {
 		return this.rows.get(fileId)?.status;
 	}
+
+	/** A verdict applied from outside (what the scan pipeline does to the row). */
+	public decide(fileId: string, status: FileStatus): void {
+		const row = this.rows.get(fileId);
+		if (row !== undefined) {
+			this.rows.set(fileId, { ...row, status });
+		}
+	}
 }
 
 /** Reads over the same in-memory rows; a file the actor "cannot see" is listed in `hiddenFrom`. */
@@ -171,6 +195,27 @@ export class InMemoryStoredFileReads implements StoredFileReadPort {
 	public findOwnUpload(actor: ActorContext, fileId: string): Promise<StoredFileView | null> {
 		const row = this.files.rows.get(fileId);
 		return Promise.resolve(row === undefined || row.isDeleted || row.uploadedById !== actingUserId(actor) ? null : viewOf(row));
+	}
+
+	/** The newest live row holding `content`: READY first, else one awaiting a verdict (insertion order stands in for `createdAt`). */
+	public findIngestedContent(_actor: ActorContext, content: IngestedFileContent): Promise<StoredFileView | null> {
+		const matching = [...this.files.rows.values()].reverse().filter((row) => {
+			const upload = this.files.uploads.get(row.id);
+			return (
+				!row.isDeleted &&
+				row.tenantId === content.tenantId &&
+				row.category === content.category &&
+				row.expectedChecksum === content.checksumSha256 &&
+				upload?.originalName === content.originalName
+			);
+		});
+		const found = matching.find((row) => row.status === "READY") ?? matching.find((row) => AWAITING_VERDICT_STATUSES.includes(row.status));
+		return Promise.resolve(found === undefined ? null : viewOf(found, this.files.uploads.get(found.id)));
+	}
+
+	public findLiveForIngest(_actor: ActorContext, fileId: string): Promise<StoredFileView | null> {
+		const row = this.files.rows.get(fileId);
+		return Promise.resolve(row === undefined || row.isDeleted ? null : viewOf(row, this.files.uploads.get(fileId)));
 	}
 
 	public listStalePending(): Promise<readonly StoredFileView[]> {
@@ -221,6 +266,7 @@ export class RecordingStorageTaskDispatcher extends StorageTaskDispatcher {
 /** Object storage as the use cases see it. Verification answers with `verification` (or throws `verificationError`). */
 export class FakeFileObjectStorage implements FileObjectStoragePort {
 	public readonly tickets: UploadTicketRequest[] = [];
+	public readonly serverWrites: ServerUploadWrite[] = [];
 	public readonly verifiedChecksums: string[] = [];
 	public readonly withdrawn: string[] = [];
 	public readonly deleted: string[] = [];
@@ -243,6 +289,11 @@ export class FakeFileObjectStorage implements FileObjectStoragePort {
 			method: "PUT",
 			uploadUrl: `https://storage.test/${request.locator.path}`,
 		});
+	}
+
+	public writeServerUpload(write: ServerUploadWrite): Promise<void> {
+		this.serverWrites.push(write);
+		return Promise.resolve();
 	}
 
 	public verifyUpload(_file: StoredFileView, checksumSha256: string): Promise<VerifiedUpload> {

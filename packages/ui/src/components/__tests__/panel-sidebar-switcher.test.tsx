@@ -27,7 +27,7 @@ function group(overrides: Partial<PanelSidebarSwitcherGroup> = {}): PanelSidebar
 }
 
 function openMenu(): HTMLElement {
-	fireEvent.click(screen.getByRole("button", { name: /^Switch store/u }));
+	fireEvent.click(screen.getByRole("button", { name: /, Switch store$/u }));
 	return screen.getByRole("menu");
 }
 
@@ -39,7 +39,7 @@ describe("PanelSidebarSwitcher", () => {
 				wrapper: UiKitTestProviders,
 			},
 		);
-		const trigger = screen.getByRole("button", { name: "Switch store: Acme Coffee, Downtown" });
+		const trigger = screen.getByRole("button", { name: "Acme Coffee, Downtown, Switch store" });
 		expect(trigger.textContent).toContain("Acme Coffee");
 		expect(trigger.textContent).toContain("Downtown");
 	});

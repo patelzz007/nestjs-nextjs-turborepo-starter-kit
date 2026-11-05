@@ -16,9 +16,11 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { BACKUP_CODE_LENGTH, normalizeBackupCodeInput, TOTP_CODE_LENGTH, type TwoFactorSetupResponse } from "@workspace/shared";
-import { useCallback, useEffect, useRef, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX, type ReactNode } from "react";
 
 import { MfaRecoveryRequestPanel } from "./recovery-request-panel";
+import { PasskeysSection } from "../passkeys/passkeys-section";
+import { PASSKEYS_LABELS } from "../passkeys/passkeys-labels";
 import { SignedInDevicesSection } from "../sessions/signed-in-devices-section";
 import { SIGNED_IN_DEVICES_LABELS } from "../sessions/signed-in-devices-labels";
 import { useEmailVerifiedToast } from "../email/use-verified-toast";
@@ -324,7 +326,16 @@ function useEnrollmentMessageToast(): void {
 	}, []);
 }
 
-export function SecuritySettingsPanel(): JSX.Element {
+export interface SecuritySettingsPanelProps {
+	/** More sections after the security ones, in the same grid (the privacy context's "Your data" and "Delete my account"). */
+	readonly children?: ReactNode;
+}
+
+/**
+ * The account's security settings. Other contexts' sections are passed in (`children`) by the page that
+ * composes them, so identity never depends on them.
+ */
+export function SecuritySettingsPanel({ children }: SecuritySettingsPanelProps): JSX.Element {
 	useEmailVerifiedToast();
 	useEnrollmentMessageToast();
 
@@ -351,6 +362,15 @@ export function SecuritySettingsPanel(): JSX.Element {
 				</div>
 				<TwoFactorSetupPanel />
 			</section>
+			<section className="space-y-4 rounded-xl border bg-card p-6 lg:col-span-2" aria-labelledby="passkeys-heading">
+				<div>
+					<h2 id="passkeys-heading" className="text-lg font-semibold">
+						{PASSKEYS_LABELS.title}
+					</h2>
+					<p className="text-sm text-muted-foreground">{PASSKEYS_LABELS.description}</p>
+				</div>
+				<PasskeysSection />
+			</section>
 			<section className="space-y-4 rounded-xl border bg-card p-6 lg:col-span-2" aria-labelledby="signed-in-devices-heading">
 				<div>
 					<h2 id="signed-in-devices-heading" className="text-lg font-semibold">
@@ -367,6 +387,7 @@ export function SecuritySettingsPanel(): JSX.Element {
 				</div>
 				<MfaRecoveryRequestPanel />
 			</section>
+			{children}
 		</div>
 	);
 }

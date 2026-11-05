@@ -27,6 +27,7 @@
 		"pnpm-lock.yaml",
 		".pnpm-store/",
 		".expo/",
-		"**/uniwind-types.d.ts"
+		"**/uniwind-types.d.ts",
+		"**/routeTree.gen.ts"
 	]
 }

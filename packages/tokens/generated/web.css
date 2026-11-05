@@ -5,7 +5,8 @@
  *
  * The web design tokens, imported by packages/ui src/styles/globals.css:
  * :root holds the palette primitives, the theme-independent tokens and the light
- * theme; .dark and .nord hold the dark and Nord themes; @theme inline maps tokens to Tailwind utilities.
+ * theme; .dark and .nord hold the dark and Nord themes; .admin-app holds the admin panel's own re-maps
+ * (its dark theme is the phone's graphite); @theme inline maps tokens to Tailwind utilities.
  */
 
 :root {
@@ -97,6 +98,39 @@
 	--palette-vivid-8: oklch(0.795 0.118 217.5);
 	--palette-vivid-9: oklch(0.717 0.112 248.7);
 	--palette-vivid-14: oklch(0.788 0.142 131.1);
+	--palette-gray-10: oklch(0.993 0 0);
+	--palette-gray-25: oklch(0.985 0 0);
+	--palette-gray-50: oklch(0.965 0 0);
+	--palette-gray-100: oklch(0.943 0 0);
+	--palette-gray-200: oklch(0.912 0 0);
+	--palette-gray-300: oklch(0.87 0 0);
+	--palette-gray-400: #a4a4a4;
+	--palette-gray-500: oklch(0.6 0 0);
+	--palette-gray-600: oklch(0.51 0 0);
+	--palette-gray-700: #4a4a4a;
+	--palette-gray-900: oklch(0.205 0 0);
+	--palette-dusk-25: #e6e9f0;
+	--palette-dusk-50: #d6dae4;
+	--palette-dusk-100: #c0c5cf;
+	--palette-dusk-200: #b8bfcb;
+	--palette-dusk-300: #a3aab7;
+	--palette-dusk-600: #4a5162;
+	--palette-dusk-700: #3b4150;
+	--palette-dusk-750: #343a47;
+	--palette-dusk-800: #303540;
+	--palette-dusk-900: #2b2d36;
+	--palette-dusk-950: #262830;
+	--palette-dusk-accent: #8aa4c8;
+	--palette-dusk-accent-soft: #2f3a4b;
+	--palette-dusk-accent-link: #8da7ca;
+	--palette-graphite-25: #f0f1f4;
+	--palette-graphite-400: #a9adb6;
+	--palette-graphite-700: #46494f;
+	--palette-graphite-750: #3a3c40;
+	--palette-graphite-800: #313337;
+	--palette-graphite-850: #292b2f;
+	--palette-graphite-950: #1c1d20;
+	--palette-graphite-975: #151619;
 	--z-overlay: 50;
 	--z-popover: 50;
 	--z-toast: 60;
@@ -169,6 +203,7 @@
 	--topbar: var(--palette-neutral-50);
 	--shell-frame: var(--palette-neutral-40);
 	--shell-panel: var(--palette-neutral-50);
+	--sheet: var(--palette-neutral-25);
 	--primary: var(--palette-brand-800);
 	--primary-foreground: var(--palette-neutral-0);
 	--secondary: var(--palette-neutral-100);
@@ -253,6 +288,7 @@
 	--topbar: var(--palette-ink-850);
 	--shell-frame: var(--palette-ink-950);
 	--shell-panel: var(--palette-ink-850);
+	--sheet: var(--palette-ink-800);
 	--primary: var(--palette-brand-100);
 	--primary-foreground: var(--palette-brand-950);
 	--secondary: var(--palette-ink-700);
@@ -337,6 +373,7 @@
 	--topbar: var(--palette-nord-0);
 	--shell-frame: #272c36;
 	--shell-panel: var(--palette-nord-0);
+	--sheet: #333a47;
 	--primary: var(--palette-vivid-9);
 	--primary-foreground: var(--palette-nord-0);
 	--secondary: var(--palette-nord-2);
@@ -409,6 +446,64 @@
 	--auth-brand-from: var(--palette-vivid-9);
 	--auth-brand-to: var(--palette-nord-10);
 	--link: #94c6d4;
+}
+
+.dark .admin-app {
+	--background: var(--palette-graphite-950);
+	--foreground: var(--palette-graphite-25);
+	--card: var(--palette-graphite-850);
+	--card-foreground: var(--palette-graphite-25);
+	--popover: var(--palette-graphite-800);
+	--popover-foreground: var(--palette-graphite-25);
+	--topbar: var(--palette-graphite-950);
+	--shell-frame: var(--palette-graphite-975);
+	--shell-panel: var(--palette-graphite-950);
+	--sheet: var(--palette-graphite-850);
+	--primary: var(--palette-graphite-25);
+	--primary-foreground: var(--palette-graphite-950);
+	--secondary: var(--palette-graphite-750);
+	--secondary-foreground: var(--palette-graphite-25);
+	--muted: var(--palette-graphite-750);
+	--muted-foreground: var(--palette-graphite-400);
+	--accent: var(--palette-graphite-750);
+	--accent-foreground: var(--palette-graphite-25);
+	--destructive-soft: oklch(0.35 0.085 25);
+	--success-soft: oklch(0.34 0.075 150);
+	--warning-soft: oklch(0.34 0.05 85);
+	--info-soft: oklch(0.34 0.075 255);
+	--tone-green-soft: oklch(0.34 0.075 150);
+	--tone-blue-soft: oklch(0.34 0.075 255);
+	--tone-yellow: oklch(0.85 0.1 88);
+	--tone-yellow-soft: oklch(0.34 0.05 85);
+	--tone-red-soft: oklch(0.35 0.085 25);
+	--tone-orange-soft: oklch(0.35 0.075 50);
+	--tone-teal-soft: oklch(0.34 0.06 190);
+	--tone-violet-soft: oklch(0.35 0.085 295);
+	--border: var(--palette-graphite-750);
+	--input: var(--palette-graphite-700);
+	--ring: #8ab4ff;
+	--chart-1: #8ab4ff;
+	--chart-2: var(--palette-warm-300);
+	--chart-3: oklch(0.72 0.1 190);
+	--chart-4: oklch(0.7 0.14 295);
+	--chart-5: var(--palette-gray-500);
+	--sidebar: var(--palette-graphite-950);
+	--sidebar-foreground: var(--palette-graphite-25);
+	--sidebar-primary: var(--palette-graphite-25);
+	--sidebar-primary-foreground: var(--palette-graphite-950);
+	--sidebar-accent: var(--palette-graphite-750);
+	--sidebar-accent-foreground: var(--palette-graphite-25);
+	--sidebar-border: var(--palette-graphite-750);
+	--sidebar-ring: #8ab4ff;
+	--sidebar-active: var(--palette-graphite-25);
+	--sidebar-active-foreground: var(--palette-graphite-950);
+	--sidebar-active-border: var(--palette-graphite-25);
+	--search-mark-bg: #8ab4ff;
+	--search-mark-fg: var(--palette-graphite-950);
+	--shadow-ambient: oklch(0 0 0 / 0.3);
+	--shadow-key: oklch(0 0 0 / 0.5);
+	--edge-highlight: oklch(1 0 0 / 0.04);
+	--link: #8ab4ff;
 }
 
 @theme inline {
@@ -491,6 +586,7 @@
 	--color-topbar: var(--topbar);
 	--color-shell-frame: var(--shell-frame);
 	--color-shell-panel: var(--shell-panel);
+	--color-sheet: var(--sheet);
 	--color-tier-bronze: var(--tier-bronze);
 	--color-tier-bronze-soft: var(--tier-bronze-soft);
 	--color-tier-silver: var(--tier-silver);

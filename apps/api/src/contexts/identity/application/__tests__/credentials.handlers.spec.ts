@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { epochMs } from "@workspace/shared";
 
 import { PasswordResetToken } from "../../domain/entities/password-reset-token.entity";
-import { CurrentPasswordIncorrectError, InvalidCredentialsError, PasswordResetTokenInvalidError, PasswordReusedError } from "../../domain/errors/identity.errors";
+import {
+	PasswordBreachedError,
+	CurrentPasswordIncorrectError,
+	InvalidCredentialsError,
+	PasswordResetTokenInvalidError,
+	PasswordReusedError,
+} from "../../domain/errors/identity.errors";
 import { EmailAddress } from "../../domain/value-objects/email-address.value-object";
 import { MAX_FAILED_SIGN_IN_ATTEMPTS } from "../../domain/value-objects/lockout-state.value-object";
 import { TokenVersion } from "../../domain/value-objects/token-version.value-object";
@@ -16,6 +22,7 @@ import { ResetPasswordCommand } from "../commands/reset-password/reset-password.
 import { ResetPasswordHandler } from "../commands/reset-password/reset-password.handler";
 import { signInHarness, type SignInHarness } from "./fakes/identity-sign-in.fakes";
 import {
+	FakeBreachCheck,
 	FakeCredentialCrypto,
 	FixedClock,
 	InMemoryIdentityStore,
@@ -25,6 +32,7 @@ import {
 	TEST_DEVICE,
 	accountState,
 	anonymousActor,
+	passkeyState,
 	sessionState,
 	userActor,
 } from "./fakes/identity.fakes";
@@ -37,7 +45,11 @@ let store: InMemoryIdentityStore;
 let clock: FixedClock;
 let flow: RecordingFlowSubject;
 
+/** Refuses nothing unless a test swaps in a breached password. */
+let breachCheck: FakeBreachCheck = new FakeBreachCheck();
+
 beforeEach(() => {
+	breachCheck = new FakeBreachCheck();
 	store = new InMemoryIdentityStore();
 	clock = new FixedClock();
 	flow = new RecordingFlowSubject();
@@ -95,10 +107,22 @@ describe("LogInHandler", () => {
 	it("asks for the second factor of an account with 2FA, storing a login challenge and no session", async () => {
 		store.accounts.seed(accountState({ id: USER_ID, email: EmailAddress.of(EMAIL), passwordHash: `hash:${PASSWORD}`, twoFactorEnabled: true }));
 
-		await expect(logIn(PASSWORD)).resolves.toEqual({ requiresTwoFactor: true, tempToken: "challenge-ref", message: "Two-factor authentication required" });
+		await expect(logIn(PASSWORD)).resolves.toEqual({
+			requiresTwoFactor: true,
+			tempToken: "challenge-ref",
+			message: "Two-factor authentication required",
+			passkeyAvailable: false,
+		});
 
 		expect(store.challenges.rows.get("challenge-1")).toMatchObject({ userId: USER_ID, purpose: "LOGIN", attemptCount: 0 });
 		expect(store.sessions.rows.has("session-1")).toBe(false);
+	});
+
+	it("tells the second step the account may answer with a passkey instead of a code (ADR 080)", async () => {
+		store.accounts.seed(accountState({ id: USER_ID, email: EmailAddress.of(EMAIL), passwordHash: `hash:${PASSWORD}`, twoFactorEnabled: true }));
+		store.passkeys.seed(passkeyState({ id: "passkey-1", userId: USER_ID }));
+
+		await expect(logIn(PASSWORD)).resolves.toMatchObject({ requiresTwoFactor: true, passkeyAvailable: true });
 	});
 
 	it("answers the uniform INVALID_CREDENTIALS to the admin panel for an account without dashboard access", async () => {
@@ -122,7 +146,7 @@ describe("LogInHandler", () => {
 
 describe("ChangePasswordHandler", () => {
 	function change(currentPassword: string, newPassword: string): ReturnType<ChangePasswordHandler["execute"]> {
-		return new ChangePasswordHandler(store.uow, new FakeCredentialCrypto(), flow, clock).execute(
+		return new ChangePasswordHandler(store.uow, new FakeCredentialCrypto(), flow, clock, breachCheck).execute(
 			new ChangePasswordCommand(userActor(USER_ID), { userId: USER_ID, currentPassword, newPassword }),
 		);
 	}
@@ -148,6 +172,21 @@ describe("ChangePasswordHandler", () => {
 	});
 });
 
+describe("ChangePasswordHandler and breached passwords", () => {
+	it("refuses a new password found in a data breach, changing nothing", async () => {
+		breachCheck = new FakeBreachCheck(new Set(["Battery-Staple-2"]));
+
+		await expect(
+			new ChangePasswordHandler(store.uow, new FakeCredentialCrypto(), flow, clock, breachCheck).execute(
+				new ChangePasswordCommand(userActor(USER_ID), { userId: USER_ID, currentPassword: PASSWORD, newPassword: "Battery-Staple-2" }),
+			),
+		).rejects.toBeInstanceOf(PasswordBreachedError);
+
+		expect(store.accounts.rows.get(USER_ID)?.passwordHash).toBe(`hash:${PASSWORD}`);
+		expect(store.sessions.revokerOf("session-old")).toBeNull();
+	});
+});
+
 describe("Password reset", () => {
 	const crypto = new FakeCredentialCrypto();
 
@@ -158,7 +197,7 @@ describe("Password reset", () => {
 	}
 
 	function reset(token: string, password: string): ReturnType<ResetPasswordHandler["execute"]> {
-		return new ResetPasswordHandler(store.uow, crypto, flow, clock).execute(new ResetPasswordCommand(anonymousActor(), { token, password }));
+		return new ResetPasswordHandler(store.uow, crypto, flow, clock, breachCheck).execute(new ResetPasswordCommand(anonymousActor(), { token, password }));
 	}
 
 	it("issues one usable link per request, expiring the older open ones, and mails it", async () => {
@@ -189,6 +228,18 @@ describe("Password reset", () => {
 		expect(store.sessions.revokerOf("session-old")).toBe("system:logout-all");
 		expect(flow.identified).toContain(USER_ID);
 		await expect(reset(token, "Another-Pass-3")).rejects.toBeInstanceOf(PasswordResetTokenInvalidError);
+	});
+
+	it("refuses a new password found in a data breach and leaves the link usable", async () => {
+		await requestReset(EMAIL);
+		const [mail] = store.emails.sent;
+		const token: string = mail?.detail ?? "";
+		breachCheck = new FakeBreachCheck(new Set(["Battery-Staple-2"]));
+
+		await expect(reset(token, "Battery-Staple-2")).rejects.toBeInstanceOf(PasswordBreachedError);
+
+		expect(store.accounts.rows.get(USER_ID)?.passwordHash).toBe(`hash:${PASSWORD}`);
+		await expect(store.resetTokens.findUsableByDigest(`sha:${token}`, NOW)).resolves.toBeInstanceOf(PasswordResetToken);
 	});
 
 	it("refuses an unknown link", async () => {

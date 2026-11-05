@@ -3,6 +3,7 @@
 
 import type { AppVersion, NodeEnv } from "@workspace/shared";
 
+import { RECORD_RETENTION_DAYS } from "../../platform/domain/record-retention";
 import type { LogLevel, TenantKmsProvider } from "../api-env.fields";
 
 // ── Durations and defaults (named, never magic) ────────────────────────────
@@ -57,6 +58,13 @@ export const DEFAULT_EMAIL_TIMEOUT_MS = 10 * MS_PER_SECOND;
 /** Where the `mailpit` Docker service listens by default (`pnpm mailpit`): web inbox + HTTP API. */
 export const DEFAULT_MAILPIT_URL = "http://localhost:8025";
 export const DEFAULT_WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
+/** Days a received webhook is kept when INBOUND_WEBHOOK_RETENTION_DAYS is unset (ADR 081): a month of delivery history. */
+export const DEFAULT_INBOUND_WEBHOOK_RETENTION_DAYS = 30;
+/**
+ * The shortest retention allowed: the log is also the replay guard, and providers redeliver for days
+ * (GitHub lets a person redeliver for three, Svix retries for about one) — a week keeps every one recognised.
+ */
+export const MIN_INBOUND_WEBHOOK_RETENTION_DAYS = 7;
 
 export const DEFAULT_THROTTLE_DEFAULT_LIMIT = 300;
 export const DEFAULT_THROTTLE_STRICT_LIMIT = 30;
@@ -118,8 +126,8 @@ export const MIN_MEMORY_LEAK_WINDOW_MS = 5 * MS_PER_MINUTE;
 export const DEFAULT_MEMORY_LEAK_GROWTH_THRESHOLD_MB = 64;
 /** Where the plain-text transaction log is written when TRANSACTION_LOG_DIR is unset (relative to the monorepo root: `<repo>/logs/transactions`). */
 export const DEFAULT_TRANSACTION_LOG_DIR = "logs/transactions";
-/** Days of transaction log files kept when TRANSACTION_LOG_RETENTION_DAYS is unset. */
-export const DEFAULT_TRANSACTION_LOG_RETENTION_DAYS = 30;
+/** Days of transaction log files kept when TRANSACTION_LOG_RETENTION_DAYS is unset: the record retention (ten years). */
+export const DEFAULT_TRANSACTION_LOG_RETENTION_DAYS: number = RECORD_RETENTION_DAYS;
 
 /**
  * The zone the transaction log reads its times in when TRANSACTION_LOG_TIME_ZONE

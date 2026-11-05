@@ -1,0 +1,103 @@
+// What the root `@workspace/shared` barrel exposes of the `webhooks` context (enhancement 8.2): a curated subset of
+// this context's index. Its own contract objects and route maps stay behind the aggregated `apiContract` /
+// `apiRoutes`. Add a name here to make it part of the package's public surface (the export snapshot in
+// src/contracts/__tests__/api-contract-shape.test.ts records it).
+
+// ── Inbound: received webhooks (ADR 081) ─────────────────────────────────────
+export {
+	RECEIVED_WEBHOOK_DELIVERY_ID_MAX_LENGTH,
+	RECEIVED_WEBHOOK_ERROR_SUMMARY_MAX_LENGTH,
+	RECEIVED_WEBHOOK_EVENT_TYPE_MAX_LENGTH,
+	RECEIVED_WEBHOOK_HEADER_VALUE_MAX_LENGTH,
+	ReceivedWebhookDetailSchema,
+	ReceivedWebhookHeadersSchema,
+	ReceivedWebhookIdParamSchema,
+	ReceivedWebhookListQuerySchema,
+	ReceivedWebhookOutcomeSchema,
+	ReceivedWebhookProviderSchema,
+	ReceivedWebhookSummarySchema,
+	ReceivedWebhookVerificationSchema,
+	receivedWebhookListQuery,
+} from "./schemas/received-webhooks";
+export type {
+	ReceivedWebhookDetail,
+	ReceivedWebhookHeaders,
+	ReceivedWebhookIdParam,
+	ReceivedWebhookListQuery,
+	ReceivedWebhookListSortField,
+	ReceivedWebhookOutcome,
+	ReceivedWebhookProvider,
+	ReceivedWebhookSummary,
+	ReceivedWebhookVerification,
+} from "./schemas/received-webhooks";
+
+// ── Outbound: outgoing webhooks for integrators (ADR 082) ───────────────────
+export {
+	WEBHOOK_API_VERSION,
+	WEBHOOK_EVENT_TYPE_DESCRIPTIONS,
+	WEBHOOK_ID_HEADER,
+	WEBHOOK_PAYLOAD_TEXT_MAX_LENGTH,
+	WEBHOOK_SIGNATURE_HEADER,
+	WEBHOOK_SIGNATURE_TOLERANCE_SECONDS,
+	WEBHOOK_TIMESTAMP_HEADER,
+	WebhookClaimDataSchema,
+	WebhookEventDraftSchema,
+	WebhookEventEnvelopeSchema,
+	WebhookEventTypeSchema,
+	WebhookPaymentDataSchema,
+	WebhookRewardPublishedDataSchema,
+	WebhookRewardPublishedViaSchema,
+	WebhookRewardRejectedDataSchema,
+	WebhookSaleCompletedDataSchema,
+	WebhookSubscribableEventTypeSchema,
+	WebhookTestDataSchema,
+} from "./schemas/outbound-webhook-events";
+export type { WebhookEventDraft, WebhookEventEnvelope, WebhookEventType, WebhookSubscribableEventType } from "./schemas/outbound-webhook-events";
+export {
+	CreateWebhookEndpointSchema,
+	DEFAULT_WEBHOOK_SECRET_GRACE_HOURS,
+	MAX_WEBHOOK_ENDPOINTS_PER_TENANT,
+	MAX_WEBHOOK_SECRET_GRACE_HOURS,
+	RotateWebhookSecretSchema,
+	UpdateWebhookEndpointSchema,
+	WEBHOOK_DELIVERIES_PAGE_SIZE,
+	WEBHOOK_DELIVERY_ERROR_MAX_LENGTH,
+	WEBHOOK_ENDPOINT_DESCRIPTION_MAX_LENGTH,
+	WEBHOOK_ENDPOINT_URL_MAX_LENGTH,
+	WEBHOOK_SECRET_HINT_LENGTH,
+	WEBHOOK_SECRET_PREFIX,
+	WebhookDeliveryIdParamsSchema,
+	WebhookDeliveryListQuerySchema,
+	WebhookDeliveryStatusSchema,
+	WebhookDeliverySummarySchema,
+	WebhookEndpointDisabledReasonSchema,
+	WebhookEndpointEventTypesSchema,
+	WebhookEndpointIdParamsSchema,
+	WebhookEndpointListQuerySchema,
+	WebhookEndpointStatusSchema,
+	WebhookEndpointSummarySchema,
+	WebhookEndpointUrlSchema,
+	WebhookEndpointWithSecretSchema,
+	webhookDeliveryListQuery,
+	webhookEndpointListQuery,
+} from "./schemas/outbound-webhooks";
+export type {
+	CreateWebhookEndpoint,
+	CreateWebhookEndpointInput,
+	RotateWebhookSecret,
+	RotateWebhookSecretInput,
+	UpdateWebhookEndpoint,
+	UpdateWebhookEndpointInput,
+	WebhookDeliveryIdParams,
+	WebhookDeliveryListQuery,
+	WebhookDeliveryListSortField,
+	WebhookDeliveryStatus,
+	WebhookDeliverySummary,
+	WebhookEndpointDisabledReason,
+	WebhookEndpointIdParams,
+	WebhookEndpointListQuery,
+	WebhookEndpointListSortField,
+	WebhookEndpointStatus,
+	WebhookEndpointSummary,
+	WebhookEndpointWithSecret,
+} from "./schemas/outbound-webhooks";

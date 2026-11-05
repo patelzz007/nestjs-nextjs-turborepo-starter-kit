@@ -34,6 +34,11 @@ import { GithubModule } from "./contexts/integrations-github/public-api";
 import { HealthModule } from "./platform/presentation/http/health/health.module";
 import { LogsModule } from "./platform/infrastructure/logging/logs.module";
 import { NotificationsModule } from "./contexts/notifications/public-api";
+import { PaymentsModule } from "./contexts/payments/public-api";
+import { PrivacyModule } from "./contexts/privacy/public-api";
+import { SavedViewsModule } from "./contexts/saved-views/public-api";
+import { FeatureFlagsModule } from "./contexts/feature-flags/public-api";
+import { PersonalDataModule } from "./platform/infrastructure/personal-data/personal-data.module";
 import { AuditLogInterceptor } from "./platform/infrastructure/audit/audit-log.interceptor";
 import { AuditLogModule } from "./platform/infrastructure/audit/audit-log.module";
 import { IdempotencyInterceptor } from "./platform/infrastructure/idempotency/idempotency.interceptor";
@@ -45,6 +50,7 @@ import { TenantsModule } from "./contexts/tenancy/tenants.module";
 import { ReferralsModule } from "./contexts/referrals/public-api";
 import { RewardsAccessModule, RewardsModule } from "./contexts/rewards/public-api";
 import { ClaimsModule } from "./contexts/claims/claims.module";
+import { WebhooksOutboundModule } from "./contexts/webhooks/outbound/public-api";
 import { CatalogModule } from "./contexts/catalog/public-api";
 import { KanbanModule } from "./contexts/kanban/public-api";
 import { OperationsModule } from "./contexts/operations/public-api";
@@ -100,6 +106,11 @@ if (observeConfig !== null) {
 		IdentityModule,
 		ReferralsModule,
 		NotificationsModule,
+		PaymentsModule,
+		PersonalDataModule,
+		PrivacyModule,
+		SavedViewsModule,
+		FeatureFlagsModule,
 		ReferenceDataModule,
 		GithubModule,
 		AuditLogModule,
@@ -110,6 +121,7 @@ if (observeConfig !== null) {
 		EncryptionModule,
 		RewardsModule,
 		ClaimsModule,
+		WebhooksOutboundModule,
 		PosModule,
 		CatalogModule,
 		KanbanModule,

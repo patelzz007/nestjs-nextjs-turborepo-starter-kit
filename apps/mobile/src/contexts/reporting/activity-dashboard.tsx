@@ -93,10 +93,14 @@ export function ActivityDashboard({ dashboard, insights, selection }: ActivityDa
 					testID="analytics-spending-chart"
 				/>
 			</Card>
-			<View className="flex-row flex-wrap gap-3" testID="analytics-kpis">
-				{ACTIVITY_KPIS.map((definition: KpiDefinition): React.JSX.Element => (
-					<KpiCard key={definition.key} view={kpiViewOf(definition, dashboard, formatters)} comparisonLabel={comparisonLabel} />
-				))}
+			{/* One surface split by hairlines, not four boxes: the inner row runs a point past the frame on the
+			    right and bottom, so the last column's and last row's lines fall outside its clipped edge. */}
+			<View className="overflow-hidden rounded-2xl border border-border bg-card">
+				<View className="-mr-px -mb-px flex-row flex-wrap" testID="analytics-kpis">
+					{ACTIVITY_KPIS.map((definition: KpiDefinition): React.JSX.Element => (
+						<KpiCard key={definition.key} view={kpiViewOf(definition, dashboard, formatters)} comparisonLabel={comparisonLabel} />
+					))}
+				</View>
 			</View>
 			<HighlightsSection dashboard={dashboard} insights={insights} formatters={formatters} />
 			<PeriodComparisonSection dashboard={dashboard} formatters={formatters} selection={selection} />
@@ -135,10 +139,10 @@ interface KpiCardProps {
 	readonly comparisonLabel: string;
 }
 
-/** A KPI on its own card, two to a row (one on a narrow phone). */
+/** A KPI in its cell of the shared surface, two to a row (one on a narrow phone), a hairline on its right and bottom. */
 function KpiCard({ view, comparisonLabel }: KpiCardProps): React.JSX.Element {
 	return (
-		<View className="min-w-40 grow basis-40 rounded-xl border border-border bg-card p-4">
+		<View className="min-w-40 grow basis-40 border-r border-b border-border p-4">
 			<KpiTile
 				label={view.label}
 				value={view.value}

@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Injectable } from "@nestjs/common";
 import { QUEUE_NAMES, TransactionLogWriteJobSchema } from "@workspace/shared";
 import type { Job } from "bullmq";
@@ -14,7 +15,7 @@ export type TransactionLogWriteExecution = Pick<Job, "data">;
  * preset; a job that runs out of attempts stays in the failed set (Bull Board)
  * to be replayed. The queue-wide concurrency of one keeps the file in order.
  */
-@Processor(QUEUE_NAMES.transactionLogWrite)
+@Processor(QUEUE_NAMES.transactionLogWrite, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class TransactionLogWriteProcessor extends WorkerHost {
 	public constructor(private readonly writer: TransactionLogFileWriter) {

@@ -12,6 +12,15 @@ export interface UploadTicketRequest {
 	readonly maxBytes: number;
 }
 
+/** Bytes the server itself produced for a file row that already exists (no browser ticket involved). */
+export interface ServerUploadWrite {
+	readonly fileId: string;
+	readonly uploadedById: string;
+	readonly locator: StorageObjectLocator;
+	readonly input: FileUploadRequest;
+	readonly bytes: Buffer;
+}
+
 /**
  * Everything the files use cases need from object storage and public delivery.
  * Implemented in infrastructure over the platform storage ports; the
@@ -22,6 +31,12 @@ export interface FileObjectStoragePort {
 	stagingLocator(input: FileUploadRequest, fileId: string, ownerId: string): StorageObjectLocator;
 
 	issueUploadTicket(request: UploadTicketRequest): Promise<CreateFileUploadUrlResponse>;
+
+	/**
+	 * Writes server-produced bytes to the file's staging location, where a browser upload would have
+	 * put them; {@link verifyUpload} then checks them exactly as it checks an upload.
+	 */
+	writeServerUpload(write: ServerUploadWrite): Promise<void>;
 
 	/**
 	 * Verifies the uploaded bytes against the row and the ticket: present, the

@@ -11,3 +11,5 @@ export { PosDomainErrorCodeSchema, type PosDomainErrorCode } from "./domain/erro
 export { PosAccessModule } from "./infrastructure/pos-access.module";
 export { API_KEY_PREFIX_LENGTH } from "./domain/value-objects/api-key-format.value-object";
 export { POS_CODE_LOCKOUT_MS, POS_CODE_MAX_FAILURES } from "./domain/policies/code-lockout.policy";
+// The event other contexts may react to (outgoing webhooks, ADR 082).
+export { SaleCheckedOut } from "./domain/events/pos.events";

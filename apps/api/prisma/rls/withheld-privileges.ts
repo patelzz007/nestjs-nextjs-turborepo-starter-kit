@@ -32,6 +32,15 @@ export const APP_RUNTIME_WITHHELD_PRIVILEGES: Readonly<Record<string, readonly W
 	DataChangeGroup: NEVER_DELETED,
 	ImpersonationAuditLog: APPEND_ONLY,
 	MfaRecoveryAuditLog: APPEND_ONLY,
+	// ── Audit-record retention (ADR 078): the run log is append-only; a legal hold is lifted, never deleted ──
+	RetentionRun: APPEND_ONLY,
+	// ── Backup restore drills (enhancement 2.6): one row per drill, the evidence restores work ──
+	OpsRestoreDrill: APPEND_ONLY,
+	// ── The public status page (enhancement 4.5): an update, once posted to customers, is never changed ──
+	StatusIncidentUpdate: APPEND_ONLY,
+	AuditLegalHold: NEVER_DELETED,
+	// ── Account erasure (ADR 077): the request is the evidence; it ends as CANCELLED or COMPLETED, never deleted ──
+	AccountErasure: NEVER_DELETED,
 	// ── Proof of marketing consent (ADR 070): a withdrawal is a new row, never an edit ──
 	MarketingConsent: APPEND_ONLY,
 	// ── Never deleted: ended via `endedAt`, kept as forensic record ──
@@ -57,6 +66,9 @@ export const APP_RUNTIME_WITHHELD_PRIVILEGES: Readonly<Record<string, readonly W
 	KanbanTaskActivity: NEVER_DELETED,
 	// ── A person's preferences: "Reset to default" soft-deletes ──
 	UserPreference: NEVER_DELETED,
+	// ── Payments (ADR 020): a payment is a financial record (soft delete only); its history is append-only ──
+	PaymentIntent: NEVER_DELETED,
+	PaymentEvent: APPEND_ONLY,
 };
 
 /** A PostgreSQL identifier this module will interpolate (a table name: letters, digits and underscores). */

@@ -4,7 +4,7 @@ import { getQueueToken } from "@nestjs/bullmq";
 import { Module, type Provider } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import type { Prisma } from "@prisma/client";
-import { ALL_QUEUE_NAMES, epochMs, OPS_HOUR_MS, PLATFORM_DISPLAY_REGION, QUEUE_NAMES, type LoadTestJob } from "@workspace/shared";
+import { ALL_QUEUE_NAMES, epochMs, OPS_HOUR_MS, PLATFORM_DISPLAY_REGION, QUEUE_NAMES, type LoadTestJob, type QueueName } from "@workspace/shared";
 import { KafkaProducerService, REDIS_PUBLISHER } from "@workspace/messaging/nest";
 import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
@@ -37,6 +37,7 @@ import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrast
 import { PrismaModule } from "../../prisma/prisma.module";
 import { PrismaService } from "../../prisma/prisma.service";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
+import { FilesModule, ServerFileIngest } from "../files/public-api";
 import { NotificationsModule, NotificationsTransactionalPortsFactory } from "../notifications/public-api";
 import {
 	CreateOpsBackupHandler,
@@ -55,7 +56,15 @@ import type { OperationsScope } from "./application/operations-scope";
 import { BACKUP_QUEUE, BACKUP_STORAGE, DATABASE_DUMP, type BackupQueuePort, type BackupStoragePort, type DatabaseDumpPort } from "./application/ports/backup.ports";
 import { CLOUD_SERVER_FACTS, type CloudServerFactsPort } from "./application/ports/cloud-server-facts.port";
 import { DEPENDENCY_PROBES, type DependencyProbe } from "./application/ports/dependency-probe.port";
-import { LOAD_TEST_PASSWORDS, LOAD_TEST_QUEUE, LOAD_TEST_TRAFFIC, type LoadTestPasswordPort, type LoadTestQueuePort } from "./application/ports/load-test.ports";
+import {
+	LOAD_TEST_PASSWORDS,
+	LOAD_TEST_QUEUE,
+	LOAD_TEST_REWARD_IMAGE,
+	LOAD_TEST_TRAFFIC,
+	type LoadTestPasswordPort,
+	type LoadTestQueuePort,
+	type LoadTestRewardImagePort,
+} from "./application/ports/load-test.ports";
 import type { OperationsReads } from "./application/ports/operations-reads.port";
 import {
 	BACKUP_RUNNER,
@@ -66,12 +75,15 @@ import {
 	OPERATIONS_MONITOR,
 	OPERATIONS_READ,
 	OPERATIONS_TRAFFIC,
+	OPERATIONS_QUEUES,
+	STATUS_PAGE,
 	OPS_BACKUP_RUN_OPERATION,
 	OPS_HISTORY_MAINTAIN_OPERATION,
 	OPS_INSTANCE_RECORD_OPERATION,
 	OPS_MONITOR_COLLECT_OPERATION,
 	OPS_READS,
 	OPS_UNIT_OF_WORK,
+	OPS_RESTORE_DRILL_OPERATION,
 } from "./application/ports/operations.tokens";
 import { OPS_LIVE_STORE, type OpsLiveStore } from "./application/ports/ops-live-store.port";
 import { BackupRunner } from "./application/services/backup-runner";
@@ -81,7 +93,17 @@ import { LoadTestRecorder } from "./application/services/load-test-recorder";
 import { OperationsMonitor } from "./application/services/operations-monitor";
 import { OperationsReadService } from "./application/services/operations-read.service";
 import { OperationsQueueModule } from "./infrastructure/backup/operations-queue.module";
-import { BullBackupQueue, InlineBackupQueue, type OpsBackupJob } from "./infrastructure/backup/backup-queue";
+import {
+	BullBackupQueue,
+	BullRestoreDrillQueue,
+	InlineBackupQueue,
+	InlineRestoreDrillQueue,
+	type OpsBackupJob,
+	type OpsRestoreDrillJob,
+} from "./infrastructure/backup/backup-queue";
+import { PgRestoreDrillAdapter } from "./infrastructure/backup/pg-restore-drill.adapter";
+import { RESTORE_DRILL, RESTORE_DRILL_QUEUE, RESTORE_DRILL_SERVICE, type RestoreDrillPort, type RestoreDrillQueuePort } from "./application/ports/restore-drill.port";
+import { RestoreDrillService } from "./application/services/restore-drill.service";
 import { ObjectStorageBackupAdapter } from "./infrastructure/backup/object-storage-backup.adapter";
 import { PgDumpAdapter } from "./infrastructure/backup/pg-dump.adapter";
 import { CloudServerFactsRegistry } from "./infrastructure/cloud/cloud-server-facts.registry";
@@ -89,6 +111,7 @@ import { ProcessMetricsSampler } from "./infrastructure/instance/process-metrics
 import { RequestMetricsRecorder } from "./infrastructure/instance/request-metrics.recorder";
 import { InMemoryOpsLiveStore, RedisOpsLiveStore } from "./infrastructure/live/redis-ops-live.store";
 import { BullLoadTestQueue, LoadTestEventsListener, RandomLoadTestPasswords, UnavailableLoadTestQueue } from "./infrastructure/load-test/load-test-queue";
+import { LoadTestRewardImage } from "./infrastructure/load-test/load-test-reward-image";
 import { OperationsScheduler } from "./infrastructure/operations.scheduler";
 import { OperationsScopeFactory } from "./infrastructure/persistence/operations-scope.factory";
 import { PrismaOperationsReads } from "./infrastructure/persistence/prisma-operations.reads";
@@ -99,6 +122,15 @@ import { OperationsController } from "./presentation/http/operations.controller"
 import { OperationsLoadTestsController } from "./presentation/http/operations-load-tests.controller";
 import { OperationsTrafficController } from "./presentation/http/operations-traffic.controller";
 import { OperationsTrafficService } from "./application/services/operations-traffic";
+import { QUEUE_ADMIN, type QueueAdminPort } from "./application/ports/queue-admin.port";
+import { OperationsQueuesService } from "./application/services/operations-queues.service";
+import { BullMqQueueAdmin, UnavailableQueueAdmin, type AdministeredQueue } from "./infrastructure/queues/bullmq-queue-admin.adapter";
+import { OperationsQueuesController } from "./presentation/http/operations-queues.controller";
+import { OpenStatusIncidentHandler, PostStatusIncidentUpdateHandler } from "./application/commands/status-page/status-page.handlers";
+import { PUBLIC_STATUS_READS, type PublicStatusReads } from "./application/ports/public-status-reads.port";
+import { StatusPageService } from "./application/services/status-page.service";
+import { PrismaPublicStatusReads } from "./infrastructure/persistence/prisma-public-status.reads";
+import { OperationsStatusController, PublicStatusController } from "./presentation/http/operations-status.controller";
 
 // Queue wiring is decided at load time from the validated config (like the files context): BullMQ
 // when Redis is configured (always in production), in this process otherwise.
@@ -115,6 +147,8 @@ const COMMAND_HANDLERS: readonly Provider[] = [
 	PinOpsBackupHandler,
 	DeleteOpsBackupHandler,
 	UpdateOpsBackupScheduleHandler,
+	OpenStatusIncidentHandler,
+	PostStatusIncidentUpdateHandler,
 	IssueOpsBackupDownloadHandler,
 	StartLoadTestHandler,
 	AbortLoadTestHandler,
@@ -129,6 +163,11 @@ const QUEUE_PROVIDERS: readonly Provider[] = hasRedis
 				provide: BACKUP_QUEUE,
 				inject: [getQueueToken(QUEUE_NAMES.operationsBackup)],
 				useFactory: (queue: Queue<OpsBackupJob>): BackupQueuePort => new BullBackupQueue(queue),
+			},
+			{
+				provide: RESTORE_DRILL_QUEUE,
+				inject: [getQueueToken(QUEUE_NAMES.operationsBackup)],
+				useFactory: (queue: Queue<OpsBackupJob | OpsRestoreDrillJob>): RestoreDrillQueuePort => new BullRestoreDrillQueue(queue),
 			},
 			{
 				provide: LOAD_TEST_QUEUE,
@@ -148,6 +187,16 @@ const QUEUE_PROVIDERS: readonly Provider[] = hasRedis
 				inject: [ModuleRef],
 				// The runner is resolved when a backup is queued (the runner itself needs this queue).
 				useFactory: (moduleRef: ModuleRef): BackupQueuePort => new InlineBackupQueue((backupId) => moduleRef.get<BackupRunner>(BACKUP_RUNNER).run(backupId)),
+			},
+			{
+				provide: RESTORE_DRILL_QUEUE,
+				inject: [ModuleRef],
+				useFactory: (moduleRef: ModuleRef): RestoreDrillQueuePort =>
+					new InlineRestoreDrillQueue(async (): Promise<void> => {
+						await moduleRef
+							.get<RestoreDrillService>(RESTORE_DRILL_SERVICE)
+							.run(systemActor(OPS_RESTORE_DRILL_OPERATION, "job", null, "Restore the latest backup into a throwaway database and check it", null));
+					}),
 			},
 			{ provide: LOAD_TEST_QUEUE, useFactory: (): LoadTestQueuePort => new UnavailableLoadTestQueue() },
 		];
@@ -188,7 +237,7 @@ function dependencyProbes(
  * RLS and reached through named `operations.*` / `load_test.*` system operations.
  */
 @Module({
-	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, NotificationsModule, StorageModule, ...(hasRedis ? [OperationsQueueModule] : [])],
+	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, NotificationsModule, FilesModule, StorageModule, ...(hasRedis ? [OperationsQueueModule] : [])],
 	controllers: [
 		OperationsController,
 		OperationsBackupsController,
@@ -196,6 +245,9 @@ function dependencyProbes(
 		OperationsLoadTestsController,
 		OperationsAgentController,
 		OperationsTrafficController,
+		OperationsQueuesController,
+		PublicStatusController,
+		OperationsStatusController,
 	],
 	providers: [
 		{
@@ -248,6 +300,11 @@ function dependencyProbes(
 			useFactory: (config: TypedConfigService): LoadTestPasswordPort => new RandomLoadTestPasswords(config.auth.bcryptSaltRounds),
 		},
 		{ provide: LOAD_TEST_TRAFFIC, useExisting: LoadTestTrafficKeys },
+		{
+			provide: LOAD_TEST_REWARD_IMAGE,
+			inject: [ServerFileIngest],
+			useFactory: (files: ServerFileIngest): LoadTestRewardImagePort => new LoadTestRewardImage(files),
+		},
 		RequestMetricsRecorder,
 		{
 			provide: INSTANCE_REPORTER,
@@ -292,6 +349,18 @@ function dependencyProbes(
 				new HistoryMaintainer(uow, live, clock, systemActor(OPS_HISTORY_MAINTAIN_OPERATION, "cron", null, "Roll up and prune the metric history", null)),
 		},
 		{
+			provide: RESTORE_DRILL,
+			inject: [TypedConfigService],
+			useFactory: (config: TypedConfigService): RestoreDrillPort =>
+				new PgRestoreDrillAdapter(config.operations.restoreDrillDatabaseUrl, config.operations.executableSearchPath),
+		},
+		{
+			provide: RESTORE_DRILL_SERVICE,
+			inject: [OPS_UNIT_OF_WORK, BACKUP_STORAGE, RESTORE_DRILL, RESTORE_DRILL_QUEUE, CLOCK],
+			useFactory: (uow: UnitOfWork<OperationsScope>, storage: BackupStoragePort, drill: RestoreDrillPort, queue: RestoreDrillQueuePort, clock: Clock): RestoreDrillService =>
+				new RestoreDrillService({ uow, storage, drill, queue, clock }),
+		},
+		{
 			provide: BACKUP_RUNNER,
 			inject: [OPS_UNIT_OF_WORK, DATABASE_DUMP, BACKUP_STORAGE, BACKUP_QUEUE, CLOCK],
 			useFactory: (uow: UnitOfWork<OperationsScope>, dump: DatabaseDumpPort, storage: BackupStoragePort, queue: BackupQueuePort, clock: Clock): BackupRunner =>
@@ -312,6 +381,31 @@ function dependencyProbes(
 				new LoadTestRecorder(uow, live, clock, systemActor(LOAD_TEST_RECORD_OPERATION, "consumer", null, "Record a load test's progress", null)),
 		},
 		{
+			provide: PUBLIC_STATUS_READS,
+			inject: [TenantTransactionService],
+			useFactory: (transactions: TenantTransactionService): PublicStatusReads =>
+				new PrismaPublicStatusReads(new PrismaReadExecutor<Prisma.TransactionClient>(transactions, USER_OWNED_DATA_SCOPE)),
+		},
+		{
+			provide: STATUS_PAGE,
+			inject: [OPS_LIVE_STORE, PUBLIC_STATUS_READS, OPS_READS, CLOCK],
+			useFactory: (live: OpsLiveStore, publicReads: PublicStatusReads, reads: OperationsReads, clock: Clock): StatusPageService =>
+				new StatusPageService({ live, publicReads, reads, clock }),
+		},
+		{
+			provide: QUEUE_ADMIN,
+			inject: [ModuleRef],
+			useFactory: (moduleRef: ModuleRef): QueueAdminPort =>
+				hasRedis
+					? new BullMqQueueAdmin(ALL_QUEUE_NAMES, (name: QueueName): AdministeredQueue => moduleRef.get<Queue>(getQueueToken(name), { strict: false }))
+					: new UnavailableQueueAdmin(),
+		},
+		{
+			provide: OPERATIONS_QUEUES,
+			inject: [QUEUE_ADMIN, CLOCK],
+			useFactory: (queues: QueueAdminPort, clock: Clock): OperationsQueuesService => new OperationsQueuesService(queues, clock),
+		},
+		{
 			provide: OPERATIONS_TRAFFIC,
 			inject: [CLOCK, RateLimitPolicyRegistry, RATE_LIMIT_REFUSALS, RATE_LIMIT_EXEMPTION_LIST, TENANT_RATE_LIMIT_OVERRIDES, RATE_LIMITER, APP_CACHE, TypedConfigService],
 			useFactory: (
@@ -328,7 +422,7 @@ function dependencyProbes(
 		},
 		{
 			provide: OPERATIONS_READ,
-			inject: [OPS_READS, OPS_LIVE_STORE, CLOUD_SERVER_FACTS, CLOCK, DATABASE_DUMP, BACKUP_STORAGE, LOAD_TEST_QUEUE, TypedConfigService],
+			inject: [OPS_READS, OPS_LIVE_STORE, CLOUD_SERVER_FACTS, CLOCK, DATABASE_DUMP, BACKUP_STORAGE, LOAD_TEST_QUEUE, TypedConfigService, RESTORE_DRILL],
 			useFactory: (
 				reads: OperationsReads,
 				live: OpsLiveStore,
@@ -338,6 +432,7 @@ function dependencyProbes(
 				backupStorage: BackupStoragePort,
 				loadTestQueue: LoadTestQueuePort,
 				config: TypedConfigService,
+				restoreDrill: RestoreDrillPort,
 			): OperationsReadService =>
 				new OperationsReadService({
 					reads,
@@ -346,6 +441,7 @@ function dependencyProbes(
 					clock,
 					dump,
 					backupStorage,
+					restoreDrill,
 					loadTesting: {
 						enabled: config.operations.loadTesting.enabled,
 						allowProduction: config.operations.loadTesting.allowProduction,

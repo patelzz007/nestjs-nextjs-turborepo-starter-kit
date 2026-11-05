@@ -1,4 +1,4 @@
-import type { EpochMs, OwnProfileEditableFields } from "@workspace/shared";
+import type { AppLanguage, EpochMs, OwnProfileEditableFields } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import { UserProfileChanged, type IdentityEvent } from "../events/identity.events";
@@ -21,6 +21,7 @@ export interface UserProfileState {
  */
 export class UserProfile extends AggregateRoot<IdentityEvent> {
 	private pendingChanges: OwnProfileChanges | null = null;
+	private pendingLanguage: AppLanguage | null = null;
 	private expected: number;
 
 	private constructor(private state: UserProfileState) {
@@ -46,6 +47,20 @@ export class UserProfile extends AggregateRoot<IdentityEvent> {
 
 	public get changes(): OwnProfileChanges | null {
 		return this.pendingChanges;
+	}
+
+	/** The language chosen in this unit of work, to be saved; null when none was. */
+	public get chosenLanguage(): AppLanguage | null {
+		return this.pendingLanguage;
+	}
+
+	/**
+	 * The person chose a language (enhancement 5.2). A preference, not an edit of the self-service fields: the
+	 * latest choice wins, and it leaves the version alone, so a name edit open elsewhere is never made stale by it.
+	 */
+	public chooseLanguage(language: AppLanguage, now: EpochMs): void {
+		this.pendingLanguage = language;
+		this.record(new UserProfileChanged(this.state.userId, now));
 	}
 
 	/** Applies an edit based on `expectedVersion` (what the client read). Who may edit is decided first (`assertOwnProfileWritable`). */

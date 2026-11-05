@@ -22,6 +22,8 @@ export interface PushDevicePorts {
 	readonly permission: () => Promise<PushPermission>;
 	readonly requestPermission: () => Promise<PushPermission>;
 	readonly nativeToken: () => Promise<string>;
+	/** Android's Firebase Installation ID, which FCM sends by; null where the build can't tell it (5.3). */
+	readonly installationId: () => Promise<string | null>;
 	readonly register: (input: RegisterPushDeviceInput) => Promise<void>;
 	readonly deviceLabel: string | null;
 	readonly appVersion: string | null;
@@ -33,6 +35,13 @@ const PushPlatformByOsSchema = z.enum(["ios", "android"]).transform((os): PushPl
 export function pushPlatformOf(os: string): PushPlatform | null {
 	const parsed = PushPlatformByOsSchema.safeParse(os);
 	return parsed.success ? parsed.data : null;
+}
+
+/** What the API is told: the token, and on Android the installation ID FCM sends by (iOS goes by its APNs token). */
+async function registrationOf(ports: PushDevicePorts, platform: PushPlatform): Promise<RegisterPushDeviceInput> {
+	const token = await ports.nativeToken();
+	const installationId = platform === "ANDROID" ? await ports.installationId() : null;
+	return { token, platform, surface: "CUSTOMER", deviceLabel: ports.deviceLabel, appVersion: ports.appVersion, installationId };
 }
 
 /** Ask (when still undecided) and register the token. Never throws: every ending is an outcome. */
@@ -47,8 +56,7 @@ export async function registerThisPhone(ports: PushDevicePorts): Promise<PushReg
 		if (permission !== "granted") {
 			return { kind: "denied" };
 		}
-		const token = await ports.nativeToken();
-		await ports.register({ token, platform, surface: "CUSTOMER", deviceLabel: ports.deviceLabel, appVersion: ports.appVersion });
+		await ports.register(await registrationOf(ports, platform));
 		return { kind: "registered" };
 	} catch {
 		return { kind: "unavailable" };
@@ -70,8 +78,7 @@ export async function refreshThisPhone(ports: PushDevicePorts): Promise<PushRegi
 		if ((await ports.permission()) !== "granted") {
 			return { kind: "skipped" };
 		}
-		const token = await ports.nativeToken();
-		await ports.register({ token, platform, surface: "CUSTOMER", deviceLabel: ports.deviceLabel, appVersion: ports.appVersion });
+		await ports.register(await registrationOf(ports, platform));
 		return { kind: "registered" };
 	} catch {
 		return { kind: "unavailable" };

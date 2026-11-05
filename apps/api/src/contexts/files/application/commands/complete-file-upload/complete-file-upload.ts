@@ -7,15 +7,14 @@ import type { StorageTaskDispatcher } from "../../ports/storage-task-dispatcher.
 
 /**
  * Verifies the uploaded bytes (size, SHA-256, magic bytes against the category
- * allowlist, pixel rules), claims the file PENDING → SCANNING exactly once
+ * allowlist, pixel rules) and claims the file PENDING → SCANNING exactly once
  * through `claim` (a compare-and-set: of concurrent completions only one
- * applies, the others get 409), then dispatches the malware scan. It never
- * marks a file clean itself. Shared by the command handler and the
- * published `StoredFileAccess`.
+ * applies, the others get 409). It never marks a file clean itself; the caller
+ * starts the scan. Shared by {@link completeFileUpload} and the server-side
+ * ingest (`ServerFileIngest`), which scans inline.
  */
-export async function completeFileUpload(
+export async function verifyAndClaimUpload(
 	storage: FileObjectStoragePort,
-	dispatcher: StorageTaskDispatcher,
 	uploaderId: string,
 	file: StoredFileView,
 	checksumSha256: string,
@@ -26,5 +25,20 @@ export async function completeFileUpload(
 	if ((await claim(verified)) === "lost-race") {
 		throw new FileUploadAlreadyCompletedError();
 	}
+}
+
+/**
+ * {@link verifyAndClaimUpload}, then dispatches the malware scan. Shared by the
+ * command handler and the published `StoredFileAccess`.
+ */
+export async function completeFileUpload(
+	storage: FileObjectStoragePort,
+	dispatcher: StorageTaskDispatcher,
+	uploaderId: string,
+	file: StoredFileView,
+	checksumSha256: string,
+	claim: (verified: VerifiedUpload) => Promise<StoredFileSaveOutcome>,
+): Promise<void> {
+	await verifyAndClaimUpload(storage, uploaderId, file, checksumSha256, claim);
 	await dispatcher.dispatchScan(file.id);
 }

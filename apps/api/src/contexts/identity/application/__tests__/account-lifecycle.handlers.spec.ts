@@ -3,6 +3,7 @@ import { OwnProfileSchema, epochMs } from "@workspace/shared";
 
 import { UserProfile } from "../../domain/aggregates/user-profile.aggregate";
 import {
+	PasswordBreachedError,
 	AccountAlreadyBannedError,
 	AccountNotBannedError,
 	AccountNotFoundError,
@@ -26,6 +27,7 @@ import { UpdateOwnProfileHandler } from "../commands/update-own-profile/update-o
 import { VerifyEmailCommand } from "../commands/verify-email/verify-email.command";
 import { VerifyEmailHandler } from "../commands/verify-email/verify-email.handler";
 import {
+	FakeBreachCheck,
 	FakeCredentialCrypto,
 	FakeIdentityTokens,
 	FixedClock,
@@ -48,7 +50,11 @@ let flow: RecordingFlowSubject;
 let referralCodes: ScriptedSignupReferralCodes;
 const tokens = new FakeIdentityTokens();
 
+/** Refuses nothing unless a test swaps in a breached password. */
+let breachCheck: FakeBreachCheck = new FakeBreachCheck();
+
 beforeEach(() => {
+	breachCheck = new FakeBreachCheck();
 	store = new InMemoryIdentityStore();
 	clock = new FixedClock();
 	flow = new RecordingFlowSubject();
@@ -58,7 +64,7 @@ beforeEach(() => {
 
 describe("SignUpHandler", () => {
 	function signUp(email: string, referralCode?: string): ReturnType<SignUpHandler["execute"]> {
-		return new SignUpHandler(store.uow, referralCodes, new FakeCredentialCrypto(), tokens, new SequentialIds("new-user"), flow, TEST_SETTINGS, clock).execute(
+		return new SignUpHandler(store.uow, referralCodes, new FakeCredentialCrypto(), tokens, new SequentialIds("new-user"), flow, TEST_SETTINGS, clock, breachCheck).execute(
 			new SignUpCommand(anonymousActor(), {
 				body: { email, password: "Correct-Horse-1", fullName: "New Person", ...(referralCode === undefined ? {} : { referralCode }) },
 				clientType: "web",
@@ -89,6 +95,16 @@ describe("SignUpHandler", () => {
 	it("answers a taken address exactly like a new one, creating and sending nothing (ADR 035)", async () => {
 		await expect(signUp("jane@example.com")).resolves.toEqual(GENERIC_SIGNUP_RESPONSE);
 
+		expect(store.accounts.rows.size).toBe(1);
+		expect(store.emails.sent).toEqual([]);
+	});
+
+	it("refuses a password found in a data breach, creating and sending nothing", async () => {
+		breachCheck = new FakeBreachCheck(new Set(["Correct-Horse-1"]));
+
+		await expect(signUp(NEW_EMAIL)).rejects.toBeInstanceOf(PasswordBreachedError);
+
+		expect(breachCheck.checked).toEqual(["Correct-Horse-1"]);
 		expect(store.accounts.rows.size).toBe(1);
 		expect(store.emails.sent).toEqual([]);
 	});
@@ -195,6 +211,7 @@ describe("UpdateOwnProfileHandler", () => {
 		email: "jane@example.com",
 		fullName: "Jane Q. Doe",
 		avatar: null,
+		language: "en",
 		version: 4,
 		createdAt: NOW,
 		updatedAt: NOW,

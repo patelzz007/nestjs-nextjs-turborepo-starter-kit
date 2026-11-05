@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text } from "react-native";
+
 import { makeMutable } from "react-native-reanimated";
 
 import { PAGE_HEADER_ROW_HEIGHT, PageHeader, pageHeaderControlsBottom, type PageHeaderProps } from "../page-header";
@@ -9,12 +9,13 @@ interface Handlers {
 	readonly onMenu: jest.Mock;
 	readonly onBack: jest.Mock;
 	readonly onNotifications: jest.Mock;
+	readonly onSearch: jest.Mock;
 	readonly onHeightChange: jest.Mock;
 	readonly onCollapseDistanceChange: jest.Mock;
 }
 
 function handlers(): Handlers {
-	return { onMenu: jest.fn(), onBack: jest.fn(), onNotifications: jest.fn(), onHeightChange: jest.fn(), onCollapseDistanceChange: jest.fn() };
+	return { onMenu: jest.fn(), onBack: jest.fn(), onNotifications: jest.fn(), onSearch: jest.fn(), onHeightChange: jest.fn(), onCollapseDistanceChange: jest.fn() };
 }
 
 type HeaderOverrides = Partial<Omit<PageHeaderProps, keyof Handlers | "progress" | "collapseDistance">> & { readonly progressValue?: number };
@@ -62,11 +63,16 @@ describe("PageHeader", () => {
 		expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
 	});
 
-	it("shows what the app puts beside the notifications button (its status)", async () => {
-		await render(header(handlers(), { trailing: <Text>Online</Text> }));
+	it("opens the command palette from the search button, left of the notifications button", async () => {
+		const actions = handlers();
+		await render(header(actions, { testID: "header" }));
 
-		expect(screen.getByText("Online")).toBeOnTheScreen();
-		expect(screen.getByRole("button", { name: "Notifications" })).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Search" }));
+		expect(actions.onSearch).toHaveBeenCalledTimes(1);
+		const controls = screen.getByTestId("header-controls").children;
+		const searchIndex = controls.indexOf(screen.getByTestId("header-search"));
+		const bellIndex = controls.indexOf(screen.getByTestId("header-notifications"));
+		expect(searchIndex).toBeLessThan(bellIndex);
 	});
 
 	it("puts the unread count on the bell's corner and in its name, and nothing at zero", async () => {
@@ -134,20 +140,22 @@ describe("PageHeader", () => {
 		await render(header(handlers()));
 
 		expect(screen.getByTestId("header-background")).toHaveStyle({ transform: [{ translateY: -0 }] });
-		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 0 });
+		expect(screen.getByTestId("header-background")).toHaveProp("className", expect.stringContaining("bg-background"));
 	});
 
-	it("turns the bar into the content's surface as it collapses, with no line between the two", async () => {
+	it("stays the page's own colour as it collapses, with no line along its edge (the content sits on the same colour)", async () => {
 		await render(header(handlers(), { progressValue: 1 }));
 
-		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 1 });
+		expect(screen.getByTestId("header-background")).toHaveProp("className", expect.stringContaining("bg-background"));
 		expect(screen.queryByTestId("header-hairline")).toBeNull();
 	});
 
-	it("blends part-way into the surface half-way through the collapse", async () => {
-		await render(header(handlers(), { progressValue: 0.5 }));
+	it("centres the title, set as the page's heading, with the subtitle centred under it", async () => {
+		await render(header(handlers()));
 
-		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 0.5 });
+		const titleClasses = String(screen.getByTestId("header-title").props.className).split(" ");
+		expect(titleClasses).toEqual(expect.arrayContaining(["font-sans-bold", "text-2xl", "text-center"]));
+		expect(screen.getByTestId("header-subtitle")).toHaveProp("className", expect.stringContaining("text-center"));
 	});
 
 	it("draws its controls row exactly PAGE_HEADER_ROW_HEIGHT tall, where the toasts are anchored", async () => {

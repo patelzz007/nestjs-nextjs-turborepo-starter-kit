@@ -22,6 +22,7 @@ import {
 	TOTP_CODE_LENGTH,
 	type ApiResponseMeta,
 	type LoginClientResponse,
+	type CaughtValue,
 	type LoginRestrictedEnrollmentClientResponse,
 	type UserResponse,
 } from "@workspace/shared";
@@ -32,6 +33,7 @@ import { Label } from "@workspace/ui/components/label";
 import { PasswordInput } from "@workspace/ui/components/password-input";
 import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
 import { Separator } from "@workspace/ui/components/separator";
+import { KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
@@ -42,6 +44,10 @@ import { getEnrollmentRedirectPath } from "../edge/restricted-session";
 import { markEnrollmentMessage } from "../session/enrollment-message";
 import { useAuth } from "../index";
 import { DemoAccountButton, DemoInfoBox } from "./login-form-demo";
+import { passkeyBrowserErrorMessage } from "../passkeys/browser-passkeys";
+import { usePasskeysSupported } from "../passkeys/use-passkeys-supported";
+import { PASSKEYS_LABELS } from "../passkeys/passkeys-labels";
+import { usePasskeySignIn, type PasskeyLoginAnswer } from "../passkeys/use-passkey-sign-in";
 import type { DemoAccount, LoginFormProps } from "./login-form-types";
 
 import { passwordStrength } from "../password";
@@ -58,6 +64,11 @@ function sanitizeNumericCode(value: string): string {
 interface LoginStepAnswer {
 	readonly data: LoginClientResponse;
 	readonly meta: ApiResponseMeta;
+}
+
+/** A failed step's message: the browser's own words for a passkey prompt, the API's catalog for the rest. */
+function signInErrorMessage(error: CaughtValue): string {
+	return (error instanceof Error ? passkeyBrowserErrorMessage(error) : null) ?? resolveAuthErrorMessage(error);
 }
 
 export function LoginForm({
@@ -77,6 +88,10 @@ export function LoginForm({
 	const [twoFactorTempToken, setTwoFactorTempToken] = useState<string | null>(null);
 	const [twoFactorCode, setTwoFactorCode] = useState("");
 	const [twoFactorUseBackupCode, setTwoFactorUseBackupCode] = useState(false);
+	// Whether the account has a passkey it may finish this sign-in with (the API's `passkeyAvailable`).
+	const [twoFactorPasskeyAvailable, setTwoFactorPasskeyAvailable] = useState(false);
+	// WebAuthn needs a browser (never the server render) and a secure context.
+	const canUsePasskeys = usePasskeysSupported();
 	const [backupCode, setBackupCode] = useState("");
 	const [verificationId, setVerificationId] = useState<string | null>(null);
 	const [verificationCode, setVerificationCode] = useState("");
@@ -123,6 +138,7 @@ export function LoginForm({
 	const twoFactorMutation = api.auth.loginTwoFactor.useMutation();
 	const backupCodeMutation = api.auth.loginBackupCode.useMutation();
 	const verifyLoginMutation = api.auth.verifyLogin.useMutation();
+	const passkeySignIn = usePasskeySignIn(mode);
 
 	// Live password-strength feedback while typing (#27).
 	const strength = useMemo(() => passwordStrength(password), [password]);
@@ -157,6 +173,7 @@ export function LoginForm({
 		({ data: response, meta }: LoginStepAnswer): void => {
 			if (isLoginTwoFactorPending(response)) {
 				setTwoFactorTempToken(response.tempToken);
+				setTwoFactorPasskeyAvailable(response.passkeyAvailable);
 				setTwoFactorUseBackupCode(false);
 				setBackupCode("");
 				setVerificationId(null);
@@ -206,6 +223,37 @@ export function LoginForm({
 		},
 		[loginMutation, handleLoginResponse],
 	);
+
+	/** Runs one passkey ceremony and hands its answer to the same handler as every other step. */
+	const runPasskeyStep = useCallback(
+		(step: () => Promise<PasskeyLoginAnswer>): void => {
+			setIsLoading(true);
+			setError(null);
+			void catchCaught(
+				step().then((answer): void => {
+					handleLoginResponse(answer);
+				}),
+				(err): void => {
+					setError(signInErrorMessage(err));
+				},
+			).finally((): void => {
+				setIsLoading(false);
+			});
+		},
+		[handleLoginResponse],
+	);
+
+	const handlePasskeySignIn = useCallback((): void => {
+		runPasskeyStep(passkeySignIn.signInWithPasskey);
+	}, [passkeySignIn, runPasskeyStep]);
+
+	const handlePasskeySecondFactor = useCallback((): void => {
+		if (twoFactorTempToken === null) {
+			return;
+		}
+		const tempToken = twoFactorTempToken;
+		runPasskeyStep((): Promise<PasskeyLoginAnswer> => passkeySignIn.finishWithPasskey(tempToken));
+	}, [passkeySignIn, runPasskeyStep, twoFactorTempToken]);
 
 	const handleTwoFactorSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
@@ -400,6 +448,15 @@ export function LoginForm({
 						<Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={twoFactorUseBackupCode ? handleUseAuthenticatorCode : handleUseBackupCode}>
 							{twoFactorUseBackupCode ? "Use authenticator code instead" : "Use a backup code instead"}
 						</Button>
+						{twoFactorPasskeyAvailable && canUsePasskeys ? (
+							<div className="space-y-2 border-t pt-3">
+								<p className="text-sm text-muted-foreground">{PASSKEYS_LABELS.passkeySecondStep}</p>
+								<Button type="button" variant="outline" className="h-11 w-full" onClick={handlePasskeySecondFactor} disabled={isLoading}>
+									<KeyRound aria-hidden="true" />
+									{PASSKEYS_LABELS.usePasskeyInstead}
+								</Button>
+							</div>
+						) : null}
 					</div>
 				</FormShell>
 			) : (
@@ -430,6 +487,20 @@ export function LoginForm({
 					</div>
 				</FormShell>
 			)}
+
+			{verificationId === null && twoFactorTempToken === null && canUsePasskeys ? (
+				<div className="mt-4 space-y-4">
+					<div className="flex items-center gap-3 text-xs text-muted-foreground">
+						<Separator className="flex-1" />
+						<span>{PASSKEYS_LABELS.or}</span>
+						<Separator className="flex-1" />
+					</div>
+					<Button type="button" variant="outline" className="h-11 w-full" onClick={handlePasskeySignIn} disabled={isLoading}>
+						<KeyRound aria-hidden="true" />
+						{isLoading ? PASSKEYS_LABELS.signingInWithPasskey : PASSKEYS_LABELS.signInWithPasskey}
+					</Button>
+				</div>
+			) : null}
 
 			{twoFactorTempToken === null && demoAccounts !== undefined && demoAccounts.length > 0 ? (
 				<div className="mt-4">

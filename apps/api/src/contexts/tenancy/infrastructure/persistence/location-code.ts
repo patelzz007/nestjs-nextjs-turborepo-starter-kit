@@ -8,7 +8,7 @@ const LocationCodeSchema = z
 
 interface LocationCodeLookupClient {
 	location: {
-		findFirst(args: { where: { tenantId: string; code: string }; select: { id: true } }): Promise<{ id: string } | null>;
+		findFirst(args: { where: { tenantId: string; code: string; isDeleted: false }; select: { id: true } }): Promise<{ id: string } | null>;
 	};
 }
 
@@ -28,14 +28,14 @@ export function slugifyLocationName(displayName: string): string {
 	return LocationCodeSchema.parse("store");
 }
 
-/** Pick the first unused location code within a tenant. */
+/** Pick the first code no live store of the tenant uses (a deleted store's code is free again). */
 export async function allocateUniqueLocationCode(tx: LocationCodeLookupClient, tenantId: string, displayName: string): Promise<string> {
 	const base = slugifyLocationName(displayName);
 
 	for (let attempt = 0; attempt < 100; attempt += 1) {
 		const candidate = attempt === 0 ? base : LocationCodeSchema.parse(`${base}-${String(attempt + 1)}`.slice(0, 64));
 
-		const taken = (await tx.location.findFirst({ where: { tenantId, code: candidate }, select: { id: true } })) !== null;
+		const taken = (await tx.location.findFirst({ where: { tenantId, code: candidate, isDeleted: false }, select: { id: true } })) !== null;
 
 		if (!taken) {
 			return candidate;

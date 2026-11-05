@@ -1,4 +1,6 @@
-import { Module, type Provider } from "@nestjs/common";
+import { Module, type Provider, type OnModuleInit } from "@nestjs/common";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { kanbanEraser } from "./infrastructure/personal-data/kanban-erasure";
 import type { Prisma } from "@prisma/client";
 
 import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
@@ -20,6 +22,7 @@ import { AttachKanbanFileHandler } from "./application/commands/attach-kanban-fi
 import { CreateKanbanTaskHandler } from "./application/commands/create-kanban-task/create-kanban-task.handler";
 import { DeleteKanbanTaskHandler } from "./application/commands/delete-kanban-task/delete-kanban-task.handler";
 import { ImportKanbanTasksHandler } from "./application/commands/import-kanban-tasks/import-kanban-tasks.handler";
+import { PreviewKanbanImportHandler } from "./application/queries/preview-kanban-import/preview-kanban-import.handler";
 import { MoveKanbanItemToParentHandler } from "./application/commands/move-kanban-item-to-parent/move-kanban-item-to-parent.handler";
 import { MoveKanbanColumnHandler } from "./application/commands/move-kanban-column/move-kanban-column.handler";
 import { MoveKanbanTaskHandler } from "./application/commands/move-kanban-task/move-kanban-task.handler";
@@ -53,6 +56,7 @@ import { KanbanController } from "./presentation/http/kanban.controller";
 const COMMAND_HANDLERS: readonly Provider[] = [
 	CreateKanbanTaskHandler,
 	ImportKanbanTasksHandler,
+	PreviewKanbanImportHandler,
 	ReviseKanbanTaskHandler,
 	MoveKanbanTaskHandler,
 	MoveKanbanItemToParentHandler,
@@ -121,4 +125,14 @@ const QUERY_HANDLERS: readonly Provider[] = [
 		...QUERY_HANDLERS,
 	],
 })
-export class KanbanModule {}
+export class KanbanModule implements OnModuleInit {
+	public constructor(
+		private readonly erasure: PersonalDataErasureRegistry,
+		private readonly erasureTransactions: TenantTransactionService,
+	) {}
+
+	/** Registers this context's part of account erasure (ADR 077). */
+	public onModuleInit(): void {
+		this.erasure.registerEraser(kanbanEraser(this.erasureTransactions));
+	}
+}

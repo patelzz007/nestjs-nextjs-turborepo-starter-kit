@@ -142,3 +142,39 @@ describe("list result helpers", () => {
 		});
 	});
 });
+
+describe("fetchListPage with a count cap (enhancement 2.3)", () => {
+	/** A count that honours `atMost` like a `LIMIT` subquery would, and records what it was asked. */
+	function cappedCount(actualRows: number, asked: (number | undefined)[]): ListPageSpec<Where, OrderBy, Row>["count"] {
+		return (_where, atMost): Promise<number> => {
+			asked.push(atMost);
+			return Promise.resolve(atMost === undefined ? actualRows : Math.min(actualRows, atMost));
+		};
+	}
+
+	it("asks for one row past the cap, and reports an exact total under it", async () => {
+		const asked: (number | undefined)[] = [];
+		const result = await fetchListPage({ page: 1, limit: PAGE_SIZE }, buildSpec({ countCap: 10, count: cappedCount(TOTAL_ROWS, asked) }));
+		expect(asked).toEqual([11]);
+		expect(result.total).toBe(TOTAL_ROWS);
+		expect(result.totalIsCapped).toBeUndefined();
+	});
+
+	it("stops at the cap, flags it, and still offers a next page past the last counted one", async () => {
+		const result = await fetchListPage({ page: 2, limit: PAGE_SIZE }, buildSpec({ countCap: 4, count: cappedCount(1_000_000, []) }));
+		expect(result).toEqual(expect.objectContaining({ total: 4, totalPages: 2, page: 2, hasNext: true, totalIsCapped: true }));
+		expect(result.nextCursor).not.toBeNull();
+	});
+
+	it("keyset pages past a capped total say there is a previous page and keep the flag", async () => {
+		const cursor = KEYSET.encode({ id: "row-4", createdAt: EPOCH });
+		const result = await fetchListPage({ page: 1, limit: PAGE_SIZE, cursor }, buildSpec({ countCap: 4, count: cappedCount(1_000_000, []) }));
+		expect(result).toEqual(expect.objectContaining({ total: 4, hasPrevious: true, totalIsCapped: true }));
+	});
+
+	it("carries the flag into the service result, and leaves it out for exact totals", () => {
+		const base = { items: [], total: 4, page: 1, totalPages: 2, nextCursor: null, hasNext: true, hasPrevious: false };
+		expect(toPaginatedServiceResult({ ...base, totalIsCapped: true }, { limit: PAGE_SIZE }).totalIsCapped).toBe(true);
+		expect("totalIsCapped" in toPaginatedServiceResult(base, { limit: PAGE_SIZE })).toBe(false);
+	});
+});

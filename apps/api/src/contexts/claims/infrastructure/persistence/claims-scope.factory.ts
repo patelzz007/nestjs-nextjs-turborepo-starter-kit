@@ -45,6 +45,7 @@ export class ClaimsScopeFactory implements ScopeFactory<ClaimsScope, Prisma.Tran
 			rewardAudit: rewards.audit,
 			customerStanding: tenants.customerStanding,
 			tenantCustomers: tenants.tenantCustomers,
+			tenantReviewNotices: tenants.reviewNotices,
 			emails: notifications.emailRequests,
 			events,
 		};

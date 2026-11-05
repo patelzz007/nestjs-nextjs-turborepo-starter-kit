@@ -8,6 +8,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { Search } from "lucide-react";
 import * as React from "react";
+import { SEARCH_SHORTCUTS } from "./app-shell-topbar";
 
 export interface AppShellHeaderProps {
 	/** Where the current page sits — the app's breadcrumb trail. */
@@ -52,10 +53,12 @@ export const AppShellHeader = React.forwardRef<HTMLElement, AppShellHeaderProps>
 				</span>
 				<div className="min-w-0 flex-1">{breadcrumb}</div>
 				{actions !== undefined && actions !== null ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-				<Button type="button" variant="outline" size="sm" onClick={onOpenSearch} aria-label={labels.desktopAriaLabel} className="shrink-0 gap-2 text-muted-foreground">
+				{/* Its name is its own word, "Search" (WCAG 2.5.3, label in name: a voice-control user says what they see);
+				    on a phone the word is read, not shown. The shortcut is announced as one, never read as text. */}
+				<Button type="button" variant="outline" size="sm" onClick={onOpenSearch} aria-keyshortcuts={SEARCH_SHORTCUTS} className="shrink-0 gap-2 text-muted-foreground">
 					<Search aria-hidden="true" />
-					<span className="hidden sm:inline">{labels.mobileAriaLabel}</span>
-					<KbdGroup className="hidden md:inline-flex">
+					<span className="sr-only sm:not-sr-only">{labels.mobileAriaLabel}</span>
+					<KbdGroup className="hidden md:inline-flex" aria-hidden="true">
 						<Kbd>⌘</Kbd>
 						<Kbd>K</Kbd>
 					</KbdGroup>

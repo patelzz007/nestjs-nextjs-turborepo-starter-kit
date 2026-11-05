@@ -1,8 +1,9 @@
 // A vertical timeline, as GitHub draws a conversation: a line down the left
 // with each entry's node on it (an avatar, or a small icon disc), and the
 // entry beside it. Presentational and data-agnostic: the caller passes the
-// node and the content. Rows sit flush so the line runs unbroken from one
-// entry to the next; the last entry's line stops at its node.
+// node and the content. As in ReUI's timeline, a connector runs from below
+// each node to the next entry: nothing above the first node, nothing after
+// the last.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
@@ -19,12 +20,29 @@ export const timelineRailItemVariants = cva("flex-row gap-3", {
 	defaultVariants: { variant: "default", size: "md" },
 });
 
-/** The line down the node column; the last entry's stops at its node. */
-const timelineRailLineVariants = cva("absolute top-0 w-0.5 bg-border", {
+/**
+ * The node column. `align`: `start` puts the node level with the top of the entry (a conversation's
+ * avatar beside a comment); `center` centres it on the entry, so the glyph and a list row (its title and
+ * the line under it) sit on one line, whatever the row's height.
+ */
+const timelineRailNodeColumnVariants = cva("w-8 items-center", {
 	variants: {
-		isLast: { true: "h-4", false: "bottom-0" },
+		align: { start: "", center: "justify-center" },
 	},
-	defaultVariants: { isLast: false },
+	defaultVariants: { align: "start" },
+});
+
+/**
+ * The connector, as ReUI's timeline draws it (ADR 079): from just below one node to the next, so nothing
+ * shows above the first node and nothing runs on after the last. A centred node has a half above it (to
+ * the previous entry) and a half below it (to the next); `hidden` keeps the space but draws nothing.
+ */
+const timelineRailConnectorVariants = cva("w-0.5 flex-1 rounded-full", {
+	variants: {
+		side: { above: "mb-1", below: "mt-1" },
+		hidden: { true: "bg-transparent", false: "bg-border" },
+	},
+	defaultVariants: { side: "below", hidden: false },
 });
 
 const timelineRailContentVariants = cva("flex-1", {
@@ -32,11 +50,14 @@ const timelineRailContentVariants = cva("flex-1", {
 		size: { md: "pb-5", sm: "pb-3" },
 		compact: { true: "min-h-8 justify-center", false: "" },
 		isLast: { true: "pb-0", false: "" },
+		/** A centred node's entry is a list row that pads itself: no room below it, or the node would sit off centre. */
+		align: { start: "", center: "pb-0" },
 	},
-	defaultVariants: { size: "md", compact: false, isLast: false },
+	defaultVariants: { size: "md", compact: false, isLast: false, align: "start" },
 });
 
 type TimelineRailItemVariantProps = VariantProps<typeof timelineRailItemVariants>;
+export type TimelineRailAlign = NonNullable<VariantProps<typeof timelineRailNodeColumnVariants>["align"]>;
 export type TimelineRailItemVariant = NonNullable<TimelineRailItemVariantProps["variant"]>;
 export type TimelineRailSize = NonNullable<TimelineRailItemVariantProps["size"]>;
 
@@ -44,10 +65,14 @@ export interface TimelineRailItemProps {
 	/** What sits on the line: `<TimelineRailIcon />` or an avatar. */
 	readonly node: React.ReactNode;
 	readonly children: React.ReactNode;
-	/** The final entry: the line ends at its node instead of running on. */
+	/** The first entry: with a centred node, no connector above it. */
+	readonly isFirst?: boolean;
+	/** The final entry: no connector below its node. */
 	readonly isLast?: boolean;
 	/** A one-line entry (an event): its text centres on the node instead of starting at its top. */
 	readonly compact?: boolean;
+	/** Where the node sits: level with the entry's top (`start`), or centred on it (`center`, for list rows). */
+	readonly align?: TimelineRailAlign;
 	readonly variant?: TimelineRailItemVariant;
 	/** The room below each entry: `sm` for dense lists. */
 	readonly size?: TimelineRailSize;
@@ -58,17 +83,24 @@ export interface TimelineRailItemProps {
 
 export const TimelineRailItem = React.memo(
 	React.forwardRef<ViewInstance, TimelineRailItemProps>(function TimelineRailItem(
-		{ node, children, isLast = false, compact = false, variant = "default", size = "md", className, testID },
+		{ node, children, isFirst = false, isLast = false, compact = false, align = "start", variant = "default", size = "md", className, testID },
 		ref,
 	): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(timelineRailItemVariants({ variant, size }), className)} testID={testID}>
-				{/* Width of the node column; the line runs down its middle. */}
-				<View className="w-8 items-center" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-					<View className={timelineRailLineVariants({ isLast })} />
+				{/* Width of the node column: the node, then the connector down its middle to the next entry. */}
+				<View className={timelineRailNodeColumnVariants({ align })} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+					{align === "center" ? (
+						<View className={timelineRailConnectorVariants({ side: "above", hidden: isFirst })} testID={testID === undefined ? undefined : `${testID}-connector-above`} />
+					) : null}
 					{node}
+					{align === "center" ? (
+						<View className={timelineRailConnectorVariants({ side: "below", hidden: isLast })} testID={testID === undefined ? undefined : `${testID}-connector`} />
+					) : isLast ? null : (
+						<View className={timelineRailConnectorVariants()} testID={testID === undefined ? undefined : `${testID}-connector`} />
+					)}
 				</View>
-				<View testID={testID === undefined ? undefined : `${testID}-content`} className={cn(timelineRailContentVariants({ size, compact, isLast }))}>
+				<View testID={testID === undefined ? undefined : `${testID}-content`} className={cn(timelineRailContentVariants({ size, compact, isLast, align }))}>
 					{children}
 				</View>
 			</View>
@@ -113,7 +145,7 @@ export interface TimelineRailIconProps {
 	readonly testID?: string;
 }
 
-/** A small disc on the line holding an event's glyph; it covers the line behind it. Decorative: the entry beside it says what happened. */
+/** A small disc on the rail holding an event's glyph. Decorative: the entry beside it says what happened. */
 export const TimelineRailIcon = React.memo(
 	React.forwardRef<ViewInstance, TimelineRailIconProps>(function TimelineRailIcon({ icon, tone = "neutral", size = "md", className, testID }, ref): React.JSX.Element {
 		return (

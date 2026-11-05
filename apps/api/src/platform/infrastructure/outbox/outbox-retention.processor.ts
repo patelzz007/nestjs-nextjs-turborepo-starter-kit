@@ -1,4 +1,5 @@
 import { InjectQueue, Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Job } from "bullmq";
 
@@ -52,7 +53,7 @@ export class OutboxRetentionScheduler implements OnModuleInit {
  * `outbox.retention` system operation. A failure (e.g. the database is down)
  * throws, so BullMQ retries it per the `maintenance` preset.
  */
-@Processor(OUTBOX_RETENTION_QUEUE)
+@Processor(OUTBOX_RETENTION_QUEUE, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class OutboxRetentionProcessor extends WorkerHost {
 	public constructor(

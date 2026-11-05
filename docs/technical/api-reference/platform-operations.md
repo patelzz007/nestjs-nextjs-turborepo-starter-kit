@@ -1,7 +1,7 @@
 ---
 title: "API reference — Platform operations (servers, backups, load tests)"
 description: "The admin panel's operations console (ADR 068): servers and their history, instances, dependencies, alerts, database backups and load tests — and the endpoint a server agent reports to."
-order: 16
+order: 21
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -173,6 +173,17 @@ SuperAdmin: the backups, the schedule and when the next one runs
 | `data.backups[].status` | "QUEUED" \| "RUNNING" \| "SUCCEEDED" \| "FAILED" | yes |  |
 | `data.backups[].trigger` | "MANUAL" \| "SCHEDULED" | yes |  |
 | `data.nextScheduledAt` | integer | yes |  |
+| `data.restoreDrillConfigured` | boolean | yes |  |
+| `data.restoreDrills` | object[] | yes |  |
+| `data.restoreDrills[].backupId` | string | yes |  |
+| `data.restoreDrills[].failures` | string[] | yes |  |
+| `data.restoreDrills[].finishedAt` | integer | yes |  |
+| `data.restoreDrills[].id` | string | yes |  |
+| `data.restoreDrills[].migration` | string \| null | yes |  |
+| `data.restoreDrills[].outcome` | "PASSED" \| "FAILED" | yes |  |
+| `data.restoreDrills[].rowsRestored` | integer | yes |  |
+| `data.restoreDrills[].startedAt` | integer | yes |  |
+| `data.restoreDrills[].tablesChecked` | integer | yes |  |
 | `data.schedule` | object | yes |  |
 | `data.schedule.backupHour` | integer | yes | range 0–23 |
 | `data.schedule.retentionDays` | integer | yes | range 1–365 |
@@ -1219,6 +1230,173 @@ Every server, instance and dependency with its live numbers, and the open alerts
 > [!WARNING]
 > No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
+### GET /api/v1/admin/operations/queues
+
+Every background job queue: what is waiting, running, delayed and failed, and the last hour's failure rate
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:BACKGROUND_JOB`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsQueuesController_list` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-queues.controller.ts)
+
+**Response 200 OK** (`application/json`) — The queues
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.available` | boolean | yes |  |
+| `data.metricsWindowMinutes` | integer | yes |  |
+| `data.queues` | object[] | yes |  |
+| `data.queues[].active` | integer | yes |  |
+| `data.queues[].completedLastHour` | integer | yes |  |
+| `data.queues[].delayed` | integer | yes |  |
+| `data.queues[].failed` | integer | yes |  |
+| `data.queues[].failedLastHour` | integer | yes |  |
+| `data.queues[].failureRatePercent` | number \| null | yes | range 0–100 |
+| `data.queues[].name` | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `data.queues[].paused` | boolean | yes |  |
+| `data.queues[].waiting` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/operations/queues/{queueName}/failed
+
+A queue's failed jobs, newest first (without their data)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:BACKGROUND_JOB`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsQueuesController_failed` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-queues.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+
+**Response 200 OK** (`application/json`) — The failed jobs
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.jobs` | object[] | yes |  |
+| `data.jobs[].attemptsMade` | integer | yes |  |
+| `data.jobs[].createdAt` | integer | yes |  |
+| `data.jobs[].failedAt` | integer \| null | yes |  |
+| `data.jobs[].failedReason` | string \| null | yes |  |
+| `data.jobs[].id` | string | yes |  |
+| `data.jobs[].maxAttempts` | integer | yes |  |
+| `data.jobs[].name` | string | yes |  |
+| `data.queue` | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `data.total` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/operations/queues/{queueName}/jobs/{jobId}/discard
+
+Discard a failed job for good (with a reason); 404 unless the job is failed
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `DELETE:BACKGROUND_JOB`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsQueuesController_discard` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-queues.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `jobId` | path | string | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `reason` | string | yes | length 10–500 |
+
+**Response 201 Created** (`application/json`) — Discarded
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/operations/queues/{queueName}/jobs/{jobId}/retry
+
+Run a failed job again, attempts reset (with a reason); 404 unless the job is failed
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `UPDATE:BACKGROUND_JOB`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsQueuesController_retry` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-queues.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `jobId` | path | string | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `reason` | string | yes | length 10–500 |
+
+**Response 201 Created** (`application/json`) — Queued again
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### GET /api/v1/admin/operations/rate-limits
 
 Every rate-limit policy, refusals over the last hour, the most limited subjects (masked) and the exemptions
@@ -1900,6 +2078,202 @@ SuperAdmin: a new agent token for a server; the old one stops working
 > [!WARNING]
 > No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
+### GET /api/v1/admin/operations/status/incidents
+
+The status page's incidents, newest first, with their updates and who posted them
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:STATUS_INCIDENT`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsStatusController_list` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-status.controller.ts)
+
+**Response 200 OK** (`application/json`) — The incidents
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.incidents` | object[] | yes |  |
+| `data.incidents[].components` | "api" \| "database" \| "background-jobs"[] | yes |  |
+| `data.incidents[].id` | string (uuid) | yes |  |
+| `data.incidents[].impact` | "MINOR" \| "MAJOR" \| "CRITICAL" | yes |  |
+| `data.incidents[].openedByName` | string \| null | yes |  |
+| `data.incidents[].resolvedAt` | integer \| null | yes |  |
+| `data.incidents[].startedAt` | integer | yes |  |
+| `data.incidents[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+| `data.incidents[].title` | string | yes |  |
+| `data.incidents[].updates` | object[] | yes |  |
+| `data.incidents[].updates[].id` | string (uuid) | yes |  |
+| `data.incidents[].updates[].message` | string | yes |  |
+| `data.incidents[].updates[].postedAt` | integer | yes |  |
+| `data.incidents[].updates[].postedByName` | string \| null | yes |  |
+| `data.incidents[].updates[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/operations/status/incidents
+
+Open an incident on the public status page, with its first update
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `CREATE:STATUS_INCIDENT`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsStatusController_open` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-status.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `components` | "api" \| "database" \| "background-jobs"[] | yes | 1–∞ items |
+| `impact` | "MINOR" \| "MAJOR" \| "CRITICAL" | yes |  |
+| `message` | string | yes | length 10–2000 |
+| `title` | string | yes | length 3–160 |
+
+**Response 201 Created** (`application/json`) — The incident
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.components` | "api" \| "database" \| "background-jobs"[] | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.impact` | "MINOR" \| "MAJOR" \| "CRITICAL" | yes |  |
+| `data.openedByName` | string \| null | yes |  |
+| `data.resolvedAt` | integer \| null | yes |  |
+| `data.startedAt` | integer | yes |  |
+| `data.state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+| `data.title` | string | yes |  |
+| `data.updates` | object[] | yes |  |
+| `data.updates[].id` | string (uuid) | yes |  |
+| `data.updates[].message` | string | yes |  |
+| `data.updates[].postedAt` | integer | yes |  |
+| `data.updates[].postedByName` | string \| null | yes |  |
+| `data.updates[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/operations/status/incidents/{incidentId}
+
+One incident with its updates
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:STATUS_INCIDENT`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsStatusController_detail` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-status.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `incidentId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The incident
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.components` | "api" \| "database" \| "background-jobs"[] | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.impact` | "MINOR" \| "MAJOR" \| "CRITICAL" | yes |  |
+| `data.openedByName` | string \| null | yes |  |
+| `data.resolvedAt` | integer \| null | yes |  |
+| `data.startedAt` | integer | yes |  |
+| `data.state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+| `data.title` | string | yes |  |
+| `data.updates` | object[] | yes |  |
+| `data.updates[].id` | string (uuid) | yes |  |
+| `data.updates[].message` | string | yes |  |
+| `data.updates[].postedAt` | integer | yes |  |
+| `data.updates[].postedByName` | string \| null | yes |  |
+| `data.updates[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/operations/status/incidents/{incidentId}/updates
+
+Post an update on an incident (RESOLVED ends it); 409 once it is resolved
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `UPDATE:STATUS_INCIDENT`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsStatusController_post` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-status.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `incidentId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `message` | string | yes | length 10–2000 |
+| `state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+
+**Response 201 Created** (`application/json`) — The incident
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.components` | "api" \| "database" \| "background-jobs"[] | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.impact` | "MINOR" \| "MAJOR" \| "CRITICAL" | yes |  |
+| `data.openedByName` | string \| null | yes |  |
+| `data.resolvedAt` | integer \| null | yes |  |
+| `data.startedAt` | integer | yes |  |
+| `data.state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+| `data.title` | string | yes |  |
+| `data.updates` | object[] | yes |  |
+| `data.updates[].id` | string (uuid) | yes |  |
+| `data.updates[].message` | string | yes |  |
+| `data.updates[].postedAt` | integer | yes |  |
+| `data.updates[].postedByName` | string \| null | yes |  |
+| `data.updates[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### POST /api/v1/operations/agent/report
 
 A server agent's report (bearer: the server's agent token)
@@ -2015,6 +2389,58 @@ The backup file, for a one-time ticket from POST …/download
 | Status | Code | When |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/operations/status
+
+The public status page: each part of the service and the incidents (no sign-in)
+
+- **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `PublicStatusController_page` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-status.controller.ts)
+
+**Response 200 OK** (`application/json`) — The status page
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.checkedAt` | integer \| null | yes |  |
+| `data.components` | object[] | yes |  |
+| `data.components[].key` | "api" \| "database" \| "background-jobs" | yes |  |
+| `data.components[].label` | string | yes |  |
+| `data.components[].status` | "OPERATIONAL" \| "UNKNOWN" \| "DEGRADED" \| "PARTIAL_OUTAGE" \| "MAJOR_OUTAGE" | yes |  |
+| `data.open` | object[] | yes |  |
+| `data.open[].components` | "api" \| "database" \| "background-jobs"[] | yes |  |
+| `data.open[].id` | string (uuid) | yes |  |
+| `data.open[].impact` | "MINOR" \| "MAJOR" \| "CRITICAL" | yes |  |
+| `data.open[].resolvedAt` | integer \| null | yes |  |
+| `data.open[].startedAt` | integer | yes |  |
+| `data.open[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+| `data.open[].title` | string | yes |  |
+| `data.open[].updates` | object[] | yes |  |
+| `data.open[].updates[].message` | string | yes |  |
+| `data.open[].updates[].postedAt` | integer | yes |  |
+| `data.open[].updates[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+| `data.overall` | "OPERATIONAL" \| "UNKNOWN" \| "DEGRADED" \| "PARTIAL_OUTAGE" \| "MAJOR_OUTAGE" | yes |  |
+| `data.recent` | object[] | yes |  |
+| `data.recent[].components` | "api" \| "database" \| "background-jobs"[] | yes |  |
+| `data.recent[].id` | string (uuid) | yes |  |
+| `data.recent[].impact` | "MINOR" \| "MAJOR" \| "CRITICAL" | yes |  |
+| `data.recent[].resolvedAt` | integer \| null | yes |  |
+| `data.recent[].startedAt` | integer | yes |  |
+| `data.recent[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+| `data.recent[].title` | string | yes |  |
+| `data.recent[].updates` | object[] | yes |  |
+| `data.recent[].updates[].message` | string | yes |  |
+| `data.recent[].updates[].postedAt` | integer | yes |  |
+| `data.recent[].updates[].state` | "INVESTIGATING" \| "IDENTIFIED" \| "MONITORING" \| "RESOLVED" | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
 > [!WARNING]

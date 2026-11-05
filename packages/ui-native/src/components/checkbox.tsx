@@ -7,6 +7,7 @@
 //   dash, read as "mixed"; pressing it checks;
 // - unchecked: an outlined box;
 // - locked (kept as it is by a policy): a tinted box with a lock, never faded.
+// A tick or dash pops in when it is pressed (toggle-mark.tsx); the one shown at first stays still.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import CheckIcon from "lucide-react-native/icons/check";
@@ -18,6 +19,7 @@ import { type AccessibilityState, type NativeSyntheticEvent, Pressable, type Tar
 import { cn } from "../lib/cn";
 import { resolveControlState, type ControlState } from "../lib/control-state";
 import { Icon } from "./icon";
+import { ToggleMark, ToggleMarkScope } from "./toggle-mark";
 
 /** The pressable row: the box, then the label. */
 export const checkboxVariants = cva("min-h-11 flex-row items-center gap-3 py-2 active:opacity-80", {
@@ -96,9 +98,17 @@ function CheckboxGlyph({
 		return <Icon icon={LockIcon} size="sm" weight="bold" colorClassName="accent-primary" testID="checkbox-lock" />;
 	}
 	if (indeterminate) {
-		return <Icon icon={MinusIcon} size="sm" weight="bold" colorClassName="accent-primary-foreground" testID="checkbox-dash" />;
+		return (
+			<ToggleMark key="dash">
+				<Icon icon={MinusIcon} size="sm" weight="bold" colorClassName="accent-primary-foreground" testID="checkbox-dash" />
+			</ToggleMark>
+		);
 	}
-	return checked ? <Icon icon={CheckIcon} size="sm" weight="bold" colorClassName="accent-primary-foreground" testID="checkbox-tick" /> : null;
+	return checked ? (
+		<ToggleMark key="tick">
+			<Icon icon={CheckIcon} size="sm" weight="bold" colorClassName="accent-primary-foreground" testID="checkbox-tick" />
+		</ToggleMark>
+	) : null;
 }
 
 export interface CheckboxProps {
@@ -173,9 +183,9 @@ export const Checkbox = React.memo(
 				onBlur={onBlur}
 				testID={testID}
 				className={cn(checkboxVariants({ variant, size, state }), className)}>
-				<View className={checkboxBoxVariants({ size, checked: checked || indeterminate, state })}>
+				<ToggleMarkScope className={checkboxBoxVariants({ size, checked: checked || indeterminate, state })}>
 					<CheckboxGlyph state={state} checked={checked} indeterminate={indeterminate} />
-				</View>
+				</ToggleMarkScope>
 				<View className="flex-1 gap-0.5">
 					<Text className={checkboxLabelVariants({ size })}>{label}</Text>
 					{description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{description}</Text>}

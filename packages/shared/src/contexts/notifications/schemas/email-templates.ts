@@ -74,6 +74,14 @@ export const TwoFactorStatusEmailPropsSchema = BaseEmailPropsSchema.extend({
 
 export type TwoFactorStatusEmailProps = z.output<typeof TwoFactorStatusEmailPropsSchema>;
 
+/** A passkey was added to or removed from the account (ADR 080): which one, and when. */
+export const PasskeyChangedEmailPropsSchema = BaseEmailPropsSchema.extend({
+	passkeyName: z.string().min(1).max(64),
+	changedAt: EpochMsSchema,
+}).strict();
+
+export type PasskeyChangedEmailProps = z.output<typeof PasskeyChangedEmailPropsSchema>;
+
 export const LoginVerificationEmailPropsSchema = BaseEmailPropsSchema.extend({
 	verificationCode: z.string().length(6),
 	expiresInMinutes: z.number().int().positive().default(10),

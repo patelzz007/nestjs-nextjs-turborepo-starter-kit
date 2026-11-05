@@ -199,6 +199,17 @@ describe("ImpersonationSession", () => {
 });
 
 describe("UserProfile", () => {
+	it("saves a chosen language without moving the version (the latest choice wins, enhancement 5.2)", () => {
+		const profile = UserProfile.rehydrate({ userId: "user-1", fullName: "Jane", version: 3 });
+
+		profile.chooseLanguage("ms", NOW);
+
+		expect(profile.chosenLanguage).toBe("ms");
+		expect(profile.changes).toBeNull();
+		expect(profile.concurrencyToken).toBe(3);
+		expect(profile.pullEvents()).toEqual([expect.any(UserProfileChanged)]);
+	});
+
 	it("edits against the version the client read and moves to the next version", () => {
 		const profile = UserProfile.rehydrate({ userId: "user-1", fullName: "Jane", version: 3 });
 

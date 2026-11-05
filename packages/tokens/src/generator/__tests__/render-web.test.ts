@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { GRAPHITE_DARK_THEME } from "../../mobile-theme";
 import { ThemeRoleSchema } from "../../schema";
 import { TOKEN_SOURCE } from "../../source";
 import { readDeclarations } from "../../testing/css-reader";
@@ -10,6 +11,17 @@ describe("renderWebStylesheet", () => {
 	const root = readDeclarations(css, ":root");
 	const dark = readDeclarations(css, ".dark");
 	const theme = readDeclarations(css, "@theme inline");
+
+	it("gives the admin panel the phone's graphite dark theme, under .dark .admin-app only", () => {
+		const admin = readDeclarations(css, ".dark .admin-app");
+		expect([...admin.keys()]).toStrictEqual(ThemeRoleSchema.options.filter((role) => GRAPHITE_DARK_THEME[role] !== undefined));
+		expect(admin.get("background")).toBe("var(--palette-graphite-950)");
+		expect(admin.get("card")).toBe("var(--palette-graphite-850)");
+		expect(admin.get("sidebar-active")).toBe("var(--palette-graphite-25)");
+		// The other themes and the other apps keep the shared values.
+		expect(css).not.toContain(".nord .admin-app");
+		expect(dark.get("background")).not.toBe(admin.get("background"));
+	});
 
 	it("writes the dark theme as exactly the themed roles, in role order", () => {
 		expect([...dark.keys()]).toStrictEqual(ThemeRoleSchema.options);

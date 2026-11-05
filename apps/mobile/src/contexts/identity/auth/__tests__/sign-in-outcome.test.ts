@@ -27,7 +27,17 @@ describe("classifySignInResponse", () => {
 	});
 
 	it("asks for the second factor", () => {
-		expect(classifySignInResponse(parsed({ requiresTwoFactor: true, tempToken: "challenge", message: "2FA" }))).toEqual({ kind: "twoFactor", tempToken: "challenge" });
+		expect(classifySignInResponse(parsed({ requiresTwoFactor: true, tempToken: "challenge", message: "2FA", passkeyAvailable: false }))).toEqual({
+			kind: "twoFactor",
+			tempToken: "challenge",
+			passkeyAvailable: false,
+		});
+		// An account with a passkey may finish with it instead of a code (ADR 080).
+		expect(classifySignInResponse(parsed({ requiresTwoFactor: true, tempToken: "challenge", message: "2FA", passkeyAvailable: true }))).toEqual({
+			kind: "twoFactor",
+			tempToken: "challenge",
+			passkeyAvailable: true,
+		});
 	});
 
 	it("asks for the emailed new-device code", () => {

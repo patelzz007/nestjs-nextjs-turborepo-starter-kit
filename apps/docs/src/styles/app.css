@@ -1,0 +1,732 @@
+/*
+ * Docs site styles. The shared kit's stylesheet comes first, so every @workspace/ui component (Alert,
+ * CodeBlock, Command, Sheet, DataTable, Badge, …) renders exactly as in the apps; the docs then give it
+ * their own identity by redefining the semantic tokens below (B + F: precise layout, graphite and verdigris
+ * on a cool neutral canvas). Every colour is a token here — never in a component — and
+ * src/styles/__tests__/theme-contrast.test.ts holds the text pairs to WCAG AA in every theme.
+ *
+ * Themes: light (no class) and dark (`.dark`) on <html> — the contract the shared kit and the generated
+ * token CSS use (src/browser/theme.ts). The apps' Nord theme is not offered on the docs.
+ *
+ * Typography: IBM Plex Sans (everything) and IBM Plex Mono (code, file paths, HTTP verbs), self-hosted from
+ * Fontsource: no font CDN, no third-party request.
+ */
+@import "@workspace/ui/globals.css";
+@import "@fontsource-variable/ibm-plex-sans/wght.css";
+@import "@fontsource-variable/ibm-plex-sans/wght-italic.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+@source "../**/*.{ts,tsx}";
+@source "../../../../packages/docs-renderer/src/**/*.ts";
+
+/*
+ * `dark:` follows the site theme, except inside code blocks, which follow their own
+ * when the reader picked one (`data-code-theme` on <html>, src/browser/code-theme.ts): dark code in a light
+ * page, light code in a dark page. Replaces the kit's `dark` variant for the docs only.
+ */
+@custom-variant dark (&:where(.dark, .dark:not([data-code-theme]) *, .dark :not(.code-block-island, .code-block-island *), [data-code-theme="dark"] .code-block-island, [data-code-theme="dark"] .code-block-island *));
+
+/* ── Light — also inside code blocks the reader set to light ──────────────── */
+/* A cool neutral canvas (the kit's #f1f4f9) with chrome a shade lighter, never pure white; teal stays the one accent. */
+:root,
+:root[data-code-theme="light"] .code-block-island {
+	--background: #f1f4f9;
+	--foreground: #1f2733;
+	--card: #f8fafc;
+	--card-foreground: #1f2733;
+	--popover: #fbfcfe;
+	--popover-foreground: #1f2733;
+	--muted: #e8edf4;
+	--muted-foreground: #5a6474;
+	--accent: #e4e9f1;
+	--accent-foreground: #1f2733;
+	--secondary: #e8edf4;
+	--secondary-foreground: #1f2733;
+	--border: #dde3ec;
+	--input: #cbd3df;
+	--primary: #0b6b66;
+	--primary-foreground: #f1f4f9;
+	--ring: #0b6b66;
+
+	--docs-chrome: #f8fafc;
+	--docs-text-secondary: #3e4858;
+	--docs-link: #0b6b66;
+	--docs-link-line: #9ccfcb;
+	--docs-sel: #0b6b66;
+	--docs-sel-foreground: #f1f4f9;
+	--docs-sel-soft: #dceae8;
+	--docs-hover: #e6ebf2;
+	--docs-grid-line: #dde3ec;
+	/* The glass header: how much of the chrome colour stays, and how strongly the page behind is blurred. */
+	--docs-glass-opacity: 72%;
+	--docs-glass-blur: 14px;
+	--docs-code-chip: #e6ebf2;
+	--docs-mark: #f2e2a5;
+
+	--diagram-entry: #2e90fa;
+	--diagram-step: #516480;
+	--diagram-store: #15b79e;
+	--diagram-decision: #f79009;
+	--diagram-outcome: #7a5af8;
+	--diagram-person: #f63d68;
+	--diagram-success: #17b26a;
+	--diagram-fill-mix: 12%;
+	--diagram-outline-mix: 62%;
+	--diagram-line: #7d8797;
+	--diagram-group: #e8edf4;
+
+	/* QR codes stay black on white in every theme: a scanner needs maximum contrast. */
+	--qr-background: #ffffff;
+	--qr-foreground: #000000;
+
+	--font-sans: "IBM Plex Sans Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	--font-heading: var(--font-sans);
+	--font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	/* The docs' code size, passed to the shared CodeBlock (`CODE_BLOCK_TYPE_CLASS`). */
+	--type-code-block-size: 0.875rem;
+	/* One reading column: prose, tables, code and diagrams share it (~85 characters of body copy). */
+	--type-measure: 48rem;
+	--header-height: 3.5rem;
+	color-scheme: light;
+}
+
+/* ── Dark — also inside code blocks the reader set to dark ────────────────── */
+.dark,
+:root[data-code-theme="dark"] .code-block-island {
+	--background: #1f1f1d;
+	--foreground: #ebeae5;
+	--card: #252523;
+	--card-foreground: #ebeae5;
+	--popover: #2a2a27;
+	--popover-foreground: #ebeae5;
+	--muted: #2c2b28;
+	--muted-foreground: #a3a097;
+	--accent: #33322e;
+	--accent-foreground: #ebeae5;
+	--secondary: #2c2b28;
+	--secondary-foreground: #ebeae5;
+	--border: #34332f;
+	--input: #3d3c37;
+	--primary: #5fc4bd;
+	--primary-foreground: #1f1f1d;
+	--ring: #5fc4bd;
+
+	--docs-chrome: #252523;
+	--docs-text-secondary: #cfcdc6;
+	--docs-link: #5fc4bd;
+	--docs-link-line: #2f6764;
+	--docs-sel: #5fc4bd;
+	--docs-sel-foreground: #1f1f1d;
+	--docs-sel-soft: #24403d;
+	--docs-hover: #2e2d2a;
+	--docs-grid-line: #34332f;
+	--docs-code-chip: #2f2e2b;
+	--docs-mark: #5a4a1a;
+
+	--diagram-step: #8a9bb8;
+	--diagram-fill-mix: 22%;
+	--diagram-outline-mix: 72%;
+	--diagram-line: #8f8c84;
+	--diagram-group: #272725;
+	color-scheme: dark;
+}
+
+/* Dark code blocks keep One Dark Pro's own charcoal and chrome, not the page's surface. */
+.dark:not([data-code-theme]) .code-block-island,
+:root[data-code-theme="dark"] .code-block-island {
+	--card: #282c34;
+	--card-foreground: #d7dae0;
+	--muted: #21252b;
+	--muted-foreground: #9da5b4;
+	--accent: #2c313c;
+	--foreground: #d7dae0;
+	--border: #3e4452;
+	color-scheme: dark;
+}
+
+@layer base {
+	html {
+		scroll-padding-top: calc(var(--header-height) + 1.5rem);
+	}
+
+	/* Jumps to a heading glide there (the timeline's scrollspy follows along); not for readers who asked for less motion. */
+	@media (prefers-reduced-motion: no-preference) {
+		html {
+			scroll-behavior: smooth;
+		}
+	}
+
+	body {
+		background: var(--background);
+		color: var(--foreground);
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+
+	:where(code, kbd, pre, samp) {
+		font-family: var(--font-mono);
+		font-variant-ligatures: none;
+	}
+
+	::selection {
+		background: var(--docs-sel-soft);
+		color: var(--foreground);
+	}
+}
+
+@layer components {
+	/*
+	 * The header: a drafting grid (B: precise, engineered) on frosted glass, so the page shows softly through
+	 * it as it scrolls under. The grid lines stay opaque: translucent lines would darken where they cross.
+	 * Without backdrop blur the band stays solid, so text never sits on an unblurred page.
+	 */
+	.docs-grid-band {
+		background-color: var(--docs-chrome);
+		background-image: linear-gradient(var(--docs-grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--docs-grid-line) 1px, transparent 1px);
+		background-size: 16px 16px;
+		background-position: -1px -1px;
+	}
+	/* The sticky bars under it (the phone "On this page" bar) share the glass, without the grid. */
+	.docs-glass {
+		background-color: var(--docs-chrome);
+	}
+	@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+		.docs-grid-band,
+		.docs-glass {
+			background-color: color-mix(in oklab, var(--docs-chrome) var(--docs-glass-opacity), transparent);
+			-webkit-backdrop-filter: blur(var(--docs-glass-blur)) saturate(1.4);
+			backdrop-filter: blur(var(--docs-glass-blur)) saturate(1.4);
+		}
+	}
+
+	/* ── The guide tree: one class, because every page carries every link ──── */
+	.docs-nav-link {
+		display: flex;
+		width: 100%;
+		min-width: 0;
+		min-height: 2rem;
+		align-items: flex-start;
+		gap: 0.625rem;
+		border-radius: calc(var(--radius) - 2px);
+		padding: 0.375rem 0.625rem;
+		color: var(--docs-text-secondary);
+		line-height: 1.375;
+		overflow-wrap: break-word;
+		transition:
+			background-color 150ms ease,
+			color 150ms ease;
+	}
+	.docs-nav-link > svg {
+		flex-shrink: 0;
+		margin-top: 0.125rem;
+		color: var(--muted-foreground);
+	}
+	.docs-nav-link > span {
+		min-width: 0;
+	}
+	.docs-nav-link:hover {
+		background: var(--docs-hover);
+		color: var(--foreground);
+	}
+	.docs-nav-link:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 2px var(--ring);
+	}
+	.docs-nav-link[aria-current="page"] {
+		background: var(--docs-sel);
+		color: var(--docs-sel-foreground);
+		font-weight: 500;
+	}
+	.docs-nav-link[aria-current="page"] > svg {
+		color: currentColor;
+		opacity: 0.9;
+	}
+
+	/* ── A guide card's section links: tinted pills (one class: the home page lists every guide) ── */
+	.docs-pill {
+		display: inline-flex;
+		align-items: center;
+		border: 1px solid color-mix(in oklab, var(--docs-link) 25%, transparent);
+		border-radius: 9999px;
+		background: var(--docs-sel-soft);
+		padding: 0.25rem 0.625rem;
+		color: var(--docs-link);
+		font-weight: 500;
+		transition: border-color 150ms ease;
+	}
+	.docs-pill:hover {
+		border-color: var(--docs-link);
+	}
+	.docs-pill:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 2px var(--ring);
+	}
+
+	/* ── "On this page": progress ring + vertical timeline ─────────────────── */
+	.toc-timeline {
+		display: grid;
+	}
+	.toc-timeline > li {
+		position: relative;
+		padding: 0.3125rem 0 0.3125rem 1.625rem;
+	}
+	/* The track to the next entry; filled where the reader has been (solid colours: no overlapping strokes). */
+	.toc-timeline > li::before {
+		content: "";
+		position: absolute;
+		left: 0.25rem;
+		top: 1.375rem;
+		bottom: -0.6875rem;
+		width: 2px;
+		border-radius: 1px;
+		background: linear-gradient(to bottom, var(--docs-link) 0 var(--toc-fill, 0%), var(--border) var(--toc-fill, 0%) 100%);
+	}
+	.toc-timeline > li:last-child::before {
+		display: none;
+	}
+	.toc-node {
+		position: absolute;
+		left: 0.0625rem;
+		top: 0.6875rem;
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 9999px;
+		border: 2px solid var(--border);
+		background: var(--background);
+	}
+	.toc-timeline > li[data-state="read"] .toc-node {
+		border-color: var(--docs-link);
+		background: var(--docs-link);
+	}
+	.toc-timeline > li[data-state="current"] .toc-node {
+		border-color: var(--docs-link);
+	}
+	.toc-kids {
+		display: grid;
+		gap: 1px;
+		margin: 0.25rem 0 0.125rem 0.125rem;
+		padding-left: 0.625rem;
+		border-left: 1px solid var(--border);
+	}
+
+	/* ── Prose: the rendered Markdown ──────────────────────────────────────── */
+	.prose {
+		color: var(--foreground);
+		font-size: 1rem;
+		line-height: 1.7;
+		overflow-wrap: break-word;
+	}
+	.prose > :first-child {
+		margin-top: 0;
+	}
+	.prose :where(p, ul, ol, dl, figure, .table-wrapper, .diagram, .image-gallery, .qr-code, .pdf-embed, .callout, .code-block-island, .media-island) {
+		margin: 0 0 1rem;
+	}
+	.prose :where(h2, h3, h4) {
+		position: relative;
+		color: var(--foreground);
+		font-weight: 600;
+		letter-spacing: -0.012em;
+		scroll-margin-top: calc(var(--header-height) + 1.5rem);
+	}
+	.prose h2 {
+		margin: 2.5rem 0 0.75rem;
+		font-size: 1.375rem;
+		line-height: 1.3;
+	}
+	.prose h3 {
+		margin: 2rem 0 0.5rem;
+		font-size: 1.125rem;
+		line-height: 1.35;
+	}
+	.prose h4 {
+		margin: 1.5rem 0 0.5rem;
+		font-size: 1rem;
+		line-height: 1.4;
+	}
+	.heading-anchor {
+		margin-left: 0.5rem;
+		color: var(--muted-foreground);
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		font-weight: 400;
+		text-decoration: none;
+		opacity: 0;
+		transition: opacity 150ms ease;
+	}
+	.prose :where(h2, h3, h4):hover .heading-anchor,
+	.heading-anchor:focus-visible {
+		opacity: 1;
+	}
+	.prose a:not(.heading-anchor, [data-slot]) {
+		color: var(--docs-link);
+		text-decoration: underline;
+		text-decoration-color: var(--docs-link-line);
+		text-underline-offset: 3px;
+		transition: text-decoration-color 150ms ease;
+	}
+	.prose a:not(.heading-anchor, [data-slot]):hover {
+		text-decoration-color: var(--docs-link);
+	}
+	.prose strong {
+		font-weight: 600;
+	}
+	.prose :where(ul, ol) {
+		padding-left: 1.5rem;
+	}
+	.prose ul {
+		list-style: disc;
+	}
+	.prose ol {
+		list-style: decimal;
+	}
+	.prose li {
+		margin: 0.25rem 0;
+	}
+	.prose li::marker {
+		color: var(--muted-foreground);
+	}
+	.prose :where(li > ul, li > ol) {
+		margin: 0.25rem 0 0;
+	}
+	.prose hr {
+		margin: 2.5rem 0;
+		border: 0;
+		border-top: 1px solid var(--border);
+	}
+	.prose img {
+		max-width: 100%;
+		height: auto;
+		border-radius: 0.5rem;
+	}
+	.prose :not(pre, [data-slot="code-block"] *) > code {
+		padding: 0.0625rem 0.3125rem;
+		border-radius: 0.25rem;
+		background: var(--docs-code-chip);
+		font-size: 0.875em;
+	}
+	.prose abbr.glossary-term {
+		text-decoration: underline dotted;
+		text-decoration-color: var(--muted-foreground);
+		text-underline-offset: 3px;
+		cursor: help;
+	}
+	.prose mark {
+		background: var(--docs-mark);
+		color: inherit;
+		border-radius: 2px;
+	}
+
+	/* Tables: reference material, read across a row. */
+	.table-wrapper {
+		overflow-x: auto;
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+	}
+	.prose table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.9375rem;
+		line-height: 1.5;
+		font-variant-numeric: tabular-nums;
+	}
+	.prose thead th {
+		background: var(--docs-chrome);
+		color: var(--docs-text-secondary);
+		font-size: 0.8125rem;
+		font-weight: 600;
+		text-align: left;
+	}
+	.prose :where(th, td) {
+		padding: 0.5625rem 0.875rem;
+		vertical-align: top;
+	}
+	.prose tbody td {
+		border-top: 1px solid var(--border);
+	}
+	.prose tbody td:first-child {
+		color: var(--foreground);
+		font-weight: 600;
+	}
+	@media (hover: hover) {
+		.prose tbody tr:hover td {
+			background: var(--docs-hover);
+		}
+	}
+
+	/* Callouts are the shared Alert (rendered by @workspace/docs-renderer); only spacing is the docs'. */
+	.prose .callout :where(p, ul, ol) {
+		margin: 0;
+	}
+
+	/* Code blocks (the shared CodeBlock) and their code-theme toggle: CSS shows the stored state. */
+	.code-theme-state {
+		display: none;
+		align-items: center;
+		gap: 0.375rem;
+	}
+	:root:not([data-code-theme]) .code-theme-state[data-code-theme-state="site"],
+	:root[data-code-theme="light"] .code-theme-state[data-code-theme-state="light"],
+	:root[data-code-theme="dark"] .code-theme-state[data-code-theme-state="dark"] {
+		display: inline-flex;
+	}
+	.prose .media-island img {
+		border-radius: 0;
+	}
+
+	/* QR codes (```qr fences). */
+	.qr-code {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.qr-code svg {
+		width: 100%;
+		max-width: 200px;
+		height: auto;
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+	}
+	.qr-code .qr-code-background {
+		fill: var(--qr-background);
+	}
+	.qr-code .qr-code-modules {
+		fill: var(--qr-foreground);
+	}
+	.qr-code figcaption {
+		color: var(--muted-foreground);
+		font-size: 0.75rem;
+		overflow-wrap: anywhere;
+		text-align: center;
+	}
+
+	/* PDF embeds (```pdf fences). */
+	.pdf-embed {
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+		background: var(--card);
+	}
+	.pdf-embed-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 1rem;
+		padding: 0.625rem 1rem;
+		border-bottom: 1px solid var(--border);
+		font-size: 0.875rem;
+		line-height: 1.5;
+	}
+	.pdf-embed-name {
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		color: var(--foreground);
+		font-weight: 500;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.pdf-embed-action {
+		color: var(--docs-link);
+		font-weight: 500;
+	}
+	.pdf-embed-frame {
+		display: block;
+		width: 100%;
+		height: min(80vh, 720px);
+		border: 0;
+		background: var(--muted);
+	}
+	.pdf-embed-unsupported {
+		margin: 0;
+		padding: 1.5rem 1rem;
+		color: var(--muted-foreground);
+		font-size: 0.875rem;
+		text-align: center;
+	}
+
+	/*
+	 * Diagrams — ```mermaid fences drawn by Pele (src/browser/diagrams.ts) as plain SVG coloured by the
+	 * variables below, so a theme switch recolours a diagram without re-rendering it. Colour carries
+	 * meaning, the same in every diagram: entry points, steps, stores (cylinders), decisions (diamonds),
+	 * outcomes, people (circles). Tints mix in oklab: an oklch mix would sweep the hue through the
+	 * achromatic surface and turn blue into pink. Labels keep the body text colour.
+	 */
+	.diagram {
+		--pele-bg: var(--card);
+		--pele-fg: var(--foreground);
+		--pele-muted: var(--muted-foreground);
+		--pele-line: var(--diagram-line);
+		--pele-surface: var(--muted);
+		--pele-surface-alt: var(--diagram-group);
+		--pele-border: var(--input);
+		--pele-accent: var(--docs-link);
+		--pele-font: var(--font-sans);
+		--pele-font-mono: var(--font-mono);
+		--pele-radius: 8px;
+		position: relative;
+		padding: 1.5rem 1.25rem;
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+		background: var(--card);
+		font-size: 0.875rem;
+	}
+	.diagram-canvas {
+		display: flex;
+		justify-content: center;
+	}
+	.diagram-source {
+		margin: 0;
+		overflow-x: auto;
+		color: var(--muted-foreground);
+		font-size: 0.75rem;
+		white-space: pre;
+	}
+	.diagram[data-rendered] .diagram-source {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+	/* While a diagram renders: the kit's skeleton sweep (`.skeleton-bone` in @workspace/ui's components.css),
+	   on its keyframes and timing tokens, so the docs and the apps shimmer alike. */
+	:root[data-js] .diagram[aria-busy="true"] .diagram-source {
+		min-height: 180px;
+		overflow: hidden;
+		border-radius: 0.5rem;
+		color: transparent;
+		user-select: none;
+		background-color: var(--muted);
+		background-image: linear-gradient(100deg, transparent 40%, var(--skeleton-sheen) 50%, transparent 60%);
+		background-size: 200vw 100%;
+		background-repeat: no-repeat;
+		background-attachment: fixed;
+		animation: skeleton-sweep var(--skeleton-sweep-duration) ease-in-out infinite;
+	}
+	.diagram .pele {
+		max-width: 100%;
+	}
+	.diagram :where(.pele-edge-label, .pele-cluster-label, .pele-frame-label) {
+		font-size: 0.75rem;
+	}
+	.diagram .pele-node[data-role] {
+		--node-hue: var(--diagram-step);
+	}
+	.diagram .pele-node[data-role="entry"] {
+		--node-hue: var(--diagram-entry);
+	}
+	.diagram .pele-node[data-role="store"] {
+		--node-hue: var(--diagram-store);
+	}
+	.diagram .pele-node[data-role="decision"] {
+		--node-hue: var(--diagram-decision);
+	}
+	.diagram .pele-node[data-role="outcome"] {
+		--node-hue: var(--diagram-outcome);
+	}
+	.diagram .pele-node[data-role="person"] {
+		--node-hue: var(--diagram-person);
+	}
+	.diagram :where(.pele-node[data-role], .pele-actor[data-hue]) > :where(rect, path, polygon, circle, ellipse) {
+		stroke: color-mix(in oklab, var(--node-hue) var(--diagram-outline-mix), var(--card));
+		stroke-width: 1.25px;
+	}
+	.diagram :where(.pele-node[data-role], .pele-actor[data-hue]) > :where(rect, path, polygon, circle, ellipse):not([fill="none"]) {
+		fill: color-mix(in oklab, var(--node-hue) var(--diagram-fill-mix), var(--card));
+	}
+	.diagram [data-hue="1"] {
+		--node-hue: var(--diagram-entry);
+	}
+	.diagram [data-hue="2"] {
+		--node-hue: var(--diagram-outcome);
+	}
+	.diagram [data-hue="3"] {
+		--node-hue: var(--diagram-store);
+	}
+	.diagram [data-hue="4"] {
+		--node-hue: var(--diagram-decision);
+	}
+	.diagram [data-hue="5"] {
+		--node-hue: var(--diagram-person);
+	}
+	.diagram [data-hue="6"] {
+		--node-hue: var(--diagram-success);
+	}
+	.diagram .pele-lifeline[data-hue] {
+		stroke: color-mix(in oklab, var(--node-hue) 45%, var(--card));
+		stroke-dasharray: 4 4;
+	}
+	.diagram .pele-notes {
+		fill: var(--muted);
+		stroke: var(--input);
+		stroke-dasharray: 4 3;
+	}
+	.diagram .pele-state > :where(rect, path) {
+		fill: color-mix(in oklab, var(--diagram-entry) var(--diagram-fill-mix), var(--card));
+		stroke: color-mix(in oklab, var(--diagram-entry) var(--diagram-outline-mix), var(--card));
+	}
+	.diagram .pele-state-start > :where(circle, ellipse) {
+		fill: var(--docs-link);
+		stroke: var(--docs-link);
+	}
+
+	/* Screenshot galleries (a table whose cells are images). */
+	.image-gallery {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		gap: 0.75rem;
+	}
+	.image-gallery figure {
+		margin: 0;
+		overflow: hidden;
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+		background: var(--card);
+	}
+	.image-gallery img {
+		display: block;
+		width: 100%;
+		border-radius: 0;
+	}
+	.image-gallery figcaption {
+		padding: 0.5rem 0.75rem;
+		color: var(--muted-foreground);
+		font-size: 0.875rem;
+		line-height: 1.5;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root[data-js] .diagram[aria-busy="true"] .diagram-source {
+		background-image: none;
+		animation: none;
+	}
+	.heading-anchor {
+		transition: none;
+	}
+}
+
+/*
+ * Media embeds' images are rendered transparent at build time (the kit fades each one in once React sees it
+ * load). Until the island is hydrated they are shown — from this unlayered rule, since a rule inside a
+ * cascade layer loses to Tailwind's `opacity-0` utility.
+ */
+[data-media-island-root]:not([data-hydrated="true"]) img {
+	opacity: 1;
+}
+
+/*
+ * A docs callout holds prose blocks (paragraphs, lists, code blocks), which should fill its width like the
+ * rest of the reading column; the shared Alert starts-aligns its description's children for short app
+ * notices. Unlayered, so it outranks the Alert's `justify-items-start` utility.
+ */
+.prose .callout [data-slot="alert-description"] {
+	justify-items: stretch;
+}

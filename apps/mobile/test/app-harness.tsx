@@ -14,14 +14,16 @@ import { createAppDrawerStore } from "../src/features/app-drawer/store";
 import { PreferencesStoreProvider } from "../src/features/preferences/facade";
 import type { PreferencesState } from "../src/features/preferences/state";
 import { sessionActions, type RestoredSession } from "../src/features/session/actions";
-import { SessionStoreProvider } from "../src/features/session/facade";
+import { SessionStoreProvider, useRootRoute } from "../src/features/session/facade";
 import { ToastStoreProvider } from "../src/features/toast/facade";
 import { createToastStore } from "../src/features/toast/store";
 import { ToastHost } from "../src/features/toast/toast-host";
 import { ApiClientProvider } from "../src/lib/api-context";
+import type { BuildIdentity } from "../src/lib/build-identity";
 import type { RawMobileEnv } from "../src/lib/env";
 import type { ThemePreference } from "../src/lib/secure-store";
 import { createAppRuntime, type AppRuntimeInputs, type ReadyAppRuntime } from "../src/runtime/app-runtime";
+import { RootStack, withRootGate, type GatedRootRoute } from "../src/runtime/root-navigator";
 import { ReadyRuntimeProvider } from "../src/runtime/runtime-context";
 import { trackQueryClient } from "./query-clients";
 
@@ -39,9 +41,18 @@ export const TEST_RAW_ENV: RawMobileEnv = {
 	allowLanHttpApi: undefined,
 };
 
+/** A development build with no update running and no install time: the build line shows its type and version only. */
+export const TEST_BUILD_IDENTITY: BuildIdentity = {
+	kind: "development",
+	runningUpdateCreatedAt: null,
+	isEmbeddedLaunch: true,
+	readInstalledAt: (): Promise<Date | null> => Promise.resolve(null),
+};
+
 export interface TestRuntimeOverrides {
 	readonly rawEnv?: RawMobileEnv;
 	readonly readAppVersion?: () => string;
+	readonly build?: BuildIdentity;
 	readonly applyTheme?: (theme: ThemePreference) => void;
 	readonly savePreferences?: (preferences: PreferencesState) => Promise<void>;
 }
@@ -52,6 +63,7 @@ export function testRuntimeInputs(overrides: TestRuntimeOverrides = {}): AppRunt
 		appName: "Starter",
 		readAppVersion: overrides.readAppVersion ?? ((): string => "1.0.0"),
 		buildNumber: null,
+		build: overrides.build ?? TEST_BUILD_IDENTITY,
 		deviceDetails: { modelName: "iPhone 15 Pro", deviceName: "Alex’s iPhone" },
 		applyTheme: overrides.applyTheme ?? jest.fn(),
 		savePreferences: overrides.savePreferences ?? jest.fn((): Promise<void> => Promise.resolve()),
@@ -120,6 +132,16 @@ export function markerScreen(name: string): () => React.JSX.Element {
 	};
 }
 
+/** A root route file's stand-in: a placeholder gated like the real file (runtime/root-navigator, `withRootGate`). */
+export function gatedMarkerScreen(owners: readonly GatedRootRoute[], name: string): () => React.JSX.Element {
+	return withRootGate(owners, markerScreen(name));
+}
+
+/** A root group layout's stand-in: renders its child route, gated like the real layout. */
+export function gatedSlotLayout(owners: readonly GatedRootRoute[]): () => React.JSX.Element {
+	return withRootGate(owners, SlotLayout);
+}
+
 /** Where the test router is (read after the render settled). */
 export interface RenderedApp {
 	readonly pathname: () => string;
@@ -136,6 +158,25 @@ export interface RenderedApp {
  * such as a layout's stack settings.
  */
 export type TestRoute = (() => React.JSX.Element) | { readonly default: () => React.JSX.Element };
+
+/** The root navigator on the session's root route, as the app shell renders it (nothing while the session starts). */
+function SessionRootStack(): React.JSX.Element | null {
+	const route = useRootRoute();
+	return route === "starting" ? null : <RootStack route={route} />;
+}
+
+/** `renderInApp` through the root navigator: each root route file's gate (`withRootGate`) applies, as in the app. */
+export async function renderInRootApp(runtime: ReadyAppRuntime, screens: Readonly<Record<string, TestRoute>>, initialUrl: string): Promise<RenderedApp> {
+	function TestRootLayout(): React.JSX.Element {
+		return (
+			<AppProviders runtime={runtime}>
+				<SessionRootStack />
+			</AppProviders>
+		);
+	}
+	const view = await renderRouter({ _layout: TestRootLayout, ...screens }, { initialUrl });
+	return { pathname: (): string => view.getPathname(), pathnameWithParams: (): string => view.getPathnameWithParams() };
+}
 
 export async function renderInApp(runtime: ReadyAppRuntime, screens: Readonly<Record<string, TestRoute>>, initialUrl: string): Promise<RenderedApp> {
 	function TestRootLayout(): React.JSX.Element {

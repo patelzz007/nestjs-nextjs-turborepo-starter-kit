@@ -11,4 +11,8 @@ describe("k6Script", () => {
 		expect(script).toContain("step");
 		expect(script).toContain("export default function");
 	});
+
+	it("keeps each virtual user's session cookies across iterations (it signs in once, then reuses the session)", () => {
+		expect(k6Script()).toContain("noCookiesReset: true");
+	});
 });

@@ -47,6 +47,11 @@ import {
 	StorageProviderSettingSchema,
 	TenantKmsProviderSchema,
 	SessionLocationProviderSchema,
+	PasswordBreachCheckSchema,
+	WebAuthnRpIdEnvSchema,
+	AndroidPackageNameEnvSchema,
+	AndroidCertFingerprintsEnvSchema,
+	AppleAppIdsEnvSchema,
 } from "../api-env.fields";
 import {
 	DEFAULT_ACCESS_TOKEN_STATE_CACHE_MAX_ENTRIES,
@@ -99,6 +104,8 @@ import {
 	DEFAULT_THROTTLE_TTL_MS,
 	DEFAULT_USER_SESSION_CACHE_TTL_MS,
 	DEFAULT_WEBHOOK_RATE_LIMIT_PER_MINUTE,
+	DEFAULT_INBOUND_WEBHOOK_RETENTION_DAYS,
+	MIN_INBOUND_WEBHOOK_RETENTION_DAYS,
 	GITHUB_WEBHOOK_SECRET_MIN_LENGTH,
 	MAX_BCRYPT_SALT_ROUNDS,
 	MAX_EMAIL_ATTEMPTS,
@@ -142,6 +149,7 @@ export const ApiEnvInputSchema = z.object({
 
 	// Database
 	DATABASE_URL: PostgresUrlEnvSchema,
+	DATABASE_SESSION_URL: PostgresUrlEnvSchema.optional(),
 	DB_POOL_MAX: integerEnvSchema({ min: 2, defaultValue: DEFAULT_DB_POOL_MAX }),
 	DB_IDLE_TIMEOUT_MS: integerEnvSchema({ min: 0, defaultValue: DEFAULT_DB_IDLE_TIMEOUT_MS }),
 
@@ -153,7 +161,30 @@ export const ApiEnvInputSchema = z.object({
 	EMAIL_VERIFICATION_SECRET: SecretEnvSchema,
 	TWO_FACTOR_PENDING_SECRET: SecretEnvSchema,
 	TWO_FACTOR_ISSUER: NonEmptyEnvStringSchema.optional(),
+	// Passkeys (ADR 080): the relying party is derived from COOKIE_DOMAIN / APP_URL unless set
+	WEBAUTHN_RP_ID: WebAuthnRpIdEnvSchema.optional(),
+	WEBAUTHN_ANDROID_PACKAGE_NAME: AndroidPackageNameEnvSchema.optional(),
+	WEBAUTHN_ANDROID_CERT_FINGERPRINTS: AndroidCertFingerprintsEnvSchema.optional(),
+	WEBAUTHN_APPLE_APP_IDS: AppleAppIdsEnvSchema.optional(),
 	LOGIN_VERIFICATION_MODE: LoginVerificationModeSchema.default("new-device"),
+	PASSWORD_BREACH_CHECK: PasswordBreachCheckSchema.default("hibp"),
+	// ── Payments (ADR 020): each gateway is on when all of its settings are set ──
+	BILLPLZ_API_KEY: SecretEnvSchema.optional(),
+	BILLPLZ_COLLECTION_ID: NonEmptyEnvStringSchema.optional(),
+	BILLPLZ_X_SIGNATURE_KEY: SecretEnvSchema.optional(),
+	BILLPLZ_SANDBOX: OptionalToggleEnvSchema,
+	CHIP_SECRET_KEY: SecretEnvSchema.optional(),
+	CHIP_BRAND_ID: NonEmptyEnvStringSchema.optional(),
+	/** The company public key CHIP signs success callbacks with (PEM; `\n` for line breaks). */
+	CHIP_PUBLIC_KEY: NonEmptyEnvStringSchema.optional(),
+	/** The fake gateway's callback signing secret: development and tests only. */
+	PAYMENTS_FAKE_SECRET: SecretEnvSchema.optional(),
+	/** Outgoing webhooks (ADR 082): the key ring endpoint signing secrets are encrypted with; unset = webhooks are off. */
+	WEBHOOK_SECRET_ENCRYPTION_KEYS: MfaEncryptionKeysEnvSchema.optional(),
+	/** Lets an endpoint be `http://localhost` / a loopback address (development and tests only; refused in production). */
+	WEBHOOK_ALLOW_LOOPBACK_URLS: BooleanFlagEnvSchema,
+	/** Days a received webhook (ADR 081) is kept before the hourly prune deletes it; at least a week (the replay guard). */
+	INBOUND_WEBHOOK_RETENTION_DAYS: integerEnvSchema({ min: MIN_INBOUND_WEBHOOK_RETENTION_DAYS, defaultValue: DEFAULT_INBOUND_WEBHOOK_RETENTION_DAYS }),
 	BCRYPT_SALT_ROUNDS: integerEnvSchema({ min: MIN_BCRYPT_SALT_ROUNDS, max: MAX_BCRYPT_SALT_ROUNDS, defaultValue: DEFAULT_BCRYPT_SALT_ROUNDS }),
 
 	// MFA / encryption
@@ -197,6 +228,7 @@ export const ApiEnvInputSchema = z.object({
 	HCLOUD_TOKEN: NonEmptyEnvStringSchema.optional(),
 	// The backup's own read-only login (BYPASSRLS; `pnpm --filter @workspace/api db:provision-backup-login`).
 	BACKUP_DATABASE_URL: PostgresUrlEnvSchema.optional(),
+	RESTORE_DRILL_DATABASE_URL: PostgresUrlEnvSchema.optional(),
 	// The image `pg_dump` runs from when the installed one is older than the server.
 	BACKUP_PG_DUMP_DOCKER_IMAGE: NonEmptyEnvStringSchema.default(DEFAULT_BACKUP_PG_DUMP_DOCKER_IMAGE),
 	// Where the backup looks up `pg_dump` and `docker` (the process's own search path).

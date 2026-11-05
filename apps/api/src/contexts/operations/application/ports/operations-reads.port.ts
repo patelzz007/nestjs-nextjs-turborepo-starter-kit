@@ -3,9 +3,12 @@
 // ============================================
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
+import type { SystemOperationName } from "../../../../platform/application/system-operation-names";
 import type { OperationsReadScope } from "../operations-scope";
 
 /** Runs `work` in one read transaction under the console's read operation. */
 export interface OperationsReads {
 	read<TResult>(actor: ActorContext, work: (scope: OperationsReadScope) => Promise<TResult>): Promise<TResult>;
+	/** The same, under another named read operation (the status page's staff reads). */
+	readAs<TResult>(operation: SystemOperationName, actor: ActorContext, work: (scope: OperationsReadScope) => Promise<TResult>): Promise<TResult>;
 }

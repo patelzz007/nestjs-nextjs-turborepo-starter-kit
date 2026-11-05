@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Injectable } from "@nestjs/common";
 import type { Job } from "bullmq";
 import { QUEUE_NAMES, RewardsMaintenanceJobSchema } from "@workspace/shared";
@@ -11,7 +12,7 @@ import { AutoPublishDueRewardsCommand, type AutoPublishDueRewardsResult } from "
 const AUTO_PUBLISH_OPERATION = "queue.rewards.auto_publish";
 
 /** `rewards.auto-publish` → AutoPublishDueRewards, audited by the dispatcher; a failure rethrows so BullMQ retries. */
-@Processor(QUEUE_NAMES.rewardsAutoPublish)
+@Processor(QUEUE_NAMES.rewardsAutoPublish, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class RewardsAutoPublishProcessor extends WorkerHost {
 	public constructor(private readonly commands: SystemCommandDispatcher) {

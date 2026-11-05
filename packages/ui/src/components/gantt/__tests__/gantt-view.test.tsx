@@ -176,4 +176,82 @@ describe("GanttView", (): void => {
 		expect(document.querySelector("[data-slot=gantt-drag-ghost]")).toBeNull();
 		expect(document.body.classList.contains("gantt-dragging")).toBe(false);
 	});
+
+	describe("centring the target until the user scrolls", (): void => {
+		/** A ResizeObserver a test fires, as the browser does when an observed box changes size; a disconnected one stays quiet. */
+		const observers: RecordingResizeObserver[] = [];
+		class RecordingResizeObserver {
+			public connected = true;
+			public readonly targets = new Set<Element>();
+			public constructor(public readonly callback: () => void) {
+				observers.push(this);
+			}
+			public observe(target: Element): void {
+				this.targets.add(target);
+			}
+			public unobserve(target: Element): void {
+				this.targets.delete(target);
+			}
+			public disconnect(): void {
+				this.connected = false;
+				this.targets.clear();
+			}
+		}
+
+		/** The timeline pane's scrolling viewport, as the view itself finds it. */
+		function timelineViewport(): HTMLElement {
+			const viewport = screen.getByRole("region", { name: "Timeline" }).querySelector<HTMLElement>("[data-slot=scroll-area-viewport]");
+			if (viewport === null) {
+				throw new Error("the timeline has no scrolling viewport");
+			}
+			return viewport;
+		}
+
+		/**
+		 * Gives the timeline a laid-out size (jsdom has no layout): the pane's visible width, the axis's own width, and
+		 * the scrolled width (the axis plus anything overflowing past its end). Then tells every observer.
+		 */
+		function resizeTimeline(viewport: HTMLElement, size: { readonly clientWidth: number; readonly axisWidth: number; readonly overflowPx?: number }): void {
+			const axis = viewport.querySelector<HTMLElement>("[data-gantt-axis]");
+			if (axis === null) {
+				throw new Error("the timeline has no axis");
+			}
+			Object.defineProperty(viewport, "clientWidth", { configurable: true, value: size.clientWidth });
+			Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: size.axisWidth + (size.overflowPx ?? 0) });
+			Object.defineProperty(axis, "offsetWidth", { configurable: true, value: size.axisWidth });
+			act((): void => {
+				for (const observer of observers.filter((candidate: RecordingResizeObserver): boolean => candidate.connected && candidate.targets.size > 0)) {
+					observer.callback();
+				}
+			});
+		}
+
+		it("keeps the same instant at the centre as the pane changes size (fonts arriving, a sidebar folding)", (): void => {
+			observers.length = 0;
+			vi.stubGlobal("ResizeObserver", RecordingResizeObserver);
+			renderHarness();
+			const viewport = timelineViewport();
+
+			resizeTimeline(viewport, { clientWidth: 400, axisWidth: 4000 });
+			const centreWhenWide = viewport.scrollLeft + 400 / 2;
+			resizeTimeline(viewport, { clientWidth: 300, axisWidth: 4000 });
+			const centreWhenNarrow = viewport.scrollLeft + 300 / 2;
+
+			expect(centreWhenWide).toBeGreaterThan(0);
+			expect(centreWhenNarrow).toBe(centreWhenWide);
+		});
+
+		it("maps the centre onto the axis, not onto content overflowing past its end (a bar's label)", (): void => {
+			observers.length = 0;
+			vi.stubGlobal("ResizeObserver", RecordingResizeObserver);
+			renderHarness();
+			const viewport = timelineViewport();
+
+			resizeTimeline(viewport, { clientWidth: 400, axisWidth: 4000 });
+			const centred = viewport.scrollLeft;
+			resizeTimeline(viewport, { clientWidth: 400, axisWidth: 4000, overflowPx: 33 });
+
+			expect(viewport.scrollLeft).toBe(centred);
+		});
+	});
 });

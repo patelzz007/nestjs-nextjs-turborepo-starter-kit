@@ -41,6 +41,7 @@ import {
 	EMAIL_LOG_TABLE_PAGE,
 	MERCHANTS_TABLE_PAGE,
 	MFA_RECOVERY_TABLE_PAGE,
+	RECEIVED_WEBHOOKS_TABLE_PAGE,
 	PRODUCTS_TABLE_PAGE,
 	TABLE_PAGE_SKELETON_ROWS,
 	TablePageSkeleton,
@@ -106,6 +107,7 @@ describe("TablePageSkeleton", () => {
 		{ name: "audit log", shape: AUDIT_LOG_TABLE_PAGE },
 		{ name: "email log", shape: EMAIL_LOG_TABLE_PAGE },
 		{ name: "MFA recovery", shape: MFA_RECOVERY_TABLE_PAGE },
+		{ name: "received webhooks", shape: RECEIVED_WEBHOOKS_TABLE_PAGE },
 	];
 
 	it.each(shapes)("draws the $name page's header and every column of its table", ({ shape }) => {

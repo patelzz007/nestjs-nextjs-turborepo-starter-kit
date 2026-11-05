@@ -11,6 +11,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { createMobileApiClient, type MobileApiClient } from "../lib/api";
 import { InvalidAppVersionError } from "../lib/app-version";
+import type { BuildIdentity } from "../lib/build-identity";
 import { buildDeviceHeaders, type DeviceDetails } from "../lib/device-headers";
 import { resolveMobileEnv, type MobileEnv, type RawMobileEnv } from "../lib/env";
 import { clearQueryClient, createMobileQueryClient } from "../lib/query-client";
@@ -39,6 +40,8 @@ export interface ReadyAppRuntime {
 	readonly appName: string;
 	readonly appVersion: string;
 	readonly buildNumber: string | null;
+	/** Which build this is and when its code was made (the drawer, the sign-in panel, Settings → About). */
+	readonly build: BuildIdentity;
 	readonly queryClient: QueryClient;
 	readonly sessionStore: SessionStore;
 	readonly preferencesStore: PreferencesStore;
@@ -56,6 +59,7 @@ export interface AppRuntimeInputs {
 	readonly appName: string;
 	readonly readAppVersion: () => string;
 	readonly buildNumber: string | null;
+	readonly build: BuildIdentity;
 	readonly deviceDetails: DeviceDetails;
 	readonly applyTheme: (theme: ThemePreference) => void;
 	readonly savePreferences: (preferences: PreferencesState) => Promise<void>;
@@ -140,6 +144,7 @@ export function createAppRuntime(inputs: AppRuntimeInputs): AppRuntime {
 		appName: inputs.appName,
 		appVersion,
 		buildNumber: inputs.buildNumber,
+		build: inputs.build,
 		queryClient,
 		sessionStore,
 		preferencesStore,

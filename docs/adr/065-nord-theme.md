@@ -45,7 +45,8 @@ as text on Nord's own surfaces: Aurora red `#bf616a` is 3.05:1 on nord0.
    The Expo app instead fills Nord's buttons, switches, focus and active tab with Snow Storm
    (nord6) and Polar Night text (10.8:1), at the owner's request: a near-white accent rather than
    blue. Its re-maps live in `packages/tokens/src/mobile-theme.ts` (`MOBILE_THEME_OVERRIDES`,
-   brand roles only, applied to mobile.css alone), the mobile counterpart of the web apps'
+   brand roles only, applied to mobile.css alone — since [ADR 079](./079-mobile-visual-system.md) any
+   themed role: on mobile, Nord is the owner's editor-slate `dusk` palette with a steel-blue accent), the mobile counterpart of the web apps'
    `app/<name>-theme.css`. Links there keep a colour of their own: the `link` role (link text and
    ghost-button labels; the accent in light and dark), which under Nord is Frost cyan nord8
    lightened to `#94c6d4` (AA on every Nord surface), so a link never looks like body text.

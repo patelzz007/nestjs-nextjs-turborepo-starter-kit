@@ -2,7 +2,8 @@
 // kind of message is a checkbox (all of its channels, some, or none) with its channels hung under it
 // on a guide line, one checkbox each. A channel kept on shows a lock and says why, one not available
 // yet says what to do, and a channel a kind is never sent on is not shown. Then quiet hours and the
-// digest, and offers per store. Every change is saved at once.
+// digest, and offers per store. Every change shows the moment it is tapped and is saved behind it
+// (use-preference-saves): a failed save puts the server's state back and says so.
 
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/api-client";
@@ -22,6 +23,13 @@ import {
 	type NotificationPreferencesResponse,
 	type NotificationSchedule,
 	type NotificationTenantSetting,
+	type OkResponse,
+	type Envelope,
+	type SetMarketingConsentInput,
+	type UpdateNotificationPreferencesInput,
+	withMarketingConsent,
+	withPreferenceChanges,
+	withSchedule,
 } from "@workspace/shared";
 import { AlertDialog } from "@workspace/ui-native/components/alert-dialog";
 import { Button } from "@workspace/ui-native/components/button";
@@ -43,6 +51,8 @@ import { categoryKindOf } from "./feed-model";
 import { CATEGORY_DESCRIPTIONS, CATEGORY_LABELS, CHANNEL_LABELS, DIGEST_LABELS, NOTIFICATION_SETTINGS_COPY } from "./labels";
 import { PushPermissionPrimer } from "./push-permission-primer";
 import { CHANNEL_ICONS, channelNoteOf } from "./settings-model";
+import { useInstantChoice } from "./use-instant-choice";
+import { usePreferenceSaves, type PreferenceSaves } from "./use-preference-saves";
 import { usePushRegistration, type PushRegistration } from "./use-push-registration";
 
 const MINUTES_PER_HOUR = 60;
@@ -76,14 +86,34 @@ function useSaveFeedback(): { readonly onSuccess: () => void; readonly onError: 
 	);
 }
 
+/**
+ * The settings are never served from the cache: what each channel can do depends on things outside this screen
+ * (this phone's push registration, a verified phone number, consent given elsewhere), and a cached answer once
+ * showed Phone greyed out ("Turn on notifications on this phone first") under "This phone gets notifications."
+ * Each visit asks the API, and nothing is kept once the screen is gone.
+ */
+const UNCACHED_PREFERENCES: { readonly staleTime: number; readonly gcTime: number; readonly refetchOnMount: "always" } = {
+	staleTime: 0,
+	gcTime: 0,
+	refetchOnMount: "always",
+};
+
 export function NotificationSettingsBody(): React.JSX.Element {
 	const api = useApi();
-	const preferences = api.notifications.preferences.useQuery({});
+	const preferences = api.notifications.preferences.useQuery({}, UNCACHED_PREFERENCES);
 	const registration = usePushRegistration();
+	const saves = usePreferenceSaves();
 	const { refetch } = preferences;
 	const retry = React.useCallback((): void => {
 		void refetch();
 	}, [refetch]);
+	// This phone was just registered here: its Phone options are now available, so ask again.
+	const registered = registration.outcome?.kind === "registered";
+	React.useEffect((): void => {
+		if (registered) {
+			void refetch();
+		}
+	}, [refetch, registered]);
 
 	if (preferences.isError) {
 		return <ErrorState message={NOTIFICATION_SETTINGS_COPY.loadError} retryLabel="Try again" onRetry={retry} />;
@@ -95,9 +125,9 @@ export function NotificationSettingsBody(): React.JSX.Element {
 	return (
 		<View className="gap-4">
 			<PushPermissionPrimer registration={registration} />
-			<KindsCard preferences={data} registration={registration} />
-			<ScheduleCard schedule={data.schedule} />
-			<OffersCard preferences={data} />
+			<KindsCard preferences={data} registration={registration} saves={saves} />
+			<ScheduleCard schedule={data.schedule} saves={saves} />
+			<OffersCard preferences={data} saves={saves} />
 		</View>
 	);
 }
@@ -105,9 +135,29 @@ export function NotificationSettingsBody(): React.JSX.Element {
 /** Turns `channels` of one kind on or off, in one save. */
 type ChangeChannels = (category: NotificationCategory, channels: readonly NotificationChannel[], enabled: boolean) => void;
 
-function KindsCard({ preferences, registration }: { readonly preferences: NotificationPreferencesResponse; readonly registration: PushRegistration }): React.JSX.Element {
+/** The preferences a save answers with. */
+function preferencesOf(response: Envelope<NotificationPreferencesResponse>): NotificationPreferencesResponse {
+	return response.data;
+}
+
+/** A consent save answers only "ok": the preferences are read again. */
+function noPreferences(_response: Envelope<OkResponse>): null {
+	return null;
+}
+
+function KindsCard({
+	preferences,
+	registration,
+	saves,
+}: {
+	readonly preferences: NotificationPreferencesResponse;
+	readonly registration: PushRegistration;
+	readonly saves: PreferenceSaves;
+}): React.JSX.Element {
 	const api = useApi();
-	const update = api.notifications.updatePreferences.useMutation(useSaveFeedback());
+	const update = api.notifications.updatePreferences.useMutation(
+		saves.optionsFor<UpdateNotificationPreferencesInput, Envelope<NotificationPreferencesResponse>>(withPreferenceChanges, preferencesOf),
+	);
 	const { mutate } = update;
 	const changeChannels = React.useCallback<ChangeChannels>(
 		(category, channels, enabled): void => {
@@ -128,7 +178,7 @@ function KindsCard({ preferences, registration }: { readonly preferences: Notifi
 				{preferences.categories.map((row): React.JSX.Element => (
 					<React.Fragment key={row.category}>
 						<Separator />
-						<KindNode row={row} onChange={changeChannels} saving={update.isPending} registration={registration} />
+						<KindNode row={row} onChange={changeChannels} registration={registration} />
 					</React.Fragment>
 				))}
 			</View>
@@ -139,7 +189,6 @@ function KindsCard({ preferences, registration }: { readonly preferences: Notifi
 interface KindNodeProps {
 	readonly row: NotificationPreferenceRow;
 	readonly onChange: ChangeChannels;
-	readonly saving: boolean;
 	readonly registration: PushRegistration;
 }
 
@@ -147,7 +196,7 @@ interface KindNodeProps {
  * One kind of message as a node of the tree: its own checkbox (all of its channels, some, or none; kept
  * on when none can change) and its symbol, then its channels hung under it, one checkbox each.
  */
-function KindNode({ row, onChange, saving, registration }: KindNodeProps): React.JSX.Element {
+function KindNode({ row, onChange, registration }: KindNodeProps): React.JSX.Element {
 	const kind = categoryKindOf(row.category);
 	const checkState = kindCheckStateOf(row);
 	const switchable = isKindSwitchable(row);
@@ -155,24 +204,27 @@ function KindNode({ row, onChange, saving, registration }: KindNodeProps): React
 	const kindLocked = !switchable && checkState === "all";
 	const kindDisabled = !switchable && checkState !== "all";
 	const title = CATEGORY_LABELS[row.category];
-	const handleKind = React.useCallback(
+	const saveKind = React.useCallback(
 		(enabled: boolean): void => {
 			onChange(row.category, kindChannelChangesOf(row, enabled), enabled);
 		},
 		[onChange, row],
 	);
+	// The kind's box answers the tap at once (all on, or all off), before the save is queued.
+	const kindChoice = useInstantChoice(row, checkState === "all", saveKind);
+	// A pending choice is all or nothing: no dash until the setting has caught up.
+	const kindIndeterminate = kindChoice.shown === (checkState === "all") && checkState === "some";
 	return (
 		<View className="px-4 py-2" testID={`notification-kind-${row.category}`}>
 			<View className="flex-row items-center gap-3">
 				<Checkbox
 					label={title}
 					description={CATEGORY_DESCRIPTIONS[row.category]}
-					checked={checkState === "all"}
-					indeterminate={checkState === "some"}
-					onChange={handleKind}
+					checked={kindChoice.shown}
+					indeterminate={kindIndeterminate}
+					onChange={kindChoice.choose}
 					locked={kindLocked}
 					disabled={kindDisabled}
-					loading={saving}
 					className="flex-1"
 					testID={`notification-kind-${row.category}-checkbox`}
 				/>
@@ -180,7 +232,7 @@ function KindNode({ row, onChange, saving, registration }: KindNodeProps): React
 			</View>
 			<TreeBranch accessibilityLabel={title} className="ml-3">
 				{shownPreferenceCellsOf(row).map((cell): React.JSX.Element => (
-					<ChannelNode key={cell.channel} category={row.category} cell={cell} onChange={onChange} saving={saving} registration={registration} />
+					<ChannelNode key={cell.channel} category={row.category} cell={cell} onChange={onChange} registration={registration} />
 				))}
 			</TreeBranch>
 		</View>
@@ -191,19 +243,20 @@ interface ChannelNodeProps {
 	readonly category: NotificationCategory;
 	readonly cell: NotificationPreferenceCell;
 	readonly onChange: ChangeChannels;
-	readonly saving: boolean;
 	readonly registration: PushRegistration;
 }
 
-/** One channel of a kind, a leaf of the tree: its checkbox and symbol on one row, then why it is kept on or what to do to have it. */
-function ChannelNode({ category, cell, onChange, saving, registration }: ChannelNodeProps): React.JSX.Element {
-	const handleChange = React.useCallback(
+/** One channel of a kind, a leaf of the tree: its checkbox and symbol on one row, then its subtitle, always (what it is, why it is kept on, or what to do to have it). */
+function ChannelNode({ category, cell, onChange, registration }: ChannelNodeProps): React.JSX.Element {
+	const save = React.useCallback(
 		(checked: boolean): void => {
 			onChange(category, [cell.channel], checked);
 		},
 		[category, cell.channel, onChange],
 	);
 	const state = preferenceCellStateOf(cell);
+	// Answers the tap at once, before the save is queued (use-instant-choice).
+	const choice = useInstantChoice(cell, state === "on" || state === "locked", save);
 	const note = channelNoteOf(category, cell);
 	const needsPush = state === "unavailable" && cell.reason === "no-push-device" && registration.outcome?.kind !== "registered";
 	return (
@@ -211,12 +264,11 @@ function ChannelNode({ category, cell, onChange, saving, registration }: Channel
 			<View className="flex-row items-center gap-2">
 				<Checkbox
 					label={CHANNEL_LABELS[cell.channel]}
-					{...(note === null ? {} : { accessibilityHint: note })}
-					checked={state === "on" || state === "locked"}
-					onChange={handleChange}
+					accessibilityHint={note}
+					checked={choice.shown}
+					onChange={choice.choose}
 					locked={state === "locked"}
 					disabled={state === "unavailable"}
-					loading={saving}
 					size="sm"
 					className="flex-1"
 					testID={`notification-channel-${category}-${cell.channel}`}
@@ -228,14 +280,14 @@ function ChannelNode({ category, cell, onChange, saving, registration }: Channel
 				)}
 			</View>
 			{/* Under the label (box 20 + gap 10 = 30pt), so the row the guide points at stays one line. */}
-			{note === null ? null : <Text className="-mt-1.5 pb-2 pl-7.5 font-sans text-sm text-muted-foreground">{note}</Text>}
+			<Text className="-mt-1.5 pb-2 pl-7.5 font-sans text-sm text-muted-foreground">{note}</Text>
 		</View>
 	);
 }
 
-function ScheduleCard({ schedule }: { readonly schedule: NotificationSchedule }): React.JSX.Element {
+function ScheduleCard({ schedule, saves }: { readonly schedule: NotificationSchedule; readonly saves: PreferenceSaves }): React.JSX.Element {
 	const api = useApi();
-	const update = api.notifications.updateSchedule.useMutation(useSaveFeedback());
+	const update = api.notifications.updateSchedule.useMutation(saves.optionsFor<NotificationSchedule, Envelope<NotificationPreferencesResponse>>(withSchedule, preferencesOf));
 	const { mutate } = update;
 	const handleQuiet = React.useCallback(
 		(quietHoursEnabled: boolean): void => {
@@ -257,23 +309,21 @@ function ScheduleCard({ schedule }: { readonly schedule: NotificationSchedule })
 					description={NOTIFICATION_SETTINGS_COPY.quietHoursHint(minuteToTime(schedule.quietStartMinute), minuteToTime(schedule.quietEndMinute), schedule.timeZone)}
 					checked={schedule.quietHoursEnabled}
 					onChange={handleQuiet}
-					loading={update.isPending}
 				/>
 				<SegmentedControl<NotificationDigestFrequency>
 					label={NOTIFICATION_SETTINGS_COPY.digest}
 					options={DIGEST_OPTIONS}
 					value={schedule.digestFrequency}
 					onChange={handleDigest}
-					disabled={update.isPending}
 				/>
 			</View>
 		</Card>
 	);
 }
 
-function OffersCard({ preferences }: { readonly preferences: NotificationPreferencesResponse }): React.JSX.Element {
+function OffersCard({ preferences, saves }: { readonly preferences: NotificationPreferencesResponse; readonly saves: PreferenceSaves }): React.JSX.Element {
 	const api = useApi();
-	const consent = api.notifications.setConsent.useMutation(useSaveFeedback());
+	const consent = api.notifications.setConsent.useMutation(saves.optionsFor<SetMarketingConsentInput, Envelope<OkResponse>>(withMarketingConsent, noPreferences));
 	const { mutate } = consent;
 	const handlePlatform = React.useCallback(
 		(granted: boolean): void => {
@@ -284,14 +334,14 @@ function OffersCard({ preferences }: { readonly preferences: NotificationPrefere
 	return (
 		<Card title={NOTIFICATION_SETTINGS_COPY.offers} description={NOTIFICATION_SETTINGS_COPY.offersHint}>
 			<View className="gap-3">
-				<Switch label={NOTIFICATION_SETTINGS_COPY.platformConsent} checked={preferences.platformMarketingConsent} onChange={handlePlatform} loading={consent.isPending} />
+				<Switch label={NOTIFICATION_SETTINGS_COPY.platformConsent} checked={preferences.platformMarketingConsent} onChange={handlePlatform} />
 				{preferences.tenants.length === 0 ? (
 					<Text className="font-sans text-sm text-muted-foreground">{NOTIFICATION_SETTINGS_COPY.noTenants}</Text>
 				) : (
 					preferences.tenants.map((tenant): React.JSX.Element => (
 						<React.Fragment key={tenant.tenantId}>
 							<Separator />
-							<TenantOffers tenant={tenant} />
+							<TenantOffers tenant={tenant} saves={saves} />
 						</React.Fragment>
 					))
 				)}
@@ -301,11 +351,11 @@ function OffersCard({ preferences }: { readonly preferences: NotificationPrefere
 }
 
 /** One store the person claimed from: hear its offers or not, or leave it (asked first). A store they left says so. */
-function TenantOffers({ tenant }: { readonly tenant: NotificationTenantSetting }): React.JSX.Element {
+function TenantOffers({ tenant, saves }: { readonly tenant: NotificationTenantSetting; readonly saves: PreferenceSaves }): React.JSX.Element {
 	const api = useApi();
-	const feedback = useSaveFeedback();
-	const consent = api.notifications.setConsent.useMutation(feedback);
-	const leave = api.notifications.leaveTenant.useMutation(feedback);
+	const consent = api.notifications.setConsent.useMutation(saves.optionsFor<SetMarketingConsentInput, Envelope<OkResponse>>(withMarketingConsent, noPreferences));
+	// Leaving is asked first and answered when done (it removes the store's offers): it keeps its own feedback.
+	const leave = api.notifications.leaveTenant.useMutation(useSaveFeedback());
 	const { mutate: consentMutate } = consent;
 	const { mutate: leaveMutate } = leave;
 	const [confirming, setConfirming] = React.useState(false);
@@ -341,13 +391,7 @@ function TenantOffers({ tenant }: { readonly tenant: NotificationTenantSetting }
 	}
 	return (
 		<View className="gap-1">
-			<Switch
-				label={tenant.tenantName}
-				description={NOTIFICATION_SETTINGS_COPY.tenantConsent}
-				checked={tenant.marketingConsent}
-				onChange={handleConsent}
-				loading={consent.isPending}
-			/>
+			<Switch label={tenant.tenantName} description={NOTIFICATION_SETTINGS_COPY.tenantConsent} checked={tenant.marketingConsent} onChange={handleConsent} />
 			<Button label={NOTIFICATION_SETTINGS_COPY.leave} variant="ghost" size="sm" className="self-start" onPress={handleAsk} disabled={leave.isPending} />
 			<AlertDialog
 				visible={confirming}

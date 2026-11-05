@@ -3,12 +3,12 @@ import type { SectionMoveDirection, SidebarAction } from "./actions";
 import { MAX_MANUAL_EXPANDED_ITEMS, type SidebarManualExpansion, type SidebarState } from "./state";
 
 /** The order a move applies to: the custom order while it still matches the menu, else the menu's own. */
-function resolveOrder(sectionOrder: readonly string[] | null, allTitles: readonly string[]): readonly string[] {
-	return sectionOrder !== null && sectionOrder.length === allTitles.length ? sectionOrder : allTitles;
+function resolveOrder(sectionOrder: readonly string[] | null, allKeys: readonly string[]): readonly string[] {
+	return sectionOrder !== null && sectionOrder.length === allKeys.length ? sectionOrder : allKeys;
 }
 
-function moveInOrder(order: readonly string[], title: string, direction: SectionMoveDirection): readonly string[] {
-	const currentIndex = order.indexOf(title);
+function moveInOrder(order: readonly string[], key: string, direction: SectionMoveDirection): readonly string[] {
+	const currentIndex = order.indexOf(key);
 	const targetIndex = currentIndex + direction;
 	if (currentIndex === -1 || targetIndex < 0 || targetIndex >= order.length) {
 		return order;
@@ -53,7 +53,7 @@ export function sidebarReducer(state: SidebarState, action: SidebarAction): Side
 		case "[ Sidebar ] Collapsed":
 			return { ...state, isOpen: false };
 		case "[ Sidebar ] Section Moved":
-			return { ...state, sectionOrder: moveInOrder(resolveOrder(state.sectionOrder, action.allTitles), action.title, action.direction) };
+			return { ...state, sectionOrder: moveInOrder(resolveOrder(state.sectionOrder, action.allKeys), action.key, action.direction) };
 		case "[ Sidebar ] Item Expansion Changed":
 			return { ...state, manualExpansion: withManualExpansion(state.manualExpansion, action.pathname, action.itemId, action.expanded) };
 		case "[ Sidebar ] Link Followed":

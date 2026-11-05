@@ -6,6 +6,8 @@ describe("APP_LINKS", () => {
 	it("builds the tenant-scoped merchant API-keys path (`/t/:tenantSlug`, MT-07), encoding the slug", () => {
 		expect(APP_LINKS.merchant.apiKeys("brew-bean-kl")).toBe("/t/brew-bean-kl/api-keys");
 		expect(APP_LINKS.merchant.apiKeys("a b/c")).toBe("/t/a%20b%2Fc/api-keys");
+		expect(APP_LINKS.merchant.webhooks("brew-bean-kl")).toBe("/t/brew-bean-kl/webhooks");
+		expect(APP_LINKS.merchant.webhookEndpoint("a b", "e/1")).toBe("/t/a%20b/webhooks/e%2F1");
 		expect(APP_LINKS.merchant.terminals("a b/c")).toBe("/t/a%20b%2Fc/terminals");
 	});
 

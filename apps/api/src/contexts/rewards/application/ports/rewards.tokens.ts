@@ -5,6 +5,8 @@ export const REWARDS_UNIT_OF_WORK = Symbol("REWARDS_UNIT_OF_WORK");
 
 /** {@link RewardReadPort}. */
 export const REWARD_READS = Symbol("REWARD_READS");
+/** {@link RewardMerchantDisplayPort}: a command response's merchant name and logo, after its commit. */
+export const REWARD_MERCHANT_DISPLAY = Symbol("REWARD_MERCHANT_DISPLAY");
 
 /** {@link RewardImageDeliveryPort}. */
 export const REWARD_IMAGE_DELIVERY = Symbol("REWARD_IMAGE_DELIVERY");

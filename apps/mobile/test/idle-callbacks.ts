@@ -7,12 +7,28 @@
 const IDLE_BUDGET_MS = 50;
 const NEXT_TICK_MS = 0;
 
+/** Idle-callback handles are plain numbers (the runtime's), whatever a timer handle is in this environment. */
+const pendingTimers = new Map<number, ReturnType<typeof setTimeout>>();
+let nextHandle = 1;
+
 export function installIdleCallbacks(): void {
-	globalThis.requestIdleCallback = (callback: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void): number =>
-		setTimeout((): void => {
-			callback({ didTimeout: false, timeRemaining: (): number => IDLE_BUDGET_MS });
-		}, NEXT_TICK_MS);
+	globalThis.requestIdleCallback = (callback: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void): number => {
+		const handle = nextHandle;
+		nextHandle += 1;
+		pendingTimers.set(
+			handle,
+			setTimeout((): void => {
+				pendingTimers.delete(handle);
+				callback({ didTimeout: false, timeRemaining: (): number => IDLE_BUDGET_MS });
+			}, NEXT_TICK_MS),
+		);
+		return handle;
+	};
 	globalThis.cancelIdleCallback = (handle: number | null | undefined): void => {
-		clearTimeout(handle ?? undefined);
+		if (handle === null || handle === undefined) {
+			return;
+		}
+		clearTimeout(pendingTimers.get(handle));
+		pendingTimers.delete(handle);
 	};
 }

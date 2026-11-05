@@ -45,7 +45,16 @@ export interface ListPageSpec<TWhere, TOrderBy, TRow> {
 	readonly keyset?: ListKeyset<TRow, TWhere> | undefined;
 	/** Combines the list `where` with the keyset "after cursor" condition (`{ AND: [left, right] }`). */
 	readonly and: (left: TWhere, right: TWhere) => TWhere;
-	readonly count: (where: TWhere) => Promise<number>;
+	/**
+	 * Counts the rows matching `where`; when `atMost` is given it may stop there (`LIMIT atMost` in a
+	 * subquery), which is what makes a capped count cheap on a huge table.
+	 */
+	readonly count: (where: TWhere, atMost?: number) => Promise<number>;
+	/**
+	 * Count at most this many rows (enhancement 2.3). A larger result reports `total = countCap` and
+	 * `totalIsCapped`; its later pages are reached with `nextCursor`. Omit to count exactly.
+	 */
+	readonly countCap?: number | undefined;
 	readonly findMany: (args: { where: TWhere; orderBy: TOrderBy[]; take: number; skip?: number }) => Promise<TRow[]>;
 }
 
@@ -57,8 +66,29 @@ export async function fetchListPage<TWhere, TOrderBy, TRow>(request: ListPageReq
 	return fetchOffsetPage(request, spec);
 }
 
+/** A count, possibly stopped at the spec's cap. */
+interface BoundedCount {
+	readonly count: number;
+	readonly capped: boolean;
+}
+
+/** Counts `where` exactly, or up to `countCap` (one more row is asked for, to know whether there are more). */
+export async function boundedCount<TWhere, TOrderBy, TRow>(spec: ListPageSpec<TWhere, TOrderBy, TRow>, where: TWhere): Promise<BoundedCount> {
+	if (spec.countCap === undefined) {
+		return { count: await spec.count(where), capped: false };
+	}
+	const counted: number = await spec.count(where, spec.countCap + 1);
+	return counted > spec.countCap ? { count: spec.countCap, capped: true } : { count: counted, capped: false };
+}
+
+/** `totalIsCapped`, present only when it is true (exact totals keep the old shape). */
+function cappedFlag(capped: boolean): { readonly totalIsCapped?: boolean } {
+	return capped ? { totalIsCapped: true } : {};
+}
+
 async function fetchOffsetPage<TWhere, TOrderBy, TRow>(request: ListPageRequest, spec: ListPageSpec<TWhere, TOrderBy, TRow>): Promise<RepositoryListResult<TRow>> {
-	const total: number = await spec.count(spec.where);
+	const counted: BoundedCount = await boundedCount(spec, spec.where);
+	const total: number = counted.count;
 	const offsetMeta: OffsetPaginationMeta = buildOffsetPaginationMeta(total, request.page, request.limit);
 	const rows: TRow[] = await spec.findMany({
 		where: spec.where,
@@ -66,14 +96,17 @@ async function fetchOffsetPage<TWhere, TOrderBy, TRow>(request: ListPageRequest,
 		skip: (offsetMeta.page - 1) * request.limit,
 		take: request.limit,
 	});
+	// Past a capped total's last counted page there are still rows: a full last page continues by cursor.
+	const hasNext: boolean = offsetMeta.hasNext || (counted.capped && rows.length === request.limit);
 	return {
 		items: rows,
 		total,
 		page: offsetMeta.page,
 		totalPages: offsetMeta.totalPages,
-		nextCursor: offsetMeta.hasNext && spec.order.isDefault ? continuationCursor(spec.keyset, rows.at(-1)) : null,
-		hasNext: offsetMeta.hasNext,
+		nextCursor: hasNext && spec.order.isDefault ? continuationCursor(spec.keyset, rows.at(-1)) : null,
+		hasNext,
 		hasPrevious: offsetMeta.hasPrevious,
+		...cappedFlag(counted.capped),
 	};
 }
 
@@ -88,20 +121,22 @@ async function fetchKeysetPage<TWhere, TOrderBy, TRow>(cursor: string, limit: nu
 	// Throws InvalidListCursorError (400) for a malformed or tampered cursor.
 	const afterCursor: TWhere = spec.and(spec.where, keyset.decode(cursor));
 	// Sequential on purpose: the spec may run on an interactive transaction client, which serves one query at a time.
-	const total: number = await spec.count(spec.where);
-	const remaining: number = await spec.count(afterCursor);
+	const counted: BoundedCount = await boundedCount(spec, spec.where);
+	const remaining: BoundedCount = await boundedCount(spec, afterCursor);
 	const rows: TRow[] = await spec.findMany({ where: afterCursor, orderBy: spec.order.orderBy, take: limit + 1 });
 	const hasNext: boolean = rows.length > limit;
 	const pageRows: TRow[] = hasNext ? rows.slice(0, limit) : rows;
-	const position: KeysetPagePosition = keysetPagePosition(total, remaining, limit);
+	const position: KeysetPagePosition = keysetPagePosition(counted.count, remaining.count, limit);
 	return {
 		items: pageRows,
-		total,
+		total: counted.count,
 		page: position.page,
 		totalPages: position.totalPages,
 		nextCursor: hasNext ? continuationCursor(keyset, pageRows.at(-1)) : null,
 		hasNext,
-		hasPrevious: position.hasPrevious,
+		// With a capped total the rows before the cursor can't be counted; a cursor always follows a page, so there is one.
+		hasPrevious: counted.capped ? true : position.hasPrevious,
+		...cappedFlag(counted.capped),
 	};
 }
 
@@ -152,5 +187,6 @@ export function toPaginatedServiceResult<TItem>(result: RepositoryListResult<TIt
 		nextCursor: result.nextCursor,
 		hasNext: result.hasNext,
 		hasPrevious: result.hasPrevious,
+		...cappedFlag(result.totalIsCapped === true),
 	};
 }

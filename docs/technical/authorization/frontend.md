@@ -20,7 +20,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 ## 1. The one API every app uses
 
-Everything comes from `@workspace/client/lib/contexts/authorization` (`packages/client/src/lib/contexts/authorization/index.tsx`).
+Everything comes from `@workspace/client/lib/contexts/authorization` (`packages/client/src/lib/contexts/authorization/index.tsx`). The checker behind it (`createAuthorizationChecker`, `meetsRequirement`) lives in `@workspace/shared` (`lib/navigation-menu`); the Expo app has the same `useAuthorization()` / `<Can>` in `apps/mobile/src/features/authorization` over it, fed by `GET /auth/permissions` ([ADR 038](../../adr/038-mobile-app-drawer.md)).
 
 ### 1.1 The hook: `useAuthorization()`
 
@@ -262,7 +262,7 @@ first needs its owner lookup in `ResourceOwnershipResolver` (see [backend](./bac
 Menus are **application-owned config** (spec §14): admin `lib/navigation/sidebar-menu.json` +
 `menu-authorization.ts`; merchant `data/merchant-sidebar-menu.json` (each item's `authorization`
 must equal its page's rule in `ORG_PAGE_RULES`). The schema is in
-`packages/client/src/lib/sidebar/sidebar-menu-schema.ts`:
+`packages/shared/src/lib/navigation-menu/sidebar-menu-schema.ts` (re-exported from `packages/client`; the mobile drawer's `mobile-drawer-items.json` uses it too, see ADR 038):
 
 ```ts
 {
@@ -281,7 +281,7 @@ must equal its page's rule in `ORG_PAGE_RULES`). The schema is in
 ```
 
 Every slug is validated when the menu loads (a typo fails fast). The recursive filter
-(`packages/client/src/lib/navigation/filter-sidebar-menu-by-capabilities.ts`) applies:
+(`packages/shared/src/lib/navigation-menu/filter-sidebar-menu-by-capabilities.ts`) applies:
 
 | Case | Result |
 |---|---|

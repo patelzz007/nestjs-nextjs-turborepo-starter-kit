@@ -1,0 +1,14 @@
+# Opens one screen by its deep link (LINK, a path from runtime/routes.ts) and saves it as NAME.png (in the run's --test-output-dir),
+# once its header is up and nothing on it is still moving (loading skeletons, the header's fade).
+appId: ${APP_ID}
+---
+- openLink:
+    link: "${SCHEME}://${LINK}"
+    autoVerify: false
+- extendedWaitUntil:
+    visible:
+      id: "app-header"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: ${NAME}

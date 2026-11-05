@@ -8,3 +8,5 @@
 export type { ClaimRedemptionLookup, ClaimRedemptionPort } from "./application/ports/claim-redemption.port";
 export { createClaimsTransactionalPorts, type ClaimsTransactionalPorts } from "./infrastructure/persistence/claims-transactional-ports";
 export { ClaimNoLongerRedeemableError } from "./domain/errors/claims.errors";
+// The events other contexts may react to (outgoing webhooks, ADR 082).
+export { ClaimExpired, ClaimRedeemed, RewardClaimed } from "./domain/events/claim.events";

@@ -20,7 +20,8 @@
 		"/rewards/[rewardId]": 527360,
 		"/dashboard/notifications": 531456,
 		"/dashboard/notifications/settings": 536576,
-		"/unsubscribe": 436224
+		"/unsubscribe": 436224,
+		"/status": 444416
 	},
 	"admin": {
 		"/": 745472,
@@ -49,9 +50,9 @@
 		"/catalog/products/[id]/edit": 653312,
 		"/catalog/products/new": 653312,
 		"/components": 595968,
-		"/components/[slug]": 923648,
-		"/components/kanban-board": 661504,
-		"/components/kanban-board/tasks/[id]": 634880,
+		"/components/[slug]": 1033216,
+		"/components/kanban-board": 735232,
+		"/components/kanban-board/tasks/[id]": 699392,
 		"/components/kanban-board/tasks/[id]/edit": 708608,
 		"/emails": 581632,
 		"/emails/log": 656384,
@@ -86,7 +87,14 @@
 		"/notifications": 566272,
 		"/notifications/settings": 569344,
 		"/operations/cache": 540672,
-		"/operations/rate-limits": 589824
+		"/operations/rate-limits": 589824,
+		"/operations/queues": 549888,
+		"/operations/status": 547840,
+		"/operations/status/[id]": 588800,
+		"/operations/status/new": 586752,
+		"/settings/feature-flags": 573440,
+		"/webhooks/received": 632832,
+		"/webhooks/received/[id]": 578560
 	},
 	"merchant": {
 		"/": 528384,
@@ -94,8 +102,8 @@
 		"/_not-found": 528384,
 		"/account": 528384,
 		"/auth/forgot-password": 548864,
-		"/auth/login": 544768,
-		"/auth/reset-password": 545792,
+		"/auth/login": 609280,
+		"/auth/reset-password": 606208,
 		"/auth/verify-email": 547840,
 		"/auth/verify-email/[token]": 533504,
 		"/onboarding": 573440,
@@ -130,10 +138,16 @@
 		"/t/[tenantSlug]/broadcasts/[broadcastId]/edit": 792576,
 		"/t/[tenantSlug]/broadcasts/new": 792576,
 		"/t/[tenantSlug]/notifications": 618496,
-		"/t/[tenantSlug]/notifications/settings": 611328
+		"/t/[tenantSlug]/notifications/settings": 611328,
+		"/t/[tenantSlug]/payments": 611328,
+		"/t/[tenantSlug]/payments/[paymentId]": 608256,
+		"/t/[tenantSlug]/payments/new": 613376,
+		"/t/[tenantSlug]/webhooks": 651264,
+		"/t/[tenantSlug]/webhooks/[endpointId]": 653312,
+		"/t/[tenantSlug]/webhooks/[endpointId]/edit": 651264
 	},
 	"mobile": {
-		"ios": 7902208,
-		"android": 8133632
+		"ios": 9413632,
+		"android": 9400320
 	}
 }

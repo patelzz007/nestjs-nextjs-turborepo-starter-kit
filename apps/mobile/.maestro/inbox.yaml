@@ -1,0 +1,11 @@
+# The bell opens the inbox.
+appId: ${APP_ID}
+name: Inbox
+tags: [smoke]
+---
+- runFlow: subflows/signed-in.yaml
+- tapOn:
+    id: "app-header-notifications"
+- assertVisible:
+    id: "app-header-title"
+    text: "Notifications"

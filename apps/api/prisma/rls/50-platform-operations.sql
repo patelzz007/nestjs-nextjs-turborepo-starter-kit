@@ -19,6 +19,11 @@ BEGIN
     'OpsAlert',
     'OpsSettings',
     'OpsBackup',
+    'OpsRestoreDrill',
+    'StatusIncident',
+    'StatusIncidentUpdate',
+    'FeatureFlagSetting',
+    'FeatureFlagStoreOverride',
     'LoadTestRun',
     'LoadTestPoint',
     'LoadTestStepStat'
@@ -64,6 +69,36 @@ DROP POLICY IF EXISTS ops_backup_bypass ON public."OpsBackup";
 CREATE POLICY ops_backup_bypass ON public."OpsBackup"
   USING ((SELECT app_rls_bypass_on('OpsBackup')))
   WITH CHECK ((SELECT app_rls_bypass_on('OpsBackup')));
+
+DROP POLICY IF EXISTS ops_restore_drill_bypass ON public."OpsRestoreDrill";
+CREATE POLICY ops_restore_drill_bypass ON public."OpsRestoreDrill"
+  USING ((SELECT app_rls_bypass_on('OpsRestoreDrill')))
+  WITH CHECK ((SELECT app_rls_bypass_on('OpsRestoreDrill')));
+
+-- The public status page (enhancement 4.5): read anonymously and written by staff, always under a named
+-- `operations.status.*` system operation.
+DROP POLICY IF EXISTS status_incident_bypass ON public."StatusIncident";
+CREATE POLICY status_incident_bypass ON public."StatusIncident"
+  USING ((SELECT app_rls_bypass_on('StatusIncident')))
+  WITH CHECK ((SELECT app_rls_bypass_on('StatusIncident')));
+
+DROP POLICY IF EXISTS status_incident_update_bypass ON public."StatusIncidentUpdate";
+CREATE POLICY status_incident_update_bypass ON public."StatusIncidentUpdate"
+  USING ((SELECT app_rls_bypass_on('StatusIncidentUpdate')))
+  WITH CHECK ((SELECT app_rls_bypass_on('StatusIncidentUpdate')));
+
+-- Runtime feature flags (enhancement 5.6): read by every admin staff member, changed with FEATURE_FLAG:UPDATE,
+-- always under a named `feature_flags.*` system operation.
+DROP POLICY IF EXISTS feature_flag_setting_bypass ON public."FeatureFlagSetting";
+CREATE POLICY feature_flag_setting_bypass ON public."FeatureFlagSetting"
+  USING ((SELECT app_rls_bypass_on('FeatureFlagSetting')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagSetting')));
+
+-- A store's own setting of a store feature flag (enhancement 5.11): only under the `feature_flags.*` operations.
+DROP POLICY IF EXISTS feature_flag_store_override_bypass ON public."FeatureFlagStoreOverride";
+CREATE POLICY feature_flag_store_override_bypass ON public."FeatureFlagStoreOverride"
+  USING ((SELECT app_rls_bypass_on('FeatureFlagStoreOverride')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagStoreOverride')));
 
 DROP POLICY IF EXISTS load_test_run_bypass ON public."LoadTestRun";
 CREATE POLICY load_test_run_bypass ON public."LoadTestRun"

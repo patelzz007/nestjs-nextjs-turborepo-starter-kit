@@ -1,7 +1,7 @@
 ---
 title: "API reference — Sample catalog (products and categories)"
 description: "The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk."
-order: 14
+order: 17
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -68,6 +68,7 @@ List Products
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -855,6 +856,7 @@ List SampleCategories
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)

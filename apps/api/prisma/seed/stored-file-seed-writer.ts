@@ -35,7 +35,10 @@ import { prisma } from "./client";
 import { sha256BytesHex } from "./helpers";
 
 /** The categories seeds store bytes for. */
-export type SeedFileCategory = Extract<FileCategory, "MERCHANT_KYB" | "PRODUCT_IMAGE" | "USER_AVATAR" | "STORE_LOGO" | "REWARD_IMAGE" | "KANBAN_TASK_ATTACHMENT">;
+export type SeedFileCategory = Extract<
+	FileCategory,
+	"MERCHANT_KYB" | "PRODUCT_IMAGE" | "USER_AVATAR" | "STORE_LOGO" | "REWARD_IMAGE" | "KANBAN_TASK_ATTACHMENT" | "BROADCAST_IMAGE"
+>;
 
 /** The MIME types of the seed files on disk / in memory (each matches its magic bytes). */
 export type SeedFileMimeType = "application/pdf" | "image/png" | "image/webp";

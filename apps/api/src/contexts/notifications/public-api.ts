@@ -46,6 +46,7 @@ export {
 	REWARD_REJECTED_NOTIFICATION,
 	SIGNUP_REFERRAL_SUCCESS_NOTIFICATION,
 } from "./domain/catalog/types/rewards.types";
+export { WEBHOOK_ENDPOINT_AUTO_DISABLED_NOTIFICATION } from "./domain/catalog/types/webhooks.types";
 export { EMAIL_LOG_ID_TAG } from "./domain/value-objects/email-log-id-tag.value-object";
 export { NotificationsHealthIndicator } from "./infrastructure/adapters/notifications-health.adapter";
 
@@ -64,6 +65,8 @@ export { RewardClaimOtpEmailTemplate } from "./domain/templates/reward-claim-otp
 export { SecurityAlertEmailTemplate } from "./domain/templates/security-alert-email.template";
 export { TeamMemberInviteEmailTemplate } from "./domain/templates/team-member-invite-email.template";
 export { TwoFactorDisabledEmailTemplate } from "./domain/templates/two-factor-disabled-email.template";
+export { PasskeyAddedEmailTemplate } from "./domain/templates/passkey-added-email.template";
+export { PasskeyRemovedEmailTemplate } from "./domain/templates/passkey-removed-email.template";
 export { TwoFactorEnabledEmailTemplate } from "./domain/templates/two-factor-enabled-email.template";
 export { VerificationEmailTemplate } from "./domain/templates/verification-email.template";
 export { WelcomeEmailTemplate } from "./domain/templates/welcome-email.template";

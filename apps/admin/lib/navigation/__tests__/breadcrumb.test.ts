@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { resolveAdminTrail, withAccessibleLinks } from "@/lib/navigation/breadcrumb";
+import { translateSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
+import { ADMIN_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
+import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 
 describe("resolveAdminTrail", () => {
 	it("resolves a top-level menu item to a single current-page crumb", () => {
@@ -116,5 +119,16 @@ describe("withAccessibleLinks", () => {
 
 		expect(linked.map((crumb) => crumb.label)).toEqual(trail.map((crumb) => crumb.label));
 		expect(linked.map((crumb) => crumb.href)).toEqual([undefined, "/catalog", undefined, undefined, undefined]);
+	});
+});
+
+describe("resolveAdminTrail in another language (enhancement 5.12)", () => {
+	it("names every crumb as the translated sidebar does, keeping the links", () => {
+		const trail = resolveAdminTrail("/merchants/verification", translateSidebarMenu(SIDEBAR_MENU, ADMIN_SIDEBAR_LABELS, "ms"), "ms");
+		expect(trail.map((crumb) => [crumb.label, crumb.href])).toEqual([
+			["Peniaga", "/merchants"],
+			["Pengesahan", undefined],
+		]);
+		expect(resolveAdminTrail("/unknown/route", translateSidebarMenu(SIDEBAR_MENU, ADMIN_SIDEBAR_LABELS, "zh-Hans"), "zh-Hans").map((crumb) => crumb.label)).toEqual(["概览"]);
 	});
 });

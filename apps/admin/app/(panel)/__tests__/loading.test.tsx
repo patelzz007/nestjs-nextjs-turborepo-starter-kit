@@ -41,6 +41,8 @@ import SettingsLoading from "../(settings)/settings/loading";
 import PanelCatchAllLoading from "../[...slug]/loading";
 import UserDetailLoading from "../users/[id]/loading";
 import UsersLoading from "../users/loading";
+import ReceivedWebhookDetailLoading from "../webhooks/received/[id]/loading";
+import ReceivedWebhooksLoading from "../webhooks/received/loading";
 import MfaRecoveryLoading from "../users/mfa-recovery/loading";
 import SupportAccessLoading from "../users/support-access/loading";
 
@@ -130,6 +132,13 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 		landmarks: [PAGE_HEADER, '[data-skeleton="email-template-row"]', '[data-skeleton="email-preview-body"]'],
 	},
 	{ route: "/emails/log", loadingView: EmailLogLoading, announcement: "Loading email log…", landmarks: [PAGE_HEADER, TABLE] },
+	{ route: "/webhooks/received", loadingView: ReceivedWebhooksLoading, announcement: "Loading received webhooks…", landmarks: [PAGE_HEADER, TABLE] },
+	{
+		route: "/webhooks/received/[id]",
+		loadingView: ReceivedWebhookDetailLoading,
+		announcement: "Loading received webhook…",
+		landmarks: ['[data-skeleton="received-webhook-record"]', '[data-skeleton="received-webhook-section"]', '[data-skeleton="received-webhook-headers"]'],
+	},
 	{
 		route: "/geography",
 		loadingView: GeographyLoading,

@@ -25,7 +25,7 @@ describe("parseApiConfig", () => {
 	});
 
 	it("ignores unrelated OS variables (PATH, HOME, …)", () => {
-		expect(parseApiConfig({ ...TEST_API_ENV, PATH: "/usr/bin", SOME_OTHER_TOOL_FLAG: "x" }).runtime.appName).toBe("hello-world");
+		expect(parseApiConfig({ ...TEST_API_ENV, PATH: "/usr/bin", SOME_OTHER_TOOL_FLAG: "x" }).runtime.appName).toBe("Starter Test");
 	});
 });
 

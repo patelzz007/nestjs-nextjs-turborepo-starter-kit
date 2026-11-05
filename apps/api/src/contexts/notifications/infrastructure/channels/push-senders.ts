@@ -2,9 +2,7 @@
 // notifications/infrastructure/channels/push-senders.ts — the push sender `PUSH_PROVIDER` selects (ADR 070)
 // ============================================
 
-import type { PushPlatform } from "@workspace/shared";
-
-import type { ChannelSendResult, PushMessage, PushSender } from "../../application/ports/channel-senders.port";
+import type { ChannelSendResult, PushMessage, PushSender, SilentSyncMessage } from "../../application/ports/channel-senders.port";
 import type { EmailTransport } from "../adapters/transports/email-transport";
 import type { ApnsPushSender } from "./apns-push.sender";
 import type { FcmPushSender } from "./fcm-push.sender";
@@ -40,9 +38,9 @@ export class NativePushSender implements PushSender {
 		return this.apns === null ? Promise.resolve({ kind: "disabled" }) : this.apns.send(message);
 	}
 
-	public sendSilentSync(message: { readonly platform: PushPlatform; readonly token: string; readonly badge: number }): Promise<ChannelSendResult> {
+	public sendSilentSync(message: SilentSyncMessage): Promise<ChannelSendResult> {
 		if (message.platform === "ANDROID") {
-			return this.fcm === null ? Promise.resolve({ kind: "disabled" }) : this.fcm.sendSilentSync(message.token, message.badge);
+			return this.fcm === null ? Promise.resolve({ kind: "disabled" }) : this.fcm.sendSilentSync(message, message.badge);
 		}
 		return this.apns === null ? Promise.resolve({ kind: "disabled" }) : this.apns.sendSilentSync(message.token, message.badge);
 	}

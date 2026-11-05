@@ -135,7 +135,7 @@ describe("App (e2e)", () => {
 	it("GET /health/ready reports every probe when the instance can serve traffic", async () => {
 		const response = await app.inject({ method: "GET", url: "/health/ready" });
 
-		expect(response.statusCode).toBe(200);
+		expect(response.statusCode, response.body).toBe(200);
 		const readiness = parseSuccessEnvelope(response, ReadinessResponseSchema).data;
 		expect(readiness.status).toBe("ready");
 		expect(readiness.checks).toEqual(expect.arrayContaining([expect.objectContaining({ name: "database", status: "up" })]));

@@ -1,3 +1,5 @@
+import type { AppLanguage } from "@workspace/shared";
+
 import type { AppLockTimeoutMs, ThemePreference } from "../../lib/secure-store";
 import type { PreferencesState } from "./state";
 
@@ -7,6 +9,10 @@ export function selectTheme(state: PreferencesState): ThemePreference {
 
 export function selectAppLockEnabled(state: PreferencesState): boolean {
 	return state.appLock.enabled;
+}
+
+export function selectLanguage(state: PreferencesState): AppLanguage | null {
+	return state.language;
 }
 
 export function selectOnboardingCompleted(state: PreferencesState): boolean {

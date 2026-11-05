@@ -8,6 +8,7 @@ import {
 	readPaginatedNextCursor,
 	readPaginatedPage,
 	readPaginatedTotal,
+	readPaginatedTotalIsCapped,
 	readPaginatedTotalPages,
 } from "../envelope";
 
@@ -32,6 +33,13 @@ describe("initialDataOption", () => {
 });
 
 describe("paginated meta readers", () => {
+	it("reads whether the total is a lower bound, false when absent or unanswered", () => {
+		expect(readPaginatedTotalIsCapped(undefined)).toBe(false);
+		expect(readPaginatedTotalIsCapped(PAGINATED_META)).toBe(false);
+		const capped: ApiPaginatedMeta = { ...PAGINATED_META, totalIsCapped: true };
+		expect(readPaginatedTotalIsCapped(capped)).toBe(true);
+	});
+
 	it("use the fallback only while there is no answer yet", () => {
 		expect(readPaginatedTotal(undefined, 7)).toBe(7);
 		expect(readPaginatedPage(undefined)).toBe(1);

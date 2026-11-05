@@ -271,7 +271,7 @@ Every workspace exposes a `typecheck` script, run by **[tsrs](https://github.com
 | `@workspace/api`                                | `tsrs --noEmit -p tsconfig.typecheck.json && tsrs --noEmit -p tsconfig.json` |
 | aws-infrastructure                              | `tsrs --noEmit -p tsconfig.json`                                               |
 | ui, ui-native, shared, api-client, messaging, tokens, client | `tsrs --noEmit`                                                   |
-| docs                                            | `astro check` (Volar, on TypeScript 6 — see below)                             |
+| docs, docs-renderer                             | `tsrs --noEmit`                                                                |
 
 What tsrs does and does not replace:
 
@@ -348,16 +348,14 @@ case: `import { TokenExpiredError } from "jsonwebtoken"` crashes at runtime, so
 destructures the class from it. If you add a new CJS dependency, prefer default
 imports and destructure from there.
 
-### TypeScript 7, and the two places TypeScript 6 remains
+### TypeScript 7, and the one place TypeScript 6 remains
 
-The workspaces run **TypeScript 7.0.2** (the Go-native compiler, ADR 063). TypeScript 7 ships **no
+Every workspace runs **TypeScript 7.0.2** (the Go-native compiler, ADR 063). TypeScript 7 ships **no
 classic JS compiler API** (no `ts.sys`, no `createProgram`; only `typescript/unstable/*`), so
-anything that still executes that API gets TypeScript 6.0.3 instead:
+anything that still executes that API gets TypeScript 6.0.3 instead. (`apps/docs` was the other
+holdout while it ran `astro check`; the TanStack Start rewrite, 2026-11-05, moved it to TypeScript 7 and
+`tsrs` like the rest.)
 
-- **`apps/docs`** declares `"typescript": "6.0.3"`: `astro check` runs on Volar, and
-  `@astrojs/check` 0.9.12 peers `^5 || ^6`. A syncpack version group pins it (every other
-  workspace must declare the same exact TypeScript 7 version — see
-  `docs/technical/tooling/dependencies.md`).
 - **`@darraghor/eslint-plugin-nestjs-typed`** (an oxlint JS plugin) imports `typescript` without
   declaring it and runs on `@typescript-eslint/utils` (peers `<6.1.0`). `pnpm-workspace.yaml`
   `packageExtensions` gives it TypeScript 6.0.3 as a dependency, so it and the typescript-eslint

@@ -18,6 +18,7 @@ import { isoWeek } from "../../src/contexts/notifications/domain/broadcasts/broa
 import { DEFAULT_NOTIFICATION_LOCALE, type NotificationRenderContext } from "../../src/contexts/notifications/domain/catalog/notification-type";
 import { destinationHash } from "../../src/contexts/notifications/domain/policies/mask-destination";
 import { PLATFORM_PREFERENCE_KEY } from "../../src/contexts/notifications/domain/policies/notification-rules";
+import { encryptInstallationId } from "../../src/contexts/notifications/application/services/push-address";
 import { GcmPushTokenCipher } from "../../src/contexts/notifications/infrastructure/crypto/gcm-push-token.cipher";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -25,6 +26,7 @@ import { EXTRA_SEED_USER_EMAILS } from "./extra-users";
 import { requireRow } from "./require-row";
 import { REWARD_SEED_IDS } from "./rewards";
 import { TENANT_SEED_IDS } from "./tenant-seed-ids";
+import { seedBroadcastImage } from "./broadcast-images";
 
 const NAMESPACE = "seed.notifications";
 const CONSENT_WORDING_VERSION = "2026-10";
@@ -355,6 +357,8 @@ interface SeedDevice {
 	readonly key: string;
 	readonly platform: Prisma.PushDeviceUncheckedCreateInput["platform"];
 	readonly token: string;
+	/** Android's Firebase Installation ID, which FCM sends by (5.3); iOS has none. */
+	readonly installationId: string | null;
 	readonly sessionId: string;
 	readonly label: string;
 	readonly appVersion: string;
@@ -362,8 +366,8 @@ interface SeedDevice {
 }
 
 /**
- * The customer's phones: an Android phone in use and an old iPhone revoked when its session ended. Tokens are
- * sealed with the app's cipher; without `NOTIFICATIONS_ENCRYPTION_KEYS` nothing can be sealed, so none are seeded.
+ * The customer's phones: an Android phone in use (with its installation ID, 5.3) and an old iPhone revoked when its
+ * session ended. Tokens and the installation ID are sealed with the app's cipher; without `NOTIFICATIONS_ENCRYPTION_KEYS` nothing can be sealed, so none are seeded.
  */
 async function seedPushDevices(people: SeedPeople, now: number): Promise<{ readonly activeDeviceId: string | null; readonly count: number | "skipped" }> {
 	const cipher = new GcmPushTokenCipher(new TypedConfigService(getApiConfig()).notifications.encryptionKeys);
@@ -374,8 +378,26 @@ async function seedPushDevices(people: SeedPeople, now: number): Promise<{ reado
 	const [current, older] = sessions;
 	const session = requireRow(current, "a refresh token of user@example.com");
 	const devices: readonly SeedDevice[] = [
-		{ key: "android", platform: "ANDROID", token: "seed-fcm-token-pixel-8", sessionId: session.id, label: "Pixel 8", appVersion: "1.4.0", revoked: false },
-		{ key: "ios", platform: "IOS", token: "seed-apns-token-iphone-12", sessionId: (older ?? session).id, label: "iPhone 12", appVersion: "1.2.3", revoked: true },
+		{
+			key: "android",
+			platform: "ANDROID",
+			token: "seed-fcm-token-pixel-8",
+			installationId: "fSeedPixel8Install0001",
+			sessionId: session.id,
+			label: "Pixel 8",
+			appVersion: "1.4.0",
+			revoked: false,
+		},
+		{
+			key: "ios",
+			platform: "IOS",
+			token: "seed-apns-token-iphone-12",
+			installationId: null,
+			sessionId: (older ?? session).id,
+			label: "iPhone 12",
+			appVersion: "1.2.3",
+			revoked: true,
+		},
 	];
 	for (const device of devices) {
 		const id = deterministicUuid(NAMESPACE, `device.${device.key}`);
@@ -387,6 +409,7 @@ async function seedPushDevices(people: SeedPeople, now: number): Promise<{ reado
 			surface: "CUSTOMER",
 			tokenCiphertext: cipher.encrypt(device.token, id),
 			tokenHash: destinationHash(device.token),
+			installationIdCiphertext: encryptInstallationId(cipher, device.installationId, id),
 			deviceLabel: device.label,
 			appVersion: device.appVersion,
 			lastSeenAt: at(now, device.revoked ? 45 * DAY_MS : HOUR_MS),
@@ -569,6 +592,13 @@ async function seedBroadcasts(people: SeedPeople, now: number): Promise<number> 
 	const sentAt = now - 3 * DAY_MS;
 	const tomorrowNine = Date.UTC(new Date(now + DAY_MS).getUTCFullYear(), new Date(now + DAY_MS).getUTCMonth(), new Date(now + DAY_MS).getUTCDate(), 9);
 	const offer = bodyOf("Two-for-one lattes all weekend at Brew & Bean KL.", "Show this message at the counter.");
+	// The draft shows the store's picture (enhancement 5.4): a seeded BROADCAST_IMAGE named by file id only.
+	const thankYouPicture = await seedBroadcastImage(people.klOwnerId);
+	const thankYou = bodyOf("Thank you for visiting us every week — your next coffee is on us.");
+	const thankYouBody: RichTextDocument = {
+		...thankYou,
+		content: [{ type: "image", attrs: { fileId: thankYouPicture, alt: "A slice of our chocolate cake" } }, ...thankYou.content],
+	};
 	const ids = NOTIFICATION_SEED_IDS;
 	const broadcasts: SeedBroadcast[] = [
 		{
@@ -622,7 +652,7 @@ async function seedBroadcasts(people: SeedPeople, now: number): Promise<number> 
 				category: "MARKETING",
 				channels: TENANT_CHANNELS,
 				title: "A thank-you for our regulars",
-				body: bodyOf("Thank you for visiting us every week — your next coffee is on us."),
+				body: thankYouBody,
 				audienceFilter: tenantAudience([people.customerId, people.otherCustomerId]),
 				sendMode: "INSTANT",
 				sendAt: BigInt(now + 2 * DAY_MS),
@@ -947,7 +977,7 @@ async function seedPrivateReward(people: SeedPeople, now: number): Promise<void>
 	await prisma.rewardImage.deleteMany({ where: { rewardId: id } });
 	await prisma.rewardImage.createMany({ data: source.images.map((image, position) => ({ rewardId: id, tenantId: source.tenantId, fileId: image.fileId, position })) });
 	const removed = await prisma.user.findFirst({
-		where: { email: { in: [...EXTRA_SEED_USER_EMAILS] }, id: { notIn: [people.customerId, people.otherCustomerId] } },
+		where: { email: { in: [...EXTRA_SEED_USER_EMAILS] }, isDeleted: false, id: { notIn: [people.customerId, people.otherCustomerId] } },
 		orderBy: { email: "asc" },
 		select: { id: true },
 	});

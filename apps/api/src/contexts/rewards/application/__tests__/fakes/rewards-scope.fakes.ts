@@ -6,6 +6,7 @@ import { RewardImagesInvalidError } from "../../../domain/errors/reward.errors";
 import type { TenantStoreFacts } from "../../../domain/policies/reward-location-scope.policy";
 import type { LegalAcceptanceRepository } from "../../../domain/repositories/legal-acceptance.repository";
 import type { TenantStoresPort, RewardAuditEntry, RewardAuditPort, RewardImageFilesPort, RewardViewPort } from "../../ports/rewards-transactional.ports";
+import type { RewardMerchantDisplayPort } from "../../ports/reward-merchant-display.port";
 import type { IdGenerator } from "../../ports/rewards.tokens";
 import type { RewardsScope } from "../../rewards-scope";
 import type { TenantCustomerLinksPort, TenantCustomerPage, TenantCustomerPageRequest, TenantCustomerSummary } from "../../../../tenancy/public-api";
@@ -179,4 +180,21 @@ export function fakeRewardsScope(activeLocationIds: readonly string[] = []): Fak
 		audit: new RecordingRewardAudit(),
 		events: new RecordingEventCollector(),
 	};
+}
+
+/** The merchant name the fake display step adds. */
+export const FAKE_MERCHANT_NAME = "Sunrise Cafe";
+
+/** {@link RewardMerchantDisplayPort} that names the merchant and records each response it completed. */
+export class RecordingMerchantDisplay implements RewardMerchantDisplayPort {
+	public readonly completed: RewardResponse[] = [];
+
+	/** `onComplete` runs as each response is completed (a test reads the unit of work's state then). */
+	public constructor(private readonly onComplete: () => void = (): void => undefined) {}
+
+	public withMerchantDisplay(response: RewardResponse): Promise<RewardResponse> {
+		this.onComplete();
+		this.completed.push(response);
+		return Promise.resolve({ ...response, tenantName: FAKE_MERCHANT_NAME });
+	}
 }

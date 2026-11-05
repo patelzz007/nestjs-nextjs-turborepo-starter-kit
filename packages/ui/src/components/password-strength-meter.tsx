@@ -71,14 +71,14 @@ interface StrengthTier {
  * dark mode automatically (rule 22). 0–1 share destructive, then the ramp
  * moves warning → info → success so every label reads distinctly.
  */
-const WEAKEST_TIER: StrengthTier = { minScore: 0, barClass: "bg-destructive", chipClass: "bg-destructive-soft text-destructive", icon: ShieldAlertIcon };
+const WEAKEST_TIER: StrengthTier = { minScore: 0, barClass: "bg-destructive", chipClass: "bg-tone-red-soft text-tone-red", icon: ShieldAlertIcon };
 
 const STRENGTH_TIERS: readonly StrengthTier[] = [
 	WEAKEST_TIER,
-	{ minScore: 1, barClass: "bg-destructive", chipClass: "bg-destructive-soft text-destructive", icon: ShieldAlertIcon },
-	{ minScore: 2, barClass: "bg-warning", chipClass: "bg-warning-soft text-warning", icon: ShieldIcon },
-	{ minScore: 3, barClass: "bg-info", chipClass: "bg-info-soft text-info", icon: ShieldCheckIcon },
-	{ minScore: 4, barClass: "bg-success", chipClass: "bg-success-soft text-success", icon: ShieldCheckIcon },
+	{ minScore: 1, barClass: "bg-destructive", chipClass: "bg-tone-red-soft text-tone-red", icon: ShieldAlertIcon },
+	{ minScore: 2, barClass: "bg-warning", chipClass: "bg-tone-yellow-soft text-tone-yellow", icon: ShieldIcon },
+	{ minScore: 3, barClass: "bg-info", chipClass: "bg-tone-blue-soft text-tone-blue", icon: ShieldCheckIcon },
+	{ minScore: 4, barClass: "bg-success", chipClass: "bg-tone-green-soft text-tone-green", icon: ShieldCheckIcon },
 ];
 
 /** Iterate highest-first so the exact score tier wins (score >= minScore). */

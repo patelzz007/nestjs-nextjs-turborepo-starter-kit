@@ -21,7 +21,7 @@ async function renderPill(): Promise<ApiStub> {
 	await render(
 		<AppProviders runtime={runtime}>
 			<AppStatusProvider>
-				<NetworkStatusPill compact testID="pill" />
+				<NetworkStatusPill testID="pill" />
 			</AppStatusProvider>
 		</AppProviders>,
 	);
@@ -42,7 +42,7 @@ describe("NetworkStatusPill", () => {
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: "Connection: strong, 0 ms ping" })).toBeTruthy();
 		});
-		expect(screen.getByText("0 ms")).toBeTruthy();
+		expect(screen.getByText("Strong, 0 ms")).toBeTruthy();
 	});
 
 	it("opens the connection sheet with ping, jitter and packet loss, and tests again on request", async () => {

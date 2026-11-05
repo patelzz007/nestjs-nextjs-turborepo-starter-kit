@@ -19,7 +19,7 @@ import { assertAllowedUploadMime, MAGIC_BYTES_PREFIX_LENGTH, UploadContentReject
 import { digestStream, readStreamPrefix } from "../../../../platform/infrastructure/storage/utils/object-stream.util";
 import { toStorageObjectLocator } from "../../../../platform/infrastructure/storage/utils/storage-locator.util";
 import type { VerifiedUpload } from "../../domain/aggregates/stored-file.aggregate";
-import type { FileObjectStoragePort, UploadTicketRequest } from "../../application/ports/file-object-storage.port";
+import type { FileObjectStoragePort, ServerUploadWrite, UploadTicketRequest } from "../../application/ports/file-object-storage.port";
 import type { StoredFileView } from "../../application/ports/stored-file-read.port";
 import { ImageRulesViolationError, type ImageRenditionService } from "./image-rendition.service";
 
@@ -71,6 +71,15 @@ export class StorageFileObjectAdapter implements FileObjectStoragePort {
 			...(ticket.fields === undefined ? {} : { fields: ticket.fields }),
 			...(ticket.headers === undefined ? {} : { headers: ticket.headers }),
 		};
+	}
+
+	public async writeServerUpload(write: ServerUploadWrite): Promise<void> {
+		await this.storage.upload({
+			locator: this.active(write.locator),
+			buffer: write.bytes,
+			mimeType: write.input.mimeType,
+			metadata: { fileId: write.fileId, category: write.input.category, uploadedById: write.uploadedById },
+		});
 	}
 
 	public async verifyUpload(file: StoredFileView, checksumSha256: string): Promise<VerifiedUpload> {

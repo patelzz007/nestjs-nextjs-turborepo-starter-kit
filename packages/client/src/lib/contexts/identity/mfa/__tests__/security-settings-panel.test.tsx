@@ -72,6 +72,27 @@ vi.mock("../../index", () => {
 					isError: false,
 				}),
 			},
+			// The passkeys section (ADR 080): none yet, and nothing sent (its own suite drives it).
+			passkeys: {
+				useQuery: (): QueryStub<Envelope<{ readonly passkeys: readonly [] }>> & { readonly isPending: boolean; readonly isError: boolean; readonly error: null } => ({
+					data: envelopeFixture({ passkeys: [] }),
+					refetch: mocks.noop,
+					isPending: false,
+					isError: false,
+					error: null,
+				}),
+			},
+			passkeyRegistrationOptions: { useMutation: idleMutation },
+			passkeyRegistration: { useMutation: idleMutation },
+			renamePasskey: { useMutation: idleMutation },
+			removePasskey: {
+				useMutation: (): { readonly mutateAsync: typeof mocks.noop; readonly isPending: boolean; readonly error: null; readonly reset: () => void } => ({
+					mutateAsync: mocks.noop,
+					isPending: false,
+					error: null,
+					reset: (): void => undefined,
+				}),
+			},
 			revokeSession: {
 				useMutation: (): { readonly mutateAsync: typeof mocks.noop; readonly isPending: boolean; readonly error: null; readonly reset: () => void } => ({
 					mutateAsync: mocks.noop,
@@ -80,6 +101,12 @@ vi.mock("../../index", () => {
 					reset: (): void => undefined,
 				}),
 			},
+		},
+		// "Delete my account" (ADR 077): no request yet.
+		privacy: {
+			erasure: { useQuery: (): { readonly data: Envelope<{ readonly erasure: null }> } => ({ data: envelopeFixture({ erasure: null }) }) },
+			requestErasure: { useMutation: idleMutation },
+			cancelErasure: { useMutation: (): { readonly mutate: typeof mocks.noop; readonly isPending: boolean } => ({ mutate: mocks.noop, isPending: false }) },
 		},
 	};
 	return {
@@ -137,6 +164,20 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	window.sessionStorage.clear();
+});
+
+describe("SecuritySettingsPanel composition", () => {
+	it("renders the sections another context passes in, after its own", () => {
+		render(
+			<SecuritySettingsPanel>
+				<section aria-label="Passed in">A passed-in section</section>
+			</SecuritySettingsPanel>,
+			{ wrapper: Providers },
+		);
+		const passed = screen.getByRole("region", { name: "Passed in" });
+		expect(passed.textContent).toBe("A passed-in section");
+		expect(passed.previousElementSibling?.textContent).toContain("MFA recovery");
+	});
 });
 
 describe("SecuritySettingsPanel two-factor setup", () => {

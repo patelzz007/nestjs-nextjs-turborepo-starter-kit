@@ -83,39 +83,44 @@ const MENU: SidebarMenuData = {
 	sections: [
 		{
 			title: "Main",
+			labelKey: "main",
 			items: [
-				{ title: "Overview", url: "/", icon: "LayoutDashboard" },
+				{ title: "Overview", labelKey: "overview", url: "/", icon: "LayoutDashboard" },
 				{
 					title: "Settings",
+					labelKey: "settings",
 					url: "/settings",
 					icon: "Settings",
 					children: [
-						{ title: "General", url: "/settings/general", icon: "Gauge" },
-						{ title: "Security", url: "/settings/security", icon: "Shield" },
+						{ title: "General", labelKey: "general", url: "/settings/general", icon: "Gauge" },
+						{ title: "Security", labelKey: "security", url: "/settings/security", icon: "Shield" },
 					],
 				},
 				{
 					title: "Analytics",
+					labelKey: "analytics",
 					url: "/analytics",
 					icon: "BarChart3",
 					disabled: true,
-					children: [{ title: "Realtime", url: "/analytics/realtime", icon: "Activity" }],
+					children: [{ title: "Realtime", labelKey: "realtime", url: "/analytics/realtime", icon: "Activity" }],
 				},
 			],
 		},
 		{
 			title: "Docs",
+			labelKey: "docs",
 			items: [
 				{
 					title: "Docs Home",
+					labelKey: "docs-home",
 					url: "/docs",
 					icon: "BookOpen",
-					children: [{ title: "Getting Started", url: "/docs/getting-started", icon: "Rocket" }],
+					children: [{ title: "Getting Started", labelKey: "getting-started", url: "/docs/getting-started", icon: "Rocket" }],
 				},
 			],
 		},
 	],
-	bottomItems: [{ title: "Support", url: "/support", icon: "LifeBuoy" }],
+	bottomItems: [{ title: "Support", labelKey: "support", url: "/support", icon: "LifeBuoy" }],
 };
 
 const COMPILED_MENU = compileMenu(MENU);
@@ -274,7 +279,10 @@ describe("Sidebar", () => {
 		const settings = screen.getByRole("button", { name: "Settings" });
 		expect(settings.getAttribute("aria-expanded")).toBe("true");
 		const group = document.getElementById(settings.getAttribute("aria-controls") ?? "");
-		expect(group?.getAttribute("role")).toBe("group");
+		// A real list (its items announced as "list, n items"), named by the branch it opens.
+		expect(group?.tagName).toBe("UL");
+		expect(group?.hasAttribute("role")).toBe(false);
+		expect(group?.getAttribute("aria-label")).toBe("Settings");
 		expect(group?.contains(link("General"))).toBe(true);
 	});
 
@@ -459,7 +467,8 @@ describe("Sidebar", () => {
 		const onLogout = vi.fn();
 		renderSidebar({ pathname: "/", onLogout, profileMenu: <p>Profile menu</p> });
 
-		fireEvent.click(screen.getByRole("button", { name: "Open profile menu, Ada Lovelace" }));
+		// Named by what it shows: the name, then the email (WCAG 2.5.3 label in name).
+		fireEvent.click(screen.getByRole("button", { name: /^Ada Lovelace/u }));
 		expect(screen.getByText("Profile menu")).toBeTruthy();
 
 		fireEvent.click(screen.getByRole("button", { name: ADMIN_SHELL_LABELS.logoutAriaLabel }));

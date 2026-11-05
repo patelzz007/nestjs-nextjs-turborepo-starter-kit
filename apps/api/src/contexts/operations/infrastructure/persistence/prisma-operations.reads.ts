@@ -5,6 +5,7 @@
 import type { Prisma } from "@prisma/client";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
+import type { SystemOperationName } from "../../../../platform/application/system-operation-names";
 import type { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import type { OperationsReadScope } from "../../application/operations-scope";
 import type { OperationsReads } from "../../application/ports/operations-reads.port";
@@ -15,6 +16,10 @@ export class PrismaOperationsReads implements OperationsReads {
 	public constructor(private readonly executor: PrismaReadExecutor<Prisma.TransactionClient>) {}
 
 	public read<TResult>(actor: ActorContext, work: (scope: OperationsReadScope) => Promise<TResult>): Promise<TResult> {
-		return this.executor.readAsSystemOperation(OPS_CONSOLE_READ_OPERATION, actor, (db) => work(createOperationsReadScope(db)));
+		return this.readAs(OPS_CONSOLE_READ_OPERATION, actor, work);
+	}
+
+	public readAs<TResult>(operation: SystemOperationName, actor: ActorContext, work: (scope: OperationsReadScope) => Promise<TResult>): Promise<TResult> {
+		return this.executor.readAsSystemOperation(operation, actor, (db) => work(createOperationsReadScope(db)));
 	}
 }

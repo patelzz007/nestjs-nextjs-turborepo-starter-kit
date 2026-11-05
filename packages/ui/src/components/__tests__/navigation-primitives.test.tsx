@@ -97,7 +97,8 @@ describe("PanelSidebarSectionHeader", () => {
 				isLast
 				isSearching={false}
 				isActiveSection={false}
-				allTitles={["Catalog"]}
+				sectionKey="Catalog"
+				allKeys={["Catalog"]}
 				color="green"
 				moveUpTitle="Up"
 				moveDownTitle="Down"

@@ -1,4 +1,8 @@
 import { Module, type OnModuleInit } from "@nestjs/common";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { notificationsEraser } from "./infrastructure/personal-data/notifications-erasure";
+import { PersonalDataExportRegistry } from "../../platform/application/personal-data/personal-data-export.registry";
+import { NotificationsPersonalDataExporter } from "./infrastructure/personal-data/notifications-personal-data.exporter";
 import type { Prisma } from "@prisma/client";
 import { EmailRenderContextSchema, type EmailRenderContext } from "@workspace/shared";
 
@@ -26,6 +30,8 @@ import {
 	EMAIL_LOG_READ,
 	EMAIL_LOG_SIGNAL,
 	EMAIL_RENDER_CONTEXT,
+	NOTIFICATION_WEBHOOK_RECEPTION,
+	NOTIFICATION_WEBHOOK_VERIFIERS,
 	EMAIL_REQUEST_RELAY,
 	NOTIFICATIONS_UNIT_OF_WORK,
 } from "./application/ports/notifications.tokens";
@@ -47,6 +53,8 @@ import { NotificationsScopeFactory } from "./infrastructure/persistence/notifica
 import { EmailLogController } from "./presentation/http/email-log.controller";
 import { EmailPreviewController } from "./presentation/http/email-preview.controller";
 import { EmailWebhookController } from "./presentation/http/email-webhook.controller";
+import { NotificationWebhookReception } from "./application/services/notification-webhook-reception";
+import { ConfiguredNotificationWebhookVerifiers } from "./infrastructure/adapters/notification-webhook-verifiers.adapter";
 import { NotificationUnsubscribeController, TwilioWebhooksController } from "./presentation/http/notification-webhooks.controller";
 import { NotificationsAdminController } from "./presentation/http/notifications-admin.controller";
 import { NotificationsController } from "./presentation/http/notifications.controller";
@@ -71,6 +79,10 @@ import { describeSlidingWindow, RateLimitPolicyRegistry } from "../../platform/a
 import { SMS_CAP_WINDOW_MS, SMS_RECIPIENT_DAILY_POLICY, SMS_TENANT_DAILY_POLICY } from "./application/services/notification-fan-out";
 import { TenantAccessModule } from "../tenancy/public-api";
 import { BULLMQ_NOTIFICATION_QUEUES, NotificationsQueueModule } from "./infrastructure/queue/notifications-queue.module";
+import { PublicUrlResolver } from "../../config/public-url.resolver";
+import { NotificationsFileRegistrations } from "./infrastructure/persistence/notifications-file-registrations";
+import { FilesModule } from "../files/public-api";
+import { WebhooksInboundModule } from "../webhooks/inbound/public-api";
 
 // Queue wiring is decided at load time from the validated config (parsed by main.ts first).
 const usesRedis = getApiConfig().messaging.redisUrl !== undefined;
@@ -81,7 +93,7 @@ const notificationsQueueImports = usesRedis ? [NotificationsQueueModule] : [Noti
  * (ADR 060), the provider webhook and the admin email log / preview surfaces.
  */
 @Module({
-	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, SystemCommandModule, TenantAccessModule, ...notificationsQueueImports],
+	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, SystemCommandModule, TenantAccessModule, FilesModule, WebhooksInboundModule, ...notificationsQueueImports],
 	controllers: [
 		EmailPreviewController,
 		EmailWebhookController,
@@ -97,6 +109,8 @@ const notificationsQueueImports = usesRedis ? [NotificationsQueueModule] : [Noti
 		BroadcastReportController,
 	],
 	providers: [
+		PublicUrlResolver,
+		NotificationsFileRegistrations,
 		{
 			provide: EMAIL_RENDER_CONTEXT,
 			inject: [TypedConfigService],
@@ -108,14 +122,16 @@ const notificationsQueueImports = usesRedis ? [NotificationsQueueModule] : [Noti
 		NotificationsTransactionalPortsFactory,
 		{
 			provide: NOTIFICATIONS_UNIT_OF_WORK,
-			inject: [TenantTransactionService, NotificationsTransactionalPortsFactory, TransactionalEventDispatcher, AFTER_COMMIT_PUBLISHER, TypedConfigService],
+			inject: [TenantTransactionService, NotificationsTransactionalPortsFactory, TransactionalEventDispatcher, AFTER_COMMIT_PUBLISHER, TypedConfigService, PublicUrlResolver],
 			useFactory: (
 				transactions: TenantTransactionService,
 				ports: NotificationsTransactionalPortsFactory,
 				dispatcher: TransactionalEventDispatcher<Prisma.TransactionClient>,
 				publisher: AfterCommitPublisher,
 				config: TypedConfigService,
-			): UnitOfWork<NotificationsScope> => new PrismaUnitOfWork(transactions, new NotificationsScopeFactory(ports, config.runtime.appName), dispatcher, publisher),
+				urls: PublicUrlResolver,
+			): UnitOfWork<NotificationsScope> =>
+				new PrismaUnitOfWork(transactions, new NotificationsScopeFactory(ports, config.runtime.appName, urls.resolve), dispatcher, publisher),
 		},
 		EmailDeliveryAdapter,
 		{ provide: EMAIL_DELIVERY, useExisting: EmailDeliveryAdapter },
@@ -135,6 +151,11 @@ const notificationsQueueImports = usesRedis ? [NotificationsQueueModule] : [Noti
 		PreviewEmailTemplateHandler,
 		HandOffRequestedEmailOnEmailRequested,
 		SignalEmailLogChanged,
+		// ── Provider callbacks through the shared inbound receiver (ADR 081) ──
+		ConfiguredNotificationWebhookVerifiers,
+		{ provide: NOTIFICATION_WEBHOOK_VERIFIERS, useExisting: ConfiguredNotificationWebhookVerifiers },
+		NotificationWebhookReception,
+		{ provide: NOTIFICATION_WEBHOOK_RECEPTION, useExisting: NotificationWebhookReception },
 		// ── Notifications (ADR 070) ──
 		...notificationProviders(usesRedis, usesRedis ? BULLMQ_NOTIFICATION_QUEUES : null, usesRedis ? BullMqBroadcastQueue : null),
 		SendBroadcastHandler,
@@ -155,6 +176,10 @@ export class NotificationsModule implements OnModuleInit {
 		private readonly handOff: EmailRequestHandOff,
 		private readonly rateLimitPolicies: RateLimitPolicyRegistry,
 		private readonly config: TypedConfigService,
+		private readonly personalData: PersonalDataExportRegistry,
+		private readonly transactions: TenantTransactionService,
+		private readonly erasure: PersonalDataErasureRegistry,
+		private readonly erasureTransactions: TenantTransactionService,
 	) {}
 
 	/**
@@ -162,7 +187,9 @@ export class NotificationsModule implements OnModuleInit {
 	 * route (ADR 060), and the per-destination limits it counts (ADR 071).
 	 */
 	public onModuleInit(): void {
+		this.erasure.registerEraser(notificationsEraser(this.erasureTransactions));
 		this.mappers.register(new NotificationsIntegrationEventsMapper());
+		this.personalData.register(new NotificationsPersonalDataExporter(this.transactions));
 		this.emailRoutes.register(this.handOff);
 		const { notifications, email } = this.config;
 		this.rateLimitPolicies.register(

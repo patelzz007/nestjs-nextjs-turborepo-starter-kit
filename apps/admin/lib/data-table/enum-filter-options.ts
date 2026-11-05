@@ -19,6 +19,9 @@ import type {
 	IpAddressScope,
 	KybStatus,
 	MerchantTenantStatus,
+	ReceivedWebhookOutcome,
+	ReceivedWebhookProvider,
+	ReceivedWebhookVerification,
 	SignupReferralStatus,
 	TenantAppealStatus,
 	TenantLifecycleState,
@@ -153,4 +156,32 @@ export const DATA_CHANGE_ACTOR_KIND_LABELS: Readonly<Record<DataChangeActorKind,
 export const AUDIT_TRAIL_KIND_LABELS: Readonly<Record<AuditTrailEntryKind, string>> = {
 	REQUEST: "HTTP requests",
 	BACKGROUND: "Background & direct writes",
+};
+
+/** Who sent a received webhook (ADR 081). */
+export const RECEIVED_WEBHOOK_PROVIDER_LABELS: Readonly<Record<ReceivedWebhookProvider, string>> = {
+	GITHUB: "GitHub",
+	RESEND: "Resend",
+	BILLPLZ: "Billplz",
+	CHIP: "CHIP",
+	FAKE_PAYMENTS: "Fake payment gateway",
+	TWILIO: "Twilio",
+};
+
+/** What a received webhook came to (ADR 081). */
+export const RECEIVED_WEBHOOK_OUTCOME_LABELS: Readonly<Record<ReceivedWebhookOutcome, string>> = {
+	PROCESSING: "Processing",
+	RECORDED: "Recorded",
+	DUPLICATE: "Duplicate",
+	IGNORED: "Ignored",
+	REJECTED: "Rejected",
+	FAILED: "Failed",
+};
+
+/** What a received webhook's signature check said (ADR 081). */
+export const RECEIVED_WEBHOOK_VERIFICATION_LABELS: Readonly<Record<ReceivedWebhookVerification, string>> = {
+	VALID: "Valid signature",
+	INVALID: "Invalid signature",
+	MISSING: "No signature",
+	NOT_CONFIGURED: "Not configured",
 };

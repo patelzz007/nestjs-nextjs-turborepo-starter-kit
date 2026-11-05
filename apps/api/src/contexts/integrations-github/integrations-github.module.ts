@@ -1,4 +1,6 @@
-import { Module } from "@nestjs/common";
+import { Module, type OnModuleInit } from "@nestjs/common";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { githubEraser } from "./infrastructure/personal-data/github-erasure";
 import type { Prisma } from "@prisma/client";
 
 import { TypedConfigService } from "../../config/typed-config.service";
@@ -14,6 +16,7 @@ import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrast
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
 import { FilesModule } from "../files/public-api";
+import { WebhooksInboundModule } from "../webhooks/inbound/public-api";
 import { GithubFileRegistrations } from "./infrastructure/adapters/github-file-registrations";
 import { AttachPullRequestPictureHandler } from "./application/commands/attach-pull-request-picture/attach-pull-request-picture.handler";
 import { CommentOnPullRequestHandler } from "./application/commands/comment-on-pull-request/comment-on-pull-request.handler";
@@ -107,7 +110,7 @@ import { GithubWebhookDeliveryRetentionCron } from "./presentation/jobs/github-w
  * heard by every instance's LISTEN hub, streamed over SSE.
  */
 @Module({
-	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, FilesModule],
+	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, FilesModule, WebhooksInboundModule],
 	controllers: [
 		GithubController,
 		GithubAccountController,
@@ -206,10 +209,20 @@ import { GithubWebhookDeliveryRetentionCron } from "./presentation/jobs/github-w
 			useFactory:
 				(config: TypedConfigService): OpenListenConnection =>
 				(): PgListenConnection =>
-					new PgListenConnection(config.database.url, "github-pull-request-listener"),
+					new PgListenConnection(config.database.sessionUrl, "github-pull-request-listener"),
 		},
 		{ provide: GITHUB_FETCH, useValue: GLOBAL_GITHUB_FETCH },
 		{ provide: GITHUB_CLOCK, useValue: SYSTEM_GITHUB_CLOCK },
 	],
 })
-export class GithubModule {}
+export class GithubModule implements OnModuleInit {
+	public constructor(
+		private readonly erasure: PersonalDataErasureRegistry,
+		private readonly erasureTransactions: TenantTransactionService,
+	) {}
+
+	/** Registers this context's part of account erasure (ADR 077). */
+	public onModuleInit(): void {
+		this.erasure.registerEraser(githubEraser(this.erasureTransactions));
+	}
+}

@@ -66,6 +66,24 @@ export const OWN_PROFILE_EDITABLE_FIELDS: readonly (keyof OwnProfileEditableFiel
  * the client reloads and retries. Unknown keys (`email`, `isSuperAdmin`, …)
  * are rejected, never silently dropped.
  */
+/**
+ * A language the apps are shipped in (ADR 076): English, Malay, Simplified Chinese, Tamil. The same tags as the
+ * UI kit's packs (a client test keeps the two lists equal). Saved on the account (`User.locale`), it is the
+ * language the apps open in after sign-in on a device that hasn't chosen one, and the one notifications are
+ * written in (each falls back to English until it has that language's template).
+ */
+export const AppLanguageSchema = z.enum(["en", "ms", "zh-Hans", "ta"]).meta({ description: "A shipped language: en, ms, zh-Hans or ta", example: "ms" });
+export type AppLanguage = z.output<typeof AppLanguageSchema>;
+
+/** The language a stored locale means; one the apps don't ship (an older value) is English. */
+export function appLanguageOf(locale: string): AppLanguage {
+	return AppLanguageSchema.safeParse(locale).data ?? "en";
+}
+
+/** `PUT /auth/profile/language`: the language the signed-in person chose (a preference: the latest choice wins). */
+export const SetOwnLanguageSchema = z.object({ language: AppLanguageSchema }).strict();
+export type SetOwnLanguageInput = z.output<typeof SetOwnLanguageSchema>;
+
 export const UpdateOwnProfileSchema = OwnProfileEditableFieldsSchema.partial()
 	.extend({
 		version: OptimisticVersionSchema.meta({ description: "The profile `version` this edit is based on (optimistic lock)", example: 3 }),
@@ -96,6 +114,7 @@ export const OwnProfileSchema = z
 		email: z.string().meta({ description: "Sign-in email (read-only here)" }),
 		fullName: z.string(),
 		avatar: OwnProfileAvatarSchema.nullable().meta({ description: "The live avatar, or null when the user has none" }),
+		language: AppLanguageSchema.meta({ description: "The language the person chose (enhancement 5.2): the apps and their notifications use it" }),
 		version: OptimisticVersionSchema.meta({ description: "Optimistic-lock token: send it back with `PATCH /auth/profile`", example: 3 }),
 		createdAt: EpochMsSchema,
 		updatedAt: EpochMsSchema,

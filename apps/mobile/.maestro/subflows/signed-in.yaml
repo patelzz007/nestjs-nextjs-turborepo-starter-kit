@@ -1,0 +1,55 @@
+# Opens the app and makes sure it is signed in. Signs in with MAESTRO_EMAIL / MAESTRO_PASSWORD only
+# when the sign-in screen shows (and enters the emailed code when the API asks this device for one);
+# an app that is already signed in is left as it is.
+appId: ${APP_ID}
+---
+# Not restarted: a development build loads its code from Metro, and a restart from here can lose
+# the phone's USB link to it (the run script restores that link first).
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: "app-header|sign-in-email"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "sign-in-email"
+    commands:
+      - tapOn:
+          id: "sign-in-email"
+      - inputText: ${MAESTRO_EMAIL}
+      - tapOn:
+          id: "sign-in-password"
+      - inputText: ${MAESTRO_PASSWORD}
+      - hideKeyboard
+      - runScript: now.js
+      - tapOn: "Sign in"
+      - extendedWaitUntil:
+          visible:
+            id: "app-header|verify-device-code"
+          timeout: 20000
+      # An API that asks a new device for an emailed code (login verification, `new-device` mode: the
+      # development default; CI turns it off): read it from the local Mailpit (MAILPIT_URL) once it arrives.
+      - runFlow:
+          when:
+            visible:
+              id: "verify-device-code"
+          commands:
+            - retry:
+                maxRetries: 10
+                commands:
+                  - runScript:
+                      file: emailed-code.js
+                      env:
+                        REQUESTED_AT: ${output.requestedAt}
+                  - assertTrue: ${output.code != undefined}
+            - tapOn:
+                id: "verify-device-code"
+            - inputText: ${output.code}
+            - hideKeyboard
+            - tapOn: "Verify and sign in"
+- extendedWaitUntil:
+    visible:
+      id: "app-header"
+    timeout: 20000

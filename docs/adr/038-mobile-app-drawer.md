@@ -111,3 +111,28 @@ must keep running in Expo Go, and every colour must come from the tokens (ADR 03
   versions, where the blur is too slow.
 - Under Jest, `expo-blur` is a boundary stand-in (`test/expo-blur-mock.tsx`): plain views, so the
   real Reanimated and drawer code run. The blur's look is checked on a device.
+
+## Menu from JSON, nested and gated by capability (amendment, 2026-11-05)
+
+- The drawer's entries live in `apps/mobile/src/features/navigation/mobile-drawer-items.json`, in the
+  **same menu model as the web sidebars**: `SidebarMenuDataSchema`, `compileMenu`,
+  `applyMenuAuthorization` and `filterCompiledSidebarMenu` moved from `packages/client` (and the admin
+  app) to `@workspace/shared` (`lib/navigation-menu`), framework-free, so React and React Native run one
+  implementation. `packages/client` re-exports them, so web imports are unchanged.
+- **Nesting.** An item with `url: ""` is a branch: its row folds its children open in place (a chevron,
+  announced expanded or collapsed). Children sit in a `DrawerSubmenu` with a vertical line down their
+  left, like the web sidebars' nested lists, one step further in per level, up to **six levels**
+  (`MAX_DRAWER_DEPTH`). A branch holding the screen on show starts open.
+- **Authorization.** Requirements are kept by route in `MOBILE_DRAWER_AUTHORIZATION` (compile-checked
+  `PERMISSION.*`, mirroring each screen's API route, as admin does): pull requests need GitHub READ, the
+  token READ and UPDATE, servers SERVER_METRIC LIST. The session's capabilities come from
+  `GET /auth/permissions` (`SessionCapabilitiesProvider` in the app shell), which also backs the app's
+  `useAuthorization()` / `<Can>` (`features/authorization`, the web API over the shared
+  `createAuthorizationChecker`). Until they load, or when they cannot, everything gated is hidden (fail
+  closed). The API still checks every request.
+- **Feature flags** (`developer-tools` in development builds, `github-pull-requests` unless the server
+  has them off) replace the earlier API probes (GitHub account, operations overview).
+- Everything the JSON names (routes, Lucide icon names in `drawer-icons.ts`, sections, flags, depth,
+  branch vs screen) is checked when the module loads, so a typo fails at start-up rather than hiding an
+  entry. The command palette lists the same filtered entries, branches unfolded.
+- Branch titles are the JSON's English titles; screens keep their translated headings.

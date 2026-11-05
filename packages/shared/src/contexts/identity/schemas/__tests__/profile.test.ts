@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { apiContract } from "../../../../contracts";
 import { apiRoutes } from "../../../../api-routes";
 import {
+	appLanguageOf,
 	OWN_PROFILE_EDITABLE_FIELDS,
+	SetOwnLanguageSchema,
 	OwnProfileEditableFieldsSchema,
 	OwnProfileSchema,
 	UpdateOwnProfileSchema,
@@ -84,6 +86,7 @@ describe("OwnProfileSchema", () => {
 		id: USER_ID,
 		email: "user@example.com",
 		fullName: "Regular User",
+		language: "ms",
 		avatar: {
 			fileId: AVATAR_FILE_ID,
 			url: "https://cdn.example.com/users/avatar.png",
@@ -128,5 +131,18 @@ describe("UpdateUserSchema", () => {
 	it("shares the full-name rule with the own-profile update", () => {
 		expect(UpdateUserSchema.parse({ fullName: "  Jane Doe " })).toEqual({ fullName: "Jane Doe" });
 		expect(UpdateUserSchema.safeParse({ fullName: "J" }).success).toBe(false);
+	});
+});
+
+describe("the person's language (enhancement 5.2)", () => {
+	it("reads a stored locale as a shipped language, and one the apps don't ship as English", () => {
+		expect(appLanguageOf("zh-Hans")).toBe("zh-Hans");
+		expect(appLanguageOf("fr")).toBe("en");
+	});
+
+	it("accepts only a shipped language", () => {
+		expect(SetOwnLanguageSchema.parse({ language: "ta" })).toStrictEqual({ language: "ta" });
+		expect(SetOwnLanguageSchema.safeParse({ language: "zh-Hant" }).success).toBe(false);
+		expect(SetOwnLanguageSchema.safeParse({ language: "ms", extra: true }).success).toBe(false);
 	});
 });

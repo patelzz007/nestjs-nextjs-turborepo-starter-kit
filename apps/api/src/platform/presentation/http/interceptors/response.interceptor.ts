@@ -102,11 +102,22 @@ export class ResponseInterceptor implements NestInterceptor {
 	}
 
 	private static paginatedEnvelope(page: PaginatedServiceResult, correlationId: string): PaginatedEnvelope {
-		const { items, limit, total, page: pageNumber, totalPages, nextCursor, hasNext, hasPrevious } = page;
+		const { items, limit, total, page: pageNumber, totalPages, nextCursor, hasNext, hasPrevious, totalIsCapped } = page;
 		return {
 			success: true,
 			data: items,
-			meta: { limit, total, page: pageNumber, totalPages, nextCursor, hasNext, hasPrevious, correlationId, timestamp: nowEpochMs() },
+			meta: {
+				limit,
+				total,
+				page: pageNumber,
+				totalPages,
+				nextCursor,
+				hasNext,
+				hasPrevious,
+				...(totalIsCapped === true ? { totalIsCapped } : {}),
+				correlationId,
+				timestamp: nowEpochMs(),
+			},
 		};
 	}
 }

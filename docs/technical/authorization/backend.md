@@ -526,7 +526,7 @@ token gets `401 TOKEN_VERSION_MISMATCH` and refreshes.
 | Job | Schedule | Does |
 | --- | --- | --- |
 | `permission-expiry.cron.ts` | hourly | Soft-deletes expired per-user overrides (they are already ignored at read time) |
-| `audit-log-retention.cron.ts` | hourly | Soft-deletes authorization audit rows older than 90 days |
+| `audit-log-retention.cron.ts` | hourly | Soft-deletes authorization audit rows older than ten years (the record retention, `platform/domain/record-retention.ts`) |
 | `support-access-expiry.cron.ts` | every 5 min | Expires support-access grants |
 
 ### Automatic role provisioning

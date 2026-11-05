@@ -69,7 +69,7 @@ describe("EmailLogView URL state", () => {
 		render(<EmailLogView />, { wrapper: ClientTestProviders });
 
 		expect(logQuery).toHaveBeenLastCalledWith({ page: 2, limit: 25, sort: "to", filter: { status: { eq: "failed" } } }, expect.anything());
-		expect(screen.getByRole("combobox", { name: "Status" }).textContent).toContain("Failed");
+		expect(screen.getByRole("combobox", { name: /^Status:/u }).textContent).toContain("Failed");
 	});
 
 	it("pushes the next page (offset — no cursor in the response) to the URL", async () => {

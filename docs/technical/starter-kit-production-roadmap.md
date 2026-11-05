@@ -1,4 +1,3 @@
-
 ---
 title: "Starter kit — production roadmap (extended reference)"
 description: "Long-form reference: agency fork strategy, locked product decisions, tenancy modes, Reward Hub removal, DigitalOcean, authorization kernel, Cedar, Kafka, semver releases, and improvement backlog."
@@ -230,7 +229,7 @@ Document as a semver **major** template release if you provide automation.
 | `@workspace/web` | 3000 | **Placeholder** — marketing/auth shell, not a consumer Reward Hub |
 | `@workspace/admin` | 3001 | **Full dashboard layout** — primary operator UI (as today) |
 | `@workspace/merchant` | 3003 | **Placeholder only** — app remains, reward flows removed |
-| `@workspace/docs` | 3002 | Astro docs; remove Reward Hub user-guide prominence |
+| `@workspace/docs` | 3002 | TanStack Start docs; remove Reward Hub user-guide prominence |
 | `@workspace/api` | 8080 | Kernel + sample modules; rewards modules deleted |
 
 ### Web placeholder — what to keep

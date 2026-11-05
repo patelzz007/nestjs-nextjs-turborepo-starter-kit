@@ -1,0 +1,9 @@
+# Signed in, the app opens on Home with the person's name.
+appId: ${APP_ID}
+name: Sign in
+tags: [smoke]
+---
+- runFlow: subflows/signed-in.yaml
+- tapOn: "Home"
+- assertVisible:
+    id: "home-highlights"

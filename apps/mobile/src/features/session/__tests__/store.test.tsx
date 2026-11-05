@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react-native";
 import * as React from "react";
 
 import { sessionActions } from "../actions";
-import { SessionStoreProvider, useEnrollmentReason, useMinimumVersion, useRootRoute, useSessionCommands, useSessionSnapshot, useSignedOutReason } from "../facade";
+import { SessionStoreProvider, useMinimumVersion, useRootRoute, useSessionCommands, useSessionSnapshot, useSignedOutReason } from "../facade";
 import { createSessionStore, type SessionStore } from "../store";
 
 describe("createSessionStore", () => {
@@ -44,7 +44,6 @@ describe("session facade", () => {
 			() => ({
 				route: useRootRoute(),
 				reason: useSignedOutReason(),
-				enrollment: useEnrollmentReason(),
 				minimum: useMinimumVersion(),
 				commands: useSessionCommands(),
 				snapshot: useSessionSnapshot(),
@@ -62,7 +61,7 @@ describe("session facade", () => {
 		await act((): void => {
 			result.current.commands.signedIn({ scope: "restricted", enrollmentReason: "mfa_enrollment" });
 		});
-		expect(result.current.enrollment).toBe("mfa_enrollment");
+		expect(result.current.route).toBe("enroll-two-factor");
 
 		await act((): void => {
 			result.current.commands.tokensRotated({ scope: "full" });

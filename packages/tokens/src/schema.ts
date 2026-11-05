@@ -61,6 +61,21 @@ export const AccentStepSchema = z.enum(["50", "100", "200", "300", "400", "500",
 export const WarmStepSchema = z.enum(["300", "500", "700"]);
 /** Nord (nordtheme.com): its sixteen named colours, `nord0`–`nord15` — Polar Night 0–3, Snow Storm 4–6, Frost 7–10, Aurora 11–15. */
 export const NordStepSchema = z.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]);
+/**
+ * The pure greys (zero chroma) of the mobile app's own visual system (ADR 079), named by lightness: 10 the
+ * lightest surface, 975 the deepest dark chrome.
+ */
+export const GrayStepSchema = z.enum(["10", "25", "50", "100", "200", "300", "400", "500", "600", "700", "900"]);
+/**
+ * The mobile Nord theme's editor slate (ADR 079): a cool blue-grey from the owner's reference — 950 the
+ * deepest chrome, 900 the page, 800 surfaces, 750 raised, 700 hairlines, 600 control edges; 25 and 200 the
+ * sharper text and secondary text the theme reads in, 50 / 100 / 300 the reference's own; and its
+ * steel-blue accent (`accent`) with the soft tint under it.
+ */
+export const DuskStepSchema = z.enum(["25", "50", "100", "200", "300", "600", "700", "750", "800", "900", "950", "accent", "accent-soft", "accent-link"]);
+
+/** The mobile dark theme\'s graphite: neutral greys leaning faintly cool (ADR 079). */
+export const GraphiteStepSchema = z.enum(["25", "400", "700", "750", "800", "850", "950", "975"]);
 /** The Nord accents the `nord` theme fills with, boosted (`vivid`): numbered after the Nord colour each one comes from. */
 export const VividStepSchema = z.enum(["8", "9", "14"]);
 
@@ -74,6 +89,9 @@ export const PALETTE_STEP_SCHEMAS = {
 	green: AccentStepSchema,
 	nord: NordStepSchema,
 	vivid: VividStepSchema,
+	gray: GrayStepSchema,
+	dusk: DuskStepSchema,
+	graphite: GraphiteStepSchema,
 };
 
 export const PaletteSchema = z.strictObject({
@@ -85,6 +103,9 @@ export const PaletteSchema = z.strictObject({
 	green: z.record(PALETTE_STEP_SCHEMAS.green, PrimitiveColorSchema),
 	nord: z.record(PALETTE_STEP_SCHEMAS.nord, PrimitiveColorSchema),
 	vivid: z.record(PALETTE_STEP_SCHEMAS.vivid, PrimitiveColorSchema),
+	gray: z.record(PALETTE_STEP_SCHEMAS.gray, PrimitiveColorSchema),
+	dusk: z.record(PALETTE_STEP_SCHEMAS.dusk, PrimitiveColorSchema),
+	graphite: z.record(PALETTE_STEP_SCHEMAS.graphite, PrimitiveColorSchema),
 });
 export type Palette = z.infer<typeof PaletteSchema>;
 
@@ -93,7 +114,16 @@ export const PaletteScaleSchema = PaletteSchema.keyof();
 export type PaletteScale = z.infer<typeof PaletteScaleSchema>;
 
 /** Every step name any scale defines. */
-export const PaletteStepNameSchema = z.union([NeutralStepSchema, InkStepSchema, AccentStepSchema, WarmStepSchema, NordStepSchema]);
+export const PaletteStepNameSchema = z.union([
+	NeutralStepSchema,
+	InkStepSchema,
+	AccentStepSchema,
+	WarmStepSchema,
+	NordStepSchema,
+	GrayStepSchema,
+	DuskStepSchema,
+	GraphiteStepSchema,
+]);
 export type PaletteStepName = z.infer<typeof PaletteStepNameSchema>;
 
 /** The steps one scale defines (`PaletteStep<"warm">` is `"300" | "500" | "700"`). */
@@ -126,6 +156,7 @@ export const ThemeRoleSchema = z.enum([
 	"topbar",
 	"shell-frame",
 	"shell-panel",
+	"sheet",
 	"primary",
 	"primary-foreground",
 	"secondary",
@@ -465,6 +496,34 @@ export type AppBrandRole = z.infer<typeof AppBrandRoleSchema>;
 export const AppThemeOverridesSchema = z.partialRecord(ThemeNameSchema, z.partialRecord(AppBrandRoleSchema, ColorValueSchema));
 export type AppThemeOverrides = z.infer<typeof AppThemeOverridesSchema>;
 
+/**
+ * The Expo app's own visual system (ADR 079): unlike a web app, which re-maps only its brand roles, the
+ * mobile app is a separate design language and may re-map ANY themed role — surfaces, borders and text
+ * included — per theme. Applied to mobile.css only; the web apps never see these values.
+ */
+export const MobileThemeOverridesSchema = z.partialRecord(ThemeNameSchema, z.partialRecord(ThemeRoleSchema, ColorValueSchema));
+export type MobileThemeOverrides = z.infer<typeof MobileThemeOverridesSchema>;
+
+/**
+ * The admin panel's own re-maps of any themed role, per theme: since 2026-11-05 its dark theme is the phone's graphite
+ * (GRAPHITE_DARK_THEME), surfaces and text included, not only its brand roles. Written into web.css under
+ * `.admin-app`, so the web app and the merchant portal keep the shared themes.
+ */
+export const AdminThemeOverridesSchema = z.partialRecord(ThemeNameSchema, z.partialRecord(ThemeRoleSchema, ColorValueSchema));
+export type AdminThemeOverrides = z.infer<typeof AdminThemeOverridesSchema>;
+
+/**
+ * Colours that belong to one mobile component and to no theme role, so a change to the shared roles
+ * can never move them (ADR 079): the floating tab bar's pill, edge, selected capsule, the capsule's icon
+ * and label and the unselected icons; and the chip an original (full-colour) brand logo sits on.
+ */
+export const MobileComponentColorNameSchema = z.enum(["tab-bar", "tab-bar-border", "tab-bar-active", "tab-bar-active-foreground", "tab-bar-icon", "logo-tile"]);
+export type MobileComponentColorName = z.infer<typeof MobileComponentColorNameSchema>;
+
+/** Every component colour, in every theme (no partial theme: each theme must say what its tab bar is). */
+export const MobileComponentColorsSchema = z.record(ThemeNameSchema, z.record(MobileComponentColorNameSchema, ColorValueSchema));
+export type MobileComponentColors = z.infer<typeof MobileComponentColorsSchema>;
+
 export const TokenSourceSchema = z.strictObject({
 	palette: PaletteSchema,
 	themes: ThemesSchema,
@@ -474,8 +533,12 @@ export const TokenSourceSchema = z.strictObject({
 	layout: LayoutSchema,
 	motion: MotionSchema,
 	tailwindTheme: TailwindThemeSchema,
-	/** The Expo app's brand re-maps, applied to mobile.css only (the web apps keep theirs in `app/<name>-theme.css`). */
-	mobileThemeOverrides: AppThemeOverridesSchema,
+	/** The Expo app's own re-maps of any themed role, applied to mobile.css only (the web apps keep theirs in `app/<name>-theme.css`). */
+	mobileThemeOverrides: MobileThemeOverridesSchema,
+	/** The Expo app's component colours (the floating tab bar), mobile.css only. */
+	mobileComponentColors: MobileComponentColorsSchema,
+	/** The admin panel's re-maps of any themed role, web.css under `.admin-app` only. */
+	adminThemeOverrides: AdminThemeOverridesSchema,
 });
 export type TokenSource = z.infer<typeof TokenSourceSchema>;
 

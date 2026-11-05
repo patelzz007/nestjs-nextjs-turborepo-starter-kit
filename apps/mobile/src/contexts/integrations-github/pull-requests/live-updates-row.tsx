@@ -31,7 +31,7 @@ export function LiveUpdatesRow({ liveUpdates }: LiveUpdatesRowProps): React.JSX.
 			accessibilityLabel={
 				on ? `Live updates on. ${reconnecting ? LIVE_UPDATES_RECONNECTING_DETAIL : LIVE_UPDATES_ON_DETAIL}` : `Live updates are off. ${LIVE_UPDATES_OFF_DETAIL}`
 			}
-			className="flex-row items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
+			className="flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
 			testID="pull-request-live-updates">
 			{on ? (
 				<PulseDot className={`size-2.5 rounded-full ${reconnecting ? "bg-warning" : "bg-success"}`} />

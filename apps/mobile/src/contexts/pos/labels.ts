@@ -89,6 +89,17 @@ export const TILL_COPY = {
 	successMessage: (rewardTitle: string, bill: string): string => `${rewardTitle} redeemed on a ${bill} bill.`,
 	next: "Next customer",
 
+	// The offline queue (enhancement 6.4).
+	queuedTitle: "Saved on this till",
+	queuedMessage: "There's no connection, so this redemption is saved on the till. It's sent when the connection is back; if the API refuses it, it shows below.",
+	queueFull: (max: number): string => `This till already holds ${String(max)} redemptions waiting for the connection. Reconnect before redeeming more.`,
+	queueTitle: "Waiting for the connection",
+	queueWaiting: (bill: string): string => `${bill} bill · waiting to send`,
+	queueRefused: (reason: string): string => `Not redeemed: ${reason}`,
+	queueSendNow: "Send now",
+	queueDismiss: (rewardTitle: string): string => `Dismiss ${rewardTitle}`,
+	queueSent: (rewardTitle: string, bill: string): string => `${rewardTitle} redeemed on a ${bill} bill (sent when the connection came back).`,
+
 	exchangeTitle: "What the till sent",
 	exchangeDescription: (method: string, path: string): string => `${method} ${path}. The API key is shortened so a screenshot never shows it.`,
 	checkoutExchangeTitle: "What the till sent to redeem it",

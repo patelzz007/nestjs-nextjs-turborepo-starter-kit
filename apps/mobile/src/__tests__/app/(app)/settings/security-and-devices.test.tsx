@@ -5,6 +5,7 @@ import { dynamic, fail, ok, okPage, stubApi } from "../../../../../test/api-stub
 import { createTestRuntime, markerScreen, type RenderedApp, renderInApp } from "../../../../../test/app-harness";
 import { sessionJson, twoFactorSetupJson, userJson } from "../../../../../test/fixtures";
 import { testAccessToken } from "../../../../../test/jwt";
+import * as fakePasskey from "../../../../../test/react-native-passkey-fake";
 import { memorySecureStore } from "../../../../../test/secure-store-memory";
 import DevicesScreen from "../../../../app/(app)/settings/devices";
 import SecurityScreen from "../../../../app/(app)/settings/security";
@@ -355,5 +356,92 @@ describe("Turn on 2FA / new backup codes from Security", () => {
 		await renderSignedIn(TWO_FACTOR_SCREENS, "/settings/two-factor?mode=everything");
 		expect(within(screen.getByTestId("app-header")).getByRole("header", { name: "Turn on two-factor authentication" })).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: "Set up authenticator app" })).toBeOnTheScreen();
+	});
+});
+
+const PIXEL_PASSKEY = {
+	id: "019b76da-a810-7000-8000-0000000000a1",
+	name: "Pixel 9",
+	deviceType: "MULTI_DEVICE",
+	backedUp: true,
+	transports: ["hybrid", "internal"],
+	createdAt: 1_786_000_000_000,
+	lastUsedAt: null,
+};
+const REGISTRATION_OPTIONS = {
+	challengeId: "019b76da-a810-7000-8000-00000000c0de",
+	options: {
+		rp: { id: "example.com", name: "Starter" },
+		user: { id: "dXNlcg", name: "a@example.com", displayName: "A" },
+		challenge: "Y2hhbGxlbmdl",
+		pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+	},
+};
+
+describe("Security — passkeys (ADR 080)", () => {
+	it("lists the account's passkeys and how each is kept", async () => {
+		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/passkeys": ok({ passkeys: [PIXEL_PASSKEY] }) });
+		await renderSignedIn(SECURITY_SCREENS, "/settings/security");
+
+		expect(await screen.findByText("Pixel 9")).toBeOnTheScreen();
+		expect(screen.getByText("Synced")).toBeOnTheScreen();
+		expect(screen.getByText("Not used yet")).toBeOnTheScreen();
+	});
+
+	it("adds a passkey: the password again, the phone's credential, then the list reloads", async () => {
+		fakePasskey.supportPasskeys();
+		fakePasskey.answerNextCreate({ id: "Y3JlZA", rawId: "Y3JlZA", type: "public-key", response: { clientDataJSON: "Y2xpZW50", attestationObject: "YXR0" } });
+		let listed: readonly (typeof PIXEL_PASSKEY)[] = [];
+		const api = stubApi({
+			"GET /auth/me": ok(userJson()),
+			"GET /auth/passkeys": dynamic(() => ok({ passkeys: listed })),
+			"POST /auth/passkeys/registration/options": ok(REGISTRATION_OPTIONS, 201),
+			"POST /auth/passkeys/registration": dynamic(() => {
+				listed = [PIXEL_PASSKEY];
+				return ok(PIXEL_PASSKEY, 201);
+			}),
+		});
+		await renderSignedIn(SECURITY_SCREENS, "/settings/security");
+		expect(await screen.findByText("No passkeys yet. Add one to sign in without typing a code.")).toBeOnTheScreen();
+
+		await fireEvent.changeText(screen.getByTestId("new-passkey-name"), "Pixel 9");
+		await fireEvent.changeText(screen.getByTestId("new-passkey-password"), "Secret@123");
+		await fireEvent.press(screen.getByRole("button", { name: "Add passkey" }));
+
+		expect(await screen.findByText("Pixel 9")).toBeOnTheScreen();
+		expect(api.callsTo("POST /auth/passkeys/registration/options").at(0)?.body).toBe(JSON.stringify({ password: "Secret@123" }));
+		expect(api.callsTo("POST /auth/passkeys/registration").at(0)?.body).toContain('"name":"Pixel 9"');
+	});
+
+	it("removes a passkey only after the person confirms", async () => {
+		let listed: readonly (typeof PIXEL_PASSKEY)[] = [PIXEL_PASSKEY];
+		const api = stubApi({
+			"GET /auth/me": ok(userJson()),
+			"GET /auth/passkeys": dynamic(() => ok({ passkeys: listed })),
+			"DELETE /auth/passkeys/019b76da-a810-7000-8000-0000000000a1": dynamic(() => {
+				listed = [];
+				return ok({ message: "Passkey removed" });
+			}),
+		});
+		await renderSignedIn(SECURITY_SCREENS, "/settings/security");
+
+		await fireEvent.press(await screen.findByRole("button", { name: "Remove Pixel 9" }));
+		expect(api.callsTo("DELETE /auth/passkeys/019b76da-a810-7000-8000-0000000000a1")).toHaveLength(0);
+		expect(screen.getByText('Remove the passkey "Pixel 9"?')).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Remove passkey" }));
+
+		expect(await screen.findByText("Passkey removed.")).toBeOnTheScreen();
+		await waitFor(() => {
+			expect(screen.queryByText("Pixel 9")).toBeNull();
+		});
+	});
+
+	it("says this phone can't add one, and still lists them", async () => {
+		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/passkeys": ok({ passkeys: [PIXEL_PASSKEY] }) });
+		await renderSignedIn(SECURITY_SCREENS, "/settings/security");
+
+		expect(await screen.findByText("This phone can't use passkeys (it needs Android 9 or iOS 16, and a screen lock).")).toBeOnTheScreen();
+		expect(screen.queryByRole("button", { name: "Add passkey" })).toBeNull();
+		expect(await screen.findByText("Pixel 9")).toBeOnTheScreen();
 	});
 });

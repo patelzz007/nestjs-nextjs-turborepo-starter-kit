@@ -66,6 +66,13 @@ export const SENSITIVE_FIELD_NAMES: readonly string[] = [
 	// 2FA enrollment: both carry the TOTP secret (the key URI in its query, the QR code as an image of it)
 	"otpAuthUrl",
 	"qrCodeDataUrl",
+	// Passkey ceremonies (ADR 080): the single-use challenge, and the signed parts of the authenticator's answer.
+	// None is a key, but a log line must never hold a challenge with the signature that answers it.
+	"challenge",
+	"signature",
+	"clientDataJSON",
+	"authenticatorData",
+	"attestationObject",
 	// Device pairing (POS terminal pairing codes are bearer credentials)
 	"pairingCode",
 	// Payment data

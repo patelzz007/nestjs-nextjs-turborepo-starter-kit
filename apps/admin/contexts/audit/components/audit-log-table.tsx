@@ -1,6 +1,6 @@
 "use client";
 
-import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal, readPaginatedTotalIsCapped } from "@workspace/client/lib/api/envelope";
 import { ALL_FILTER_OPTION, parseFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
@@ -40,6 +40,7 @@ import { DataChangeActorCell, DataChangeOperationBadge } from "@/contexts/audit/
 import { DataChangeDrawer } from "@/contexts/audit/components/audit-logs/data-change-drawer";
 import { IdFilterChip } from "@/contexts/audit/components/audit-logs/id-filter-chip";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
+import { SavedViewsMenu } from "@/contexts/saved-views";
 import { LivePill } from "@/components/common/live-pill";
 import { AUDIT_LOG_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { AUDIT_LOG_TABLE_PAGE, TablePageSkeleton } from "@/components/loading/table-page-skeleton";
@@ -345,6 +346,8 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 	// Stable rows reference (rule 16 — avoid re-renders via new array identity).
 	const rows = React.useMemo(() => trailQuery.data?.data ?? [], [trailQuery.data]);
 	const totalCount: number = readPaginatedTotal(trailQuery.data?.meta, rows.length);
+	// The timeline counts at most 10,000 entries (enhancement 2.3); past that the API says the total is a lower bound.
+	const totalLabel: string = readPaginatedTotalIsCapped(trailQuery.data?.meta) ? `${totalCount.toLocaleString("en")}+` : String(totalCount);
 	const isRefetching: boolean = trailQuery.isFetching && !trailQuery.isLoading;
 	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
 		state: urlState,
@@ -407,12 +410,17 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 
 	const searchToolbar = React.useMemo(
 		(): React.JSX.Element => (
-			<DataTableSearchToolbar
-				value={searchDraft}
-				onChange={setSearchDraft}
-				placeholder="Search by email, name, user id, path, table or correlation id..."
-				ariaLabel="Search audit log"
-			/>
+			<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+				<DataTableSearchToolbar
+					value={searchDraft}
+					onChange={setSearchDraft}
+					placeholder="Search by email, name, user id, path, table or correlation id..."
+					ariaLabel="Search audit log"
+				/>
+				<div className="sm:ms-auto">
+					<SavedViewsMenu listKey="admin.audit-logs" />
+				</div>
+			</div>
 		),
 		[searchDraft, setSearchDraft],
 	);
@@ -498,7 +506,7 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 			<Card>
 				<CardHeader className="pb-3">
 					<CardTitle className="text-base">Activity</CardTitle>
-					<CardDescription>{totalCount} entries · newest first unless you sort by time · click an entry for its details</CardDescription>
+					<CardDescription>{totalLabel} entries · newest first unless you sort by time · click an entry for its details</CardDescription>
 					{activeIdFilters.length === 0 ? null : (
 						<div className="flex flex-wrap gap-2 pt-2">
 							{activeIdFilters.map(({ key, value }) => (

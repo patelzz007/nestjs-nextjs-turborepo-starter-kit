@@ -11,6 +11,6 @@
 		],
 		"customConditions": ["development"]
 	},
-	"include": ["next-env.d.ts", "next.config.ts", "**/*.ts", "**/*.tsx", "**/*.mts", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
+	"include": ["next-env.d.ts", "next.config.ts", "**/*.ts", "**/*.tsx", "**/*.mts", "app/.well-known/**/*.ts", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
 	"exclude": ["node_modules"]
 }

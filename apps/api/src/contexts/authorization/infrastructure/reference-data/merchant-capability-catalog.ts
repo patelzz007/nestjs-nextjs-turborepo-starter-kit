@@ -96,6 +96,18 @@ const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, M
 		groupName: "Customers",
 		sortOrder: 52,
 	},
+	"merchant:manage_payments": {
+		label: "Manage payments",
+		description: "Ask customers to pay through Billplz or CHIP, follow each payment, and refund it.",
+		groupName: "Payments",
+		sortOrder: 60,
+	},
+	"merchant:manage_webhooks": {
+		label: "Manage webhooks",
+		description: "Send the business's events to its own systems: add webhook endpoints, rotate their signing secrets, read the delivery log and redeliver.",
+		groupName: "Operations",
+		sortOrder: 23,
+	},
 };
 
 /** MERCHANT-scope catalog rows in the shared vocabulary's order. */

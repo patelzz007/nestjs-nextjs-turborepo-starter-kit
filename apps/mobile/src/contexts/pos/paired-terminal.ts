@@ -35,6 +35,9 @@ const TILL_ENTRIES = [
 	SECURE_STORE_ENTRIES.tillTenantName,
 	SECURE_STORE_ENTRIES.tillTenantId,
 	SECURE_STORE_ENTRIES.tillLocationId,
+	// Checkouts waiting for the connection belong to this pairing (its store, its key): never sent by another.
+	// Nothing was redeemed for them, so the customer keeps the reward.
+	SECURE_STORE_ENTRIES.tillCheckoutQueue,
 ];
 
 /** Forgets the pairing: every entry, so no half of it is left behind. */

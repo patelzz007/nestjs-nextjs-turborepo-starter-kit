@@ -1,12 +1,12 @@
 // config/api-config/api-env.rules.ts — Cross-field rules: checks that span several variables, reported by name and never by value.
 // Part of the API environment contract; `../api-config.schema.ts` is its public entry.
 
-import { NodeEnvSchema, GITHUB_REPOSITORIES_MAX } from "@workspace/shared";
+import { HttpUrlEnvSchema, NodeEnvSchema, GITHUB_REPOSITORIES_MAX } from "@workspace/shared";
 import { listKafkaSecurityEnvIssues } from "@workspace/messaging/kafka";
 import { z } from "zod";
 
 import type { StorageProviderSetting } from "../api-env.fields";
-import { configuredPrivateContainer, configuredPublicContainer, resolveStorageProvider } from "./api-config.derivations";
+import { configuredPrivateContainer, configuredPublicContainer, resolveStorageProvider, resolveWebAuthnRpId } from "./api-config.derivations";
 import type { ApiEnv } from "./api-env.input";
 
 // ── Cross-field rules ──────────────────────────────────────────────────────
@@ -277,6 +277,82 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 	checkGithubRules(env, context);
 	checkCacheRules(env, context);
 	checkNotificationRules(env, context);
+	checkPaymentRules(env, context);
+	checkPasskeyRules(env, context);
+	checkWebhookRules(env, context);
+}
+
+/** ADR 082: loopback endpoints are a development and test convenience; a production build never calls one. */
+export function checkWebhookRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	if (env.NODE_ENV === NodeEnvSchema.enum.production && env.WEBHOOK_ALLOW_LOOPBACK_URLS) {
+		context.addIssue({
+			code: "custom",
+			path: ["WEBHOOK_ALLOW_LOOPBACK_URLS"],
+			message: "must not be on in production (it lets a tenant point a webhook at this server's own loopback interface)",
+		});
+	}
+}
+
+/** The client-app URLs whose origins a passkey ceremony may come from (ADR 080). */
+const PASSKEY_CLIENT_APP_URLS: readonly ("APP_URL" | "ADMIN_APP_URL" | "MERCHANT_APP_URL")[] = ["APP_URL", "ADMIN_APP_URL", "MERCHANT_APP_URL"];
+
+/**
+ * ADR 080: WebAuthn only accepts a ceremony whose origin's host is the RP ID or a subdomain of it, so a
+ * client app outside the RP ID could never use a passkey — refused at boot rather than at the first
+ * sign-in. The Android app's package name and signing certificates are configured together or not at all.
+ */
+export function checkPasskeyRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	// A malformed client URL is already refused by its own field; it has no host to compare.
+	if (!PASSKEY_CLIENT_APP_URLS.every((name): boolean => HttpUrlEnvSchema.safeParse(env[name]).success)) {
+		return;
+	}
+	const rpId: string = resolveWebAuthnRpId(env);
+	for (const name of PASSKEY_CLIENT_APP_URLS) {
+		const host: string = new URL(env[name]).hostname;
+		if (host !== rpId && !host.endsWith(`.${rpId}`)) {
+			context.addIssue({
+				code: "custom",
+				path: [name],
+				message: `must have a host that is the passkey RP ID (${env.WEBAUTHN_RP_ID === undefined ? "derived from COOKIE_DOMAIN or APP_URL" : "WEBAUTHN_RP_ID"}) or a subdomain of it; set WEBAUTHN_RP_ID to the domain every client app shares`,
+			});
+		}
+	}
+	if ((env.WEBAUTHN_ANDROID_PACKAGE_NAME === undefined) !== (env.WEBAUTHN_ANDROID_CERT_FINGERPRINTS === undefined)) {
+		const missing: keyof ApiEnv = env.WEBAUTHN_ANDROID_PACKAGE_NAME === undefined ? "WEBAUTHN_ANDROID_PACKAGE_NAME" : "WEBAUTHN_ANDROID_CERT_FINGERPRINTS";
+		context.addIssue({
+			code: "custom",
+			path: [missing],
+			message: "is required with the other WEBAUTHN_ANDROID_* setting (the Android app is configured completely or not at all)",
+		});
+	}
+}
+
+/** The settings each payment gateway needs together (ADR 020). */
+const PAYMENT_GATEWAY_SETTINGS: readonly (readonly (keyof ApiEnv)[])[] = [
+	["BILLPLZ_API_KEY", "BILLPLZ_COLLECTION_ID", "BILLPLZ_X_SIGNATURE_KEY"],
+	["CHIP_SECRET_KEY", "CHIP_BRAND_ID", "CHIP_PUBLIC_KEY"],
+];
+
+/** ADR 020: a gateway is configured completely or not at all, and the fake gateway never runs in production. */
+export function checkPaymentRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	for (const settings of PAYMENT_GATEWAY_SETTINGS) {
+		const missing = settings.filter((name) => env[name] === undefined);
+		if (missing.length > 0 && missing.length < settings.length) {
+			for (const name of missing) {
+				context.addIssue({
+					code: "custom",
+					path: [name],
+					message: `is required with ${settings.filter((other) => !missing.includes(other)).join(", ")} (a payment gateway is configured completely or not at all)`,
+				});
+			}
+		}
+	}
+	if (env.NODE_ENV === NodeEnvSchema.enum.production && env.PAYMENTS_FAKE_SECRET !== undefined) {
+		context.addIssue({ code: "custom", path: ["PAYMENTS_FAKE_SECRET"], message: "must not be set in production (the fake payment gateway is for development and tests)" });
+	}
+	if (env.NODE_ENV === NodeEnvSchema.enum.production && env.BILLPLZ_SANDBOX === true && !isLoopbackUrl(env.APP_URL)) {
+		context.addIssue({ code: "custom", path: ["BILLPLZ_SANDBOX"], message: "must not be on for a deployed production environment (payments would go to Billplz's sandbox)" });
+	}
 }
 
 /** ADR 070: a provider is configured before it is chosen, and the local sinks never run on a deployment. */

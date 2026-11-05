@@ -24,9 +24,12 @@ describe("merchant nav authorization", () => {
 			"rewards-new",
 			"broadcasts",
 			"broadcasts-new",
+			"payments",
+			"payments-new",
 			"redemptions",
 			"terminals",
 			"api-keys",
+			"webhooks",
 			"settings",
 			"settings-team",
 			"settings-locations",
@@ -37,12 +40,29 @@ describe("merchant nav authorization", () => {
 		]);
 	});
 
+	it("shows webhooks to owners only (merchant:manage_webhooks is the owner's by default)", () => {
+		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")))).map((item) => item.id);
+		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")))).map((item) => item.id);
+
+		expect(managerIds).not.toContain("webhooks");
+		expect(cashierIds).not.toContain("webhooks");
+	});
+
 	it("shows broadcasts to managers and keeps them from cashiers", () => {
 		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")))).map((item) => item.id);
 		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")))).map((item) => item.id);
 
 		expect(managerIds).toEqual(expect.arrayContaining(["broadcasts", "broadcasts-new"]));
 		expect(cashierIds).not.toContain("broadcasts");
+	});
+
+	it("shows payments to managers and keeps them from cashiers", () => {
+		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")))).map((item) => item.id);
+		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")))).map((item) => item.id);
+
+		expect(managerIds).toEqual(expect.arrayContaining(["payments", "payments-new"]));
+		expect(cashierIds).not.toContain("payments");
+		expect(cashierIds).not.toContain("payments-new");
 	});
 
 	it("hides business verification from admins (owner-only)", () => {

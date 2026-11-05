@@ -1,0 +1,128 @@
+name: Load nightly
+
+# Enhancement 3.9: every night (and on demand), a short load test against a CI-sized deployment on the
+# runner (the API, PostgreSQL and Redis on one 4-vCPU machine, seeded with the development data), held to
+# p95 thresholds per endpoint group. It runs the way an operator does (ADR 068): the seeded Platform
+# Developer starts load-baselines.json's traffic mix through the API, the load runner (apps/load-runner)
+# takes it from the queue and drives it with k6, and `pnpm tools load:check` compares the run's steps with
+# load-baselines.json. Thresholds, groups and how to recalibrate them: apps/load-runner/README.md.
+
+on:
+  schedule:
+    # 20:00 UTC: 04:00 in Malaysia, after the mobile nightly has started and when no one is merging.
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: load-nightly
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "24.22.1"
+  # Throwaway service-container database; nothing here is a real credential.
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
+  # The load-test queue (the API and the load runner) and the run's traffic key live in Redis.
+  REDIS_URL: redis://localhost:6379
+  LOAD_TESTING_ENABLED: "true"
+  # The job's own poller (load:run) shares the loopback address with k6. k6's requests carry the run's
+  # traffic key and are never refused, but they still count against the address's pre-auth limit, which
+  # would then refuse the poller. Exempt traffic is still counted (ADR 071); only this throwaway
+  # deployment, which nothing else can reach, sets it.
+  RATE_LIMIT_EXEMPT_CIDRS: 127.0.0.1/32,::1/128
+  # Keep in step with deploy/docker/Dockerfile (the load runner's image). The checksum is the release's
+  # own (k6-v<version>-checksums.txt), so a replaced download fails the job.
+  K6_VERSION: "1.0.0"
+  K6_LINUX_AMD64_SHA256: 5eb2236bc76a3c5cced12aaf0fd76c4b1ceac5ea040c70388a3d272b46595b59
+
+jobs:
+  load:
+    name: Load test (p95 per endpoint group)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        # Keep in step with compose.yml (local dev) and ci.yml.
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:8.10.1
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Write throwaway apps/api/.env
+        uses: ./.github/actions/write-api-ci-env
+        with:
+          database-url: ${{ env.DATABASE_URL }}
+          tenancy-mode: multi
+
+      - name: Build the API and the load runner's packages
+        run: pnpm turbo run build --filter=@workspace/api --filter=@workspace/load-runner^...
+
+      - name: Install k6 (pinned release, checksum verified)
+        run: |
+          archive="k6-v${K6_VERSION}-linux-amd64"
+          curl -fsSL --retry 3 "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/${archive}.tar.gz" -o "$RUNNER_TEMP/${archive}.tar.gz"
+          echo "${K6_LINUX_AMD64_SHA256}  $RUNNER_TEMP/${archive}.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/${archive}.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/${archive}" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/${archive}/k6" version
+
+      - name: Restore the pinned geo dataset (the seed downloads and verifies it on a miss)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/api/.cache/geo-dataset
+          key: geo-dataset-${{ hashFiles('apps/api/prisma/seed/geo-dataset.ts') }}
+
+      - name: Apply migrations + RLS, seed the development scenario
+        run: |
+          pnpm tools db:deploy
+          pnpm db:seed -- --scenario development
+
+      - name: Start the API and the load runner (background, logs kept)
+        run: |
+          mkdir -p .ci-logs
+          nohup pnpm --filter @workspace/api start > .ci-logs/api.log 2>&1 &
+          nohup pnpm --filter @workspace/load-runner start > .ci-logs/load-runner.log 2>&1 &
+          node packages/tooling/scripts/wait-for-http.mjs --timeout-ms 120000 http://localhost:8080/health/ready
+
+      - name: Run the load test
+        run: pnpm tools load:run -- --api-url http://localhost:8080 --out .ci-logs/load-baseline.json
+
+      - name: Check it against load-baselines.json
+        run: pnpm tools load:check -- --results .ci-logs/load-baseline.json --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the results and the logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: load-nightly-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci-logs/
+          if-no-files-found: warn
+          retention-days: 30

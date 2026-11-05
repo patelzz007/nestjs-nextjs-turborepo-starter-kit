@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Injectable, Logger } from "@nestjs/common";
 import { EmailSendJobSchema, QUEUE_NAMES, type EmailSendJob } from "@workspace/shared";
 import { Job, UnrecoverableError } from "bullmq";
@@ -24,7 +25,7 @@ const DEFAULT_JOB_ATTEMPTS = 1;
  * missing, delivery abandoned) the job fails with `UnrecoverableError`, which
  * stops BullMQ at once.
  */
-@Processor(QUEUE_NAMES.emailSend)
+@Processor(QUEUE_NAMES.emailSend, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class EmailSendProcessor extends WorkerHost {
 	private readonly logger: Logger = new Logger(EmailSendProcessor.name);

@@ -11,6 +11,9 @@ export interface IdentityEmailPort {
 	sendPasswordChangedEmail(email: string): Promise<void>;
 	sendTwoFactorEnabledEmail(email: string): Promise<void>;
 	sendTwoFactorDisabledEmail(email: string): Promise<void>;
+	/** A passkey was added to the account (NIST SP 800-63B §6.1.2.1: a new authenticator is announced out of band, ADR 080). */
+	sendPasskeyAddedEmail(email: string, passkeyName: string): Promise<void>;
+	sendPasskeyRemovedEmail(email: string, passkeyName: string): Promise<void>;
 	sendLoginVerificationEmail(email: string, verificationCode: string, deviceInfo: string, ipAddress: string): Promise<EmailSendResult>;
 	sendMfaRecoveryUserNotification(email: string, title: string, message: string): Promise<void>;
 	sendMfaRecoveryAdminNotification(email: string, title: string, message: string): Promise<void>;

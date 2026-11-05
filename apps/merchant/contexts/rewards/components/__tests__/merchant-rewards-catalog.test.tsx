@@ -192,15 +192,20 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		rewardFixture({ id: "4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f8a", title: "Disabled teh tarik deal", status: "DISABLED" }),
 	];
 
+	/** A tab's accessible name: the one phrase a screen reader reads ("Live 1 reward"). */
+	function tabName(tab: Element | null | undefined): string | null {
+		return tab?.querySelector(".sr-only")?.textContent ?? null;
+	}
+
 	function tabNames(): (string | null)[] {
-		return screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"));
+		return screen.getAllByRole("tab").map((tab) => tabName(tab));
 	}
 
 	function selectedTab(): string | null | undefined {
 		return screen
 			.getAllByRole("tab")
 			.find((tab) => tab.getAttribute("aria-selected") === "true")
-			?.getAttribute("aria-label");
+			?.querySelector(".sr-only")?.textContent;
 	}
 
 	function panel(): HTMLElement {
@@ -211,13 +216,13 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		renderCatalog(false, REWARDS);
 
 		expect(screen.getByRole("tablist", { name: "Reward status" })).toBeDefined();
-		expect(tabNames()).toEqual(["Live, 1 reward", "In review, 0 rewards", "Drafts, 1 reward", "Ended, 2 rewards"]);
+		expect(tabNames()).toEqual(["Live 1 reward", "In review 0 rewards", "Drafts 1 reward", "Ended 2 rewards"]);
 	});
 
 	it("opens on live rewards and shows only that tab's rewards", () => {
 		renderCatalog(false, REWARDS);
 
-		expect(selectedTab()).toBe("Live, 1 reward");
+		expect(selectedTab()).toBe("Live 1 reward");
 		expect(within(panel()).getByText("Nyonya kuih sampler")).toBeDefined();
 		expect(screen.queryByText("Lunch set draft")).toBeNull();
 		expect(screen.queryByText("Old cendol giveaway")).toBeNull();
@@ -226,7 +231,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 	it("opens on the first tab with rewards when nothing is live", () => {
 		renderCatalog(false, [rewardFixture({ title: "Lunch set draft", status: "DRAFT" })]);
 
-		expect(selectedTab()).toBe("Drafts, 1 reward");
+		expect(selectedTab()).toBe("Drafts 1 reward");
 		expect(within(panel()).getByText("Lunch set draft")).toBeDefined();
 		expect(window.location.search).toBe("");
 	});
@@ -235,7 +240,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		window.history.replaceState(null, "", `${REWARDS_PATH}?status=ended`);
 		renderCatalog(false, REWARDS);
 
-		expect(selectedTab()).toBe("Ended, 2 rewards");
+		expect(selectedTab()).toBe("Ended 2 rewards");
 		expect(within(panel()).getByText("Old cendol giveaway")).toBeDefined();
 		expect(within(panel()).getByText("Disabled teh tarik deal")).toBeDefined();
 		expect(screen.queryByText("Nyonya kuih sampler")).toBeNull();
@@ -245,7 +250,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		window.history.replaceState(null, "", `${REWARDS_PATH}?status=archived`);
 		renderCatalog(false, REWARDS);
 
-		expect(selectedTab()).toBe("Live, 1 reward");
+		expect(selectedTab()).toBe("Live 1 reward");
 		expect(within(panel()).getByText("Nyonya kuih sampler")).toBeDefined();
 	});
 
@@ -254,14 +259,14 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		const view = renderCatalog(false, REWARDS);
 
 		act(() => {
-			fireEvent.click(screen.getByRole("tab", { name: "Drafts, 1 reward" }));
+			fireEvent.click(screen.getByRole("tab", { name: "Drafts 1 reward" }));
 		});
 		view.rerender();
 
 		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?status=drafts");
-		expect(selectedTab()).toBe("Drafts, 1 reward");
+		expect(selectedTab()).toBe("Drafts 1 reward");
 		expect(within(panel()).getByText("Lunch set draft")).toBeDefined();
 	});
 
@@ -277,7 +282,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 
 		await flushUrlUpdates();
 		expect(window.location.search).toBe("?status=drafts");
-		expect(selectedTab()).toBe("Drafts, 1 reward");
+		expect(selectedTab()).toBe("Drafts 1 reward");
 	});
 
 	it("links an empty tab to the reward editor for members who manage rewards, and offers nothing to the rest", () => {
@@ -327,7 +332,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		renderCatalog(false, REWARDS);
 
 		expect(tabNames()).toHaveLength(REWARD_STATUS_GROUPS.length);
-		expect(selectedTab()).toBe("Ended, 2 rewards");
+		expect(selectedTab()).toBe("Ended 2 rewards");
 		expect(panel().querySelectorAll('[data-slot="reward-row"]')).toHaveLength(2);
 		expect(panel().querySelectorAll('[data-slot="reward-row"] [data-slot="cover-image"]')).toHaveLength(2);
 		expect(within(panel()).getByText("Inventory")).toBeDefined();
@@ -341,13 +346,13 @@ describe("MerchantRewardsCatalog status tabs", () => {
 			fireEvent.click(screen.getByRole("button", { name: "List view" }));
 		});
 
-		expect(selectedTab()).toBe("Drafts, 1 reward");
+		expect(selectedTab()).toBe("Drafts 1 reward");
 		expect(panel().querySelectorAll('[data-slot="reward-row"]')).toHaveLength(1);
 	});
 
 	it("moves focus between tabs with the arrow keys, without opening them", async () => {
 		renderCatalog(false, REWARDS);
-		const live = screen.getByRole("tab", { name: "Live, 1 reward" });
+		const live = screen.getByRole("tab", { name: "Live 1 reward" });
 
 		act(() => {
 			live.focus();
@@ -355,10 +360,10 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		fireEvent.keyDown(live, { key: "ArrowRight" });
 
 		await waitFor((): void => {
-			expect(document.activeElement?.getAttribute("aria-label")).toBe("In review, 0 rewards");
+			expect(document.activeElement).toBe(screen.getByRole("tab", { name: "In review 0 rewards" }));
 		});
 		await flushUrlUpdates();
-		expect(selectedTab()).toBe("Live, 1 reward");
+		expect(selectedTab()).toBe("Live 1 reward");
 		expect(window.location.search).toBe("");
 	});
 });

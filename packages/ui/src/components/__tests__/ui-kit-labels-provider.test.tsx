@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, render, renderHook, screen } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import { UI_KIT_LANGUAGE_PACKS, UI_KIT_LANGUAGES, UiKitLanguageSchema } from "../../lib/labels/language-packs";
+import { UI_KIT_LANGUAGE_PACKS } from "../../lib/labels/all-language-packs";
+import { UI_KIT_LANGUAGES, UiKitLanguageSchema, loadUiKitLanguagePack } from "../../lib/labels/language-packs";
 import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { UiKitLabelsProvider, UiKitLanguageProvider, useUiKitLabels } from "../ui-kit-labels-provider";
@@ -55,6 +56,46 @@ describe("useUiKitLabels", () => {
 
 	it("fails loudly without a provider instead of rendering blank controls", (): void => {
 		expect(() => render(<DialogCloseLabel />)).toThrow('No UiKitLabelsProvider above a component that needs "dialog" labels');
+	});
+});
+
+describe("loading a language pack", () => {
+	it("shows another language once its pack has loaded, and English without waiting", async (): Promise<void> => {
+		// A suspended `use()` resumes inside an async act (React 19): this waits for the pack's import.
+		await act(async (): Promise<void> => {
+			render(
+				<React.Suspense fallback={<span>loading</span>}>
+					<UiKitLanguageProvider language="ms">
+						<DialogCloseLabel />
+					</UiKitLanguageProvider>
+				</React.Suspense>,
+			);
+			await loadUiKitLanguagePack("ms");
+		});
+		expect(screen.getByText(UI_KIT_LANGUAGE_PACKS.ms.dialog.close)).toBeTruthy();
+		cleanup();
+
+		render(
+			<React.Suspense fallback={<span>loading</span>}>
+				<UiKitLanguageProvider language="en">
+					<DialogCloseLabel />
+				</UiKitLanguageProvider>
+			</React.Suspense>,
+		);
+		expect(screen.queryByText("loading")).toBeNull();
+		expect(screen.getByText(UI_KIT_LABELS_EN.dialog.close)).toBeTruthy();
+	});
+
+	it("loads each pack once, and loads the right one", async (): Promise<void> => {
+		for (const language of UI_KIT_LANGUAGES) {
+			expect(loadUiKitLanguagePack(language)).toBe(loadUiKitLanguagePack(language));
+			const loaded = await loadUiKitLanguagePack(language);
+			const expected = UI_KIT_LANGUAGE_PACKS[language];
+			// The loader binds its own copy of the language's catalogue: the same words and the same formatting.
+			expect(loaded.dialog.close).toBe(expected.dialog.close);
+			expect(loaded.dateSelector.months).toStrictEqual(expected.dateSelector.months);
+			expect(loaded.cascader.itemCount(3)).toBe(expected.cascader.itemCount(3));
+		}
 	});
 });
 

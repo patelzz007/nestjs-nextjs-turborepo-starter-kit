@@ -30,7 +30,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Switch } from "@workspace/ui/components/switch";
 import { TimePicker } from "@workspace/ui/components/time-picker";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { TreeBranch } from "@workspace/ui/components/tree-branch";
+import { TreeBranch, TreeNodeText } from "@workspace/ui/components/tree-branch";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { useCallback, useMemo, useState, type JSX } from "react";
 
@@ -70,6 +70,10 @@ export interface NotificationSettingsProps {
  * The signed-in person's notification settings (ADR 070, 073): what reaches them on which channel, quiet
  * hours and the digest, marketing consent per sender, and their phones. Shared by every app; each cell's
  * lock and availability come from the API, which enforces them again on save.
+ *
+ * Layout: one column on narrow screens. From `lg`, the tree of kinds fills the main column (two kinds side
+ * by side from `2xl`) and the smaller settings stack in a side column that stays in view while the tree scrolls,
+ * so a wide screen has no empty band beside short rows.
  */
 export function NotificationSettings({ labels = NOTIFICATION_SETTINGS_LABELS }: NotificationSettingsProps): JSX.Element {
 	const { api } = useAuth();
@@ -81,19 +85,23 @@ export function NotificationSettings({ labels = NOTIFICATION_SETTINGS_LABELS }: 
 		<div className="space-y-6">
 			<header className="space-y-1">
 				<h1 className="text-2xl font-semibold tracking-tight">{labels.title}</h1>
-				<p className="text-sm text-muted-foreground">{labels.description}</p>
+				<p className="max-w-prose text-sm text-muted-foreground">{labels.description}</p>
 			</header>
 			{preferences.isError ? <p className="text-sm text-destructive">{labels.loadError}</p> : null}
-			{data === undefined ? (
-				<Skeleton className="h-72 w-full rounded-xl" />
-			) : (
-				<>
-					<KindsCard preferences={data} labels={labels} />
-					<ScheduleCard schedule={data.schedule} labels={labels} />
-					<ConsentCard preferences={data} labels={labels} />
-				</>
-			)}
-			<DevicesCard devices={devices.data?.data} labels={labels} />
+			<div data-testid="notification-settings-layout" className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-start">
+				{data === undefined ? <Skeleton className="h-96 w-full rounded-xl" /> : <KindsCard preferences={data} labels={labels} />}
+				<div data-testid="notification-settings-side" className="space-y-6 lg:sticky lg:top-6">
+					{data === undefined ? (
+						<Skeleton className="h-48 w-full rounded-xl" />
+					) : (
+						<>
+							<ScheduleCard schedule={data.schedule} labels={labels} />
+							<ConsentCard preferences={data} labels={labels} />
+						</>
+					)}
+					<DevicesCard devices={devices.data?.data} labels={labels} />
+				</div>
+			</div>
 		</div>
 	);
 }
@@ -147,9 +155,10 @@ function KindsCard({ preferences, labels }: { readonly preferences: Notification
 				<CardDescription>{labels.kindsDescription}</CardDescription>
 			</CardHeader>
 			<CardContent className="px-0">
-				<ul className="divide-y divide-border border-y border-border">
+				{/* One kind per row; two side by side from `2xl`, with the rule between them drawn by the left one. */}
+				<ul className="grid border-t border-border 2xl:grid-cols-2">
 					{preferences.categories.map((row): JSX.Element => (
-						<li key={row.category}>
+						<li key={row.category} className="border-b border-border 2xl:odd:border-e">
 							<KindNode row={row} labels={labels} onChange={handleChange} saving={update.isPending} />
 						</li>
 					))}
@@ -187,7 +196,7 @@ function KindNode({ row, labels, onChange, saving }: KindNodeProps): JSX.Element
 	);
 	const checkboxId = `notification-kind-${row.category}-checkbox`;
 	return (
-		<div className="px-6 py-4" data-testid={`notification-kind-${row.category}`}>
+		<div className="px-6 py-5" data-testid={`notification-kind-${row.category}`}>
 			<div className="flex items-center gap-3">
 				<Checkbox
 					id={checkboxId}
@@ -202,12 +211,11 @@ function KindNode({ row, labels, onChange, saving }: KindNodeProps): JSX.Element
 				<IconTile tone={look.tone}>
 					<KindIcon />
 				</IconTile>
-				<Label htmlFor={checkboxId} className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-					<span className="font-medium text-foreground">{title}</span>
-					<span className="text-sm font-normal text-muted-foreground">{labels.categories[row.category].description}</span>
+				<Label htmlFor={checkboxId} className="flex min-w-0 flex-1">
+					<TreeNodeText title={title} description={labels.categories[row.category].description} />
 				</Label>
 			</div>
-			<TreeBranch aria-label={title} className="ms-2 mt-2">
+			<TreeBranch aria-label={title} className="ms-2 mt-3">
 				{shownPreferenceCellsOf(row).map((cell): JSX.Element => (
 					<ChannelNode key={cell.channel} category={row.category} cell={cell} labels={labels} onChange={onChange} saving={saving} />
 				))}
@@ -224,7 +232,7 @@ interface ChannelNodeProps {
 	readonly saving: boolean;
 }
 
-/** One channel of a kind, a leaf of the tree: its checkbox, its symbol, its name, and why it is kept on or what to do to have it. */
+/** One channel of a kind, a leaf of the tree: its checkbox, its symbol, its name and, always, a subtitle (what it is, why it is kept on, or what to do to have it). */
 function ChannelNode({ category, cell, labels, onChange, saving }: ChannelNodeProps): JSX.Element {
 	const handleCheckedChange = useCallback(
 		(checked: boolean): void => {
@@ -248,9 +256,8 @@ function ChannelNode({ category, cell, labels, onChange, saving }: ChannelNodePr
 				aria-label={`${labels.categories[category].title}: ${labels.channels[cell.channel]}`}
 			/>
 			<ChannelIcon className={cn("size-4 shrink-0", state === "unavailable" ? "text-muted-foreground" : "text-foreground")} aria-hidden="true" />
-			<Label htmlFor={checkboxId} className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-				<span className={cn("font-medium", state === "unavailable" ? "text-muted-foreground" : undefined)}>{labels.channels[cell.channel]}</span>
-				{note === null ? null : <span className="text-xs font-normal text-muted-foreground">{note}</span>}
+			<Label htmlFor={checkboxId} className="flex min-w-0 flex-1">
+				<TreeNodeText title={labels.channels[cell.channel]} description={note} muted={state === "unavailable"} />
 			</Label>
 		</div>
 	);
@@ -321,7 +328,7 @@ function ScheduleCard({ schedule, labels }: { readonly schedule: NotificationSch
 					<Switch id="quiet-hours" checked={schedule.quietHoursEnabled} onCheckedChange={handleQuiet} disabled={update.isPending} />
 				</div>
 				{schedule.quietHoursEnabled ? (
-					<div className="grid gap-4 sm:grid-cols-2">
+					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-1.5">
 							<Label id="quiet-start-label">{labels.quietFrom}</Label>
 							<TimePicker value={minuteToTime(schedule.quietStartMinute)} onValueChange={handleStart} hourCycle={24} minuteStep={15} aria-labelledby="quiet-start-label" />
@@ -343,7 +350,7 @@ function ScheduleCard({ schedule, labels }: { readonly schedule: NotificationSch
 				<div className="space-y-1.5">
 					<Label htmlFor="digest">{labels.digestLabel}</Label>
 					<Select<NotificationDigestFrequency> items={digestOptions} value={schedule.digestFrequency} onValueChange={handleDigest} disabled={update.isPending}>
-						<SelectTrigger id="digest" className="w-full sm:w-64">
+						<SelectTrigger id="digest" className="w-full">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>

@@ -42,6 +42,14 @@ export interface NetworkQualityMonitorOptions {
 	/** What the device says before its first event (the web apps count as online until hydration has run). */
 	readonly online?: boolean;
 	readonly visible?: boolean;
+	/**
+	 * When an automatic test (at start, on coming back into view, on the interval) may run: `run` is called
+	 * once the platform is ready, and the returned function cancels a run still waiting. Default: at once.
+	 * A test times round trips on the thread that handles the answers, so one run while the app is busy
+	 * starting up reads that work as latency; the mobile app waits for its JS thread to be idle. A test asked
+	 * for by the person (`testNow`) always runs at once.
+	 */
+	readonly scheduleTest?: (run: () => void) => () => void;
 }
 
 /** Before anything is known: online, nothing measured, nothing running. */
@@ -55,6 +63,8 @@ export class NetworkQualityMonitor {
 	private _latest: TimedNetworkQuality | null = null;
 	private _running: AbortController | null = null;
 	private _timer: ReturnType<typeof setInterval> | null = null;
+	/** Cancels an automatic test that is scheduled but not started yet. */
+	private _cancelScheduled: (() => void) | null = null;
 	private _snapshot: NetworkQualitySnapshot;
 
 	public constructor(private readonly _options: NetworkQualityMonitorOptions) {
@@ -123,9 +133,19 @@ export class NetworkQualityMonitor {
 
 	private testIfStale(): void {
 		const last = this._latest;
-		if (this._timer !== null && this._visible && (last === null || this._options.clock() - last.measuredAtMs >= this._intervalMs)) {
-			void this.runTest();
+		const isStale = last === null || this._options.clock() - last.measuredAtMs >= this._intervalMs;
+		if (this._timer === null || !this._visible || !isStale || this._cancelScheduled !== null) {
+			return;
 		}
+		const { scheduleTest } = this._options;
+		if (scheduleTest === undefined) {
+			void this.runTest();
+			return;
+		}
+		this._cancelScheduled = scheduleTest((): void => {
+			this._cancelScheduled = null;
+			void this.runTest();
+		});
 	}
 
 	private async runTest(): Promise<void> {
@@ -149,6 +169,10 @@ export class NetworkQualityMonitor {
 	}
 
 	private cancel(): void {
+		if (this._cancelScheduled !== null) {
+			this._cancelScheduled();
+			this._cancelScheduled = null;
+		}
 		if (this._running !== null) {
 			this._running.abort();
 			this._running = null;

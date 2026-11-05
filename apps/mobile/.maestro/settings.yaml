@@ -1,0 +1,13 @@
+# Settings opens, and a section in it (Appearance) shows its choices.
+appId: ${APP_ID}
+name: Settings
+tags: [smoke]
+---
+- runFlow: subflows/signed-in.yaml
+- tapOn: "Settings"
+- assertVisible: "Appearance"
+- tapOn: "Appearance"
+# The theme choices (the group itself is named "Theme" for screen readers only).
+- assertVisible: "Follow the device's light or dark setting"
+- assertVisible: "Nord"
+- back

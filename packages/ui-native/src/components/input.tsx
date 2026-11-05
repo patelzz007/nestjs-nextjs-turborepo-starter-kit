@@ -23,7 +23,8 @@ export const inputVariants = cva("flex-row gap-2", {
 	variants: {
 		/** `default`: the outlined input. `ghost`: no border or fill, for an input inside another surface. */
 		variant: {
-			default: "border border-input bg-card",
+			/** The page colour, so a field inside a card reads as a recessed well (ADR 079); on the page it is the page. */
+			default: "border border-input bg-background",
 			ghost: "border border-transparent bg-transparent",
 		},
 		size: {

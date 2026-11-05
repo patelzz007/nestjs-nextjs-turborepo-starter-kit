@@ -36,4 +36,31 @@ const TreeBranch = React.forwardRef<HTMLUListElement, TreeBranchProps>(function 
 	);
 });
 
-export { TreeBranch };
+export interface TreeNodeTextProps {
+	/** What the node is: one short line. Required. */
+	readonly title: string;
+	/** The line under it: what the node does, why it is kept on, or what to do to have it. Required, so every node of a tree reads the same way. */
+	readonly description: string;
+	/** Fades both lines, for a node that can't be changed yet. */
+	readonly muted?: boolean | undefined;
+	readonly className?: string | undefined;
+}
+
+/**
+ * The text of one tree node: a title and a subtitle, both required. Every node of a tree carries both, so the
+ * rows line up and none reads as an unexplained bare word.
+ */
+function TreeNodeText({ title, description, muted = false, className }: TreeNodeTextProps): React.JSX.Element {
+	return (
+		<span data-slot="tree-node-text" className={cn("flex min-w-0 flex-1 flex-col items-start gap-0.5", className)}>
+			<span data-slot="tree-node-title" className={cn("font-medium", muted ? "text-muted-foreground" : "text-foreground")}>
+				{title}
+			</span>
+			<span data-slot="tree-node-description" className="text-sm font-normal text-muted-foreground">
+				{description}
+			</span>
+		</span>
+	);
+}
+
+export { TreeBranch, TreeNodeText };

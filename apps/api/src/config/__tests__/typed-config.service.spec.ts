@@ -9,7 +9,7 @@ describe("TypedConfigService", () => {
 		expect(config.rateLimits.throttleDefaultLimit).toBe(1000);
 		expect(config.email.replyTo).toBe("support@example.com");
 		expect(config.auth.jwtAccessExpiry).toBe("15m");
-		expect(config.runtime.appName).toBe("hello-world");
+		expect(config.runtime.appName).toBe("Starter Test");
 		expect(config.http.corsOrigins).toEqual(["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"]);
 		expect(config.runtime.nodeEnv).toBe("test");
 		expect(config.runtime.isTest).toBe(true);

@@ -21,7 +21,9 @@ export interface LanguageShare {
 	readonly color: string | null;
 	/** The logo tile's background (the colour softened, `#rrggbbaa`); `null` for the muted surface. */
 	readonly tint: string | null;
-	/** The logo's SVG path in a 24 × 24 box; `null` when the language has none. */
+	/** The language's original (full-colour) logo as an SVG document; `null` when there is none. */
+	readonly originalLogo: string | null;
+	/** The one-colour logo's SVG path in a 24 × 24 box, for a language with no original logo; `null` when it has none either. */
 	readonly logoPath: string | null;
 	/** Stands in for a missing logo ("C#"). */
 	readonly monogram: string;
@@ -47,7 +49,13 @@ export function LanguageBreakdown({ title, languages, testID }: LanguageBreakdow
 			<View className="gap-2">
 				{languages.map((language: LanguageShare): React.JSX.Element => (
 					<View key={language.name} className="min-h-8 flex-row items-center gap-3" accessible accessibilityLabel={`${language.name}: ${language.percentLabel}`}>
-						<LanguageLogo path={language.logoPath} monogram={language.monogram} tint={language.tint} testID={`language-logo-${language.name}`} />
+						<LanguageLogo
+							original={language.originalLogo}
+							path={language.logoPath}
+							monogram={language.monogram}
+							tint={language.tint}
+							testID={`language-logo-${language.name}`}
+						/>
 						<Text className="font-sans-medium flex-1 text-sm text-foreground">{language.name}</Text>
 						<Text className="font-sans text-sm text-muted-foreground">{language.percentLabel}</Text>
 					</View>

@@ -1,7 +1,13 @@
 import { ROUTES } from "../../../runtime/routes";
 import { DEVICES_COPY } from "../../../contexts/identity";
 import type { AppRoute } from "../../../runtime/routes";
-import { screenHeadingOf, type ScreenParams } from "../app-screens";
+import { screenHeadingOf as headingIn, type ScreenHeading, type ScreenParams } from "../app-screens";
+import { NAVIGATION_LABELS } from "../navigation-labels";
+
+/** The heading in English. */
+function screenHeadingOf(pathname: string, params: ScreenParams): ScreenHeading {
+	return headingIn(pathname, params, NAVIGATION_LABELS.en);
+}
 
 /** The heading's title, the part these title cases check. */
 function screenTitleOf(pathname: string, params: ScreenParams): string {
@@ -88,5 +94,13 @@ describe("screenHeadingOf — subtitles", () => {
 
 	it("has no heading for a path the app does not have", () => {
 		expect(screenHeadingOf("/nowhere", {})).toEqual({ title: "", subtitle: "" });
+	});
+});
+
+describe("screenHeadingOf — languages (ADR 076)", () => {
+	it("names a screen in the language on screen", () => {
+		expect(headingIn(ROUTES.settings, {}, NAVIGATION_LABELS.ms)).toEqual({ title: "Tetapan", subtitle: "Urus keutamaan dan akaun anda" });
+		expect(headingIn(ROUTES.language, {}, NAVIGATION_LABELS["zh-Hans"]).title).toBe("语言");
+		expect(headingIn(ROUTES.appLock, {}, NAVIGATION_LABELS.ta).title).toBe("செயலிப் பூட்டு");
 	});
 });

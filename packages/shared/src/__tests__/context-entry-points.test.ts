@@ -13,12 +13,17 @@ import * as integrationsGithubEntry from "../contexts/integrations-github/index"
 import * as kanbanEntry from "../contexts/kanban/index";
 import * as notificationsEntry from "../contexts/notifications/index";
 import * as operationsEntry from "../contexts/operations/index";
+import * as paymentsEntry from "../contexts/payments/index";
+import * as privacyEntry from "../contexts/privacy/index";
+import * as savedViewsEntry from "../contexts/saved-views/index";
+import * as featureFlagsEntry from "../contexts/feature-flags/index";
 import * as tenancyEntry from "../contexts/tenancy/index";
 import * as posEntry from "../contexts/pos/index";
 import * as referenceDataEntry from "../contexts/reference-data/index";
 import * as referralsEntry from "../contexts/referrals/index";
 import * as reportingEntry from "../contexts/reporting/index";
 import * as rewardsEntry from "../contexts/rewards/index";
+import * as webhooksEntry from "../contexts/webhooks/index";
 
 const CONTEXTS_DIR: string = resolve(import.meta.dirname, "..", "contexts");
 const PACKAGE_JSON: string = resolve(import.meta.dirname, "..", "..", "package.json");
@@ -40,12 +45,17 @@ const ENTRIES: Readonly<Record<string, Readonly<Record<string, ExportedValue>>>>
 	kanban: kanbanEntry,
 	notifications: notificationsEntry,
 	operations: operationsEntry,
+	payments: paymentsEntry,
+	privacy: privacyEntry,
+	"saved-views": savedViewsEntry,
+	"feature-flags": featureFlagsEntry,
 	tenancy: tenancyEntry,
 	pos: posEntry,
 	"reference-data": referenceDataEntry,
 	referrals: referralsEntry,
 	reporting: reportingEntry,
 	rewards: rewardsEntry,
+	webhooks: webhooksEntry,
 };
 
 /** The root barrel's exports by name, for comparing against a context's entry point. */

@@ -26,6 +26,10 @@ import {
 	tenantNotificationsRoutes,
 } from "./contexts/notifications/routes";
 import { auditLogsRoutes, auditTrailRoutes, dataChangesRoutes } from "./contexts/audit/routes";
+import { tenantPaymentsRoutes } from "./contexts/payments/routes";
+import { adminPrivacyRoutes, privacyRoutes } from "./contexts/privacy/routes";
+import { savedViewsRoutes } from "./contexts/saved-views/routes";
+import { featureFlagsRoutes } from "./contexts/feature-flags/routes";
 import { githubPicturesRoutes, githubPullRequestsRoutes, githubRoutes } from "./contexts/integrations-github/routes";
 import { geoRoutes } from "./contexts/reference-data/routes";
 import { integrationRewardsRoutes, legalRoutes, tenantRewardsRoutes, rewardsAdminRewardRoutes, rewardsRoutes } from "./contexts/rewards/routes";
@@ -37,6 +41,8 @@ import { adminTenantsRoutes, tenantsRoutes, rewardsAdminTenantRoutes } from "./c
 import { productRoutes, sampleCategoryRoutes } from "./contexts/catalog/routes";
 import { kanbanRoutes } from "./contexts/kanban/routes";
 import { operationsRoutes } from "./contexts/operations/routes";
+import { receivedWebhooksRoutes } from "./contexts/webhooks/received-webhooks.routes";
+import { tenantWebhooksRoutes } from "./contexts/webhooks/outbound-webhooks.routes";
 import type { RouteTree } from "./route-tree";
 
 export type { RouteTree } from "./route-tree";
@@ -55,6 +61,11 @@ export const apiRoutes = {
 	notifications: { ...notificationsRoutes, ...broadcastReportRoutes },
 	notificationsAdmin: notificationsAdminRoutes,
 	tenantNotifications: tenantNotificationsRoutes,
+	tenantPayments: tenantPaymentsRoutes,
+	privacy: privacyRoutes,
+	adminPrivacy: adminPrivacyRoutes,
+	savedViews: savedViewsRoutes,
+	featureFlags: featureFlagsRoutes,
 	admin: adminRbacRoutes,
 	auditLogs: auditLogsRoutes,
 	auditTrail: auditTrailRoutes,
@@ -97,6 +108,8 @@ export const apiRoutes = {
 	product: productRoutes,
 	kanban: kanbanRoutes,
 	operations: operationsRoutes,
+	receivedWebhooks: receivedWebhooksRoutes,
+	tenantWebhooks: tenantWebhooksRoutes,
 } satisfies Record<string, RouteTree>;
 
 /** The full route tree — exported for type-level access. */

@@ -1,0 +1,6 @@
+# Maestro flows for the mobile app (enhancement 3.7): they drive the BUILT app on a device or an
+# emulator, the way a person would. Run them with `pnpm --filter @workspace/mobile e2e:device`
+# (see apps/mobile/README.md → Device tests). None of them clears the app's data: signing in
+# happens only when the app is signed out, so they can run against a phone that is in use.
+flows:
+  - "*.yaml"

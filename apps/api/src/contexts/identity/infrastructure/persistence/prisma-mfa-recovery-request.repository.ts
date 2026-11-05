@@ -5,6 +5,7 @@ import { MfaRecoveryRequest, type MfaRecoveryAuditEntry, type MfaRecoveryStatus 
 import { MfaRecoveryNotPendingError } from "../../domain/errors/identity.errors";
 import type { MfaRecoveryRequestRepository } from "../../domain/repositories/mfa-recovery-request.repository";
 import { epochOrNull } from "./identity-row.mappers";
+import { retirePasskeys } from "./prisma-passkey.repository";
 import { CLEARED_TWO_FACTOR_COLUMNS, retireBackupCodes } from "./prisma-two-factor.repository";
 
 /** Statuses of a request that is still open — at most one per user. */
@@ -92,6 +93,8 @@ export class PrismaMfaRecoveryRequestRepository implements MfaRecoveryRequestRep
 			await this.db.user.update({ where: { id: state.userId }, data: { ...CLEARED_TWO_FACTOR_COLUMNS, tokenVersion: { increment: 1 }, updatedAt: completedAt } });
 			// Soft-deleted, attributed to the approving SuperAdmin (the actor of this unlock).
 			await retireBackupCodes(this.db, state.userId, state.reviewedBy, completedAt);
+			// Recovery means the person lost their factors: a passkey on a lost device must not sign in either (ADR 080).
+			await retirePasskeys(this.db, state.userId, state.reviewedBy, completedAt);
 			await this.db.twoFactorPendingSetup.deleteMany({ where: { userId: state.userId } });
 			await this.appendAudits(request);
 			return true;

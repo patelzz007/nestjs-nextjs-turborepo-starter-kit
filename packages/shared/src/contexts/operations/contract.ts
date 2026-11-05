@@ -17,6 +17,15 @@ import {
 	TenantRateLimitOverrideListSchema,
 	TenantRateLimitOverrideSchema,
 } from "./schemas/traffic-and-cache";
+import { OpsFailedJobListSchema, OpsQueueJobActionInputSchema, OpsQueueListSchema, OpsQueuePathSchema } from "./schemas/queues";
+import {
+	CreateStatusIncidentSchema,
+	PostStatusIncidentUpdateInputSchema,
+	PublicStatusPageSchema,
+	StatusIncidentListSchema,
+	StatusIncidentPathSchema,
+	StatusIncidentSchema,
+} from "./schemas/status-page";
 import {
 	LoadTestCapsInputSchema,
 	OpsAlertSettingsInputSchema,
@@ -166,4 +175,31 @@ export const operationsContract = {
 	}),
 	cache: defineContract({ method: "GET", path: operationsRoutes.cache, input: z.undefined(), response: singleResponse(CacheOverviewSchema) }),
 	flushCache: defineContract({ method: "POST", path: operationsRoutes.flushCache, input: FlushCacheSchema, response: singleResponse(OkResponseSchema) }),
+	/** Background job queues (enhancement 4.4): depth, failure rate, failed jobs, retry and discard. */
+	queues: defineContract({ method: "GET", path: operationsRoutes.queues, input: z.undefined(), response: singleResponse(OpsQueueListSchema) }),
+	queueFailedJobs: defineContract({ method: "GET", path: operationsRoutes.queueFailedJobs, input: OpsQueuePathSchema, response: singleResponse(OpsFailedJobListSchema) }),
+	retryQueueJob: defineContract({ method: "POST", path: operationsRoutes.retryQueueJob, input: OpsQueueJobActionInputSchema, response: singleResponse(OkResponseSchema) }),
+	discardQueueJob: defineContract({ method: "POST", path: operationsRoutes.discardQueueJob, input: OpsQueueJobActionInputSchema, response: singleResponse(OkResponseSchema) }),
+	/** The public status page and its incidents (enhancement 4.5). */
+	publicStatus: defineContract({
+		access: "public",
+		method: "GET",
+		path: operationsRoutes.publicStatus,
+		input: z.undefined(),
+		response: singleResponse(PublicStatusPageSchema),
+	}),
+	statusIncidents: defineContract({ method: "GET", path: operationsRoutes.statusIncidents, input: z.undefined(), response: singleResponse(StatusIncidentListSchema) }),
+	statusIncident: defineContract({ method: "GET", path: operationsRoutes.statusIncident, input: StatusIncidentPathSchema, response: singleResponse(StatusIncidentSchema) }),
+	createStatusIncident: defineContract({
+		method: "POST",
+		path: operationsRoutes.statusIncidents,
+		input: CreateStatusIncidentSchema,
+		response: singleResponse(StatusIncidentSchema),
+	}),
+	postStatusIncidentUpdate: defineContract({
+		method: "POST",
+		path: operationsRoutes.statusIncidentUpdates,
+		input: PostStatusIncidentUpdateInputSchema,
+		response: singleResponse(StatusIncidentSchema),
+	}),
 };

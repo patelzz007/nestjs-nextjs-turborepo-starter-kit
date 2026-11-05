@@ -1,8 +1,9 @@
 import { ForbiddenException, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { inMemoryWebhookReceiver, ManualClock } from "../../../../../test/support/in-memory-received-webhooks";
 
 import { githubWebhookSignature } from "../../domain/policies/github-webhook-signature.policy";
-import type { GithubWebhookHeaders } from "../../domain/policies/webhook-delivery.policy";
 import { DisableLiveUpdatesCommand } from "../commands/disable-live-updates/disable-live-updates.command";
 import { DisableLiveUpdatesHandler } from "../commands/disable-live-updates/disable-live-updates.handler";
 import { EnableLiveUpdatesCommand } from "../commands/enable-live-updates/enable-live-updates.command";
@@ -34,14 +35,23 @@ function disable(harness: GithubHarness): DisableLiveUpdatesHandler {
 	return new DisableLiveUpdatesHandler(harness.credentials, harness.endpoint, harness.webhooks, harness.store, harness.liveUpdates, harness.clock);
 }
 
+/** Every handler of one test shares one received-webhook log, as every request of one server does. */
+let inbound: ReturnType<typeof inMemoryWebhookReceiver> = inMemoryWebhookReceiver(new ManualClock(AT));
+
 function receive(harness: GithubHarness): RecordGithubWebhookDeliveryHandler {
-	return new RecordGithubWebhookDeliveryHandler(harness.endpoint, harness.store, harness.clock);
+	return new RecordGithubWebhookDeliveryHandler(harness.endpoint, harness.store, harness.clock, inbound.receiver);
+}
+
+/** A delivery exactly as GitHub posts it: the raw body, its event and delivery headers, and a signature of the body. */
+function signedDelivery(event: string, rawBody: Buffer, deliveryId: string, signature: string | undefined): RecordGithubWebhookDeliveryCommand {
+	return new RecordGithubWebhookDeliveryCommand(anonymousActor(), {
+		request: { rawBody, headers: { "x-github-event": event, "x-github-delivery": deliveryId, "x-hub-signature-256": signature, "content-type": "application/json" } },
+	});
 }
 
 function delivery(event: string, payload: object, deliveryId = "delivery-1"): RecordGithubWebhookDeliveryCommand {
 	const rawBody = Buffer.from(JSON.stringify(payload));
-	const headers: GithubWebhookHeaders = { event, deliveryId, signature: githubWebhookSignature(SECRET, rawBody) };
-	return new RecordGithubWebhookDeliveryCommand(anonymousActor(), { headers, rawBody });
+	return signedDelivery(event, rawBody, deliveryId, githubWebhookSignature(SECRET, rawBody));
 }
 
 async function linked(): Promise<GithubHarness> {
@@ -51,6 +61,10 @@ async function linked(): Promise<GithubHarness> {
 }
 
 describe("RecordGithubWebhookDeliveryHandler", () => {
+	beforeEach(() => {
+		inbound = inMemoryWebhookReceiver(new ManualClock(AT));
+	});
+
 	it("records a pull-request event once and announces which pull request changed", async () => {
 		const harness = githubHarness();
 
@@ -78,6 +92,39 @@ describe("RecordGithubWebhookDeliveryHandler", () => {
 		await receive(harness).execute(command);
 		await expect(receive(harness).execute(command)).resolves.toBe("duplicate");
 		expect(harness.store.announcements).toHaveLength(1);
+		// The redelivery is answered from the received-webhook log, without reaching GitHub's own table.
+		expect(inbound.store.rows).toEqual([
+			expect.objectContaining({
+				provider: "GITHUB",
+				providerDeliveryId: "delivery-1",
+				eventType: "pull_request_review",
+				outcome: "RECORDED",
+				httpStatus: 200,
+				duplicateCount: 1,
+			}),
+		]);
+	});
+
+	it("still answers duplicate when GitHub's own table already had the delivery (recorded before the log existed)", async () => {
+		const harness = githubHarness();
+		await receive(harness).execute(delivery("pull_request", { ...REPOSITORY_PAYLOAD, pull_request: { number: 42 } }));
+		inbound = inMemoryWebhookReceiver(new ManualClock(AT));
+
+		await expect(receive(harness).execute(delivery("pull_request", { ...REPOSITORY_PAYLOAD, pull_request: { number: 42 } }))).resolves.toBe("duplicate");
+		expect(inbound.store.rows).toEqual([expect.objectContaining({ outcome: "DUPLICATE", httpStatus: 200 })]);
+		expect(harness.store.announcements).toHaveLength(1);
+	});
+
+	it("logs a ping and an unused event as ignored", async () => {
+		const harness = githubHarness();
+
+		await receive(harness).execute(delivery("ping", { zen: "Design for failure." }, "ping-1"));
+		await receive(harness).execute(delivery("push", REPOSITORY_PAYLOAD, "push-1"));
+
+		expect(inbound.store.rows.map((row) => [row.providerDeliveryId, row.eventType, row.outcome])).toEqual([
+			["ping-1", "ping", "IGNORED"],
+			["push-1", "push", "IGNORED"],
+		]);
 	});
 
 	it("takes a comment on a pull request, and ignores one on an issue", async () => {
@@ -101,38 +148,29 @@ describe("RecordGithubWebhookDeliveryHandler", () => {
 		const harness = githubHarness();
 		const garbled = Buffer.from("not json");
 
-		await expect(receive(harness).execute(delivery("ping", { zen: "Keep it logically awesome." }))).resolves.toBe("ping");
-		await expect(receive(harness).execute(delivery("push", REPOSITORY_PAYLOAD))).resolves.toBe("ignored");
+		await expect(receive(harness).execute(delivery("ping", { zen: "Keep it logically awesome." }, "ping-1"))).resolves.toBe("ping");
+		await expect(receive(harness).execute(delivery("push", REPOSITORY_PAYLOAD, "push-1"))).resolves.toBe("ignored");
 		await expect(receive(harness).execute(delivery("pull_request", { ...REPOSITORY_PAYLOAD, pull_request: { number: 1 } }, ""))).resolves.toBe("ignored");
-		await expect(
-			receive(harness).execute(
-				new RecordGithubWebhookDeliveryCommand(anonymousActor(), {
-					headers: { event: "pull_request", deliveryId: "d", signature: githubWebhookSignature(SECRET, garbled) },
-					rawBody: garbled,
-				}),
-			),
-		).resolves.toBe("ignored");
+		await expect(receive(harness).execute(signedDelivery("pull_request", garbled, "d", githubWebhookSignature(SECRET, garbled)))).resolves.toBe("ignored");
 		expect(harness.store.deliveries.size).toBe(0);
 	});
 
 	it("refuses a delivery whose signature does not match with 403, before reading it", async () => {
 		const harness = githubHarness();
 		const rawBody = Buffer.from(JSON.stringify({ ...REPOSITORY_PAYLOAD, pull_request: { number: 1 } }));
-		const forged = new RecordGithubWebhookDeliveryCommand(anonymousActor(), {
-			headers: { event: "pull_request", deliveryId: "d", signature: githubWebhookSignature("another secret", rawBody) },
-			rawBody,
-		});
+		const forged = signedDelivery("pull_request", rawBody, "d", githubWebhookSignature("another secret", rawBody));
 
 		const failure = receive(harness).execute(forged);
 
 		await expect(failure).rejects.toBeInstanceOf(ForbiddenException);
 		await expect(failure).rejects.toMatchObject({ response: { error: GITHUB_WEBHOOK_SIGNATURE_INVALID_CODE } });
-		await expect(
-			receive(harness).execute(
-				new RecordGithubWebhookDeliveryCommand(anonymousActor(), { headers: { event: "pull_request", deliveryId: "d", signature: undefined }, rawBody }),
-			),
-		).rejects.toBeInstanceOf(ForbiddenException);
+		await expect(receive(harness).execute(signedDelivery("pull_request", rawBody, "d", undefined))).rejects.toBeInstanceOf(ForbiddenException);
 		expect(harness.store.deliveries.size).toBe(0);
+		// Both refusals are logged, neither claims the delivery id (a forged request can never block the real one).
+		expect(inbound.store.rows.map((row) => [row.verification, row.outcome, row.httpStatus, row.providerDeliveryId])).toEqual([
+			["INVALID", "REJECTED", 403, null],
+			["MISSING", "REJECTED", 403, null],
+		]);
 	});
 
 	it("receives nothing when this server has no webhook settings", async () => {
@@ -143,6 +181,7 @@ describe("RecordGithubWebhookDeliveryHandler", () => {
 
 		await expect(failure).rejects.toBeInstanceOf(ServiceUnavailableException);
 		await expect(failure).rejects.toMatchObject({ response: { error: GITHUB_LIVE_UPDATES_OFF_CODE } });
+		expect(inbound.store.rows).toEqual([expect.objectContaining({ verification: "NOT_CONFIGURED", outcome: "REJECTED", httpStatus: 503 })]);
 	});
 });
 

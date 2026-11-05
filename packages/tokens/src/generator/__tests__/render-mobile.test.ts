@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AppThemeOverridesSchema, SharedColorNameSchema, ThemeRoleSchema } from "../../schema";
+import { AppThemeOverridesSchema, MobileComponentColorNameSchema, MobileThemeOverridesSchema, SharedColorNameSchema, ThemeRoleSchema, type ThemeName } from "../../schema";
 import { TOKEN_SOURCE } from "../../source";
 import { readDeclarations } from "../../testing/css-reader";
 import { renderMobileStylesheet } from "../render-mobile";
@@ -37,10 +37,10 @@ describe("renderMobileStylesheet", () => {
 	});
 
 	it("resolves each value for its own theme", () => {
-		expect(light.get("background")).toBe("#f1f4f9");
-		expect(dark.get("background")).toBe("oklch(0.225 0.015 258)");
-		expect(light.get("invert")).toBe("oklch(0.24 0.02 258)");
-		expect(dark.get("invert")).toBe("oklch(0.965 0.004 258)");
+		expect(light.get("background")).toBe("oklch(0.965 0 0)");
+		expect(dark.get("background")).toBe("#1c1d20");
+		expect(light.get("invert")).toBe("oklch(0.27 0.042 257)");
+		expect(dark.get("invert")).toBe("#f0f1f4");
 	});
 
 	it("carries the radius and the type sizes, and none of the web-chrome tokens", () => {
@@ -51,39 +51,86 @@ describe("renderMobileStylesheet", () => {
 		expect(light.has("palette-neutral-0")).toBe(false);
 	});
 
-	it("maps the same colour utilities as the web, and the radius scale as literal lengths", () => {
+	it("maps the web's colour utilities plus the mobile component colours, and the radius scale as literal lengths", () => {
 		const webTheme = readDeclarations(renderWebStylesheet(TOKEN_SOURCE), "@theme inline");
 		const webColorUtilities = [...webTheme].filter(([name]) => name.startsWith("color-"));
+		const componentUtilities = MobileComponentColorNameSchema.options.map((name): [string, string] => [`color-${name}`, `var(--${name})`]);
 
-		expect([...theme].filter(([name]) => name.startsWith("color-"))).toStrictEqual(webColorUtilities);
+		expect([...theme].filter(([name]) => name.startsWith("color-"))).toStrictEqual([...webColorUtilities, ...componentUtilities]);
 		expect(theme.get("radius-sm")).toBe("0.25rem");
 		expect(theme.get("radius-lg")).toBe("0.625rem");
 		expect(theme.get("radius-3xl")).toBe("1.375rem");
 	});
 });
 
-describe("the mobile app's brand re-maps (MOBILE_THEME_OVERRIDES)", () => {
+/** The themes whose tab bar keeps the look it shipped with (dark and Nord follow their mobile surfaces). */
+const TAB_BAR_KEPT_THEMES: readonly ThemeName[] = ["light"];
+
+describe("the mobile app's own visual system (MOBILE_THEME_OVERRIDES, ADR 079)", () => {
 	const mobile = renderMobileStylesheet(TOKEN_SOURCE);
 	const web = renderWebStylesheet(TOKEN_SOURCE);
+	/** The stylesheet the mobile app had before it had its own system: the shared themes, no re-maps. */
+	const shared = renderMobileStylesheet({ ...TOKEN_SOURCE, mobileThemeOverrides: {} });
 
-	it("fills Nord's buttons and active items with Snow Storm (nord6) and Polar Night text on mobile only", () => {
+	it("gives light its own neutral surfaces and slate ink, dark its graphite greys, and leaves the web's untouched", () => {
+		expect(readDeclarations(mobile, "@variant light").get("card")).toBe("oklch(0.993 0 0)");
+		expect(readDeclarations(mobile, "@variant light").get("primary")).toBe("oklch(0.33 0.05 257)");
+		expect(readDeclarations(mobile, "@variant dark").get("card")).toBe("#292b2f");
+		expect(readDeclarations(web, ":root").get("background")).toBe("var(--palette-neutral-50)");
+	});
+
+	it("pins the tab bar where it keeps its shipped look: the mobile re-maps never move it", () => {
+		const tabBarNames = MobileComponentColorNameSchema.options.filter((name) => name.startsWith("tab-bar"));
+
+		for (const theme of TAB_BAR_KEPT_THEMES) {
+			const variant = `@variant ${theme}`;
+
+			for (const name of tabBarNames) {
+				expect(readDeclarations(mobile, variant).get(name)).toBe(readDeclarations(shared, variant).get(name));
+			}
+		}
+	});
+
+	it("draws the dark and Nord tab bars in their own surfaces: the card pill and border, a bright capsule, readable icons", () => {
+		const dark = readDeclarations(mobile, "@variant dark");
+
 		const nord = readDeclarations(mobile, "@variant nord");
-		expect(nord.get("primary")).toBe("#eceff4");
-		expect(nord.get("primary-foreground")).toBe("#2e3440");
-		expect(nord.get("sidebar-active")).toBe("#eceff4");
-		// Links keep a colour of their own: Frost, not the near-white of the buttons and body text.
-		expect(nord.get("link")).toBe("#94c6d4");
+
+		expect([dark.get("tab-bar"), dark.get("tab-bar-border")]).toStrictEqual([dark.get("card"), dark.get("border")]);
+
+		expect([dark.get("tab-bar-active"), dark.get("tab-bar-active-foreground"), dark.get("tab-bar-icon")]).toStrictEqual(["#f0f1f4", "#1c1d20", "#a9adb6"]);
+
+		expect([nord.get("tab-bar"), nord.get("tab-bar-border")]).toStrictEqual([nord.get("card"), nord.get("border")]);
+
+		expect([nord.get("tab-bar-active"), nord.get("tab-bar-active-foreground"), nord.get("tab-bar-icon")]).toStrictEqual(["oklch(1 0 0)", "#262830", "#b8bfcb"]);
+	});
+
+	it("draws Nord as the editor slate on mobile only, read at a glance: bright text, white buttons and active items", () => {
+		const nord = readDeclarations(mobile, "@variant nord");
+		expect(nord.get("background")).toBe("#2b2d36");
+		expect(nord.get("card")).toBe("#303540");
+		expect(nord.get("border")).toBe("#3b4150");
+		expect(nord.get("foreground")).toBe("#e6e9f0");
+		expect(nord.get("muted-foreground")).toBe("#b8bfcb");
+		expect(nord.get("primary")).toBe("oklch(1 0 0)");
+		expect(nord.get("sidebar-active")).toBe("oklch(1 0 0)");
+		expect(nord.get("link")).toBe("#8da7ca");
 		expect(readDeclarations(web, ".nord").get("primary")).toBe("var(--palette-vivid-9)");
 	});
 
-	it("leaves light and dark exactly as the shared themes", () => {
-		expect(readDeclarations(mobile, "@variant dark").get("primary")).toBe(
-			readDeclarations(renderMobileStylesheet({ ...TOKEN_SOURCE, mobileThemeOverrides: {} }), "@variant dark").get("primary"),
-		);
+	it("puts an original (full-colour) logo on a light chip in every theme, so near-black brand logos still read", () => {
+		expect(readDeclarations(mobile, "@variant light").get("logo-tile")).toBe("oklch(0.943 0 0)");
+		expect(readDeclarations(mobile, "@variant dark").get("logo-tile")).toBe("oklch(0.87 0 0)");
+		expect(readDeclarations(mobile, "@variant nord").get("logo-tile")).toBe("#e6e9f0");
 	});
 
-	it("accepts brand roles only — surfaces, borders and text are never re-mapped per app", () => {
+	it("lets the mobile app re-map any themed role, while a web app may re-map its brand roles only", () => {
+		expect(MobileThemeOverridesSchema.safeParse({ nord: { background: { kind: "hex", value: "#000000" } } }).success).toBe(true);
 		expect(AppThemeOverridesSchema.safeParse({ nord: { background: { kind: "hex", value: "#000000" } } }).success).toBe(false);
 		expect(AppThemeOverridesSchema.safeParse({ nord: { primary: { kind: "hex", value: "#000000" } } }).success).toBe(true);
+	});
+
+	it("never writes the component colours into the web stylesheet", () => {
+		expect(web).not.toContain("--tab-bar");
 	});
 });

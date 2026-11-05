@@ -10,6 +10,30 @@ import type { ApiEnv } from "./api-env.input";
 
 // ── Derivations ────────────────────────────────────────────────────────────
 
+/** The leading dot of a cookie domain that covers subdomains (`.example.com`). */
+const COOKIE_DOMAIN_LEADING_DOT = /^\./;
+
+/** Separator of the hex pairs in a certificate fingerprint (`AB:CD:…`). */
+const FINGERPRINT_SEPARATOR = ":";
+
+/** How Android Credential Manager names an app as a WebAuthn origin. */
+const ANDROID_APK_KEY_HASH_ORIGIN_PREFIX = "android:apk-key-hash:";
+
+/**
+ * The passkey RP ID (ADR 080): `WEBAUTHN_RP_ID` when set, else `COOKIE_DOMAIN` (the domain the apps already
+ * share cookies on) without its leading dot, else the web app's host. `checkPasskeyRules` verifies every
+ * client app's host is the RP ID or a subdomain of it, which WebAuthn requires.
+ */
+export function resolveWebAuthnRpId(env: Pick<ApiEnv, "WEBAUTHN_RP_ID" | "COOKIE_DOMAIN" | "APP_URL">): string {
+	return env.WEBAUTHN_RP_ID ?? env.COOKIE_DOMAIN?.replace(COOKIE_DOMAIN_LEADING_DOT, "") ?? new URL(env.APP_URL).hostname;
+}
+
+/** The WebAuthn origin of an Android app signed with the certificate whose SHA-256 fingerprint is `fingerprint` (`AB:CD:…`). */
+export function androidApkKeyHashOrigin(fingerprint: string): string {
+	const digest: Buffer = Buffer.from(fingerprint.split(FINGERPRINT_SEPARATOR).join(""), "hex");
+	return `${ANDROID_APK_KEY_HASH_ORIGIN_PREFIX}${digest.toString("base64url")}`;
+}
+
 /**
  * Docs exposure: `SWAGGER_ENABLED` when set, otherwise ON outside production
  * and OFF in production. Development/test docs are public; production docs

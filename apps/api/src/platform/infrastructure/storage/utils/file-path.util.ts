@@ -69,6 +69,8 @@ const CATEGORY_KEY_LAYOUT: Readonly<Record<FileCategory, CategoryKeyLayout>> = {
 	REWARD_IMAGE: { root: "stores", folder: "reward-images", variantsReplaceFolder: false },
 	GITHUB_COMMENT_IMAGE: { root: "users", folder: "github-comment-images", variantsReplaceFolder: false },
 	KANBAN_TASK_ATTACHMENT: { root: "users", folder: "kanban-attachments", variantsReplaceFolder: false },
+	BROADCAST_IMAGE: { root: "stores", folder: "broadcast-images", variantsReplaceFolder: false },
+	PLATFORM_BROADCAST_IMAGE: { root: "users", folder: "broadcast-images", variantsReplaceFolder: false },
 };
 
 /** `<root>/<ownerId>[/<folder>]` — the directory a category's original files live in. */

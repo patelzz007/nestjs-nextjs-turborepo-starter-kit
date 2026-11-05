@@ -48,16 +48,13 @@ describe("app status: connection and session (the web shells' indicators)", () =
 		});
 	});
 
-	it("shows the connection and the token's countdown, compact, in the page header", async () => {
+	it("keeps the page header free of status pills: no connection, no countdown (ADR 079)", async () => {
 		await renderSignedIn("/");
-		const corner = within(screen.getByTestId("app-header"));
+		const header = within(screen.getByTestId("app-header"));
 
-		expect(await corner.findByRole("button", { name: MEASURED_CONNECTION })).toBeOnTheScreen();
-		expect(await corner.findByText("14m 32s")).toBeOnTheScreen();
-		expect(corner.getByLabelText("Session verified, token expires in 14m 32s")).toBeOnTheScreen();
-		// Compact: the connection is its bars and ping, without the strength's word.
-		expect(corner.getByText("0 ms")).toBeOnTheScreen();
-		expect(corner.queryByText("Strong, 0 ms")).toBeNull();
+		expect(await header.findByRole("button", { name: "Open menu" })).toBeOnTheScreen();
+		expect(header.queryByRole("button", { name: MEASURED_CONNECTION })).toBeNull();
+		expect(header.queryByLabelText("Session verified, token expires in 14m 32s")).toBeNull();
 	});
 
 	it("shows both in full in the app drawer", async () => {
@@ -67,24 +64,27 @@ describe("app status: connection and session (the web shells' indicators)", () =
 
 		expect(await status.findByText("Strong, 0 ms")).toBeOnTheScreen();
 		expect(await status.findByText("Token expires in 14m 32s")).toBeOnTheScreen();
+		expect(status.getByRole("button", { name: MEASURED_CONNECTION })).toBeOnTheScreen();
 	});
 
-	it("turns offline in both places when the connection drops", async () => {
+	it("turns offline in the drawer when the connection drops", async () => {
 		await renderSignedIn("/");
-		await screen.findByText("14m 32s");
+		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
+		await within(screen.getByTestId("app-drawer-status")).findByText("Token expires in 14m 32s");
 
 		await act(async (): Promise<void> => {
 			setState(OFFLINE_STATE);
 			await Promise.resolve();
 		});
 
-		expect(within(screen.getByTestId("app-header")).getByRole("button", { name: "Offline" })).toBeOnTheScreen();
 		expect(within(screen.getByTestId("app-drawer-status", { includeHiddenElements: true })).getByText("Offline", { includeHiddenElements: true })).toBeOnTheScreen();
 	});
 
-	it("ticks the countdown every second", async () => {
+	it("ticks the drawer's countdown every second", async () => {
 		await renderSignedIn("/");
-		await screen.findByText("14m 32s");
+		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
+		const status = within(screen.getByTestId("app-drawer-status"));
+		await status.findByText("Token expires in 14m 32s");
 
 		await act(async (): Promise<void> => {
 			jest.advanceTimersByTime(2_000);
@@ -92,20 +92,22 @@ describe("app status: connection and session (the web shells' indicators)", () =
 		});
 
 		await waitFor(() => {
-			expect(within(screen.getByTestId("app-header")).getByText("14m 30s")).toBeOnTheScreen();
+			expect(status.getByText("Token expires in 14m 30s")).toBeOnTheScreen();
 		});
 	});
 
-	it("stays in the header deeper in a stack, beside the back button", async () => {
+	it("keeps the header free of pills deeper in a stack too, beside the back button", async () => {
 		await renderSignedIn("/");
 		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
-		await fireEvent.press(within(screen.getByTestId("app-drawer-panel")).getByRole("button", { name: "Security" }));
+		const drawer = within(screen.getByTestId("app-drawer-panel"));
+		// Security sits in the drawer's "Sign-in & security" branch (mobile-drawer-items.json).
+		await fireEvent.press(drawer.getByRole("button", { name: "Sign-in & security" }));
+		await fireEvent.press(drawer.getByRole("button", { name: "Security" }));
 		expect(await screen.findByText("security screen")).toBeOnTheScreen();
 
 		const header = within(screen.getByTestId("app-header"));
-		expect(header.getByRole("button", { name: MEASURED_CONNECTION })).toBeOnTheScreen();
-		expect(header.getByText("14m 32s")).toBeOnTheScreen();
 		expect(header.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+		expect(header.queryByRole("button", { name: MEASURED_CONNECTION })).toBeNull();
 	});
 });
 
@@ -198,7 +200,9 @@ describe("app status: this phone stays registered for push (ADR 070)", () => {
 		const api = stubWithPush();
 
 		await renderSignedIn("/");
-		await screen.findByText("14m 32s");
+		// The session has settled (its countdown is in the drawer) by the time registration would have run.
+		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
+		await within(screen.getByTestId("app-drawer-status")).findByText("Token expires in 14m 32s");
 
 		expect(api.callsTo("PUT /notifications/push-devices")).toHaveLength(0);
 		expect(permissionRequests()).toBe(0);

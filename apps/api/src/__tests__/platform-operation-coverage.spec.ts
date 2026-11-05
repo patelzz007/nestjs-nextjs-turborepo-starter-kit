@@ -109,6 +109,13 @@ const NO_SYSTEM_OPERATION_ROUTES: ReadonlyMap<string, string> = new Map<string, 
 	["GithubController.getCommitPage", "GitHub API call with the caller's own link (user-owned RLS)"],
 	["GithubController.getCommit", "GitHub API call with the caller's own link (user-owned RLS)"],
 	["GithubController.getContributorStats", "GitHub API call with the caller's own link (user-owned RLS)"],
+	["OperationsQueuesController.list", "Reads BullMQ's queue counts and metrics in Redis; no table"],
+	["OperationsQueuesController.failed", "Reads a queue's failed jobs in Redis; no table"],
+	["OperationsQueuesController.retry", "Moves one failed job back to waiting in Redis; no table"],
+	["OperationsQueuesController.discard", "Removes one failed job from Redis; no table"],
+	["SavedViewsController.list", "The caller's own SavedListView rows (user-owned RLS); views others shared read under saved_views.shared.read inside the store"],
+	["SavedViewsController.create", "Writes the caller's own SavedListView (user-owned RLS)"],
+	["SavedViewsController.remove", "Soft-deletes the caller's own SavedListView (user-owned RLS)"],
 ]);
 
 describe("PLAT-005: every admin-console route declares its platform operation", () => {

@@ -57,14 +57,14 @@ describe("ShellTopbar", () => {
 		expect(screen.getByRole("navigation", { name: "breadcrumb" }).textContent).toContain("Rewards");
 		expect(screen.getByText("extra action")).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Notifications" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Search pages" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Search" })).toBeTruthy();
 	});
 
 	it("mounts the command palette only once search is opened, and unmounts it when it closes", () => {
 		renderTopbar(READY);
 		expect(screen.queryByText("palette open")).toBeNull();
 
-		fireEvent.click(screen.getByRole("button", { name: "Search pages" }));
+		fireEvent.click(screen.getByRole("button", { name: "Search" }));
 		fireEvent.click(screen.getByText("palette open"));
 
 		expect(screen.queryByText(/palette/u)).toBeNull();

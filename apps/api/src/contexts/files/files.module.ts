@@ -52,6 +52,8 @@ import {
 import { StorageTaskDispatcher } from "./application/ports/storage-task-dispatcher.port";
 import { GetFileDownloadUrlHandler } from "./application/queries/get-file-download-url/get-file-download-url.handler";
 import { GetFileHandler } from "./application/queries/get-file/get-file.handler";
+import type { StoredFileReadPort } from "./application/ports/stored-file-read.port";
+import { ServerFileIngest } from "./application/services/server-file-ingest";
 import { CdnInvalidationAdapter } from "./infrastructure/adapters/cdn-invalidation.adapter";
 import { FileProcessingAdapter } from "./infrastructure/adapters/file-processing.adapter";
 import { StoredFileAccess } from "./infrastructure/adapters/stored-file-access";
@@ -195,6 +197,12 @@ const storageTaskProviders: Provider[] = hasRedis
 		GetFileDownloadUrlHandler,
 		PurgeDeletedFileObjectsHandler,
 		{
+			provide: ServerFileIngest,
+			inject: [FILES_UNIT_OF_WORK, STORED_FILE_READS, FILE_OBJECT_STORAGE, FILE_PROCESSING],
+			useFactory: (uow: UnitOfWork<FilesScope>, reads: StoredFileReadPort, storage: FileObjectStoragePort, processing: FileProcessingPort): ServerFileIngest =>
+				new ServerFileIngest(uow, reads, storage, processing),
+		},
+		{
 			provide: StoredFileAccess,
 			inject: [TypedConfigService, TenantTransactionService, FILE_OBJECT_STORAGE, OBJECT_STORAGE, StorageTaskDispatcher, FileDeletion],
 			useFactory: (
@@ -207,6 +215,6 @@ const storageTaskProviders: Provider[] = hasRedis
 			): StoredFileAccess => new StoredFileAccess({ config, transactions, storage, objects, dispatcher, deletion }),
 		},
 	],
-	exports: [FileCategoryAccessRegistry, FileReferenceGuardRegistry, StoredFileAccess, ImageRenditionService],
+	exports: [FileCategoryAccessRegistry, FileReferenceGuardRegistry, StoredFileAccess, ServerFileIngest, ImageRenditionService],
 })
 export class FilesModule {}

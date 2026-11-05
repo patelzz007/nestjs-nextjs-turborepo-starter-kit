@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { API_VERSION_PREFIX, apiRoutes, OWN_PROFILE_ERROR_CODES, OwnProfileSchema, type JsonValue } from "@workspace/shared";
+import { appLanguageOf, API_VERSION_PREFIX, apiRoutes, OWN_PROFILE_ERROR_CODES, OwnProfileSchema, type JsonValue } from "@workspace/shared";
 
 import { toAuditLogCreateInput } from "../../src/platform/infrastructure/audit/audit-log.mapper";
 import { toAuditPayload } from "../../src/platform/infrastructure/audit/http-audit-entry";
@@ -58,7 +58,7 @@ export interface OwnProfileSeedSummary {
 }
 
 export async function seedOwnProfileHistory(actors: OwnProfileSeedActors): Promise<OwnProfileSeedSummary> {
-	const { id: customerId } = await prisma.user.findUniqueOrThrow({ where: { email: actors.customerEmail }, select: { id: true } });
+	const { id: customerId } = await prisma.user.findUniqueOrThrow({ where: { email: actors.customerEmail, isDeleted: false }, select: { id: true } });
 	// The edit itself, under the session the API's PATCH ran in — its change record joins the seeded request.
 	// Only a profile not yet at the edited version is written, so re-seeding records no second edit.
 	await withSeedAttribution(
@@ -74,7 +74,7 @@ export async function seedOwnProfileHistory(actors: OwnProfileSeedActors): Promi
 	);
 	const customer = await prisma.user.findUniqueOrThrow({
 		where: { id: customerId },
-		select: { id: true, email: true, fullName: true, createdAt: true, updatedAt: true },
+		select: { id: true, email: true, fullName: true, locale: true, createdAt: true, updatedAt: true },
 	});
 	// The response the API answered the edit with — built and validated with the endpoint's own contract.
 	const editedProfile: JsonValue = OwnProfileSchema.parse({
@@ -82,6 +82,7 @@ export async function seedOwnProfileHistory(actors: OwnProfileSeedActors): Promi
 		email: customer.email,
 		fullName: customer.fullName,
 		avatar: null,
+		language: appLanguageOf(customer.locale),
 		version: EDITED_PROFILE_VERSION,
 		createdAt: Number(customer.createdAt),
 		updatedAt: Number(customer.updatedAt),

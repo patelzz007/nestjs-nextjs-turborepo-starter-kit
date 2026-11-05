@@ -11,16 +11,18 @@ import type { ScopeFactory } from "../../../../platform/application/events/in-tr
 import type { TransactionalEventCollector } from "../../../../platform/application/events/transactional-event-collector";
 import type { NotificationsTransactionalPortsFactory } from "../../../notifications/public-api";
 import type { OperationsReadScope, OperationsScope } from "../../application/operations-scope";
-import { PrismaLoadTestTenant } from "../load-test/prisma-load-test-tenant";
+import { createPrismaLoadTestTenant } from "../load-test/prisma-load-test-tenant";
 import {
 	PrismaLoadTestRepository,
 	PrismaOpsAlertRecipientsReader,
 	PrismaOpsAlertRepository,
 	PrismaOpsBackupRepository,
 	PrismaOpsHistoryRepository,
+	PrismaOpsRestoreDrillRepository,
 	PrismaOpsServerRepository,
 	PrismaOpsSettingsRepository,
 } from "./prisma-operations.repositories";
+import { PrismaStatusIncidentRepository } from "./prisma-status-incident.repository";
 
 /** The read-only repositories on one transaction. */
 export function createOperationsReadScope(db: Prisma.TransactionClient): OperationsReadScope {
@@ -31,8 +33,10 @@ export function createOperationsReadScope(db: Prisma.TransactionClient): Operati
 		settings: new PrismaOpsSettingsRepository(db),
 		recipients: new PrismaOpsAlertRecipientsReader(db),
 		backups: new PrismaOpsBackupRepository(db),
+		restoreDrills: new PrismaOpsRestoreDrillRepository(db),
+		statusIncidents: new PrismaStatusIncidentRepository(db, "staff"),
 		loadTests: new PrismaLoadTestRepository(db),
-		loadTestTenant: new PrismaLoadTestTenant(db),
+		loadTestTenant: createPrismaLoadTestTenant(db),
 	};
 }
 
@@ -40,7 +44,7 @@ export class OperationsScopeFactory implements ScopeFactory<OperationsScope, Pri
 	public constructor(private readonly notifications: NotificationsTransactionalPortsFactory) {}
 
 	public create(db: Prisma.TransactionClient, events: TransactionalEventCollector): OperationsScope {
-		const loadTestTenant = new PrismaLoadTestTenant(db);
+		const loadTestTenant = createPrismaLoadTestTenant(db);
 		const notifications = this.notifications.create(db, events);
 		return {
 			...createOperationsReadScope(db),

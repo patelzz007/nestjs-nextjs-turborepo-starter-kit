@@ -2,6 +2,9 @@ import type { RegisterPushDeviceInput } from "@workspace/shared";
 
 import { pushPlatformOf, pushTapOf, refreshThisPhone, registerThisPhone, type PushDevicePorts, type PushPermission } from "../push-device";
 
+/** A Firebase Installation ID as Firebase generates it. */
+const FID = "fH3kVq9TzR1aB2cD3eF4g_";
+
 function ports(overrides: Partial<PushDevicePorts> = {}): PushDevicePorts & { readonly registered: RegisterPushDeviceInput[] } {
 	const registered: RegisterPushDeviceInput[] = [];
 	return {
@@ -9,6 +12,7 @@ function ports(overrides: Partial<PushDevicePorts> = {}): PushDevicePorts & { re
 		permission: (): Promise<PushPermission> => Promise.resolve("undetermined"),
 		requestPermission: (): Promise<PushPermission> => Promise.resolve("granted"),
 		nativeToken: (): Promise<string> => Promise.resolve("fcm-token"),
+		installationId: (): Promise<string | null> => Promise.resolve(FID),
 		register: (input: RegisterPushDeviceInput): Promise<void> => {
 			registered.push(input);
 			return Promise.resolve();
@@ -25,7 +29,17 @@ describe("registerThisPhone", () => {
 		const phone = ports();
 
 		await expect(registerThisPhone(phone)).resolves.toEqual({ kind: "registered" });
-		expect(phone.registered).toEqual([{ token: "fcm-token", platform: "ANDROID", surface: "CUSTOMER", deviceLabel: "Pixel 9", appVersion: "1.2.0" }]);
+		expect(phone.registered).toEqual([{ token: "fcm-token", platform: "ANDROID", surface: "CUSTOMER", deviceLabel: "Pixel 9", appVersion: "1.2.0", installationId: FID }]);
+	});
+
+	it("reports the installation ID FCM sends by on Android only, and none where the build can't tell it (enhancement 5.3)", async () => {
+		const iphone = ports({ os: "ios" });
+		await registerThisPhone(iphone);
+		expect(iphone.registered).toMatchObject([{ platform: "IOS", installationId: null }]);
+
+		const olderBuild = ports({ installationId: (): Promise<string | null> => Promise.resolve(null) });
+		await registerThisPhone(olderBuild);
+		expect(olderBuild.registered).toMatchObject([{ platform: "ANDROID", installationId: null }]);
 	});
 
 	it("does not ask again once the person decided", async () => {
@@ -78,7 +92,17 @@ describe("refreshThisPhone", () => {
 
 		expect(await refreshThisPhone(phone)).toEqual({ kind: "registered" });
 		expect(asked).not.toHaveBeenCalled();
-		expect(phone.registered).toEqual([{ token: "fcm-token", platform: "ANDROID", surface: "CUSTOMER", deviceLabel: "Pixel 9", appVersion: "1.2.0" }]);
+		expect(phone.registered).toEqual([{ token: "fcm-token", platform: "ANDROID", surface: "CUSTOMER", deviceLabel: "Pixel 9", appVersion: "1.2.0", installationId: FID }]);
+	});
+
+	it("reports the installation ID FCM sends by on Android only, and none where the build can't tell it (enhancement 5.3)", async () => {
+		const iphone = ports({ os: "ios" });
+		await registerThisPhone(iphone);
+		expect(iphone.registered).toMatchObject([{ platform: "IOS", installationId: null }]);
+
+		const olderBuild = ports({ installationId: (): Promise<string | null> => Promise.resolve(null) });
+		await registerThisPhone(olderBuild);
+		expect(olderBuild.registered).toMatchObject([{ platform: "ANDROID", installationId: null }]);
 	});
 
 	it("leaves an undecided or refused phone alone: only the primer's button asks", async () => {

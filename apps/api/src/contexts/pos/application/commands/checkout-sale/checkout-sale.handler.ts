@@ -7,7 +7,7 @@ import { CLOCK, type Clock } from "../../../../../platform/application/clock.por
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { ClaimNoLongerRedeemableError } from "../../../../claims/public-api";
 import { RewardSale, type CheckoutPoint, type SaleLine } from "../../../domain/aggregates/reward-sale.aggregate";
-import { PosCodeLockedError, RedemptionCodeNotFoundError, SaleIdempotencyKeyTakenError } from "../../../domain/errors/pos.errors";
+import { PosCodeLockedError, RedemptionCodeNotFoundError, SaleIdempotencyKeyTakenError, TillRedemptionDisabledError } from "../../../domain/errors/pos.errors";
 import { redemptionOfferOf } from "../../../domain/policies/redemption-offer.policy";
 import type { StoredSale } from "../../../domain/repositories/pos.repositories";
 import { idempotencyKeyTakenElsewhere, redemptionRefused, toPosWireError } from "../../errors/pos-refusal.errors";
@@ -16,6 +16,7 @@ import type { CheckoutFingerprintPort } from "../../ports/checkout-fingerprint.p
 import { CHECKOUT_FINGERPRINT, POS_ID_GENERATOR, POS_UNIT_OF_WORK, type PosIdGenerator } from "../../ports/pos.tokens";
 import { RedemptionCodeResolver, type CodeResolution } from "../../services/redemption-code-resolver";
 import { CheckoutSaleCommand } from "./checkout-sale.command";
+import { TILL_REDEMPTION_GATE, type TillRedemptionGate } from "../../ports/till-redemption.port";
 
 type CheckoutOutcome = Exclude<CodeResolution, { readonly kind: "resolved" }> | { readonly kind: "recorded"; readonly response: RedemptionCheckoutResponse };
 
@@ -49,6 +50,7 @@ export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand,
 		@Inject(POS_ID_GENERATOR) private readonly ids: PosIdGenerator,
 		@Inject(CHECKOUT_FINGERPRINT) private readonly fingerprint: CheckoutFingerprintPort,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(TILL_REDEMPTION_GATE) private readonly gate: TillRedemptionGate,
 	) {}
 
 	public async execute(command: CheckoutSaleCommand): Promise<RedemptionCheckoutResponse> {
@@ -58,6 +60,10 @@ export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand,
 			const replayed = await this.replay(actor, point, input.idempotencyKey, requestHash);
 			if (replayed !== null) {
 				return replayed;
+			}
+			// A sale already made replays above whatever the flag says now; a new one needs redemption open here (5.11).
+			if (!(await this.gate.isOpen(point))) {
+				throw new TillRedemptionDisabledError(point.locationId);
 			}
 			const outcome = await this.uow.run(actor, async (scope: PosScope): Promise<CheckoutOutcome> => this.checkout(scope, point, input, requestHash));
 			switch (outcome.kind) {

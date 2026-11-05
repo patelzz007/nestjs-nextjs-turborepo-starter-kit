@@ -6,34 +6,40 @@
 	"sections": [
 		{
 			"title": "Rewards",
+			"labelKey": "rewards",
 			"color": "green",
 			"items": [
 				{
 					"title": "Browse Rewards",
+					"labelKey": "rewards.browse-rewards",
 					"url": "/dashboard",
 					"icon": "Search",
 					"disabled": false
 				},
 				{
 					"title": "Near Me",
+					"labelKey": "rewards.near-me",
 					"url": "/dashboard/nearby",
 					"icon": "MapPin",
 					"disabled": true
 				},
 				{
 					"title": "Trending",
+					"labelKey": "rewards.trending",
 					"url": "/dashboard/trending",
 					"icon": "TrendingUp",
 					"disabled": true
 				},
 				{
 					"title": "Categories",
+					"labelKey": "rewards.categories",
 					"url": "/dashboard/categories",
 					"icon": "FolderOpen",
 					"disabled": true
 				},
 				{
 					"title": "Favorites",
+					"labelKey": "rewards.favorites",
 					"url": "/dashboard/favorites",
 					"icon": "Heart",
 					"disabled": true
@@ -42,22 +48,26 @@
 		},
 		{
 			"title": "Wallet",
+			"labelKey": "wallet",
 			"color": "blue",
 			"items": [
 				{
 					"title": "My Wallet",
+					"labelKey": "wallet.my-wallet",
 					"url": "/dashboard/wallet",
 					"icon": "Wallet",
 					"disabled": false
 				},
 				{
 					"title": "Redeemed",
+					"labelKey": "wallet.redeemed",
 					"url": "/dashboard/wallet/redeemed",
 					"icon": "CheckCircle",
 					"disabled": true
 				},
 				{
 					"title": "Expired",
+					"labelKey": "wallet.expired",
 					"url": "/dashboard/wallet/expired",
 					"icon": "Clock",
 					"disabled": true
@@ -66,22 +76,26 @@
 		},
 		{
 			"title": "Insights",
+			"labelKey": "insights",
 			"color": "amber",
 			"items": [
 				{
 					"title": "My Activity",
+					"labelKey": "insights.my-activity",
 					"url": "/dashboard/activity",
 					"icon": "BarChart2",
 					"disabled": false
 				},
 				{
 					"title": "Claim Trends",
+					"labelKey": "insights.claim-trends",
 					"url": "/dashboard/activity/claims",
 					"icon": "TrendingUp",
 					"disabled": true
 				},
 				{
 					"title": "History",
+					"labelKey": "insights.history",
 					"url": "/dashboard/activity/history",
 					"icon": "Clock",
 					"disabled": true
@@ -90,34 +104,40 @@
 		},
 		{
 			"title": "Earn More",
+			"labelKey": "earn-more",
 			"color": "purple",
 			"items": [
 				{
 					"title": "Referrals",
+					"labelKey": "earn-more.referrals",
 					"url": "/dashboard/referrals",
 					"icon": "Users",
 					"disabled": false
 				},
 				{
 					"title": "Points",
+					"labelKey": "earn-more.points",
 					"url": "/dashboard/points",
 					"icon": "Award",
 					"disabled": true,
 					"children": [
 						{
 							"title": "Balance",
+							"labelKey": "earn-more.points.balance",
 							"url": "/dashboard/points/balance",
 							"icon": "Wallet",
 							"disabled": true
 						},
 						{
 							"title": "History",
+							"labelKey": "earn-more.points.history",
 							"url": "/dashboard/points/history",
 							"icon": "FileText",
 							"disabled": true
 						},
 						{
 							"title": "Redeem Points",
+							"labelKey": "earn-more.points.redeem-points",
 							"url": "/dashboard/points/redeem",
 							"icon": "Gift",
 							"disabled": true
@@ -130,12 +150,14 @@
 	"bottomItems": [
 		{
 			"title": "Account",
+			"labelKey": "bottom.account",
 			"url": "/dashboard/account",
 			"icon": "UserCog",
 			"disabled": false
 		},
 		{
 			"title": "Help & Support",
+			"labelKey": "bottom.help-support",
 			"url": "/dashboard/support",
 			"icon": "HelpCircle",
 			"disabled": true

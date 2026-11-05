@@ -15,6 +15,7 @@ import type { IdGeneratorPort } from "../../ports/id-generator.port";
 import type { IdentitySettings } from "../../ports/identity-settings.port";
 import type { IdentityTokensPort } from "../../ports/identity-tokens.port";
 import {
+	BREACHED_PASSWORD_CHECK,
 	AUTH_FLOW_SUBJECT,
 	CREDENTIAL_CRYPTO,
 	ID_GENERATOR,
@@ -24,6 +25,8 @@ import {
 	ACCOUNT_LOOKUP_OPERATION,
 	SIGNUP_REGISTER_OPERATION,
 } from "../../ports/identity.tokens";
+import type { BreachedPasswordCheckPort } from "../../ports/breached-password.port";
+import { assertPasswordNotBreached } from "../../services/password-breach.policy";
 import { SignUpCommand } from "./sign-up.command";
 
 /**
@@ -47,6 +50,7 @@ export class SignUpHandler implements ICommandHandler<SignUpCommand, SignupRespo
 		@Inject(AUTH_FLOW_SUBJECT) private readonly flowSubject: AuthFlowSubjectPort,
 		@Inject(IDENTITY_SETTINGS) private readonly settings: IdentitySettings,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(BREACHED_PASSWORD_CHECK) private readonly breachCheck: BreachedPasswordCheckPort,
 	) {}
 
 	public async execute(command: SignUpCommand): Promise<SignupResponse> {
@@ -57,6 +61,7 @@ export class SignUpHandler implements ICommandHandler<SignUpCommand, SignupRespo
 		// never a generic "check your inbox" (ADR 035).
 		const accepted: AcceptedSignupReferral | null = await this.signupReferrals.acceptCodeForSignup(input.body.referralCode, input.clientType);
 
+		await assertPasswordNotBreached(this.breachCheck, input.body.password);
 		const emailTaken: boolean = await this.uow.runSystemOperation(ACCOUNT_LOOKUP_OPERATION, actor, (scope) => scope.accounts.existsByEmail(email));
 		if (emailTaken) {
 			return GENERIC_SIGNUP_RESPONSE;

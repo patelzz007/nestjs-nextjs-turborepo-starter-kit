@@ -50,7 +50,10 @@ import type {
 	OpsServerRepository,
 	OpsSettingsRecord,
 	OpsSettingsRepository,
+	OpsRestoreDrillRecord,
+	OpsRestoreDrillRepository,
 } from "../../ports/operations-repositories.port";
+import type { StatusIncidentRecord, StatusIncidentRepository } from "../../ports/status-incident.repository.port";
 
 export class NotUsedHere extends Error {
 	public constructor(what: string) {
@@ -285,9 +288,45 @@ class UnusedRecipients implements OpsAlertRecipientsReader {
 	}
 }
 
+class UnusedStatusIncidents implements StatusIncidentRepository {
+	public forPublicPage(): Promise<readonly StatusIncidentRecord[]> {
+		return notUsed("statusIncidents.forPublicPage");
+	}
+
+	public list(): Promise<readonly StatusIncidentRecord[]> {
+		return notUsed("statusIncidents.list");
+	}
+
+	public find(): Promise<StatusIncidentRecord | null> {
+		return notUsed("statusIncidents.find");
+	}
+
+	public open(): Promise<StatusIncidentRecord> {
+		return notUsed("statusIncidents.open");
+	}
+
+	public postUpdate(): Promise<StatusIncidentRecord | null> {
+		return notUsed("statusIncidents.postUpdate");
+	}
+}
+
+class UnusedRestoreDrills implements OpsRestoreDrillRepository {
+	public record(): Promise<OpsRestoreDrillRecord> {
+		return notUsed("restoreDrills.record");
+	}
+
+	public recent(): Promise<readonly OpsRestoreDrillRecord[]> {
+		return notUsed("restoreDrills.recent");
+	}
+}
+
 class UnusedBackups implements OpsBackupRepository {
 	public list(): Promise<readonly OpsBackupRecord[]> {
 		return notUsed("backups.list");
+	}
+
+	public latestSucceeded(): Promise<OpsBackupRecord | null> {
+		return notUsed("backups.latestSucceeded");
 	}
 
 	public find(): Promise<OpsBackupRecord | null> {
@@ -323,7 +362,7 @@ class UnusedBackups implements OpsBackupRepository {
 	}
 }
 
-class UnusedLoadTests implements LoadTestRepository {
+export class UnusedLoadTests implements LoadTestRepository {
 	public list(): Promise<readonly LoadTestRunRecord[]> {
 		return notUsed("loadTests.list");
 	}
@@ -366,6 +405,10 @@ class UnusedLoadTests implements LoadTestRepository {
 }
 
 class UnusedLoadTestTenant implements LoadTestProvisioningPort {
+	public ensureTenant(): Promise<string> {
+		return notUsed("loadTestTenant.ensureTenant");
+	}
+
 	public provision(): Promise<ProvisionedLoadTestTenant> {
 		return notUsed("loadTestTenant.provision");
 	}
@@ -406,6 +449,8 @@ export class FakeOperationsUnitOfWork implements UnitOfWork<OperationsScope> {
 		settings: this.settings,
 		recipients: new UnusedRecipients(),
 		backups: new UnusedBackups(),
+		restoreDrills: new UnusedRestoreDrills(),
+		statusIncidents: new UnusedStatusIncidents(),
 		loadTests: new UnusedLoadTests(),
 		loadTestTenant: new UnusedLoadTestTenant(),
 		emails: new UnusedEmails(),

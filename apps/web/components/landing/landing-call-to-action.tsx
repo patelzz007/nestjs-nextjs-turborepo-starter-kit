@@ -22,7 +22,7 @@ export function LandingCallToAction({ heading, description, action }: LandingCal
 					<h2 id="landing-cta-heading" className="mx-auto max-w-2xl font-[family-name:var(--font-heading)] text-3xl font-medium tracking-tight text-balance sm:text-4xl">
 						{heading}
 					</h2>
-					<p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-pretty text-primary-foreground/85 sm:text-base">{description}</p>
+					<p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-pretty text-primary-foreground sm:text-base">{description}</p>
 					<Link href={action.href} className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "mt-8 min-w-48")}>
 						{action.label}
 					</Link>

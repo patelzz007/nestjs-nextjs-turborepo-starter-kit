@@ -11,14 +11,18 @@ import type {
 	MessagingConfig,
 	MfaConfig,
 	MobileConfig,
+	PasskeysConfig,
 	GithubConfig,
 	SessionsConfig,
 	ObservabilityConfig,
 	OperationsConfig,
+	PaymentsConfig,
 	RateLimitConfig,
 	RuntimeConfig,
 	StorageConfig,
 	TenancyConfig,
+	WebhooksConfig,
+	InboundWebhooksConfig,
 } from "./api-config.schema";
 import { RedisNamespace } from "../platform/infrastructure/redis/redis-namespace";
 
@@ -65,6 +69,11 @@ export class TypedConfigService {
 
 	public get mfa(): MfaConfig {
 		return this.config.mfa;
+	}
+
+	/** The passkey relying party and the native apps sharing its passkeys (ADR 080). */
+	public get passkeys(): PasskeysConfig {
+		return this.config.passkeys;
 	}
 
 	public get mobile(): MobileConfig {
@@ -115,6 +124,21 @@ export class TypedConfigService {
 
 	public get operations(): OperationsConfig {
 		return this.config.operations;
+	}
+
+	/** The payment gateways this deployment is configured for (ADR 020). */
+	public get payments(): PaymentsConfig {
+		return this.config.payments;
+	}
+
+	/** Outgoing webhooks (ADR 082). */
+	public get webhooks(): WebhooksConfig {
+		return this.config.webhooks;
+	}
+
+	/** The received-webhook log (ADR 081). */
+	public get inboundWebhooks(): InboundWebhooksConfig {
+		return this.config.inboundWebhooks;
 	}
 
 	public get observability(): ObservabilityConfig {

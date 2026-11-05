@@ -212,6 +212,14 @@ const PLATFORM_PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "LIST", resource: "RATE_LIMIT", description: "See the rate-limit policies and who is being limited", group: "Operations", isSystem: true },
 	{ action: "UPDATE", resource: "RATE_LIMIT", description: "Set tenant overrides and lift penalties", group: "Operations", isSystem: true },
 	{ action: "READ", resource: "CACHE", description: "See the cache namespaces and Redis memory", group: "Operations", isSystem: true },
+	{ action: "LIST", resource: "BACKGROUND_JOB", description: "See the background job queues, their failure rates and failed jobs", group: "Operations", isSystem: true },
+	{ action: "UPDATE", resource: "BACKGROUND_JOB", description: "Retry a failed background job", group: "Operations", isSystem: true },
+	{ action: "DELETE", resource: "BACKGROUND_JOB", description: "Discard a failed background job", group: "Operations", isSystem: true },
+	{ action: "LIST", resource: "STATUS_INCIDENT", description: "See the status page's incidents", group: "Operations", isSystem: true },
+	{ action: "CREATE", resource: "STATUS_INCIDENT", description: "Open an incident on the public status page", group: "Operations", isSystem: true },
+	{ action: "UPDATE", resource: "STATUS_INCIDENT", description: "Post an update on a status-page incident, or resolve it", group: "Operations", isSystem: true },
+	{ action: "LIST", resource: "FEATURE_FLAG", description: "See the feature flags and who last changed them", group: "Operations", isSystem: true },
+	{ action: "UPDATE", resource: "FEATURE_FLAG", description: "Turn a feature flag on, off or on for a share of people", group: "Operations", isSystem: true },
 	{ action: "DELETE", resource: "CACHE", description: "Flush a cache namespace or one tenant's cached data", group: "Operations", isSystem: true },
 ];
 

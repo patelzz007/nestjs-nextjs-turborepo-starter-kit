@@ -73,6 +73,8 @@ export const WEB_ROUTE_ACCESS: readonly WebRouteAccessRule[] = [
 	{ pattern: ROUTES.dashboard.notificationSettings, audience: "signed-in", breadcrumbLabel: "Settings" },
 	// POST /notifications/unsubscribe — @Public, the signed token is the authority
 	{ pattern: ROUTES.unsubscribe, audience: "public" },
+	// GET /operations/status — @Public: the status page (enhancement 4.5)
+	{ pattern: ROUTES.status, audience: "public" },
 ];
 
 /** The session facts a route rule is evaluated against. */
@@ -131,6 +133,7 @@ function applyToItem(item: SidebarMenuItem, rules: readonly WebRouteAccessRule[]
 	const children = item.children?.map((child) => applyToItem(child, rules));
 	return {
 		title: item.title,
+		labelKey: item.labelKey,
 		url: item.url,
 		icon: item.icon,
 		disabled: item.disabled,
@@ -149,7 +152,12 @@ function applyToItem(item: SidebarMenuItem, rules: readonly WebRouteAccessRule[]
 export function applyWebRouteAuthorization(menu: SidebarMenuData, rules: readonly WebRouteAccessRule[] = WEB_ROUTE_ACCESS): SidebarMenuData {
 	return {
 		header: menu.header,
-		sections: menu.sections.map((section) => ({ title: section.title, color: section.color, items: section.items.map((item) => applyToItem(item, rules)) })),
+		sections: menu.sections.map((section) => ({
+			title: section.title,
+			labelKey: section.labelKey,
+			color: section.color,
+			items: section.items.map((item) => applyToItem(item, rules)),
+		})),
 		bottomItems: menu.bottomItems.map((item) => applyToItem(item, rules)),
 	};
 }

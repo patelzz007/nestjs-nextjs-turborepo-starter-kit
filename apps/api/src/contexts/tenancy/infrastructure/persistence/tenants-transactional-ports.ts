@@ -5,6 +5,7 @@ import type { MerchantPosSettingsPort, TenantsTransactionalPorts, TillTenantFact
 import { isTenantOperating } from "../../domain/policies/tenant-operating.policy";
 import type { TenantExistencePort } from "../../application/ports/tenant-existence.port";
 import type { CustomerStandingPort } from "../../application/ports/customer-standing.port";
+import type { ReviewNoticeFacts, ReviewNoticeFactsPort } from "../../application/ports/review-notice-facts.port";
 import { createTenantAuditPort, TransactionTenantAuditWriter } from "../audit/tenant-audit.adapter";
 import { TransactionTenantCustomerLinks } from "./transaction-tenant-customer-links";
 
@@ -92,6 +93,19 @@ class TransactionCustomerStanding implements CustomerStandingPort {
 	}
 }
 
+/** A review notice's tenant facts on the caller's transaction: ONE query, the tenant with its active owners. */
+class TransactionReviewNoticeFacts implements ReviewNoticeFactsPort {
+	public constructor(private readonly db: Prisma.TransactionClient) {}
+
+	public async reviewNoticeFacts(tenantId: string): Promise<ReviewNoticeFacts | null> {
+		const tenant = await this.db.tenant.findFirst({
+			where: { id: tenantId, isDeleted: false },
+			select: { slug: true, memberships: { where: { role: "OWNER", status: "ACTIVE", isDeleted: false }, select: { userId: true } } },
+		});
+		return tenant === null ? null : { slug: tenant.slug, ownerUserIds: tenant.memberships.map((membership): string => membership.userId) };
+	}
+}
+
 /**
  * Tenant ports bound to ANOTHER context's unit-of-work transaction
  * (plan §5.4 cross-context scopes). Only other contexts' `infrastructure/`
@@ -104,5 +118,6 @@ export function createTenantsTransactionalPorts(db: Prisma.TransactionClient): T
 		customerStanding: new TransactionCustomerStanding(db),
 		audit: new TransactionTenantAuditWriter(db, createTenantAuditPort()),
 		tenantCustomers: new TransactionTenantCustomerLinks(db),
+		reviewNotices: new TransactionReviewNoticeFacts(db),
 	};
 }

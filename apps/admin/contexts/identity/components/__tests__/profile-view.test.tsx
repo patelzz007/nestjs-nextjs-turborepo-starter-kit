@@ -91,6 +91,7 @@ const PROFILE: OwnProfile = {
 	email: "superadmin@example.com",
 	fullName: "Super Admin",
 	avatar: null,
+	language: "en",
 	version: 3,
 	createdAt: epochMs(1_788_000_000_000),
 	updatedAt: epochMs(1_788_253_200_000),

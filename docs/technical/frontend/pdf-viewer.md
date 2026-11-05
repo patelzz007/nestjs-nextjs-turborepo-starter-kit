@@ -19,7 +19,7 @@ checks, and the loading, empty, failure and "can't show it here" states.
 | Platform | Component | Pages drawn by |
 | --- | --- | --- |
 | Web, merchant, admin (Next.js) | `PdfViewer` from `@workspace/ui/components/pdf-viewer` | The browser's built-in PDF viewer, in a frame |
-| Docs site (Astro) | ```` ```pdf ```` fence (`apps/docs/src/lib/markdown/pdf-embed.ts`) | The browser's built-in PDF viewer, in a frame |
+| Docs site | ```` ```pdf ```` fence (`packages/docs-renderer/src/markdown/pdf-embed.ts`) | The browser's built-in PDF viewer, in a frame |
 | Mobile (Expo) | `PdfViewer` from `@workspace/ui-native/components/pdf-viewer` | PDFKit (iOS) / `PdfRenderer` (Android) through the local module `apps/mobile/modules/pdf-renderer` — see [Mobile](#mobile) |
 
 ```pdf title="PDF viewer sample.pdf"
@@ -114,7 +114,7 @@ A `pdf` fence embeds a PDF. Its body is the URL — a path on the docs site or a
 
 `remarkPdfEmbed` turns it into static HTML at build time: a header with the name, open-in-new-tab
 and download, above a frame. No React and no PDF library ship to the page. Where the browser cannot
-show PDFs inline, `src/scripts/pdf-embeds.ts` removes the frame and shows a note pointing at the
+show PDFs inline, `src/browser/pdf-embeds.ts` removes the frame and shows a note pointing at the
 two links (the same `readPdfInlineSupport` the web kit uses). `/files/pdf-viewer-sample.pdf` is
 written at build time by `buildTextPdf` (`apps/docs/src/lib/pdf-sample.ts`), so no binary file is
 committed.
@@ -155,7 +155,7 @@ description is [the mobile app guide, §10.18](../mobile/mobile-app.md#1018-pdf-
 | Admin gallery demo | `apps/admin/components/component-gallery/__tests__/family-demos.test.tsx` |
 | Native kit viewer and its layout maths | `packages/ui-native/src/components/__tests__/pdf-viewer.test.tsx`, `packages/ui-native/src/lib/__tests__/pdf-viewer-layout.test.ts` |
 | Mobile engine mapping, sources, files, screen, gallery (with fake native, picker, sharing and file-system modules) | `apps/mobile/src/features/pdf-viewer/__tests__/`, `apps/mobile/src/__tests__/app/(app)/settings/pdf-viewer.test.tsx` |
-| Docs fence, sample, unsupported-browser script | `apps/docs/src/lib/markdown/__tests__/pdf-embed.test.ts`, `apps/docs/src/lib/__tests__/pdf-sample.test.ts`, `apps/docs/src/scripts/__tests__/pdf-embeds.test.ts` |
+| Docs fence, sample, unsupported-browser script | `packages/docs-renderer/src/markdown/__tests__/pdf-embed.test.ts`, `apps/docs/src/lib/__tests__/pdf-sample.test.ts`, `apps/docs/src/browser/__tests__/pdf-embeds.test.ts` |
 
 No test draws a page: jsdom has no PDF engine, and the Swift and Kotlin code has no native test
 target. Check by hand: the web viewer in Chrome, Safari and Firefox (and Android Chrome for the

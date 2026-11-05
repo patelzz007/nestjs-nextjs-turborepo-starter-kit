@@ -1,5 +1,5 @@
 import { addLocalDays } from "@workspace/shared";
-import { fireEvent, screen, within } from "expo-router/testing-library";
+import { fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 import * as Haptics from "expo-haptics";
 
 import { ok, stubApi, type ApiStub } from "../../../../test/api-stub";
@@ -180,7 +180,10 @@ describe("Analytics screen", () => {
 		await fireEvent.press(screen.getByTestId("analytics-date-picker-apply"));
 
 		const range = activityRangeOfDays(from, to);
-		expect(screen.queryByText("Choose dates")).toBeNull();
+		// It slides away (and its backdrop fades) before the window closes.
+		await waitFor(() => {
+			expect(screen.queryByText("Choose dates")).toBeNull();
+		});
 		expect(screen.getByRole("radio", { name: "Custom dates" })).toBeChecked();
 		expect(screen.getByTestId("analytics-range-label")).toHaveTextContent(`${rangeLabelOf(range)} · UTC`);
 		expect(screen.getAllByText("vs previous 15 days").length).toBeGreaterThan(0);
@@ -195,7 +198,10 @@ describe("Analytics screen", () => {
 		expect(screen.getByText("Choose dates")).toBeOnTheScreen();
 		await fireEvent.press(screen.getByRole("button", { name: "Close choose dates" }));
 
-		expect(screen.queryByText("Choose dates")).toBeNull();
+		// It slides away (and its backdrop fades) before the window closes.
+		await waitFor(() => {
+			expect(screen.queryByText("Choose dates")).toBeNull();
+		});
 		expect(screen.getByRole("radio", { name: "Last 30 days" })).toBeChecked();
 	});
 });

@@ -9,6 +9,7 @@
 
 export type { BrandMarkFacet, BrandMarkFacetName } from "./brand";
 export { BRAND_MARK_FACETS, BRAND_MARK_SIZE, BRAND_MARK_VIEW_BOX, BRAND_NAME } from "./brand";
+export { PROJECT_DISPLAY_NAME, PROJECT_SLUG } from "./project-identity";
 export { LAYOUT } from "./layout";
 export { MOTION } from "./motion";
 export { PALETTE } from "./palette";

@@ -1,4 +1,8 @@
-import { Module } from "@nestjs/common";
+import { Module, type OnModuleInit } from "@nestjs/common";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { claimsEraser } from "./infrastructure/personal-data/claims-erasure";
+import { PersonalDataExportRegistry } from "../../platform/application/personal-data/personal-data-export.registry";
+import { ClaimsPersonalDataExporter } from "./infrastructure/personal-data/claims-personal-data.exporter";
 import type { Prisma } from "@prisma/client";
 
 import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
@@ -95,4 +99,17 @@ const claimsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [Cl
 		GetMyClaimHandler,
 	],
 })
-export class ClaimsModule {}
+export class ClaimsModule implements OnModuleInit {
+	public constructor(
+		private readonly personalData: PersonalDataExportRegistry,
+		private readonly transactions: TenantTransactionService,
+		private readonly erasure: PersonalDataErasureRegistry,
+		private readonly erasureTransactions: TenantTransactionService,
+	) {}
+
+	/** Registers this context's section of "Download my data" (ADR 077). */
+	public onModuleInit(): void {
+		this.erasure.registerEraser(claimsEraser(this.erasureTransactions));
+		this.personalData.register(new ClaimsPersonalDataExporter(this.transactions));
+	}
+}

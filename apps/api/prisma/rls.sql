@@ -50,6 +50,8 @@ BEGIN
     'BackupCode',
     'TwoFactorPendingSetup',
     'TwoFactorLoginChallenge',
+    'WebAuthnCredential',
+    'WebAuthnChallenge',
     'MfaRecoveryRequest',
     'GithubAccountLink',
     'UserRole',
@@ -120,6 +122,18 @@ DROP POLICY IF EXISTS two_factor_login_challenges_own ON public."TwoFactorLoginC
 CREATE POLICY two_factor_login_challenges_own ON public."TwoFactorLoginChallenge"
   USING ((SELECT app_rls_bypass_on('TwoFactorLoginChallenge')) OR (app_owns("userId")))
   WITH CHECK ((SELECT app_rls_bypass_on('TwoFactorLoginChallenge')) OR (app_owns("userId")));
+
+-- Passkeys (ADR 080): only the owner's session reads or writes its credentials and ceremony challenges.
+-- A passwordless challenge has no owner yet (userId NULL): only its allow-listed system operations reach it.
+DROP POLICY IF EXISTS web_authn_credentials_own ON public."WebAuthnCredential";
+CREATE POLICY web_authn_credentials_own ON public."WebAuthnCredential"
+  USING ((SELECT app_rls_bypass_on('WebAuthnCredential')) OR (app_owns("userId")))
+  WITH CHECK ((SELECT app_rls_bypass_on('WebAuthnCredential')) OR (app_owns("userId")));
+
+DROP POLICY IF EXISTS web_authn_challenges_own ON public."WebAuthnChallenge";
+CREATE POLICY web_authn_challenges_own ON public."WebAuthnChallenge"
+  USING ((SELECT app_rls_bypass_on('WebAuthnChallenge')) OR (app_owns("userId")))
+  WITH CHECK ((SELECT app_rls_bypass_on('WebAuthnChallenge')) OR (app_owns("userId")));
 
 DROP POLICY IF EXISTS mfa_recovery_requests_own ON public."MfaRecoveryRequest";
 CREATE POLICY mfa_recovery_requests_own ON public."MfaRecoveryRequest"
@@ -393,7 +407,9 @@ BEGIN
     'TenantAsset',
     'UserAvatar',
     'UserPreference',
-    'TenantKybFile'
+    'TenantKybFile',
+    'PaymentIntent',
+    'PaymentEvent'
   ]
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
@@ -655,6 +671,27 @@ DROP POLICY IF EXISTS reward_sales_system_write ON public."RewardSale";
 CREATE POLICY reward_sales_system_write ON public."RewardSale"
   USING ((SELECT app_rls_bypass_on('RewardSale')))
   WITH CHECK ((SELECT app_rls_bypass_on('RewardSale')));
+
+-- Payments (ADR 020): the tenant's members read their tenant's payments and their history; every write
+-- (create, callback, reconciliation, refund) runs as its own payments system operation, after the route's
+-- capability check or the gateway's verified signature.
+DROP POLICY IF EXISTS payment_intents_select ON public."PaymentIntent";
+CREATE POLICY payment_intents_select ON public."PaymentIntent"
+  FOR SELECT
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('PaymentIntent')));
+DROP POLICY IF EXISTS payment_intents_system_write ON public."PaymentIntent";
+CREATE POLICY payment_intents_system_write ON public."PaymentIntent"
+  USING ((SELECT app_rls_bypass_on('PaymentIntent')))
+  WITH CHECK ((SELECT app_rls_bypass_on('PaymentIntent')));
+
+DROP POLICY IF EXISTS payment_events_select ON public."PaymentEvent";
+CREATE POLICY payment_events_select ON public."PaymentEvent"
+  FOR SELECT
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('PaymentEvent')));
+DROP POLICY IF EXISTS payment_events_system_write ON public."PaymentEvent";
+CREATE POLICY payment_events_system_write ON public."PaymentEvent"
+  USING ((SELECT app_rls_bypass_on('PaymentEvent')))
+  WITH CHECK ((SELECT app_rls_bypass_on('PaymentEvent')));
 
 DROP POLICY IF EXISTS reward_referrals_parties ON public."RewardReferral";
 CREATE POLICY reward_referrals_parties ON public."RewardReferral"

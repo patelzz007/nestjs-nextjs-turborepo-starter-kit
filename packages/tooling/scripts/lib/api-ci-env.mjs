@@ -13,6 +13,13 @@
  * runs the output through the API's config schema, so it cannot drift.
  */
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { parseProjectIdentity } from "./project-identity.mjs";
+
+/** The project's identity (project.json), so the CI app is named after the project. */
+const PROJECT = parseProjectIdentity(readFileSync(path.resolve(import.meta.dirname, "../../../../project.json"), "utf8"));
 
 /** Bytes in each generated secret or key. */
 const SECRET_BYTES = 32;
@@ -40,6 +47,8 @@ export const API_CI_SECRETS = [
 	{ name: "GITHUB_CREDENTIAL_ENCRYPTION_KEYS", format: "base64", keyRing: true },
 	// Push device tokens are sealed at rest: without it the seed has no devices to write.
 	{ name: "NOTIFICATIONS_ENCRYPTION_KEYS", format: "base64", keyRing: true },
+	// Outgoing webhook signing secrets are sealed at rest: without it the seed has no endpoint to write (ADR 082).
+	{ name: "WEBHOOK_SECRET_ENCRYPTION_KEYS", format: "base64", keyRing: true },
 ];
 
 /** The fixed, non-secret settings, in the order they are written. */
@@ -49,13 +58,19 @@ const API_CI_SETTINGS = [
 	["JWT_REFRESH_EXPIRY", "7d"],
 	["BCRYPT_SALT_ROUNDS", "10"],
 	["LOGIN_VERIFICATION_MODE", "disabled"],
+	// CI must not depend on Have I Been Pwned being reachable (the adapter has its own tests).
+	["PASSWORD_BREACH_CHECK", "off"],
 	["EMAIL_MODE", "noop"],
 	["EMAIL_FROM_ADDRESS", "noreply@example.com"],
 	["STORAGE_PROVIDER", "local"],
 	["MALWARE_SCANNER", "none"],
-	["APP_NAME", "Starter Kit CI"],
+	["APP_NAME", `${PROJECT.displayName} CI`],
 	// Explicit Redis namespace (inert while REDIS_URL is unset; the e2e suite forces its own per run).
-	["REDIS_NAMESPACE", "starter-kit-ci"],
+	["REDIS_NAMESPACE", `${PROJECT.slug}-ci`],
+	// The address the API puts in links it hands out (local-storage upload and file URLs). It must be the
+	// origin the apps call (`NEXT_PUBLIC_API_URL`), or their content security policy refuses the upload: left
+	// unset, the API would advertise its bind host, 127.0.0.1, which is a different origin from localhost.
+	["API_PUBLIC_URL", "http://localhost:8080"],
 	["APP_URL", "http://localhost:3000"],
 	["ADMIN_APP_URL", "http://localhost:3001"],
 	["MERCHANT_APP_URL", "http://localhost:3003"],

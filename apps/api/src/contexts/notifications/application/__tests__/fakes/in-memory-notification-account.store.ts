@@ -14,7 +14,7 @@ import {
 	type PushDeviceResponse,
 } from "@workspace/shared";
 
-import type { ConsentRecord, NewPushDevice, NotificationAccountStore, TenantLink } from "../../ports/notification-account-store.port";
+import type { ConsentRecord, NewPushDevice, PushDeviceTouch, NotificationAccountStore, TenantLink } from "../../ports/notification-account-store.port";
 import type { ActivePushDevice, StoredSchedule } from "../../ports/notification-store.port";
 import { PLATFORM_PREFERENCE_KEY, type StoredPreference } from "../../../domain/policies/notification-rules";
 
@@ -231,11 +231,11 @@ export class InMemoryNotificationAccountStore implements NotificationAccountStor
 		return Promise.resolve();
 	}
 
-	public touchDevice(deviceId: string, update: { readonly deviceSessionId: string }, now: number): Promise<void> {
+	public touchDevice(deviceId: string, update: PushDeviceTouch, now: number): Promise<void> {
 		const index = this.devices.findIndex((device): boolean => device.id === deviceId);
 		const device = this.devices.at(index);
 		if (device !== undefined) {
-			this.devices.splice(index, 1, { ...device, deviceSessionId: update.deviceSessionId, lastSeenAt: now });
+			this.devices.splice(index, 1, { ...device, ...update, lastSeenAt: now });
 		}
 		return Promise.resolve();
 	}

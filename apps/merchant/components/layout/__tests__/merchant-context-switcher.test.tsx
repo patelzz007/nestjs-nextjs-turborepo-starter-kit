@@ -86,7 +86,7 @@ function renderSwitcher(
 }
 
 function openMenu(): HTMLElement {
-	fireEvent.click(screen.getByRole("button", { name: /^Switch store or location/u }));
+	fireEvent.click(screen.getByRole("button", { name: /, Switch store or location$/u }));
 	return screen.getByRole("menu");
 }
 
@@ -119,13 +119,13 @@ describe("location switcher helpers", () => {
 describe("MerchantContextSwitcher", () => {
 	it("names the store and the location in effect on the trigger, from the first render", () => {
 		renderSwitcher([OWNER], STORE_B.id);
-		const trigger = screen.getByRole("button", { name: /^Switch store or location: Acme Coffee, /u });
+		const trigger = screen.getByRole("button", { name: /^Acme Coffee, .+, Switch store or location$/u });
 		expect(trigger.textContent).toContain("Acme Coffee");
 	});
 
 	it("switches location from the menu and remembers it for the server", () => {
 		renderSwitcher([OWNER], null);
-		expect(screen.getByRole("button", { name: "Switch store or location: Acme Coffee, All locations" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Acme Coffee, All locations, Switch store or location" })).toBeTruthy();
 		const menu = openMenu();
 		expect(within(menu).getByText("Locations")).toBeTruthy();
 		const [all] = within(menu).getAllByRole("menuitemradio");

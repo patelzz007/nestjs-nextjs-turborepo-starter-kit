@@ -1,7 +1,7 @@
 ---
 title: "API reference — Email log, templates and delivery webhooks"
 description: "The outbound email log, template previews and test sends, and the Resend delivery webhook."
-order: 9
+order: 12
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -50,7 +50,7 @@ List sent emails
 | `data[].resendId` | string \| null | no |  |
 | `data[].status` | "pending" \| "sent" \| "delivered" \| "bounced" \| "complained" \| "failed" | yes |  |
 | `data[].subject` | string | yes | at least 1 characters |
-| `data[].templateKey` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
+| `data[].templateKey` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "passkey-added" \| "passkey-removed" \| … (+10 more) | yes |  |
 | `data[].to` | string | yes | at least 1 characters |
 | `data[].updatedAt` | integer | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
@@ -59,6 +59,7 @@ List sent emails
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -158,7 +159,7 @@ List email template metadata
 | --- | --- | --- | --- |
 | `data.templates` | object[] | yes |  |
 | `data.templates[].description` | string | yes | at least 1 characters |
-| `data.templates[].key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
+| `data.templates[].key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "passkey-added" \| "passkey-removed" \| … (+10 more) | yes |  |
 | `data.templates[].label` | string | yes | at least 1 characters |
 | `data.templates[].sampleSubject` | string | yes | at least 1 characters |
 | `data.templates[].sampleTo` | string (email) | yes |  |
@@ -223,7 +224,7 @@ Render one email template preview
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
+| `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "passkey-added" \| "passkey-removed" \| … (+10 more) | yes |  |
 
 **Response 200 OK** (`application/json`) — Rendered preview for one template
 
@@ -231,7 +232,7 @@ Render one email template preview
 | --- | --- | --- | --- |
 | `data.description` | string | yes | at least 1 characters |
 | `data.html` | string | yes | at least 1 characters |
-| `data.key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
+| `data.key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "passkey-added" \| "passkey-removed" \| … (+10 more) | yes |  |
 | `data.label` | string | yes | at least 1 characters |
 | `data.previewText` | string | yes | at least 1 characters |
 | `data.props` | object | yes |  |
@@ -300,7 +301,7 @@ Send one email template (sample props)
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
+| `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "passkey-added" \| "passkey-removed" \| … (+10 more) | yes |  |
 
 **Response 201 Created** (`application/json`) — Outcome of the send attempt
 

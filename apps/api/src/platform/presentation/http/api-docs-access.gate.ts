@@ -17,6 +17,7 @@ import { correlationIdFor } from "../../infrastructure/context/correlation-id";
 import { AuthenticationError, AuthorizationError, type AppError } from "../../application/errors/app-error";
 import { GlobalExceptionFilter } from "./errors/global-exception.filter";
 import { mapException } from "../../infrastructure/errors/exception-mapper";
+import { decodedRequestPath, routeTemplateOf, type RoutedRequest } from "./routed-path";
 
 /** The admin panel's session cookie (the docs' audience is platform operators). */
 const ADMIN_ACCESS_TOKEN_COOKIE = "adminAccessToken";
@@ -24,11 +25,25 @@ const ADMIN_ACCESS_TOKEN_COOKIE = "adminAccessToken";
 /** Legacy docs entry point that redirects to the versioned path. */
 const LEGACY_DOCS_PATH = "/docs";
 
-/** True for every URL the Swagger mount serves (UI, document, assets, legacy redirect). */
-export function isApiDocsRequest(url: string): boolean {
-	const [path = url] = url.split("?");
+/** True for a path under the Swagger mount (UI, document, assets, legacy redirect). */
+export function isApiDocsPath(path: string): boolean {
 	const docsPath: string = apiDocsPath();
 	return [docsPath, LEGACY_DOCS_PATH].some((prefix: string): boolean => path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}-`));
+}
+
+/**
+ * True for every request the Swagger mount would serve. It decides on what the router dispatches on, never
+ * the raw `request.url` (a percent-encoded `/v1/%64ocs-json` reaches the docs route too): the matched route
+ * template, else the decoded path. A target that can't be decoded counts as a docs request, so the gate
+ * fails closed.
+ */
+export function isApiDocsRequest(request: RoutedRequest): boolean {
+	const template: string | undefined = routeTemplateOf(request);
+	if (template !== undefined && isApiDocsPath(template)) {
+		return true;
+	}
+	const path: string | null = decodedRequestPath(request.url);
+	return path === null || isApiDocsPath(path);
 }
 
 /** The token checks the gate needs (narrowed so it can be tested without the auth module graph). */
@@ -43,7 +58,7 @@ export class ApiDocsAccessGate {
 
 	/** Fastify `onRequest` hook: non-docs requests pass straight through. */
 	public readonly onRequest = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-		if (!isApiDocsRequest(request.url)) {
+		if (!isApiDocsRequest(request)) {
 			return;
 		}
 		const denial: AppError | null = await this.check(request);

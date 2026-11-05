@@ -1,4 +1,5 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import {
 	cityListQuery,
 	countryListQuery,
@@ -80,9 +81,34 @@ import {
 type GeoReadClient = Prisma.TransactionClient;
 
 /** The five geo tables a fuzzy search may run against (a closed union, never caller input). */
-type GeoTable = "Region" | "Subregion" | "Country" | "State" | "City";
+export type GeoTable = "Region" | "Subregion" | "Country" | "State" | "City";
+
+/**
+ * Each searchable table's identifier as SQL. The ONLY way a table name reaches the query: a fixed map over
+ * the closed union, so no caller text can ever become an identifier (security audit 2026-10-25, hardening
+ * note). Every value (the search term, the limit) is a bound parameter.
+ */
+export const GEO_TABLE_SQL: Readonly<Record<GeoTable, Prisma.Sql>> = {
+	Region: Prisma.raw('"Region"'),
+	Subregion: Prisma.raw('"Subregion"'),
+	Country: Prisma.raw('"Country"'),
+	State: Prisma.raw('"State"'),
+	City: Prisma.raw('"City"'),
+};
 
 const LIVE = { isDeleted: false } satisfies { isDeleted: boolean };
+
+const MatchedIdRowsSchema = z.array(z.object({ id: z.coerce.number().int() }));
+
+/** The trigram query: live rows of `table` similar to `search`, most similar first. */
+export function trigramSearchSql(table: GeoTable, search: string, limit: number): Prisma.Sql {
+	return Prisma.sql`SELECT id, similarity(name, ${search}) AS similarity FROM ${GEO_TABLE_SQL[table]} WHERE "isDeleted" = false AND name % ${search} ORDER BY similarity DESC LIMIT ${limit}`;
+}
+
+/** The fallback: live rows of `table` whose name contains `search`. */
+export function substringSearchSql(table: GeoTable, search: string, limit: number): Prisma.Sql {
+	return Prisma.sql`SELECT id FROM ${GEO_TABLE_SQL[table]} WHERE "isDeleted" = false AND name ILIKE ${`%${search}%`} LIMIT ${limit}`;
+}
 
 /**
  * Find live IDs matching a search term using pg_trgm trigram similarity,
@@ -90,13 +116,11 @@ const LIVE = { isDeleted: false } satisfies { isDeleted: boolean };
  * trigram index finds nothing.
  */
 async function fuzzySearchIds(db: GeoReadClient, table: GeoTable, search: string, limit: number): Promise<number[]> {
-	const trigramSql = `SELECT id, similarity(name, $1) AS similarity FROM "${table}" WHERE "isDeleted" = false AND name % $1 ORDER BY similarity DESC LIMIT $2`;
-	const trigramResults: { readonly id: number; readonly similarity: number }[] = await db.$queryRawUnsafe(trigramSql, search, limit);
+	const trigramResults = MatchedIdRowsSchema.parse(await db.$queryRaw(trigramSearchSql(table, search, limit)));
 	if (trigramResults.length > 0) {
 		return trigramResults.map((r) => r.id);
 	}
-	const likeSql = `SELECT id FROM "${table}" WHERE "isDeleted" = false AND name ILIKE $1 LIMIT $2`;
-	const likeResults: { readonly id: number }[] = await db.$queryRawUnsafe(likeSql, `%${search}%`, limit);
+	const likeResults = MatchedIdRowsSchema.parse(await db.$queryRaw(substringSearchSql(table, search, limit)));
 	return likeResults.map((r) => r.id);
 }
 

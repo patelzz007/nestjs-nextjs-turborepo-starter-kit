@@ -269,3 +269,20 @@ describe("withTrailTailLabel", () => {
 		expect(withTrailTailLabel([], "Free coffee").map((crumb) => crumb.label)).toEqual(["Free coffee"]);
 	});
 });
+
+describe("the catch-all section in another language (enhancement 5.12)", () => {
+	const item = (title: string, url: string): { readonly title: string; readonly url: string } => ({ title, url });
+	// Translated titles, stable English keys: the catch-all is still known as "Main".
+	const MENU = {
+		sections: [
+			{ title: "Utama", key: "Main", items: [item("Ringkasan", "/"), item("Pengguna", "/users")] },
+			{ title: "Platform", key: "Platform", items: [item("Log audit", "/audit-logs"), item("Operasi", "/operations")] },
+		],
+		bottomItems: [],
+	};
+
+	it("gives the catch-all's items no section crumb, by its key rather than its title", () => {
+		expect(trailOf("/users", { menu: MENU }).map((crumb) => crumb.label)).toEqual(["Pengguna"]);
+		expect(trailOf("/audit-logs", { menu: MENU }).map((crumb) => crumb.label)).toEqual(["Platform", "Log audit"]);
+	});
+});

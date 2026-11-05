@@ -11,7 +11,7 @@ export function Avatar14Example(): React.JSX.Element {
 				<AvatarFallback className="bg-destructive/10 text-destructive">DV</AvatarFallback>
 			</Avatar>
 			<Avatar className="after:border-success-soft">
-				<AvatarFallback className="bg-success-soft text-success">SB</AvatarFallback>
+				<AvatarFallback className="bg-tone-green-soft text-tone-green">SB</AvatarFallback>
 			</Avatar>
 			<Avatar className="after:border-tone-violet-soft">
 				<AvatarFallback className="bg-tone-violet-soft text-tone-violet">DB</AvatarFallback>

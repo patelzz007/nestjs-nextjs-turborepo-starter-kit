@@ -1,11 +1,20 @@
-import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
 import * as React from "react";
-import { AccessibilityInfo, FlatList, type ListRenderItemInfo, Text, type ViewInstance } from "react-native";
+import { Dimensions, FlatList, type ListRenderItemInfo, Text, type ViewInstance } from "react-native";
+import { getAnimatedStyle } from "react-native-reanimated";
 import { z } from "zod";
 
+import { SHEET_MOTION } from "../../lib/motion";
+import { SHEET_SCRIM_OPACITY } from "../../lib/use-sheet-motion";
 import { BottomSheet, SheetOptionRow, type BottomSheetSize } from "../bottom-sheet";
 import { KeyboardAvoidingView } from "../keyboard-avoiding-view";
 import { TextField } from "../text-field";
+
+/** The sheet's animated transform: one slide down. */
+const SlideSchema = z.array(z.object({ translateY: z.number() }));
+
+/** Half of an animation's duration. */
+const HALF = 2;
 
 /** The Modal host element: the rendered tree's root (it carries `onRequestClose` and `animationType`). */
 function modal(): NonNullable<typeof screen.root> {
@@ -109,21 +118,54 @@ describe("BottomSheet", () => {
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 
-	it("slides up, and simply appears under Reduce Motion", async () => {
-		await render(
-			<BottomSheet visible title="Filter" onClose={jest.fn()}>
-				<Text>Options</Text>
-			</BottomSheet>,
-		);
-		expect(modal()).toHaveProp("animationType", "slide");
+	it("animates itself: the backdrop and the sheet leave together, and the window closes only once both are away", async () => {
+		jest.useFakeTimers();
+		try {
+			await render(
+				<BottomSheet visible title="Filter" onClose={jest.fn()} testID="sheet">
+					<Text>Options</Text>
+				</BottomSheet>,
+			);
+			// The Modal's own slide would move the backdrop with the window; the sheet drives both itself.
+			expect(modal()).toHaveProp("animationType", "none");
+			await act((): void => {
+				jest.advanceTimersByTime(SHEET_MOTION.enter.duration);
+			});
 
-		jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
-		await render(
-			<BottomSheet visible title="Filter" onClose={jest.fn()}>
-				<Text>Options</Text>
-			</BottomSheet>,
-		);
-		expect(modal()).toHaveProp("animationType", "none");
+			await screen.rerender(
+				<BottomSheet visible={false} title="Filter" onClose={jest.fn()} testID="sheet">
+					<Text>Options</Text>
+				</BottomSheet>,
+			);
+			await act((): void => {
+				jest.advanceTimersByTime(SHEET_MOTION.exit.duration / HALF);
+			});
+			// Half-way out, the fade and the slide are at the same point: one value drives both.
+			const backdrop = getAnimatedStyle(screen.getByTestId("sheet-backdrop", { includeHiddenElements: true }));
+			const sheet = getAnimatedStyle(screen.getByTestId("sheet"));
+			const shown = Number(backdrop.opacity) / SHEET_SCRIM_OPACITY;
+			expect(shown).toBeGreaterThan(0);
+			expect(shown).toBeLessThan(1);
+			const [slide] = SlideSchema.parse(sheet.transform);
+			expect(slide?.translateY).toBeCloseTo((1 - shown) * Dimensions.get("window").height, 1);
+			await act((): void => {
+				jest.advanceTimersByTime(SHEET_MOTION.exit.duration / HALF - 1);
+			});
+			// Still leaving: the sheet and its backdrop are both still there.
+			expect(screen.getByTestId("sheet")).toBeOnTheScreen();
+			// (Hidden from screen readers by the modal sheet beside it, as it should be.)
+			expect(screen.getByTestId("sheet-backdrop", { includeHiddenElements: true })).toBeOnTheScreen();
+			expect(modal()).toHaveProp("visible", true);
+
+			await act((): void => {
+				jest.advanceTimersByTime(SHEET_MOTION.exit.duration);
+			});
+			// Both fully away: the window closes, taking the sheet and the backdrop with it.
+			expect(screen.queryByTestId("sheet")).toBeNull();
+			expect(screen.queryByTestId("sheet-backdrop", { includeHiddenElements: true })).toBeNull();
+		} finally {
+			jest.useRealTimers();
+		}
 	});
 
 	it("names its backdrop with the caller's words", async () => {

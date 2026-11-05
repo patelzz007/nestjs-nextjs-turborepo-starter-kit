@@ -36,8 +36,8 @@ export interface SidebarProps {
 	/** A menu or pinned link was followed — closes the branches opened by hand. */
 	/** A menu or pinned link was followed, with its `href`. */
 	readonly onFollowLink: (href: string) => void;
-	readonly onMoveSectionUp: (title: string, allTitles: readonly string[]) => void;
-	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
+	readonly onMoveSectionUp: (key: string, allKeys: readonly string[]) => void;
+	readonly onMoveSectionDown: (key: string, allKeys: readonly string[]) => void;
 	readonly pinnedItems: readonly PanelSidebarPinnedItem[];
 	/** The current page's resolved breadcrumb label, announced after navigation. */
 	readonly pageLabel: string | null;

@@ -11,6 +11,7 @@ export const kanbanRoutes = {
 	search: "/admin/kanban/search",
 	createTask: "/admin/kanban/tasks",
 	importTasks: "/admin/kanban/tasks/import",
+	previewImport: "/admin/kanban/tasks/import/dry-run",
 	task: "/admin/kanban/tasks/:taskId",
 	updateTask: "/admin/kanban/tasks/:taskId",
 	deleteTask: "/admin/kanban/tasks/:taskId",

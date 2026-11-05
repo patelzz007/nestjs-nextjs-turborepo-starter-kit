@@ -3,6 +3,7 @@
 import type { BroadcastReportReason, NotificationCategory, NotificationChannel, NotificationChannelUnavailableReason, NotificationDigestFrequency } from "@workspace/shared";
 
 import type { FeedSectionKey, InboxFilter } from "./feed-model";
+import type { InboxOutOfDate } from "./inbox-state";
 
 export const NOTIFICATIONS_TITLE = "Notifications";
 export const NOTIFICATION_SETTINGS_TITLE = "Notification settings";
@@ -15,6 +16,11 @@ export const NOTIFICATIONS_COPY = {
 	empty: "You're all caught up.",
 	emptyUnread: "No unread notifications. You're all caught up.",
 	loadError: "Notifications could not be loaded.",
+	offlineError: "You're offline. Your notifications will load when you're back online.",
+	outOfDate: {
+		offline: "You're offline. This list may be out of date.",
+		refreshFailed: "Couldn't refresh. This list may be out of date.",
+	} satisfies Readonly<Record<InboxOutOfDate, string>>,
 	retry: "Try again",
 	unread: "Unread",
 	openHint: "Opens the full message",
@@ -87,6 +93,14 @@ export const CATEGORY_DESCRIPTIONS: Readonly<Record<NotificationCategory, string
 };
 
 export const CHANNEL_LABELS: Readonly<Record<NotificationChannel, string>> = { IN_APP: "In app", EMAIL: "Email", PUSH: "Phone", SMS: "SMS" };
+
+/** What each channel is: the subtitle of an ordinary channel (every node of the settings tree has a title and a subtitle). */
+export const CHANNEL_DESCRIPTIONS: Readonly<Record<NotificationChannel, string>> = {
+	IN_APP: "In the bell, in every app you use",
+	EMAIL: "To your sign-in email address",
+	PUSH: "A notification on this phone",
+	SMS: "A text to your verified phone number",
+};
 
 /** Why a channel that is always on can't be turned off, per kind of message. */
 export const LOCKED_LABELS: Readonly<Record<NotificationCategory, string>> = {

@@ -1,0 +1,104 @@
+# The root README's mobile screenshots (docs/images/readme/mobile-*.webp). Not part of the smoke suite
+# (config.yaml runs only the top-level flows): run it with `pnpm --filter @workspace/mobile screenshots:device`,
+# which turns on the phone's status-bar demo mode, passes RESTORE_THEME and an output folder (--test-output-dir), and converts the
+# PNGs this flow writes. Each screen opens by its deep link, so the flow does not depend on the drawer's
+# layout. It changes only the theme, and puts the phone's own theme back at the end.
+appId: ${APP_ID}
+name: README screenshots
+---
+- runFlow: ../subflows/signed-in.yaml
+
+- runFlow:
+    file: subflows/set-theme.yaml
+    env:
+      THEME: "Light"
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/", NAME: "mobile-home" }
+- tapOn:
+    id: "app-header-menu"
+- waitForAnimationToEnd
+- takeScreenshot: mobile-drawer
+- back
+- tapOn:
+    id: "app-header-search"
+- waitForAnimationToEnd
+- takeScreenshot: mobile-command-palette
+- back
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/analytics", NAME: "mobile-analytics" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/profile", NAME: "mobile-profile" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/profile/pull-requests", NAME: "mobile-pull-requests" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/notifications", NAME: "mobile-notifications" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings", NAME: "mobile-settings" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/security", NAME: "mobile-security" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/devices", NAME: "mobile-devices" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/till", NAME: "mobile-till" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/servers", NAME: "mobile-servers" }
+# The gallery loads its code on first open: wait for it to replace its skeleton.
+- openLink:
+    link: "${SCHEME}:///settings/components"
+    autoVerify: false
+- extendedWaitUntil:
+    notVisible:
+      id: "component-gallery-loading"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-components
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/appearance", NAME: "mobile-appearance" }
+
+- runFlow:
+    file: subflows/set-theme.yaml
+    env:
+      THEME: "Dark"
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/", NAME: "mobile-home-dark" }
+- tapOn:
+    id: "app-header-menu"
+- waitForAnimationToEnd
+- takeScreenshot: mobile-drawer-dark
+- back
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/analytics", NAME: "mobile-analytics-dark" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings", NAME: "mobile-settings-dark" }
+
+- runFlow:
+    file: subflows/set-theme.yaml
+    env:
+      THEME: "Nord"
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/", NAME: "mobile-home-nord" }
+
+# The phone's own theme, as it was before the run.
+- runFlow:
+    file: subflows/set-theme.yaml
+    env:
+      THEME: ${RESTORE_THEME}
+- openLink:
+    link: "${SCHEME}:///"
+    autoVerify: false

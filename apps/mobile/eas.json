@@ -1,0 +1,52 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "base": {
+      "node": "24.22.1",
+      "pnpm": "12.16.1",
+      "env": {
+        "EAS_PROJECT_ID": "592c9738-0680-40f2-8f13-51db84601603"
+      }
+    },
+    "development": {
+      "extends": "base",
+      "environment": "development",
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "env": {
+        "EXPO_PUBLIC_ALLOW_LAN_HTTP_API": "true",
+        "EXPO_PUBLIC_SHOW_DEMO_ACCOUNT": "true"
+      }
+    },
+    "preview": {
+      "extends": "base",
+      "environment": "preview",
+      "distribution": "internal",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://192.168.100.30:8080",
+        "EXPO_PUBLIC_ALLOW_LAN_HTTP_API": "true",
+        "EXPO_PUBLIC_SHOW_DEMO_ACCOUNT": "true"
+      }
+    },
+    "production": {
+      "extends": "base",
+      "environment": "production",
+      "channel": "production",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SHOW_DEMO_ACCOUNT": "false"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

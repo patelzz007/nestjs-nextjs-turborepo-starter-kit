@@ -107,13 +107,10 @@ tree (the adapter's and the app's `Pool` must be the same declarations), and a p
 group makes every workspace declare that same exact version. Bump the override and the pin
 together.
 
-**One TypeScript exception: `apps/docs`.**
-
-The real `.syncpackrc.json` has an earlier version group (shown in the file, omitted above) that
-pins `typescript` to `6.0.3` for `@workspace/docs` only: `astro check` runs on Volar, which needs
-the TypeScript JS API that TypeScript 7 removed. Every other workspace declares the same exact
-TypeScript 7 version. See `docs/technical/tooling/typescript.md` → "TypeScript 7, and the two
-places TypeScript 6 remains".
+**One TypeScript version.** Every workspace declares the same exact TypeScript 7 version (the
+default "same version everywhere" group). `apps/docs` was pinned to 6.0.3 while `astro check` needed the
+TypeScript JS API; the TanStack Start rewrite (2026-11-05) removed that group. See
+`docs/technical/tooling/typescript.md` → "TypeScript 7, and the one place TypeScript 6 remains".
 
 ---
 

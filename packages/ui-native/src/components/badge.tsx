@@ -18,7 +18,7 @@ export const badgeVariants = cva("flex-row items-center self-start rounded-full 
 		size: { sm: "gap-1 px-2 py-px", md: "gap-1 px-2.5 py-0.5" },
 	},
 	compoundVariants: [
-		{ variant: "soft", tone: "neutral", className: "border-border bg-muted" },
+		{ variant: "soft", tone: "neutral", className: "bg-muted" },
 		{ variant: "soft", tone: "info", className: "bg-info-soft" },
 		{ variant: "soft", tone: "success", className: "bg-success-soft" },
 		{ variant: "soft", tone: "warning", className: "bg-warning-soft" },

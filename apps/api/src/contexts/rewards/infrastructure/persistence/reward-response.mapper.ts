@@ -151,6 +151,17 @@ export function rewardLogoUrl(tenant: RewardTenantDisplay | undefined): string |
 	return parsed.success ? parsed.data : null;
 }
 
+/** The merchant fields of a reward response: its name, logo URL and the logo's renditions (none without a logo). */
+export function tenantDisplayFields(tenant: RewardTenantDisplay | undefined): Pick<RewardResponse, "tenantName" | "tenantLogoUrl" | "tenantLogoSources"> {
+	const logoUrl = rewardLogoUrl(tenant);
+	return {
+		tenantName: tenant?.displayName,
+		tenantLogoUrl: logoUrl,
+		// The logo's renditions go with its URL: no logo, no sources.
+		tenantLogoSources: logoUrl === null || tenant === undefined ? [] : [...tenant.logoSources],
+	};
+}
+
 /**
  * A reward as the API returns it. `resolve` turns each stored image reference
  * (its photos, the merchant logo) into the URL a client opens.
@@ -166,15 +177,11 @@ export function mapRewardToResponse(reward: RewardResponseSource, tenant: Reward
 	});
 	const locationIds = resolvedScopes.map((scope) => scope.locationId);
 	const locationNames = resolvedScopes.map((scope) => scope.name);
-	const logoUrl = rewardLogoUrl(tenant);
 
 	return {
 		id: reward.id,
 		tenantId: reward.tenantId,
-		tenantName: tenant?.displayName,
-		tenantLogoUrl: logoUrl,
-		// The logo's renditions go with its URL: no logo, no sources.
-		tenantLogoSources: logoUrl === null || tenant === undefined ? [] : [...tenant.logoSources],
+		...tenantDisplayFields(tenant),
 		title: reward.title,
 		description: reward.description,
 		rewardType: reward.rewardType,

@@ -88,7 +88,7 @@ const SQUARE_RATIO = 1;
 
 const SIGN_IN_CODE = `const session = await auth.signIn({ email, password });
 if (session.requiresTwoFactor) {
-  router.push("/two-factor");
+  router.push("/auth/two-factor");
 }`;
 
 // ── QrCode ─────────────────────────────────────────────────────────────────

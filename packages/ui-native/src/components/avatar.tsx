@@ -15,30 +15,32 @@ import { cn } from "../lib/cn";
 export const avatarVariants = cva("shrink-0 items-center justify-center overflow-hidden", {
 	variants: {
 		/** `lg` heads an account (profile, drawer); `md` leads a list row (a contributor); `sm` sits inline with text (a commit's author). */
-		size: { sm: "size-6", md: "size-8", lg: "size-14" },
+		/** `row`: a list row's lead picture (a notification), between a chip's `md` and a profile's `lg`. */
+		size: { sm: "size-6", md: "size-8", row: "size-11", lg: "size-14" },
 		/** `circle`: a person. `rounded`: a tenant, a shop, a team (its logo). */
 		shape: { circle: "rounded-full", rounded: "" },
 	},
 	compoundVariants: [
 		{ shape: "rounded", size: "sm", className: "rounded-md" },
 		{ shape: "rounded", size: "md", className: "rounded-lg" },
+		{ shape: "rounded", size: "row", className: "rounded-lg" },
 		{ shape: "rounded", size: "lg", className: "rounded-xl" },
 	],
 	defaultVariants: { size: "lg", shape: "circle" },
 });
 
-/** The initials fallback's fill: `inverse` sits on a `primary` surface (the drawer's account header). */
+/** The initials fallback's fill: `default` a soft grey disc with ink initials; `inverse` sits on a `primary` surface. */
 export const avatarFallbackVariants = cva("", {
 	variants: {
-		tone: { default: "bg-primary", inverse: "bg-primary-foreground" },
+		tone: { default: "bg-muted", inverse: "bg-primary-foreground" },
 	},
 	defaultVariants: { tone: "default" },
 });
 
 export const avatarInitialsVariants = cva("font-heading", {
 	variants: {
-		size: { sm: "text-xs", md: "text-sm", lg: "text-lg" },
-		tone: { default: "text-primary-foreground", inverse: "text-primary" },
+		size: { sm: "text-xs", md: "text-sm", row: "text-base", lg: "text-lg" },
+		tone: { default: "text-foreground", inverse: "text-primary" },
 	},
 	defaultVariants: { size: "lg", tone: "default" },
 });
@@ -47,10 +49,11 @@ export type AvatarSize = NonNullable<VariantProps<typeof avatarVariants>["size"]
 export type AvatarShape = NonNullable<VariantProps<typeof avatarVariants>["shape"]>;
 export type AvatarTone = NonNullable<VariantProps<typeof avatarFallbackVariants>["tone"]>;
 
-/** Side of the avatar per size, in points: the picture's drawn size (`size-6`, `size-8`, `size-14`). */
+/** Side of the avatar per size, in points: the picture's drawn size (`size-6`, `size-8`, `size-11`, `size-14`). */
 export const AVATAR_POINTS: Readonly<Record<AvatarSize, number>> = {
 	sm: 24,
 	md: 32,
+	row: 44,
 	lg: 56,
 };
 

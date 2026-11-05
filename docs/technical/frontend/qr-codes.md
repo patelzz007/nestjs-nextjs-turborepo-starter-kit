@@ -112,7 +112,7 @@ Codes are black on white in every theme, for maximum scanner contrast: the `qr-f
   frame.
 - **Native:** `withUniwind(Svg)` maps `colorClassName="accent-qr-foreground"` onto the `Svg`'s
   `color`, and the path fills with `currentColor`.
-- **Docs:** `global.css` defines `--qr-foreground` / `--qr-background` (deliberately not themed).
+- **Docs:** `apps/docs/src/styles/app.css` defines `--qr-foreground` / `--qr-background` (deliberately not themed).
 
 ## In the docs
 
@@ -126,7 +126,7 @@ pos-pair:v1:ABCD2345
 ```
 ````
 
-The plugin is `remarkQrCode` in `apps/docs/src/lib/markdown/qr-code.ts`.
+The plugin is `remarkQrCode` in `packages/docs-renderer/src/markdown/qr-code.ts`.
 
 ## How correctness is verified
 

@@ -38,6 +38,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
+import { useTranslatedSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
+import { MERCHANT_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 
 export interface MerchantSidebarPanelProps {
 	/** The first page of the member's stores (the switcher's list). */
@@ -79,7 +81,9 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, o
 	const { setSearchQuery, setItemExpanded, followLink, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const pinnedUrls = useCommandPalettePinnedUrls();
 
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(MERCHANT_SIDEBAR_MENU, menuFilterCapabilities), [menuFilterCapabilities]);
+	// In the language on screen (5.12); ids and the saved section order stay the English ones.
+	const menu = useTranslatedSidebarMenu(MERCHANT_SIDEBAR_MENU, MERCHANT_SIDEBAR_LABELS);
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(menu, menuFilterCapabilities), [menu, menuFilterCapabilities]);
 	const enrollmentLockedMenu = React.useMemo(() => applyEnrollmentNavLock(filteredMenu, isEnrollmentLocked), [filteredMenu, isEnrollmentLocked]);
 	const resolvedMenu = React.useMemo(() => withResolvedSidebarMenuUrls(enrollmentLockedMenu, resolveNavHref), [enrollmentLockedMenu, resolveNavHref]);
 

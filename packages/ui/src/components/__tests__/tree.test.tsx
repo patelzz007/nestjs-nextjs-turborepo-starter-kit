@@ -6,6 +6,7 @@ import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { Tree, TreeDragLine, TreeItem, TreeItemLabel, type TreeToggleIconType } from "../tree";
+import { accessibilityViolations } from "../../testing/axe";
 
 afterEach((): void => {
 	cleanup();
@@ -61,6 +62,11 @@ function Fixture({ toggleIconType, withDragLine = false, treeRef }: FixtureProps
 }
 
 describe("Tree", () => {
+	it("has no serious accessibility problems (enhancement 3.2)", async (): Promise<void> => {
+		render(<Fixture />);
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+	});
+
 	it("renders headless-tree's tree role with one item per visible node", (): void => {
 		render(<Fixture />);
 		expect(screen.getByRole("tree", { name: "Pantry" }).dataset.slot).toBe("tree");

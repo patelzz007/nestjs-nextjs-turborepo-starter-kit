@@ -3,6 +3,7 @@ import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
 
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
+import { routeTemplateOf } from "../../routed-path";
 import type { AccessTokenPayload } from "@workspace/shared";
 
 /** Metadata key for routes that explicitly require a full (non-restricted) session. */
@@ -18,7 +19,8 @@ interface RestrictedRouteRule {
 
 /**
  * Routes accessible while `sessionScope === "restricted"`.
- * Matches suffixes so versioned prefixes (`/api/v1/...`) are handled.
+ * Matched against the route TEMPLATE Fastify dispatched to (never the raw `request.url`, whose query or
+ * `#` fragment the caller controls), by suffix so versioned prefixes (`/api/v1/...`) are handled.
  */
 const RESTRICTED_SESSION_ALLOWLIST: readonly RestrictedRouteRule[] = [
 	{ method: "GET", pathSuffix: "/auth/me" },
@@ -89,9 +91,16 @@ export class RestrictedSessionGuard implements CanActivate {
 		});
 	}
 
+	/**
+	 * Decides on the route template only: `GET /admin/users#/merchant/me` is routed to `/admin/users`, so its
+	 * template is `/admin/users` whatever the raw target says. No template (no route matched) is never allowlisted.
+	 */
 	private isAllowlistedRoute(request: FastifyRequest): boolean {
 		const method: string = request.method.toUpperCase();
-		const [path = request.url] = request.url.split("?");
+		const path: string | undefined = routeTemplateOf(request);
+		if (path === undefined) {
+			return false;
+		}
 
 		if (method === "GET" && path.includes("/merchant/kyb/documents/") && path.endsWith("/download")) {
 			return true;
@@ -104,7 +113,7 @@ export class RestrictedSessionGuard implements CanActivate {
 			if (method === "GET" && path.endsWith("/download-url")) {
 				return true;
 			}
-			if (method === "GET" && /\/files\/[0-9a-f-]{36}$/i.test(path)) {
+			if (method === "GET" && /\/files\/:[A-Za-z]+$/u.test(path)) {
 				return true;
 			}
 		}

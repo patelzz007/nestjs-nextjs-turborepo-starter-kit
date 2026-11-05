@@ -10,6 +10,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, type JSX, type ReactNode } from "react";
 
 import { AuthProvider } from "../index";
+import { ProfileLanguageSync } from "../profile/profile-language-sync";
 import type { ServerRenderedSession } from "./server-rendered-session";
 
 export interface ClientAuthWrapperProps {
@@ -90,6 +91,8 @@ export function ClientAuthWrapper({
 			sessionHint={sessionHint}
 			serverSession={serverSession}
 			requestHeaders={requestHeaders}>
+			{/* The signed-in person's language follows them across devices (5.2). */}
+			<ProfileLanguageSync />
 			{children}
 		</AuthProvider>
 	);

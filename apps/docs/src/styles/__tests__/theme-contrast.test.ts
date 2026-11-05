@@ -1,55 +1,59 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
-import { contrastRatio, MIN_NON_TEXT_CONTRAST, MIN_TEXT_CONTRAST, readCustomProperties, relativeLuminance } from "@workspace/ui/lib/core/color-contrast";
+import { contrastRatio, MIN_TEXT_CONTRAST, readCustomProperties, relativeLuminance } from "@workspace/ui/lib/core/color-contrast";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+/*
+ * The docs' palette (src/styles/app.css) redefines the shared semantic tokens for light and dark and adds
+ * its own. Every text pair the docs draw is held to WCAG AA (4.5:1) in both themes.
+ */
 const require = createRequire(import.meta.url);
-const PALETTE_CSS = readFileSync(require.resolve("@workspace/tokens/palette.css"), "utf8");
-const THEME_CSS = readFileSync(new URL("../global.css", import.meta.url), "utf8");
+const TOKENS_CSS = readFileSync(require.resolve("@workspace/tokens/web.css"), "utf8");
+const THEME_CSS = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 
-const PALETTE = readCustomProperties(PALETTE_CSS, ":root");
-/** The theme blocks' selectors: each theme also applies inside code blocks the reader set to it (src/scripts/code-theme.ts). */
+const PALETTE = readCustomProperties(TOKENS_CSS, ":root");
+/** The theme blocks' selectors: each theme also applies inside code blocks the reader set to it (src/browser/code-theme.ts). */
 const LIGHT_SELECTOR = ':root,\n:root[data-code-theme="light"] .code-block-island';
-const DARK_SELECTOR = '[data-theme="dark"],\n:root[data-code-theme="dark"] .code-block-island';
+const DARK_SELECTOR = '.dark,\n:root[data-code-theme="dark"] .code-block-island';
 const LIGHT = readCustomProperties(THEME_CSS, LIGHT_SELECTOR, PALETTE);
 const DARK = readCustomProperties(THEME_CSS, DARK_SELECTOR, LIGHT);
-const NORD = readCustomProperties(THEME_CSS, '[data-theme="nord"]', LIGHT);
 
 /** Every text colour the docs set, on every surface it is set on. */
 const TEXT_PAIRINGS: readonly (readonly [string, string])[] = [
-	["--text", "--bg"],
-	["--text", "--surface-muted"],
-	["--text-secondary", "--bg"],
-	["--muted", "--bg"],
-	["--muted", "--surface-muted"],
-	["--brand-text", "--bg"],
-	["--brand-text", "--brand-soft"],
-	["--nav-active-text", "--nav-active-bg"],
-	["--brand-text-hover", "--bg"],
-	["--on-brand-solid", "--brand-solid"],
-	["--on-brand-solid", "--brand-solid-hover"],
+	["--foreground", "--background"],
+	["--foreground", "--card"],
+	["--foreground", "--muted"],
+	["--foreground", "--popover"],
+	["--foreground", "--docs-hover"],
+	["--docs-text-secondary", "--background"],
+	["--docs-text-secondary", "--card"],
+	["--docs-text-secondary", "--docs-sel-soft"],
+	["--muted-foreground", "--background"],
+	["--muted-foreground", "--card"],
+	["--docs-link", "--background"],
+	["--docs-link", "--card"],
+	["--docs-link", "--docs-sel-soft"],
+	["--docs-sel-foreground", "--docs-sel"],
+	["--primary-foreground", "--primary"],
+	["--foreground", "--docs-mark"],
 ];
 
-function violations(theme: ReadonlyMap<string, string>): readonly string[] {
-	return TEXT_PAIRINGS.flatMap(([foreground, background]): string[] => {
+function violations(theme: ReadonlyMap<string, string>, pairings: readonly (readonly [string, string])[] = TEXT_PAIRINGS): readonly string[] {
+	return pairings.flatMap(([foreground, background]): string[] => {
 		const ratio = contrastRatio(theme.get(foreground) ?? "", theme.get(background) ?? "");
 		return ratio >= MIN_TEXT_CONTRAST ? [] : [`${foreground} on ${background}: ${ratio.toFixed(2)}:1`];
 	});
 }
 
 /** Dark code blocks' chrome (One Dark Pro): its title, language label and line numbers on its charcoal. */
-const DARK_CODE = readCustomProperties(
-	THEME_CSS,
-	'[data-theme="dark"]:not([data-code-theme]) .code-block-island,\n[data-theme="nord"]:not([data-code-theme]) .code-block-island,\n:root[data-code-theme="dark"] .code-block-island',
-	DARK,
-);
+const DARK_CODE = readCustomProperties(THEME_CSS, '.dark:not([data-code-theme]) .code-block-island,\n:root[data-code-theme="dark"] .code-block-island', DARK);
 const DARK_CODE_PAIRINGS: readonly (readonly [string, string])[] = [
-	["--text", "--surface"],
-	["--muted", "--surface"],
-	["--text", "--surface-muted"],
-	["--muted", "--surface-muted"],
+	["--foreground", "--card"],
+	["--muted-foreground", "--card"],
+	["--foreground", "--muted"],
+	["--muted-foreground", "--muted"],
 ];
 
 describe("docs theme contrast (WCAG AA 4.5:1 text)", () => {
@@ -61,47 +65,14 @@ describe("docs theme contrast (WCAG AA 4.5:1 text)", () => {
 		expect(violations(DARK)).toEqual([]);
 	});
 
-	it("meets the minimum for every text pair in the Nord theme", () => {
-		expect(violations(NORD)).toEqual([]);
-	});
-
-	it.each([
-		["light", LIGHT],
-		["dark", DARK],
-		["Nord", NORD],
-	])("keeps every callout title readable on its tint, and the badge glyph on the title's shade, in the %s theme", (_name, theme) => {
-		const failing = ["info", "success", "warning", "error"].flatMap((kind): string[] =>
-			[
-				[`--${kind}-text`, `--${kind}-bg`],
-				["--on-callout-accent", `--${kind}-text`],
-			].flatMap(([foreground = "", background = ""]): string[] => {
-				const ratio = contrastRatio(theme.get(foreground) ?? "", theme.get(background) ?? "");
-				return ratio >= MIN_TEXT_CONTRAST ? [] : [`${foreground} on ${background}: ${ratio.toFixed(2)}:1`];
-			}),
-		);
-		expect(failing).toEqual([]);
-	});
-
-	it("keeps Nord's card-tile icons at 3:1 on its pastel tiles (an icon, not text: WCAG 1.4.11)", () => {
-		const failing = ["1", "2", "3", "4", "5", "6"].flatMap((tile): string[] => {
-			const ratio = contrastRatio(NORD.get("--on-tile") ?? "", NORD.get(`--tile-${tile}`) ?? "");
-			return ratio >= MIN_NON_TEXT_CONTRAST ? [] : [`--on-tile on --tile-${tile}: ${ratio.toFixed(2)}:1`];
-		});
-		expect(failing).toEqual([]);
-	});
-
-	it("meets the minimum for the dark code blocks' chrome (One Dark Pro, under the dark and Nord themes)", () => {
-		const failing = DARK_CODE_PAIRINGS.flatMap(([foreground, background]): string[] => {
-			const ratio = contrastRatio(DARK_CODE.get(foreground) ?? "", DARK_CODE.get(background) ?? "");
-			return ratio >= MIN_TEXT_CONTRAST ? [] : [`${foreground} on ${background}: ${ratio.toFixed(2)}:1`];
-		});
-		expect(failing).toEqual([]);
+	it("meets the minimum for the dark code blocks' chrome (One Dark Pro, under the dark theme)", () => {
+		expect(violations(DARK_CODE, DARK_CODE_PAIRINGS)).toEqual([]);
 	});
 });
 
 // ── Diagram labels on their role tints ─────────────────────────────────────
-// A node's fill is `color-mix(in oklab, <role hue> <fill mix>, var(--surface))`
-// (global.css → "Diagrams") and its label is `--text`. The mix is reproduced
+// A node's fill is `color-mix(in oklab, <role hue> <fill mix>, var(--card))`
+// (app.css → "Diagrams") and its label is `--foreground`. The mix is reproduced
 // here — sRGB → linear → Oklab, mixed, and back — so every role tint is held to
 // the same 4.5:1 as the rest of the docs in both themes.
 
@@ -180,11 +151,11 @@ function mixInOklab(first: string, amount: string, second: string): string {
 }
 
 function diagramLabelViolations(theme: ReadonlyMap<string, string>): readonly string[] {
-	const text = theme.get("--text") ?? "";
+	const text = theme.get("--foreground") ?? "";
 	return DIAGRAM_HUES.flatMap((hue): string[] => {
-		const fill = mixInOklab(theme.get(hue) ?? "", theme.get("--diagram-fill-mix") ?? "", theme.get("--surface") ?? "");
+		const fill = mixInOklab(theme.get(hue) ?? "", theme.get("--diagram-fill-mix") ?? "", theme.get("--card") ?? "");
 		const ratio = contrastRatio(text, fill);
-		return ratio >= MIN_TEXT_CONTRAST ? [] : [`--text on ${hue} tint (${fill}): ${ratio.toFixed(2)}:1`];
+		return ratio >= MIN_TEXT_CONTRAST ? [] : [`--foreground on ${hue} tint (${fill}): ${ratio.toFixed(2)}:1`];
 	});
 }
 
@@ -202,9 +173,5 @@ describe("diagram label contrast (WCAG AA 4.5:1 text)", () => {
 
 	it("keeps every role tint readable in the dark theme", () => {
 		expect(diagramLabelViolations(DARK)).toEqual([]);
-	});
-
-	it("keeps every role tint readable in the Nord theme", () => {
-		expect(diagramLabelViolations(NORD)).toEqual([]);
 	});
 });

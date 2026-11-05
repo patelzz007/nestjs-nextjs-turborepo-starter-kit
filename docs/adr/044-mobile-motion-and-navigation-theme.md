@@ -35,7 +35,7 @@ The launch screen also showed a still mark.
     Dark), with `background`, `card`, `text`, `border`, `primary` and `notification` from the
     tokens' CSS variables.
   - It also paints the native root window the page colour (`expo-system-ui`).
-  - The `(auth)` stack gets the same theme with `background` set to `card`, because its screens
+  - The `(auth)` stack (since 2026-11-04 `auth/(forms)`) gets the same theme with `background` set to `card`, because its screens
     sit on the card-coloured sheet.
 - **Tabs cross-fade with a short drift.** `TAB_TRANSITION_SPEC` and `tabSceneStyle`
   (`src/lib/screen-transitions.ts`) are 260 ms on the tokens' `ease-emphasized-enter` curve

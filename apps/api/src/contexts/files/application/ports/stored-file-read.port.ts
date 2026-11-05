@@ -24,6 +24,15 @@ export interface StoredFileView {
 	readonly record: FileRecord;
 }
 
+/** Bytes a server-side ingest stores: the same bytes under the same name in the same tenant category are one file. */
+export interface IngestedFileContent {
+	/** Null for a platform category (a file of no tenant). */
+	readonly tenantId: string | null;
+	readonly category: FileCategory;
+	readonly originalName: string;
+	readonly checksumSha256: string;
+}
+
 /**
  * Read side of stored files. Every read runs under the actor's RLS session, so
  * a file the actor cannot see is simply absent (404, never 403: existence is not leaked).
@@ -42,6 +51,16 @@ export interface StoredFileReadPort {
 
 	/** Files whose verdict is overdue (lost job, scanner outage beyond retries), oldest first, one sweep page. */
 	listStaleAwaitingVerdict(actor: ActorContext, olderThanMs: number): Promise<readonly StoredFileView[]>;
+
+	/**
+	 * Server ingest (`files.server_ingest`): the live file already holding `content` — a READY one
+	 * first, else one an earlier ingest left awaiting its scan verdict — or null. Read as that
+	 * operation: the ingest acts for a context that authorized it, not as a member of the tenant.
+	 */
+	findIngestedContent(actor: ActorContext, content: IngestedFileContent): Promise<StoredFileView | null>;
+
+	/** Server ingest: a live file the ingest just recorded, read as `files.server_ingest` (see {@link findIngestedContent}). */
+	findLiveForIngest(actor: ActorContext, fileId: string): Promise<StoredFileView | null>;
 
 	/** READY files of a staging category that nothing consumed within `olderThanMs`, oldest first, one sweep page. */
 	listExpiredStaging(actor: ActorContext, category: FileCategory, olderThanMs: number): Promise<readonly StoredFileView[]>;

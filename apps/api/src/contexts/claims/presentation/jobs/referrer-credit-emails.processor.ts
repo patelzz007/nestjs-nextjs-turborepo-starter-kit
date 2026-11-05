@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Inject, Injectable } from "@nestjs/common";
 import { QUEUE_NAMES, RewardsMaintenanceJobSchema } from "@workspace/shared";
 import type { Job } from "bullmq";
@@ -9,7 +10,7 @@ import { SweepReferrerCreditEmailsCommand } from "../../application/commands/swe
 import { REFERRER_CREDIT_EMAIL_OPERATION, type ReferrerCreditEmailSweep } from "../../application/services/referrer-credit-email.application-service";
 
 /** `rewards.referral-credit-notify` → SweepReferrerCreditEmails, audited by the dispatcher; a failure rethrows so BullMQ retries. */
-@Processor(QUEUE_NAMES.rewardsReferralCreditNotify)
+@Processor(QUEUE_NAMES.rewardsReferralCreditNotify, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class ReferrerCreditEmailsProcessor extends WorkerHost {
 	public constructor(@Inject(SystemCommandDispatcher) private readonly commands: Pick<SystemCommandDispatcher, "dispatch">) {

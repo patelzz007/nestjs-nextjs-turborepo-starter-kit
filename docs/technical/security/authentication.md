@@ -117,6 +117,11 @@ A restricted session reaches only the routes needed to finish setup (verificatio
 recovery, logout, own profile); everything else answers `403 RESTRICTED_SESSION`. Routes that need
 more declare `@RequiresFullSession()` / `@EmailVerified()`.
 
+The restricted-session guard matches its allowlist against the **route template** Fastify dispatched
+to (`request.routeOptions.url`), never the raw `request.url`: a `#fragment` or query naming an
+allowlisted route changes nothing, and a request no route matched is never allowlisted
+(`platform/presentation/http/routed-path.ts`; the API-docs gate uses the same helper).
+
 ## Login hardening
 
 - **New-device verification** (`LOGIN_VERIFICATION_MODE`): `new-device` (default) emails a code
@@ -129,6 +134,12 @@ more declare `@RequiresFullSession()` / `@EmailVerified()`.
 - **No enumeration:** signup, forgot-password and resend-verification answer the same way whether
   or not the account exists. Reset tokens are single-use and stored as SHA-256 digests.
 - Passwords: bcrypt with `BCRYPT_SALT_ROUNDS` (10–15, default 12) and a password history.
+- **Breached passwords** (`PASSWORD_BREACH_CHECK`, default `hibp`): a new password (sign-up, reset,
+  change, invite and onboarding registration, SuperAdmin bootstrap) is refused when it appears in a
+  known data breach. Only the first 5 hex characters of its SHA-1 are sent to Have I Been Pwned's
+  range API (k-anonymity, with `Add-Padding`); the rest of the hash is matched locally. If the service
+  can't be reached within 2.5 s the password is accepted and a warning is logged (fail open), so an
+  outage never blocks sign-ups. `off` for air-gapped deployments and automated tests.
 
 ## Two-factor authentication
 

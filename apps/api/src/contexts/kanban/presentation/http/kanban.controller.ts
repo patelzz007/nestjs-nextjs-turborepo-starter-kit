@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, HttpStatus, Patch, Post, Put } from "@nestjs/common";
+import { Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, Put } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
@@ -9,6 +9,7 @@ import {
 	CreateKanbanTaskSchema,
 	DeleteSuccessDataSchema,
 	ImportKanbanTasksSchema,
+	KanbanImportReportSchema,
 	KanbanActivityListQuerySchema,
 	KanbanActivitySchema,
 	KanbanAttachmentDownloadSchema,
@@ -40,6 +41,7 @@ import {
 	type CreateKanbanTaskInput,
 	type DeleteSuccessData,
 	type ImportKanbanTasksInput,
+	type KanbanImportReport,
 	type KanbanActivity,
 	type KanbanActivityListQuery,
 	type KanbanAttachment,
@@ -93,6 +95,7 @@ import { SetKanbanChecklistItemCommand } from "../../application/commands/set-ka
 import { UpdateKanbanColumnCommand } from "../../application/commands/update-kanban-column/update-kanban-column.command";
 import { WatchKanbanTaskCommand } from "../../application/commands/watch-kanban-task/watch-kanban-task.command";
 import { KANBAN_READ_OPERATION, KANBAN_WRITE_OPERATION } from "../../application/ports/kanban.tokens";
+import { PreviewKanbanImportQuery } from "../../application/queries/preview-kanban-import/preview-kanban-import.query";
 import { GetKanbanAttachmentDownloadQuery } from "../../application/queries/get-kanban-attachment-download/get-kanban-attachment-download.query";
 import { GetKanbanBoardQuery } from "../../application/queries/get-kanban-board/get-kanban-board.query";
 import { GetKanbanTaskQuery } from "../../application/queries/get-kanban-task/get-kanban-task.query";
@@ -175,6 +178,17 @@ export class KanbanController {
 	@ZodResponse(KanbanBoardSchema, { status: HttpStatus.CREATED, description: "The board after the import" })
 	public importTasks(@CurrentActor() actor: ActorContext, @ZodBody(ImportKanbanTasksSchema) body: ImportKanbanTasksInput): Promise<KanbanBoard> {
 		return this.commandBus.execute(new ImportKanbanTasksCommand(actor, body));
+	}
+
+	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@RequirePermission("CREATE", "KANBAN_TASK")
+	@PlatformOperation(KANBAN_WRITE_OPERATION)
+	@Post("tasks/import/dry-run")
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({ summary: "Dry-run an import: which rows the board would refuse right now and why, writing nothing" })
+	@ZodResponse(KanbanImportReportSchema, { description: "The rows that would import, and each refused row with its reason" })
+	public previewImport(@CurrentActor() actor: ActorContext, @ZodBody(ImportKanbanTasksSchema) body: ImportKanbanTasksInput): Promise<KanbanImportReport> {
+		return this.queryBus.execute(new PreviewKanbanImportQuery(actor, body));
 	}
 
 	@RequirePermission("READ", "KANBAN_TASK")

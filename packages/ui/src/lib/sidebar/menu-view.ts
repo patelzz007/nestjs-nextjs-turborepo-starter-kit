@@ -12,7 +12,13 @@ export interface SidebarMenuItemLike {
 export type PanelSectionColor = "blue" | "green" | "amber" | "rose" | "purple" | "teal";
 
 export interface SidebarMenuDataLike {
-	readonly sections: readonly { readonly title: string; readonly items: readonly SidebarMenuItemLike[]; readonly color?: PanelSectionColor | undefined }[];
+	readonly sections: readonly {
+		readonly title: string;
+		/** The section's stable identity (its saved place in the order), the same in every language; defaults to the title. */
+		readonly key?: string | undefined;
+		readonly items: readonly SidebarMenuItemLike[];
+		readonly color?: PanelSectionColor | undefined;
+	}[];
 	readonly bottomItems: readonly SidebarMenuItemLike[];
 }
 
@@ -183,7 +189,10 @@ export function sectionHasActiveItem(items: readonly SidebarMenuItemLike[], acti
 
 /** One section of the sidebar as rendered: its items after the search filter. Computed here, never parsed from outside. */
 export interface SidebarViewSection {
+	/** What the section is called on screen (in the reader's language). */
 	readonly title: string;
+	/** Its stable identity: what the saved section order holds and moves. */
+	readonly key: string;
 	readonly items: readonly SidebarMenuItemLike[];
 	readonly color?: PanelSectionColor | undefined;
 }
@@ -193,7 +202,8 @@ export interface SidebarView {
 	readonly isSearching: boolean;
 	readonly routeState: RouteState;
 	readonly sections: readonly SidebarViewSection[];
-	readonly sectionTitles: readonly string[];
+	/** Every section's key, in the order shown: what moving a section reorders. */
+	readonly sectionKeys: readonly string[];
 	readonly bottomItems: readonly SidebarMenuItemLike[];
 	readonly noResults: boolean;
 }
@@ -215,7 +225,7 @@ export function buildSidebarView({
 	const routeState = computeRouteState(allItems, pathname);
 
 	const filteredSections: readonly SidebarViewSection[] = menu.sections
-		.map((section) => ({ title: section.title, items: filterItemsBySearch(section.items, searchQuery), color: section.color }))
+		.map((section) => ({ title: section.title, key: section.key ?? section.title, items: filterItemsBySearch(section.items, searchQuery), color: section.color }))
 		.filter((section) => section.items.length > 0);
 
 	const bottomItems = filterItemsBySearch(menu.bottomItems, searchQuery);
@@ -223,8 +233,8 @@ export function buildSidebarView({
 	let sections = filteredSections;
 	if (sectionOrder !== null) {
 		sections = [...filteredSections].sort((a, b): number => {
-			const aIndex = sectionOrder.indexOf(a.title);
-			const bIndex = sectionOrder.indexOf(b.title);
+			const aIndex = sectionOrder.indexOf(a.key);
+			const bIndex = sectionOrder.indexOf(b.key);
 			if (aIndex === -1 && bIndex === -1) {
 				return 0;
 			}
@@ -244,7 +254,7 @@ export function buildSidebarView({
 		isSearching,
 		routeState,
 		sections,
-		sectionTitles: sections.map((section) => section.title),
+		sectionKeys: sections.map((section) => section.key),
 		bottomItems,
 		noResults,
 	};

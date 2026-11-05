@@ -154,6 +154,8 @@ export interface OpsBackupRecord extends OpsBackup {
 
 export interface OpsBackupRepository {
 	list(): Promise<readonly OpsBackupRecord[]>;
+	/** The newest backup that finished well (what a restore drill restores), or null. */
+	latestSucceeded(): Promise<OpsBackupRecord | null>;
 	find(backupId: string): Promise<OpsBackupRecord | null>;
 	/** A backup that is queued or running, if any. */
 	findActive(): Promise<OpsBackupRecord | null>;
@@ -230,4 +232,26 @@ export interface LoadTestRepository {
 	): Promise<void>;
 	points(runId: string): Promise<readonly LoadTestPoint[]>;
 	steps(runId: string): Promise<readonly LoadTestStepStat[]>;
+}
+
+/** One restore drill (enhancement 2.6). */
+export interface OpsRestoreDrillRecord {
+	readonly id: string;
+	readonly backupId: string;
+	readonly startedAt: EpochMs;
+	readonly finishedAt: EpochMs;
+	readonly outcome: "PASSED" | "FAILED";
+	readonly tablesChecked: number;
+	readonly rowsRestored: number;
+	readonly failures: readonly string[];
+	readonly migration: string | null;
+}
+
+export type NewOpsRestoreDrill = Omit<OpsRestoreDrillRecord, "id">;
+
+/** The restore drills' log (append-only). */
+export interface OpsRestoreDrillRepository {
+	record(drill: NewOpsRestoreDrill): Promise<OpsRestoreDrillRecord>;
+	/** The most recent drills, newest first. */
+	recent(limit: number): Promise<readonly OpsRestoreDrillRecord[]>;
 }

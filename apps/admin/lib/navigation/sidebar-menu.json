@@ -6,34 +6,41 @@
 	"sections": [
 		{
 			"title": "Main",
+			"labelKey": "main",
 			"items": [
 				{
 					"title": "Overview",
+					"labelKey": "main.overview",
 					"url": "/",
 					"icon": "LayoutDashboard"
 				},
 				{
 					"title": "Analytics",
+					"labelKey": "main.analytics",
 					"url": "/analytics",
 					"icon": "BarChart3"
 				},
 				{
 					"title": "Users",
+					"labelKey": "main.users",
 					"url": "/users",
 					"icon": "Users",
 					"children": [
 						{
 							"title": "All users",
+							"labelKey": "main.users.all-users",
 							"url": "/users",
 							"icon": "CircleUserRound"
 						},
 						{
 							"title": "MFA recovery",
+							"labelKey": "main.users.mfa-recovery",
 							"url": "/users/mfa-recovery",
 							"icon": "ShieldAlert"
 						},
 						{
 							"title": "Support access",
+							"labelKey": "main.users.support-access",
 							"url": "/users/support-access",
 							"icon": "LifeBuoy"
 						}
@@ -41,27 +48,32 @@
 				},
 				{
 					"title": "Merchants",
+					"labelKey": "main.merchants",
 					"url": "/merchants",
 					"icon": "Briefcase",
 					"children": [
 						{
 							"title": "All merchants",
+							"labelKey": "main.merchants.all-merchants",
 							"url": "/merchants",
 							"icon": "Package"
 						},
 						{
 							"title": "Invites",
+							"labelKey": "main.merchants.invites",
 							"url": "/merchants/invites",
 							"icon": "Send",
 							"featureFlag": "merchant-invites"
 						},
 						{
 							"title": "Verification",
+							"labelKey": "main.merchants.verification",
 							"url": "/merchants/verification",
 							"icon": "ShieldCheck"
 						},
 						{
 							"title": "Store requests",
+							"labelKey": "main.merchants.store-requests",
 							"url": "/merchants/store-requests",
 							"icon": "MapPin"
 						}
@@ -69,11 +81,13 @@
 				},
 				{
 					"title": "Rewards",
+					"labelKey": "main.rewards",
 					"url": "/rewards",
 					"icon": "Gift",
 					"children": [
 						{
 							"title": "Review",
+							"labelKey": "main.rewards.review",
 							"url": "/rewards/review",
 							"icon": "ListChecks"
 						}
@@ -81,21 +95,25 @@
 				},
 				{
 					"title": "Emails",
+					"labelKey": "main.emails",
 					"url": "/emails",
 					"icon": "Mail",
 					"children": [
 						{
 							"title": "Templates",
+							"labelKey": "main.emails.templates",
 							"url": "/emails/templates",
 							"icon": "ScrollText"
 						},
 						{
 							"title": "Log",
+							"labelKey": "main.emails.log",
 							"url": "/emails/log",
 							"icon": "MailCheck"
 						},
 						{
 							"title": "Broadcasts",
+							"labelKey": "main.emails.broadcasts",
 							"url": "/emails/broadcasts",
 							"icon": "Megaphone"
 						}
@@ -103,6 +121,7 @@
 				},
 				{
 					"title": "Geography",
+					"labelKey": "main.geography",
 					"url": "/geography",
 					"icon": "Globe"
 				}
@@ -110,61 +129,91 @@
 		},
 		{
 			"title": "Platform",
+			"labelKey": "platform",
 			"items": [
 				{
 					"title": "Audit log",
+					"labelKey": "platform.audit-log",
 					"url": "/audit-logs",
 					"icon": "History"
 				},
 				{
+					"title": "Received webhooks",
+					"labelKey": "platform.received-webhooks",
+					"url": "/webhooks/received",
+					"icon": "Webhook"
+				},
+				{
 					"title": "Operations",
+					"labelKey": "platform.operations",
 					"url": "/operations",
 					"icon": "Gauge",
 					"children": [
 						{
 							"title": "Servers",
+							"labelKey": "platform.operations.servers",
 							"url": "/operations/servers",
 							"icon": "Activity"
 						},
 						{
 							"title": "Alerts",
+							"labelKey": "platform.operations.alerts",
 							"url": "/operations/alerts",
 							"icon": "AlertCircle"
 						},
 						{
 							"title": "Backups",
+							"labelKey": "platform.operations.backups",
 							"url": "/operations/backups",
 							"icon": "Database"
 						},
 						{
 							"title": "Load tests",
+							"labelKey": "platform.operations.load-tests",
 							"url": "/operations/load-tests",
 							"icon": "Rocket"
 						},
 						{
 							"title": "Rate limits",
+							"labelKey": "platform.operations.rate-limits",
 							"url": "/operations/rate-limits",
 							"icon": "Gauge"
 						},
 						{
 							"title": "Cache",
+							"labelKey": "platform.operations.cache",
 							"url": "/operations/cache",
 							"icon": "Database"
+						},
+						{
+							"title": "Queues",
+							"labelKey": "platform.operations.queues",
+							"url": "/operations/queues",
+							"icon": "ListChecks"
+						},
+						{
+							"title": "Status page",
+							"labelKey": "platform.operations.status-page",
+							"url": "/operations/status",
+							"icon": "Radar"
 						}
 					]
 				},
 				{
 					"title": "Catalog",
+					"labelKey": "platform.catalog",
 					"url": "/catalog",
 					"icon": "Layers",
 					"children": [
 						{
 							"title": "Products",
+							"labelKey": "platform.catalog.products",
 							"url": "/catalog/products",
 							"icon": "Package"
 						},
 						{
 							"title": "Categories",
+							"labelKey": "platform.catalog.categories",
 							"url": "/catalog/categories",
 							"icon": "FolderTree"
 						}
@@ -172,29 +221,26 @@
 				},
 				{
 					"title": "Settings",
+					"labelKey": "platform.settings",
 					"url": "/settings",
-					"icon": "Settings",
-					"children": [
-						{
-							"title": "Access control",
-							"url": "/settings/access",
-							"icon": "ShieldCheck"
-						}
-					]
+					"icon": "Settings"
 				},
 				{
 					"title": "Components",
+					"labelKey": "platform.components",
 					"url": "/components",
 					"icon": "Blocks",
 					"featureFlag": "component-gallery",
 					"children": [
 						{
 							"title": "Gallery",
+							"labelKey": "platform.components.gallery",
 							"url": "/components",
 							"icon": "LayoutGrid"
 						},
 						{
 							"title": "Kanban",
+							"labelKey": "platform.components.kanban",
 							"url": "/components/kanban-board",
 							"icon": "SquareKanban"
 						}
@@ -206,21 +252,25 @@
 	"bottomItems": [
 		{
 			"title": "Account",
+			"labelKey": "bottom.account",
 			"url": "/account",
 			"icon": "UserCog",
 			"children": [
 				{
 					"title": "Profile",
+					"labelKey": "bottom.account.profile",
 					"url": "/account/profile",
 					"icon": "UserRound"
 				},
 				{
 					"title": "Security",
+					"labelKey": "bottom.account.security",
 					"url": "/account/security",
 					"icon": "Shield"
 				},
 				{
 					"title": "GitHub token",
+					"labelKey": "bottom.account.github-token",
 					"url": "/account/github",
 					"icon": "KeyRound"
 				}

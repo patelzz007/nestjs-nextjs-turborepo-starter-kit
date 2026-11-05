@@ -45,7 +45,7 @@ The exact package list can evolve as the product grows, but ownership of each pa
 | Adding... | Goes in | Why |
 |---|---|---|
 | A REST endpoint, NestJS module | `apps/api/src/contexts/<context>` | API-specific, owns HTTP concerns |
-| A web page/route | `apps/web/src/app/...` | Web-specific routing/rendering |
+| A web page/route | `apps/web/app/...` | Web-specific routing/rendering |
 | A mobile screen | `apps/mobile/src/app/...` | Mobile-specific navigation |
 | A component used only on web, reused across 2+ features | `packages/ui` | Real reuse, web-only (shadcn on Base UI) |
 | A low-level React Native component (button, input, sheet, badge, …) | `packages/ui-native` | Shared by every mobile app; the twin of `packages/ui`, same names (packages/ui-native/README.md) |

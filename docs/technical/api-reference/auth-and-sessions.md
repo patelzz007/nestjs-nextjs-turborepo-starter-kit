@@ -363,6 +363,7 @@ SuperAdmin: list MFA recovery requests
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -567,6 +568,7 @@ SuperAdmin: list all users with roles and lockout status
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1162,6 +1164,7 @@ Authenticate with email and password
 | `data.⟨shape 2⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
 | `data.⟨shape 2⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 | `data.⟨shape 3⟩ message` | string | yes |  |
+| `data.⟨shape 3⟩ passkeyAvailable` | boolean | yes |  |
 | `data.⟨shape 3⟩ requiresTwoFactor` | true | yes |  |
 | `data.⟨shape 3⟩ tempToken` | string | yes | at least 1 characters |
 | `data.⟨shape 4⟩ message` | string | yes |  |
@@ -1335,6 +1338,7 @@ Complete login with a TOTP code
 | `data.⟨shape 2⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
 | `data.⟨shape 2⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 | `data.⟨shape 3⟩ message` | string | yes |  |
+| `data.⟨shape 3⟩ passkeyAvailable` | boolean | yes |  |
 | `data.⟨shape 3⟩ requiresTwoFactor` | true | yes |  |
 | `data.⟨shape 3⟩ tempToken` | string | yes | at least 1 characters |
 | `data.⟨shape 4⟩ message` | string | yes |  |
@@ -1446,6 +1450,186 @@ Response `200 OK` (application/json):
 }
 ```
 
+### POST /api/v1/auth/login/2fa/passkey
+
+Complete a password sign-in with a passkey instead of a TOTP or backup code
+
+- **Public** — no session required.
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_completeSecondFactor` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `challengeId` | string (uuid) | yes |  |
+| `response` | object | yes |  |
+| `response.authenticatorAttachment` | "platform" \| "cross-platform" | no |  |
+| `response.clientExtensionResults` | object | yes |  |
+| `response.clientExtensionResults.credProps` | object | no |  |
+| `response.clientExtensionResults.credProps.rk` | boolean | no |  |
+| `response.id` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `response.rawId` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response` | object | yes |  |
+| `response.response.authenticatorData` | string | yes | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.clientDataJSON` | string | yes | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.signature` | string | yes | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.userHandle` | string | no | length 1–86; pattern `^[A-Za-z0-9_-]+$` |
+| `response.type` | "public-key" | yes |  |
+| `tempToken` | string | yes | at least 1 characters |
+
+**Response 200 OK** (`application/json`) — Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.⟨shape 1⟩ accessToken` | string | yes | Access token — send as `Authorization: Bearer`; length 1–8192 |
+| `data.⟨shape 1⟩ enrollmentReason` | "email_verification" \| "mfa_enrollment" | yes |  |
+| `data.⟨shape 1⟩ message` | string | yes |  |
+| `data.⟨shape 1⟩ refreshToken` | string | yes | Refresh token — present once to `POST /auth/refresh`; rotated on every use; length 1–4096 |
+| `data.⟨shape 1⟩ requiresEnrollment` | true | yes |  |
+| `data.⟨shape 1⟩ tenantSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.⟨shape 1⟩ tokenTransport` | "body" | yes | The tokens travel in this body (client type `mobile`) |
+| `data.⟨shape 1⟩ user` | object | no |  |
+| `data.⟨shape 1⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 1⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 1⟩ user.email` | string | yes |  |
+| `data.⟨shape 1⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 1⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 1⟩ user.id` | string | yes |  |
+| `data.⟨shape 1⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 1⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 1⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 1⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 1⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 1⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 1⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 1⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 1⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 1⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 1⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 2⟩ enrollmentReason` | "email_verification" \| "mfa_enrollment" | yes |  |
+| `data.⟨shape 2⟩ message` | string | yes |  |
+| `data.⟨shape 2⟩ requiresEnrollment` | true | yes |  |
+| `data.⟨shape 2⟩ tenantSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.⟨shape 2⟩ user` | object | no |  |
+| `data.⟨shape 2⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 2⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 2⟩ user.email` | string | yes |  |
+| `data.⟨shape 2⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 2⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 2⟩ user.id` | string | yes |  |
+| `data.⟨shape 2⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 2⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 2⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 2⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 2⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 2⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 2⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 2⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 3⟩ message` | string | yes |  |
+| `data.⟨shape 3⟩ passkeyAvailable` | boolean | yes |  |
+| `data.⟨shape 3⟩ requiresTwoFactor` | true | yes |  |
+| `data.⟨shape 3⟩ tempToken` | string | yes | at least 1 characters |
+| `data.⟨shape 4⟩ message` | string | yes |  |
+| `data.⟨shape 4⟩ requiresVerification` | true | yes |  |
+| `data.⟨shape 4⟩ verificationId` | string | yes | at least 1 characters |
+| `data.⟨shape 5⟩ accessToken` | string | yes | Access token — send as `Authorization: Bearer`; length 1–8192 |
+| `data.⟨shape 5⟩ refreshToken` | string | yes | Refresh token — present once to `POST /auth/refresh`; rotated on every use; length 1–4096 |
+| `data.⟨shape 5⟩ tokenTransport` | "body" | yes | The tokens travel in this body (client type `mobile`) |
+| `data.⟨shape 5⟩ user` | object | yes |  |
+| `data.⟨shape 5⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 5⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 5⟩ user.email` | string | yes |  |
+| `data.⟨shape 5⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 5⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 5⟩ user.id` | string | yes |  |
+| `data.⟨shape 5⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 5⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 5⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 5⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 5⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 5⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 5⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 5⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 6⟩ user` | object | yes |  |
+| `data.⟨shape 6⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 6⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 6⟩ user.email` | string | yes |  |
+| `data.⟨shape 6⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 6⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 6⟩ user.id` | string | yes |  |
+| `data.⟨shape 6⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 6⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 6⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 6⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 6⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 6⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 6⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 6⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/auth/login/2fa/passkey/options
+
+The navigator.credentials.get() options of a passkey second factor, for the tempToken a password sign-in answered
+
+- **Public** — no session required.
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_startSecondFactor` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `tempToken` | string | yes | at least 1 characters |
+
+**Response 201 Created** (`application/json`) — The request options (the account's passkeys) and the id of their challenge
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.challengeId` | string (uuid) | yes |  |
+| `data.options` | object | yes |  |
+| `data.options.allowCredentials` | object[] | no | 0–20 items |
+| `data.options.allowCredentials[].id` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `data.options.allowCredentials[].transports` | "ble" \| "cable" \| "hybrid" \| "internal" \| "nfc" \| "smart-card" \| "usb"[] | no | 0–16 items |
+| `data.options.allowCredentials[].type` | "public-key" | yes |  |
+| `data.options.challenge` | string | yes | length 1–128; pattern `^[A-Za-z0-9_-]+$` |
+| `data.options.extensions` | object | no |  |
+| `data.options.extensions.credProps` | boolean | no |  |
+| `data.options.hints` | "hybrid" \| "security-key" \| "client-device"[] | no |  |
+| `data.options.rpId` | string | no | length 1–253 |
+| `data.options.timeout` | integer | no |  |
+| `data.options.userVerification` | "required" \| "preferred" \| "discouraged" | no |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### POST /api/v1/auth/login/backup-code
 
 Complete login with a one-time backup code
@@ -1514,6 +1698,7 @@ Complete login with a one-time backup code
 | `data.⟨shape 2⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
 | `data.⟨shape 2⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 | `data.⟨shape 3⟩ message` | string | yes |  |
+| `data.⟨shape 3⟩ passkeyAvailable` | boolean | yes |  |
 | `data.⟨shape 3⟩ requiresTwoFactor` | true | yes |  |
 | `data.⟨shape 3⟩ tempToken` | string | yes | at least 1 characters |
 | `data.⟨shape 4⟩ message` | string | yes |  |
@@ -1624,6 +1809,197 @@ Response `200 OK` (application/json):
   }
 }
 ```
+
+### POST /api/v1/auth/login/passkey
+
+Sign in with a passkey alone (possession plus user verification: a multi-factor sign-in)
+
+- **Public** — no session required.
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_completePasswordless` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `client_type` | query | "web" \| "admin" \| "merchant" \| "mobile" | no | Which frontend initiated the action (fallback for the X-Client-Type header). |
+| `x-client-type` | header | string | no | The app signing in, exactly as for POST /auth/login (admin and merchant apply their sign-in gates). |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `challengeId` | string (uuid) | yes |  |
+| `response` | object | yes |  |
+| `response.authenticatorAttachment` | "platform" \| "cross-platform" | no |  |
+| `response.clientExtensionResults` | object | yes |  |
+| `response.clientExtensionResults.credProps` | object | no |  |
+| `response.clientExtensionResults.credProps.rk` | boolean | no |  |
+| `response.id` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `response.rawId` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response` | object | yes |  |
+| `response.response.authenticatorData` | string | yes | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.clientDataJSON` | string | yes | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.signature` | string | yes | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.userHandle` | string | no | length 1–86; pattern `^[A-Za-z0-9_-]+$` |
+| `response.type` | "public-key" | yes |  |
+
+**Response 200 OK** (`application/json`) — Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.⟨shape 1⟩ accessToken` | string | yes | Access token — send as `Authorization: Bearer`; length 1–8192 |
+| `data.⟨shape 1⟩ enrollmentReason` | "email_verification" \| "mfa_enrollment" | yes |  |
+| `data.⟨shape 1⟩ message` | string | yes |  |
+| `data.⟨shape 1⟩ refreshToken` | string | yes | Refresh token — present once to `POST /auth/refresh`; rotated on every use; length 1–4096 |
+| `data.⟨shape 1⟩ requiresEnrollment` | true | yes |  |
+| `data.⟨shape 1⟩ tenantSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.⟨shape 1⟩ tokenTransport` | "body" | yes | The tokens travel in this body (client type `mobile`) |
+| `data.⟨shape 1⟩ user` | object | no |  |
+| `data.⟨shape 1⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 1⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 1⟩ user.email` | string | yes |  |
+| `data.⟨shape 1⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 1⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 1⟩ user.id` | string | yes |  |
+| `data.⟨shape 1⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 1⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 1⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 1⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 1⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 1⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 1⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 1⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 1⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 1⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 1⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 2⟩ enrollmentReason` | "email_verification" \| "mfa_enrollment" | yes |  |
+| `data.⟨shape 2⟩ message` | string | yes |  |
+| `data.⟨shape 2⟩ requiresEnrollment` | true | yes |  |
+| `data.⟨shape 2⟩ tenantSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.⟨shape 2⟩ user` | object | no |  |
+| `data.⟨shape 2⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 2⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 2⟩ user.email` | string | yes |  |
+| `data.⟨shape 2⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 2⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 2⟩ user.id` | string | yes |  |
+| `data.⟨shape 2⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 2⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 2⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 2⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 2⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 2⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 2⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 2⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 3⟩ message` | string | yes |  |
+| `data.⟨shape 3⟩ passkeyAvailable` | boolean | yes |  |
+| `data.⟨shape 3⟩ requiresTwoFactor` | true | yes |  |
+| `data.⟨shape 3⟩ tempToken` | string | yes | at least 1 characters |
+| `data.⟨shape 4⟩ message` | string | yes |  |
+| `data.⟨shape 4⟩ requiresVerification` | true | yes |  |
+| `data.⟨shape 4⟩ verificationId` | string | yes | at least 1 characters |
+| `data.⟨shape 5⟩ accessToken` | string | yes | Access token — send as `Authorization: Bearer`; length 1–8192 |
+| `data.⟨shape 5⟩ refreshToken` | string | yes | Refresh token — present once to `POST /auth/refresh`; rotated on every use; length 1–4096 |
+| `data.⟨shape 5⟩ tokenTransport` | "body" | yes | The tokens travel in this body (client type `mobile`) |
+| `data.⟨shape 5⟩ user` | object | yes |  |
+| `data.⟨shape 5⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 5⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 5⟩ user.email` | string | yes |  |
+| `data.⟨shape 5⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 5⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 5⟩ user.id` | string | yes |  |
+| `data.⟨shape 5⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 5⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 5⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 5⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 5⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 5⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 5⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 5⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 6⟩ user` | object | yes |  |
+| `data.⟨shape 6⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 6⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 6⟩ user.email` | string | yes |  |
+| `data.⟨shape 6⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 6⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 6⟩ user.id` | string | yes |  |
+| `data.⟨shape 6⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 6⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 6⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 6⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 6⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 6⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 6⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 6⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | — | The challenge expired or was used, or the passkey could not be verified |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/auth/login/passkey/options
+
+The navigator.credentials.get() options of a passwordless sign-in (no account is named)
+
+- **Public** — no session required.
+- Rate limit: 5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_startPasswordless` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `client_type` | query | "web" \| "admin" \| "merchant" \| "mobile" | no | Which frontend initiated the action (fallback for the X-Client-Type header). |
+
+**Request body** (`application/json`, required)
+
+_No fields._
+
+**Response 201 Created** (`application/json`) — The request options and the id of their challenge
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.challengeId` | string (uuid) | yes |  |
+| `data.options` | object | yes |  |
+| `data.options.allowCredentials` | object[] | no | 0–20 items |
+| `data.options.allowCredentials[].id` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `data.options.allowCredentials[].transports` | "ble" \| "cable" \| "hybrid" \| "internal" \| "nfc" \| "smart-card" \| "usb"[] | no | 0–16 items |
+| `data.options.allowCredentials[].type` | "public-key" | yes |  |
+| `data.options.challenge` | string | yes | length 1–128; pattern `^[A-Za-z0-9_-]+$` |
+| `data.options.extensions` | object | no |  |
+| `data.options.extensions.credProps` | boolean | no |  |
+| `data.options.hints` | "hybrid" \| "security-key" \| "client-device"[] | no |  |
+| `data.options.rpId` | string | no | length 1–253 |
+| `data.options.timeout` | integer | no |  |
+| `data.options.userVerification` | "required" \| "preferred" \| "discouraged" | no |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ### GET /api/v1/auth/me
 
@@ -1815,6 +2191,274 @@ Response `200 OK` (application/json):
   }
 }
 ```
+
+### GET /api/v1/auth/passkeys
+
+List the caller's passkeys, newest first (names, sync state and last use — never a key)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `READ:USER (own record only)` — A user lists their own passkeys.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_listPasskeys` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Response 200 OK** (`application/json`) — The caller's live passkeys
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.passkeys` | object[] | yes | 0–20 items |
+| `data.passkeys[].backedUp` | boolean | yes |  |
+| `data.passkeys[].createdAt` | integer | yes |  |
+| `data.passkeys[].deviceType` | "SINGLE_DEVICE" \| "MULTI_DEVICE" | yes |  |
+| `data.passkeys[].id` | string (uuid) | yes |  |
+| `data.passkeys[].lastUsedAt` | integer \| null | yes |  |
+| `data.passkeys[].name` | string | yes | length 1–64 |
+| `data.passkeys[].transports` | "ble" \| "cable" \| "hybrid" \| "internal" \| "nfc" \| "smart-card" \| "usb"[] | yes | 0–16 items |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### PATCH /api/v1/auth/passkeys/{passkeyId}
+
+Rename one of the caller's passkeys (404 for any id that is not one of them)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `UPDATE:USER (own record only)` — A user renames one of their own passkeys.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_renamePasskey` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `passkeyId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | yes | length 1–64 |
+
+**Response 200 OK** (`application/json`) — The renamed passkey
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.backedUp` | boolean | yes |  |
+| `data.createdAt` | integer | yes |  |
+| `data.deviceType` | "SINGLE_DEVICE" \| "MULTI_DEVICE" | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.lastUsedAt` | integer \| null | yes |  |
+| `data.name` | string | yes | length 1–64 |
+| `data.transports` | "ble" \| "cable" \| "hybrid" \| "internal" \| "nfc" \| "smart-card" \| "usb"[] | yes | 0–16 items |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### DELETE /api/v1/auth/passkeys/{passkeyId}
+
+Remove one of the caller's passkeys (soft delete; the owner is emailed; 404 for any id that is not one of them)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `UPDATE:USER (own record only)` — A user removes one of their own passkeys.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_removePasskey` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `passkeyId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The passkey is removed
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.message` | string | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/auth/passkeys/app-associations
+
+The Android and iOS apps allowed to use this site's passkeys: the bodies of the web app's assetlinks.json and apple-app-site-association
+
+- **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_appAssociations` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Response 200 OK** (`application/json`) — Digital Asset Links statements and the webcredentials app ids (empty when no app is configured)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.appleAppSiteAssociation` | object | yes |  |
+| `data.appleAppSiteAssociation.webcredentials` | object | yes |  |
+| `data.appleAppSiteAssociation.webcredentials.apps` | string[] | yes |  |
+| `data.assetLinks` | object[] | yes |  |
+| `data.assetLinks[].relation` | string[] | yes | 1–∞ items |
+| `data.assetLinks[].target` | object | yes |  |
+| `data.assetLinks[].target.namespace` | "android_app" | yes |  |
+| `data.assetLinks[].target.package_name` | string | yes | at least 1 characters |
+| `data.assetLinks[].target.sha256_cert_fingerprints` | string[] | yes | 1–∞ items |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/auth/passkeys/registration
+
+Finish adding a passkey with the browser's registration response (the owner is emailed)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `UPDATE:USER (own record only)` — A user adds a passkey to their own account.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_completeRegistration` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `challengeId` | string (uuid) | yes |  |
+| `name` | string | yes | length 1–64 |
+| `response` | object | yes |  |
+| `response.authenticatorAttachment` | "platform" \| "cross-platform" | no |  |
+| `response.clientExtensionResults` | object | yes |  |
+| `response.clientExtensionResults.credProps` | object | no |  |
+| `response.clientExtensionResults.credProps.rk` | boolean | no |  |
+| `response.id` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `response.rawId` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response` | object | yes |  |
+| `response.response.attestationObject` | string | yes | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.authenticatorData` | string | no | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.clientDataJSON` | string | yes | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.publicKey` | string | no | length 1–16384; pattern `^[A-Za-z0-9_-]+$` |
+| `response.response.publicKeyAlgorithm` | integer | no | min -9007199254740991 |
+| `response.response.transports` | string[] | no | 0–16 items |
+| `response.type` | "public-key" | yes |  |
+
+**Response 201 Created** (`application/json`) — The new passkey
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.backedUp` | boolean | yes |  |
+| `data.createdAt` | integer | yes |  |
+| `data.deviceType` | "SINGLE_DEVICE" \| "MULTI_DEVICE" | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.lastUsedAt` | integer \| null | yes |  |
+| `data.name` | string | yes | length 1–64 |
+| `data.transports` | "ble" \| "cable" \| "hybrid" \| "internal" \| "nfc" \| "smart-card" \| "usb"[] | yes | 0–16 items |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | — | The challenge expired or was used, or the response did not verify |
+| 409 | — | CONFLICT — this credential is already registered |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/auth/passkeys/registration/options
+
+Start adding a passkey: confirm the password, get the navigator.credentials.create() options
+
+Stores a single-use challenge (5 minutes). 401 for a wrong password; 403 during impersonation; 400 when the account already holds 20 passkeys.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `UPDATE:USER (own record only)` — A user starts adding a passkey to their own account.
+- Rate limit: 5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `PasskeysController_startRegistration` · [source](../../../apps/api/src/contexts/identity/presentation/http/passkeys.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `password` | string | yes | at least 1 characters |
+
+**Response 201 Created** (`application/json`) — The creation options and the id of their challenge
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.challengeId` | string (uuid) | yes |  |
+| `data.options` | object | yes |  |
+| `data.options.attestation` | "none" \| "indirect" \| "direct" \| "enterprise" | no |  |
+| `data.options.authenticatorSelection` | object | no |  |
+| `data.options.authenticatorSelection.authenticatorAttachment` | "platform" \| "cross-platform" | no |  |
+| `data.options.authenticatorSelection.requireResidentKey` | boolean | no |  |
+| `data.options.authenticatorSelection.residentKey` | "discouraged" \| "preferred" \| "required" | no |  |
+| `data.options.authenticatorSelection.userVerification` | "required" \| "preferred" \| "discouraged" | no |  |
+| `data.options.challenge` | string | yes | length 1–128; pattern `^[A-Za-z0-9_-]+$` |
+| `data.options.excludeCredentials` | object[] | no | 0–20 items |
+| `data.options.excludeCredentials[].id` | string | yes | length 1–1364; pattern `^[A-Za-z0-9_-]+$` |
+| `data.options.excludeCredentials[].transports` | "ble" \| "cable" \| "hybrid" \| "internal" \| "nfc" \| "smart-card" \| "usb"[] | no | 0–16 items |
+| `data.options.excludeCredentials[].type` | "public-key" | yes |  |
+| `data.options.extensions` | object | no |  |
+| `data.options.extensions.credProps` | boolean | no |  |
+| `data.options.hints` | "hybrid" \| "security-key" \| "client-device"[] | no |  |
+| `data.options.pubKeyCredParams` | object[] | yes | 1–8 items |
+| `data.options.pubKeyCredParams[].alg` | integer | yes | min -9007199254740991 |
+| `data.options.pubKeyCredParams[].type` | "public-key" | yes |  |
+| `data.options.rp` | object | yes |  |
+| `data.options.rp.id` | string | no | length 1–253 |
+| `data.options.rp.name` | string | yes | length 1–256 |
+| `data.options.timeout` | integer | no |  |
+| `data.options.user` | object | yes |  |
+| `data.options.user.displayName` | string | yes | at most 256 characters |
+| `data.options.user.id` | string | yes | length 1–86; pattern `^[A-Za-z0-9_-]+$` |
+| `data.options.user.name` | string | yes | length 1–256 |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ### GET /api/v1/auth/permissions
 
@@ -2040,6 +2684,7 @@ Get the signed-in user's own profile (name, avatar, optimistic-lock version)
 | `data.email` | string | yes | Sign-in email (read-only here) |
 | `data.fullName` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.language` | "en" \| "ms" \| "zh-Hans" \| "ta" | yes | The language the person chose (enhancement 5.2): the apps and their notifications use it |
 | `data.updatedAt` | integer | yes |  |
 | `data.version` | integer | yes | Optimistic-lock token: send it back with `PATCH /auth/profile` |
 
@@ -2114,6 +2759,7 @@ Send the `version` read from GET /auth/profile: the change applies only while th
 | `data.email` | string | yes | Sign-in email (read-only here) |
 | `data.fullName` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.language` | "en" \| "ms" \| "zh-Hans" \| "ta" | yes | The language the person chose (enhancement 5.2): the apps and their notifications use it |
 | `data.updatedAt` | integer | yes |  |
 | `data.version` | integer | yes | Optimistic-lock token: send it back with `PATCH /auth/profile` |
 
@@ -2163,6 +2809,56 @@ Response `200 OK` (application/json):
   }
 }
 ```
+
+### PUT /api/v1/auth/profile/language
+
+Save the signed-in user's language
+
+The language the apps open in after sign-in (on a device that hasn't chosen one) and notifications are written in (enhancement 5.2). The latest choice wins; it doesn't change the profile `version`. Refused (403 PROFILE_UPDATE_DURING_IMPERSONATION) for an impersonation session.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `UPDATE:PROFILE (own record only)` — A user saves their own language (never during impersonation).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `ProfileController_setOwnLanguage` · [source](../../../apps/api/src/contexts/identity/presentation/http/profile.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `language` | "en" \| "ms" \| "zh-Hans" \| "ta" | yes | A shipped language: en, ms, zh-Hans or ta |
+
+**Response 200 OK** (`application/json`) — The profile, with its language
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.avatar` | object \| null | yes | The live avatar, or null when the user has none |
+| `data.avatar.fileId` | string (uuid) | yes | The stored file (`GET /files/:fileId`, `DELETE /files/:fileId`) |
+| `data.avatar.sources` | object[] | yes | Its served sizes, smallest first, for `srcset` (empty for an avatar uploaded before avatars had renditions) |
+| `data.avatar.sources[].url` | string (uri) | yes |  |
+| `data.avatar.sources[].width` | integer | yes |  |
+| `data.avatar.updatedAt` | integer | yes | When this avatar was bound to the profile (epoch ms) |
+| `data.avatar.url` | string (uri) | yes | Public URL of the avatar image |
+| `data.createdAt` | integer | yes |  |
+| `data.email` | string | yes | Sign-in email (read-only here) |
+| `data.fullName` | string | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.language` | "en" \| "ms" \| "zh-Hans" \| "ta" | yes | The language the person chose (enhancement 5.2): the apps and their notifications use it |
+| `data.updatedAt` | integer | yes |  |
+| `data.version` | integer | yes | Optimistic-lock token: send it back with `PATCH /auth/profile` |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | `PROFILE_UPDATE_DURING_IMPERSONATION` | Stated in the endpoint description. |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ### POST /api/v1/auth/resend-verification
 
@@ -2415,6 +3111,7 @@ People who registered with the caller's referral code
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -2610,6 +3307,7 @@ Complete login with an email verification code
 | `data.⟨shape 2⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
 | `data.⟨shape 2⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 | `data.⟨shape 3⟩ message` | string | yes |  |
+| `data.⟨shape 3⟩ passkeyAvailable` | boolean | yes |  |
 | `data.⟨shape 3⟩ requiresTwoFactor` | true | yes |  |
 | `data.⟨shape 3⟩ tempToken` | string | yes | at least 1 characters |
 | `data.⟨shape 4⟩ message` | string | yes |  |
@@ -2873,13 +3571,14 @@ List the caller's signed-in devices (every client type), most recently active fi
 | `data[].location.region` | string \| null | yes | length 1–64 |
 | `data[].osName` | string \| null | yes |  |
 | `data[].osVersion` | string \| null | yes |  |
-| `data[].signInMethod` | "PASSWORD" \| "PASSWORD_NEW_DEVICE_CODE" \| "PASSWORD_TOTP" \| "PASSWORD_TOTP_NEW_DEVICE_CODE" \| "PASSWORD_BACKUP_CODE" \| "PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE" \| "TEAM_INVITE_REGISTRATION" \| "TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE" \| null | yes |  |
+| `data[].signInMethod` | "PASSWORD" \| "PASSWORD_NEW_DEVICE_CODE" \| "PASSWORD_TOTP" \| "PASSWORD_TOTP_NEW_DEVICE_CODE" \| "PASSWORD_BACKUP_CODE" \| "PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE" \| "TEAM_INVITE_REGISTRATION" \| "TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE" \| "PASSWORD_PASSKEY" \| "PASSWORD_PASSKEY_NEW_DEVICE_CODE" \| … (+2 more) \| null | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -3265,6 +3964,7 @@ Response `201 Created` (application/json):
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)

@@ -45,7 +45,7 @@ and stacks used each platform's default (a slide on iOS, a fade-up on Android).
     primary button.
   - The bottom area is kept loose (`pb-8`) so the button is not crowded against the home
     indicator.
-- **The slides** live in the screen (`src/app/onboarding.tsx`) and describe what the starter really
+- **The slides** live in the screen (`src/app/onboarding.tsx`; since 2026-11-04 `src/app/auth/onboarding.tsx`, `/auth/onboarding`) and describe what the starter really
   does: the account, security (2FA, app lock, device sign-out) and personal preferences. Products
   rewrite them.
 - **Replaying it.** The "seen" flag lives in the Keychain, which survives reinstalling the app on
@@ -67,7 +67,9 @@ and follow Reduce Motion.
 - **A carousel library** (react-native-pager-view and others): ruled out by the product. Most also
   need native code outside Expo Go.
 - **Onboarding as the first `(auth)` screen:** returning users would pass through it. Product
-  state belongs in the root guard, not in a screen.
+  state belongs in the root guard, not in a screen. (*2026-11-04:* the screen now sits in the `auth`
+  folder with the sign-in screens, but it is still its own root route, gated by the root guard; a
+  returning device never sees it.)
 - **Platform default transitions:** the app moved differently on iOS and Android.
 
 ## Consequences

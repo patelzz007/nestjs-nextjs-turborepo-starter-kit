@@ -151,6 +151,82 @@ describe("NetworkQualityMonitor", () => {
 		expect(signals).toHaveLength(1);
 	});
 
+	it("waits for the platform's scheduler before an automatic test (the app idle, not mid-startup)", async () => {
+		const network = instantProbe();
+		const waiting: (() => void)[] = [];
+		const monitor = new NetworkQualityMonitor({
+			probe: network.probe,
+			now: (): number => Date.now(),
+			clock: (): number => Date.now(),
+			intervalMs: INTERVAL_MS,
+			scheduleTest: (run: () => void): (() => void) => {
+				waiting.push(run);
+				return (): void => undefined;
+			},
+		});
+
+		monitor.start();
+		await settle();
+		expect(network.calls()).toBe(0);
+		expect(waiting).toHaveLength(1);
+
+		waiting.forEach((run: () => void): void => {
+			run();
+		});
+		await settle();
+		expect(network.calls()).toBe(REQUESTS_PER_TEST);
+		monitor.stop();
+	});
+
+	it("schedules one automatic test at a time, and runs a test asked for at once", async () => {
+		const network = instantProbe();
+		let scheduled = 0;
+		const monitor = new NetworkQualityMonitor({
+			probe: network.probe,
+			now: (): number => Date.now(),
+			clock: (): number => Date.now(),
+			intervalMs: INTERVAL_MS,
+			visible: false,
+			scheduleTest: (): (() => void) => {
+				scheduled += 1;
+				return (): void => undefined;
+			},
+		});
+		monitor.start();
+		monitor.setVisible(true);
+		monitor.setVisible(false);
+		monitor.setVisible(true);
+		expect(scheduled).toBe(1);
+
+		monitor.testNow();
+		await settle();
+		expect(network.calls()).toBe(REQUESTS_PER_TEST);
+		monitor.stop();
+	});
+
+	it("cancels a scheduled test when it stops or the device goes offline", () => {
+		let cancelled = 0;
+		const options = {
+			probe: instantProbe().probe,
+			now: (): number => Date.now(),
+			clock: (): number => Date.now(),
+			intervalMs: INTERVAL_MS,
+			scheduleTest: (): (() => void) => (): void => {
+				cancelled += 1;
+			},
+		};
+		const stopped = new NetworkQualityMonitor(options);
+		stopped.start();
+		stopped.stop();
+		expect(cancelled).toBe(1);
+
+		const offline = new NetworkQualityMonitor(options);
+		offline.start();
+		offline.setOnline(false);
+		expect(cancelled).toBe(2);
+		offline.stop();
+	});
+
 	it("is unreachable when no request is answered", async () => {
 		const monitor = monitorWith((): Promise<void> => Promise.reject(new Error("503")));
 		monitor.start();

@@ -85,7 +85,7 @@ export const TOOLS = [
 		description: "Rewrite the committed OpenAPI document from the API.",
 		command: "turbo run openapi:export --filter=@workspace/api",
 	},
-	{ name: "docs:api", group: "Build and generate", description: "Regenerate the docs site's API reference.", command: "pnpm --filter @workspace/docs docs:api" },
+	{ name: "docs:api", group: "Build and generate", description: "Regenerate the docs site's API reference.", command: "pnpm --filter @workspace/docs-renderer docs:api" },
 	{
 		name: "secrets:generate",
 		group: "Build and generate",
@@ -98,6 +98,18 @@ export const TOOLS = [
 		group: "Checks",
 		description: "Check the app bundles against their size budgets (after a build).",
 		command: "node packages/tooling/src/bundle-budget/cli.mjs",
+	},
+	{
+		name: "load:run",
+		group: "Checks",
+		description: "Start load-baselines.json's load test through the API and save its results (needs the load runner).",
+		command: "node packages/tooling/scripts/load-baseline.mjs run",
+	},
+	{
+		name: "load:check",
+		group: "Checks",
+		description: "Check a load test's results against load-baselines.json (--write-baseline recalibrates).",
+		command: "node packages/tooling/scripts/load-baseline.mjs check",
 	},
 	{ name: "deps:check", group: "Checks", description: "Check every workspace uses the same dependency versions.", command: "turbo run deps:check" },
 	{ name: "deps:fix", group: "Checks", description: "Align mismatched dependency versions.", command: "turbo run deps:fix" },

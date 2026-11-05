@@ -53,6 +53,7 @@ describe("own profile cache", () => {
 			email: "member@example.com",
 			fullName: "Alex Morgan",
 			avatar: null,
+			language: "en",
 			version: 4,
 			createdAt: 0,
 			updatedAt: 0,

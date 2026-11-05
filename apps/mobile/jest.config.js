@@ -6,9 +6,10 @@ const { transformIgnorePatterns: EXPO_TRANSFORM_IGNORE_PATTERNS } = require("jes
 
 /**
  * Packages published as ES modules only. Metro bundles them as they are; Jest
- * runs CommonJS, so Babel compiles them like React Native's own packages.
+ * runs CommonJS, so Babel compiles them like React Native's own packages (FormatJS: the translation
+ * catalogues' ICU messages, `formatMessage` in @workspace/shared).
  */
-const ES_MODULE_ONLY_PACKAGES = ["marked", "nuqs"];
+const ES_MODULE_ONLY_PACKAGES = ["marked", "nuqs", "intl-messageformat", "@formatjs"];
 
 /** jest-expo's first pattern: skip node_modules except an allow-list, `(?!(a|b|…))`. */
 const ALLOW_LIST_START = "/node_modules/(?!(";
@@ -23,6 +24,10 @@ function withEsModuleOnlyPackages(patterns) {
 
 /** @type {import("jest").Config} */
 module.exports = {
+	// Coverage floors (enhancement 3.1): measured on 2026-11-03, set just below. Raise them as tests are
+	// added; never lower them. `pnpm test` measures (`jest --coverage`).
+	coverageReporters: ["text-summary"],
+	coverageThreshold: { global: { lines: 93, statements: 93, functions: 90, branches: 83 } },
 	preset: "jest-expo",
 	// Same resolution rules as Metro (metro.config.js): React / React Native /
 	// TanStack Query are singletons from this app, and @workspace/* resolve
@@ -38,7 +43,12 @@ module.exports = {
 	// "Where tests live"); the route screens' tests in src/__tests__/app/ (never
 	// inside src/app/: Expo Router bundles every file there). test/ holds the
 	// shared test helpers, with their own tests in test/__tests__/.
-	testMatch: ["<rootDir>/src/**/__tests__/**/*.test.{ts,tsx}", "<rootDir>/test/__tests__/**/*.test.{ts,tsx}", "<rootDir>/config-plugins/__tests__/**/*.test.ts"],
+	testMatch: [
+		"<rootDir>/src/**/__tests__/**/*.test.{ts,tsx}",
+		"<rootDir>/test/__tests__/**/*.test.{ts,tsx}",
+		"<rootDir>/config-plugins/__tests__/**/*.test.ts",
+		"<rootDir>/build-env/__tests__/**/*.test.ts",
+	],
 	clearMocks: true,
 	restoreMocks: true,
 };

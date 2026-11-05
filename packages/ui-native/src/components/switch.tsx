@@ -36,7 +36,7 @@ export const switchVariants = cva("min-h-11 flex-row items-center gap-3 active:o
 		variant: {
 			default: "",
 			/** A bordered tile that stands on its own. */
-			card: "rounded-xl border border-border bg-card px-3.5 py-2",
+			card: "rounded-2xl border border-border bg-card px-4 py-2",
 		},
 		size: { md: "", sm: "gap-2.5" },
 		state: {

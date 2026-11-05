@@ -6,10 +6,12 @@
 	"sections": [
 		{
 			"title": "Overview",
+			"labelKey": "overview",
 			"color": "blue",
 			"items": [
 				{
 					"title": "Dashboard",
+					"labelKey": "overview.dashboard",
 					"url": "/dashboard",
 					"icon": "LayoutDashboard",
 					"disabled": false,
@@ -19,10 +21,12 @@
 		},
 		{
 			"title": "Rewards",
+			"labelKey": "rewards",
 			"color": "green",
 			"items": [
 				{
 					"title": "My Rewards",
+					"labelKey": "rewards.my-rewards",
 					"url": "/rewards",
 					"icon": "Gift",
 					"disabled": false,
@@ -30,6 +34,7 @@
 					"children": [
 						{
 							"title": "All Rewards",
+							"labelKey": "rewards.my-rewards.all-rewards",
 							"url": "/rewards",
 							"icon": "List",
 							"disabled": false,
@@ -37,6 +42,7 @@
 						},
 						{
 							"title": "Create New",
+							"labelKey": "rewards.my-rewards.create-new",
 							"url": "/rewards/new",
 							"icon": "PlusCircle",
 							"disabled": false,
@@ -44,6 +50,7 @@
 						},
 						{
 							"title": "Archived",
+							"labelKey": "rewards.my-rewards.archived",
 							"url": "/rewards/archived",
 							"icon": "FolderOpen",
 							"disabled": true,
@@ -53,6 +60,7 @@
 				},
 				{
 					"title": "Campaigns",
+					"labelKey": "rewards.campaigns",
 					"url": "/campaigns",
 					"icon": "Zap",
 					"disabled": true,
@@ -60,6 +68,7 @@
 					"children": [
 						{
 							"title": "Active Campaigns",
+							"labelKey": "rewards.campaigns.active-campaigns",
 							"url": "/campaigns",
 							"icon": "Play",
 							"disabled": true,
@@ -67,6 +76,7 @@
 						},
 						{
 							"title": "Scheduled",
+							"labelKey": "rewards.campaigns.scheduled",
 							"url": "/campaigns/scheduled",
 							"icon": "Calendar",
 							"disabled": true,
@@ -74,6 +84,7 @@
 						},
 						{
 							"title": "Create Campaign",
+							"labelKey": "rewards.campaigns.create-campaign",
 							"url": "/campaigns/new",
 							"icon": "PlusCircle",
 							"disabled": true,
@@ -85,10 +96,12 @@
 		},
 		{
 			"title": "Customers",
+			"labelKey": "customers",
 			"color": "teal",
 			"items": [
 				{
 					"title": "Broadcasts",
+					"labelKey": "customers.broadcasts",
 					"url": "/broadcasts",
 					"icon": "Megaphone",
 					"disabled": false,
@@ -96,6 +109,7 @@
 					"children": [
 						{
 							"title": "All Broadcasts",
+							"labelKey": "customers.broadcasts.all-broadcasts",
 							"url": "/broadcasts",
 							"icon": "List",
 							"disabled": false,
@@ -103,6 +117,7 @@
 						},
 						{
 							"title": "New Broadcast",
+							"labelKey": "customers.broadcasts.new-broadcast",
 							"url": "/broadcasts/new",
 							"icon": "PlusCircle",
 							"disabled": false,
@@ -114,10 +129,12 @@
 		},
 		{
 			"title": "Operations",
+			"labelKey": "operations",
 			"color": "amber",
 			"items": [
 				{
 					"title": "Redemptions",
+					"labelKey": "operations.redemptions",
 					"url": "/redemptions",
 					"icon": "CheckCircle",
 					"disabled": false,
@@ -125,6 +142,7 @@
 					"children": [
 						{
 							"title": "Recent",
+							"labelKey": "operations.redemptions.recent",
 							"url": "/redemptions",
 							"icon": "Clock",
 							"disabled": false,
@@ -132,6 +150,7 @@
 						},
 						{
 							"title": "History",
+							"labelKey": "operations.redemptions.history",
 							"url": "/redemptions/history",
 							"icon": "FileText",
 							"disabled": true,
@@ -139,6 +158,7 @@
 						},
 						{
 							"title": "Pending",
+							"labelKey": "operations.redemptions.pending",
 							"url": "/redemptions/pending",
 							"icon": "AlertCircle",
 							"disabled": true,
@@ -148,6 +168,7 @@
 				},
 				{
 					"title": "POS terminals",
+					"labelKey": "operations.pos-terminals",
 					"url": "/terminals",
 					"icon": "MonitorSmartphone",
 					"disabled": false,
@@ -155,19 +176,30 @@
 				},
 				{
 					"title": "API Keys",
+					"labelKey": "operations.api-keys",
 					"url": "/api-keys",
 					"icon": "KeyRound",
 					"disabled": false,
 					"authorization": { "permissions": ["merchant:manage_api_keys"] }
+				},
+				{
+					"title": "Webhooks",
+					"labelKey": "operations.webhooks",
+					"url": "/webhooks",
+					"icon": "Webhook",
+					"disabled": false,
+					"authorization": { "permissions": ["merchant:manage_webhooks"] }
 				}
 			]
 		},
 		{
 			"title": "Insights",
+			"labelKey": "insights",
 			"color": "rose",
 			"items": [
 				{
 					"title": "Analytics",
+					"labelKey": "insights.analytics",
 					"url": "/analytics",
 					"icon": "BarChart2",
 					"disabled": false,
@@ -175,6 +207,7 @@
 					"children": [
 						{
 							"title": "Overview",
+							"labelKey": "insights.analytics.overview",
 							"url": "/analytics",
 							"icon": "PieChart",
 							"disabled": false,
@@ -182,6 +215,7 @@
 						},
 						{
 							"title": "Reward Performance",
+							"labelKey": "insights.analytics.reward-performance",
 							"url": "/analytics/rewards",
 							"icon": "TrendingUp",
 							"disabled": true,
@@ -189,6 +223,7 @@
 						},
 						{
 							"title": "Customer Insights",
+							"labelKey": "insights.analytics.customer-insights",
 							"url": "/analytics/customers",
 							"icon": "Users",
 							"disabled": true,
@@ -202,42 +237,49 @@
 	"bottomItems": [
 		{
 			"title": "Settings",
+			"labelKey": "bottom.settings",
 			"url": "/settings",
 			"icon": "Settings",
 			"authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification", "merchant:manage_rewards"], "mode": "any" },
 			"children": [
 				{
 					"title": "Overview",
+					"labelKey": "bottom.settings.overview",
 					"url": "/settings",
 					"icon": "Settings",
 					"authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification", "merchant:manage_rewards"], "mode": "any" }
 				},
 				{
 					"title": "Team",
+					"labelKey": "bottom.settings.team",
 					"url": "/settings/team",
 					"icon": "Users",
 					"authorization": { "permissions": ["merchant:manage_team"] }
 				},
 				{
 					"title": "Locations",
+					"labelKey": "bottom.settings.locations",
 					"url": "/settings/locations",
 					"icon": "MapPin",
 					"authorization": { "permissions": ["merchant:view_locations"] }
 				},
 				{
 					"title": "Branding",
+					"labelKey": "bottom.settings.branding",
 					"url": "/settings/branding",
 					"icon": "Palette",
 					"authorization": { "permissions": ["merchant:view_locations"] }
 				},
 				{
 					"title": "Verification",
+					"labelKey": "bottom.settings.verification",
 					"url": "/settings/verification",
 					"icon": "ShieldCheck",
 					"authorization": { "permissions": ["merchant:manage_verification"] }
 				},
 				{
 					"title": "Banned customers",
+					"labelKey": "bottom.settings.banned-customers",
 					"url": "/settings/banned-customers",
 					"icon": "UserX",
 					"authorization": { "permissions": ["merchant:manage_rewards"] }
@@ -246,11 +288,13 @@
 		},
 		{
 			"title": "Account",
+			"labelKey": "bottom.account",
 			"url": "/account",
 			"icon": "CircleUser"
 		},
 		{
 			"title": "Help & Support",
+			"labelKey": "bottom.help-support",
 			"url": "/support",
 			"icon": "HelpCircle",
 			"disabled": true

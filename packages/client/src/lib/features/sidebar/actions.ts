@@ -8,7 +8,7 @@ export type SidebarAction =
 	| { readonly type: "[ Sidebar ] Toggled" }
 	| { readonly type: "[ Sidebar ] Expanded" }
 	| { readonly type: "[ Sidebar ] Collapsed" }
-	| { readonly type: "[ Sidebar ] Section Moved"; readonly title: string; readonly direction: SectionMoveDirection; readonly allTitles: readonly string[] }
+	| { readonly type: "[ Sidebar ] Section Moved"; readonly key: string; readonly direction: SectionMoveDirection; readonly allKeys: readonly string[] }
 	| { readonly type: "[ Sidebar ] Item Expansion Changed"; readonly pathname: string; readonly itemId: string; readonly expanded: boolean }
 	| { readonly type: "[ Sidebar ] Link Followed"; readonly currentPathname: string; readonly targetPathname: string }
 	| { readonly type: "[ Sidebar ] Route Changed"; readonly pathname: string }
@@ -21,11 +21,11 @@ export const sidebarActions = {
 	toggled: (): SidebarAction => ({ type: "[ Sidebar ] Toggled" }),
 	expanded: (): SidebarAction => ({ type: "[ Sidebar ] Expanded" }),
 	collapsed: (): SidebarAction => ({ type: "[ Sidebar ] Collapsed" }),
-	sectionMoved: (title: string, direction: SectionMoveDirection, allTitles: readonly string[]): SidebarAction => ({
+	sectionMoved: (key: string, direction: SectionMoveDirection, allKeys: readonly string[]): SidebarAction => ({
 		type: "[ Sidebar ] Section Moved",
-		title,
+		key,
 		direction,
-		allTitles,
+		allKeys,
 	}),
 	itemExpansionChanged: (pathname: string, itemId: string, expanded: boolean): SidebarAction => ({
 		type: "[ Sidebar ] Item Expansion Changed",

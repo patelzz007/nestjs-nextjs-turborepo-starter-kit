@@ -2,7 +2,7 @@ import { epochMs, LOAD_TEST_ABORT_CPU_SECONDS, LOAD_TEST_ABORT_ERROR_SECONDS, ty
 import { describe, expect, it } from "vitest";
 
 import { LoadTestOverCapError } from "../errors/operations.errors";
-import { assertWithinCaps, autoAbortReason, errorPercent, loadTestPassed } from "../policies/load-test.policy";
+import { assertWithinCaps, autoAbortReason, errorPercent, loadTestPassed, loadTestStaffCount } from "../policies/load-test.policy";
 
 const CAPS: LoadTestCaps = { maxVirtualUsers: 100, maxRequestsPerSecond: 500, maxMinutes: 10, maxSoakMinutes: 60 };
 const RUN: Pick<StartLoadTestInput, "virtualUsers" | "requestsPerSecond" | "durationSeconds" | "shape"> = {
@@ -80,5 +80,37 @@ describe("loadTestPassed", () => {
 		expect(loadTestPassed({ requests: 1_000, failures: 11, p95Ms: 100 }, thresholds)).toBe(false);
 		expect(loadTestPassed({ requests: 1_000, failures: 0, p95Ms: 301 }, thresholds)).toBe(false);
 		expect(loadTestPassed({ requests: 0, failures: 0, p95Ms: null }, thresholds)).toBe(false);
+	});
+});
+
+describe("loadTestStaffCount", () => {
+	const SESSIONS_PER_USER = 5;
+
+	/** How many virtual users the runner gives each account: virtual user n gets account (n - 1) % accounts. */
+	function sessionsPerAccount(virtualUsers: number, accounts: number): number[] {
+		const perAccount: number[] = Array.from({ length: accounts }, () => 0);
+		for (let virtualUser = 1; virtualUser <= virtualUsers; virtualUser += 1) {
+			const account = (virtualUser - 1) % accounts;
+			perAccount.splice(account, 1, (perAccount.at(account) ?? 0) + 1);
+		}
+		return perAccount;
+	}
+
+	it("gives one account up to a user's session cap, and one more for every further cap's worth", () => {
+		expect(loadTestStaffCount(1, SESSIONS_PER_USER)).toBe(1);
+		expect(loadTestStaffCount(SESSIONS_PER_USER, SESSIONS_PER_USER)).toBe(1);
+		expect(loadTestStaffCount(SESSIONS_PER_USER + 1, SESSIONS_PER_USER)).toBe(2);
+		expect(loadTestStaffCount(300, SESSIONS_PER_USER)).toBe(60);
+	});
+
+	it.each([1, 4, 25, 26, 99, 300, 2_000])("never asks one account for more sessions than a user may keep (%i virtual users)", (virtualUsers) => {
+		const accounts = loadTestStaffCount(virtualUsers, SESSIONS_PER_USER);
+
+		expect(Math.max(...sessionsPerAccount(virtualUsers, accounts))).toBeLessThanOrEqual(SESSIONS_PER_USER);
+	});
+
+	it("is not the fixed five accounts that capped a run at 25 virtual users", () => {
+		expect(Math.max(...sessionsPerAccount(26, loadTestStaffCount(26, SESSIONS_PER_USER)))).toBeLessThanOrEqual(SESSIONS_PER_USER);
+		expect(Math.max(...sessionsPerAccount(26, 5))).toBeGreaterThan(SESSIONS_PER_USER);
 	});
 });

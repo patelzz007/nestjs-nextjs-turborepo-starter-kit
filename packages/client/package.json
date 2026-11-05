@@ -6,10 +6,11 @@
 	"scripts": {
 		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
-		"test": "vitest run",
+		"test": "vitest run --coverage",
 		"typecheck": "tsrs --noEmit"
 	},
 	"dependencies": {
+		"@simplewebauthn/browser": "^14.0.0",
 		"@tanstack/react-query": "^5.105.0",
 		"@workspace/api-client": "workspace:*",
 		"@workspace/shared": "workspace:*",
@@ -26,6 +27,7 @@
 		"next": ">=16.0.0"
 	},
 	"devDependencies": {
+		"@playwright/test": "1.64.1",
 		"@testing-library/dom": "^10.4.2",
 		"@testing-library/react": "^16.3.3",
 		"@types/node": "^26.6.6",
@@ -56,6 +58,7 @@
 		"./lib/features/live-updates/live-query-invalidation": "./src/lib/features/live-updates/live-query-invalidation.ts",
 		"./lib/features/live-updates/reconnecting-event-stream": "./src/lib/features/live-updates/reconnecting-event-stream.ts",
 		"./lib/features/broadcasts/broadcast-composer-form": "./src/lib/features/broadcasts/broadcast-composer-form.tsx",
+		"./lib/features/broadcasts/use-broadcast-picture-upload": "./src/lib/features/broadcasts/use-broadcast-picture-upload.ts",
 		"./lib/features/broadcasts/broadcast-draft": "./src/lib/features/broadcasts/broadcast-draft.ts",
 		"./lib/features/notifications/notifications-dropdown": "./src/lib/features/notifications/notifications-dropdown.tsx",
 		"./lib/features/notifications/notifications-dropdown-labels": "./src/lib/features/notifications/notifications-dropdown-labels.ts",
@@ -75,6 +78,8 @@
 		"./lib/contexts/reporting/analytics-range-controls": "./src/lib/contexts/reporting/analytics-range-controls.tsx",
 		"./lib/api/api-request": "./src/lib/api/api-request.ts",
 		"./lib/i18n/ui-kit-language": "./src/lib/i18n/ui-kit-language.ts",
+		"./lib/i18n/request-language": "./src/lib/i18n/request-language.ts",
+		"./lib/i18n/app-language-provider": "./src/lib/i18n/app-language-provider.tsx",
 		"./lib/api/config": "./src/lib/api/config.ts",
 		"./lib/api/download": "./src/lib/api/download.ts",
 		"./lib/api/rate-limit": "./src/lib/api/rate-limit.ts",
@@ -86,9 +91,12 @@
 		"./lib/api/server-query-outcome": "./src/lib/api/server-query-outcome.ts",
 		"./lib/api/use-api": "./src/lib/api/use-api.ts",
 		"./lib/contexts/identity": "./src/lib/contexts/identity/index.tsx",
+		"./lib/contexts/privacy": "./src/lib/contexts/privacy/index.ts",
 		"./lib/contexts/authorization": "./src/lib/contexts/authorization/index.tsx",
 		"./lib/contexts/identity/edge/jwt": "./src/lib/contexts/identity/edge/jwt.ts",
 		"./lib/contexts/identity/edge/proxy-refresh": "./src/lib/contexts/identity/edge/proxy-refresh.ts",
+		"./lib/security/security-headers": "./src/lib/security/security-headers.ts",
+		"./lib/security/security-nonce": "./src/lib/security/security-nonce.ts",
 		"./lib/contexts/identity/edge/restricted-session": "./src/lib/contexts/identity/edge/restricted-session.ts",
 		"./lib/contexts/identity/email/verification-panel": "./src/lib/contexts/identity/email/verification-panel.tsx",
 		"./lib/contexts/identity/email/verify-email-view": "./src/lib/contexts/identity/email/verify-email-view.tsx",
@@ -160,7 +168,9 @@
 		"./lib/url-state/url-state-test-provider": "./src/lib/url-state/url-state-test-provider.tsx",
 		"./testing/client-test-providers": "./src/testing/client-test-providers.tsx",
 		"./testing/flush-url-updates": "./src/testing/flush-url-updates.ts",
+		"./testing/browser-sign-in": "./src/testing/browser-sign-in.ts",
 		"./lib/sidebar/sidebar-menu-compile": "./src/lib/sidebar/sidebar-menu-compile.ts",
+		"./lib/sidebar/sidebar-menu-labels": "./src/lib/sidebar/sidebar-menu-labels.ts",
 		"./lib/sidebar/sidebar-menu-schema": "./src/lib/sidebar/sidebar-menu-schema.ts",
 		"./lib/sidebar/sidebar-menu-skeleton": "./src/lib/sidebar/sidebar-menu-skeleton.ts"
 	}

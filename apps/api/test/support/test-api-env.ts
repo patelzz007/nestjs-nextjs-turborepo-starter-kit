@@ -28,6 +28,17 @@ export const TEST_API_SECRETS: TestEnv = {
 	RESEND_WEBHOOK_SECRET: "whsec_dGVzdC1vbmx5LXdlYmhvb2stc2lnbmluZy1rZXk=",
 };
 
+/** e2e only: webhook endpoints may be a local test receiver on loopback (ADR 082; refused in production). */
+export const TEST_E2E_WEBHOOKS: TestEnv = { WEBHOOK_ALLOW_LOOPBACK_URLS: "true" };
+
+/**
+ * e2e only (never the unit fixture, which also parses production configurations, where the fake gateway is
+ * refused): turns the fake payment gateway on; the payments e2e signs its callbacks with it (ADR 020).
+ */
+export const TEST_E2E_PAYMENTS: TestEnv = {
+	PAYMENTS_FAKE_SECRET: "test-only-payments-fake-secret-not-for-real-use-0005",
+};
+
 /**
  * Deterministic behaviour switches. e2e FORCES these too: OTP verification
  * would block every helper login, the mutation-intent guard validates Origin
@@ -56,6 +67,8 @@ export const TEST_API_DATA_KEYS: TestEnv = {
 	REWARD_CODE_HASH_KEYS: '{"1":"AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="}',
 	// 32 bytes of 0x03, base64 — TEST-ONLY GitHub linked-token key ring (the seed links a demo token with it).
 	GITHUB_CREDENTIAL_ENCRYPTION_KEYS: '{"1":"AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM="}',
+	// 32 bytes of 0x04, base64 — TEST-ONLY webhook signing-secret key ring (the seed seals its demo endpoint with it).
+	WEBHOOK_SECRET_ENCRYPTION_KEYS: '{"1":"BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ="}',
 };
 
 /**
@@ -64,7 +77,9 @@ export const TEST_API_DATA_KEYS: TestEnv = {
  */
 export const TEST_API_INFRASTRUCTURE: TestEnv = {
 	NODE_ENV: "test",
-	APP_NAME: "hello-world",
+	APP_NAME: "Starter Test",
+	// No network in unit tests; the HIBP adapter is tested against a fake fetch.
+	PASSWORD_BREACH_CHECK: "off",
 	APP_URL: "http://localhost:3000",
 	ADMIN_APP_URL: "http://localhost:3001",
 	MERCHANT_APP_URL: "http://localhost:3003",

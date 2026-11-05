@@ -19,7 +19,7 @@ coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=form
 > - Kit: `packages/ui/src/components/skeleton.tsx`, `skeleton-region.tsx`, `skeleton-patterns.tsx`; motion in `packages/ui/src/styles/components.css` (`skeleton-bone`, `skeleton-region`)
 > - App compositions: `apps/{web,admin,merchant}/components/loading/`
 > - Route boundaries: every page segment's `loading.tsx` in `apps/web`, `apps/admin`, `apps/merchant`
-> - Docs site (`apps/docs`, static Astro): search-result placeholders (`src/scripts/search.ts`) and the diagram placeholder (`global.css`, `:root[data-js] .diagram[aria-busy="true"] .diagram-source`)
+> - Docs site (`apps/docs`, TanStack Start, pre-rendered): the search dialog's loading state (`src/components/search-provider.tsx`) and the diagram placeholder (`src/styles/app.css`, `:root[data-js] .diagram[aria-busy="true"] .diagram-source`)
 
 ## The three layers
 
@@ -86,10 +86,10 @@ Admin's `LazySection` is the one deliberate exception. It draws bones that are *
 
 ## Docs site
 
-`apps/docs` is a static Astro build: navigations are full page loads with the content in the HTML, so it has no route skeletons. Two things load after the page, and both use the same viewport-wide sweep:
+`apps/docs` is pre-rendered by TanStack Start: every page's content is in its HTML, and client navigation reads each page's data from a static JSON file written at build, so it has no route skeletons. Two things load after the page:
 
-- **Search.** While the index downloads, the results list is `aria-busy` and shows four result-shaped rows. Once the index is cached, these rows never appear again.
-- **Mermaid diagrams.** Until mermaid renders a diagram, a placeholder block replaces the raw diagram source. Screen readers still get the source text. If rendering fails, the source becomes visible again (`data-error`). The placeholder only applies when scripts run (`:root[data-js]`, set by the head script), so a no-JS reader still sees the source.
+- **Search.** While the index downloads (TanStack Query, once per session), the dialog shows a spinner with "Loading the search index…". Once the index is cached, it never appears again.
+- **Mermaid diagrams.** They use the kit's own skeleton sweep (`.skeleton-bone`'s keyframes and timing tokens; `apps/docs/src/styles/__tests__/skeleton-motion-parity.test.ts` keeps them the same). Until the diagram renders, a placeholder block replaces the raw diagram source. Screen readers still get the source text. If rendering fails, the source becomes visible again (`data-error`). The placeholder only applies when scripts run (`:root[data-js]`, set by the head script), so a no-JS reader still sees the source.
 
 ## Testing
 

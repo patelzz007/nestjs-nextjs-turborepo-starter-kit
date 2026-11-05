@@ -41,6 +41,7 @@ const PROFILE: OwnProfile = {
 		sources: [{ width: 128, url: "http://10.0.0.5:8080/api/v1/files/9a1c2e4b-6d8f-4a0b-8c2d-4e6f8a0b2c4d/variants/THUMBNAIL/local-public" }],
 		updatedAt: epochMs(1_790_000_000_000),
 	},
+	language: "en",
 	version: 1,
 	createdAt: epochMs(1_788_000_000_000),
 	updatedAt: epochMs(1_790_000_000_000),

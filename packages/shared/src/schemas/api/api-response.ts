@@ -45,6 +45,11 @@ export const ApiPaginatedMetaSchema = ApiResponseMetaSchema.extend({
 	nextCursor: z.string().nullable().meta({ description: "Opaque cursor for the next page, or null when there are no more rows", example: "Y2x1c18x" }),
 	hasNext: z.boolean().meta({ description: "Whether a next page exists", example: true }),
 	hasPrevious: z.boolean().meta({ description: "Whether a previous page exists", example: false }),
+	totalIsCapped: z.boolean().optional().meta({
+		description:
+			"True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact.",
+		example: false,
+	}),
 });
 
 export type ApiPaginatedMeta = z.output<typeof ApiPaginatedMetaSchema>;
@@ -62,6 +67,8 @@ export const PaginatedServiceFieldsSchema = z.object({
 	nextCursor: z.string().nullable(),
 	hasNext: z.boolean(),
 	hasPrevious: z.boolean(),
+	/** `total` stopped at the list's count cap (a lower bound); see `ApiPaginatedMetaSchema`. */
+	totalIsCapped: z.boolean().optional(),
 });
 
 /**
@@ -88,6 +95,8 @@ export interface PaginatedServiceResult<TItem = DataValue> {
 	nextCursor: string | null;
 	hasNext: boolean;
 	hasPrevious: boolean;
+	/** `total` stopped at the list's count cap (a lower bound); absent when it is exact. */
+	totalIsCapped?: boolean | undefined;
 }
 
 /** Payload returned by soft-delete endpoints (`DELETE /:id`). */

@@ -5,7 +5,8 @@ import { actingUserId, type ActorContext } from "../../../../platform/applicatio
 import { FILES_AUTHORIZATION_OPERATION } from "../../../../platform/application/shared-system-operations";
 import type { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { AWAITING_VERDICT_STATUSES } from "../../domain/aggregates/stored-file.aggregate";
-import type { StoredFileReadPort, StoredFileView } from "../../application/ports/stored-file-read.port";
+import { FILES_SERVER_INGEST_OPERATION } from "../../application/ports/files.tokens";
+import type { IngestedFileContent, StoredFileReadPort, StoredFileView } from "../../application/ports/stored-file-read.port";
 import { toStoredFileView } from "./stored-file.mapper";
 
 /** Upper bound for one stale-file sweep page (the hourly sweep picks up the rest next time). */
@@ -31,6 +32,29 @@ export class PrismaStoredFileReadRepository implements StoredFileReadPort {
 		const row = await this.reads.readAsSystemOperation(FILES_AUTHORIZATION_OPERATION, actor, (db) =>
 			db.storedFile.findFirst({ where: { id: fileId, uploadedById: uploaderId, isDeleted: false } }),
 		);
+		return row === null ? null : toStoredFileView(row, this.publicBaseUrl);
+	}
+
+	public async findIngestedContent(actor: ActorContext, content: IngestedFileContent): Promise<StoredFileView | null> {
+		const row = await this.reads.readAsSystemOperation(FILES_SERVER_INGEST_OPERATION, actor, async (db) => {
+			const sameBytes = {
+				tenantId: content.tenantId,
+				category: content.category,
+				originalName: content.originalName,
+				expectedChecksum: content.checksumSha256,
+				isDeleted: false,
+			} satisfies Prisma.StoredFileWhereInput;
+			const newestFirst = { createdAt: "desc" } satisfies Prisma.StoredFileOrderByWithRelationInput;
+			return (
+				(await db.storedFile.findFirst({ where: { ...sameBytes, status: "READY" }, orderBy: newestFirst })) ??
+				db.storedFile.findFirst({ where: { ...sameBytes, status: { in: [...AWAITING_VERDICT_STATUSES] } }, orderBy: newestFirst })
+			);
+		});
+		return row === null ? null : toStoredFileView(row, this.publicBaseUrl);
+	}
+
+	public async findLiveForIngest(actor: ActorContext, fileId: string): Promise<StoredFileView | null> {
+		const row = await this.reads.readAsSystemOperation(FILES_SERVER_INGEST_OPERATION, actor, (db) => db.storedFile.findFirst({ where: { id: fileId, isDeleted: false } }));
 		return row === null ? null : toStoredFileView(row, this.publicBaseUrl);
 	}
 

@@ -2,10 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import HouseIcon from "lucide-react-native/icons/house";
 import * as React from "react";
 
-import { DrawerAccountHeader, DrawerRow, DrawerSection } from "../drawer-menu";
+import { DrawerAccountHeader, DrawerRow, DrawerSection, DrawerSubmenu } from "../drawer-menu";
 
 describe("DrawerAccountHeader", () => {
-	it("shows the person, their initials on the inverse avatar, and one action", async () => {
+	it("shows the person on a solid primary block, their initials on the inverse avatar, and one action", async () => {
 		const onPress = jest.fn();
 		await render(<DrawerAccountHeader name="Alex Morgan" email="alex@example.com" imageUrl={null} action={{ label: "Edit profile", onPress }} testID="account" />);
 
@@ -77,5 +77,79 @@ describe("DrawerRow", () => {
 		await fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
 		expect(onPress).toHaveBeenCalledTimes(1);
 		expect(screen.getByTestId("sign-out")).toBeOnTheScreen();
+	});
+});
+
+describe("DrawerRow in a nested menu", () => {
+	it("announces a branch as expanded or collapsed, its chevron pointing the way it folds", async () => {
+		const onPress = jest.fn();
+		await render(<DrawerRow icon={HouseIcon} label="Reports" expanded={false} onPress={onPress} testID="reports" />);
+
+		expect(screen.getByRole("button", { name: "Reports" })).toBeCollapsed();
+		expect(screen.getByTestId("reports-chevron", { includeHiddenElements: true })).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Reports" }));
+		expect(onPress).toHaveBeenCalledTimes(1);
+
+		await render(<DrawerRow icon={HouseIcon} label="Reports" expanded onPress={onPress} />);
+		expect(screen.getByRole("button", { name: "Reports" })).toBeExpanded();
+	});
+
+	it("gives a screen's row no chevron and no expanded state", async () => {
+		await render(<DrawerRow icon={HouseIcon} label="Home" onPress={jest.fn()} testID="home" />);
+
+		expect(screen.queryByTestId("home-chevron", { includeHiddenElements: true })).toBeNull();
+		expect(screen.getByRole("button", { name: "Home" })).not.toBeExpanded();
+		expect(screen.getByRole("button", { name: "Home" })).not.toBeCollapsed();
+	});
+
+	it("puts a branch's rows in a submenu: stepped in, with one vertical line down their left", async () => {
+		await render(
+			<DrawerSubmenu testID="rows">
+				<DrawerRow icon={HouseIcon} label="Security" onPress={jest.fn()} />
+			</DrawerSubmenu>,
+		);
+
+		const classes = String(screen.getByTestId("rows").props.className).split(" ");
+		expect(classes).toEqual(expect.arrayContaining(["border-l", "border-border", "ml-6.5"]));
+		expect(screen.getByRole("button", { name: "Security" })).toBeOnTheScreen();
+	});
+});
+
+describe("DrawerRow glyph tiles", () => {
+	function tileClassOf(testID: string): string {
+		return String(screen.getByTestId(`${testID}-tile`, { includeHiddenElements: true }).props.className);
+	}
+
+	it("tints a titled section's rows in the section's tone", async () => {
+		await render(
+			<DrawerSection heading={{ title: "Account", tone: "blue" }}>
+				<DrawerRow icon={HouseIcon} label="Security" onPress={jest.fn()} testID="security" />
+			</DrawerSection>,
+		);
+
+		expect(tileClassOf("security")).toContain("bg-tone-blue-soft");
+	});
+
+	it("gives the main section's rows a neutral tile, and the destructive row its own tint", async () => {
+		await render(
+			<DrawerSection>
+				<DrawerRow icon={HouseIcon} label="Home" onPress={jest.fn()} testID="home" />
+				<DrawerRow icon={HouseIcon} label="Sign out" tone="destructive" onPress={jest.fn()} testID="sign-out" />
+			</DrawerSection>,
+		);
+
+		expect(tileClassOf("home")).toContain("bg-muted");
+		expect(tileClassOf("sign-out")).toContain("bg-destructive-soft");
+	});
+
+	it("inverts the tile inside the selected capsule", async () => {
+		await render(
+			<DrawerSection heading={{ title: "Account", tone: "blue" }}>
+				<DrawerRow icon={HouseIcon} label="Security" selected onPress={jest.fn()} testID="security" />
+			</DrawerSection>,
+		);
+
+		expect(tileClassOf("security")).toContain("bg-primary-foreground/15");
+		expect(screen.getByTestId("security")).toHaveProp("className", expect.stringContaining("bg-primary"));
 	});
 });

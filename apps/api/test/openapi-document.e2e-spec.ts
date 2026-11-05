@@ -478,6 +478,7 @@ describe("OpenAPI document (e2e)", () => {
 			expect(fileRoutes.map((route: RouteHandler): string => route.handler).sort()).toEqual([
 				"IntegrationAnalyticsController.exportReport",
 				"OperationsBackupFileController.file",
+				"PersonalDataController.dataExport",
 				"RewardsAdminAnalyticsController.exportReport",
 				"RewardsAdminRewardsController.downloadRewardImagesArchive",
 				"TenantAnalyticsController.exportReport",

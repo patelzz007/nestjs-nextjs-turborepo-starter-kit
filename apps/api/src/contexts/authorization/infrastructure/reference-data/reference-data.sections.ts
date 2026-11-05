@@ -137,6 +137,62 @@ export class RolePermissionMatrixSection implements ReferenceDataSection {
 	}
 }
 
+/**
+ * Every tenant's Owner role (ADR 067: it cannot be edited and always holds every tenant permission) kept equal to
+ * the Owner template. Tenant roles are copies made when the tenant is created, so a permission added to the
+ * templates later (a new feature's capability) would otherwise reach new tenants only, leaving every existing
+ * Owner without it. Manager and Cashier copies are the tenant's to edit and are never touched here. Converges
+ * both ways, like the template matrix: missing grants are added or restored, ones the template dropped retired.
+ */
+export class OwnerRoleCopiesSection implements ReferenceDataSection {
+	public readonly name = "owner-role-copies";
+
+	public async sync(tx: Tx): Promise<SectionChange> {
+		const template = await tx.role.findFirst({
+			where: { kind: "TEMPLATE", templateKey: "OWNER", isDeleted: false },
+			include: { rolePermissions: { where: { isDeleted: false } } },
+		});
+		if (template === null) {
+			return NO_CHANGE;
+		}
+		const desired: ReadonlySet<string> = new Set(template.rolePermissions.map((row: RolePermission): string => row.permissionId));
+		const owners: Role[] = await tx.role.findMany({ where: { kind: "TENANT", templateKey: "OWNER", isDeleted: false } });
+		const rows: RolePermission[] = await tx.rolePermission.findMany({ where: { roleId: { in: owners.map((role: Role): string => role.id) } } });
+		const now: number = nowEpochMs();
+		const missing: Prisma.RolePermissionCreateManyInput[] = [];
+		const toRestore: string[] = [];
+		const toRetire: string[] = [];
+
+		for (const owner of owners) {
+			const own: RolePermission[] = rows.filter((row: RolePermission): boolean => row.roleId === owner.id);
+			for (const permissionId of desired) {
+				const row: RolePermission | undefined = own.find((candidate: RolePermission): boolean => candidate.permissionId === permissionId);
+				if (row === undefined) {
+					missing.push({ roleId: owner.id, permissionId });
+				} else if (row.isDeleted) {
+					toRestore.push(row.id);
+				}
+			}
+			for (const row of own) {
+				if (!row.isDeleted && !desired.has(row.permissionId)) {
+					toRetire.push(row.id);
+				}
+			}
+		}
+
+		if (missing.length > 0) {
+			await tx.rolePermission.createMany({ data: missing });
+		}
+		if (toRestore.length > 0) {
+			await tx.rolePermission.updateMany({ where: { id: { in: toRestore } }, data: { isDeleted: false, deletedAt: null, updatedAt: now } });
+		}
+		if (toRetire.length > 0) {
+			await tx.rolePermission.updateMany({ where: { id: { in: toRetire } }, data: { isDeleted: true, deletedAt: now, updatedAt: now } });
+		}
+		return { created: missing.length, updated: 0, restored: toRestore.length, retired: toRetire.length };
+	}
+}
+
 /** The MERCHANT capability catalog (`CapabilityDefinition`). */
 export class MerchantCapabilitySection implements ReferenceDataSection {
 	public readonly name = "merchant-capabilities";
@@ -191,5 +247,12 @@ export class PlatformCapabilitySection implements ReferenceDataSection {
 
 /** Every section, in dependency order (grants need the roles and permissions committed first). The single list the seed and the command share. */
 export function createReferenceDataSections(): readonly ReferenceDataSection[] {
-	return [new PermissionCatalogSection(), new SystemRoleSection(), new RolePermissionMatrixSection(), new PlatformCapabilitySection(), new MerchantCapabilitySection()];
+	return [
+		new PermissionCatalogSection(),
+		new SystemRoleSection(),
+		new RolePermissionMatrixSection(),
+		new OwnerRoleCopiesSection(),
+		new PlatformCapabilitySection(),
+		new MerchantCapabilitySection(),
+	];
 }

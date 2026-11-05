@@ -113,7 +113,7 @@ record; everything else is recorded here.
 | 15  | Storage                 | `expo-secure-store` for tokens **and** preferences; no AsyncStorage                                                                                                                                                                                                    | this page                                                      |
 | 16  | API address             | Dev: Expo's host address + API port. Otherwise `EXPO_PUBLIC_API_URL`, zod-checked, config error screen                                                                                                                                                                 | this page                                                      |
 | 17  | Forced upgrade          | `X-App-Version` header, `MOBILE_MIN_SUPPORTED_VERSION`, 426, blocking screen                                                                                                                                                                                           | [ADR 033](../../adr/033-mobile-forced-upgrade.md)              |
-| 18  | Navigation              | Expo Router: `(auth)` stack, `(app)` tabs, root guard                                                                                                                                                                                                                  | this page                                                      |
+| 18  | Navigation              | Expo Router: `auth` stack, `(app)` tabs, root guard                                                                                                                                                                                                                  | this page                                                      |
 | 19  | Starter screens         | Full sign-in flow, sign-up, forgot password, Home, Analytics (sample data — [ADR 048](../../adr/048-mobile-analytics-screen.md)), Search (placeholder), Profile, Settings, Security — under the floating tab bar ([ADR 036](../../adr/036-mobile-floating-tab-bar.md)) | this page                                                      |
 | 20  | 2FA enrollment on phone | "Open in authenticator app" link + copyable secret + QR                                                                                                                                                                                                                | this page                                                      |
 | 21  | Email-link flows        | Reset password and email verification finish on the web pages                                                                                                                                                                                                          | this page                                                      |
@@ -906,13 +906,16 @@ apps/mobile/
       config-error.tsx
       update-required.tsx
       lock.tsx
-      (auth)/_layout.tsx    stack
-      (auth)/sign-in.tsx
-      (auth)/verify-device.tsx
-      (auth)/two-factor.tsx
-      (auth)/enroll-two-factor.tsx
-      (auth)/sign-up.tsx
-      (auth)/forgot-password.tsx
+      auth/_layout.tsx      stack: everything in front of the auth wall, at /auth/…
+      auth/onboarding.tsx   first-launch walkthrough (/auth/onboarding)
+      auth/(forms)/_layout.tsx   stack inside the AuthShell (ADR 039)
+      auth/(forms)/sign-in.tsx   /auth/sign-in
+      auth/(forms)/verify-device.tsx
+      auth/(forms)/two-factor.tsx
+      auth/(forms)/enroll-two-factor.tsx
+      auth/(forms)/verify-email.tsx
+      auth/(forms)/sign-up.tsx
+      auth/(forms)/forgot-password.tsx
       (app)/_layout.tsx     tabs
       (app)/index.tsx       Home
       (app)/analytics.tsx   Analytics (sample data, ADR 048)
@@ -993,16 +996,46 @@ stateDiagram-v2
   SignedOut --> UpgradeRequired: 426
 ```
 
-| State             | Routes allowed                               |
-| ----------------- | -------------------------------------------- |
-| `ConfigError`     | `config-error` only                          |
-| `UpgradeRequired` | `update-required` only (cannot be dismissed) |
-| `SignedOut`       | `(auth)` group only                          |
-| `Locked`          | `lock` only                                  |
-| `SignedIn`        | `(app)` group only                           |
+| State             | Root route          | Screens allowed                                                        |
+| ----------------- | ------------------- | ---------------------------------------------------------------------- |
+| `ConfigError`     | `config-error`      | `config-error` only                                                    |
+| `UpgradeRequired` | `update-required`   | `update-required` only (cannot be dismissed)                           |
+| `SignedOut`       | `onboarding`, `auth` | `/auth/onboarding` until it is done (ADR 041), then the `/auth/…` sign-in screens |
+| `Locked`          | `lock`              | `lock` only                                                            |
+| Restricted (2FA)  | `enroll-two-factor` | `/auth/enroll-two-factor` only                                         |
+| Restricted (email)| `verify-email`      | `/auth/verify-email` only                                              |
+| `SignedIn`        | `app`               | `(app)` group only                                                     |
 
 The guard reads the session store and redirects; screens never decide where to go after
-authentication on their own. Route params are parsed with zod
+authentication on their own.
+
+**How the guard works (rewritten 2026-11-04).** `RootStack` (`src/runtime/root-navigator.tsx`)
+always declares every root screen — the list never changes — and provides the session's root route
+through a context. Every root route file wraps its default export in `withRootGate(owners, Screen)`:
+the screen renders while the root route is one of `owners`, and otherwise renders
+`<Redirect href={ROOT_ROUTE_ENTRY[route]} />`, the screen the current route opens on. The `auth`
+folder (`src/app/auth`, URLs `/auth/…`) holds every screen in front of the auth wall and serves four
+routes (`onboarding`, `auth`, `enroll-two-factor`, `verify-email`); each of its screens is gated to
+its own one, so a restricted session can only see its enrollment step and a signed-out device never
+sees one. Inside it, `onboarding` is full screen and the forms share the `(forms)` group, whose
+layout draws the AuthShell once (a group adds no URL segment).
+
+*Moved 2026-11-04:* the forms were the pathless `(auth)` group (`/sign-in`, `/two-factor`, …) and
+onboarding a root screen (`/onboarding`). Every path is named in `src/runtime/routes.ts`, so the move
+changed that file only; the API builds no links into the app (its emails link to the web apps), so
+nothing outside `apps/mobile` changed. A link to an old path now opens "Unmatched Route". A screen rendered outside a `RootStack` (a unit test of one screen) is
+not gated.
+
+Expo Router's protected screens (`Stack.Protected`) are deliberately not used. Their guards
+change a navigator's screen list with the session; each change is a `ROUTE_NAMES_CHANGED`
+action, reported as "not handled" when it lands on a navigator that is leaving. Inside the old `(auth)` group
+(a nested stack reached by a redirect, its route carrying `params: {}`), the guards re-ran Expo
+Router's guarded-route clean-up (`useClearGuardedRoutes` → `REMOVE_ROUTES`) on every render; each
+run produced an equal but new navigation state, a new params object and new guards, so the next
+render ran it again — "Maximum update depth exceeded", repeating whenever anything re-rendered
+(the live notification stream's reconnect backoff). It was seen on a phone opened after its
+session had ended; with the nested guards removed the error stopped at once (checked on the
+device), and Expo Router 58.0.30 has the same guard code. Route params are parsed with zod
 (`Schema.parse(useLocalSearchParams())`), per `rules/04`.
 
 ### 9.7 Secure Store usage
@@ -1076,11 +1109,11 @@ See [section 19, piece 5](#piece-5-appsmobile).
   CommonJS (Metro and Jest configs).
 - **Structure as built.** `src/runtime/` holds what is built once per start (`app-runtime.ts`: env →
   app version → query client → session and preferences stores → Secure Store token provider → API
-  client), the providers (`app-shell.tsx`) and the root guard (`root-navigator.tsx`, Expo Router
-  protected routes). `features/` holds `session`, `preferences`, `app-lock`, `auth`, `two-factor`,
+  client), the providers (`app-shell.tsx`) and the root guard (`root-navigator.tsx`, a fixed
+  root stack and `withRootGate` on every root route file; §9.6). `features/` holds `session`, `preferences`, `app-lock`, `auth`, `two-factor`,
   `devices` and `profile`. Route tests live in `src/__tests__/app/`, mirroring `src/app`: Expo Router
   bundles EVERY file under `src/app` (a test there broke `expo export` by pulling
-  `expo-router/testing-library` into the app). Extra routes: `(auth)/verify-email` (a session restricted to email
+  `expo-router/testing-library` into the app). Extra routes: `auth/(forms)/verify-email` (a session restricted to email
   verification) and `(app)/settings/two-factor` (turn 2FA on / new backup codes).
 - **Session states.** `unknown` is `starting` (the splash screen stays up). `ConfigError` is decided
   before the store exists (an invalid environment builds no API client). `SignedIn` carries the
@@ -1171,7 +1204,8 @@ launch pnpm here, so `apps/mobile` and `packages/ui-native` took the versions in
   for — the signed-out app showed "Unmatched Route". `RootStack` now gives every
   `Stack.Protected` a `redirectTo`: the entry screen of the current state (`/sign-in` when signed
   out). Inside `(auth)`, a restricted session's guards still turn `/sign-in` away to its
-  enrollment step.
+  enrollment step. *Superseded 2026-11-04:* protected screens were replaced by `withRootGate`
+  (§9.6), which redirects to the same entry screens.
 - **Reanimated under Jest.** Reanimated 4.7 runs its JavaScript build in Jest and ships a Jest
   resolver for it, but that resolver (and Worklets') recognises its own files with
   `basedir.includes("react-native-worklets")`, which pnpm's peer-named store folders match for
@@ -2003,7 +2037,7 @@ pnpm workspaces work with Expo without hoisting.
 | Mobile session lifetime | Same as web                                                                              |
 | Who refreshes tokens    | `packages/api-client`, single flight                                                     |
 | API address             | Expo dev host in development; `EXPO_PUBLIC_API_URL` otherwise, zod-checked, error screen |
-| Navigation              | `(auth)` stack and `(app)` tabs with a root guard                                        |
+| Navigation              | `auth` stack and `(app)` tabs with a root guard                                          |
 | Preferences storage     | Secure Store for everything                                                              |
 | Generated CSS           | Committed, with a staleness check                                                        |
 | api-client split        | Core + `/react`, shared query keys                                                       |

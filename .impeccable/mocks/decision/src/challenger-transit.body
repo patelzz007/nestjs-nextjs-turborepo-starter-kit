@@ -1,0 +1,17 @@
+<style>
+body{background:#0f1a33;color:#f4f6fa;font-family:Geist,sans-serif}
+.hd{display:flex;justify-content:space-between;align-items:center;padding:52px 20px 0}
+.ib svg{width:22px;height:22px;stroke:#f4f6fa;fill:none;stroke-width:2;stroke-linecap:round}
+h1{font:700 32px "Bricolage Grotesque";margin:14px 20px 2px}.sub{margin:0 20px 18px;color:#9fb0cf;font-size:14px}
+.line{position:relative;margin:0 20px 0 20px;padding-left:34px}
+.line:before{content:"";position:absolute;left:11px;top:8px;bottom:8px;width:6px;border-radius:3px;background:var(--c)}
+.code{display:inline-block;font:700 12px Geist;background:var(--c);color:#fff;border-radius:6px;padding:3px 7px;margin:0 0 10px -34px}
+.stn{position:relative;padding:10px 0}
+.stn:before{content:"";position:absolute;left:-28px;top:16px;width:12px;height:12px;border-radius:50%;background:#f4f6fa;border:3px solid var(--c)}
+.stn b{font:600 16px Geist;display:block}.stn i{font-style:normal;color:#9fb0cf;font-size:13px}
+.x:before{width:16px;height:16px;left:-30px;background:#0f1a33;border:3px solid #f4f6fa}
+</style>
+<div class="hd"><div class="ib"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></div><div class="ib"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 3 7 3 7H3s3-1 3-7"/></svg></div></div>
+<h1>Home</h1><div class="sub">Your account at a glance</div>
+<div class="line" style="--c:#e2412f"><span class="code">AC · Account</span><div class="stn"><b>Admin User</b><i>admin@example.com</i></div><div class="stn"><b>Two-factor on</b><i>7 backup codes left</i></div></div>
+<div class="line" style="--c:#2d6cdf;margin-top:14px"><span class="code">DS · Discover</span><div class="stn x"><b>See your activity</b><i>Spending, visits and rewards</i></div><div class="stn"><b>Lock the app</b><i>Face, fingerprint or passcode</i></div><div class="stn"><b>Read a PDF</b><i>Page by page, right here</i></div></div>

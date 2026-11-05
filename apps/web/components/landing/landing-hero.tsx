@@ -112,14 +112,21 @@ interface HeroStatProps {
 	readonly value: string;
 }
 
+/**
+ * One stat: a `<dt>`/`<dd>` pair in the single `<div>` a description list allows around it (anything else
+ * between the `<dl>` and its terms breaks the list for screen readers). The decorative icon sits inside the term,
+ * placed beside the text as before.
+ */
 function HeroStat({ icon, label, value }: HeroStatProps): React.JSX.Element {
 	return (
-		<div className="flex items-center gap-3 rounded-2xl border border-border/80 bg-background/70 px-3 py-2 shadow-xs backdrop-blur-sm sm:pr-4 sm:pl-2">
-			<span className="hidden size-9 items-center justify-center rounded-xl bg-primary/10 text-primary sm:flex">{icon}</span>
-			<div className="text-left leading-tight">
-				<dt className="text-xs text-muted-foreground">{label}</dt>
-				<dd className="text-sm font-semibold text-foreground tabular-nums">{value}</dd>
-			</div>
+		<div className="relative flex flex-col justify-center rounded-2xl border border-border/80 bg-background/70 px-3 py-2 text-left leading-tight shadow-xs backdrop-blur-sm sm:min-h-13 sm:pr-4 sm:pl-14">
+			<dt className="text-xs text-muted-foreground">
+				<span aria-hidden="true" className="absolute top-1/2 left-2 hidden size-9 -translate-y-1/2 items-center justify-center rounded-xl bg-primary/10 text-primary sm:flex">
+					{icon}
+				</span>
+				{label}
+			</dt>
+			<dd className="text-sm font-semibold text-foreground tabular-nums">{value}</dd>
 		</div>
 	);
 }

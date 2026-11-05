@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { FixedClock } from "../../../../platform/application/__tests__/fixed-clock";
 import { AppError, ConflictError } from "../../../../platform/application/errors/app-error";
 import type { CheckoutPoint } from "../../domain/aggregates/reward-sale.aggregate";
-import { MinSpendNotMetError, PosCodeLockedError, RedemptionCodeNotFoundError } from "../../domain/errors/pos.errors";
+import { MinSpendNotMetError, PosCodeLockedError, RedemptionCodeNotFoundError, TillRedemptionDisabledError } from "../../domain/errors/pos.errors";
 import { POS_CODE_LOCKOUT_MS, POS_CODE_MAX_FAILURES } from "../../domain/policies/code-lockout.policy";
 import { CheckoutSaleCommand } from "../commands/checkout-sale/checkout-sale.command";
 import { CheckoutSaleHandler, SaleRedemptionUnresolvedError } from "../commands/checkout-sale/checkout-sale.handler";
@@ -13,6 +13,15 @@ import { ValidateRedemptionCodesHandler } from "../commands/validate-redemption-
 import type { StoredSale } from "../../domain/repositories/pos.repositories";
 import { RedemptionCodeResolver } from "../services/redemption-code-resolver";
 import { apiKeyActor, CUSTOMER, FIXTURE_CLAIM_TTL_MS, InMemoryPosStore, JoinedFingerprint, NOW, TENANT_ID, SequentialIds, STORE_A, STORE_B } from "./fakes/pos.fakes";
+
+import type { TillRedemptionGate } from "../ports/till-redemption.port";
+
+/** The `till-redemption` gate (enhancement 5.11): open, or switched off at the till's store. */
+function gate(open: boolean): TillRedemptionGate {
+	return { isOpen: (): Promise<boolean> => Promise.resolve(open) };
+}
+const OPEN_GATE = gate(true);
+const CLOSED_GATE = gate(false);
 
 const POINT: CheckoutPoint = { tenantId: TENANT_ID, locationId: STORE_A, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" };
 
@@ -26,7 +35,7 @@ describe("ValidateRedemptionCodesHandler", () => {
 
 	beforeEach(() => {
 		store = new InMemoryPosStore();
-		handler = new ValidateRedemptionCodesHandler(store.uow, new RedemptionCodeResolver(), new FixedClock(NOW));
+		handler = new ValidateRedemptionCodesHandler(store.uow, new RedemptionCodeResolver(), new FixedClock(NOW), OPEN_GATE);
 	});
 
 	it("previews a redeemable code and audits the scan under the key's own principal", async () => {
@@ -89,7 +98,7 @@ describe("ValidateRedemptionCodesHandler", () => {
 		const due = store.claims.seed("claim-01", { claimExpiresAt: NOW });
 
 		await expect(handler.execute(new ValidateRedemptionCodesCommand(apiKeyActor(), POINT, { token: due.token }))).resolves.toMatchObject({ valid: true, invalidReason: null });
-		const past = new ValidateRedemptionCodesHandler(store.uow, new RedemptionCodeResolver(), new FixedClock(epochMs(NOW + 1)));
+		const past = new ValidateRedemptionCodesHandler(store.uow, new RedemptionCodeResolver(), new FixedClock(epochMs(NOW + 1)), OPEN_GATE);
 		await expect(past.execute(new ValidateRedemptionCodesCommand(apiKeyActor(), POINT, { token: due.token }))).resolves.toMatchObject({
 			valid: false,
 			invalidReason: "EXPIRED",
@@ -122,7 +131,7 @@ describe("CheckoutSaleHandler", () => {
 
 	beforeEach(() => {
 		store = new InMemoryPosStore();
-		handler = new CheckoutSaleHandler(store.uow, new RedemptionCodeResolver(), new SequentialIds("sale"), new JoinedFingerprint(), new FixedClock(NOW));
+		handler = new CheckoutSaleHandler(store.uow, new RedemptionCodeResolver(), new SequentialIds("sale"), new JoinedFingerprint(), new FixedClock(NOW), OPEN_GATE);
 	});
 
 	it("records the bill and redeems every code in one unit of work, crediting referrals and stamping the signup referral", async () => {
@@ -449,5 +458,28 @@ describe("CheckoutSaleHandler", () => {
 		expect(store.referrals.pendingReferrals.get("reward-1")).toBe("referral-1");
 		expect(store.referrals.pendingSignupReferral).toBe("signup-referral-1");
 		expect(store.sales.rows.size).toBe(0);
+	});
+});
+
+describe("till redemption switched off at the store (enhancement 5.11)", () => {
+	it("refuses a preview before looking at the code", async () => {
+		const store = new InMemoryPosStore();
+		const claim = store.claims.seed("claim-01");
+		const closed = new ValidateRedemptionCodesHandler(store.uow, new RedemptionCodeResolver(), new FixedClock(NOW), CLOSED_GATE);
+		await expect(closed.execute(new ValidateRedemptionCodesCommand(apiKeyActor(), POINT, { token: claim.token }))).rejects.toThrow(TillRedemptionDisabledError);
+	});
+
+	it("refuses a new sale, but still replays one already made with the same key", async () => {
+		const store = new InMemoryPosStore();
+		const claim = store.claims.seed("claim-01");
+		const open = new CheckoutSaleHandler(store.uow, new RedemptionCodeResolver(), new SequentialIds("sale"), new JoinedFingerprint(), new FixedClock(NOW), OPEN_GATE);
+		const sold = await open.execute(new CheckoutSaleCommand(apiKeyActor(), POINT, bill([{ token: claim.token }])));
+
+		const closed = new CheckoutSaleHandler(store.uow, new RedemptionCodeResolver(), new SequentialIds("sale"), new JoinedFingerprint(), new FixedClock(NOW), CLOSED_GATE);
+		await expect(closed.execute(new CheckoutSaleCommand(apiKeyActor(), POINT, bill([{ token: claim.token }])))).resolves.toStrictEqual(sold);
+		const other = store.claims.seed("claim-02", { rewardId: "reward-2" });
+		await expect(closed.execute(new CheckoutSaleCommand(apiKeyActor(), POINT, bill([{ token: other.token }], { idempotencyKey: "idem-2" })))).rejects.toThrow(
+			TillRedemptionDisabledError,
+		);
 	});
 });

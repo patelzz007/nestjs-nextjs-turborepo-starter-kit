@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { PUBLISHED_AUTHENTICATOR_AAGUIDS } from "../account-security";
 import { TENANT_SEED_IDS } from "../tenant-seed-ids";
 
 const SEED_DIR: string = resolve(import.meta.dirname, "..");
@@ -24,11 +25,16 @@ describe("seed id literals", () => {
 		const notV7: string[] = seedSources(SEED_DIR).flatMap((file: string): string[] =>
 			[...readFileSync(file, "utf8").matchAll(UUID_LITERAL)]
 				.map((match): string => match.groups?.id ?? "")
-				.filter((id: string): boolean => !UUID_V7.test(id))
+				.filter((id: string): boolean => !UUID_V7.test(id) && !PUBLISHED_AUTHENTICATOR_AAGUIDS.includes(id))
 				.map((id: string): string => `${file.slice(SEED_DIR.length + 1)}: ${id}`),
 		);
 
 		expect(notV7).toEqual([]);
+	});
+
+	it("exempts only published authenticator model numbers, which are not row ids", () => {
+		expect(PUBLISHED_AUTHENTICATOR_AAGUIDS).toHaveLength(3);
+		expect(PUBLISHED_AUTHENTICATOR_AAGUIDS.some((id: string): boolean => UUID_V7.test(id))).toBe(false);
 	});
 
 	it("covers the fixed tenant ids the tests and the single-tenant config name", () => {

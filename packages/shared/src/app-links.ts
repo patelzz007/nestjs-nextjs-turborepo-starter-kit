@@ -44,6 +44,8 @@ export interface WebAppLinks {
 	readonly reward: (rewardId: string) => string;
 	/** The unsubscribe page an email's footer links (`?token=`; no sign-in needed). */
 	readonly unsubscribe: string;
+	/** The public status page (enhancement 4.5; no sign-in needed). */
+	readonly status: string;
 }
 
 /** Merchant app pages the API links to. */
@@ -55,6 +57,9 @@ export interface MerchantAppLinks {
 	/** A tenant's API keys. */
 	readonly apiKeys: (tenantSlug: string) => string;
 	readonly terminals: (tenantSlug: string) => string;
+	/** A tenant's outgoing webhooks, and one endpoint with its delivery log (ADR 082). */
+	readonly webhooks: (tenantSlug: string) => string;
+	readonly webhookEndpoint: (tenantSlug: string, endpointId: string) => string;
 	/** One of a tenant's rewards, and its editor (reward-review notices link here, ADR 070). */
 	readonly reward: (tenantSlug: string, rewardId: string) => string;
 	readonly rewardEdit: (tenantSlug: string, rewardId: string) => string;
@@ -96,12 +101,15 @@ export const APP_LINKS: AppLinks = {
 		notifications: "/dashboard/notifications",
 		reward: (rewardId: string): string => `/dashboard/rewards/${encodeURIComponent(rewardId)}`,
 		unsubscribe: "/unsubscribe",
+		status: "/status",
 	},
 	merchant: {
 		onboarding: "/onboarding",
 		teamInvite: "/team-invite",
 		apiKeys: (tenantSlug: string): string => `/t/${encodeURIComponent(tenantSlug)}/api-keys`,
 		terminals: (tenantSlug: string): string => `/t/${encodeURIComponent(tenantSlug)}/terminals`,
+		webhooks: (tenantSlug: string): string => `/t/${encodeURIComponent(tenantSlug)}/webhooks`,
+		webhookEndpoint: (tenantSlug: string, endpointId: string): string => `/t/${encodeURIComponent(tenantSlug)}/webhooks/${encodeURIComponent(endpointId)}`,
 		reward: (tenantSlug: string, rewardId: string): string => `/t/${encodeURIComponent(tenantSlug)}/rewards/${encodeURIComponent(rewardId)}`,
 		rewardEdit: (tenantSlug: string, rewardId: string): string => `/t/${encodeURIComponent(tenantSlug)}/rewards/${encodeURIComponent(rewardId)}/edit`,
 		notifications: "/notifications",

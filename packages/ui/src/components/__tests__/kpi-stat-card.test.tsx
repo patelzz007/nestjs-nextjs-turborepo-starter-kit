@@ -27,7 +27,8 @@ describe("KpiStatCard", () => {
 	it("colours by sentiment, not by direction", (): void => {
 		render(<KpiStatCard label="Refunds" value="4" change={{ status: "change", direction: "up", sentiment: "negative", label: "+2" }} />, { wrapper: UiKitTestProviders });
 
-		expect(screen.getByText("+2").className).toContain("text-destructive");
+		// Negative reads red: the AA tone pair (red text on its soft fill), not the status colour, which is too faint as small text.
+		expect(screen.getByText("+2").className).toContain("text-tone-red");
 	});
 
 	it("says so when there was nothing to compare with", (): void => {

@@ -294,8 +294,17 @@ dependency and uses one error format everywhere.
 
 ## 10. The mobile app (`apps/mobile`)
 
-The Expo app follows the same rule — **only one module reads `process.env`** — with two kinds of
-variables (docs/technical/mobile/mobile-app.md §9.3, §9.5):
+The Expo app follows the same rule, once for each place its configuration is read (lint-enforced in
+`apps/mobile/oxlint.config.mts`; the same in the expo-boilerplate) — docs/technical/mobile/mobile-app.md §9.3, §9.5:
+
+| Module | Runs | Reads |
+| --- | --- | --- |
+| `src/lib/env.ts` | in the app, on the phone | the `EXPO_PUBLIC_*` values Metro bakes into the bundle |
+| `build-env/app-config-env.ts` | on the build machine (Expo CLI, a native build, EAS Build), for `app.config.ts` | the build's settings: identity, Firebase files, EAS project, the LAN-http permission, the passkey domain |
+
+`app.config.ts` itself never reads `process.env`: it imports the validated values (with the `.ts`
+extension, which Expo's config loader needs). Every variable a build reads is also in the root
+`turbo.json`'s `build.env`, so a change to one never replays a cached build.
 
 | Variable | Read by | Required | Purpose |
 | --- | --- | --- | --- |
@@ -303,11 +312,14 @@ variables (docs/technical/mobile/mobile-app.md §9.3, §9.5):
 | `EXPO_PUBLIC_API_PORT` | `src/lib/env.ts` | no (`8080`) | Development only: the API's port, joined with the host Expo Go connected to (never `localhost` — on a phone that is the phone), and added to an `http://` `EXPO_PUBLIC_API_URL` that names no port |
 | `EXPO_PUBLIC_IOS_STORE_URL`, `EXPO_PUBLIC_ANDROID_STORE_URL` | `src/lib/env.ts` | no | `https://` store pages the "Update required" screen opens (ADR 033) |
 | `EXPO_PUBLIC_SHOW_DEMO_ACCOUNT` | `src/lib/env.ts` | no (off) | `true` puts the seeded quick sign-in buttons into a **release** build, for internal test APKs only (development builds always have them); `true`, `false` or unset, anything else is a configuration error. The passwords are then inside the APK: never set it for a store build ([ADR 042](../../adr/042-mobile-demo-quick-sign-in.md)) |
-| `EXPO_PUBLIC_ALLOW_LAN_HTTP_API` | `src/lib/env.ts`, `app.config.ts` | no (off) | `true` lets a **release** build use an `http://` `EXPO_PUBLIC_API_URL` on a private LAN (10.x, 172.16–31.x, 192.168.x), and allows plain http in that build's Android manifest (`config-plugins/lan-http-api.ts`, applied at prebuild): a test APK for a phone on the same Wi-Fi or hotspot as the dev machine. `true`, `false` or unset. Never for a store build ([Building installable apps §7](../mobile/building-installable-apps.md)) |
-| `MOBILE_APP_NAME` | `app.config.ts` (build machine) | no (`Starter`) | Display name, at most 30 characters |
-| `MOBILE_APP_SLUG` | `app.config.ts` | no (`starter`) | Expo slug |
-| `MOBILE_BUNDLE_ID` | `app.config.ts` | no (`com.example.starter`) | iOS bundle id and Android package — letters and digits in reverse-DNS segments |
-| `MOBILE_SCHEME` | `app.config.ts` | no (`starter`) | Deep-link scheme (Expo Router's default links only) |
+| `EXPO_PUBLIC_ALLOW_LAN_HTTP_API` | `src/lib/env.ts`, `build-env/app-config-env.ts` | no (off) | `true` lets a **release** build use an `http://` `EXPO_PUBLIC_API_URL` on a private LAN (10.x, 172.16–31.x, 192.168.x), and allows plain http in that build's Android manifest (`config-plugins/lan-http-api.ts`, applied at prebuild): a test APK for a phone on the same Wi-Fi or hotspot as the dev machine. `true`, `false` or unset. Never for a store build ([Building installable apps §7](../mobile/building-installable-apps.md)) |
+| `MOBILE_APP_NAME` | `build-env/app-config-env.ts` (build machine) | no (`Starter`) | Display name, at most 30 characters |
+| `MOBILE_APP_SLUG` | `build-env/app-config-env.ts` | no (`starter`) | Expo slug |
+| `MOBILE_BUNDLE_ID` | `build-env/app-config-env.ts` | no (`com.example.starter`) | iOS bundle id and Android package — letters and digits in reverse-DNS segments |
+| `MOBILE_SCHEME` | `build-env/app-config-env.ts` | no (`starter`) | Deep-link scheme (Expo Router's default links only) |
+| `MOBILE_PASSKEY_DOMAIN` | `build-env/app-config-env.ts` | no (none) | The API's `WEBAUTHN_RP_ID` (ADR 080): gives the iOS build the `webcredentials:` associated domain its passkeys need. Android needs nothing here (the site's `/.well-known/assetlinks.json` names the app) |
+| `GOOGLE_SERVICES_JSON`, `GOOGLE_SERVICES_PLIST` | `build-env/app-config-env.ts` | no | Paths to Firebase's Android and iOS config files (push, crash reporting) |
+| `EAS_PROJECT_ID` | `build-env/app-config-env.ts` | no (updates off) | The EAS project's id (a UUID): turns on over-the-air updates |
 
 - **`EXPO_PUBLIC_*` is public.** Metro inlines each literal `process.env.EXPO_PUBLIC_…` read into
   the bundle, so the value is readable by anyone who has the app. No secret is ever configured this

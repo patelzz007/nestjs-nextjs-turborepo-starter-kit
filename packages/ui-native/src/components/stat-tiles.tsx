@@ -1,7 +1,9 @@
 // A row of headline numbers ("Stars 42", "Commits 1,204"), wrapping onto more
 // rows on narrow screens. Presentational and data-agnostic — the caller
 // formats each value. Each tile is read by screen readers as "label: value".
-// The mobile counterpart of the web kit's `StatCard` row.
+// The mobile counterpart of the web kit's `StatCard` row. By default (`plain`) the
+// figures stand on their surface with no box of their own, so a row of stats in a
+// card is never boxes inside a box (ADR 079).
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
@@ -14,25 +16,29 @@ export interface StatTile {
 	readonly value: string;
 }
 
-export const statTilesVariants = cva("flex-row flex-wrap gap-2", {
+export const statTilesVariants = cva("flex-row flex-wrap", {
 	variants: {
-		/** `muted`: soft filled tiles. `outline`: bordered tiles, for a tinted surface. */
-		variant: { muted: "", outline: "" },
+		/** `plain`: figures on the surface they sit on. `muted`: soft filled tiles. `outline`: bordered tiles, for a tinted surface. */
+		variant: { plain: "gap-x-6 gap-y-4", muted: "gap-2", outline: "gap-2" },
 		size: { md: "", sm: "" },
 	},
-	defaultVariants: { variant: "muted", size: "md" },
+	defaultVariants: { variant: "plain", size: "md" },
 });
 
-export const statTileVariants = cva("grow gap-0.5 rounded-lg", {
+export const statTileVariants = cva("grow gap-0.5", {
 	variants: {
-		variant: { muted: "bg-muted", outline: "border border-border bg-card" },
-		size: { md: "min-w-20 px-3 py-2", sm: "min-w-16 px-2.5 py-1.5" },
+		variant: { plain: "", muted: "rounded-lg bg-muted", outline: "rounded-lg border border-border bg-card" },
+		size: { md: "min-w-20", sm: "min-w-16" },
 	},
-	defaultVariants: { variant: "muted", size: "md" },
+	compoundVariants: [
+		{ variant: ["muted", "outline"], size: "md", className: "px-3 py-2" },
+		{ variant: ["muted", "outline"], size: "sm", className: "px-2.5 py-1.5" },
+	],
+	defaultVariants: { variant: "plain", size: "md" },
 });
 
-export const statTileValueVariants = cva("font-sans-semibold text-foreground", {
-	variants: { size: { md: "text-lg", sm: "text-base" } },
+export const statTileValueVariants = cva("font-sans-bold text-foreground tabular-nums", {
+	variants: { size: { md: "text-xl tracking-tight", sm: "text-base" } },
 	defaultVariants: { size: "md" },
 });
 
@@ -50,7 +56,7 @@ export interface StatTilesProps {
 }
 
 export const StatTiles = React.memo(
-	React.forwardRef<ViewInstance, StatTilesProps>(function StatTiles({ items, variant = "muted", size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, StatTilesProps>(function StatTiles({ items, variant = "plain", size = "md", className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(statTilesVariants({ variant, size }), className)} testID={testID}>
 				{items.map((item: StatTile): React.JSX.Element => (

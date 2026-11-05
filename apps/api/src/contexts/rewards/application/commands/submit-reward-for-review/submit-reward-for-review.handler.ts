@@ -6,7 +6,8 @@ import { CLOCK, type Clock } from "../../../../../platform/application/clock.por
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
-import { REWARDS_UNIT_OF_WORK } from "../../ports/rewards.tokens";
+import { REWARDS_UNIT_OF_WORK, REWARD_MERCHANT_DISPLAY } from "../../ports/rewards.tokens";
+import type { RewardMerchantDisplayPort } from "../../ports/reward-merchant-display.port";
 import type { RewardsScope } from "../../rewards-scope";
 import { rewardManager } from "../merchant-manager-scope";
 import { SubmitRewardForReviewCommand } from "./submit-reward-for-review.command";
@@ -18,18 +19,22 @@ export class SubmitRewardForReviewHandler implements ICommandHandler<SubmitRewar
 		@Inject(REWARDS_UNIT_OF_WORK) private readonly uow: UnitOfWork<RewardsScope>,
 		@Inject(MERCHANT_ACCESS) private readonly merchantAccess: MerchantAccessPort,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(REWARD_MERCHANT_DISPLAY) private readonly merchantDisplay: RewardMerchantDisplayPort,
 	) {}
 
 	public async execute(command: SubmitRewardForReviewCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
 		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
 
-		return this.uow.run(actor, async (scope: RewardsScope): Promise<RewardResponse> => {
-			const reward = await scope.rewards.getConsumerInTenant(input.tenantId, input.rewardId);
-			reward.submitForReview(rewardManager(actor, grant), this.clock.now());
-			await scope.rewards.save(reward);
-			scope.events.collectFrom(reward);
-			return scope.views.getResponse(reward.id);
-		});
+		// The merchant's name and logo after the commit (a read of its own: not inside this transaction).
+		return this.merchantDisplay.withMerchantDisplay(
+			await this.uow.run(actor, async (scope: RewardsScope): Promise<RewardResponse> => {
+				const reward = await scope.rewards.getConsumerInTenant(input.tenantId, input.rewardId);
+				reward.submitForReview(rewardManager(actor, grant), this.clock.now());
+				await scope.rewards.save(reward);
+				scope.events.collectFrom(reward);
+				return scope.views.getResponse(reward.id);
+			}),
+		);
 	}
 }

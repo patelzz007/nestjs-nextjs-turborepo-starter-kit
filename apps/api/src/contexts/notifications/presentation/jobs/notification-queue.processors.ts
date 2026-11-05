@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Injectable } from "@nestjs/common";
 import { QUEUE_NAMES } from "@workspace/shared";
 import type { Job } from "bullmq";
@@ -12,7 +13,7 @@ import { NOTIFICATIONS_FAN_OUT_OPERATION } from "../../application/services/noti
 import { NotificationChannelJobSchema, NotificationFanOutJobSchema } from "../../application/ports/notification-queues.port";
 
 /** `notifications.fan-out` worker: one notification → its deliveries, as an audited system command. */
-@Processor(QUEUE_NAMES.notificationsFanOut)
+@Processor(QUEUE_NAMES.notificationsFanOut, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class NotificationFanOutProcessor extends WorkerHost {
 	public constructor(private readonly commands: SystemCommandDispatcher) {
@@ -29,7 +30,7 @@ export class NotificationFanOutProcessor extends WorkerHost {
 }
 
 /** `notifications.push` worker: one push delivery. A retryable provider failure throws, and BullMQ backs off. */
-@Processor(QUEUE_NAMES.notificationsPush)
+@Processor(QUEUE_NAMES.notificationsPush, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class NotificationPushProcessor extends WorkerHost {
 	public constructor(private readonly commands: SystemCommandDispatcher) {
@@ -49,7 +50,7 @@ export class NotificationPushProcessor extends WorkerHost {
 }
 
 /** `notifications.sms` worker: one SMS delivery. */
-@Processor(QUEUE_NAMES.notificationsSms)
+@Processor(QUEUE_NAMES.notificationsSms, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class NotificationSmsProcessor extends WorkerHost {
 	public constructor(private readonly commands: SystemCommandDispatcher) {

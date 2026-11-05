@@ -2,7 +2,7 @@ import { checkPdfFile } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { PDF_SAMPLE_PATH, pdfSampleBytes } from "../pdf-sample";
-import { PdfEmbedUrlSchema } from "../markdown/pdf-embed";
+import { PdfEmbedUrlSchema } from "@workspace/docs-renderer/markdown/pdf-embed";
 
 describe("the PDF viewer guide's sample", () => {
 	it("is a PDF the viewers accept", () => {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import * as React from "react";
 import { StatusBar, Text } from "react-native";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
@@ -28,6 +28,30 @@ describe("AuthShell", () => {
 		expect(screen.getByRole("header", { name: "Starter" })).toBeOnTheScreen();
 		expect(screen.getByText("Sign in to pick up where you left off.")).toBeOnTheScreen();
 		expect(screen.getByText("sign-in form")).toBeOnTheScreen();
+	});
+
+	it("prints which build is running under the tagline, and drops it with the tagline while compact", async () => {
+		const lines = ["Preview build · Version 1.0.0 (3)", "Built 5 Nov 2026, 6:12 pm GMT+8"];
+		const view = await render(
+			inFrame(
+				<AuthShell brandName="Starter" tagline="Sign in to pick up where you left off." buildLines={lines} testID="shell">
+					<Text>sign-in form</Text>
+				</AuthShell>,
+			),
+		);
+
+		const build = within(screen.getByTestId("shell-build"));
+		expect(build.getByText("Preview build · Version 1.0.0 (3)")).toBeOnTheScreen();
+		expect(build.getByText("Built 5 Nov 2026, 6:12 pm GMT+8")).toBeOnTheScreen();
+
+		await view.rerender(
+			inFrame(
+				<AuthShell brandName="Starter" tagline="Sign in to pick up where you left off." buildLines={lines} compact testID="shell">
+					<Text>sign-in form</Text>
+				</AuthShell>,
+			),
+		);
+		expect(screen.queryByTestId("shell-build")).toBeNull();
 	});
 
 	it("folds the brand into one compact row while the keyboard is open", async () => {

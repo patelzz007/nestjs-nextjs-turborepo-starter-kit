@@ -41,6 +41,7 @@ import {
 	summaryTiles,
 } from "../labels";
 import { languageLogoOf } from "../language-logos";
+import { languageOriginalLogoOf } from "../language-original-logos";
 
 const SUMMARY = GithubRepositorySummarySchema.parse(githubSummaryJson());
 
@@ -73,16 +74,26 @@ describe("GitHub contribution labels", () => {
 				percentLabel: "75%",
 				color: "#3178c6",
 				tint: "#3178c629",
+				originalLogo: languageOriginalLogoOf("TypeScript")?.xml,
 				logoPath: languageLogoOf("TypeScript")?.path,
 				monogram: "Ty",
 			},
-			{ name: "CSS", percent: 25, percentLabel: "25%", color: "#663399", tint: "#66339929", logoPath: languageLogoOf("CSS")?.path, monogram: "CS" },
+			{
+				name: "CSS",
+				percent: 25,
+				percentLabel: "25%",
+				color: "#663399",
+				tint: "#66339929",
+				originalLogo: languageOriginalLogoOf("CSS")?.xml,
+				logoPath: languageLogoOf("CSS")?.path,
+				monogram: "CS",
+			},
 		]);
 	});
 
 	it("draws a language without a logo as a monogram, and without a colour on the muted surface", () => {
 		expect(languageShares([{ name: "C#", color: null, bytes: 10, percent: 100 }])).toEqual([
-			{ name: "C#", percent: 100, percentLabel: "100%", color: null, tint: null, logoPath: null, monogram: "C#" },
+			{ name: "C#", percent: 100, percentLabel: "100%", color: null, tint: null, originalLogo: null, logoPath: null, monogram: "C#" },
 		]);
 	});
 

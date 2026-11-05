@@ -840,6 +840,7 @@ Response `201 Created` (application/json):
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1097,6 +1098,7 @@ Response `201 Created` (application/json):
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1447,6 +1449,7 @@ Response `201 Created` (application/json):
 | `data.⟨shape 2⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
 | `data.⟨shape 2⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 | `data.⟨shape 3⟩ message` | string | yes |  |
+| `data.⟨shape 3⟩ passkeyAvailable` | boolean | yes |  |
 | `data.⟨shape 3⟩ requiresTwoFactor` | true | yes |  |
 | `data.⟨shape 3⟩ tempToken` | string | yes | at least 1 characters |
 | `data.⟨shape 4⟩ message` | string | yes |  |
@@ -1660,7 +1663,7 @@ List the current user's tenant memberships
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
-| `data[].capabilities` | "merchant:view_dashboard" \| "merchant:view_rewards" \| "merchant:manage_rewards" \| "merchant:view_redemptions" \| "merchant:manage_api_keys" \| "merchant:view_analytics" \| "merchant:manage_team" \| "merchant:view_locations" \| "merchant:manage_locations" \| "merchant:manage_verification" \| … (+3 more)[] | no |  |
+| `data[].capabilities` | "merchant:view_dashboard" \| "merchant:view_rewards" \| "merchant:manage_rewards" \| "merchant:view_redemptions" \| "merchant:manage_api_keys" \| "merchant:view_analytics" \| "merchant:manage_team" \| "merchant:view_locations" \| "merchant:manage_locations" \| "merchant:manage_verification" \| … (+5 more)[] | no |  |
 | `data[].createdAt` | integer | no |  |
 | `data[].displayName` | string | yes |  |
 | `data[].kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
@@ -1674,6 +1677,7 @@ List the current user's tenant memberships
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1981,7 +1985,7 @@ Complete an invite-authorized KYB document upload
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" \| "BROADCAST_IMAGE" \| "PLATFORM_BROADCAST_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -2713,6 +2717,7 @@ List tenant rewards
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -3633,6 +3638,7 @@ The tenant's customers, to give a reward to (name and masked email; people who m
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -3727,6 +3733,7 @@ List the tenant's POS terminals
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -4350,6 +4357,7 @@ List tenant API keys
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -4593,6 +4601,7 @@ List tenant redemptions
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -4691,6 +4700,7 @@ List the tenant's active customer bans, newest first
 | `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
 | `meta.page` | integer | yes | Current page (1-indexed); min 1 |
 | `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalIsCapped` | boolean | no | True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact. |
 | `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5058,7 +5068,7 @@ A member's extra permissions still in force, newest first, with their end time
 | `data[].membershipId` | string (uuid) | yes |  |
 | `data[].permission` | object | yes |  |
 | `data[].permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data[].permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `data[].permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -5101,7 +5111,7 @@ Only a permission the caller's own role gives, within the caller's stores.
 | `locationId` | string (uuid) | no |  |
 | `permission` | object | yes |  |
 | `permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 
 **Response 201 Created** (`application/json`) — Permission granted
 
@@ -5116,7 +5126,7 @@ Only a permission the caller's own role gives, within the caller's stores.
 | `data.membershipId` | string (uuid) | yes |  |
 | `data.permission` | object | yes |  |
 | `data.permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `data.permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -5201,7 +5211,7 @@ The tenant's roles, with their permissions and how many members hold each
 | `data[].name` | string | yes |  |
 | `data[].permissions` | object[] | yes |  |
 | `data[].permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data[].permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `data[].permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 | `data[].templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5241,7 +5251,7 @@ Create a role from tenant permissions the caller's own role holds
 | `name` | string | yes | length 1–100 |
 | `permissions` | object[] | yes | 0–200 items |
 | `permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 
 **Response 201 Created** (`application/json`) — Role created
 
@@ -5252,7 +5262,7 @@ Create a role from tenant permissions the caller's own role holds
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5293,7 +5303,7 @@ Rename a role or replace its permissions (never the Owner role)
 | `name` | string | no | length 1–100 |
 | `permissions` | object[] | no | 0–200 items |
 | `permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 
 **Response 200 OK** (`application/json`) — Role updated
 
@@ -5304,7 +5314,7 @@ Rename a role or replace its permissions (never the Owner role)
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5476,7 +5486,7 @@ Make a role equal the template it was copied from again
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+39 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)

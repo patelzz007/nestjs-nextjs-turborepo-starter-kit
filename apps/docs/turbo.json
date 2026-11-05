@@ -4,7 +4,14 @@
 	"tasks": {
 		"build": {
 			"dependsOn": ["$TURBO_EXTENDS$", "@workspace/shared#build"],
-			"inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/docs/**", "$TURBO_ROOT$/blog/**"],
+			"inputs": [
+				"$TURBO_EXTENDS$",
+				"$TURBO_ROOT$/docs/**",
+				"$TURBO_ROOT$/blog/**",
+				"$TURBO_ROOT$/apps/api/src/**/*.controller.ts",
+				"$TURBO_ROOT$/apps/api/src/platform/presentation/http/security/throttling/rate-limit-policy.ts"
+			],
+			"outputs": ["dist/**"],
 			"env": ["$TURBO_EXTENDS$", "PUBLIC_SITE_URL", "PUBLIC_ADMIN_URL", "PUBLIC_API_DOCS_URL"]
 		},
 		"lint": {
@@ -18,7 +25,7 @@
 			"passThroughEnv": ["API_BASE_URL", "API_LOG_FILE", "SEED_LOG_FILE", "CAPTURE_RESEND_WEBHOOK_SECRET", "CAPTURE_STORAGE_CALLBACK_SECRET"]
 		},
 		"test": {
-			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/generated/**", "$TURBO_ROOT$/docs/technical/api-reference/**", "$TURBO_ROOT$/apps/api/src/**/*.controller.ts"]
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/**", "$TURBO_ROOT$/blog/**", "$TURBO_ROOT$/apps/api/src/**/*.controller.ts"]
 		}
 	}
 }

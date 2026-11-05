@@ -50,7 +50,7 @@ describe("findStaleStylesheets", () => {
 	});
 
 	it("reports every output a token change affects until it is regenerated", () => {
-		const changed = generateTokenStylesheets({ ...TOKEN_SOURCE, themes: { ...THEMES, dark: { ...DARK_THEME, card: paletteColor("ink", "800") } } });
+		const changed = generateTokenStylesheets({ ...TOKEN_SOURCE, themes: { ...THEMES, dark: { ...DARK_THEME, "tone-green": paletteColor("ink", "800") } } });
 
 		expect(findStaleStylesheets(changed, readCommitted).map((problem) => problem.split(" ").at(0))).toStrictEqual(["generated/web.css", "generated/mobile.css"]);
 	});

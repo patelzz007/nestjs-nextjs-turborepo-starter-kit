@@ -15,6 +15,7 @@ import {
 	type UserPreferenceValue,
 } from "@workspace/shared";
 
+import type { BreachedPasswordCheckPort, BreachedPasswordVerdict } from "../../ports/breached-password.port";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { Clock } from "../../../../../platform/application/clock.port";
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
@@ -28,10 +29,20 @@ import { ImpersonationSession, type ImpersonationSessionState } from "../../../d
 import { MfaRecoveryRequest, type MfaRecoveryRequestState } from "../../../domain/aggregates/mfa-recovery-request.aggregate";
 import type { EncryptedTotpSecret, TotpVerification, TwoFactorEnrollment } from "../../../domain/aggregates/two-factor-enrollment.aggregate";
 import { TwoFactorLoginChallenge, type TwoFactorLoginChallengeState } from "../../../domain/aggregates/two-factor-login-challenge.aggregate";
+import { Passkey, type PasskeyState } from "../../../domain/aggregates/passkey.aggregate";
+import { WebAuthnChallenge, type WebAuthnChallengeState } from "../../../domain/aggregates/web-authn-challenge.aggregate";
+import type { PasskeyRepository, WebAuthnChallengeRepository } from "../../../domain/repositories/passkey.repository";
 import { UserAccount, type UserAccountState } from "../../../domain/aggregates/user-account.aggregate";
 import type { UserProfile } from "../../../domain/aggregates/user-profile.aggregate";
 import { PasswordResetToken, type PasswordResetTokenState } from "../../../domain/entities/password-reset-token.entity";
-import { EmailAlreadyRegisteredError, MfaRecoveryNotPendingError } from "../../../domain/errors/identity.errors";
+import {
+	EmailAlreadyRegisteredError,
+	MfaRecoveryNotPendingError,
+	PasskeyAlreadyRegisteredError,
+	PasskeyChallengeInvalidError,
+	PasskeyNotFoundError,
+	PasskeyVerificationFailedError,
+} from "../../../domain/errors/identity.errors";
 import type { DeviceSessionRepository, OwnSessionRevocation, RotationWrite } from "../../../domain/repositories/device-session.repository";
 import type { ImpersonationSessionRepository } from "../../../domain/repositories/impersonation-session.repository";
 import type { MfaRecoveryRequestRepository } from "../../../domain/repositories/mfa-recovery-request.repository";
@@ -420,6 +431,118 @@ export class InMemoryChallenges implements TwoFactorLoginChallengeRepository {
 	}
 }
 
+/** One stored passkey row: its state plus the soft-delete columns. */
+export interface PasskeyRow extends PasskeyState {
+	readonly isDeleted: boolean;
+	readonly deletedBy: string | null;
+}
+
+/** A stored passkey of `userId` (credential `cred-<id>`, counter 0, a synced passkey). */
+export function passkeyState(overrides: Partial<PasskeyState> & Pick<PasskeyState, "id" | "userId">): PasskeyState {
+	return {
+		credentialId: `cred-${overrides.id}`,
+		publicKey: "cHVibGljLWtleQ",
+		counter: 0,
+		transports: ["internal", "hybrid"],
+		deviceType: "MULTI_DEVICE",
+		backedUp: true,
+		aaguid: "00000000-0000-0000-0000-000000000000",
+		name: "Laptop",
+		createdAt: NOW,
+		lastUsedAt: null,
+		...overrides,
+	};
+}
+
+/** Passkeys as rows; writes honour the same compare-and-set conditions as the Prisma repository. */
+export class InMemoryPasskeys implements PasskeyRepository {
+	public readonly rows = new Map<string, PasskeyRow>();
+
+	public seed(state: PasskeyState): void {
+		this.rows.set(state.id, { ...state, isDeleted: false, deletedBy: null });
+	}
+
+	public listLive(userId: string): Promise<readonly Passkey[]> {
+		const live = [...this.rows.values()].filter((row: PasskeyRow): boolean => row.userId === userId && !row.isDeleted).sort((left, right) => right.createdAt - left.createdAt);
+		return Promise.resolve(live.map((row: PasskeyRow): Passkey => Passkey.rehydrate(row)));
+	}
+
+	public async countLive(userId: string): Promise<number> {
+		return (await this.listLive(userId)).length;
+	}
+
+	public findLiveById(id: string): Promise<Passkey | null> {
+		const row: PasskeyRow | undefined = this.rows.get(id);
+		return Promise.resolve(row === undefined || row.isDeleted ? null : Passkey.rehydrate(row));
+	}
+
+	public findLiveByCredentialId(credentialId: string): Promise<Passkey | null> {
+		const row = [...this.rows.values()].find((candidate: PasskeyRow): boolean => candidate.credentialId === credentialId && !candidate.isDeleted);
+		return Promise.resolve(row === undefined ? null : Passkey.rehydrate(row));
+	}
+
+	/** Like the unique index: a credential id ever stored (removed or not) is refused. */
+	public add(passkey: Passkey): Promise<void> {
+		if ([...this.rows.values()].some((row: PasskeyRow): boolean => row.credentialId === passkey.credentialId)) {
+			return Promise.reject(new PasskeyAlreadyRegisteredError());
+		}
+		this.seed(passkey.snapshot);
+		return Promise.resolve();
+	}
+
+	public save(passkey: Passkey): Promise<void> {
+		for (const change of passkey.pendingChanges) {
+			const row: PasskeyRow | undefined = this.rows.get(passkey.id);
+			if (row === undefined || row.isDeleted) {
+				return Promise.reject(change.kind === "used" ? new PasskeyVerificationFailedError() : new PasskeyNotFoundError());
+			}
+			if (change.kind === "used" && row.counter !== change.previousCounter) {
+				return Promise.reject(new PasskeyVerificationFailedError());
+			}
+			this.rows.set(passkey.id, change.kind === "removed" ? { ...row, isDeleted: true, deletedBy: change.by } : { ...passkey.snapshot, isDeleted: false, deletedBy: null });
+		}
+		return Promise.resolve();
+	}
+}
+
+/** WebAuthn challenges as rows; consuming one is a compare-and-set on `consumedAt`, as in Postgres. */
+export class InMemoryWebAuthnChallenges implements WebAuthnChallengeRepository {
+	public readonly rows = new Map<string, WebAuthnChallengeState & { readonly isDeleted: boolean }>();
+
+	public add(challenge: WebAuthnChallenge): Promise<void> {
+		this.rows.set(challenge.id, { ...challenge.snapshot, isDeleted: false });
+		return Promise.resolve();
+	}
+
+	public findById(id: string): Promise<WebAuthnChallenge | null> {
+		const row = this.rows.get(id);
+		return Promise.resolve(row === undefined || row.isDeleted ? null : WebAuthnChallenge.rehydrate(row));
+	}
+
+	public saveConsumed(challenge: WebAuthnChallenge): Promise<void> {
+		const row = this.rows.get(challenge.id);
+		if (!challenge.wasConsumed) {
+			return Promise.resolve();
+		}
+		if (row === undefined || row.consumedAt !== null) {
+			return Promise.reject(new PasskeyChallengeInvalidError());
+		}
+		this.rows.set(challenge.id, { ...challenge.snapshot, isDeleted: false });
+		return Promise.resolve();
+	}
+
+	public retireExpired(now: EpochMs, retentionMs: number): Promise<number> {
+		let retired = 0;
+		for (const [id, row] of this.rows) {
+			if (!row.isDeleted && row.expiresAt <= now - retentionMs) {
+				this.rows.set(id, { ...row, isDeleted: true });
+				retired += 1;
+			}
+		}
+		return Promise.resolve(retired);
+	}
+}
+
 export class InMemoryProfiles implements UserProfileRepository {
 	public readonly profiles = new Map<string, UserProfile>();
 	public readonly reads = new Map<string, OwnProfile>();
@@ -465,6 +588,14 @@ export class RecordingIdentityEmails implements IdentityEmailPort {
 
 	public sendTwoFactorDisabledEmail(email: string): Promise<void> {
 		return this.record("two_factor_disabled", email, null);
+	}
+
+	public sendPasskeyAddedEmail(email: string, passkeyName: string): Promise<void> {
+		return this.record("passkey_added", email, passkeyName);
+	}
+
+	public sendPasskeyRemovedEmail(email: string, passkeyName: string): Promise<void> {
+		return this.record("passkey_removed", email, passkeyName);
 	}
 
 	public async sendLoginVerificationEmail(email: string, verificationCode: string): Promise<EmailSendResult> {
@@ -629,6 +760,8 @@ export class InMemoryIdentityStore {
 	public readonly resetTokens = new InMemoryResetTokens();
 	public readonly twoFactor = new InMemoryTwoFactor();
 	public readonly challenges = new InMemoryChallenges();
+	public readonly passkeys = new InMemoryPasskeys();
+	public readonly webAuthnChallenges = new InMemoryWebAuthnChallenges();
 	public readonly profiles = new InMemoryProfiles();
 	public readonly preferences = new InMemoryPreferences();
 	public readonly emails = new RecordingIdentityEmails();
@@ -644,6 +777,8 @@ export class InMemoryIdentityStore {
 		resetTokens: this.resetTokens,
 		twoFactor: this.twoFactor,
 		challenges: this.challenges,
+		passkeys: this.passkeys,
+		webAuthnChallenges: this.webAuthnChallenges,
 		profiles: this.profiles,
 		preferences: this.preferences,
 		emails: this.emails,
@@ -666,6 +801,8 @@ export class InMemoryIdentityStore {
 			restorableMap(this.mfaRecoveries.rows),
 			restorableMap(this.resetTokens.rows),
 			restorableMap(this.challenges.rows),
+			restorableMap(this.passkeys.rows),
+			restorableMap(this.webAuthnChallenges.rows),
 			restorableArray(this.impersonations.audits),
 			restorableArray(this.mfaRecoveries.audits),
 			restorableArray(this.emails.sent),
@@ -992,5 +1129,17 @@ export class ScriptedSignupReferralCodes implements SignupReferralPort {
 
 	public summaryForReferee(refereeUserId: string): Promise<SignupReferralSummary | null> {
 		return Promise.resolve(this.summaries.get(refereeUserId) ?? null);
+	}
+}
+
+/** A breach check that knows a fixed set of breached passwords and records what it was asked. */
+export class FakeBreachCheck implements BreachedPasswordCheckPort {
+	public readonly checked: string[] = [];
+
+	public constructor(private readonly breached: ReadonlySet<string> = new Set<string>()) {}
+
+	public check(password: string): Promise<BreachedPasswordVerdict> {
+		this.checked.push(password);
+		return Promise.resolve(this.breached.has(password) ? "breached" : "clear");
 	}
 }

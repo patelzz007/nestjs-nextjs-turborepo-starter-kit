@@ -7,7 +7,9 @@ import {
 	backgroundEntriesAreWholeGroups,
 	backgroundEntryConditions,
 	buildAuditTrailOrder,
+	buildAuditTrailPageTimeline,
 	buildAuditTrailTimeline,
+	buildAuditTrailTimelineBranches,
 	requestEntryConditions,
 } from "../prisma-audit-trail.read-repository";
 import { dataChangeGroupKey } from "../data-change-group-key";
@@ -100,6 +102,25 @@ describe("buildAuditTrailTimeline", () => {
 
 	it("is the requests alone when background entries are excluded", () => {
 		expect(sqlText(buildAuditTrailTimeline(query({ filter: { kind: { eq: "REQUEST" } } })))).not.toContain("UNION ALL");
+	});
+});
+
+describe("buildAuditTrailPageTimeline", () => {
+	it("filters, orders and cuts every branch to the page's end on its own, so each reads in index order", () => {
+		const branches = buildAuditTrailTimelineBranches(query({}));
+		const page = sqlText(
+			buildAuditTrailPageTimeline(branches, { where: Prisma.sql`t."occurredAt" < ${1}`, orderBy: [Prisma.sql`t."occurredAt" DESC`, Prisma.sql`t.id DESC`], limit: 50 }),
+		);
+
+		expect(branches).toHaveLength(2);
+		expect(page.match(/\(SELECT t\.kind, t\.id, t\."occurredAt" FROM \(SELECT '(REQUEST|BACKGROUND)'::text/gu)).toHaveLength(2);
+		expect(page.match(/WHERE t\."occurredAt" < \$\d+ ORDER BY t\."occurredAt" DESC, t\.id DESC LIMIT \$\d+\)/gu)).toHaveLength(2);
+		expect(page).toContain(") UNION ALL (");
+	});
+
+	it("is one cut branch when background entries are excluded", () => {
+		const branches = buildAuditTrailTimelineBranches(query({ filter: { kind: { eq: "REQUEST" } } }));
+		expect(sqlText(buildAuditTrailPageTimeline(branches, { where: Prisma.sql`TRUE`, orderBy: [Prisma.sql`t.id DESC`], limit: 25 }))).not.toContain("UNION ALL");
 	});
 });
 

@@ -42,7 +42,8 @@ export class PostgresIdempotencyKeyLocks implements IdempotencyKeyLocks, OnModul
 
 	public constructor(config: TypedConfigService) {
 		this.pool = new Pool({
-			connectionString: config.database.url,
+			// A session advisory lock is held across statements: it needs a real session, never a transaction pooler.
+			connectionString: config.database.sessionUrl,
 			max: IDEMPOTENCY_LOCK_POOL_MAX,
 			connectionTimeoutMillis: IDEMPOTENCY_DUPLICATE_WAIT_MS,
 			idleTimeoutMillis: config.database.idleTimeoutMs,

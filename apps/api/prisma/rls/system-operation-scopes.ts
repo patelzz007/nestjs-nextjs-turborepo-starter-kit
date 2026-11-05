@@ -83,7 +83,7 @@ export function buildSystemOperationScopesSql(operations: ScopedOperations, know
 
 CREATE OR REPLACE FUNCTION app_rls_bypass_on(table_name text) RETURNS boolean
 LANGUAGE sql STABLE AS $$
-  SELECT app_rls_bypass() AND CASE app_system_operation()
+  SELECT public.app_rls_bypass() AND CASE public.app_system_operation()
 ${branches}
     ELSE false
   END;

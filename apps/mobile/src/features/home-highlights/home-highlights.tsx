@@ -7,7 +7,7 @@
 
 import { useIsFocused, useRouter } from "expo-router";
 import * as React from "react";
-import { View } from "react-native";
+import { Text, View } from "react-native";
 
 import { Button } from "@workspace/ui-native/components/button";
 import { Carousel } from "@workspace/ui-native/components/carousel";
@@ -72,15 +72,18 @@ function HighlightCard({ highlight, onOpen }: HighlightCardProps): React.JSX.Ele
 		onOpen(highlight);
 	}, [highlight, onOpen]);
 	return (
-		<View className="flex-1 gap-3 rounded-xl border border-border bg-card p-4" testID={`home-highlight-${highlight.key}`}>
-			<IconTile icon={highlight.icon} tone={highlight.tone} />
-			<View className="flex-1 gap-1">
-				<Subheading numberOfLines={1}>{highlight.title}</Subheading>
-				<MutedText numberOfLines={3}>{highlight.body}</MutedText>
+		// Compact (ADR 079): the glyph beside the title and its line, the action a full-width button under them.
+		<View className="flex-1 justify-between gap-4 rounded-2xl border border-border bg-card p-4" testID={`home-highlight-${highlight.key}`}>
+			<View className="flex-row items-start gap-3">
+				<IconTile icon={highlight.icon} tone={highlight.tone} size="sm" />
+				<View className="flex-1 gap-1">
+					<Text numberOfLines={1} accessibilityRole="header" className="font-sans-semibold text-base text-foreground">
+						{highlight.title}
+					</Text>
+					<MutedText numberOfLines={3}>{highlight.body}</MutedText>
+				</View>
 			</View>
-			<View className="flex-row">
-				<Button label={highlight.action} accessibilityLabel={`${highlight.action}: ${highlight.title}`} onPress={openThis} variant="secondary" size="sm" />
-			</View>
+			<Button label={highlight.action} accessibilityLabel={`${highlight.action}: ${highlight.title}`} onPress={openThis} variant="secondary" />
 		</View>
 	);
 }

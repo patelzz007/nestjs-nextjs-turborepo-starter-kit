@@ -212,10 +212,11 @@ describe("applyWebRouteAuthorization", () => {
 		sections: [
 			{
 				title: "Main",
+				labelKey: "main",
 				items: [
-					{ title: "Browse", url: ROUTES.dashboard.browse },
-					{ title: "Orders", url: ORDERS_PATTERN },
-					{ title: "Soon", url: "/dashboard/soon", disabled: true },
+					{ title: "Browse", labelKey: "browse", url: ROUTES.dashboard.browse },
+					{ title: "Orders", labelKey: "orders", url: ORDERS_PATTERN },
+					{ title: "Soon", labelKey: "soon", url: "/dashboard/soon", disabled: true },
 				],
 			},
 		],

@@ -8,7 +8,6 @@ import {
 } from "../../../../notifications/public-api";
 import { ReferrerCredited } from "../../../../referrals/public-api";
 import { RewardApproved, RewardAutoPublished, RewardRejected } from "../../../../rewards/public-api";
-import type { TenantReadPort } from "../../../../tenancy/public-api";
 import type { ClaimsScope } from "../../claims-scope";
 
 /** A referee's redemption credited the referrer: tell them, in the checkout's own transaction (ADR 070). */
@@ -32,21 +31,17 @@ type RewardReviewDecision = RewardApproved | RewardRejected | RewardAutoPublishe
 
 /** Every review decision tells the tenant's owners, in the decision's own transaction (ADR 070). */
 export class RecordOwnerNoticesOnRewardReview implements InTransactionEventHandler<RewardReviewDecision, ClaimsScope> {
-	public constructor(private readonly tenants: TenantReadPort) {}
-
 	public accepts(event: DomainEvent): event is RewardReviewDecision {
 		return event instanceof RewardApproved || event instanceof RewardRejected || event instanceof RewardAutoPublished;
 	}
 
 	public async handle(event: RewardReviewDecision, scope: ClaimsScope): Promise<void> {
-		const owners = await this.tenants.listOwnerUserIds(event.tenantId);
-		if (owners.length === 0) {
+		// Read on the decision's own transaction (one connection), not through a system operation of its own.
+		const tenant = await scope.tenantReviewNotices.reviewNoticeFacts(event.tenantId);
+		if (tenant === null || tenant.ownerUserIds.length === 0) {
 			return;
 		}
-		const tenant = (await this.tenants.getDisplayData([event.tenantId])).get(event.tenantId);
-		if (tenant === undefined) {
-			return;
-		}
+		const owners = tenant.ownerUserIds;
 		// A reward can be reviewed more than once (rejected, edited, reviewed again): the decision's time keeps each one.
 		const decision = `${event.rewardId}:${String(event.occurredAt)}`;
 		for (const ownerUserId of owners) {

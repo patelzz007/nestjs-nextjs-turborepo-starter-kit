@@ -14,13 +14,13 @@ export const buttonVariants = cva("flex-row items-center justify-center gap-2 ac
 	variants: {
 		variant: {
 			primary: "bg-primary",
-			secondary: "border border-border bg-card",
+			secondary: "bg-secondary",
 			destructive: "bg-destructive",
 			ghost: "bg-transparent",
 		},
 		/** `md`: a form's or a screen's action. `sm`: a compact pill beside other content; its touch area still reaches 44 pt. */
 		size: {
-			md: "min-h-11 rounded-lg px-4 py-3",
+			md: "min-h-12 rounded-xl px-5 py-3",
 			sm: "min-h-9 rounded-full px-3.5 py-1.5",
 		},
 		state: {
@@ -33,7 +33,8 @@ export const buttonVariants = cva("flex-row items-center justify-center gap-2 ac
 	defaultVariants: { variant: "primary", size: "md", state: "default" },
 });
 
-export const buttonLabelVariants = cva("font-sans-semibold shrink", {
+/** Button labels are the one place Bricolage Grotesque appears (`font-button`, ADR 079). */
+export const buttonLabelVariants = cva("shrink font-button", {
 	variants: {
 		variant: {
 			primary: "text-primary-foreground",

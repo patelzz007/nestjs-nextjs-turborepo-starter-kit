@@ -121,7 +121,7 @@ async function upsertLocations(tenantId: string, locations: readonly EnterpriseL
 
 async function upsertMemberUser(member: EnterpriseMemberRow, passwordHash: string, consumerRole: Role): Promise<User> {
 	const user = await prisma.user.upsert({
-		where: { email: member.email },
+		where: { id: member.userId },
 		create: {
 			id: member.userId,
 			email: member.email,

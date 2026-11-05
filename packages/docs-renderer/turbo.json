@@ -1,0 +1,12 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"lint": {
+			"dependsOn": ["$TURBO_EXTENDS$", "@workspace/shared#build"]
+		},
+		"test": {
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/**", "$TURBO_ROOT$/apps/api/src/**/*.controller.ts"]
+		}
+	}
+}

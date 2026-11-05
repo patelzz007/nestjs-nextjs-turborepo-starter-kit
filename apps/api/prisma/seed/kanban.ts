@@ -1069,7 +1069,7 @@ type StaffId = (email: string) => string;
 
 export async function seedKanbanBoard(): Promise<KanbanSeedSummary> {
 	const { seedReadyFile, deleteFile } = createSeedFileWriter();
-	const staff = await prisma.user.findMany({ where: { email: { in: [...STAFF_EMAILS] } }, select: { id: true, email: true } });
+	const staff = await prisma.user.findMany({ where: { email: { in: [...STAFF_EMAILS] }, isDeleted: false }, select: { id: true, email: true } });
 	const staffId: StaffId = (email) => requireRow(staff.find((user) => user.email === email)?.id, `kanban staff ${email}`);
 
 	for (const [position, column] of PLANNING_COLUMNS.entries()) {

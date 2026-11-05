@@ -1,9 +1,10 @@
 import type { DataValue } from "@workspace/shared";
 import { act, fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 
-import { fail, ok, okPage, stubApi } from "../../../../../test/api-stub";
+import { dynamic, fail, ok, okPage, stubApi, UNREACHABLE, type StubAnswer } from "../../../../../test/api-stub";
 import { createTestRuntime, renderInApp } from "../../../../../test/app-harness";
 import { FAKE_DEVICE_TOKEN, permissionRequests, setNotificationPermission } from "../../../../../test/expo-notifications-fake";
+import { OFFLINE_STATE, ONLINE_STATE, setState as setNetworkState } from "../../../../../test/network-fake";
 import { testAccessToken } from "../../../../../test/jwt";
 import NotificationSettingsScreen from "../../../../app/(app)/settings/notification-settings";
 import NotificationsScreen from "../../../../app/(app)/settings/notifications";
@@ -92,6 +93,12 @@ function feed(): DataValue[] {
 		}),
 	];
 }
+
+/** The app's query retries (query-client.ts) and TanStack's default waits before them (1 s, then 2 s), plus slack. */
+const MAX_QUERY_RETRIES = 2;
+const RETRIES_GIVE_UP_MS = 5_000;
+/** Long enough for a stubbed answer and the re-render after it. */
+const ANSWER_SETTLE_MS = 100;
 
 const INBOX_ROUTES = {
 	[INBOX]: okPage(feed()),
@@ -240,6 +247,62 @@ describe("Notifications — the inbox", () => {
 		expect(await screen.findByText("Notifications could not be loaded.")).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: "Try again" })).toBeOnTheScreen();
 	});
+
+	it("keeps the inbox it loaded readable offline, marked as possibly out of date, its changes waiting for the connection (6.4)", async () => {
+		const api = stubApi(INBOX_ROUTES);
+		await openInbox();
+		const loadsBeforeOffline = api.callsTo(INBOX).length;
+
+		await act(async (): Promise<void> => {
+			setNetworkState(OFFLINE_STATE);
+			await Promise.resolve();
+		});
+
+		expect(await screen.findByText("You're offline. This list may be out of date.")).toBeOnTheScreen();
+		expect(screen.getByText("Weekend specials")).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: "Mark all as read" })).toBeDisabled();
+
+		await act(async (): Promise<void> => {
+			setNetworkState(ONLINE_STATE);
+			await Promise.resolve();
+		});
+		await waitFor(() => {
+			expect(screen.queryByText("You're offline. This list may be out of date.")).toBeNull();
+		});
+		// Back online, the list is fetched again (seen on a phone, 2026-11-05: it wasn't, the list stayed as it was).
+		await waitFor(() => {
+			expect(api.callsTo(INBOX).length).toBeGreaterThan(loadsBeforeOffline);
+		});
+	});
+
+	it("says it will load when back online, for an inbox opened offline, and loads it when the connection is back", async () => {
+		// No answer while the phone is offline, the inbox once it is back (as on the phone: requests just fail).
+		let reachable = false;
+		const api = stubApi({ ...INBOX_ROUTES, [INBOX]: dynamic((): StubAnswer => (reachable ? INBOX_ROUTES[INBOX] : UNREACHABLE)) });
+		setNetworkState(OFFLINE_STATE);
+		jest.useFakeTimers();
+		try {
+			await renderSignedIn({ "settings/notifications": NotificationsScreen }, "/settings/notifications");
+			expect(await screen.findByText("You're offline. Your notifications will load when you're back online.")).toBeOnTheScreen();
+
+			// Let the query's own retries run out first: a reconnect during them is answered by the next retry.
+			await act(async (): Promise<void> => {
+				await jest.advanceTimersByTimeAsync(RETRIES_GIVE_UP_MS);
+			});
+			expect(api.callsTo(INBOX)).toHaveLength(1 + MAX_QUERY_RETRIES);
+
+			await act(async (): Promise<void> => {
+				reachable = true;
+				setNetworkState(ONLINE_STATE);
+				// The reload's answer is delivered on the (fake) clock too.
+				await jest.advanceTimersByTimeAsync(ANSWER_SETTLE_MS);
+			});
+			expect(api.callsTo(INBOX)).toHaveLength(2 + MAX_QUERY_RETRIES);
+			expect(await screen.findByText("Weekend specials")).toBeOnTheScreen();
+		} finally {
+			jest.useRealTimers();
+		}
+	});
 });
 
 describe("Notifications — settings", () => {
@@ -269,6 +332,41 @@ describe("Notifications — settings", () => {
 		expect(await screen.findByText("This phone gets notifications.")).toBeOnTheScreen();
 		expect(permissionRequests()).toBe(1);
 		expect(api.callsTo("PUT /notifications/push-devices").at(0)?.body).toContain(`"token":"${FAKE_DEVICE_TOKEN}"`);
+	});
+
+	it("asks for the settings again once this phone is registered, so its Phone options open (seen on a phone, 2026-11-05)", async () => {
+		const withPhone = {
+			...PREFERENCES,
+			categories: PREFERENCES.categories.map((category) => ({
+				...category,
+				channels: category.channels.map((cell) => (cell.channel === "PUSH" ? { ...cell, available: true, reason: null } : cell)),
+			})),
+		};
+		const api = stubApi({
+			"GET /notifications/preferences": dynamic(() => (api.callsTo("PUT /notifications/push-devices").length > 0 ? ok(withPhone) : ok(PREFERENCES))),
+			"PUT /notifications/push-devices": ok({
+				id: "0193f2c4-0000-7000-8000-0000000000d1",
+				platform: "ANDROID",
+				surface: "CUSTOMER",
+				deviceLabel: null,
+				appVersion: null,
+				lastSeenAt: CREATED_AT,
+				isCurrentSession: true,
+				createdAt: CREATED_AT,
+				updatedAt: CREATED_AT,
+				isDeleted: false,
+				deletedAt: null,
+			}),
+		});
+		await renderSignedIn({ "settings/notification-settings": NotificationSettingsScreen }, "/settings/notification-settings");
+		expect(await screen.findByTestId("notification-channel-MARKETING-PUSH")).toBeDisabled();
+
+		await fireEvent.press(screen.getByRole("button", { name: "Turn on notifications" }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("notification-channel-MARKETING-PUSH")).toBeEnabled();
+		});
+		expect(screen.queryByText("Turn on notifications on this phone first")).toBeNull();
 	});
 
 	it("points to the phone's settings once notifications were refused for good", async () => {

@@ -9,3 +9,4 @@ export * from "./schemas/email";
 export * from "./schemas/notifications";
 export * from "./schemas/broadcasts";
 export * from "./schemas/rich-text";
+export * from "./schemas/rich-text-images";

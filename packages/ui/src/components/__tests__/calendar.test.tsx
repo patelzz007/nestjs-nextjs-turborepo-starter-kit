@@ -11,6 +11,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Calendar } from "../calendar";
+import { accessibilityViolations } from "../../testing/axe";
 
 beforeEach((): void => {
 	stubResizeObserverForCalendarDropdowns();
@@ -22,6 +23,11 @@ afterEach((): void => {
 });
 
 describe("Calendar", () => {
+	it("has no serious accessibility problems (enhancement 3.2)", async (): Promise<void> => {
+		render(<Calendar mode="single" defaultMonth={new Date(2026, 3, 1)} />, { wrapper: UiKitTestProviders });
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+	});
+
 	it("forwards its ref to the calendar root", (): void => {
 		const ref = React.createRef<HTMLDivElement>();
 		render(<Calendar ref={ref} mode="single" defaultMonth={new Date(2026, 3, 1)} />, { wrapper: UiKitTestProviders });

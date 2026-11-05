@@ -41,8 +41,8 @@ export interface KpiDirectionLabels {
 const changeVariants = cva("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold", {
 	variants: {
 		sentiment: {
-			positive: "bg-success-soft text-success",
-			negative: "bg-destructive-soft text-destructive",
+			positive: "bg-tone-green-soft text-tone-green",
+			negative: "bg-tone-red-soft text-tone-red",
 			neutral: "bg-muted text-muted-foreground",
 		},
 	},

@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import * as React from "react";
+
+import { SHEET_MOTION } from "@workspace/ui-native/lib/motion";
 
 import { DateDemos } from "../date-demos";
 
@@ -16,6 +18,7 @@ describe("DateDemos", () => {
 	});
 
 	afterEach(() => {
+		jest.useRealTimers();
 		jest.restoreAllMocks();
 	});
 
@@ -51,6 +54,8 @@ describe("DateDemos", () => {
 	});
 
 	it("opens the range picker from its button and applies a new range", async () => {
+		// The picker leaves with an animation (ui-native use-overlay-presence): the clock is the test's.
+		jest.useFakeTimers({ now: NOW_MS });
 		await render(<DateDemos />);
 		expect(screen.getByText("9 Oct 2026 – 15 Oct 2026")).toBeOnTheScreen();
 
@@ -61,6 +66,11 @@ describe("DateDemos", () => {
 		await fireEvent.press(screen.getByTestId("gallery-range-picker-apply"));
 
 		expect(screen.getByText("1 Oct 2026 – 3 Oct 2026")).toBeOnTheScreen();
+		// Still leaving, then gone.
+		expect(screen.getByTestId("gallery-range-picker")).toBeOnTheScreen();
+		await act((): void => {
+			jest.advanceTimersByTime(SHEET_MOTION.exit.duration);
+		});
 		expect(screen.queryByTestId("gallery-range-picker")).toBeNull();
 	});
 

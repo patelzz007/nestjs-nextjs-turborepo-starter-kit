@@ -7,6 +7,7 @@ import { MAX_RANDOM_SEED } from "./prng";
 //
 //   pnpm db:seed                                        → development (default)
 //   pnpm db:seed -- --scenario empty
+//   pnpm db:seed -- --scenario minimal
 //   pnpm db:seed -- --scenario enterprise --seed 123
 //   pnpm db:seed -- --help
 //
@@ -14,7 +15,7 @@ import { MAX_RANDOM_SEED } from "./prng";
 // before any database work starts.
 // ---------------------------------------------------------------------------
 
-export const SeedScenarioSchema = z.enum(["empty", "development", "enterprise"]);
+export const SeedScenarioSchema = z.enum(["empty", "minimal", "development", "enterprise"]);
 export type SeedScenario = z.infer<typeof SeedScenarioSchema>;
 
 export const DEFAULT_SEED_SCENARIO: SeedScenario = "development";
@@ -25,6 +26,7 @@ export const DEFAULT_RANDOM_SEED = 1;
 /** Human-readable summary of each scenario — rendered by `--help` and the docs. */
 export const SEED_SCENARIO_DESCRIPTIONS: Readonly<Record<SeedScenario, string>> = {
 	empty: "Reference data only: permissions, roles, role grants, capability catalog, ABAC demo condition. No users or tenants.",
+	minimal: "Reference data + ONE verified super admin (superadmin@example.com), nothing else: what a new product starts from.",
 	development: "Reference data + the full demo dataset (test accounts, tenants, rewards, stores, products, geo). Default.",
 	enterprise: "Reference data + test accounts + one large deterministic tenant (many locations/stores/members/products). Honors --seed.",
 };

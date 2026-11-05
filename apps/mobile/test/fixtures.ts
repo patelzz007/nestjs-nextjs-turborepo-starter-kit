@@ -1,7 +1,7 @@
 // API payloads as the API sends them (plain JSON), valid against the shared
 // response schemas — the api-client parses every one of them in the tests.
 
-import type { DataValue } from "@workspace/shared";
+import type { CapabilitySlug, DataValue } from "@workspace/shared";
 
 import { FULL_ACCESS_TOKEN, REFRESH_TOKEN } from "./jwt";
 
@@ -36,6 +36,11 @@ export function userJson(overrides: UserOverrides = {}): DataValue {
 	};
 }
 
+/** `GET /auth/permissions`: the session's roles and the capabilities the app gates its menu on (`<Can>`). */
+export function sessionPermissionsJson(capabilities: readonly CapabilitySlug[] = []): DataValue {
+	return { roles: [], permissions: [], tokenVersion: 1, hasAdminAccess: false, capabilities: [...capabilities], sessionScope: "full" };
+}
+
 /** `GET /session`: who the access token belongs to and when it expires (epoch ms, or `null`). */
 export function sessionStatusJson(expiresAt: number | null): DataValue {
 	return { userId: "user-1", email: "member@example.com", fullName: "Alex Morgan", expiresAt, checkedAt: NOW_MS };
@@ -47,7 +52,7 @@ export function mobileLoginJson(accessToken: string = FULL_ACCESS_TOKEN, refresh
 }
 
 export function profileJson(version = 3, fullName = "Alex Morgan"): DataValue {
-	return { id: "6f1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d21", email: "member@example.com", fullName, avatar: null, version, createdAt: 0, updatedAt: 0 };
+	return { id: "6f1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d21", email: "member@example.com", fullName, avatar: null, language: "en", version, createdAt: 0, updatedAt: 0 };
 }
 
 interface SessionJsonOverrides {

@@ -6,6 +6,7 @@ import { calendarDropdownOptionTexts, stubResizeObserverForCalendarDropdowns } f
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DatePicker } from "../date-picker";
+import { accessibilityViolations } from "../../testing/axe";
 
 beforeEach((): void => {
 	stubResizeObserverForCalendarDropdowns();
@@ -22,6 +23,21 @@ function formatIso(date: Date): string {
 }
 
 describe("DatePicker", () => {
+	it("has no serious accessibility problems, closed and with its calendar open (enhancement 3.2)", async (): Promise<void> => {
+		const labelled = (open: boolean): React.JSX.Element => (
+			<>
+				<label htmlFor="a11y-start">Start date</label>
+				<DatePicker id="a11y-start" open={open} placeholder="Pick" />
+			</>
+		);
+		const { unmount } = render(labelled(false), { wrapper: UiKitTestProviders });
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+		unmount();
+		render(labelled(true), { wrapper: UiKitTestProviders });
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+		expect(screen.getByRole("dialog", { name: "Choose a date" })).toBeTruthy();
+	});
+
 	it("forwards its ref to the trigger button", (): void => {
 		const ref = React.createRef<HTMLButtonElement>();
 		render(<DatePicker ref={ref} id="start" placeholder="Select a date" />, { wrapper: UiKitTestProviders });

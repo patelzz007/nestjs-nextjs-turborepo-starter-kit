@@ -7,6 +7,7 @@
 // ============================================
 
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
+import { withSecurityHeaders, type SecurityHeadersOptions } from "@workspace/client/lib/security/security-headers";
 import { decodeJwtPayload } from "@workspace/client/lib/contexts/identity/edge/jwt";
 import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/contexts/identity/edge/restricted-session";
 import {
@@ -77,6 +78,9 @@ export function createAdminRefreshAttempt(cooldownOptions: ProxyRefreshCooldownO
 	);
 }
 
+/** The shared response security headers: a nonce CSP, no framing (@workspace/client lib/security/security-headers). */
+const SECURITY_HEADERS: SecurityHeadersOptions = { apiBaseUrl: API_BASE_URL, development: serverEnv.NODE_ENV === NodeEnvSchema.enum.development };
+
 function redirectToLogin(request: NextRequest, pathname: string, rotatedCookies: readonly string[]): NextResponse {
 	const loginUrl = new URL(ROUTES.auth.login, request.url);
 	loginUrl.searchParams.set(LOGIN_REDIRECT_PARAM, pathname);
@@ -108,15 +112,16 @@ function applyRotatedCookies(response: NextResponse, setCookies: readonly string
 }
 
 /**
- * Builds the admin proxy around one refresh attempt. The exported `proxy`
+ * Builds the admin proxy around one refresh attempt, every route run with the shared security headers. The exported `proxy`
  * holds a single instance for the server process, so the cooldown memo
  * survives across requests; tests build a fresh proxy (and cooldown) each.
  */
 export function createAdminProxy(attemptRefresh: AdminProxyRefreshAttempt): AdminProxy {
-	return (request: NextRequest): Promise<NextResponse> => handleRequest(request, attemptRefresh);
+	return (request: NextRequest): Promise<NextResponse> =>
+		withSecurityHeaders(request, (secured: NextRequest, next: () => NextResponse): Promise<NextResponse> => handleRequest(secured, next, attemptRefresh), SECURITY_HEADERS);
 }
 
-async function handleRequest(request: NextRequest, attemptRefresh: AdminProxyRefreshAttempt): Promise<NextResponse> {
+async function handleRequest(request: NextRequest, next: () => NextResponse, attemptRefresh: AdminProxyRefreshAttempt): Promise<NextResponse> {
 	const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
 	const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 	const { pathname } = request.nextUrl;
@@ -148,7 +153,7 @@ async function handleRequest(request: NextRequest, attemptRefresh: AdminProxyRef
 		if (!isAuthRoute) {
 			return redirectToLogin(request, pathname, rotatedCookies);
 		}
-		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+		return serveGuestResponse(next(), rotatedCookies, accessToken);
 	}
 
 	const isAuthenticated = hasRouteSession(refreshToken);
@@ -162,9 +167,9 @@ async function handleRequest(request: NextRequest, attemptRefresh: AdminProxyRef
 			return applyRotatedCookies(NextResponse.redirect(new URL(targetUrl, request.url)), rotatedCookies);
 		}
 		if (!isAuthenticated && accessToken !== undefined) {
-			return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+			return serveGuestResponse(next(), rotatedCookies, accessToken);
 		}
-		return applyRotatedCookies(NextResponse.next(), rotatedCookies);
+		return applyRotatedCookies(next(), rotatedCookies);
 	}
 
 	if (!isAuthenticated) {
@@ -179,7 +184,7 @@ async function handleRequest(request: NextRequest, attemptRefresh: AdminProxyRef
 		const loginUrl = new URL(ROUTES.auth.login, request.url);
 		return applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies);
 	}
-	return applyRotatedCookies(NextResponse.next(), rotatedCookies);
+	return applyRotatedCookies(next(), rotatedCookies);
 }
 
 /** The proxy Next.js runs — one refresh cooldown for the whole server process. */

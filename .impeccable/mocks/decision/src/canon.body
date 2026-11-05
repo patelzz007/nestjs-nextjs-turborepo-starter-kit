@@ -1,0 +1,15 @@
+<style>
+body{background:#f2f2f7;color:#1c1c1e;font-family:Geist,sans-serif}
+.hd{display:flex;justify-content:space-between;padding:52px 16px 0}.hd svg{width:22px;height:22px;stroke:#2f5bd3;fill:none;stroke-width:2}
+h1{font:700 34px Geist;margin:10px 20px 16px;letter-spacing:-.02em}
+.g{margin:0 16px 22px;background:#fff;border-radius:14px}
+.r{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #e5e5ea}.r:last-child{border:0}
+.av{width:52px;height:52px;border-radius:50%;background:#2f5bd3;color:#fff;display:flex;align-items:center;justify-content:center;font:600 18px Geist}
+.ic{width:30px;height:30px;border-radius:8px}.rt{flex:1;font-size:16px}.rt i{display:block;font-style:normal;font-size:13px;color:#8e8e93}
+.cap{margin:0 32px 6px;font-size:13px;color:#6d6d72;text-transform:uppercase}
+</style>
+<div class="hd"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 3 7 3 7H3s3-1 3-7"/></svg></div>
+<h1>Home</h1>
+<div class="g"><div class="r"><div class="av">AU</div><div class="rt"><b>Admin User</b><i>admin@example.com</i></div></div></div>
+<div class="cap">Discover</div>
+<div class="g"><div class="r"><div class="ic" style="background:#2f5bd3"></div><div class="rt">See your activity<i>Last 7 days</i></div>›</div><div class="r"><div class="ic" style="background:#34c759"></div><div class="rt">Lock the app</div>›</div><div class="r"><div class="ic" style="background:#ff9500"></div><div class="rt">Read a PDF</div>›</div><div class="r"><div class="ic" style="background:#af52de"></div><div class="rt">Appearance</div>›</div></div>

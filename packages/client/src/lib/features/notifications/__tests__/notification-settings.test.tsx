@@ -9,6 +9,7 @@ import { envelopeFixture } from "../../../../test/auth-fixtures";
 import { ClientTestProviders } from "../../../../testing/client-test-providers";
 import { minuteToTime, NotificationSettings, timeToMinute } from "../notification-settings";
 import { NOTIFICATION_SETTINGS_LABELS } from "../notification-settings-labels";
+import { accessibilityViolations } from "@workspace/ui/testing/axe";
 
 const TENANT = "0193f2c4-0000-7000-8000-0000000000c1";
 const DEVICE = "0193f2c4-0000-7000-8000-0000000000d1";
@@ -116,6 +117,36 @@ describe("minuteToTime / timeToMinute", () => {
 });
 
 describe("NotificationSettings", () => {
+	it("has no serious accessibility problems (enhancement 3.2)", async () => {
+		render(<NotificationSettings />, { wrapper: Providers });
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+	});
+
+	it("gives every node of the tree a title and a subtitle, an ordinary channel included", () => {
+		render(<NotificationSettings />, { wrapper: Providers });
+
+		const branch = screen.getByRole("list", { name: "Offers" });
+		for (const item of within(branch).getAllByRole("listitem")) {
+			const title = item.querySelector('[data-slot="tree-node-title"]');
+			const description = item.querySelector('[data-slot="tree-node-description"]');
+			expect(title?.textContent).not.toBe("");
+			expect(description?.textContent).not.toBe("");
+		}
+		expect(within(branch).getByText(NOTIFICATION_SETTINGS_LABELS.channelDescriptions.IN_APP)).toBeTruthy();
+		expect(screen.getByText(NOTIFICATION_SETTINGS_LABELS.categories.MARKETING.description)).toBeTruthy();
+	});
+
+	it("puts the tree in the main column and the smaller settings in the side column", () => {
+		render(<NotificationSettings />, { wrapper: Providers });
+
+		const layout = screen.getByTestId("notification-settings-layout");
+		expect(layout.className).toContain("lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]");
+		const side = screen.getByTestId("notification-settings-side");
+		expect(within(side).getByText(NOTIFICATION_SETTINGS_LABELS.scheduleTitle)).toBeTruthy();
+		expect(within(side).getByText(NOTIFICATION_SETTINGS_LABELS.devicesTitle)).toBeTruthy();
+		expect(within(side).queryByRole("list", { name: "Offers" })).toBeNull();
+	});
+
 	it("shows each kind of message as a checkbox with its channels hung under it", () => {
 		render(<NotificationSettings />, { wrapper: Providers });
 

@@ -66,7 +66,7 @@ export async function seedLocationClosureAndRemoval(staffRole: Role): Promise<Lo
 		updatedAt: closedAt,
 	};
 	const location = await prisma.location.upsert({
-		where: { tenantId_code: { tenantId, code: CLOSED_LOCATION_CODE } },
+		where: { id: CLOSED_LOCATION_ID },
 		create: { id: CLOSED_LOCATION_ID, tenantId, code: CLOSED_LOCATION_CODE, createdAt: closedAt - 120 * DAY_MS, ...closedData },
 		update: closedData,
 	});

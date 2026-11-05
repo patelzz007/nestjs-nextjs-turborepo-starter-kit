@@ -1,6 +1,6 @@
 // The connection and session pills: StatusPills fed by the app status. Each
 // subscribes to its own slice, so the connection pill does not re-render with
-// every countdown tick. `compact` for the screens' corner, full in the drawer.
+// every countdown tick. Shown in the app drawer (the page header carries none, ADR 079).
 // The connection pill opens the connection sheet (ping, jitter, packet loss).
 
 import * as React from "react";
@@ -16,12 +16,11 @@ import { NetworkSheet } from "./network-sheet";
 const PILL_HIT_SLOP = 8;
 
 export interface AppStatusPillProps {
-	readonly compact: boolean;
 	readonly testID?: string;
 }
 
-export function NetworkStatusPill({ compact, testID }: AppStatusPillProps): React.JSX.Element {
-	const content = networkPillContent(useNetworkStatus().reading, compact);
+export function NetworkStatusPill({ testID }: AppStatusPillProps): React.JSX.Element {
+	const content = networkPillContent(useNetworkStatus().reading);
 	const [sheetOpen, setSheetOpen] = React.useState<boolean>(false);
 	const openSheet = React.useCallback((): void => {
 		setSheetOpen(true);
@@ -46,7 +45,7 @@ export function NetworkStatusPill({ compact, testID }: AppStatusPillProps): Reac
 	);
 }
 
-export function SessionStatusPill({ compact, testID }: AppStatusPillProps): React.JSX.Element {
-	const content = sessionPillContent(useSessionIndicator(), compact);
+export function SessionStatusPill({ testID }: AppStatusPillProps): React.JSX.Element {
+	const content = sessionPillContent(useSessionIndicator());
 	return <StatusBadge {...content} {...(testID === undefined ? {} : { testID })} />;
 }

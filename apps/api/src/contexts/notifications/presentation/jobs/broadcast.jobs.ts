@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { QUEUE_NAMES } from "@workspace/shared";
@@ -12,7 +13,7 @@ import { BROADCASTS_SEND_OPERATION } from "../../application/services/broadcast-
 import { BroadcastSendJobSchema } from "../../application/ports/notification-queues.port";
 
 /** `broadcasts.send` worker: one broadcast → its frozen audience's notifications, as an audited system command. */
-@Processor(QUEUE_NAMES.broadcastsSend)
+@Processor(QUEUE_NAMES.broadcastsSend, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class BroadcastSendProcessor extends WorkerHost {
 	public constructor(private readonly commands: SystemCommandDispatcher) {

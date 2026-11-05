@@ -17,8 +17,9 @@ import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
 import { loadAdminServerSession } from "@/lib/auth-server";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
-import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-provider";
-import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
+import { nonceProps, readSecurityNonce } from "@workspace/client/lib/security/security-nonce";
+import { AppLanguageProvider } from "@workspace/client/lib/i18n/app-language-provider";
+import { readRequestLanguage } from "@workspace/client/lib/i18n/request-language";
 import { BRAND_NAME } from "@workspace/tokens";
 
 export const metadata: Metadata = {
@@ -35,23 +36,30 @@ export default async function RootLayout({
 	// The session the server renders for: the auth store starts from it, so nothing that depends on
 	// who is signed in pops in after load. An API outage renders without it (the browser's check retries).
 	const serverSession = serverRenderedSessionOf(await loadAdminServerSession());
+	// The CSP nonce proxy.ts set for this request: next-themes' inline anti-flash script must carry it.
+	const nonce = await readSecurityNonce();
+	// ADR 076: the `lang` cookie, then the browser's Accept-Language, then English.
+	const language = await readRequestLanguage();
 
 	return (
-		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="admin-app">
+		<AppDocumentShell
+			lang={language}
+			htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)}
+			bodyClassName="admin-app">
 			{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
 			<ReduxDevToolsGuard />
-			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
+			<AppLanguageProvider language={language}>
 				<UrlStateProvider>
 					<QueryProvider>
 						<AdminClientAuthWrapper serverSession={serverSession}>
-							<ThemeProvider>
+							<ThemeProvider {...nonceProps(nonce)}>
 								{children}
 								<Toaster />
 							</ThemeProvider>
 						</AdminClientAuthWrapper>
 					</QueryProvider>
 				</UrlStateProvider>
-			</UiKitLanguageProvider>
+			</AppLanguageProvider>
 		</AppDocumentShell>
 	);
 }

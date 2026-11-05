@@ -9,7 +9,7 @@
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
 		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"typecheck": "tsrs --noEmit",
-		"test": "vitest run",
+		"test": "vitest run --coverage",
 		"clean": "rm -rf dist"
 	},
 	"main": "./dist/index.js",

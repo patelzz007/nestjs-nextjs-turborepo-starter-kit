@@ -17,7 +17,7 @@ import { RejectRewardHandler } from "../commands/reject-reward/reject-reward.han
 import { RecordRewardReviewAuditHandler } from "../event-handlers/in-transaction/record-reward-review-audit.in-transaction-handler";
 import type { DueForAutoPublish, RewardReadPort } from "../ports/reward-read.port";
 import type { RewardsScope } from "../rewards-scope";
-import { fakeRewardsScope } from "./fakes/rewards-scope.fakes";
+import { fakeRewardsScope, FAKE_MERCHANT_NAME, RecordingMerchantDisplay } from "./fakes/rewards-scope.fakes";
 import { apiKeyActor, jobActor, userActor } from "./reward-test-actors";
 
 /** A read port answering only the auto-publish selection; every other read is unused here. */
@@ -48,7 +48,7 @@ describe("ApproveRewardHandler (D01)", () => {
 		scope.rewards.seed(rewardState("PENDING_REVIEW", { referrer: referrerRow("PENDING_REVIEW") }));
 		const actor = userActor(REVIEWER_ID);
 
-		const response = await new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(actor, { rewardId: REWARD_ID }));
+		const response = await new ApproveRewardHandler(uow, clock, new RecordingMerchantDisplay()).execute(new ApproveRewardCommand(actor, { rewardId: REWARD_ID }));
 
 		expect(response.status).toBe("PUBLISHED");
 		expect(uow.committed).toEqual([{ actor, operation: "rewards.admin_review" }]);
@@ -57,12 +57,27 @@ describe("ApproveRewardHandler (D01)", () => {
 		expect(scope.events.recordedNames()).toEqual(["rewards.RewardApproved"]);
 	});
 
+	it("adds the merchant's name and logo once the decision has committed, not inside its transaction", async () => {
+		const { scope, uow, clock } = setup();
+		scope.rewards.seed(rewardState("PENDING_REVIEW", { referrer: referrerRow("PENDING_REVIEW") }));
+		const committedWhenCompleted: number[] = [];
+		const display = new RecordingMerchantDisplay((): void => {
+			committedWhenCompleted.push(uow.committed.length);
+		});
+
+		const response = await new ApproveRewardHandler(uow, clock, display).execute(new ApproveRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID }));
+
+		expect(response.tenantName).toBe(FAKE_MERCHANT_NAME);
+		expect(display.completed.map((completed) => completed.id)).toEqual([REWARD_ID]);
+		expect(committedWhenCompleted).toEqual([1]);
+	});
+
 	it("refuses a reward that is no longer pending (the loser of approve vs reject) and rolls back", async () => {
 		const { scope, uow, clock } = setup();
 		scope.rewards.seed(rewardState("DRAFT"));
-		await expect(new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID }))).rejects.toThrow(
-			RewardNotPendingReviewError,
-		);
+		await expect(
+			new ApproveRewardHandler(uow, clock, new RecordingMerchantDisplay()).execute(new ApproveRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID })),
+		).rejects.toThrow(RewardNotPendingReviewError);
 		expect(uow.rolledBack).toHaveLength(1);
 		expect(scope.events.recorded()).toEqual([]);
 	});
@@ -70,14 +85,20 @@ describe("ApproveRewardHandler (D01)", () => {
 	it("propagates a lost compare-and-set without saving", async () => {
 		const { scope, uow, clock } = setup();
 		scope.rewards.seed(rewardState("PENDING_REVIEW")).forceConflictOnNextSave();
-		await expect(new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID }))).rejects.toThrow(ConflictError);
+		await expect(
+			new ApproveRewardHandler(uow, clock, new RecordingMerchantDisplay()).execute(new ApproveRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID })),
+		).rejects.toThrow(ConflictError);
 		expect(scope.rewards.rows.get(REWARD_ID)?.status).toBe("PENDING_REVIEW");
 	});
 
 	it("answers 404 for a missing reward and refuses a machine caller before opening a transaction", async () => {
 		const { uow, clock } = setup();
-		await expect(new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID }))).rejects.toThrow(RewardNotFoundError);
-		await expect(new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(apiKeyActor(TENANT_ID), { rewardId: REWARD_ID }))).rejects.toThrow(AuthenticationError);
+		await expect(
+			new ApproveRewardHandler(uow, clock, new RecordingMerchantDisplay()).execute(new ApproveRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID })),
+		).rejects.toThrow(RewardNotFoundError);
+		await expect(
+			new ApproveRewardHandler(uow, clock, new RecordingMerchantDisplay()).execute(new ApproveRewardCommand(apiKeyActor(TENANT_ID), { rewardId: REWARD_ID })),
+		).rejects.toThrow(AuthenticationError);
 		expect(uow.committed).toEqual([]);
 	});
 });
@@ -86,7 +107,9 @@ describe("RejectRewardHandler (D01, Q74)", () => {
 	it("returns the reward to draft with the reviewer's reason", async () => {
 		const { scope, uow, clock } = setup();
 		scope.rewards.seed(rewardState("PENDING_REVIEW"));
-		const response = await new RejectRewardHandler(uow, clock).execute(new RejectRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID, reason: "Fix the terms" }));
+		const response = await new RejectRewardHandler(uow, clock, new RecordingMerchantDisplay()).execute(
+			new RejectRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID, reason: "Fix the terms" }),
+		);
 		expect(response.status).toBe("DRAFT");
 		expect(scope.rewards.rows.get(REWARD_ID)?.rejectionReason).toBe("Fix the terms");
 		const [event] = scope.events.recorded();
@@ -96,9 +119,9 @@ describe("RejectRewardHandler (D01, Q74)", () => {
 	it("refuses a blank reason with its own error and saves nothing", async () => {
 		const { scope, uow, clock } = setup();
 		scope.rewards.seed(rewardState("PENDING_REVIEW"));
-		await expect(new RejectRewardHandler(uow, clock).execute(new RejectRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID, reason: "   " }))).rejects.toThrow(
-			RewardRejectionReasonBlankError,
-		);
+		await expect(
+			new RejectRewardHandler(uow, clock, new RecordingMerchantDisplay()).execute(new RejectRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID, reason: "   " })),
+		).rejects.toThrow(RewardRejectionReasonBlankError);
 		expect(scope.rewards.saved).toEqual([]);
 	});
 });
@@ -164,7 +187,9 @@ describe("RecordRewardReviewAuditHandler", () => {
 	it("writes one reward audit row per review decision, with the reviewer and the reason", async () => {
 		const { scope, uow, clock } = setup();
 		scope.rewards.seed(rewardState("PENDING_REVIEW"));
-		await new RejectRewardHandler(uow, clock).execute(new RejectRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID, reason: "Fix the terms" }));
+		await new RejectRewardHandler(uow, clock, new RecordingMerchantDisplay()).execute(
+			new RejectRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID, reason: "Fix the terms" }),
+		);
 		const handler = new RecordRewardReviewAuditHandler();
 		const [rejected] = scope.events.recorded();
 		expect(rejected !== undefined && handler.accepts(rejected)).toBe(true);

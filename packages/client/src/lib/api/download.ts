@@ -63,6 +63,10 @@ export const apiDownloads = {
 		/** `GET /admin/rewards/:rewardId/images/archive` — every image of a reward in one ZIP of the original uploads. */
 		rewardImagesArchive: defineDownload(apiContract.rewardsAdmin.downloadRewardImagesArchive),
 	},
+	privacy: {
+		/** `GET /me/data-export` — "Download my data": one ZIP of everything held about the signed-in person, once a day (ADR 077). */
+		dataExport: defineDownload(apiContract.privacy.dataExport),
+	},
 };
 
 /** A downloaded file: its bytes, the name the server gave it, and its media type. */

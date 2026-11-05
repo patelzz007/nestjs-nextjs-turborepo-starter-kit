@@ -7,7 +7,9 @@ import {
 	BroadcastDraftSchema,
 	instantOfWallClock,
 	LIST_SLOT_INDEX,
+	RichTextDocumentResponseSchema,
 	RichTextDocumentSchema,
+	withoutImageSources,
 	type BroadcastAudience,
 	type BroadcastChannel,
 	type BroadcastDraftInput,
@@ -150,9 +152,17 @@ export function buildBroadcastDraft(parts: BroadcastDraftParts, senderTimeZone: 
 	return parsed.success && Object.keys(errors).length === 0 ? { ok: true, draft: parsed.data } : { ok: false, errors };
 }
 
-/** The editor's JSON as a broadcast body, or null while it is empty or holds something a broadcast may not. */
+/**
+ * The editor's JSON as a broadcast body, or null while it is empty or holds something a broadcast may not. A
+ * picture loaded from the server carries its address (`src`), which a saved body may not: it is dropped first,
+ * and the strict request schema (the one the API applies) decides the rest.
+ */
 export function toBroadcastBody(content: object): RichTextDocument | null {
-	const parsed = RichTextDocumentSchema.safeParse(content);
+	const loaded = RichTextDocumentResponseSchema.safeParse(content);
+	if (!loaded.success) {
+		return null;
+	}
+	const parsed = RichTextDocumentSchema.safeParse(withoutImageSources(loaded.data));
 	return parsed.success && hasText(parsed.data) ? parsed.data : null;
 }
 

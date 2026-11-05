@@ -12,6 +12,7 @@ import {
 	workerDatabaseName,
 	workerDatabaseUrl,
 	type DatabaseServer,
+	workerSessionDatabaseUrl,
 } from "../e2e-worker-databases";
 
 /** Postgres's identifier limit, in bytes. */
@@ -162,5 +163,18 @@ describe("createWorkerDatabases / dropWorkerDatabases", () => {
 
 		await expect(createWorkerDatabases(server, "app", ["app_e2e_t_w1"], 0)).rejects.toThrow(/\? \(1\)/);
 		expect(statements.some((statement: string): boolean => statement.startsWith("CREATE DATABASE"))).toBe(false);
+	});
+});
+
+describe("workerSessionDatabaseUrl (enhancement 2.5)", () => {
+	it("points the direct session URL at the worker's own copy, keeping its server and credentials", () => {
+		expect(
+			workerSessionDatabaseUrl("postgresql://app:secret@db.direct:5432/app_ci?schema=public", "postgresql://app:secret@pooler:6432/app_ci_e2e_ab12cd34_w2?schema=public"),
+		).toBe("postgresql://app:secret@db.direct:5432/app_ci_e2e_ab12cd34_w2?schema=public");
+	});
+
+	it("stays unset when no session URL is configured", () => {
+		expect(workerSessionDatabaseUrl(undefined, "postgresql://app@pooler:6432/app_ci_e2e_ab12cd34_w1")).toBeUndefined();
+		expect(workerSessionDatabaseUrl("", "postgresql://app@pooler:6432/app_ci_e2e_ab12cd34_w1")).toBeUndefined();
 	});
 });

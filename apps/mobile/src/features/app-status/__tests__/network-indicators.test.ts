@@ -23,23 +23,32 @@ function fixedTime(epochMs: number): string {
 }
 
 describe("networkPillContent", () => {
-	it("is green, yellow or red by strength, with the ping — alone when compact, after the strength in full", () => {
-		expect(networkPillContent(STRONG, true)).toMatchObject({ icon: SignalIcon, label: "42 ms", tone: "success", tabularLabel: true });
-		expect(networkPillContent(STRONG, false)).toMatchObject({ label: "Strong, 42 ms", accessibilityLabel: "Connection: strong, 42 ms ping" });
-		expect(networkPillContent(MODERATE, true)).toMatchObject({ icon: SignalMediumIcon, label: "180 ms", tone: "warning" });
-		expect(networkPillContent(WEAK, false)).toMatchObject({ icon: SignalLowIcon, label: "Weak, 640 ms", tone: "destructive" });
+	it("is green, yellow or red by strength, with the ping after the strength", () => {
+		expect(networkPillContent(STRONG)).toMatchObject({
+			icon: SignalIcon,
+			label: "Strong, 42 ms",
+			accessibilityLabel: "Connection: strong, 42 ms ping",
+			tone: "success",
+			tabularLabel: true,
+		});
+		expect(networkPillContent(MODERATE)).toMatchObject({ icon: SignalMediumIcon, label: "Moderate, 180 ms", tone: "warning" });
+		expect(networkPillContent(WEAK)).toMatchObject({ icon: SignalLowIcon, label: "Weak, 640 ms", tone: "destructive" });
 	});
 
 	it("breathes, neutral, while the first test runs", () => {
-		expect(networkPillContent({ status: "measuring" }, true)).toMatchObject({ icon: SignalHighIcon, label: null, tone: "neutral", pulsing: true });
-		expect(networkPillContent({ status: "measuring" }, false)).toMatchObject({ label: "Measuring…", accessibilityLabel: "Connection: measuring" });
+		expect(networkPillContent({ status: "measuring" })).toMatchObject({
+			icon: SignalHighIcon,
+			label: "Measuring…",
+			accessibilityLabel: "Connection: measuring",
+			tone: "neutral",
+			pulsing: true,
+		});
 	});
 
 	it("is red offline, and red when the server does not answer", () => {
-		expect(networkPillContent({ status: "offline" }, true)).toMatchObject({ icon: WifiOffIcon, label: null, accessibilityLabel: "Offline", tone: "destructive" });
-		expect(networkPillContent({ status: "offline" }, false)).toMatchObject({ label: "Offline" });
+		expect(networkPillContent({ status: "offline" })).toMatchObject({ icon: WifiOffIcon, label: "Offline", accessibilityLabel: "Offline", tone: "destructive" });
 		const unreachable: NetworkQualityReading = { status: "unreachable", measuredAtMs: MEASURED_AT_MS };
-		expect(networkPillContent(unreachable, false)).toMatchObject({ icon: SignalZeroIcon, label: "No response", tone: "destructive" });
+		expect(networkPillContent(unreachable)).toMatchObject({ icon: SignalZeroIcon, label: "No response", tone: "destructive" });
 	});
 });
 

@@ -70,6 +70,20 @@ describe("redactSecrets", () => {
 		});
 	});
 
+	it("redacts a passkey ceremony's challenge and the signed parts of the authenticator's answer, and keeps the ids", () => {
+		const body = {
+			challengeId: "019b76da-a810-7000-8000-00000000c0de",
+			options: { challenge: "Y2hhbGxlbmdl", rpId: "example.com" },
+			response: { id: "Y3JlZA", response: { clientDataJSON: "Y2xpZW50", authenticatorData: "YXV0aA", signature: "c2ln", attestationObject: "YXR0", userHandle: "dXNlcg" } },
+		};
+
+		expect(redactSecrets(body)).toEqual({
+			challengeId: "019b76da-a810-7000-8000-00000000c0de",
+			options: { challenge: REDACTED, rpId: "example.com" },
+			response: { id: "Y3JlZA", response: { clientDataJSON: REDACTED, authenticatorData: REDACTED, signature: REDACTED, attestationObject: REDACTED, userHandle: "dXNlcg" } },
+		});
+	});
+
 	it("redacts at any depth, including inside arrays", () => {
 		const input: DataValue = {
 			user: { profile: { credentials: { refreshToken: "r", note: "keep" } } },

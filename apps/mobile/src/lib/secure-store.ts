@@ -9,7 +9,7 @@
 // through the schema; a corrupt or unexpected value is treated as absent and
 // removed (or overwritten with the default), never cast.
 
-import { AccessTokenValueSchema, PosTerminalIdSchema, RefreshTokenValueSchema } from "@workspace/shared";
+import { AccessTokenValueSchema, AppLanguageSchema, PosTerminalIdSchema, RefreshTokenValueSchema } from "@workspace/shared";
 import * as SecureStore from "expo-secure-store";
 import { z } from "zod";
 
@@ -49,6 +49,15 @@ export const PosApiKeyValueSchema = z.string().min(1).max(POS_API_KEY_MAX_LENGTH
 /** A display name of the paired till, its store or its business. */
 export const TillDisplayNameSchema = z.string().min(1).max(TILL_DISPLAY_NAME_MAX_LENGTH);
 
+/**
+ * Largest stored offline checkout queue (contexts/pos/checkout-queue.ts): its five entries, each a request with a
+ * reward code and a short title, stay far below it, and it stays within what Secure Store holds on every platform.
+ */
+const TILL_CHECKOUT_QUEUE_MAX_LENGTH = 4_000;
+
+/** The till's offline checkout queue, as stored: JSON its own module parses (the registry holds primitives). */
+export const TillCheckoutQueueValueSchema = z.string().max(TILL_CHECKOUT_QUEUE_MAX_LENGTH);
+
 /** One declared Secure Store entry: its key and the schema its value must match. */
 export interface SecureStoreEntry<TValue> {
 	readonly key: string;
@@ -63,6 +72,8 @@ export const SECURE_STORE_ENTRIES = {
 	appLockEnabled: { key: "prefs.appLock.enabled", schema: z.boolean() },
 	appLockTimeoutMs: { key: "prefs.appLock.timeoutMs", schema: AppLockTimeoutMsSchema },
 	appLockBiometricFingerprint: { key: "prefs.appLock.enrolledBiometrics", schema: BiometricFingerprintSchema },
+	/** The language this device chose (ADR 076); absent while it follows the phone. */
+	language: { key: "prefs.language", schema: AppLanguageSchema },
 	onboardingCompleted: { key: "prefs.onboarding.completed", schema: z.boolean() },
 	tillApiKey: { key: "till.apiKey", schema: PosApiKeyValueSchema },
 	tillTerminalId: { key: "till.terminalId", schema: PosTerminalIdSchema },
@@ -71,6 +82,8 @@ export const SECURE_STORE_ENTRIES = {
 	tillTenantName: { key: "till.tenantName", schema: TillDisplayNameSchema },
 	tillTenantId: { key: "till.tenantId", schema: z.uuid() },
 	tillLocationId: { key: "till.locationId", schema: z.uuid() },
+	/** Checkouts waiting for the connection (enhancement 6.4): reward codes, so kept beside the till's key. */
+	tillCheckoutQueue: { key: "till.checkoutQueue", schema: TillCheckoutQueueValueSchema },
 } satisfies Record<string, SecureStoreEntry<string | number | boolean>>;
 
 /** JSON as stored: any value a registry schema can describe. */

@@ -43,6 +43,12 @@ export interface AuditTrailEntryRow {
 }
 
 const AuditTrailEntryRowSchema = z.object({ kind: AuditTrailEntryKindSchema, id: z.string(), occurredAt: z.coerce.number().int().nonnegative() });
+/**
+ * The timeline counts at most this many entries (enhancement 2.3): past it the page says "10,000+" and later
+ * pages follow `nextCursor`, so a list over millions of rows never counts them all.
+ */
+export const AUDIT_TRAIL_COUNT_CAP = 10_000;
+
 const CountRowSchema = z.tuple([z.object({ total: z.coerce.number().int().nonnegative() })]);
 const ChangeSummaryRowSchema = z.object({ group_key: z.string(), change_count: z.coerce.number().int().nonnegative(), tables: z.array(z.string()) });
 
@@ -165,28 +171,55 @@ export function backgroundEntriesAreWholeGroups(query: AuditTrailListQuery): boo
 	);
 }
 
-/** The timeline as a derived table `t (kind, id, occurred_at)`. */
-export function buildAuditTrailTimeline(query: AuditTrailListQuery): Prisma.Sql {
+/** The timeline's branches, each a `SELECT kind, id, "occurredAt"`: the requests, and the background entries unless excluded. */
+export function buildAuditTrailTimelineBranches(query: AuditTrailListQuery): readonly Prisma.Sql[] {
 	const requests: Prisma.Sql = Prisma.sql`SELECT 'REQUEST'::text AS kind, a.id::text AS id, a."occurredAt" FROM public."AuditLog" a WHERE ${requestEntryConditions(query)}`;
 	const background = backgroundEntryConditions(query);
 	if (background === null) {
-		return requests;
+		return [requests];
 	}
 	if (backgroundEntriesAreWholeGroups(query)) {
 		// One indexed row per group (kept by the data_change_group_track trigger), not every change ever captured.
-		return Prisma.sql`${requests}
-		UNION ALL
-		SELECT 'BACKGROUND'::text AS kind, g."firstChangeId"::text AS id, g."occurredAt"
+		return [
+			requests,
+			Prisma.sql`SELECT 'BACKGROUND'::text AS kind, g."firstChangeId"::text AS id, g."occurredAt"
 		  FROM public."DataChangeGroup" g
-		 WHERE NOT EXISTS (SELECT 1 FROM public."AuditLog" a WHERE a."correlationId" = g."correlationId")`;
+		 WHERE NOT EXISTS (SELECT 1 FROM public."AuditLog" a WHERE a."correlationId" = g."correlationId")`,
+		];
 	}
-	return Prisma.sql`${requests}
-		UNION ALL
-		SELECT 'BACKGROUND'::text AS kind, (array_agg(d.id::text ORDER BY d."changeSequence"))[1] AS id, min(d."occurredAt") AS "occurredAt"
+	return [
+		requests,
+		Prisma.sql`SELECT 'BACKGROUND'::text AS kind, (array_agg(d.id::text ORDER BY d."changeSequence"))[1] AS id, min(d."occurredAt") AS "occurredAt"
 		  FROM public."DataChangeLog" d
 		 WHERE ${background.rows}
 		 GROUP BY ${groupKeySql()}
-		HAVING ${background.groups}`;
+		HAVING ${background.groups}`,
+	];
+}
+
+/** The timeline as a derived table `t (kind, id, occurred_at)` (every matching entry: what counting reads, bounded by its cap). */
+export function buildAuditTrailTimeline(query: AuditTrailListQuery): Prisma.Sql {
+	return Prisma.join([...buildAuditTrailTimelineBranches(query)], " UNION ALL ");
+}
+
+/**
+ * The entries one page can draw from: each branch filtered, ordered and cut to `limit` (the page's end) on its
+ * own, then unioned. Without this, Postgres can't read a `UNION ALL` in index order, so every page collected
+ * and sorted every audit row ever written (enhancement 2.7: 33,389 buffers for a 25-row page at 200,000 rows;
+ * 35 this way, each branch an index scan). The page's top `limit` entries are always among the branches'
+ * own top `limit`, so the result is the same.
+ */
+export function buildAuditTrailPageTimeline(
+	branches: readonly Prisma.Sql[],
+	page: { readonly where: Prisma.Sql; readonly orderBy: readonly Prisma.Sql[]; readonly limit: number },
+): Prisma.Sql {
+	return Prisma.join(
+		branches.map(
+			(branch: Prisma.Sql): Prisma.Sql =>
+				Prisma.sql`(SELECT t.kind, t.id, t."occurredAt" FROM (${branch}) t WHERE ${page.where} ORDER BY ${Prisma.join([...page.orderBy], ", ")} LIMIT ${page.limit})`,
+		),
+		" UNION ALL ",
+	);
 }
 
 const SQL_DIRECTION: Readonly<Record<"asc" | "desc", Prisma.Sql>> = { asc: Prisma.sql`ASC`, desc: Prisma.sql`DESC` };
@@ -256,19 +289,24 @@ export class PrismaAuditTrailReadRepository implements AuditTrailReader {
 
 	/** One page of timeline positions (offset or keyset, like every list). */
 	private async listEntries(query: AuditTrailListQuery): Promise<RepositoryListResult<AuditTrailEntryRow>> {
+		const branches: readonly Prisma.Sql[] = buildAuditTrailTimelineBranches(query);
 		const timeline: Prisma.Sql = buildAuditTrailTimeline(query);
 		return fetchListPage(query, {
 			where: Prisma.sql`TRUE`,
 			order: buildAuditTrailOrder(query),
 			keyset: AUDIT_TRAIL_KEYSET,
 			and: (left, right) => Prisma.sql`${left} AND ${right}`,
-			count: async (where) => {
-				const [row] = CountRowSchema.parse(await this.db.$queryRaw`SELECT count(*) AS total FROM (${timeline}) t WHERE ${where}`);
+			countCap: AUDIT_TRAIL_COUNT_CAP,
+			count: async (where, atMost) => {
+				const matching = Prisma.sql`SELECT 1 FROM (${timeline}) t WHERE ${where}`;
+				const bounded = atMost === undefined ? matching : Prisma.sql`${matching} LIMIT ${atMost}`;
+				const [row] = CountRowSchema.parse(await this.db.$queryRaw`SELECT count(*) AS total FROM (${bounded}) c`);
 				return row.total;
 			},
 			findMany: async ({ where, orderBy, take, skip }) => {
-				const rows = await this.db
-					.$queryRaw`SELECT t.kind, t.id, t."occurredAt" FROM (${timeline}) t WHERE ${where} ORDER BY ${Prisma.join(orderBy, ", ")} LIMIT ${take} OFFSET ${skip ?? 0}`;
+				const offset: number = skip ?? 0;
+				const candidates: Prisma.Sql = buildAuditTrailPageTimeline(branches, { where, orderBy, limit: take + offset });
+				const rows = await this.db.$queryRaw`SELECT t.kind, t.id, t."occurredAt" FROM (${candidates}) t ORDER BY ${Prisma.join(orderBy, ", ")} LIMIT ${take} OFFSET ${offset}`;
 				return z
 					.array(AuditTrailEntryRowSchema)
 					.parse(rows)

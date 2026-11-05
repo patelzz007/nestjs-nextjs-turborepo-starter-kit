@@ -276,8 +276,10 @@ dark (and a future rebrand) change in one place. App themes (`apps/*/app/*-theme
 **brand and sidebar tokens only** (`APP_BRAND_TOKENS` in `lib/core/color-contrast.ts`) onto their hue —
 web is blue, merchant green, admin uses the shared slate — and never page/card surfaces, borders or
 text; each app's theme test enforces that and proves the layered theme's contrast. The docs site
-(`apps/docs/src/styles/global.css`) imports `@workspace/tokens/palette.css` and maps its own
-names onto the same primitives, so it cannot drift (`apps/docs/src/styles/theme-contrast.test.ts`).
+(`apps/docs/src/styles/app.css`) loads the kit's own stylesheet (`@workspace/ui/globals.css`), so every
+shared component renders as in the apps, and redefines the semantic tokens for its own identity in light
+and dark (Nord keeps the apps' Nord tokens); `apps/docs/src/styles/__tests__/theme-contrast.test.ts`
+holds every docs text pair to AA in all three themes.
 Every text pair meets WCAG AA and every ring / chart series meets 3:1 (`packages/ui/src/styles/__tests__/tokens-contrast.test.ts`, which reads the generated `web.css`).
 
 To rebrand a product built on this kit: change the accent scale(s) in `packages/tokens/src/palette.ts`,
@@ -347,8 +349,9 @@ One type system for every app and the docs site:
 
 The faces live in `packages/ui/src/fonts/` (`bricolage-grotesque.ts`, `geist-sans.ts`,
 `geist-mono.ts`); each app's root `layout.tsx` adds all three `.variable` classes to `<html>`.
-The docs load the same files through the Astro Fonts API. Do not add a fourth family per app — if a
-screen needs emphasis, use weight, size and the display face, not another typeface.
+The docs site is a reading surface with its own identity: IBM Plex Sans and IBM Plex Mono, self-hosted from
+Fontsource (`apps/docs/src/styles/app.css`). Do not add a fourth family per app — if a screen needs emphasis,
+use weight, size and the display face, not another typeface.
 
 ## Status badges and icon tiles — meaning, not colour
 

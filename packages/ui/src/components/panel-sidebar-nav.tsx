@@ -165,8 +165,8 @@ export interface PanelSidebarNavProps {
 	readonly searchQuery: string;
 	readonly onSearchQueryChange: (query: string) => void;
 	readonly pinnedItems: readonly PanelSidebarPinnedItem[];
-	readonly onMoveSectionUp: (title: string, allTitles: readonly string[]) => void;
-	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
+	readonly onMoveSectionUp: (key: string, allKeys: readonly string[]) => void;
+	readonly onMoveSectionDown: (key: string, allKeys: readonly string[]) => void;
 	/** Per-usage overrides of the `panelSidebarNav` family's copy from `UiKitLabelsProvider`. */
 	readonly labels?: UiKitLabelsOverride<"panelSidebarNav"> | undefined;
 	/** Tooltip of disabled items; defaults to the family's `itemUnavailableTitle`. */
@@ -266,15 +266,16 @@ export const PanelSidebarNav = React.forwardRef<HTMLDivElement, PanelSidebarNavP
 				{view.sections.map((section, index) => {
 					const titleId = `${sectionIdPrefix}-section-${String(index)}`;
 					return (
-						<SidebarGroup key={section.title}>
+						<SidebarGroup key={section.key}>
 							<PanelSidebarSectionHeader
 								title={section.title}
+								sectionKey={section.key}
 								titleId={titleId}
 								index={index}
 								isLast={index === view.sections.length - 1}
 								isSearching={view.isSearching}
 								isActiveSection={sectionHasActiveItem(section.items, context.activeItems)}
-								allTitles={view.sectionTitles}
+								allKeys={view.sectionKeys}
 								color={section.color}
 								moveUpTitle={labels.moveSectionUpTitle}
 								moveDownTitle={labels.moveSectionDownTitle}

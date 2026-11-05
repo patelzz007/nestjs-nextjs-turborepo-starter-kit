@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { API_CI_SECRETS, apiCiEnv, randomSecret, renderEnvFile } from "../api-ci-env.mjs";
+import { CI_BUILD_ENV } from "../ci-local-plan.mjs";
 
 const DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/app_ci?schema=public";
 const TENANT_ID = "019b76da-a800-7a94-a198-23ad1b4cfdd9";
@@ -19,6 +20,11 @@ function envOf(entries) {
 }
 
 describe("apiCiEnv", () => {
+	it("advertises the same API address the apps are built to call, so their content security policy allows uploads to it", () => {
+		const env = envOf(apiCiEnv({ databaseUrl: DATABASE_URL, tenancyMode: "multi", secret: countingSecret() }).entries);
+		expect(env.API_PUBLIC_URL).toBe(CI_BUILD_ENV.NEXT_PUBLIC_API_URL);
+	});
+
 	it("points the API at the job's database and sets every generated secret", () => {
 		const { entries, secrets } = apiCiEnv({ databaseUrl: DATABASE_URL, tenancyMode: "multi", secret: countingSecret() });
 		const env = envOf(entries);
@@ -35,9 +41,9 @@ describe("apiCiEnv", () => {
 		expect(env.JWT_ACCESS_SECRET).toMatch(/^hex-\d+$/u);
 	});
 
-	it("turns on every key ring the seed seals data with, including push device tokens", () => {
+	it("turns on every key ring the seed seals data with, including push device tokens and webhook secrets", () => {
 		const names = API_CI_SECRETS.map((secret) => secret.name);
-		expect(names).toEqual(expect.arrayContaining(["GITHUB_CREDENTIAL_ENCRYPTION_KEYS", "NOTIFICATIONS_ENCRYPTION_KEYS"]));
+		expect(names).toEqual(expect.arrayContaining(["GITHUB_CREDENTIAL_ENCRYPTION_KEYS", "NOTIFICATIONS_ENCRYPTION_KEYS", "WEBHOOK_SECRET_ENCRYPTION_KEYS"]));
 	});
 
 	it("never sets a default tenant in multi mode, and serves exactly one in single mode", () => {

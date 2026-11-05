@@ -104,6 +104,14 @@ export interface AuditLogsRoutes {
 	readonly change: RouteBuilder;
 }
 
+/** The log of webhooks providers sent the API (ADR 081). */
+export interface WebhooksRoutes {
+	/** Every received webhook, newest first; `?filter[provider]=` / `?filter[outcome]=` narrow it (RECEIVED_WEBHOOKS_URL_STATE). */
+	readonly received: string;
+	/** One received webhook: its signature check, outcome and allowlisted headers. */
+	readonly receivedDetail: RouteBuilder;
+}
+
 export interface CatalogRoutes {
 	/** Section prefix — redirects to `products.list`. */
 	readonly index: string;
@@ -115,6 +123,8 @@ export interface SettingsRoutes {
 	/** Section prefix — redirects to `access`. */
 	readonly index: string;
 	readonly access: string;
+	/** Runtime feature flags (enhancement 5.6). */
+	readonly featureFlags: string;
 }
 
 export interface ComponentsRoutes {
@@ -151,6 +161,12 @@ export interface OperationsRoutes {
 	readonly rateLimits: string;
 	/** The distributed cache (ADR 072): per-cache numbers, Redis memory, flushes. */
 	readonly cache: string;
+	/** Background job queues (enhancement 4.4): depth, failure rate, failed jobs, retry and discard. */
+	readonly queues: string;
+	/** The public status page's incidents (enhancement 4.5): the list, one incident, and opening one. */
+	readonly statusIncidents: string;
+	readonly statusIncident: RouteBuilder;
+	readonly newStatusIncident: string;
 	readonly loadTests: string;
 	/** One load test: its timeline, steps and the servers' load. */
 	readonly loadTest: RouteBuilder;
@@ -178,6 +194,7 @@ export interface AdminRoutes {
 	readonly emails: EmailsRoutes;
 	readonly geography: GeographyRoutes;
 	readonly auditLogs: AuditLogsRoutes;
+	readonly webhooks: WebhooksRoutes;
 	readonly catalog: CatalogRoutes;
 	readonly settings: SettingsRoutes;
 	readonly components: ComponentsRoutes;
@@ -242,6 +259,8 @@ const EMAIL_BROADCASTS = `${EMAILS}/broadcasts`;
 const AUDIT_LOGS = "/audit-logs";
 /** Row changes live under the audit log (`/audit-logs/changes/[id]`). */
 const AUDIT_LOG_CHANGES = `${AUDIT_LOGS}/changes`;
+/** Received webhooks sit under `/webhooks` (`/webhooks/received/[id]`). */
+const WEBHOOKS_RECEIVED = "/webhooks/received";
 const CATALOG = "/catalog";
 const SETTINGS = "/settings";
 const ACCOUNT = "/account";
@@ -252,6 +271,7 @@ const KANBAN_TASKS = `${KANBAN}/tasks`;
 const OPERATIONS = "/operations";
 const OPERATIONS_SERVERS = `${OPERATIONS}/servers`;
 const OPERATIONS_LOAD_TESTS = `${OPERATIONS}/load-tests`;
+const OPERATIONS_STATUS = `${OPERATIONS}/status`;
 /** The two runs a comparison shows (`/operations/load-tests/compare?a=&b=`). */
 export const LOAD_TEST_COMPARE_PARAMS = { left: "a", right: "b" } satisfies Record<string, string>;
 
@@ -303,6 +323,10 @@ export const ROUTES: AdminRoutes = {
 		detail: (id: string): string => childPath(AUDIT_LOGS, id),
 		change: (id: string): string => childPath(AUDIT_LOG_CHANGES, id),
 	},
+	webhooks: {
+		received: WEBHOOKS_RECEIVED,
+		receivedDetail: (id: string): string => childPath(WEBHOOKS_RECEIVED, id),
+	},
 	catalog: {
 		index: CATALOG,
 		products: crudRoutes(`${CATALOG}/products`),
@@ -311,6 +335,7 @@ export const ROUTES: AdminRoutes = {
 	settings: {
 		index: SETTINGS,
 		access: `${SETTINGS}/access`,
+		featureFlags: `${SETTINGS}/feature-flags`,
 	},
 	components: {
 		index: COMPONENTS,
@@ -329,6 +354,10 @@ export const ROUTES: AdminRoutes = {
 		backups: `${OPERATIONS}/backups`,
 		rateLimits: `${OPERATIONS}/rate-limits`,
 		cache: `${OPERATIONS}/cache`,
+		queues: `${OPERATIONS}/queues`,
+		statusIncidents: OPERATIONS_STATUS,
+		statusIncident: (id: string): string => childPath(OPERATIONS_STATUS, id),
+		newStatusIncident: `${OPERATIONS_STATUS}/new`,
 		loadTests: OPERATIONS_LOAD_TESTS,
 		loadTest: (id: string): string => childPath(OPERATIONS_LOAD_TESTS, id),
 		compare: (left: string, right: string): string =>
@@ -353,6 +382,7 @@ export interface AdminRoutePatterns {
 	readonly users: { readonly detail: string };
 	readonly merchants: { readonly detail: string };
 	readonly auditLogs: { readonly detail: string; readonly change: string };
+	readonly webhooks: { readonly receivedDetail: string };
 	readonly rewards: { readonly reviewDetail: string };
 	readonly catalog: {
 		readonly products: CrudRoutePatterns;
@@ -380,6 +410,7 @@ export const ROUTE_PATTERNS: AdminRoutePatterns = {
 	users: { detail: `${USERS}/${routeParam(ID_PARAM)}` },
 	merchants: { detail: `${MERCHANTS}/${routeParam(ID_PARAM)}` },
 	auditLogs: { detail: `${AUDIT_LOGS}/${routeParam(ID_PARAM)}`, change: `${AUDIT_LOG_CHANGES}/${routeParam(ID_PARAM)}` },
+	webhooks: { receivedDetail: `${WEBHOOKS_RECEIVED}/${routeParam(ID_PARAM)}` },
 	rewards: { reviewDetail: `${REWARDS_REVIEW}/${routeParam(ID_PARAM)}` },
 	catalog: {
 		products: crudRoutePatterns(ROUTES.catalog.products.list),

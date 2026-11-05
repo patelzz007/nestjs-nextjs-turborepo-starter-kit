@@ -8,8 +8,9 @@ Inherits the root `PRODUCT.md`; only what differs is recorded here.
 
 web
 
-Expo (iOS + Android) with **one shared design language** on both operating systems, matching
-the web apps' brand, not per-OS conventions (confirmed 2026-10-27). The value is recorded as
+Expo (iOS + Android) with **one shared design language** on both operating systems, not per-OS
+conventions (confirmed 2026-10-27). Since 2026-11-05 that language is the app's own, not the web
+apps' brand: a generic, neutral account app any product can rebrand (ADR 079). The value is recorded as
 `web` because that is what this product record means by one shared language, not because the
 app runs in a browser.
 
@@ -38,4 +39,10 @@ A complete mobile foundation to build on:
 
 ## Brand Commitments
 
-The active tab is a solid primary capsule, inset.
+- The bottom floating tab bar keeps its shape and motion; its colours are its own tokens (`tab-bar*`),
+  as shipped in light, matching the surfaces in dark and Nord. The active tab is a solid capsule, inset.
+- Generic over themed (owner, 2026-11-05): the category standard at Linear / Things precision and
+  Airbnb / Notion roominess; neutral ink accent (Frost in Nord); Geist for text, Bricolage Grotesque for button labels only.
+- Dark mode is graphite (owner's pick, 2026-11-05, "neutral, a touch cool"): #1c1d20 page, #292b2f cards,
+  #313337 raised, #3a3c40 borders, #f0f1f4 text, #a9adb6 secondary text, #8ab4ff links. Light mode uses slate (slate-900 text, slate-800 fills), never black.
+- The page header shows no ping or session pills; they live in the drawer, tinted.

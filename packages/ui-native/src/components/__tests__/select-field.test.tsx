@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
 import { filterSelectOptions, SelectField, type SelectOption } from "../select-field";
+import { SHEET_MOTION } from "../../lib/motion";
 
 type Fruit = "apple" | "banana" | "cherry";
 
@@ -14,6 +15,22 @@ const OPTIONS: readonly SelectOption<Fruit>[] = [
 
 function field(overrides: Partial<React.ComponentProps<typeof SelectField<Fruit>>> = {}): React.JSX.Element {
 	return <SelectField<Fruit> label="Fruit" options={OPTIONS} value="apple" onChange={jest.fn()} {...overrides} />;
+}
+
+/** Sheets leave with an animation (lib/use-overlay-presence): the clock is the test's, so leaving is checked exactly. */
+beforeEach((): void => {
+	jest.useFakeTimers();
+});
+
+afterEach((): void => {
+	jest.useRealTimers();
+});
+
+/** Lets the sheet finish leaving: it stays up for its exit, then unmounts. */
+async function finishLeaving(): Promise<void> {
+	await act((): void => {
+		jest.advanceTimersByTime(SHEET_MOTION.exit.duration);
+	});
 }
 
 describe("SelectField", () => {
@@ -38,6 +55,7 @@ describe("SelectField", () => {
 		await fireEvent.press(screen.getByRole("radio", { name: "Cherry" }));
 
 		expect(onChange).toHaveBeenCalledWith("cherry");
+		await finishLeaving();
 		expect(screen.queryByRole("radio")).toBeNull();
 	});
 
@@ -51,6 +69,7 @@ describe("SelectField", () => {
 		await fireEvent.press(screen.getByRole("button", { name: "Close fruit" }));
 
 		expect(onChange).not.toHaveBeenCalled();
+		await finishLeaving();
 		expect(screen.queryByRole("radio")).toBeNull();
 	});
 

@@ -187,7 +187,8 @@ export const PanelSidebarNavItem = React.forwardRef<HTMLLIElement, PanelSidebarN
 				{depth === 0 ? <SidebarMenuBadge itemId={item.id} /> : null}
 				{hasChildren ? (
 					<PanelSidebarNavCollapse open={isExpanded}>
-						<SidebarMenu id={groupId} role="group" aria-label={item.title} className="ml-5 w-auto gap-0.5 border-l border-sidebar-border/80 pl-2">
+						{/* A real list (no `role="group"`, which would strip its list semantics), named by its parent's title. */}
+						<SidebarMenu id={groupId} aria-label={item.title} className="ml-5 w-auto gap-0.5 border-l border-sidebar-border/80 pl-2">
 							{children.map((child) => (
 								<PanelSidebarNavItem
 									key={child.id}

@@ -167,3 +167,21 @@ describe("merchant proxy session refresh", () => {
 		expect(response.cookies.get(ACCESS_COOKIE)?.value).toBe("");
 	});
 });
+
+describe("proxy security headers", () => {
+	it("sends a nonce CSP and refuses framing on pages and redirects alike", async () => {
+		for (const response of [await runProxy({ pathname: "/" }), await runProxy({ pathname: "/auth/login" })]) {
+			const policy = response.headers.get("Content-Security-Policy") ?? "";
+			expect(policy).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/]+=*' 'strict-dynamic'/u);
+			expect(policy).toContain("frame-ancestors 'none'");
+			expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+			expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+		}
+	});
+
+	it("uses a fresh nonce for every request", async () => {
+		const first = (await runProxy({ pathname: "/auth/login" })).headers.get("Content-Security-Policy");
+		const second = (await runProxy({ pathname: "/auth/login" })).headers.get("Content-Security-Policy");
+		expect(first).not.toBe(second);
+	});
+});

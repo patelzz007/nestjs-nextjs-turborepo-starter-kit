@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
 import { Combobox, type ComboboxOption } from "../combobox";
+import { SHEET_MOTION } from "../../lib/motion";
 
 type Country = "fr" | "de" | "jp";
 
@@ -11,6 +12,22 @@ const OPTIONS: readonly ComboboxOption<Country>[] = [
 	{ value: "de", label: "Germany", description: "Europe" },
 	{ value: "jp", label: "Japan", description: "Asia" },
 ];
+
+/** Sheets leave with an animation (lib/use-overlay-presence): the clock is the test's, so leaving is checked exactly. */
+beforeEach((): void => {
+	jest.useFakeTimers();
+});
+
+afterEach((): void => {
+	jest.useRealTimers();
+});
+
+/** Lets the sheet finish leaving: it stays up for its exit, then unmounts. */
+async function finishLeaving(): Promise<void> {
+	await act((): void => {
+		jest.advanceTimersByTime(SHEET_MOTION.exit.duration);
+	});
+}
 
 describe("Combobox", () => {
 	it("is a combobox named by its label and its choice, with a placeholder while nothing is chosen", async () => {
@@ -35,6 +52,9 @@ describe("Combobox", () => {
 		await fireEvent.press(screen.getByRole("radio", { name: "Japan" }));
 
 		expect(onChange).toHaveBeenCalledWith("jp");
+		// Still leaving (its exit animation), then gone.
+		expect(screen.getByRole("radio", { name: "Japan" })).toBeOnTheScreen();
+		await finishLeaving();
 		expect(screen.queryByRole("radio")).toBeNull();
 	});
 

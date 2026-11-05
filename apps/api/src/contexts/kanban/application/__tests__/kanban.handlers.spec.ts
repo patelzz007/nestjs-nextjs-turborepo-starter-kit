@@ -34,6 +34,8 @@ import { DeleteKanbanTaskCommand } from "../commands/delete-kanban-task/delete-k
 import { DeleteKanbanTaskHandler } from "../commands/delete-kanban-task/delete-kanban-task.handler";
 import { ImportKanbanTasksCommand } from "../commands/import-kanban-tasks/import-kanban-tasks.command";
 import { ImportKanbanTasksHandler } from "../commands/import-kanban-tasks/import-kanban-tasks.handler";
+import { PreviewKanbanImportHandler } from "../queries/preview-kanban-import/preview-kanban-import.handler";
+import { PreviewKanbanImportQuery } from "../queries/preview-kanban-import/preview-kanban-import.query";
 import { MoveKanbanColumnCommand } from "../commands/move-kanban-column/move-kanban-column.command";
 import { MoveKanbanColumnHandler } from "../commands/move-kanban-column/move-kanban-column.handler";
 import { MoveKanbanTaskCommand } from "../commands/move-kanban-task/move-kanban-task.command";
@@ -201,6 +203,53 @@ describe("ImportKanbanTasksHandler", () => {
 			),
 		).rejects.toThrow(KanbanColumnNotFoundError);
 		expect(store.tasks.size).toBe(0);
+	});
+});
+
+describe("PreviewKanbanImportHandler (enhancement 5.8)", () => {
+	const SECOND_ID = "0199d0c0-0000-7000-8000-0000000000f2";
+	const THIRD_ID = "0199d0c0-0000-7000-8000-0000000000f3";
+
+	it("reports each row the import would refuse, by its position, and writes nothing", async () => {
+		const { store, uow } = setup();
+		const report = await new PreviewKanbanImportHandler(uow, new SequenceIdGenerator([NEW_ID, SECOND_ID, THIRD_ID]), new FakeKanbanAssignees()).execute(
+			new PreviewKanbanImportQuery(staff(), {
+				board: "EXECUTION",
+				tasks: [CREATE_INPUT, { ...CREATE_INPUT, columnId: SECOND_ID }, { ...CREATE_INPUT, assigneeId: SECOND_ID }],
+			}),
+		);
+
+		expect(report).toEqual({
+			rows: 3,
+			importable: 1,
+			problems: [
+				{ row: 1, code: "KANBAN_COLUMN_NOT_FOUND", message: "Column not found" },
+				{ row: 2, code: "KANBAN_ASSIGNEE_INVALID", message: "Assign someone who can use the board." },
+			],
+		});
+		expect(store.tasks.size).toBe(0);
+		expect(store.boardLocks).toBe(1);
+	});
+
+	it("passes every row the import itself would take", async () => {
+		const { uow } = setup();
+		const report = await new PreviewKanbanImportHandler(uow, new SequenceIdGenerator([NEW_ID, SECOND_ID]), new FakeKanbanAssignees()).execute(
+			new PreviewKanbanImportQuery(staff(), { board: "EXECUTION", tasks: [CREATE_INPUT, { ...CREATE_INPUT, columnId: DOING_ID, assigneeId: STAFF_ID }] }),
+		);
+
+		expect(report).toEqual({ rows: 2, importable: 2, problems: [] });
+	});
+
+	it("lets a failure that isn't a row's refusal through", async () => {
+		const { uow } = setup();
+		const broken = new FakeKanbanAssignees();
+		broken.assignableUserIds = (): Promise<readonly string[]> => Promise.reject(new Error("directory down"));
+
+		await expect(
+			new PreviewKanbanImportHandler(uow, new SequenceIdGenerator([NEW_ID]), broken).execute(
+				new PreviewKanbanImportQuery(staff(), { board: "EXECUTION", tasks: [{ ...CREATE_INPUT, assigneeId: STAFF_ID }] }),
+			),
+		).rejects.toThrow("directory down");
 	});
 });
 

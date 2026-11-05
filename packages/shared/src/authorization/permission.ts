@@ -80,6 +80,9 @@ export const PERMISSION: PermissionRegistry = {
 	BROADCAST_REPORT: actionSlugs("BROADCAST_REPORT"),
 	RATE_LIMIT: actionSlugs("RATE_LIMIT"),
 	CACHE: actionSlugs("CACHE"),
+	BACKGROUND_JOB: actionSlugs("BACKGROUND_JOB"),
+	STATUS_INCIDENT: actionSlugs("STATUS_INCIDENT"),
+	FEATURE_FLAG: actionSlugs("FEATURE_FLAG"),
 	MEMBER: actionSlugs("MEMBER"),
 	KYB: actionSlugs("KYB"),
 	ACCESS_REQUEST: actionSlugs("ACCESS_REQUEST"),
@@ -91,6 +94,7 @@ export const PERMISSION: PermissionRegistry = {
 	SHARE: actionSlugs("SHARE"),
 	CLAIM: actionSlugs("CLAIM"),
 	TERMINAL: actionSlugs("TERMINAL"),
+	WEBHOOK: actionSlugs("WEBHOOK"),
 };
 
 /**
@@ -115,6 +119,8 @@ export const MerchantCapabilitySchema = z.enum([
 	"merchant:view_notifications",
 	"merchant:manage_broadcasts",
 	"merchant:publish_broadcasts",
+	"merchant:manage_payments",
+	"merchant:manage_webhooks",
 ]);
 
 export type MerchantCapability = z.output<typeof MerchantCapabilitySchema>;
@@ -140,6 +146,10 @@ export interface MerchantCapabilityRegistry {
 	readonly manageBroadcasts: MerchantCapability;
 	/** Approve another member's broadcast for sending (the second pair of eyes, ADR 073). */
 	readonly publishBroadcasts: MerchantCapability;
+	/** Ask for payments through the tenant's gateways, follow them and refund them (ADR 020). */
+	readonly managePayments: MerchantCapability;
+	/** The tenant's outgoing webhooks: endpoints, signing secrets and the delivery log (ADR 082). */
+	readonly manageWebhooks: MerchantCapability;
 }
 
 export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
@@ -156,6 +166,8 @@ export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
 	viewNotifications: "merchant:view_notifications",
 	manageBroadcasts: "merchant:manage_broadcasts",
 	publishBroadcasts: "merchant:publish_broadcasts",
+	managePayments: "merchant:manage_payments",
+	manageWebhooks: "merchant:manage_webhooks",
 };
 
 /**
@@ -181,6 +193,8 @@ export const MERCHANT_CAPABILITY_CEDAR_ACTIONS: Readonly<Record<MerchantCapabili
 	"merchant:view_notifications": "tenant:view_notifications",
 	"merchant:manage_broadcasts": "tenant:manage_broadcasts",
 	"merchant:publish_broadcasts": "tenant:publish_broadcasts",
+	"merchant:manage_payments": "tenant:manage_payments",
+	"merchant:manage_webhooks": "tenant:manage_webhooks",
 };
 
 export const PermissionPairSchema = z
@@ -248,6 +262,17 @@ export const TENANT_PERMISSIONS: readonly PermissionPair[] = [
 	pair("BROADCAST", "PUBLISH"),
 	pair("BROADCAST", "DELETE"),
 	pair("NOTIFICATION", "LIST"),
+	// Payments through the tenant's gateways (ADR 020): ask for one, follow it, refund it.
+	pair("PAYMENT", "LIST"),
+	pair("PAYMENT", "READ"),
+	pair("PAYMENT", "CREATE"),
+	pair("PAYMENT", "UPDATE"),
+	// Outgoing webhooks to the tenant's own systems (ADR 082): endpoints, their secrets and the delivery log.
+	pair("WEBHOOK", "LIST"),
+	pair("WEBHOOK", "READ"),
+	pair("WEBHOOK", "CREATE"),
+	pair("WEBHOOK", "UPDATE"),
+	pair("WEBHOOK", "DELETE"),
 ];
 
 /** Whether a permission is one a tenant may hold (see {@link TENANT_PERMISSIONS}). */
@@ -255,8 +280,20 @@ export function isTenantPermission(permission: PermissionPair): boolean {
 	return TENANT_PERMISSIONS.some((candidate) => candidate.action === permission.action && candidate.resource === permission.resource);
 }
 
-/** Permissions only the Owner template holds: the business's legal identity and who may reach its data. */
-const OWNER_ONLY_TENANT_PERMISSIONS: readonly PermissionPair[] = [pair("KYB", "UPDATE"), pair("SUPPORT_ACCESS", "APPROVE"), pair("TENANT", "UPDATE")];
+/**
+ * Permissions only the Owner template holds: the business's legal identity and who may reach its data — support
+ * access, and outgoing webhooks, which send its events to systems outside the platform (ADR 082).
+ */
+const OWNER_ONLY_TENANT_PERMISSIONS: readonly PermissionPair[] = [
+	pair("KYB", "UPDATE"),
+	pair("SUPPORT_ACCESS", "APPROVE"),
+	pair("TENANT", "UPDATE"),
+	pair("WEBHOOK", "LIST"),
+	pair("WEBHOOK", "READ"),
+	pair("WEBHOOK", "CREATE"),
+	pair("WEBHOOK", "UPDATE"),
+	pair("WEBHOOK", "DELETE"),
+];
 
 function excluding(all: readonly PermissionPair[], removed: readonly PermissionPair[]): readonly PermissionPair[] {
 	return all.filter((candidate) => !removed.some((gone) => gone.action === candidate.action && gone.resource === candidate.resource));
@@ -303,6 +340,8 @@ export const MERCHANT_CAPABILITY_PERMISSION: Readonly<Record<MerchantCapability,
 	"merchant:view_notifications": pair("NOTIFICATION", "LIST"),
 	"merchant:manage_broadcasts": pair("BROADCAST", "UPDATE"),
 	"merchant:publish_broadcasts": pair("BROADCAST", "PUBLISH"),
+	"merchant:manage_payments": pair("PAYMENT", "CREATE"),
+	"merchant:manage_webhooks": pair("WEBHOOK", "UPDATE"),
 };
 
 /** The merchant capability slugs a set of effective permissions satisfies (what the merchant app shows). */

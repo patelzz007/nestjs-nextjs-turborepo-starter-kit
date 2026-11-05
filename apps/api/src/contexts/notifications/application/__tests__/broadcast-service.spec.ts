@@ -28,7 +28,7 @@ import {
 	type BroadcastSender,
 } from "../services/broadcast-service";
 import { InMemoryBroadcastStore } from "./fakes/in-memory-broadcast.store";
-import { InMemoryEmailLogs, notificationsScope, RecordingNotificationsUnitOfWork, RecordingNotify } from "./fakes/notifications.fakes";
+import { InMemoryBroadcastImages, InMemoryEmailLogs, notificationsScope, RecordingNotificationsUnitOfWork, RecordingNotify } from "./fakes/notifications.fakes";
 
 const NOW = Date.UTC(2026, 9, 30, 10);
 const HOUR = 3_600_000;
@@ -186,6 +186,29 @@ describe("writing a broadcast", () => {
 		const created = await service().create(user(AUTHOR), TENANT_SENDER, tenantDraft());
 
 		await expect(service().get(user(AUTHOR), { kind: "tenant", tenantId: "0193f2c4-0000-7000-8000-0000000000ff" }, created.id)).rejects.toBeInstanceOf(NotFoundError);
+	});
+});
+
+describe("pictures in a broadcast (enhancement 5.4)", () => {
+	const PICTURE = "0193f2c4-0000-7000-8000-00000000aaaa";
+	const withPicture = (fileId: string): BroadcastDraftInput =>
+		tenantDraft({ body: { type: "doc", content: [{ type: "image", attrs: { fileId, alt: "The new menu" } }, ...BODY.content] } });
+
+	it("checks the picture is the sender's and ready, then answers with its address", async () => {
+		const images = new InMemoryBroadcastImages(new Map([[PICTURE, "https://cdn.example.com/menu.webp"]]));
+		uow = new RecordingNotificationsUnitOfWork(notificationsScope(new InMemoryEmailLogs(), undefined, undefined, undefined, store, notify, images));
+
+		const created = await service().create(user(AUTHOR), TENANT_SENDER, withPicture(PICTURE));
+		expect(images.locked).toStrictEqual([{ owner: TENANT_SENDER, fileIds: [PICTURE] }]);
+		expect(created.body.content.at(0)).toStrictEqual({ type: "image", attrs: { fileId: PICTURE, alt: "The new menu", src: "https://cdn.example.com/menu.webp" } });
+		const read = await service().get(user(AUTHOR), TENANT_SENDER, created.id);
+		expect(read.body.content.at(0)).toMatchObject({ attrs: { src: "https://cdn.example.com/menu.webp" } });
+	});
+
+	it("refuses a picture that isn't one of the sender's ready images, writing nothing", async () => {
+		uow = new RecordingNotificationsUnitOfWork(notificationsScope(new InMemoryEmailLogs(), undefined, undefined, undefined, store, notify, new InMemoryBroadcastImages()));
+		await expect(service().create(user(AUTHOR), TENANT_SENDER, withPicture(PICTURE))).rejects.toBeInstanceOf(ValidationError);
+		await expect(service().list(user(AUTHOR), TENANT_SENDER, { page: 1, limit: 20 })).resolves.toMatchObject({ items: [] });
 	});
 });
 

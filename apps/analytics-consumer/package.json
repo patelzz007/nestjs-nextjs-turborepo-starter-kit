@@ -11,7 +11,7 @@
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
 		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"typecheck": "tsrs --noEmit",
-		"test": "vitest run --config vitest.config.ts",
+		"test": "vitest run --config vitest.config.ts --coverage",
 		"test:e2e": "dotenv run -q -- vitest run --config vitest.config.e2e.ts"
 	},
 	"dependencies": {

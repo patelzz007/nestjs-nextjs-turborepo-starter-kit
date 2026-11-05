@@ -56,7 +56,11 @@ export default async function setup(project: TestProject): Promise<() => Promise
 	const runTag = newRunTag();
 	// `maxWorkers` as resolved for this run: 1 under `--no-file-parallelism`, the CLI's `--maxWorkers` when given.
 	const workerDatabases = Array.from({ length: project.config.maxWorkers }, (_unused, index): string => workerDatabaseName(source, runTag, index + 1));
-	await withServer(sourceUrl, async (server): Promise<void> => createWorkerDatabases(server, source, workerDatabases));
+	// Copying and dropping databases are admin statements: they go to the direct session server when there is one
+	// (behind a pooler, 2.5). A pooler keeps idle server connections to the source open, which a
+	// `CREATE DATABASE … TEMPLATE` refuses, and the copies' own traffic still goes through the pooler.
+	const adminUrl = process.env.DATABASE_SESSION_URL !== undefined && process.env.DATABASE_SESSION_URL.length > 0 ? process.env.DATABASE_SESSION_URL : sourceUrl;
+	await withServer(adminUrl, async (server): Promise<void> => createWorkerDatabases(server, source, workerDatabases));
 
 	project.provide("bullMqPrefix", prefix);
 	project.provide(
@@ -65,7 +69,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
 	);
 
 	return async (): Promise<void> => {
-		await withServer(sourceUrl, async (server): Promise<void> => dropWorkerDatabases(server, workerDatabases));
+		await withServer(adminUrl, async (server): Promise<void> => dropWorkerDatabases(server, workerDatabases));
 		const redisUrl = process.env.REDIS_URL;
 		if (redisUrl === undefined) {
 			return;

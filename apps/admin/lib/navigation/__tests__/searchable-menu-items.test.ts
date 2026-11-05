@@ -8,13 +8,14 @@ const ITEMS: readonly CompiledSidebarMenuItem[] = [
 	{
 		id: "settings",
 		title: "Settings",
+		labelKey: "settings",
 		url: "/settings",
 		children: [
-			{ id: "settings-billing", title: "Billing", url: "/settings/billing" },
-			{ id: "settings-access", title: "Access control", url: "/settings/access" },
+			{ id: "settings-billing", title: "Billing", labelKey: "billing", url: "/settings/billing" },
+			{ id: "settings-access", title: "Access control", labelKey: "access-control", url: "/settings/access" },
 		],
 	},
-	{ id: "docs", title: "Docs", url: "/docs", children: [{ id: "docs-alpha", title: "Alpha", url: "/docs/alpha", disabled: true }] },
+	{ id: "docs", title: "Docs", labelKey: "docs", url: "/docs", children: [{ id: "docs-alpha", title: "Alpha", labelKey: "alpha", url: "/docs/alpha", disabled: true }] },
 ];
 
 describe("flattenMenuItems", () => {

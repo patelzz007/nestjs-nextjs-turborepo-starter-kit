@@ -354,41 +354,42 @@ export const BreadcrumbTrail = React.memo(
 
 		return (
 			<Breadcrumb ref={ref} ariaLabel={ariaLabel} className={cn("group/breadcrumb mb-6", className)}>
-				<BreadcrumbList size={size} scrollable={scrollable}>
-					{/* `motion-safe:` — the entrance animation is skipped for users who
-				    prefer reduced motion (improvement 13). */}
-					<div
-						key={animationKey}
-						className="flex min-w-0 items-center gap-1.5 motion-safe:animate-in motion-safe:duration-200 motion-safe:fill-mode-both motion-safe:fade-in motion-safe:slide-in-from-left-1 sm:gap-2.5">
-						{leading.map((item) => (
-							<React.Fragment key={`${item.label}-leading`}>
-								{renderCrumb(item, 0)}
-								<BreadcrumbSeparator>{separator}</BreadcrumbSeparator>
+				{/* The list itself animates in (keyed, so a new trail replays it): a wrapper element between the
+				    <ol> and its <li>s would break the list's structure for screen readers. `motion-safe:` — the
+				    entrance animation is skipped for users who prefer reduced motion (improvement 13). */}
+				<BreadcrumbList
+					key={animationKey}
+					size={size}
+					scrollable={scrollable}
+					className="min-w-0 motion-safe:animate-in motion-safe:duration-200 motion-safe:fill-mode-both motion-safe:fade-in motion-safe:slide-in-from-left-1">
+					{leading.map((item) => (
+						<React.Fragment key={`${item.label}-leading`}>
+							{renderCrumb(item, 0)}
+							<BreadcrumbSeparator>{separator}</BreadcrumbSeparator>
+						</React.Fragment>
+					))}
+					{collapsed && hidden.length > 0 ? (
+						<React.Fragment key="ellipsis">
+							<BreadcrumbItem>
+								<HiddenCrumbsPopover hidden={hidden} renderLink={renderLink} labels={labels} />
+							</BreadcrumbItem>
+							<BreadcrumbSeparator>{separator}</BreadcrumbSeparator>
+						</React.Fragment>
+					) : null}
+					{tail.map((item, offset) => {
+						const index = lastIndex - tail.length + 1 + offset;
+						return (
+							<React.Fragment key={`${item.label}-${String(index)}`}>
+								{renderCrumb(item, index)}
+								{index !== lastIndex ? <BreadcrumbSeparator>{separator}</BreadcrumbSeparator> : null}
 							</React.Fragment>
-						))}
-						{collapsed && hidden.length > 0 ? (
-							<React.Fragment key="ellipsis">
-								<BreadcrumbItem>
-									<HiddenCrumbsPopover hidden={hidden} renderLink={renderLink} labels={labels} />
-								</BreadcrumbItem>
-								<BreadcrumbSeparator>{separator}</BreadcrumbSeparator>
-							</React.Fragment>
-						) : null}
-						{tail.map((item, offset) => {
-							const index = lastIndex - tail.length + 1 + offset;
-							return (
-								<React.Fragment key={`${item.label}-${String(index)}`}>
-									{renderCrumb(item, index)}
-									{index !== lastIndex ? <BreadcrumbSeparator>{separator}</BreadcrumbSeparator> : null}
-								</React.Fragment>
-							);
-						})}
-						{/* Copy-link action — appears on hover at `sm`+, always on touch;
+						);
+					})}
+					{/* Copy-link action — appears on hover at `sm`+, always on touch;
 					    hidden entirely when printing (feature — print support). */}
-						<BreadcrumbItem className="ml-0.5 print:hidden">
-							<CopyLinkButton onCopy={onCopy} labels={labels} />
-						</BreadcrumbItem>
-					</div>
+					<BreadcrumbItem className="ml-0.5 print:hidden">
+						<CopyLinkButton onCopy={onCopy} labels={labels} />
+					</BreadcrumbItem>
 				</BreadcrumbList>
 			</Breadcrumb>
 		);

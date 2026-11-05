@@ -22,6 +22,8 @@ export interface RepositoryListResult<TEntity> {
 	readonly nextCursor: string | null;
 	readonly hasNext: boolean;
 	readonly hasPrevious: boolean;
+	/** `total` is a lower bound: the list counts at most its `countCap` rows (enhancement 2.3). */
+	readonly totalIsCapped?: boolean;
 }
 
 /** Lifecycle flags shared by resource repositories. */

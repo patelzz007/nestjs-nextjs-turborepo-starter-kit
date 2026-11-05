@@ -203,6 +203,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => {
 			updateColumn: mutationHook,
 			createTask: mutationHook,
 			importTasks: mutationHook,
+			previewImport: mutationHook,
 			deleteTask: mutationHook,
 			removeAttachment: mutationHook,
 			addComment: mutationHook,

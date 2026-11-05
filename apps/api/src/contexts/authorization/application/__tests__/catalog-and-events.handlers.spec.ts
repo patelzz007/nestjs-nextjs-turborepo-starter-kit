@@ -3,6 +3,7 @@ import { epochMs, type CapabilityDefinition } from "@workspace/shared";
 
 import { UserAuthorizationChanged } from "../../domain/events/user-authorization-changed.event";
 import { PurgeOldPermissionAuditLogsCommand } from "../commands/purge-old-permission-audit-logs/purge-old-permission-audit-logs.command";
+import { RECORD_RETENTION_MS } from "../../../../platform/domain/record-retention";
 import { PERMISSION_AUDIT_RETENTION_MS, PurgeOldPermissionAuditLogsHandler } from "../commands/purge-old-permission-audit-logs/purge-old-permission-audit-logs.handler";
 import { SyncCapabilityCatalogCommand } from "../commands/sync-capability-catalog/sync-capability-catalog.command";
 import { SyncCapabilityCatalogHandler } from "../commands/sync-capability-catalog/sync-capability-catalog.handler";
@@ -116,6 +117,8 @@ describe("PurgeOldPermissionAuditLogsHandler", () => {
 		).resolves.toBe(4);
 
 		expect(store.permissionAudit.retired).toEqual([{ cutoff: epochMs(NOW - PERMISSION_AUDIT_RETENTION_MS), now: NOW }]);
+		// The platform-wide record retention: ten years (platform/domain/record-retention.ts).
+		expect(PERMISSION_AUDIT_RETENTION_MS).toBe(RECORD_RETENTION_MS);
 	});
 });
 

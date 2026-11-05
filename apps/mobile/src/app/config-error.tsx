@@ -6,6 +6,7 @@
 // screen prints none regardless). In development it points to the README.
 
 import * as React from "react";
+import { withRootGate } from "../runtime/root-navigator";
 
 import { Alert } from "@workspace/ui-native/components/alert";
 import { Card } from "@workspace/ui-native/components/card";
@@ -16,7 +17,7 @@ import { useConfigIssue } from "../runtime/runtime-context";
 /** Where the variables are explained (development builds only). */
 export const CONFIG_HELP_PATH = "apps/mobile/README.md → Configuration";
 
-export default function ConfigErrorScreen(): React.JSX.Element {
+function ConfigErrorScreen(): React.JSX.Element {
 	const issue = useConfigIssue();
 	return (
 		<Screen title="The app is not configured" description="This build cannot reach its server until the configuration below is fixed.">
@@ -33,3 +34,5 @@ export default function ConfigErrorScreen(): React.JSX.Element {
 		</Screen>
 	);
 }
+
+export default withRootGate(["config-error"], ConfigErrorScreen);

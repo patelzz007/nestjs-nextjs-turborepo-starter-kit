@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema } from "../../../schemas/api/common";
-import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
+import { defineListQuery, LIST_MAX_LIMIT, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
 import { BooleanQueryParamSchema } from "../../../schemas/api/query-params";
 import { NotificationCategorySchema, NotificationChannelSchema, NotificationDeliveryReasonSchema } from "./notifications";
 import { RichTextDocumentResponseSchema, RichTextDocumentSchema } from "./rich-text";
@@ -228,12 +228,22 @@ export const TenantCustomerEntrySchema = z.object({
 });
 export type TenantCustomerEntry = z.output<typeof TenantCustomerEntrySchema>;
 
-/** `GET /tenants/:tenantSlug/broadcasts/customers`: newest claim first; `search` matches the name or email. */
+/**
+ * `ids=<uuid>,<uuid>,…`: look customers up by id (a draft's picked people, enhancement 5.5), at most one page
+ * per request; anything that isn't a UUID is refused before it reaches the query.
+ */
+export const TenantCustomerIdsParamSchema = z
+	.string()
+	.transform((value): string[] => value.split(",").filter((id) => id.length > 0))
+	.pipe(z.array(z.uuid()).min(1).max(LIST_MAX_LIMIT))
+	.optional();
+
+/** `GET /tenants/:tenantSlug/broadcasts/customers`: newest claim first; `search` matches the name or email; `ids` looks people up. */
 export const tenantCustomerListQuery = defineListQuery({
 	sortable: ["lastClaimedAt", "firstClaimedAt", "claimCount"],
 	defaultSort: [{ field: "lastClaimedAt", direction: "desc" }],
 	filter: { lastClaimedAt: listFilter.epochMs({ gte: true, lte: true }) },
-	params: { search: ListSearchSchema, reachableOnly: BooleanQueryParamSchema },
+	params: { search: ListSearchSchema, reachableOnly: BooleanQueryParamSchema, ids: TenantCustomerIdsParamSchema },
 	defaultLimit: 20,
 });
 export const TenantCustomerListQuerySchema = tenantCustomerListQuery.schema;

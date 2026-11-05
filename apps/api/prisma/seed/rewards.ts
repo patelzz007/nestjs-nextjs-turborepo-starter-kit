@@ -107,7 +107,7 @@ async function hashPassword(password: string): Promise<string> {
 async function upsertMerchantUser(id: string, email: string, fullName: string, password: string, phone: string | null, phoneVerifiedAt: number | null): Promise<User> {
 	const passwordHash = await hashPassword(password);
 	return prisma.user.upsert({
-		where: { email },
+		where: { id },
 		create: {
 			id,
 			email,
@@ -175,7 +175,7 @@ const SEED_CONSUMER_EMAILS: readonly string[] = ["alice.johnson@example.com", "b
  */
 export async function cleanupRewardSeedData(): Promise<void> {
 	const tenantId = { in: [...SEED_TENANT_IDS] };
-	const seedConsumers = await prisma.user.findMany({ where: { email: { in: [...SEED_CONSUMER_EMAILS] } }, select: { id: true } });
+	const seedConsumers = await prisma.user.findMany({ where: { email: { in: [...SEED_CONSUMER_EMAILS] }, isDeleted: false }, select: { id: true } });
 	const userId = { in: seedConsumers.map((consumer) => consumer.id) };
 
 	await prisma.rewardNotification.deleteMany({ where: { userId } });

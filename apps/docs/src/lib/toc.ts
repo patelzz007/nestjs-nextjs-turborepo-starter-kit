@@ -1,4 +1,4 @@
-/** A rendered heading, as Astro's `render()` returns it. */
+/** A rendered heading, as the docs renderer returns it (`RenderedHeading`). */
 export interface HeadingLike {
 	readonly depth: number;
 	readonly slug: string;
@@ -39,14 +39,14 @@ export function topSections(headings: readonly HeadingLike[], limit: number): re
 }
 
 /** One "On this page" entry with the h3s that follow it (the rail's nested groups). */
-export interface TocGroup {
-	readonly item: TocItem;
-	readonly children: readonly TocItem[];
+export interface TocGroup<TItem extends TocItem = TocItem> {
+	readonly item: TItem;
+	readonly children: readonly TItem[];
 }
 
-/** Nests every h3 under the h2 before it; an h3 before the first h2 stands alone. */
-export function groupToc(items: readonly TocItem[]): readonly TocGroup[] {
-	const groups: { item: TocItem; children: TocItem[] }[] = [];
+/** Nests every h3 under the h2 before it; an h3 before the first h2 stands alone. Keeps the items' own type. */
+export function groupToc<TItem extends TocItem>(items: readonly TItem[]): readonly TocGroup<TItem>[] {
+	const groups: { item: TItem; children: TItem[] }[] = [];
 	for (const item of items) {
 		const last = groups.at(-1);
 		if (item.depth === 3 && last?.item.depth === 2) {

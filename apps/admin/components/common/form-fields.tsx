@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@workspace/ui/components/checkbox";
 import { FieldError } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -143,6 +144,71 @@ export function SwitchField({ id, label, checked, onChange }: SwitchFieldProps):
 			<Switch id={id} checked={checked} onCheckedChange={onChange} />
 			<Label htmlFor={id}>{label}</Label>
 		</div>
+	);
+}
+
+export interface CheckboxGroupFieldProps<TOption extends string> {
+	readonly id: string;
+	readonly label: string;
+	readonly value: readonly TOption[];
+	readonly options: readonly TOption[];
+	readonly onChange: (value: TOption[]) => void;
+	readonly labelOf?: (option: TOption) => string;
+	readonly errors?: readonly FormFieldError[];
+}
+
+/** One option of a {@link CheckboxGroupField}. */
+function CheckboxOption<TOption extends string>({
+	option,
+	label,
+	checked,
+	onToggle,
+}: {
+	readonly option: TOption;
+	readonly label: string;
+	readonly checked: boolean;
+	readonly onToggle: (option: TOption, checked: boolean) => void;
+}): React.JSX.Element {
+	const handleChange = React.useCallback(
+		(next: boolean): void => {
+			onToggle(option, next);
+		},
+		[onToggle, option],
+	);
+	return (
+		<label className="flex items-center gap-2 text-sm">
+			<Checkbox checked={checked} onCheckedChange={handleChange} />
+			{label}
+		</label>
+	);
+}
+
+/** A labelled group of checkboxes choosing any of a closed set of options, kept in the options' order. */
+export function CheckboxGroupField<TOption extends string>({
+	id,
+	label,
+	value,
+	options,
+	onChange,
+	labelOf = identityLabel,
+	errors = [],
+}: CheckboxGroupFieldProps<TOption>): React.JSX.Element {
+	const handleToggle = React.useCallback(
+		(option: TOption, checked: boolean): void => {
+			onChange(options.filter((candidate) => (candidate === option ? checked : value.includes(candidate))));
+		},
+		[onChange, options, value],
+	);
+	return (
+		<fieldset id={id} className="space-y-2" aria-invalid={errors.length > 0}>
+			<legend className="text-sm font-medium">{label}</legend>
+			<div className="flex flex-col gap-2">
+				{options.map((option): React.JSX.Element => (
+					<CheckboxOption key={option} option={option} label={labelOf(option)} checked={value.includes(option)} onToggle={handleToggle} />
+				))}
+			</div>
+			<FieldError errors={[...errors]} />
+		</fieldset>
 	);
 }
 

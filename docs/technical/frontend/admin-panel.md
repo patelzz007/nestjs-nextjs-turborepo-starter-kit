@@ -150,7 +150,7 @@ the current page (`lib/navigation/legacy-redirects.ts`, loaded by `next.config.t
   The root `app/not-found.tsx` covers URLs outside the panel. Both use the shared `NotFoundContent`
   from `@workspace/ui`.
 - Command palette (`⌘K`): global search across the menu pages. The docs
-  site (`apps/docs`) has its own `⌘K` search over a build-time index (`apps/docs/src/scripts/search.ts`).
+  site (`apps/docs`) has its own `⌘K` search over a build-time index (`apps/docs/src/components/search-provider.tsx`).
 
 ### Panel sidebars (web, merchant, admin)
 

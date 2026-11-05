@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
+import { withSecurityHeaders, type SecurityHeadersOptions } from "@workspace/client/lib/security/security-headers";
 import { decodeJwtPayload } from "@workspace/client/lib/contexts/identity/edge/jwt";
 import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/contexts/identity/edge/restricted-session";
 import {
@@ -44,6 +45,9 @@ const attemptRefresh = createProxyRefreshCooldown((refreshToken: string): Promis
 	}),
 );
 
+/** The shared response security headers: a nonce CSP, no framing (@workspace/client lib/security/security-headers). */
+const SECURITY_HEADERS: SecurityHeadersOptions = { apiBaseUrl: API_BASE_URL, development: serverEnv.NODE_ENV === NodeEnvSchema.enum.development };
+
 function clearCookies(response: NextResponse, names: readonly string[]): NextResponse {
 	clearAuthCookies(response.cookies, names, COOKIE_CLEAR_OPTIONS);
 	return response;
@@ -83,7 +87,12 @@ export function resetMerchantProxyRefreshCooldownForTests(): void {
 	attemptRefresh.reset();
 }
 
-export async function proxy(request: NextRequest): Promise<NextResponse> {
+/** Every route runs with the shared security headers; `next` continues the request carrying them. */
+export function proxy(request: NextRequest): Promise<NextResponse> {
+	return withSecurityHeaders(request, routeRequest, SECURITY_HEADERS);
+}
+
+async function routeRequest(request: NextRequest, next: () => NextResponse): Promise<NextResponse> {
 	const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
 	const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 	const { pathname } = request.nextUrl;
@@ -116,7 +125,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		if (isProtectedRouteMatch) {
 			return redirectToLogin(request, pathname, rotatedCookies);
 		}
-		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+		return serveGuestResponse(next(), rotatedCookies, accessToken);
 	}
 
 	const isAuthenticated = hasRouteSession(refreshToken);
@@ -139,14 +148,14 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	}
 
 	if (isAuthRoute && !isAuthenticated && accessToken !== undefined) {
-		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+		return serveGuestResponse(next(), rotatedCookies, accessToken);
 	}
 
 	if (!isProtectedRouteMatch && !isAuthRoute && !isAuthenticated && accessToken !== undefined) {
-		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+		return serveGuestResponse(next(), rotatedCookies, accessToken);
 	}
 
-	return applyRotatedCookies(NextResponse.next(), rotatedCookies);
+	return applyRotatedCookies(next(), rotatedCookies);
 }
 
 export const config = {

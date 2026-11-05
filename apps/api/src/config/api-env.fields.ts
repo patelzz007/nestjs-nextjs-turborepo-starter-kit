@@ -131,6 +131,15 @@ export type TenantKmsProvider = z.output<typeof TenantKmsProviderSchema>;
  * added here together with its adapter — choosing one is a pending decision.
  */
 export const SessionLocationProviderSchema = z.enum(["none"]);
+
+/**
+ * Where new passwords are checked against known data breaches (sign-up, reset, change, invite and
+ * onboarding registration). `hibp` asks Have I Been Pwned's range API with only the first 5 hex
+ * characters of the password's SHA-1 (k-anonymity), failing open (logged) when it can't be reached;
+ * `off` skips the check (automated tests, air-gapped deployments).
+ */
+export const PasswordBreachCheckSchema = z.enum(["hibp", "off"]);
+export type PasswordBreachCheck = z.output<typeof PasswordBreachCheckSchema>;
 export type SessionLocationProvider = z.output<typeof SessionLocationProviderSchema>;
 
 // ── Formats ────────────────────────────────────────────────────────────────
@@ -141,6 +150,34 @@ const JWT_EXPIRY_PATTERN = /^[1-9]\d*[smhd]?$/;
 export function jwtExpiryEnvSchema(defaultValue: string): z.ZodType<string, string | undefined> {
 	return z.string().trim().regex(JWT_EXPIRY_PATTERN, 'must be a positive duration such as "15m", "12h" or "7d"').default(defaultValue);
 }
+
+// ── Passkeys (WebAuthn, ADR 080) ───────────────────────────────────────────
+
+/** A DNS host name: lower-case labels joined by dots, no scheme, port, path or leading dot. */
+const HOST_NAME_PATTERN = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/;
+
+/** `WEBAUTHN_RP_ID`: the passkey relying party id — a host name every client app's host is, or ends with. */
+export const WebAuthnRpIdEnvSchema = z
+	.string()
+	.trim()
+	.toLowerCase()
+	.regex(HOST_NAME_PATTERN, "must be a bare host name such as example.com (no scheme, port, path or leading dot)");
+
+/** `WEBAUTHN_ANDROID_PACKAGE_NAME`: the Android application id allowed to use this site's passkeys. */
+export const AndroidPackageNameEnvSchema = z
+	.string()
+	.regex(/^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/, "must be an Android application id such as com.example.app");
+
+/** One SHA-256 signing-certificate fingerprint as Android tooling prints it: 32 upper-case hex pairs joined by colons. */
+const SHA256_FINGERPRINT_PATTERN = /^(?:[0-9A-F]{2}:){31}[0-9A-F]{2}$/;
+
+/** `WEBAUTHN_ANDROID_CERT_FINGERPRINTS`: comma-separated SHA-256 fingerprints of the Android app's signing certificates. */
+export const AndroidCertFingerprintsEnvSchema = commaSeparatedEnvSchema(
+	z.string().regex(SHA256_FINGERPRINT_PATTERN, "must be a SHA-256 fingerprint such as 14:6D:…:A8 (32 upper-case hex pairs)"),
+);
+
+/** `WEBAUTHN_APPLE_APP_IDS`: comma-separated `TEAMID.bundle.id` of each iOS app allowed to use this site's passkeys. */
+export const AppleAppIdsEnvSchema = commaSeparatedEnvSchema(z.string().regex(/^[A-Z0-9]{10}\.[A-Za-z0-9.-]+$/, "must be TEAMID.bundle.id such as ABCDE12345.com.example.app"));
 
 /** `CORS_ORIGINS`: comma-separated absolute http(s) origins (at least one). */
 export const CorsOriginsEnvSchema = commaSeparatedEnvSchema(HttpUrlEnvSchema);

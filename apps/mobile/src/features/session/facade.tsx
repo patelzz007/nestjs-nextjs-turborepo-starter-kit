@@ -1,12 +1,11 @@
 // The session feature's facade: the only module screens import (ADR 023).
 
-import type { EnrollmentReason } from "@workspace/shared";
 import * as React from "react";
 
 import { createFeatureStoreContext } from "../../lib/state/feature-store-context";
 import type { SessionScopeInfo } from "./access-token-claims";
 import { sessionActions, type RestoredSession, type SessionAction } from "./actions";
-import { selectEnrollmentReason, selectMinimumVersion, selectRootRoute, selectSignedOutReason, type RootRoute } from "./selectors";
+import { selectMinimumVersion, selectRootRoute, selectSignedOutReason, type RootRoute } from "./selectors";
 import type { SessionState, SignedOutReason } from "./state";
 
 const sessionContext = createFeatureStoreContext<SessionState, SessionAction>("Session");
@@ -15,10 +14,6 @@ export const SessionStoreProvider = sessionContext.provider;
 
 export function useRootRoute(): RootRoute {
 	return sessionContext.useFeatureSelector(selectRootRoute);
-}
-
-export function useEnrollmentReason(): EnrollmentReason | null {
-	return sessionContext.useFeatureSelector(selectEnrollmentReason);
 }
 
 export function useSignedOutReason(): SignedOutReason | null {

@@ -23,8 +23,8 @@ import { inject } from "vitest";
 import { apiEnvFilePath } from "../scripts/lib/env-file";
 
 import { e2eRedisNamespaceFor, e2eWorkerBullMqPrefix } from "./support/e2e-bullmq-prefix";
-import { workerDatabaseUrl } from "./support/e2e-worker-databases";
-import { TEST_API_INFRASTRUCTURE, TEST_API_SECRETS, TEST_API_SWITCHES, TEST_E2E_PROXY, TEST_E2E_STORAGE } from "./support/test-api-env";
+import { workerDatabaseUrl, workerSessionDatabaseUrl } from "./support/e2e-worker-databases";
+import { TEST_API_INFRASTRUCTURE, TEST_API_SECRETS, TEST_API_SWITCHES, TEST_E2E_PAYMENTS, TEST_E2E_PROXY, TEST_E2E_STORAGE, TEST_E2E_WEBHOOKS } from "./support/test-api-env";
 
 const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 loadEnv({ path: apiEnvFilePath(apiRoot), quiet: true });
@@ -40,13 +40,27 @@ delete process.env.EMAIL_TEST_TO;
 if (BooleanFlagEnvSchema.parse(process.env.TENANCY_ENABLED)) {
 	delete process.env.DEFAULT_TENANT_ID;
 }
-for (const [name, value] of Object.entries({ ...TEST_API_SECRETS, ...TEST_API_SWITCHES, ...TEST_E2E_PROXY, ...TEST_E2E_STORAGE })) {
+for (const [name, value] of Object.entries({
+	...TEST_API_SECRETS,
+	...TEST_API_SWITCHES,
+	...TEST_E2E_PROXY,
+	...TEST_E2E_STORAGE,
+	...TEST_E2E_PAYMENTS,
+	...TEST_E2E_WEBHOOKS,
+})) {
 	process.env[name] = value;
 }
 // Test files run in parallel, one per worker. This worker's own copy of the
 // database (test/global-setup-e2e.ts): no file ever sees another file's rows,
 // and the database DATABASE_URL named is only copied, never written.
 process.env.DATABASE_URL = workerDatabaseUrl(inject("workerDatabaseUrls"), process.env.VITEST_POOL_ID);
+// Behind a pooler (2.5), the direct session URL follows to the same copy (its listeners and advisory locks).
+const sessionUrl = workerSessionDatabaseUrl(process.env.DATABASE_SESSION_URL, process.env.DATABASE_URL);
+if (sessionUrl === undefined) {
+	delete process.env.DATABASE_SESSION_URL;
+} else {
+	process.env.DATABASE_SESSION_URL = sessionUrl;
+}
 // This worker's own BullMQ key prefix inside the run's — forced, so a
 // BULLMQ_PREFIX in apps/api/.env can never put e2e jobs on the dev API's
 // queues, and a worker never runs another worker's jobs against its database.

@@ -51,7 +51,7 @@ export function ChangedFile({
 }: ChangedFileProps): React.JSX.Element {
 	const renamed = previousPath === null ? "" : `, from ${previousPath}`;
 	return (
-		<View className="overflow-hidden rounded-lg border border-border bg-card" testID={testID}>
+		<View className="overflow-hidden rounded-xl border border-border bg-card" testID={testID}>
 			<Pressable
 				accessibilityRole="button"
 				accessibilityLabel={`${path}${renamed}. ${statusLabel}. ${changeSummary}`}

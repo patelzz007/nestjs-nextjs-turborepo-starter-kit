@@ -20,7 +20,7 @@ import { Spinner } from "./spinner";
 import { MutedText } from "./text";
 
 export const loadingStateVariants = cva("items-center gap-3 py-8");
-export const emptyStateVariants = cva("gap-3 rounded-lg border border-dashed border-border px-4 py-6");
+export const emptyStateVariants = cva("gap-3 rounded-2xl bg-muted px-5 py-6");
 export const errorStateVariants = cva("gap-3");
 
 export interface LoadingStateProps {

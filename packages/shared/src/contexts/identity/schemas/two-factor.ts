@@ -144,6 +144,8 @@ export const LoginTwoFactorPendingResponseSchema = z.object({
 	requiresTwoFactor: z.literal(true),
 	tempToken: z.string().min(1),
 	message: z.string(),
+	/** The account has a passkey, so the second step may use it instead of a TOTP or backup code (ADR 080). */
+	passkeyAvailable: z.boolean(),
 });
 
 export type LoginTwoFactorPendingResponse = z.output<typeof LoginTwoFactorPendingResponseSchema>;

@@ -1,0 +1,5 @@
+{
+	"$comment": "The project's identity: the ONE place to rename a product built on this starter. Edit it, then run `pnpm project:sync`; `pnpm lint` fails while any copy is out of date. See docs/technical/project-identity.md.",
+	"slug": "starter-kit",
+	"displayName": "Starter"
+}

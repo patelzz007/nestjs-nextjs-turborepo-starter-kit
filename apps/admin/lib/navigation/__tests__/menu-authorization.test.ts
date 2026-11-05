@@ -46,13 +46,14 @@ describe("applyMenuAuthorization", () => {
 		sections: [
 			{
 				title: "Main",
+				labelKey: "main",
 				items: [
-					{ title: "Geography", url: "/geography" },
-					{ title: "Parent", url: "/p", children: [{ title: "Products", url: "/catalog/products" }] },
+					{ title: "Geography", labelKey: "geography", url: "/geography" },
+					{ title: "Parent", labelKey: "parent", url: "/p", children: [{ title: "Products", labelKey: "products", url: "/catalog/products" }] },
 				],
 			},
 		],
-		bottomItems: [{ title: "Help", url: "#" }],
+		bottomItems: [{ title: "Help", labelKey: "help", url: "#" }],
 	};
 
 	it("attaches the mapped requirement by URL, including nested children", () => {
@@ -119,9 +120,9 @@ describe("admin sidebar authorization", () => {
 		expect(urls).not.toContain("/emails/templates");
 	});
 
-	it("shows access control for any of its three permissions", () => {
-		expect(visibleUrls([PERMISSION.PERMISSION.READ])).toContain("/settings/access");
-		expect(visibleUrls([PERMISSION.ROLE.LIST])).toContain("/settings/access");
+	it("shows Settings as one link to every admin (its sections are guarded on the settings page, enhancement 5.13)", () => {
+		expect(visibleUrls([])).toContain("/settings");
+		expect(visibleUrls([])).not.toContain("/settings/access");
 	});
 
 	it("hides super-admin-only pages unless the session is a super admin", () => {

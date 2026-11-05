@@ -22,6 +22,7 @@ import type { LanguageShare } from "../../../components/language-breakdown";
 import type { StatTile } from "@workspace/ui-native/components/stat-tiles";
 import { formatRelativeTime } from "../../../lib/time-format";
 import { languageLogoOf } from "./language-logos";
+import { languageOriginalLogoOf } from "./language-original-logos";
 
 /** Shown when the phone cannot open a GitHub page (a commit, a profile). */
 export const OPEN_GITHUB_FAILED_MESSAGE = "Couldn't open GitHub. Try again from a browser.";
@@ -60,7 +61,7 @@ const LANGUAGE_TINT_ALPHA = "29";
 /** How many characters of its name stand in for a language without a logo ("C#", "Po"). */
 const MONOGRAM_LENGTH = 2;
 
-/** Each language with its share ("82.4%"), its colours and its logo — or a monogram when it has none. */
+/** Each language with its share ("82.4%"), its colours and its logo: the original, else the one-colour glyph, else a monogram. */
 export function languageShares(languages: readonly GithubLanguageShare[]): LanguageShare[] {
 	return languages.map((language: GithubLanguageShare): LanguageShare => ({
 		name: language.name,
@@ -68,6 +69,7 @@ export function languageShares(languages: readonly GithubLanguageShare[]): Langu
 		percentLabel: `${String(language.percent)}%`,
 		color: language.color,
 		tint: language.color === null ? null : `${language.color}${LANGUAGE_TINT_ALPHA}`,
+		originalLogo: languageOriginalLogoOf(language.name)?.xml ?? null,
 		logoPath: languageLogoOf(language.name)?.path ?? null,
 		monogram: language.name.slice(0, MONOGRAM_LENGTH),
 	}));

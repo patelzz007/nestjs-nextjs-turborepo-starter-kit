@@ -196,13 +196,24 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 		expect(outcome.email).toBe("root@acme.test");
 	});
 
-	it("refuses an email that already exists, even a soft-deleted account's, and creates nothing", async () => {
+	it("refuses a live account's email and creates nothing", async () => {
 		await insertSuperAdminRole();
-		await insertUser("root@acme.test", { isSuperAdmin: false, isActive: true, isDeleted: true });
+		await insertUser("root@acme.test", { isSuperAdmin: false, isActive: true, isDeleted: false });
 
 		await expect((await newService()).bootstrap(REQUEST)).rejects.toBeInstanceOf(BootstrapEmailTakenError);
 
 		expect(await count('SELECT count(*)::int AS count FROM "UserRole"')).toBe(0);
+	});
+
+	it("accepts a soft-deleted account's email: email is unique among live accounts only (Q9)", async () => {
+		await insertSuperAdminRole();
+		await insertUser("root@acme.test", { isSuperAdmin: false, isActive: true, isDeleted: true });
+
+		const outcome = await (await newService()).bootstrap(REQUEST);
+
+		expect(outcome.email).toBe("root@acme.test");
+		expect(await count(`SELECT count(*)::int AS count FROM "User" WHERE email = 'root@acme.test' AND "isDeleted" = false AND "isSuperAdmin" = true`)).toBe(1);
+		expect(await count('SELECT count(*)::int AS count FROM "UserRole"')).toBe(1);
 	});
 
 	it("matches the email case-insensitively (citext)", async () => {

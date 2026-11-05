@@ -51,6 +51,16 @@ delivery is suppressed at send time.
 **Links** (and the button) are checked on save and again on send: `https` only, no known shorteners,
 nothing on `BROADCAST_BLOCKED_LINK_DOMAINS`.
 
+**The picture** (enhancement 5.4). A message holds one, added with the editor's picture control (choose it,
+describe it for screen readers, it uploads through the file pipeline and its scan before it goes in):
+
+| | |
+|---|---|
+| File category | `BROADCAST_IMAGE` for a store (uploaded to the tenant, `manage_broadcasts`); `PLATFORM_BROADCAST_IMAGE` for a platform notice (the staff member's own upload, `CREATE:BROADCAST`). Both public: an email loads them without signing in |
+| Stored | By **file id only**. On save the API locks each picture (as file deletion does) and checks it is a READY picture of this sender; anything else is a 400 naming the file |
+| Answered | The API adds each picture's public address (`src`) to every body it answers (sender views, the inbox, email). A request that carries a `src` is refused, so no one can point a broadcast at an outside image; the composer drops `src` before saving |
+| Deleting the file | Refused (409 `FILE_IN_USE_AS_BROADCAST_IMAGE`) while any broadcast names it; found with Postgres' JSON path query over the stored body |
+
 ## Lifecycle, limits and approval
 
 ```

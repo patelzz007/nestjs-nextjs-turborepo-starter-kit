@@ -30,6 +30,9 @@ Every endpoint, with a real request and response captured from the seeded API, i
 | POS / integrations | `X-API-Key: mk_live_…` (or `Authorization: Bearer mk_live_…`) | Merchant API keys; POS keys only on `/redemptions/*` ([POS](../pos-integration.md)) |
 | Machine callbacks | Signature or shared secret | Resend webhook (svix signature), storage callback (`x-storage-callback-secret`) |
 
+The other direction, the platform calling a merchant's own server when something happens in their store, is
+[outgoing webhooks](./outgoing-webhooks.md).
+
 Restricted sessions (email not verified, or 2FA enrollment overdue) get `403 RESTRICTED_SESSION` on
 everything except the setup routes ([authentication](../security/authentication.md)).
 
@@ -86,7 +89,7 @@ flowchart LR
     Z[zod contracts +<br/>controllers] -->|pnpm --filter @workspace/api openapi:export| O[docs/generated/openapi.json]
     Z -->|decorators read from source| R
     S[seeded throwaway API] -->|apps/docs/scripts/capture-api-samples.mjs| J[docs/generated/api-samples.json]
-    O --> R[pnpm tools docs:api<br/>renderer in apps/docs/src/lib/api-reference]
+    O --> R[pnpm tools docs:api<br/>renderer in packages/docs-renderer/src/api-reference]
     J --> R
     R --> M[docs/technical/api-reference/*.md]
 ```
@@ -101,7 +104,7 @@ flowchart LR
    the same run; session tokens, signed links, generated API keys and one-time secrets are redacted;
    arrays are cut to two items. Endpoints that cannot be captured are listed with the reason.
 4. **Render** — `pnpm tools docs:api` writes `docs/technical/api-reference/`. The docs unit tests
-   (`apps/docs/src/lib/api-reference/__tests__/api-reference.artifact.test.ts`) fail when the committed pages
+   (`packages/docs-renderer/src/api-reference/__tests__/api-reference.artifact.test.ts`) fail when the committed pages
    differ from what the three inputs render, when a controller cannot be matched, or when a new
    OpenAPI tag has no page.
 

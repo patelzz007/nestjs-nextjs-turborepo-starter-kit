@@ -30,3 +30,9 @@ export const NOTIFICATION_ACCOUNT = Symbol("NOTIFICATION_ACCOUNT");
 export const NOTIFICATION_ADMIN = Symbol("NOTIFICATION_ADMIN");
 export const BROADCAST_SERVICE = Symbol("BROADCAST_SERVICE");
 export const BROADCAST_QUEUE = Symbol("BROADCAST_QUEUE");
+
+// ── Provider callbacks through the shared inbound receiver (ADR 081) ─
+/** {@link NotificationWebhookVerifiersPort}: Resend's and Twilio's signature checks, keyed for this deployment. */
+export const NOTIFICATION_WEBHOOK_VERIFIERS = Symbol("NOTIFICATION_WEBHOOK_VERIFIERS");
+/** {@link NotificationWebhookReception}: Resend's and Twilio's callbacks, verified, claimed once and logged. */
+export const NOTIFICATION_WEBHOOK_RECEPTION = Symbol("NOTIFICATION_WEBHOOK_RECEPTION");

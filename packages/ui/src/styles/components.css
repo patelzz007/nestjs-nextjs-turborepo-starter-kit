@@ -151,3 +151,23 @@
 		animation: none;
 	}
 }
+
+/* ── Code block rows (CodeBlock, code-block-line.tsx) ────────────────────────
+   One class instead of utilities on every row: each row of each block used to
+   carry the whole list below (~2,600 characters), 27 MB of the docs build.
+   - Base: with numbers on, the left inset lives inside the sticky number cell
+     instead, so paying it here too would double-count the gutter.
+   - Line numbers are a CSS counter, never DOM: a pseudo-element cannot join a
+     text selection, so copying yields exact source. A row carrying its own
+     gutter label (a patch's dual numbers, a hunk marker) shows that instead.
+   - The diff glyph has its own channel, centred in the left padding (no
+     numbers) or in the number-to-code gap, above the sticky number cell (z-10).
+   - States: highlight, diff, level and selection backgrounds; arrow navigation
+     needs a visible position (WCAG 2.4.7), gated on the selectable listbox.
+   - Focus mode dims the rest and clears while the block is hovered.
+   - Motion is streaming-only (rows keep identity, so only NEW lines animate);
+     reduced motion turns it off.
+   `@utility`, so it sits in the utilities layer like the classes it replaces. */
+@utility code-block-line {
+	@apply relative block min-h-(--code-block-line-height) w-full px-(--code-block-padding) leading-(--code-block-line-height) data-[blurred]:opacity-40 data-[blurred]:blur-[1.5px] data-[blurred]:transition-[opacity,filter] group-hover/code-block:data-[blurred]:opacity-100 group-hover/code-block:data-[blurred]:blur-none data-[diff]:after:absolute data-[diff]:after:left-0 data-[diff]:after:z-20 data-[diff]:after:w-(--code-block-padding) data-[diff]:after:text-center data-[diff]:after:select-none data-[diff=add]:bg-(--code-block-diff-add-bg) data-[diff=add]:after:text-success data-[diff=add]:after:content-['+'] data-[diff=remove]:bg-(--code-block-diff-remove-bg) data-[diff=remove]:after:text-destructive data-[diff=remove]:after:content-['-'] data-[highlighted]:bg-(--code-block-highlight-bg) data-[highlighted]:shadow-[inset_2px_0_0_0_var(--code-block-highlight-bar)] data-[level=error]:bg-(--code-block-error-bg) data-[level=info]:bg-(--code-block-info-bg) data-[level=warning]:bg-(--code-block-warning-bg) data-[selected]:bg-accent motion-reduce:animate-none [[data-code-line-numbers]_&]:pl-0 [[data-code-line-numbers]_&]:before:pointer-events-none [[data-code-line-numbers]_&]:before:sticky [[data-code-line-numbers]_&]:before:left-0 [[data-code-line-numbers]_&]:before:z-10 [[data-code-line-numbers]_&]:before:-ml-(--code-block-gutter-width) [[data-code-line-numbers]_&]:before:inline-block [[data-code-line-numbers]_&]:before:w-(--code-block-gutter-width) [[data-code-line-numbers]_&]:before:bg-(--code-block-bg) [[data-code-line-numbers]_&]:before:pr-(--code-block-number-pad) [[data-code-line-numbers]_&]:before:pl-(--code-block-padding) [[data-code-line-numbers]_&]:before:text-right [[data-code-line-numbers]_&]:before:text-muted-foreground/50 [[data-code-line-numbers]_&]:before:tabular-nums [[data-code-line-numbers]_&]:before:content-[counter(cb-line)] [[data-code-line-numbers]_&]:before:select-none [[data-code-line-numbers]_&]:before:[counter-increment:cb-line] [[data-code-line-numbers]_&]:data-[diff]:after:-left-(--code-block-gutter-gap) [[data-code-line-numbers]_&]:data-[diff]:after:w-(--code-block-gutter-gap) [[data-code-line-numbers]_&[data-gutter]]:before:whitespace-pre [[data-code-line-numbers]_&[data-gutter]]:before:content-[attr(data-gutter)] [[data-selectable]_&]:data-[active]:bg-muted/40 [[data-streaming]_&]:animate-in [[data-streaming]_&]:duration-150 [[data-streaming]_&]:ease-out [[data-streaming]_&]:fade-in-0 [[data-streaming]_&]:slide-in-from-bottom-1;
+}

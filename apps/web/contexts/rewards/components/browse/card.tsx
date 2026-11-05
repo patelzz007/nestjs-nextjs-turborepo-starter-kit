@@ -52,7 +52,7 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboard
 						isSoldOut ? "grayscale" : "group-hover:scale-[1.03] motion-reduce:group-hover:scale-100",
 					)}
 				/>
-				{isLowStock && !isSoldOut ? <Badge className="absolute top-3 left-3 border-transparent bg-warning-soft text-warning shadow-xs">Almost gone</Badge> : null}
+				{isLowStock && !isSoldOut ? <Badge className="absolute top-3 left-3 border-transparent bg-tone-yellow-soft text-tone-yellow shadow-xs">Almost gone</Badge> : null}
 				{isSoldOut ? <Badge className="absolute top-3 left-3 border-transparent bg-card text-foreground shadow-xs">Sold out</Badge> : null}
 			</div>
 

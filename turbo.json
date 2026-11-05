@@ -10,6 +10,7 @@
 	"globalEnv": [
 		"BACKUP_DATABASE_URL",
 		"BACKUP_PG_DUMP_DOCKER_IMAGE",
+		"DEPLOY_ROOT",
 		"DIGITALOCEAN_TOKEN",
 		"HCLOUD_TOKEN",
 		"K6_BINARY",
@@ -22,6 +23,7 @@
 		"OPS_AGENT_TOKEN",
 		"OPS_ALERT_EXTRA_RECIPIENTS",
 		"OPS_API_URL",
+		"SSH_ORIGINAL_COMMAND",
 		"VULTR_API_KEY",
 		"ADMIN_EMAIL",
 		"ADMIN_PASSWORD",
@@ -41,6 +43,7 @@
 		"COOKIE_DOMAIN",
 		"CORS_ORIGINS",
 		"DATABASE_URL",
+		"DATABASE_SESSION_URL",
 		"EMAIL_FROM_ADDRESS",
 		"EMAIL_MAX_ATTEMPTS",
 		"EMAIL_MODE",
@@ -116,12 +119,30 @@
 				"MOBILE_APP_NAME",
 				"MOBILE_APP_SLUG",
 				"MOBILE_BUNDLE_ID",
-				"MOBILE_SCHEME"
+				"MOBILE_SCHEME",
+				"MOBILE_PASSKEY_DOMAIN",
+				"GOOGLE_SERVICES_JSON",
+				"GOOGLE_SERVICES_PLIST",
+				"EAS_PROJECT_ID"
 			]
 		},
 		"lint": {
 			"dependsOn": ["^lint"],
 			"env": ["REWARD_CODE_HASH_KEYS"]
+		},
+		// Also checks that project.json is applied to every copy (scripts/project-identity.mjs --check), so
+		// those root files are inputs: a cached pass must never hide a renamed project.
+		"@workspace/tooling#lint": {
+			"dependsOn": ["^lint"],
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/project.json",
+				"$TURBO_ROOT$/package.json",
+				"$TURBO_ROOT$/compose.yml",
+				"$TURBO_ROOT$/apps/api/.env.example",
+				"$TURBO_ROOT$/apps/mobile/app.config.ts",
+				"$TURBO_ROOT$/packages/tokens/src/project-identity.ts"
+			]
 		},
 		"format": {
 			"dependsOn": ["^format"],

@@ -1,5 +1,5 @@
 // This phone's push ports (push-device.ts) on the real OS: expo-notifications for the permission and the
-// native FCM / APNs token, the API for the registration. Shared by the primer's button and the silent
+// native FCM / APNs token, Firebase for the installation ID (5.3), the API for the registration. Shared by the primer's button and the silent
 // refresh, so both register exactly the same way.
 
 import type { RegisterPushDeviceInput } from "@workspace/shared";
@@ -9,6 +9,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { z } from "zod";
 
+import { firebaseInstallationId } from "./firebase-installation-id";
 import type { PushDevicePorts, PushPermission } from "./push-device";
 
 /** A native FCM / APNs token: a plain string (the web's subscription object never reaches here). */
@@ -36,6 +37,7 @@ export function phonePushPorts(register: (input: RegisterPushDeviceInput) => Pro
 		permission: async (): Promise<PushPermission> => permissionOf(await Notifications.getPermissionsAsync()),
 		requestPermission: async (): Promise<PushPermission> => permissionOf(await Notifications.requestPermissionsAsync()),
 		nativeToken: async (): Promise<string> => token ?? DeviceTokenSchema.parse(await Notifications.getDevicePushTokenAsync()).data,
+		installationId: (): Promise<string | null> => firebaseInstallationId(),
 		register,
 		deviceLabel: Device.modelName,
 		appVersion: Constants.expoConfig?.version ?? null,

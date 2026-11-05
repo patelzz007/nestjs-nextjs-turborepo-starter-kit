@@ -9,7 +9,7 @@
 		"start": "next start",
 		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
-		"test": "vitest run",
+		"test": "vitest run --coverage",
 		"test:browser": "playwright test",
 		"typecheck": "tsrs --noEmit"
 	},

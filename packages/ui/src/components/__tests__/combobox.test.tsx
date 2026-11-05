@@ -19,6 +19,7 @@ import {
 } from "../combobox";
 import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { accessibilityViolations } from "../../testing/axe";
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
 class ResizeObserverStub {
@@ -59,6 +60,20 @@ afterEach((): void => {
 });
 
 describe("Combobox labels", () => {
+	it("has no serious accessibility problems while open (enhancement 3.2)", async (): Promise<void> => {
+		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+		render(
+			<Combobox labels={FRENCH_LABELS} open>
+				<ComboboxInput aria-label="Ville" showClear />
+				<ComboboxContent>
+					<ComboboxList />
+				</ComboboxContent>
+			</Combobox>,
+			{ wrapper: UiKitTestProviders },
+		);
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+	});
+
 	it("routes the trigger, loading and live-region copy through the Root's labels", (): void => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		const { container } = render(

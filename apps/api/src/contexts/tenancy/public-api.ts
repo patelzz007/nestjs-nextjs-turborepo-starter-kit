@@ -28,6 +28,7 @@ export type { TenantDisplayData, TenantReadPort } from "./application/ports/tena
 export type { TenantExistencePort } from "./application/ports/tenant-existence.port";
 export type { MerchantPosSettingsPort, TenantsTransactionalPorts, TillTenantFacts } from "./application/ports/merchant-pos-settings.port";
 export type { CustomerStandingPort } from "./application/ports/customer-standing.port";
+export type { ReviewNoticeFacts, ReviewNoticeFactsPort } from "./application/ports/review-notice-facts.port";
 export type { TenantCustomerLinksPort, TenantCustomerPage, TenantCustomerPageRequest, TenantCustomerSummary } from "./application/ports/tenant-customer-links.port";
 export type { ApiKeyCapabilitiesPort } from "./application/ports/api-key-capabilities.port";
 export type { TenantAuditEntry, TenantAuditMetadata, TenantAuditPort, TenantAuditWriter } from "./application/ports/tenant-audit.port";

@@ -8,7 +8,16 @@ import { EmailAddress } from "../../domain/value-objects/email-address.value-obj
 import type { IdentityScope } from "../identity-scope";
 import type { CredentialCryptoPort } from "../ports/credential-crypto.port";
 import type { IdentityTokensPort } from "../ports/identity-tokens.port";
-import { CREDENTIAL_CRYPTO, IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, ACCOUNT_LOOKUP_OPERATION, EMAIL_VERIFICATION_SEND_OPERATION } from "../ports/identity.tokens";
+import type { BreachedPasswordCheckPort } from "../ports/breached-password.port";
+import {
+	BREACHED_PASSWORD_CHECK,
+	CREDENTIAL_CRYPTO,
+	IDENTITY_TOKENS,
+	IDENTITY_UNIT_OF_WORK,
+	ACCOUNT_LOOKUP_OPERATION,
+	EMAIL_VERIFICATION_SEND_OPERATION,
+} from "../ports/identity.tokens";
+import { assertPasswordNotBreached } from "./password-breach.policy";
 import { backgroundActorOf } from "./background-actor";
 
 /**
@@ -23,9 +32,12 @@ export class AccountProvisioningService implements AccountProvisioningPort {
 		@Inject(CREDENTIAL_CRYPTO) private readonly crypto: CredentialCryptoPort,
 		@Inject(IDENTITY_TOKENS) private readonly tokens: IdentityTokensPort,
 		@Inject(ACCOUNT_DEFAULT_ROLE) private readonly roles: AccountDefaultRolePort,
+		@Inject(BREACHED_PASSWORD_CHECK) private readonly breachCheck: BreachedPasswordCheckPort,
 	) {}
 
-	public hashPassword(password: string): Promise<string> {
+	/** The hash of a NEW account's password, refused when the password appears in a known data breach. */
+	public async hashPassword(password: string): Promise<string> {
+		await assertPasswordNotBreached(this.breachCheck, password);
 		return this.crypto.hash(password);
 	}
 
@@ -33,7 +45,7 @@ export class AccountProvisioningService implements AccountProvisioningPort {
 		const email: EmailAddress = EmailAddress.of(credentials.email);
 		const existing: UserAccount | null = await this.uow.runSystemOperation(ACCOUNT_LOOKUP_OPERATION, backgroundActorOf(), (scope) => scope.accounts.findByEmail(email));
 		if (existing === null) {
-			return { kind: "new", passwordHash: await this.crypto.hash(credentials.password) };
+			return { kind: "new", passwordHash: await this.hashPassword(credentials.password) };
 		}
 		existing.assertProvisioningPassword(await this.crypto.compare(credentials.password, existing.passwordHash));
 		return { kind: "existing", userId: existing.id };

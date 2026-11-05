@@ -1,6 +1,7 @@
 import {
 	BarChart3,
 	CircleUser,
+	CreditCard,
 	KeyRound,
 	LayoutDashboard,
 	MapPin,
@@ -13,6 +14,7 @@ import {
 	Ticket,
 	Users,
 	UserX,
+	Webhook,
 	type LucideIcon,
 } from "lucide-react";
 
@@ -92,6 +94,24 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		keywords: ["new", "broadcast", "message", "send", "customers"],
 	},
 	{
+		id: "payments",
+		title: "Payments",
+		url: TENANT_ROUTES.payments.list,
+		section: "Operations",
+		description: "Take and refund payments",
+		icon: CreditCard,
+		keywords: ["payments", "pay", "checkout", "billplz", "chip", "refund", "fpx"],
+	},
+	{
+		id: "payments-new",
+		title: "New payment",
+		url: TENANT_ROUTES.payments.new,
+		section: "Operations",
+		description: "Send a customer a checkout link",
+		icon: CreditCard,
+		keywords: ["new", "payment", "charge", "checkout", "link"],
+	},
+	{
 		id: "redemptions",
 		title: "Redemptions",
 		url: TENANT_ROUTES.redemptions,
@@ -117,6 +137,15 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "Terminal access",
 		icon: KeyRound,
 		keywords: ["api", "keys", "terminal"],
+	},
+	{
+		id: "webhooks",
+		title: "Webhooks",
+		url: TENANT_ROUTES.webhooks.list,
+		section: "Operations",
+		description: "Send store events to your own systems",
+		icon: Webhook,
+		keywords: ["webhooks", "integrations", "events", "callbacks", "developers"],
 	},
 	{
 		id: "settings",

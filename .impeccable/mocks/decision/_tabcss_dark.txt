@@ -1,0 +1,5 @@
+.tb{position:absolute;left:0;right:0;bottom:22px;display:flex;justify-content:center;padding:0 16px}
+.tbp{width:100%;max-width:340px;display:flex;justify-content:space-between;align-items:center;background:#2b2f37;border:1px solid #3a3f48;border-radius:999px;padding:6px;box-shadow:0 10px 24px rgba(0,0,0,.4)}
+.tab{height:48px;min-width:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;padding:0 12px;gap:6px}
+.tab svg{width:22px;height:22px;fill:none;stroke:#b4bac5;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{background:#e6ebf3}.tab.on svg{stroke:#1d2638;stroke-width:2.4}.tab.on span{font:600 14px Geist,sans-serif;color:#1d2638}

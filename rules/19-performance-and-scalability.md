@@ -12,6 +12,13 @@
 
 A list endpoint must run the same number of SQL statements for a 1-row page and a 25-row page. `expectNoNPlusOne` in `apps/api/test/support/sql-statement-counter.ts` is that assertion. `GET /product` is covered by `apps/api/test/n-plus-one.e2e-spec.ts`. Fix a miss by batching the query. Do not stub the counter. There is no CI gate on process startup time (ADR 059).
 
+A list query must not read a growing table whole (audit, change, user, claim, payment, notification and similar tables that gain rows with traffic). `apps/api/test/query-plans.e2e-spec.ts` records the real statements of the busiest list endpoints, EXPLAINs each with sequential scans discouraged, and fails naming any growing table still scanned whole: a missing index, or a query shape no index can serve. Two such shapes to avoid:
+
+- **Sorting on an expression no index has**, such as `ORDER BY "createdAt" DESC, id DESC` without an index on `("createdAt", id)`.
+- **`ORDER BY … LIMIT` over a `UNION ALL`.** Postgres can't read the union in index order, so it collects and sorts every row first. Filter, order and `LIMIT` (to the page's end) inside each branch, then merge (`buildAuditTrailPageTimeline`). At 200,000 audit rows that took a 25-row page from 33,389 buffers to 35.
+
+Add an endpoint to that test when it lists a growing table.
+
 ```ts
 // ❌ DON'T — N+1: one query per order
 const orders = await prisma.order.findMany();

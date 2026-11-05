@@ -2,8 +2,9 @@
 // source.ts — the complete token source the generator reads
 // ============================================
 
+import { ADMIN_THEME_OVERRIDES } from "./admin-theme";
 import { LAYOUT } from "./layout";
-import { MOBILE_THEME_OVERRIDES } from "./mobile-theme";
+import { MOBILE_COMPONENT_COLORS, MOBILE_THEME_OVERRIDES } from "./mobile-theme";
 import { MOTION } from "./motion";
 import { PALETTE } from "./palette";
 import { RADIUS } from "./radius";
@@ -22,4 +23,6 @@ export const TOKEN_SOURCE: TokenSource = {
 	motion: MOTION,
 	tailwindTheme: TAILWIND_THEME,
 	mobileThemeOverrides: MOBILE_THEME_OVERRIDES,
+	mobileComponentColors: MOBILE_COMPONENT_COLORS,
+	adminThemeOverrides: ADMIN_THEME_OVERRIDES,
 };

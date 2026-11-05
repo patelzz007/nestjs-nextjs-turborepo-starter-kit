@@ -9,7 +9,7 @@
 		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
 		"typecheck": "tsrs --noEmit",
-		"test": "vitest run",
+		"test": "vitest run --coverage",
 		"clean": "rm -rf dist"
 	},
 	"main": "./dist/index.js",
@@ -34,6 +34,8 @@
 	},
 	"sideEffects": false,
 	"dependencies": {
+		"@formatjs/icu-messageformat-parser": "3.5.22",
+		"intl-messageformat": "12.1.4",
 		"zod": "4.6.7"
 	},
 	"devDependencies": {

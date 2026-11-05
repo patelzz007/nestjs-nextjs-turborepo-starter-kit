@@ -12,18 +12,58 @@ import type { ChannelSendResult, PushMessage } from "../../application/ports/cha
 /** Its own named app, so the storage adapter's Firebase app is never reused or replaced. */
 const FCM_APP_NAME = "notifications-fcm";
 
-/** FCM answers these when the token will never work again (the app was uninstalled or the token rotated). */
+/** FCM answers these when the token or installation will never work again (the app was uninstalled, the token rotated). */
 const INVALID_TOKEN_CODES: readonly string[] = ["messaging/registration-token-not-registered", "messaging/invalid-registration-token", "messaging/invalid-argument"];
+/**
+ * FCM's answer for an installation ID it doesn't know. Seen on a live, registered phone (2026-11-05): its ID was
+ * refused while its token, sent the same push a second later, delivered. The ID is still tried first (FCM's
+ * preferred address, firebase-admin 14), and this one answer sends the push by token instead (sendToDevice).
+ */
+const UNKNOWN_INSTALLATION_CODE = "messaging/installation-id-not-registered";
 /** FCM answers these for a passing problem: worth a retry with back-off. */
 const RETRYABLE_CODES: readonly string[] = ["messaging/internal-error", "messaging/server-unavailable", "messaging/message-rate-exceeded", "messaging/quota-exceeded"];
 
 const FirebaseErrorSchema = z.object({ code: z.string(), message: z.string() });
 const ServiceAccountSchema = z.object({ project_id: z.string(), client_email: z.string(), private_key: z.string() });
 
-/** The FCM message of one push: the kind's own channel, the time it happened, the badge and the tap data. */
+/** Who one FCM message goes to: an install by its Firebase Installation ID, or a device by its token. */
+export type FcmTarget = { readonly fid: string } | { readonly token: string };
+
+/**
+ * Who an FCM message goes to first: the install (its Firebase Installation ID) when the app reported one, else
+ * the token, for an app build older than enhancement 5.3. firebase-admin 14 deprecates token addressing.
+ */
+export function fcmTargetOf(address: { readonly token: string; readonly installationId: string | null }): FcmTarget {
+	return address.installationId === null ? { token: address.token } : { fid: address.installationId };
+}
+
+/**
+ * Sends one push to one device: by its installation ID first, and by its token when FCM answers that it doesn't
+ * know the ID (UNKNOWN_INSTALLATION_CODE). Any other failure is the ID's answer and is passed on unchanged.
+ */
+export async function sendToDevice(
+	address: { readonly token: string; readonly installationId: string | null },
+	send: (target: FcmTarget) => Promise<string>,
+): Promise<string> {
+	const first = fcmTargetOf(address);
+	try {
+		return await send(first);
+	} catch (error) {
+		if ("fid" in first && FirebaseErrorSchema.safeParse(error).data?.code === UNKNOWN_INSTALLATION_CODE) {
+			return send({ token: address.token });
+		}
+		throw error;
+	}
+}
+
+/** The FCM message of one push, addressed to its first target (fcmTargetOf). */
 export function fcmMessageOf(message: PushMessage): Message {
+	return { ...fcmContentOf(message), ...fcmTargetOf(message) };
+}
+
+/** What one push says, without its address: the kind's own channel, the time it happened, the badge and the tap data. */
+function fcmContentOf(message: PushMessage): Omit<Message, "token" | "topic" | "condition" | "fid"> {
 	return {
-		token: message.token,
 		notification: { title: message.title, body: message.body },
 		data: { ...message.data, category: message.category },
 		android: {
@@ -51,11 +91,17 @@ export class FcmPushSender {
 	}
 
 	public async send(message: PushMessage): Promise<ChannelSendResult> {
-		return this.call(async (): Promise<string> => this.messaging.send(fcmMessageOf(message)));
+		return this.call(async (): Promise<string> =>
+			sendToDevice(message, async (target: FcmTarget): Promise<string> => this.messaging.send({ ...fcmContentOf(message), ...target })),
+		);
 	}
 
-	public async sendSilentSync(token: string, badge: number): Promise<ChannelSendResult> {
-		return this.call(async (): Promise<string> => this.messaging.send({ token, data: { kind: "sync", badge: String(badge) }, android: { priority: "normal" } }));
+	public async sendSilentSync(address: { readonly token: string; readonly installationId: string | null }, badge: number): Promise<ChannelSendResult> {
+		return this.call(async (): Promise<string> =>
+			sendToDevice(address, async (target: FcmTarget): Promise<string> =>
+				this.messaging.send({ ...target, data: { kind: "sync", badge: String(badge) }, android: { priority: "normal" } }),
+			),
+		);
 	}
 
 	private async call(send: () => Promise<string>): Promise<ChannelSendResult> {

@@ -1,31 +1,21 @@
 // ============================================
-// github-webhook-signature.ts - Is this delivery really from GitHub? (ADR 052)
+// github-webhook-signature.policy.ts - Is this delivery really from GitHub? (ADR 052, ADR 081)
 // ============================================
-// GitHub signs every delivery with the webhook's secret: `X-Hub-Signature-256`
-// is `sha256=` + the hex HMAC-SHA256 of the raw request body. It is checked on
-// the exact bytes received, in constant time, before anything in the body is
-// read — a delivery that fails is never parsed.
+// GitHub signs every delivery with the webhook's secret: `X-Hub-Signature-256` is `sha256=` + the hex
+// HMAC-SHA256 of the raw request body. The scheme itself is the shared inbound-webhook one (checked on the
+// exact bytes received, in constant time, before anything in the body is read); this file only says where
+// GitHub puts it.
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { HmacSha256HeaderVerifier, hmacSha256HeaderSignature, type HmacSha256HeaderScheme, type WebhookSignatureVerifier } from "../../../webhooks/inbound/public-api";
 
-const SIGNATURE_PREFIX = "sha256=";
-const SHA256_HEX_LENGTH = 64;
-const HEX_PATTERN = /^[0-9a-f]+$/u;
+export const GITHUB_SIGNATURE_SCHEME: HmacSha256HeaderScheme = { header: "x-hub-signature-256", prefix: "sha256=" };
 
 /** The signature header GitHub would send for `rawBody` under `secret`. */
 export function githubWebhookSignature(secret: string, rawBody: Buffer): string {
-	return `${SIGNATURE_PREFIX}${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
+	return hmacSha256HeaderSignature(GITHUB_SIGNATURE_SCHEME, secret, rawBody);
 }
 
-/** Whether `header` is GitHub's signature of exactly `rawBody` under `secret`. */
-export function isValidGithubWebhookSignature(secret: string, rawBody: Buffer, header: string | undefined): boolean {
-	if (!header?.startsWith(SIGNATURE_PREFIX)) {
-		return false;
-	}
-	const provided = header.slice(SIGNATURE_PREFIX.length).toLowerCase();
-	if (provided.length !== SHA256_HEX_LENGTH || !HEX_PATTERN.test(provided)) {
-		return false;
-	}
-	const expected = createHmac("sha256", secret).update(rawBody).digest();
-	return timingSafeEqual(Buffer.from(provided, "hex"), expected);
+/** GitHub's signature check, keyed with the server's webhook secret. */
+export function githubSignatureVerifier(secret: string): WebhookSignatureVerifier {
+	return new HmacSha256HeaderVerifier(GITHUB_SIGNATURE_SCHEME, secret);
 }

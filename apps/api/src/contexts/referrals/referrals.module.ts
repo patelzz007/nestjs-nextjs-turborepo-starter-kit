@@ -1,4 +1,8 @@
-import { Module } from "@nestjs/common";
+import { Module, type OnModuleInit } from "@nestjs/common";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { referralsEraser } from "./infrastructure/personal-data/referrals-erasure";
+import { PersonalDataExportRegistry } from "../../platform/application/personal-data/personal-data-export.registry";
+import { ReferralsPersonalDataExporter } from "./infrastructure/personal-data/referrals-personal-data.exporter";
 import type { Prisma } from "@prisma/client";
 
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
@@ -81,4 +85,17 @@ import { SignupReferralMaintenanceCron } from "./presentation/jobs/signup-referr
 	],
 	exports: [SIGNUP_REFERRALS],
 })
-export class ReferralsModule {}
+export class ReferralsModule implements OnModuleInit {
+	public constructor(
+		private readonly personalData: PersonalDataExportRegistry,
+		private readonly transactions: TenantTransactionService,
+		private readonly erasure: PersonalDataErasureRegistry,
+		private readonly erasureTransactions: TenantTransactionService,
+	) {}
+
+	/** Registers this context's section of "Download my data" (ADR 077). */
+	public onModuleInit(): void {
+		this.erasure.registerEraser(referralsEraser(this.erasureTransactions));
+		this.personalData.register(new ReferralsPersonalDataExporter(this.transactions));
+	}
+}

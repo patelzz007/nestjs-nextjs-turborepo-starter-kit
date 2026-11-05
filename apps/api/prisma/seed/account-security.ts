@@ -7,6 +7,7 @@ import { getApiConfig } from "../../src/config/api-config";
 import { TypedConfigService } from "../../src/config/typed-config.service";
 import { IMPERSONATION_TOKEN_TTL_SECONDS, ImpersonationAuditAction } from "../../src/contexts/identity/domain/aggregates/impersonation-session.aggregate";
 import { MfaRecoveryAuditAction } from "../../src/contexts/identity/domain/aggregates/mfa-recovery-request.aggregate";
+import { WEB_AUTHN_CHALLENGE_TTL_MS } from "../../src/contexts/identity/domain/aggregates/web-authn-challenge.aggregate";
 import { CryptoService } from "../../src/contexts/identity/infrastructure/security/crypto.service";
 import { SecretEncryptionService } from "../../src/contexts/identity/infrastructure/security/secret-encryption.service";
 import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../src/contexts/identity/domain/value-objects/session-revoker.value-object";
@@ -31,7 +32,8 @@ import { toAuditPayload } from "../../src/platform/infrastructure/audit/http-aud
 //     client and impersonator; the recovered account's backup codes
 //     soft-deleted (deletedBy = approving admin), never removed.
 //   • An MFA-enrolled user (live + used backup codes, a live and a consumed
-//     login challenge, last TOTP step), a user mid-enrollment (pending setup),
+//     login challenge, last TOTP step, passkeys — a synced one, a security key
+//     and a removed one — and a WebAuthn challenge of every purpose, ADR 080), a user mid-enrollment (pending setup),
 //     a locked-out user, password history, device sessions in the mobile and
 //     merchant apps (one rotated) and a revoked session per `deletedBy` path.
 //   • Support-access grants in every lifecycle state with their tenant
@@ -57,6 +59,18 @@ const BITS_PER_BYTE = 8;
 const LOGIN_CHALLENGE_TTL_MS = 10 * MINUTE_MS;
 const PENDING_SETUP_TTL_MS = 15 * MINUTE_MS;
 const LOCK_DURATION_MS = 15 * MINUTE_MS;
+/** Authenticator models (AAGUIDs) as their makers publish them, so the seeded passkeys name real kinds of device. */
+const GOOGLE_PASSWORD_MANAGER_AAGUID = "ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4";
+const ICLOUD_KEYCHAIN_AAGUID = "fbfc3007-154e-4ecc-8c0b-6e020557d7bd";
+const YUBIKEY_5_AAGUID = "cb69481e-8ff7-4039-93ec-0a2729a154a8";
+
+/**
+ * UUIDs in the seed that are NOT row ids: authenticator model numbers fixed by their makers (FIDO metadata), which
+ * cannot be UUID v7. The seed-id test skips exactly these values; every row id must still be v7.
+ */
+export const PUBLISHED_AUTHENTICATOR_AAGUIDS: readonly string[] = [GOOGLE_PASSWORD_MANAGER_AAGUID, ICLOUD_KEYCHAIN_AAGUID, YUBIKEY_5_AAGUID];
+/** A security key counts its signatures; a synced passkey reports 0 every time. */
+const SECURITY_KEY_SIGNATURE_COUNT = 37;
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const MFA_RECOVERY_DELAY_MS = DAY_MS;
 const IMPERSONATION_TTL_MS = IMPERSONATION_TOKEN_TTL_SECONDS * SECOND_MS;
@@ -103,6 +117,8 @@ export interface AccountSecuritySeedSummary {
 	readonly mfaRecoveryRequests: number;
 	readonly backupCodes: number;
 	readonly loginChallenges: number;
+	/** The MFA user's passkeys, the removed one included (ADR 080). */
+	readonly passkeys: number;
 	readonly pendingSetups: number;
 	readonly passwordHistoryRows: number;
 	readonly supportAccessGrants: number;
@@ -160,6 +176,7 @@ export class AccountSecuritySeeder {
 		const now: number = Date.now();
 		const impersonation = await this.seedRecoveryUnderImpersonation(now);
 		const mfa = await this.seedEnrolledMfaUser(now);
+		const passkeys: number = await this.seedPasskeys(now);
 		await this.seedEnrollingUser(now);
 		await this.seedLockedUser(now);
 		const passwordHistoryRows: number = await this.seedPasswordHistory();
@@ -169,6 +186,7 @@ export class AccountSecuritySeeder {
 			mfaRecoveryRequests: 1,
 			backupCodes: BACKUP_CODE_COUNT * 2,
 			loginChallenges: 2,
+			passkeys,
 			pendingSetups: 1,
 			passwordHistoryRows,
 			supportAccessGrants,
@@ -492,6 +510,107 @@ export class AccountSecuritySeeder {
 		await prisma.user.update({ where: { id: mfaUser.id }, data: { tokenVersion } });
 	}
 
+	/**
+	 * The MFA user's passkeys (ADR 080): a synced one (Google Password Manager, used two hours ago), a security key
+	 * that counts its signatures (never used yet) and a removed one (soft-deleted by its owner); plus a WebAuthn
+	 * challenge of each purpose: a consumed registration, a live second step of the live login challenge, and an
+	 * expired passwordless one. The keys are random bytes: no seeded passkey can sign in (no device holds them).
+	 */
+	private async seedPasskeys(now: number): Promise<number> {
+		const { mfaUser } = this.cast;
+		const key = (name: string): string => this.material(`passkey:${name}`).toString("base64url");
+		const credentials: WithId<Prisma.WebAuthnCredentialUncheckedCreateInput>[] = [
+			{
+				id: this.id("passkey-synced"),
+				userId: mfaUser.id,
+				credentialId: key("synced:id"),
+				publicKey: key("synced:public-key"),
+				counter: 0,
+				transports: ["hybrid", "internal"],
+				deviceType: "MULTI_DEVICE",
+				backedUp: true,
+				aaguid: GOOGLE_PASSWORD_MANAGER_AAGUID,
+				name: "Pixel 9",
+				lastUsedAt: now - 2 * HOUR_MS,
+				createdAt: now - 10 * DAY_MS,
+			},
+			{
+				id: this.id("passkey-security-key"),
+				userId: mfaUser.id,
+				credentialId: key("security-key:id"),
+				publicKey: key("security-key:public-key"),
+				counter: SECURITY_KEY_SIGNATURE_COUNT,
+				transports: ["usb", "nfc"],
+				deviceType: "SINGLE_DEVICE",
+				backedUp: false,
+				aaguid: YUBIKEY_5_AAGUID,
+				name: "YubiKey 5C",
+				lastUsedAt: null,
+				createdAt: now - 3 * DAY_MS,
+			},
+			{
+				id: this.id("passkey-removed"),
+				userId: mfaUser.id,
+				credentialId: key("removed:id"),
+				publicKey: key("removed:public-key"),
+				counter: 0,
+				transports: ["internal"],
+				deviceType: "MULTI_DEVICE",
+				backedUp: true,
+				aaguid: ICLOUD_KEYCHAIN_AAGUID,
+				name: "Old iPhone",
+				lastUsedAt: now - 20 * DAY_MS,
+				createdAt: now - 60 * DAY_MS,
+				isDeleted: true,
+				deletedAt: now - DAY_MS,
+				deletedBy: mfaUser.id,
+			},
+		];
+		for (const credential of credentials) {
+			await prisma.webAuthnCredential.upsert({ where: { id: credential.id }, create: credential, update: credential });
+		}
+		const digest = (name: string): string =>
+			createHash("sha256")
+				.update(this.material(`passkey-challenge:${name}`))
+				.digest("hex");
+		const challenges: WithId<Prisma.WebAuthnChallengeUncheckedCreateInput>[] = [
+			{
+				id: this.id("passkey-challenge-registration"),
+				userId: mfaUser.id,
+				purpose: "REGISTRATION",
+				challengeHash: digest("registration"),
+				loginChallengeId: null,
+				expiresAt: now - 3 * DAY_MS + WEB_AUTHN_CHALLENGE_TTL_MS,
+				consumedAt: now - 3 * DAY_MS + MINUTE_MS,
+				createdAt: now - 3 * DAY_MS,
+			},
+			{
+				id: this.id("passkey-challenge-second-factor"),
+				userId: mfaUser.id,
+				purpose: "SECOND_FACTOR",
+				challengeHash: digest("second-factor"),
+				loginChallengeId: this.id("login-challenge-live"),
+				expiresAt: now + WEB_AUTHN_CHALLENGE_TTL_MS,
+				consumedAt: null,
+				createdAt: now,
+			},
+			{
+				id: this.id("passkey-challenge-passwordless"),
+				userId: null,
+				purpose: "PASSWORDLESS",
+				challengeHash: digest("passwordless"),
+				loginChallengeId: null,
+				expiresAt: now - HOUR_MS + WEB_AUTHN_CHALLENGE_TTL_MS,
+				consumedAt: null,
+				createdAt: now - HOUR_MS,
+			},
+		];
+		for (const challenge of challenges) {
+			await prisma.webAuthnChallenge.upsert({ where: { id: challenge.id }, create: challenge, update: challenge });
+		}
+		return credentials.length;
+	}
+
 	/** A user who scanned the QR code but has not confirmed the first TOTP yet. */
 	private async seedEnrollingUser(now: number): Promise<void> {
 		const { enrollingUser } = this.cast;
@@ -699,7 +818,7 @@ export interface AccountSecurityCastEmails {
 
 /** Resolves the cast's users, seeds everything and logs the developer credentials. */
 export async function seedAccountSecurity(emails: AccountSecurityCastEmails, log: (line: string) => void): Promise<AccountSecuritySeedSummary> {
-	const user = async (email: string): Promise<User> => prisma.user.findUniqueOrThrow({ where: { email } });
+	const user = async (email: string): Promise<User> => prisma.user.findUniqueOrThrow({ where: { email, isDeleted: false } });
 	const summary = await new AccountSecuritySeeder({
 		namespace: emails.namespace,
 		superAdmin: await user(emails.superAdmin),
@@ -710,7 +829,7 @@ export async function seedAccountSecurity(emails: AccountSecurityCastEmails, log
 		supportAccess: { tenantId: emails.supportAccess.tenantId, owner: await user(emails.supportAccess.ownerEmail) },
 	}).seed();
 	log(
-		`✅ Account security: ${String(summary.impersonationSessions)} impersonation session, ${String(summary.mfaRecoveryRequests)} completed MFA recovery, ${String(summary.backupCodes)} backup codes, ${String(summary.loginChallenges)} login challenges, ${String(summary.pendingSetups)} pending 2FA setup, ${String(summary.passwordHistoryRows)} password-history rows, ${String(summary.supportAccessGrants)} support-access grants`,
+		`✅ Account security: ${String(summary.impersonationSessions)} impersonation session, ${String(summary.mfaRecoveryRequests)} completed MFA recovery, ${String(summary.backupCodes)} backup codes, ${String(summary.loginChallenges)} login challenges, ${String(summary.passkeys)} passkeys, ${String(summary.pendingSetups)} pending 2FA setup, ${String(summary.passwordHistoryRows)} password-history rows, ${String(summary.supportAccessGrants)} support-access grants`,
 	);
 	log(`   MFA demo user ${emails.mfaUser}: TOTP secret ${summary.mfaUserTotpSecret} · unused backup code ${summary.mfaUserUnusedBackupCode}`);
 	log(`   Locked demo user ${emails.lockedUser} (15 min) · mid-enrollment demo user ${emails.enrollingUser}`);

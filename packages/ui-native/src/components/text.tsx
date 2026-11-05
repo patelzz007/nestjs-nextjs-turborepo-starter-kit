@@ -1,7 +1,8 @@
 // Typography: the type roles every screen uses. Presentational, themeable
 // (token utilities only), and they scale with the system font size. Each role
-// sets its typeface (src/lib/fonts.ts): Bricolage Grotesque for headings,
-// Geist for everything else, Geist Mono for codes. Weights are families
+// sets its typeface (src/lib/fonts.ts, ADR 079): Geist Bold for titles,
+// Geist SemiBold (`font-heading`) for section titles, Geist for everything
+// else, Geist Mono for codes. Weights are families
 // (`font-sans-medium`), never weight utilities (`font-medium`).
 //
 // Every role is one variant of `textVariants`, forwards its ref to the native
@@ -22,13 +23,13 @@ export const textVariants = cva("", {
 	variants: {
 		variant: {
 			/** A screen or section title. */
-			heading: "font-heading text-2xl text-foreground",
+			heading: "font-sans-bold text-2xl tracking-tight text-foreground",
 			/** A section title inside a screen. */
 			subheading: "font-heading text-lg text-foreground",
 			/** Running text. */
-			body: "font-sans text-base text-foreground",
+			body: "font-sans text-base leading-6 text-foreground",
 			/** Secondary text: hints, captions, metadata. */
-			muted: "font-sans text-sm text-muted-foreground",
+			muted: "font-sans text-sm leading-5 text-muted-foreground",
 			/** A form field's label. */
 			label: "font-sans-medium text-sm text-foreground",
 			/** A field or form error. */

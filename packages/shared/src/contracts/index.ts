@@ -29,6 +29,10 @@ import {
 	tenantNotificationsContract,
 } from "../contexts/notifications/contract";
 import { auditLogsContract, auditTrailContract, dataChangesContract } from "../contexts/audit/contract";
+import { tenantPaymentsContract } from "../contexts/payments/contract";
+import { adminPrivacyContract, privacyContract } from "../contexts/privacy/contract";
+import { savedViewsContract } from "../contexts/saved-views/contract";
+import { featureFlagsContract } from "../contexts/feature-flags/contract";
 import { githubContract, githubPullRequestsContract } from "../contexts/integrations-github/contract";
 import { geoContract } from "../contexts/reference-data/contract";
 import { integrationRewardsContract, legalContract, tenantRewardsContract, rewardsAdminRewardContract, rewardsContract } from "../contexts/rewards/contract";
@@ -40,6 +44,8 @@ import { adminTenantsContract, tenantsContract, rewardsAdminTenantContract } fro
 import { productContract, sampleCategoryContract } from "../contexts/catalog/contract";
 import { kanbanContract } from "../contexts/kanban/contract";
 import { operationsContract } from "../contexts/operations/contract";
+import { receivedWebhooksContract } from "../contexts/webhooks/received-webhooks.contract";
+import { tenantWebhooksContract } from "../contexts/webhooks/outbound-webhooks.contract";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─
 // Canonical definitions live in `schemas/api/common.ts` to avoid duplicate
@@ -94,6 +100,11 @@ export const apiContract = {
 	notifications: notificationsContract,
 	notificationsAdmin: notificationsAdminContract,
 	tenantNotifications: tenantNotificationsContract,
+	tenantPayments: tenantPaymentsContract,
+	privacy: privacyContract,
+	adminPrivacy: adminPrivacyContract,
+	savedViews: savedViewsContract,
+	featureFlags: featureFlagsContract,
 	github: githubContract,
 	githubPullRequests: githubPullRequestsContract,
 	geo: geoContract,
@@ -128,6 +139,8 @@ export const apiContract = {
 	product: productContract,
 	kanban: kanbanContract,
 	operations: operationsContract,
+	receivedWebhooks: receivedWebhooksContract,
+	tenantWebhooks: tenantWebhooksContract,
 };
 
 /** The full contract tree — used to derive the client router + API pipes. */

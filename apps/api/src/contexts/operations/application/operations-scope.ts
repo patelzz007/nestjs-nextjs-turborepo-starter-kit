@@ -10,11 +10,13 @@ import type {
 	OpsAlertRecipientsReader,
 	OpsAlertRepository,
 	OpsBackupRepository,
+	OpsRestoreDrillRepository,
 	OpsHistoryRepository,
 	OpsServerRepository,
 	OpsSettingsRepository,
 } from "./ports/operations-repositories.port";
 import type { LoadTestProvisioningPort, LoadTestPurgePort } from "./ports/load-test-tenant.port";
+import type { StatusIncidentRepository } from "./ports/status-incident.repository.port";
 
 export interface OperationsReadScope {
 	readonly servers: OpsServerRepository;
@@ -23,6 +25,9 @@ export interface OperationsReadScope {
 	readonly settings: OpsSettingsRepository;
 	readonly recipients: OpsAlertRecipientsReader;
 	readonly backups: OpsBackupRepository;
+	readonly restoreDrills: OpsRestoreDrillRepository;
+	/** The status page's incidents, naming who posted (staff reads and writes only). */
+	readonly statusIncidents: StatusIncidentRepository;
 	readonly loadTests: LoadTestRepository;
 	readonly loadTestTenant: LoadTestProvisioningPort;
 }

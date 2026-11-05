@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Job } from "bullmq";
 import { QUEUE_NAMES, StorageCdnInvalidationJobSchema, StorageCleanupJobSchema, StorageDeleteJobSchema, StorageScanJobSchema } from "@workspace/shared";
@@ -19,7 +20,7 @@ const DEFAULT_JOB_ATTEMPTS = 1;
 export type StorageJobExecution = Pick<Job, "data" | "attemptsMade" | "opts">;
 
 /** `storage.cleanup` → CleanUpStaleUploads (one file's failure never aborts the batch; it is retried next sweep). */
-@Processor(QUEUE_NAMES.storageCleanup)
+@Processor(QUEUE_NAMES.storageCleanup, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class StorageCleanupProcessor extends WorkerHost {
 	public constructor(@Inject(SystemCommandDispatcher) private readonly commands: Pick<SystemCommandDispatcher, "dispatch">) {
@@ -34,7 +35,7 @@ export class StorageCleanupProcessor extends WorkerHost {
 }
 
 /** `storage.delete` → PurgeFileObject (the delayed physical delete of one stored copy). */
-@Processor(QUEUE_NAMES.storageDelete)
+@Processor(QUEUE_NAMES.storageDelete, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class StorageDeleteProcessor extends WorkerHost {
 	public constructor(@Inject(SystemCommandDispatcher) private readonly commands: Pick<SystemCommandDispatcher, "dispatch">) {
@@ -54,7 +55,7 @@ export class StorageDeleteProcessor extends WorkerHost {
  * reference makes a retry after a lost response harmless. It runs as the
  * deletion's queue operation: the purge is the last step of deleting a file.
  */
-@Processor(QUEUE_NAMES.storageCdnInvalidate)
+@Processor(QUEUE_NAMES.storageCdnInvalidate, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class StorageCdnInvalidationProcessor extends WorkerHost {
 	public constructor(@Inject(SystemCommandDispatcher) private readonly commands: Pick<SystemCommandDispatcher, "dispatch">) {
@@ -73,7 +74,7 @@ export class StorageCdnInvalidationProcessor extends WorkerHost {
  * file stays SCANNING, never downloadable); on the last attempt the upload is
  * FAILED — it is never treated as clean.
  */
-@Processor(QUEUE_NAMES.storageScan)
+@Processor(QUEUE_NAMES.storageScan, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class StorageScanProcessor extends WorkerHost {
 	public constructor(@Inject(SystemCommandDispatcher) private readonly commands: Pick<SystemCommandDispatcher, "dispatch">) {

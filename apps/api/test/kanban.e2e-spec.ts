@@ -10,6 +10,7 @@ import {
 	KanbanActivitySchema,
 	KanbanAttachmentSchema,
 	KanbanBoardSchema,
+	KanbanImportReportSchema,
 	KanbanCommentSchema,
 	KanbanItemSummarySchema,
 	KanbanPeopleSchema,
@@ -452,6 +453,44 @@ describe("Kanban board (e2e, real Postgres)", () => {
 			});
 			expect(refused.statusCode).toBe(404);
 			expect(await order(columnA)).not.toContain(`${marker} never`);
+		});
+
+		it("dry-runs an import: reports each row the board would refuse, and writes nothing (enhancement 5.8)", async () => {
+			const row = (title: string): Record<string, string | number | null> => ({
+				columnId: columnA,
+				type: "STORY",
+				title: `${marker} ${title}`,
+				description: "",
+				priority: "LOW",
+				team: "QA",
+				dueAt: null,
+				progress: 0,
+			});
+			const before = await order(columnA);
+			const report = await app.inject({
+				method: "POST",
+				url: `${KANBAN}/tasks/import/dry-run`,
+				headers: { ...mutationHeaders({ cookie: cookieOf(admin) }), "x-forwarded-for": uniqueClientIp() },
+				payload: {
+					board: "EXECUTION",
+					tasks: [row("dry fine"), { ...row("dry no column"), columnId: randomUUID() }, { ...row("dry nobody"), assigneeId: randomUUID() }, row("dry fine too")],
+				},
+			});
+			expect(report.statusCode, report.body).toBe(200);
+			expect(parseSuccessEnvelope(report, KanbanImportReportSchema).data).toMatchObject({
+				rows: 4,
+				importable: 2,
+				problems: [
+					{ row: 1, code: "KANBAN_COLUMN_NOT_FOUND" },
+					{ row: 2, code: "KANBAN_ASSIGNEE_INVALID" },
+				],
+			});
+			// Nothing written: the column is exactly as it was.
+			expect(await order(columnA)).toEqual(before);
+
+			// The same permission as the import itself.
+			const customer = await send({ method: "POST", url: `${KANBAN}/tasks/import/dry-run`, session: consumer, payload: { board: "EXECUTION", tasks: [row("dry customer")] } });
+			expect(customer.statusCode).toBe(403);
 		});
 	});
 

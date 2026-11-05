@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ApiErrorCodeSchema } from "../../../schemas/api/api-error";
 import { BULK_MUTATION_MAX_ITEMS } from "../../../schemas/api/bulk-mutation";
 import { EpochMsSchema } from "../../../schemas/api/common";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
@@ -605,6 +606,26 @@ export const ImportKanbanTasksSchema = z
 	})
 	.strict();
 export type ImportKanbanTasksInput = z.output<typeof ImportKanbanTasksSchema>;
+
+/** One row the board would refuse, by its position in `tasks` (0-based), with the refusal's code (enhancement 5.8). */
+export const KanbanImportRowProblemSchema = z.object({
+	row: z.int().nonnegative(),
+	code: ApiErrorCodeSchema,
+	message: z.string().min(1),
+});
+export type KanbanImportRowProblem = z.output<typeof KanbanImportRowProblemSchema>;
+
+/**
+ * `POST /admin/kanban/tasks/import/dry-run` — what the import would do with these rows against the board as it is
+ * now (full columns, parents, assignees: the checks only the server can make), writing nothing. The rows not listed
+ * in `problems` are the ones that would import; send just those to import the rest and skip the bad ones.
+ */
+export const KanbanImportReportSchema = z.object({
+	rows: z.int().nonnegative(),
+	importable: z.int().nonnegative(),
+	problems: z.array(KanbanImportRowProblemSchema),
+});
+export type KanbanImportReport = z.output<typeof KanbanImportReportSchema>;
 
 /**
  * One step of an edit, in order. `id` names a row the subtask already has

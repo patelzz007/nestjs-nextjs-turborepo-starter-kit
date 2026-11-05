@@ -11,13 +11,13 @@ import { cn } from "../lib/cn";
 import { Icon, type LucideIcon } from "./icon";
 import { BodyText } from "./text";
 
-export const alertVariants = cva("flex-row gap-3 rounded-lg border px-4 py-3", {
+export const alertVariants = cva("flex-row gap-3 rounded-2xl border px-4 py-3.5", {
 	variants: {
 		tone: {
-			error: "border-destructive bg-destructive-soft",
-			info: "border-info bg-info-soft",
-			success: "border-success bg-success-soft",
-			warning: "border-warning bg-warning-soft",
+			error: "border-destructive/25 bg-destructive-soft",
+			info: "border-info/25 bg-info-soft",
+			success: "border-success/25 bg-success-soft",
+			warning: "border-warning/25 bg-warning-soft",
 		},
 	},
 	defaultVariants: { tone: "info" },

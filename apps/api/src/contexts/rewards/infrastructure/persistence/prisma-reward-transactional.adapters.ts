@@ -17,7 +17,6 @@ import type {
 	RewardRedemptionFactsPort,
 	RewardViewPort,
 } from "../../application/ports/rewards-transactional.ports";
-import type { TenantDisplayAdapter } from "../adapters/tenant-display.adapter";
 import { freeItemOfColumns } from "./free-item-columns";
 import { REWARD_RESPONSE_INCLUDE } from "./reward-list-queries";
 import { mapRewardToResponse } from "./reward-response.mapper";
@@ -59,18 +58,19 @@ export class PrismaTenantStoresAdapter implements TenantStoresPort {
 	}
 }
 
-/** A reward as the API returns it, read in the command's own transaction. */
+/**
+ * A reward as the API returns it, read in the command's own transaction (so it sees the command's write), without
+ * the merchant's name and logo: those are added after the commit (`RewardMerchantDisplayPort`).
+ */
 export class PrismaRewardViewAdapter implements RewardViewPort {
 	public constructor(
 		private readonly db: Prisma.TransactionClient,
-		private readonly tenants: TenantDisplayAdapter,
 		private readonly resolve: PublicUrlResolve,
 	) {}
 
 	public async getResponse(rewardId: string): Promise<RewardResponse> {
 		const row = await this.db.reward.findUniqueOrThrow({ where: { id: rewardId }, include: REWARD_RESPONSE_INCLUDE });
-		const tenants = await this.tenants.displayData([row.tenantId]);
-		return mapRewardToResponse(row, tenants.get(row.tenantId), this.resolve);
+		return mapRewardToResponse(row, undefined, this.resolve);
 	}
 }
 

@@ -88,6 +88,12 @@ overrides:
   # dependency-overrides.test.mjs fails if a release loads its own zod again. Remove once an
   # @expo/cli release depends on zod >=4.6.6 or drops the dependency.
   "@expo/cli>zod": "4.6.7" # GHSA-mrhx-c7xc-m3w5: zod <4.6.6
+  # @react-native-firebase/app depends on the `firebase` JS SDK, whose @firebase/firestore pins @grpc/grpc-js ~1.9.0.
+  # The app never loads it (React Native Firebase uses the native SDKs; Firestore isn't used at all), so this only
+  # keeps the vulnerable copy out of the install. Firestore's Node build uses grpc-js's stable 1.x client API, which
+  # dependency-overrides.test.mjs exercises through Firestore's own install. Remove once a firebase release
+  # depends on @grpc/grpc-js >=1.13.6.
+  "@firebase/firestore>@grpc/grpc-js": "1.14.7" # GHSA-m9gg-hp2v-232j: @grpc/grpc-js <1.13.6
 
 # ── Majors held back (re-checked 2026-10-06; re-check on every dependency sweep) ──
 # typescript (apps/docs only) 7: `astro check` runs on Volar, which needs the

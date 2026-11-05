@@ -2,6 +2,7 @@ import type { Role, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
+import { upsertLiveUserByEmail } from "./live-user";
 import { SEED_DEVICE_PROFILES, SEED_MOBILE_PROFILES, SEED_SESSION_LOCATIONS, seedSessionRow } from "./device-sessions";
 import { daysAgo, daysFromNow, rand, randInt, randomIpv4 } from "./helpers";
 
@@ -49,17 +50,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 		const isActive = i < 17; // 3 inactive users
 
 		const fullName = name;
-		const u = await prisma.user.upsert({
-			where: { email },
-			update: { fullName, isActive },
-			create: {
-				email,
-				passwordHash: defaultPassword,
-				fullName,
-				isActive,
-				isSuperAdmin: false,
-			},
-		});
+		const u = await upsertLiveUserByEmail(email, { fullName, isActive }, { email, passwordHash: defaultPassword, fullName, isActive, isSuperAdmin: false });
 		createdUsers.push(u);
 
 		// Assign User role

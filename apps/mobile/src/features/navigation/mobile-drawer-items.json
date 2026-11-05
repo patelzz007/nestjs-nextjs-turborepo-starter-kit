@@ -1,0 +1,242 @@
+{
+	"header": {
+		"title": "Starter",
+		"subtitle": "Mobile"
+	},
+	"sections": [
+		{
+			"title": "Tabs",
+			"labelKey": "tabs",
+			"items": [
+				{
+					"title": "Home 123",
+					"labelKey": "index",
+					"url": "/",
+					"icon": "House"
+				},
+				{
+					"title": "Analytics",
+					"labelKey": "analytics",
+					"url": "/analytics",
+					"icon": "ChartColumn"
+				},
+				{
+					"title": "Search",
+					"labelKey": "search",
+					"url": "/search",
+					"icon": "Search"
+				},
+				{
+					"title": "Profile",
+					"labelKey": "profile",
+					"url": "/profile",
+					"icon": "User"
+				},
+				{
+					"title": "Settings",
+					"labelKey": "settings",
+					"url": "/settings",
+					"icon": "Settings"
+				}
+			]
+		},
+		{
+			"title": "Account",
+			"labelKey": "account",
+			"color": "blue",
+			"items": [
+				{
+					"title": "Sign-in & security",
+					"labelKey": "sign-in-and-security",
+					"url": "",
+					"icon": "ShieldCheck",
+					"children": [
+						{
+							"title": "Security 123123",
+							"labelKey": "security",
+							"url": "/settings/security",
+							"icon": "ShieldCheck"
+						},
+						{
+							"title": "Signed-in devices",
+							"labelKey": "devices",
+							"url": "/settings/devices",
+							"icon": "Smartphone"
+						}
+					]
+				}
+			]
+		},
+		{
+			"title": "Preferences",
+			"labelKey": "preferences",
+			"color": "purple",
+			"items": [
+				{
+					"title": "Notification settings",
+					"labelKey": "notification-settings",
+					"url": "/settings/notification-settings",
+					"icon": "Bell"
+				},
+				{
+					"title": "Display",
+					"labelKey": "display",
+					"url": "",
+					"icon": "Palette",
+					"children": [
+						{
+							"title": "Appearance",
+							"labelKey": "appearance",
+							"url": "/settings/appearance",
+							"icon": "Palette"
+						},
+						{
+							"title": "Region",
+							"labelKey": "region",
+							"url": "",
+							"icon": "Languages",
+							"children": [
+								{
+									"title": "Language",
+									"labelKey": "language",
+									"url": "/settings/language",
+									"icon": "Languages"
+								}
+							]
+						}
+					]
+				},
+				{
+					"title": "App lock",
+					"labelKey": "app-lock",
+					"url": "/settings/app-lock",
+					"icon": "LockKeyhole"
+				}
+			]
+		},
+		{
+			"title": "Rewards",
+			"labelKey": "rewards",
+			"color": "green",
+			"items": [
+				{
+					"title": "Till",
+					"labelKey": "till",
+					"url": "/settings/till",
+					"icon": "ScanQrCode"
+				}
+			]
+		},
+		{
+			"title": "Documents",
+			"labelKey": "documents",
+			"color": "blue",
+			"items": [
+				{
+					"title": "PDF viewer",
+					"labelKey": "pdf-viewer",
+					"url": "/settings/pdf-viewer",
+					"icon": "FileText"
+				}
+			]
+		},
+		{
+			"title": "Developer",
+			"labelKey": "developer",
+			"color": "amber",
+			"items": [
+				{
+					"title": "UI kit",
+					"labelKey": "ui-kit",
+					"url": "",
+					"icon": "Blocks",
+					"children": [
+						{
+							"title": "Gallery",
+							"labelKey": "gallery",
+							"url": "",
+							"icon": "Blocks",
+							"children": [
+								{
+									"title": "Examples",
+									"labelKey": "examples",
+									"url": "",
+									"icon": "Blocks",
+									"children": [
+										{
+											"title": "Screens",
+											"labelKey": "screens",
+											"url": "",
+											"icon": "Blocks",
+											"children": [
+												{
+													"title": "Sections",
+													"labelKey": "sections",
+													"url": "",
+													"icon": "Blocks",
+													"children": [
+														{
+															"title": "Components",
+															"labelKey": "components",
+															"url": "/settings/components",
+															"icon": "Blocks",
+															"featureFlag": "developer-tools"
+														}
+													]
+												}
+											]
+										}
+									]
+								}
+							]
+						}
+					],
+					"featureFlag": "developer-tools"
+				}
+			]
+		},
+		{
+			"title": "GitHub",
+			"labelKey": "github",
+			"color": "teal",
+			"items": [
+				{
+					"title": "Code review",
+					"labelKey": "code-review",
+					"url": "",
+					"icon": "GitPullRequest",
+					"children": [
+						{
+							"title": "Pull requests",
+							"labelKey": "pull-requests",
+							"url": "/profile/pull-requests",
+							"icon": "GitPullRequest",
+							"featureFlag": "github-pull-requests"
+						},
+						{
+							"title": "GitHub token",
+							"labelKey": "github-account",
+							"url": "/profile/github-account",
+							"icon": "KeyRound",
+							"featureFlag": "github-pull-requests"
+						}
+					]
+				}
+			]
+		},
+		{
+			"title": "Operations",
+			"labelKey": "operations",
+			"color": "rose",
+			"items": [
+				{
+					"title": "Servers",
+					"labelKey": "servers",
+					"url": "/settings/servers",
+					"icon": "Server"
+				}
+			]
+		}
+	],
+	"bottomItems": []
+}

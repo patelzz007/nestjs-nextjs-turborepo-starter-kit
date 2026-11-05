@@ -1,8 +1,8 @@
 // A broadcast's rich body drawn natively (ADR 073): from the stored JSON, never from HTML, so only the
 // allowed nodes can appear. Marks nest as Text runs; links and the call-to-action open through the
 // caller (`onOpenLink`), which decides how a URL is opened; tables scroll sideways; code blocks are the
-// kit's CodeBlock with the caller's Copy. Data-agnostic: an image shows only when the caller resolves
-// its Files id to an address.
+// kit's CodeBlock with the caller's Copy. Data-agnostic: an image shows only when the
+// API gave it an address (`src`, enhancement 5.4).
 
 import type { RichTextBlock, RichTextDocument, RichTextInline, RichTextListItem, RichTextMark, RichTextTableRow, RichTextText } from "@workspace/shared";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -29,8 +29,6 @@ export interface RichTextViewProps {
 	readonly onOpenLink: (href: string) => void;
 	/** Copy a code block's text; without it code blocks have no Copy button. */
 	readonly onCopyCode?: ((code: string) => void) | undefined;
-	/** The address of an image the body holds (a Files id); undefined hides the image. */
-	readonly imageUrl?: ((fileId: string) => string | undefined) | undefined;
 	readonly className?: string | undefined;
 	readonly testID?: string | undefined;
 }
@@ -114,7 +112,6 @@ function plainText(inlines: readonly RichTextInline[]): string {
 interface BlockContext {
 	readonly onOpenLink: (href: string) => void;
 	readonly onCopyCode: ((code: string) => void) | undefined;
-	readonly imageUrl: ((fileId: string) => string | undefined) | undefined;
 }
 
 function Blocks({ blocks, context }: { readonly blocks: readonly RichTextBlock[]; readonly context: BlockContext }): React.JSX.Element {
@@ -234,7 +231,7 @@ function Block({ block, context }: { readonly block: RichTextBlock; readonly con
 		case "horizontalRule":
 			return <View className="h-px bg-border" />;
 		case "image": {
-			const uri = context.imageUrl?.(block.attrs.fileId);
+			const uri = block.attrs.src;
 			return uri === undefined ? null : <BodyImage uri={uri} alt={block.attrs.alt} />;
 		}
 		case "callToAction":
@@ -251,10 +248,10 @@ function Block({ block, context }: { readonly block: RichTextBlock; readonly con
 /** A broadcast body as the app's inbox shows it. */
 export const RichTextView = React.memo(
 	React.forwardRef<ViewInstance, RichTextViewProps>(function RichTextView(
-		{ document, onOpenLink, onCopyCode, imageUrl, variant = "default", className, testID },
+		{ document, onOpenLink, onCopyCode, variant = "default", className, testID },
 		ref,
 	): React.JSX.Element {
-		const context = React.useMemo((): BlockContext => ({ onOpenLink, onCopyCode, imageUrl }), [imageUrl, onCopyCode, onOpenLink]);
+		const context = React.useMemo((): BlockContext => ({ onOpenLink, onCopyCode }), [onCopyCode, onOpenLink]);
 		return (
 			<View ref={ref} className={cn(richTextViewVariants({ variant }), className)} testID={testID}>
 				<Blocks blocks={document.content} context={context} />

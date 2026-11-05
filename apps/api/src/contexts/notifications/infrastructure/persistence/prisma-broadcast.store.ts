@@ -491,6 +491,8 @@ export class PrismaBroadcastStore implements BroadcastStore {
 			query.search === undefined || query.search.length === 0
 				? Prisma.empty
 				: Prisma.sql`AND (u."fullName" ILIKE ${`%${query.search}%`} OR u.email ILIKE ${`%${query.search}%`})`;
+		// A draft's picked people, looked up by id (bounded to one page by the contract; still only this tenant's customers).
+		const ids = query.ids === undefined ? Prisma.empty : Prisma.sql`AND tc."userId" = ANY(${query.ids}::text[])`;
 		const [sort] = tenantCustomerListQuery.resolveSort(query.sort).terms;
 		const column = sort?.field ?? "lastClaimedAt";
 		const direction = sort?.direction === "asc" ? Prisma.sql`ASC` : Prisma.sql`DESC`;
@@ -507,7 +509,7 @@ export class PrismaBroadcastStore implements BroadcastStore {
 				         WHEN COALESCE((SELECT mc.granted FROM public."MarketingConsent" mc WHERE mc."userId" = tc."userId" AND mc.scope = 'TENANT' AND mc."tenantId" = tc."tenantId" ORDER BY mc."occurredAt" DESC LIMIT 1), false) = false THEN 'no-consent'
 				       END AS "unreachableReason"
 				FROM public."TenantCustomer" tc JOIN public."User" u ON u.id = tc."userId"
-				WHERE tc."tenantId" = ${tenantId} AND tc."isDeleted" = false AND u."isDeleted" = false ${search}
+				WHERE tc."tenantId" = ${tenantId} AND tc."isDeleted" = false AND u."isDeleted" = false ${search} ${ids}
 			) customers`;
 		const reachableOnly = query.reachableOnly === true || query.reachableOnly === "true";
 		const filtered = reachableOnly ? Prisma.sql`${base} WHERE "unreachableReason" IS NULL` : base;

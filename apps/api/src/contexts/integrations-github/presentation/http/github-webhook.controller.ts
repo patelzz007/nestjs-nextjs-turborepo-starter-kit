@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, HttpCode, HttpStatus, Post, Req, type RawBodyRequest } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus, Post, Req, type RawBodyRequest } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { FastifyRequest } from "fastify";
@@ -12,6 +12,7 @@ import { Public } from "../../../../platform/presentation/http/security/decorato
 import { SkipMutationIntent } from "../../../../platform/presentation/http/security/decorators/skip-mutation-intent.decorator";
 import { RecordGithubWebhookDeliveryCommand } from "../../application/commands/record-github-webhook-delivery/record-github-webhook-delivery.command";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
+import { inboundWebhookRequest } from "../../../webhooks/inbound/public-api";
 
 const GithubWebhookReceivedSchema = z.object({
 	received: z.literal(true),
@@ -57,17 +58,8 @@ export class GithubWebhookController {
 	@ApiHeader({ name: "X-GitHub-Event", required: true, description: "The event's kind" })
 	@ApiHeader({ name: "X-GitHub-Delivery", required: true, description: "The delivery's id — a redelivery is recognised by it" })
 	@ZodResponse(GithubWebhookReceivedSchema, { description: "The delivery was verified" })
-	public async receive(
-		@CurrentActor({ allowAnonymous: true }) actor: ActorContext,
-		@Req() request: RawBodyRequest<FastifyRequest>,
-		@Headers() headers: Record<string, string | undefined>,
-	): Promise<GithubWebhookReceived> {
-		const outcome = await this.commandBus.execute(
-			new RecordGithubWebhookDeliveryCommand(actor, {
-				headers: { event: headers["x-github-event"], deliveryId: headers["x-github-delivery"], signature: headers["x-hub-signature-256"] },
-				rawBody: request.rawBody ?? Buffer.alloc(0),
-			}),
-		);
+	public async receive(@CurrentActor({ allowAnonymous: true }) actor: ActorContext, @Req() request: RawBodyRequest<FastifyRequest>): Promise<GithubWebhookReceived> {
+		const outcome = await this.commandBus.execute(new RecordGithubWebhookDeliveryCommand(actor, { request: inboundWebhookRequest(request.rawBody, request.headers) }));
 		return { received: true, outcome };
 	}
 }

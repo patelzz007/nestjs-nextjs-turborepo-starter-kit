@@ -24,6 +24,7 @@ import {
 	TrendingUp,
 	Users,
 	UserX,
+	Webhook,
 	Zap,
 	type LucideIcon,
 } from "lucide-react";
@@ -55,4 +56,5 @@ export const MERCHANT_MENU_ICON_MAP: Readonly<Record<string, LucideIcon>> = {
 	MonitorSmartphone,
 	Palette,
 	UserX,
+	Webhook,
 };

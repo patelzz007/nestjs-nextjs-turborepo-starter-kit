@@ -37,8 +37,8 @@ afterEach((): void => {
 	cleanup();
 });
 
-function renderView(imageUrl?: (fileId: string) => string | undefined): void {
-	render(<RichTextView document={DOCUMENT} imageUrl={imageUrl} />, { wrapper: UiKitTestProviders });
+function renderView(document: RichTextDocument = DOCUMENT): void {
+	render(<RichTextView document={document} />, { wrapper: UiKitTestProviders });
 }
 
 describe("RichTextView", () => {
@@ -74,11 +74,14 @@ describe("RichTextView", () => {
 		expect(screen.getByText("order.cafe.example")).toBeTruthy();
 	});
 
-	it("shows the image only when its address is known", () => {
+	it("shows the image only when the server gave it an address", () => {
 		renderView();
 		expect(screen.queryByRole("img")).toBeNull();
 		cleanup();
-		renderView((fileId) => `https://files.example/${fileId}`);
+		renderView({
+			...DOCUMENT,
+			content: DOCUMENT.content.map((block) => (block.type === "image" ? { ...block, attrs: { ...block.attrs, src: "https://files.example/f1" } } : block)),
+		});
 		expect(screen.getByRole("img", { name: "Our latte" }).getAttribute("src")).toBe("https://files.example/f1");
 	});
 });

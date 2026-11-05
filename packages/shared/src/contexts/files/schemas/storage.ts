@@ -40,6 +40,9 @@ export type FileStatus = z.output<typeof FileStatusSchema>;
  * deleted once its `stagingRetentionMs` has passed. `KANBAN_TASK_ATTACHMENT` is
  * a picture or PDF a staff member attaches to a kanban task: uploaded first,
  * then attached to the task by `POST /admin/kanban/tasks/:taskId/attachments`.
+ * `BROADCAST_IMAGE` is the one picture a store's broadcast may hold, uploaded to the tenant;
+ * `PLATFORM_BROADCAST_IMAGE` is the same for a platform notice, uploaded by a staff member.
+ * Both are public (an email loads them) and named by the broadcast's body when it is saved.
  */
 export const FileCategorySchema = z.enum([
 	"PRODUCT_IMAGE",
@@ -50,6 +53,8 @@ export const FileCategorySchema = z.enum([
 	"REWARD_IMAGE",
 	"GITHUB_COMMENT_IMAGE",
 	"KANBAN_TASK_ATTACHMENT",
+	"BROADCAST_IMAGE",
+	"PLATFORM_BROADCAST_IMAGE",
 ]);
 
 export type FileCategory = z.output<typeof FileCategorySchema>;
@@ -162,6 +167,22 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 				{ kind: "XLARGE", width: 1024 },
 			],
 		},
+	},
+	BROADCAST_IMAGE: {
+		category: "BROADCAST_IMAGE",
+		// Public: an email client loads it without signing in (enhancement 5.4).
+		visibility: "PUBLIC",
+		// Within rules/20's single-shot upload size; email clients struggle with anything larger.
+		maxBytes: 10_485_760,
+		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+		generatesVariants: true,
+	},
+	PLATFORM_BROADCAST_IMAGE: {
+		category: "PLATFORM_BROADCAST_IMAGE",
+		visibility: "PUBLIC",
+		maxBytes: 10_485_760,
+		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+		generatesVariants: true,
 	},
 	STORE_BANNER: {
 		category: "STORE_BANNER",
@@ -345,12 +366,18 @@ export const FileVariantRecordSchema = z
 export type FileVariantRecord = z.output<typeof FileVariantRecordSchema>;
 
 /** Categories a signed-in person uploads for themselves or the platform (`POST /files/upload-url`). */
-export const PlatformFileCategorySchema = FileCategorySchema.extract(["PRODUCT_IMAGE", "USER_AVATAR", "GITHUB_COMMENT_IMAGE", "KANBAN_TASK_ATTACHMENT"]);
+export const PlatformFileCategorySchema = FileCategorySchema.extract([
+	"PRODUCT_IMAGE",
+	"USER_AVATAR",
+	"GITHUB_COMMENT_IMAGE",
+	"KANBAN_TASK_ATTACHMENT",
+	"PLATFORM_BROADCAST_IMAGE",
+]);
 
 export type PlatformFileCategory = z.output<typeof PlatformFileCategorySchema>;
 
 /** Categories a tenant owns (`POST /tenants/:tenantSlug/files/upload-url`): the tenant comes from the route, never the body. */
-export const TenantFileCategorySchema = FileCategorySchema.extract(["STORE_LOGO", "STORE_BANNER", "REWARD_IMAGE", "MERCHANT_KYB"]);
+export const TenantFileCategorySchema = FileCategorySchema.extract(["STORE_LOGO", "STORE_BANNER", "REWARD_IMAGE", "MERCHANT_KYB", "BROADCAST_IMAGE"]);
 
 export type TenantFileCategory = z.output<typeof TenantFileCategorySchema>;
 
@@ -375,7 +402,13 @@ export const CreateFileUploadUrlSchema = z
 		if (value.category === "PRODUCT_IMAGE" && value.productId === undefined) {
 			ctx.addIssue({ code: "custom", message: "productId is required for PRODUCT_IMAGE uploads", path: ["productId"] });
 		}
-		if ((value.category === "USER_AVATAR" || value.category === "GITHUB_COMMENT_IMAGE" || value.category === "KANBAN_TASK_ATTACHMENT") && value.userId === undefined) {
+		if (
+			(value.category === "USER_AVATAR" ||
+				value.category === "GITHUB_COMMENT_IMAGE" ||
+				value.category === "KANBAN_TASK_ATTACHMENT" ||
+				value.category === "PLATFORM_BROADCAST_IMAGE") &&
+			value.userId === undefined
+		) {
 			ctx.addIssue({ code: "custom", message: `userId is required for ${value.category} uploads`, path: ["userId"] });
 		}
 	});

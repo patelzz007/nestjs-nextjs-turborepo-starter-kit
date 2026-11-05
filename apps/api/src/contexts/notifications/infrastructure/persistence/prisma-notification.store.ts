@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import {
 	JsonObjectSchema,
+	RichTextDocumentResponseSchema,
 	NotificationCategorySchema,
 	NotificationChannelSchema,
 	NotificationDeliveryReasonSchema,
@@ -11,12 +12,15 @@ import {
 	type NotificationChannel,
 	type NotificationDeliveryStatus,
 	type NotificationSurface,
+	imageFileIdsOf,
+	withImageSources,
 } from "@workspace/shared";
 import { z } from "zod";
 
 import { ADMIN_PANEL_ROLE_NAMES } from "../../../authorization/public-api";
 import type { InAppRendering } from "../../domain/catalog/notification-type";
 import type { StoredPreference } from "../../domain/policies/notification-rules";
+import { RECORD_RETENTION_MS } from "../../../../platform/domain/record-retention";
 import type {
 	ActivePushDevice,
 	BroadcastContent,
@@ -31,15 +35,15 @@ import type {
 	StoredSchedule,
 	TenantStanding,
 } from "../../application/ports/notification-store.port";
+import type { BroadcastImageFilesPort } from "../../application/ports/broadcast-image-files.port";
 
 /** A delivery in these states may still need the notification's payload. */
 /** A QUEUED delivery untouched this long lost its job (a crash, a lost queue): the sweep queues it again. */
 const STUCK_QUEUED_AFTER_MS = 600_000;
-const MS_PER_DAY = 86_400_000;
-/** ADR 070 retention: read inbox rows 90 days, unread 365, deliveries and notifications 180. */
-const READ_INBOX_RETENTION_MS = 90 * MS_PER_DAY;
-const UNREAD_INBOX_RETENTION_MS = 365 * MS_PER_DAY;
-const DELIVERY_RETENTION_MS = 180 * MS_PER_DAY;
+/** Retention: inbox rows (read or not), deliveries and notifications are kept for the platform's record retention (ten years). */
+const READ_INBOX_RETENTION_MS = RECORD_RETENTION_MS;
+const UNREAD_INBOX_RETENTION_MS = RECORD_RETENTION_MS;
+const DELIVERY_RETENTION_MS = RECORD_RETENTION_MS;
 const RETENTION_ACTOR = "system:notifications.retention";
 const OPEN_DELIVERY_STATES: readonly NotificationDeliveryStatus[] = ["PENDING", "HELD", "QUEUED", "SENDING"];
 
@@ -48,6 +52,8 @@ export class PrismaNotificationStore implements NotificationStore {
 	public constructor(
 		private readonly db: Prisma.TransactionClient,
 		private readonly platformName: string,
+		/** Gives a broadcast body's pictures their public address (enhancement 5.4). */
+		private readonly images: Pick<BroadcastImageFilesPort, "sources">,
 	) {}
 
 	public async findNotification(notificationId: string): Promise<StoredNotification | null> {
@@ -191,6 +197,7 @@ export class PrismaNotificationStore implements NotificationStore {
 			platform: PushPlatformSchema.parse(row.platform),
 			surface: NotificationSurfaceSchema.parse(row.surface),
 			tokenCiphertext: row.tokenCiphertext,
+			installationIdCiphertext: row.installationIdCiphertext,
 			deviceLabel: row.deviceLabel,
 		}));
 	}
@@ -206,6 +213,7 @@ export class PrismaNotificationStore implements NotificationStore {
 			platform: PushPlatformSchema.parse(row.platform),
 			surface: NotificationSurfaceSchema.parse(row.surface),
 			tokenCiphertext: row.tokenCiphertext,
+			installationIdCiphertext: row.installationIdCiphertext,
 			deviceLabel: row.deviceLabel,
 			revokedAt: row.revokedAt === null ? null : Number(row.revokedAt),
 		};
@@ -342,8 +350,11 @@ export class PrismaNotificationStore implements NotificationStore {
 			return null;
 		}
 		const tenant = broadcast.tenantId === null ? null : await this.db.tenant.findFirst({ where: { id: broadcast.tenantId }, select: { displayName: true } });
+		// The body as stored names its pictures by file id; the inbox and the email get their public address.
+		const document = RichTextDocumentResponseSchema.parse(broadcast.body);
+		const withSources = withImageSources(document, await this.images.sources(imageFileIdsOf(document)));
 		return {
-			richBody: JsonObjectSchema.parse(broadcast.body),
+			richBody: JsonObjectSchema.parse(withSources),
 			senderName: tenant?.displayName ?? this.platformName,
 			senderLogoUrl: null,
 			stopped: broadcast.status === "CANCELLED" || broadcast.status === "FAILED",

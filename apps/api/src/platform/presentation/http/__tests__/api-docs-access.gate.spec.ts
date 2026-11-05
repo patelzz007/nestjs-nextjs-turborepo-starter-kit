@@ -4,7 +4,7 @@ import fastifyCookie from "@fastify/cookie";
 import { ApiErrorResponseSchema, apiDocsPath, type AccessTokenPayload } from "@workspace/shared";
 
 import { accessToken } from "../../../../../test/support/http-execution-context";
-import { ApiDocsAccessGate, isApiDocsRequest, type ApiDocsViewerVerifier } from "../api-docs-access.gate";
+import { ApiDocsAccessGate, isApiDocsPath, isApiDocsRequest, type ApiDocsViewerVerifier } from "../api-docs-access.gate";
 
 /** A verifier whose token store knows two tokens: a SuperAdmin's and a regular admin's. */
 function verifier(): ApiDocsViewerVerifier {
@@ -31,10 +31,30 @@ async function appWithGate(): Promise<FastifyInstance> {
 	return app;
 }
 
-describe("isApiDocsRequest", () => {
+/** A request that matched no route, as an `onRequest` hook sees an unknown path. */
+function unrouted(url: string): { readonly url: string; readonly routeOptions: { readonly url: undefined } } {
+	return { url, routeOptions: { url: undefined } };
+}
+
+describe("isApiDocsPath", () => {
 	it("matches the UI, the document, assets and the legacy redirect — nothing else", () => {
-		expect([apiDocsPath(), `${apiDocsPath()}-json`, `${apiDocsPath()}/swagger-ui.css`, "/docs", "/docs?x=1"].map(isApiDocsRequest)).toEqual([true, true, true, true, true]);
-		expect(["/api/v1/docsearch", "/api/v1/health", "/documents"].map(isApiDocsRequest)).toEqual([false, false, false]);
+		expect([apiDocsPath(), `${apiDocsPath()}-json`, `${apiDocsPath()}/swagger-ui.css`, "/docs"].map(isApiDocsPath)).toEqual([true, true, true, true]);
+		expect(["/api/v1/docsearch", "/api/v1/health", "/documents"].map(isApiDocsPath)).toEqual([false, false, false]);
+	});
+});
+
+describe("isApiDocsRequest", () => {
+	it("decides on the matched route template, whatever the raw target looks like", () => {
+		expect(isApiDocsRequest({ url: "/v1/%64ocs-json", routeOptions: { url: `${apiDocsPath()}-json` } })).toBe(true);
+		expect(isApiDocsRequest({ url: "/api/v1/health", routeOptions: { url: "/api/v1/health" } })).toBe(false);
+	});
+
+	it("decodes an unrouted target before matching, and treats an undecodable one as a docs request (fail closed)", () => {
+		expect(isApiDocsRequest(unrouted("/docs?x=1"))).toBe(true);
+		expect(isApiDocsRequest(unrouted("/%64ocs"))).toBe(true);
+		expect(isApiDocsRequest(unrouted("/docs#fragment"))).toBe(true);
+		expect(isApiDocsRequest(unrouted("/api/v1/%zz"))).toBe(true);
+		expect(isApiDocsRequest(unrouted("/api/v1/health"))).toBe(false);
 	});
 });
 
@@ -53,6 +73,21 @@ describe("ApiDocsAccessGate (production)", () => {
 		const app = await appWithGate();
 		expect((await app.inject({ method: "GET", url: apiDocsPath(), headers: { authorization: "Bearer forged" } })).statusCode).toBe(401);
 		expect((await app.inject({ method: "GET", url: apiDocsPath(), cookies: { adminAccessToken: "admin-token" } })).statusCode).toBe(403);
+		await app.close();
+	});
+
+	// SECURITY-AUDIT-2026-10-25 finding 1: the router percent-decodes the path, so the gate must too.
+	it("gates percent-encoded, double-dash-encoded and fragment-bearing spellings of the docs routes", async () => {
+		const app = await appWithGate();
+		const docs = apiDocsPath();
+		const encodedFirstLetter = docs.replace(
+			/\/(?<letter>[a-z])(?<rest>[^/]*)$/u,
+			(_match: string, letter: string, rest: string): string => `/%${letter.charCodeAt(0).toString(16)}${rest}`,
+		);
+		for (const url of [`${encodedFirstLetter}-json`, `${docs}%2djson`, `${docs}%2Djson`, encodedFirstLetter, `${docs}-json#x`, `${docs}-json?x=1`]) {
+			const response = await app.inject({ method: "GET", url });
+			expect({ url, status: response.statusCode }).toEqual({ url, status: 401 });
+		}
 		await app.close();
 	});
 

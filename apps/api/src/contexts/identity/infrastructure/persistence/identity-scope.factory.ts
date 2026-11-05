@@ -14,6 +14,7 @@ import { TransactionalRequestAudit } from "../adapters/request-audit.adapter";
 import { PrismaDeviceSessionRepository } from "./prisma-device-session.repository";
 import { PrismaImpersonationSessionRepository } from "./prisma-impersonation-session.repository";
 import { PrismaMfaRecoveryRequestRepository } from "./prisma-mfa-recovery-request.repository";
+import { PrismaPasskeyRepository, PrismaWebAuthnChallengeRepository } from "./prisma-passkey.repository";
 import { PrismaPasswordResetTokenRepository } from "./prisma-password-reset-token.repository";
 import { PrismaTwoFactorEnrollmentRepository, PrismaTwoFactorLoginChallengeRepository } from "./prisma-two-factor.repository";
 import { PrismaUserAccountRepository } from "./prisma-user-account.repository";
@@ -44,6 +45,8 @@ export class IdentityScopeFactory implements ScopeFactory<IdentityScope, Prisma.
 			resetTokens: new PrismaPasswordResetTokenRepository(db),
 			twoFactor: new PrismaTwoFactorEnrollmentRepository(db),
 			challenges: new PrismaTwoFactorLoginChallengeRepository(db),
+			passkeys: new PrismaPasskeyRepository(db),
+			webAuthnChallenges: new PrismaWebAuthnChallengeRepository(db),
 			mfaRecoveries: new PrismaMfaRecoveryRequestRepository(db),
 			sessions: new PrismaDeviceSessionRepository(db),
 			impersonations: new PrismaImpersonationSessionRepository(db),

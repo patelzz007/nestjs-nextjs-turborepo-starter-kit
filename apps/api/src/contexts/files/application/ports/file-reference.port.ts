@@ -4,7 +4,7 @@ import type { ScopeFactory } from "../../../../platform/application/events/in-tr
 import type { TransactionalEventCollector } from "../../../../platform/application/events/transactional-event-collector";
 
 /** Why a file cannot be deleted yet. Owners report one; the files context answers with the matching documented error. */
-export type FileReferenceBlock = "REWARD_IMAGE" | "KYB_EVIDENCE";
+export type FileReferenceBlock = "REWARD_IMAGE" | "KYB_EVIDENCE" | "BROADCAST_IMAGE";
 
 /**
  * Which RLS session a deletion of this category runs in. `actor` is the default:

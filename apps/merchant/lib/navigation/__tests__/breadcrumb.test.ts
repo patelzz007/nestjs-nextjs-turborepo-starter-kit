@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveMerchantTrail } from "@/lib/navigation/breadcrumb";
+import { translateSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
+import { MERCHANT_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
+import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { tenantRoutes } from "@/lib/routes";
 
@@ -47,5 +50,16 @@ describe("resolveMerchantTrail", () => {
 
 	it("links an unknown tenant page back to the tenant root", () => {
 		expect(trailOf(`${routes.root}/not-a-page`)).toEqual([{ label: "Dashboard", href: routes.root }]);
+	});
+});
+
+describe("resolveMerchantTrail in another language (enhancement 5.12)", () => {
+	it("names every crumb as the translated sidebar does, keeping the links", () => {
+		const malay = translateSidebarMenu(MERCHANT_SIDEBAR_MENU, MERCHANT_SIDEBAR_LABELS, "ms");
+		const english = resolveMerchantTrail(routes.rewards.list, resolveHref);
+		const trail = resolveMerchantTrail(routes.rewards.list, resolveHref, malay, "ms");
+		expect(trail.map((item) => item.href)).toEqual(english.map((item) => item.href));
+		expect(trail.map((item) => item.label)).not.toEqual(english.map((item) => item.label));
+		expect(trail.map((item) => item.label)).toContain("Ganjaran");
 	});
 });

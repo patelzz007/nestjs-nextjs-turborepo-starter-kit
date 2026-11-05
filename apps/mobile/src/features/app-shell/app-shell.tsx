@@ -1,6 +1,6 @@
 // The frame of every signed-in screen (ADR 046): the app status (connection and session, derived
 // once — the drawer shows it), the app drawer (ADR 038), the toasts confirming what actions did
-// (ADR 047) and, laid over the screens, the shared page header — menu or back, notifications, and
+// (ADR 047), the session's capabilities for `<Can>` and the drawer's menu and, laid over the screens, the shared page header — menu or back, notifications, and
 // the page's title and subtitle. All of it is rendered once for the whole (app) group and never
 // re-mounts as screens change; the screens learn the header's height from PageHeaderClearance and
 // start their content below it, and feed it their scrolling through PageHeaderScroll.
@@ -17,6 +17,8 @@ import { PageHeaderScrollProvider, type PageHeaderScroll } from "../../lib/page-
 import { AppDrawerStoreProvider } from "../app-drawer/facade";
 import { createAppDrawerStore } from "../app-drawer/store";
 import { AppStatusProvider } from "../app-status/facade";
+import { SessionCapabilitiesProvider } from "../authorization/facade";
+import { ProfileLanguageSync } from "../language/profile-language-sync";
 import { ToastStoreProvider } from "../toast/facade";
 import { createToastStore } from "../toast/store";
 import { ToastHost } from "../toast/toast-host";
@@ -56,17 +58,20 @@ export function AppShell({ children }: AppShellProps): React.JSX.Element {
 		<AppStatusProvider>
 			<AppDrawerStoreProvider store={drawerStore}>
 				<ToastStoreProvider store={toastStore}>
-					<AppDrawer>
-						<PageHeaderClearanceProvider value={headerBottom}>
-							<PageHeaderScrollProvider value={headerScroll}>
-								<View className="flex-1">
-									{children}
-									<AppHeader scroll={headerScroll} onHeightChange={setHeaderHeight} onCollapseDistanceChange={reportCollapseDistance} />
-									<ToastHost top={toastTop} />
-								</View>
-							</PageHeaderScrollProvider>
-						</PageHeaderClearanceProvider>
-					</AppDrawer>
+					<SessionCapabilitiesProvider>
+						<AppDrawer>
+							<PageHeaderClearanceProvider value={headerBottom}>
+								<PageHeaderScrollProvider value={headerScroll}>
+									<View className="flex-1">
+										{children}
+										<AppHeader scroll={headerScroll} onHeightChange={setHeaderHeight} onCollapseDistanceChange={reportCollapseDistance} />
+										<ToastHost top={toastTop} />
+										<ProfileLanguageSync />
+									</View>
+								</PageHeaderScrollProvider>
+							</PageHeaderClearanceProvider>
+						</AppDrawer>
+					</SessionCapabilitiesProvider>
 				</ToastStoreProvider>
 			</AppDrawerStoreProvider>
 		</AppStatusProvider>

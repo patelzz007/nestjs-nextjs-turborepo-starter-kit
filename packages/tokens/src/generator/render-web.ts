@@ -4,6 +4,7 @@
 // What packages/ui's globals.css imports:
 //   :root          palette primitives, theme-independent tokens, the light theme
 //   .dark / .nord  the dark and Nord themes (every themed role, nothing else)
+//   .dark .admin-app  the admin panel's own re-maps (ADMIN_THEME_OVERRIDES: graphite dark)
 //   @theme inline  the Tailwind mapping that turns tokens into utilities
 // References stay `var(--…)` so the browser resolves them per element, exactly
 // as the hand-written CSS this replaced did.
@@ -36,6 +37,30 @@ const WEB_THEME_SELECTORS: Readonly<Record<ThemeName, string>> = {
 
 /** The selector of the theme that is in effect when no theme class is set. */
 const DEFAULT_THEME_SELECTOR = ":root";
+
+/** The admin panel's body class: its own theme layer applies inside it only (ADMIN_THEME_OVERRIDES). */
+const ADMIN_APP_SELECTOR = ".admin-app";
+
+/** Where an app's re-maps for `theme` apply: light only while no theme class is set, the others under their class. */
+function appThemeSelector(theme: ThemeName, appSelector: string): string {
+	const themeSelector = WEB_THEME_SELECTORS[theme];
+	return themeSelector === DEFAULT_THEME_SELECTOR ? `:root:not(.dark):not(.nord) ${appSelector}` : `${themeSelector} ${appSelector}`;
+}
+
+/** The admin panel's own theme rules, in theme order (none for a theme it doesn't re-map). */
+function adminThemeRules(source: TokenSource): readonly CssRule[] {
+	return ThemeNameSchema.options.flatMap((theme): readonly CssRule[] => {
+		const overrides = source.adminThemeOverrides[theme];
+		if (overrides === undefined) {
+			return [];
+		}
+		const declarations = ThemeRoleSchema.options.flatMap((role): readonly CssDeclaration[] => {
+			const value = overrides[role];
+			return value === undefined ? [] : [declaration(role, formatWebColor(value))];
+		});
+		return [rule(appThemeSelector(theme, ADMIN_APP_SELECTOR), declarations)];
+	});
+}
 
 function themeDeclarations(source: TokenSource, theme: ThemeName): readonly CssDeclaration[] {
 	const values = source.themes[theme];
@@ -91,7 +116,8 @@ export function renderWebStylesheet(source: TokenSource): string {
 	const header = generatedNotice([
 		"The web design tokens, imported by packages/ui src/styles/globals.css:",
 		":root holds the palette primitives, the theme-independent tokens and the light",
-		"theme; .dark and .nord hold the dark and Nord themes; @theme inline maps tokens to Tailwind utilities.",
+		"theme; .dark and .nord hold the dark and Nord themes; .admin-app holds the admin panel's own re-maps",
+		"(its dark theme is the phone's graphite); @theme inline maps tokens to Tailwind utilities.",
 	]);
-	return printStylesheet(header, [...themeRules, tailwindThemeRule(source)]);
+	return printStylesheet(header, [...themeRules, ...adminThemeRules(source), tailwindThemeRule(source)]);
 }

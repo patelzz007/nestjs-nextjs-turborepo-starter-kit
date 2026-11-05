@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { epochMs, OwnProfileSchema, type OwnProfile, type OwnProfileAvatar } from "@workspace/shared";
+import { appLanguageOf, epochMs, OwnProfileSchema, type OwnProfile, type OwnProfileAvatar } from "@workspace/shared";
 
 import type { PublicUrlResolve } from "../../../../config/public-url.resolver";
 import { IMAGE_RENDITIONS_SELECT, toImageSources } from "../../../files/public-api";
@@ -12,6 +12,7 @@ export const OWN_PROFILE_SELECT = {
 	id: true,
 	email: true,
 	fullName: true,
+	locale: true,
 	profileVersion: true,
 	createdAt: true,
 	updatedAt: true,
@@ -48,6 +49,7 @@ export function toOwnProfile(row: OwnProfileRow, resolve: PublicUrlResolve): Own
 		email: row.email,
 		fullName: row.fullName,
 		avatar: toLiveAvatar(row.avatar, resolve),
+		language: appLanguageOf(row.locale),
 		version: row.profileVersion,
 		createdAt: Number(row.createdAt),
 		updatedAt: Number(row.updatedAt),

@@ -10,7 +10,9 @@ import { revokedByUser } from "../../../domain/value-objects/session-revoker.val
 import type { IdentityScope } from "../../identity-scope";
 import type { AuthFlowSubjectPort } from "../../ports/auth-flow.port";
 import type { CredentialCryptoPort } from "../../ports/credential-crypto.port";
-import { AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, IDENTITY_UNIT_OF_WORK } from "../../ports/identity.tokens";
+import { BREACHED_PASSWORD_CHECK, AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, IDENTITY_UNIT_OF_WORK } from "../../ports/identity.tokens";
+import type { BreachedPasswordCheckPort } from "../../ports/breached-password.port";
+import { assertPasswordNotBreached } from "../../services/password-breach.policy";
 import { matchesRecentPassword } from "../../services/password-reuse.checker";
 import { ChangePasswordCommand } from "./change-password.command";
 
@@ -31,11 +33,13 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
 		@Inject(CREDENTIAL_CRYPTO) private readonly crypto: CredentialCryptoPort,
 		@Inject(AUTH_FLOW_SUBJECT) private readonly flowSubject: AuthFlowSubjectPort,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(BREACHED_PASSWORD_CHECK) private readonly breachCheck: BreachedPasswordCheckPort,
 	) {}
 
 	public async execute(command: ChangePasswordCommand): Promise<ChangePasswordResponse> {
 		const { actor, input } = command;
 		this.flowSubject.identify(input.userId);
+		await assertPasswordNotBreached(this.breachCheck, input.newPassword);
 		await this.uow.run(actor, async (scope: IdentityScope): Promise<void> => {
 			const account: UserAccount | null = await scope.accounts.findById(input.userId);
 			if (account === null) {

@@ -25,7 +25,7 @@ password field.
 
 ## Decision
 
-- **`AuthShell` (`src/components/auth-shell.tsx`), rendered once by `src/app/(auth)/_layout.tsx`
+- **`AuthShell` (`src/components/auth-shell.tsx`), rendered once by `src/app/(auth)/_layout.tsx` (since 2026-11-04 `src/app/auth/(forms)/_layout.tsx`, URLs `/auth/…`)
   around the stack:**
   - **Brand area:** the dark auth panel (`bg-auth-panel`, the same in both themes), with the
     brand centred as on the web panel. It shows a large `auth-brand` tile with the web's mark
@@ -57,7 +57,7 @@ password field.
 
 ## Consequences
 
-- A new signed-out screen is a route file in `src/app/(auth)` that returns an `AuthPage`. It never
+- A new signed-out screen is a route file in `src/app/auth/(forms)` (`src/app/(auth)` until 2026-11-04) that returns an `AuthPage`. It never
   needs a `Screen`, a logo or its own keyboard handling.
 - The brand name is the app's configured name (`appName`), and the mark is set in the `(auth)`
   layout. A product changes both in one place.

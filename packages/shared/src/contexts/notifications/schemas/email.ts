@@ -29,6 +29,8 @@ export const EmailTemplateKeySchema = z.enum([
 	"security-alert",
 	"two-factor-enabled",
 	"two-factor-disabled",
+	"passkey-added",
+	"passkey-removed",
 	"admin-alert",
 	"api-key-created",
 	"reward-claim-otp",

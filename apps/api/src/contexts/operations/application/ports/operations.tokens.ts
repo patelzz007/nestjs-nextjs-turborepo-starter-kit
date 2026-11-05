@@ -12,6 +12,12 @@ export const OPS_SERVERS_WRITE_OPERATION: SystemOperationName = "operations.serv
 export const OPS_SETTINGS_WRITE_OPERATION: SystemOperationName = "operations.settings.write";
 export const OPS_MONITOR_COLLECT_OPERATION: SystemOperationName = "operations.monitor.collect";
 export const OPS_INSTANCE_RECORD_OPERATION: SystemOperationName = "operations.instance.record";
+/** The weekly restore drill (enhancement 2.6). */
+export const OPS_RESTORE_DRILL_OPERATION: SystemOperationName = "operations.backup.restore_drill";
+/** The public status page (enhancement 4.5): anonymous reads, staff reads and staff writes. */
+export const STATUS_PUBLIC_READ_OPERATION: SystemOperationName = "operations.status.public_read";
+export const STATUS_READ_OPERATION: SystemOperationName = "operations.status.read";
+export const STATUS_WRITE_OPERATION: SystemOperationName = "operations.status.write";
 export const OPS_HISTORY_MAINTAIN_OPERATION: SystemOperationName = "operations.history.maintain";
 export const OPS_BACKUP_WRITE_OPERATION: SystemOperationName = "operations.backup.write";
 export const OPS_BACKUP_RUN_OPERATION: SystemOperationName = "operations.backup.run";
@@ -35,4 +41,8 @@ export const LOAD_TEST_RECORDER = Symbol("LOAD_TEST_RECORDER");
 export const OPERATIONS_READ = Symbol("OPERATIONS_READ");
 /** The Rate limits and Cache pages (`OperationsTrafficService`). */
 export const OPERATIONS_TRAFFIC = Symbol("OPERATIONS_TRAFFIC");
+/** The Queues page (`OperationsQueuesService`, enhancement 4.4). */
+export const OPERATIONS_QUEUES = Symbol("OPERATIONS_QUEUES");
+/** The public status page and its incidents (`StatusPageService`, enhancement 4.5). */
+export const STATUS_PAGE = Symbol("STATUS_PAGE");
 export const REQUEST_METRICS = Symbol("REQUEST_METRICS");

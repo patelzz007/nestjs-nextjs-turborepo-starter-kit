@@ -53,18 +53,20 @@ export class PrismaRewardReadRepository implements RewardReadPort {
 	) {}
 
 	public async listTenantRewards(actor: ActorContext, grant: MerchantAccessGrant, query: MerchantRewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
-		return this.session.read(actor, async (db) => {
-			const result = await fetchListPage(query, {
+		// The page is read and its transaction closed BEFORE the merchants' display data is fetched: that read
+		// is a transaction of its own, and opening it while this one holds its connection starved the pool.
+		const result = await this.session.read(actor, async (db) =>
+			fetchListPage(query, {
 				where: buildTenantRewardListWhere(grant, query),
 				order: buildTenantRewardListOrder(query),
 				keyset: rewardListKeyset<RewardResponseRow>(),
 				and: (left: Prisma.RewardWhereInput, right: Prisma.RewardWhereInput): Prisma.RewardWhereInput => ({ AND: [left, right] }),
 				count: (where) => db.reward.count({ where }),
 				findMany: (args): Promise<RewardResponseRow[]> => db.reward.findMany({ ...args, include: REWARD_RESPONSE_INCLUDE }),
-			});
-			const items = await this.toResponses(db, result.items);
-			return toPaginatedServiceResult({ ...result, items }, query);
-		});
+			}),
+		);
+		const items = await this.toResponses(result.items);
+		return toPaginatedServiceResult({ ...result, items }, query);
 	}
 
 	public async summarizeTenantRewards(actor: ActorContext, grant: MerchantAccessGrant): Promise<MerchantRewardSummary> {
@@ -82,59 +84,63 @@ export class PrismaRewardReadRepository implements RewardReadPort {
 	}
 
 	public async findTenantReward(actor: ActorContext, grant: MerchantAccessGrant, rewardId: string): Promise<RewardResponse | null> {
-		return this.session.read(actor, async (db) =>
-			this.toResponse(db, await db.reward.findFirst({ where: { AND: [tenantRewardWhere(grant), { id: rewardId }] }, include: REWARD_RESPONSE_INCLUDE })),
+		const row = await this.session.read(actor, (db) =>
+			db.reward.findFirst({ where: { AND: [tenantRewardWhere(grant), { id: rewardId }] }, include: REWARD_RESPONSE_INCLUDE }),
 		);
+		return this.toResponse(row);
 	}
 
 	public async listPendingReview(actor: ActorContext, query: AdminPendingRewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
-		return this.session.readAcrossTenants(actor, async (db) => {
-			const result = await fetchListPage(query, {
+		// The page is read and its transaction closed BEFORE the merchants' display data is fetched: that read
+		// is a transaction of its own, and opening it while this one holds its connection starved the pool.
+		const result = await this.session.readAcrossTenants(actor, async (db) =>
+			fetchListPage(query, {
 				where: buildPendingReviewWhere(),
 				order: buildPendingReviewOrder(query),
 				keyset: PENDING_REVIEW_LIST_KEYSET,
 				and: (left: Prisma.RewardWhereInput, right: Prisma.RewardWhereInput): Prisma.RewardWhereInput => ({ AND: [left, right] }),
 				count: (where) => db.reward.count({ where }),
 				findMany: (args): Promise<RewardResponseRow[]> => db.reward.findMany({ ...args, include: REWARD_RESPONSE_INCLUDE }),
-			});
-			const items = await this.toResponses(db, result.items);
-			return toPaginatedServiceResult({ ...result, items }, query);
-		});
+			}),
+		);
+		const items = await this.toResponses(result.items);
+		return toPaginatedServiceResult({ ...result, items }, query);
 	}
 
 	public async findConsumerForReview(actor: ActorContext, rewardId: string): Promise<RewardResponse | null> {
-		return this.session.readAcrossTenants(actor, async (db) =>
-			this.toResponse(db, await db.reward.findFirst({ where: { id: rewardId, isDeleted: false, rewardKind: "CONSUMER" }, include: REWARD_RESPONSE_INCLUDE })),
+		const row = await this.session.readAcrossTenants(actor, (db) =>
+			db.reward.findFirst({ where: { id: rewardId, isDeleted: false, rewardKind: "CONSUMER" }, include: REWARD_RESPONSE_INCLUDE }),
 		);
+		return this.toResponse(row);
 	}
 
 	public async listMarketplace(actor: ActorContext, query: RewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
-		return this.session.readPublished(actor, async (db) => {
-			const result = await fetchListPage(query, {
+		// The page is read and its transaction closed BEFORE the merchants' display data is fetched: that read
+		// is a transaction of its own, and opening it while this one holds its connection starved the pool.
+		const result = await this.session.readPublished(actor, async (db) =>
+			fetchListPage(query, {
 				where: buildMarketplaceWhere(query, viewerUserIdOf(actor)),
 				order: buildMarketplaceOrder(query),
 				keyset: rewardListKeyset<MarketplaceRewardRow>(),
 				and: (left: Prisma.RewardWhereInput, right: Prisma.RewardWhereInput): Prisma.RewardWhereInput => ({ AND: [left, right] }),
 				count: (where) => db.reward.count({ where }),
 				findMany: (args): Promise<MarketplaceRewardRow[]> => db.reward.findMany({ ...args, select: MARKETPLACE_REWARD_SELECT }),
-			});
-			const items = await this.toResponses(db, result.items);
-			return toPaginatedServiceResult({ ...result, items }, query);
-		});
+			}),
+		);
+		const items = await this.toResponses(result.items);
+		return toPaginatedServiceResult({ ...result, items }, query);
 	}
 
 	public async findPublished(actor: ActorContext, rewardId: string): Promise<RewardResponse | null> {
-		return this.session.readPublished(actor, async (db) =>
-			this.toResponse(
-				db,
-				await db.reward.findFirst({
-					where: {
-						AND: [{ id: rewardId, isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER" }, OPERATING_MERCHANT_WHERE, rewardAudienceWhere(viewerUserIdOf(actor))],
-					},
-					select: MARKETPLACE_REWARD_SELECT,
-				}),
-			),
+		const row = await this.session.readPublished(actor, (db) =>
+			db.reward.findFirst({
+				where: {
+					AND: [{ id: rewardId, isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER" }, OPERATING_MERCHANT_WHERE, rewardAudienceWhere(viewerUserIdOf(actor))],
+				},
+				select: MARKETPLACE_REWARD_SELECT,
+			}),
 		);
+		return this.toResponse(row);
 	}
 
 	public async listDueForAutoPublish(actor: ActorContext, now: EpochMs, limit: number, after: DueForAutoPublish | null): Promise<readonly DueForAutoPublish[]> {
@@ -151,17 +157,20 @@ export class PrismaRewardReadRepository implements RewardReadPort {
 		return rows.flatMap((row): DueForAutoPublish[] => (row.autoPublishAt === null ? [] : [{ rewardId: row.id, autoPublishAt: epochMs(Number(row.autoPublishAt)) }]));
 	}
 
-	/** One page of rewards, with their merchants' display data fetched once for the whole page. */
-	private async toResponses(db: Prisma.TransactionClient, rows: readonly RewardResponseSource[]): Promise<RewardResponse[]> {
+	/**
+	 * One page of rewards, with their merchants' display data fetched once for the whole page. Called only once the
+	 * reward read's transaction has closed: the display read opens a transaction (a connection) of its own.
+	 */
+	private async toResponses(rows: readonly RewardResponseSource[]): Promise<RewardResponse[]> {
 		const tenants = await this.tenants.displayData(rows.map((row) => row.tenantId));
 		return rows.map((row) => mapRewardToResponse(row, tenants.get(row.tenantId), this.resolve));
 	}
 
-	private async toResponse(db: Prisma.TransactionClient, row: RewardResponseSource | null): Promise<RewardResponse | null> {
+	private async toResponse(row: RewardResponseSource | null): Promise<RewardResponse | null> {
 		if (row === null) {
 			return null;
 		}
-		const [response] = await this.toResponses(db, [row]);
+		const [response] = await this.toResponses([row]);
 		return response ?? null;
 	}
 }

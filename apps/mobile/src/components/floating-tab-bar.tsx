@@ -6,7 +6,8 @@
 //
 // Presentational and controlled: the caller (src/features/navigation/app-tab-bar.tsx)
 // says which tabs exist, which one is selected and what a press does. Colours
-// are token utilities only, so the bar follows the light and dark themes.
+// are the bar's OWN token utilities (`bg-tab-bar`, `bg-tab-bar-active`, …, ADR 079), so it
+// follows every theme but never moves when the app's shared surfaces are redesigned.
 
 import * as React from "react";
 import { Pressable, Text, View, type LayoutChangeEvent } from "react-native";
@@ -36,7 +37,7 @@ const LABEL_MAX_FONT_SCALE = 1.3;
 const BAR_BOTTOM_GAP = 12;
 
 /** Shared by the visible label and its measuring copy, so both lay out alike. */
-const LABEL_CLASSES = "font-sans-semibold text-sm text-primary-foreground";
+const LABEL_CLASSES = "font-sans-semibold text-sm text-tab-bar-active-foreground";
 
 export interface FloatingTabBarItem {
 	/** Stable identity of the tab (the route key). */
@@ -76,7 +77,7 @@ export function FloatingTabBar({ items, bottomInset, onHeightChange, testID }: F
 			<View
 				accessibilityRole="tablist"
 				{...(testID === undefined ? {} : { testID: `${testID}-tablist` })}
-				className="w-full max-w-85 flex-row items-center justify-between rounded-full border border-border bg-card p-1.5 shadow-lg">
+				className="border-tab-bar-border bg-tab-bar w-full max-w-85 flex-row items-center justify-between rounded-full border p-1.5 shadow-lg">
 				{items.map((item: FloatingTabBarItem): React.JSX.Element => (
 					<FloatingTab key={item.key} item={item} />
 				))}
@@ -122,13 +123,13 @@ function FloatingTab({ item }: FloatingTabProps): React.JSX.Element {
 			onLongPress={onLongPress}
 			testID={testID}
 			className="h-12 min-w-12 flex-row items-center justify-center rounded-full px-3 active:opacity-70">
-			<StyledAnimatedView className="absolute inset-0 rounded-full bg-primary" style={capsuleStyle} />
+			<StyledAnimatedView className="bg-tab-bar-active absolute inset-0 rounded-full" style={capsuleStyle} />
 			<View className="size-6 items-center justify-center">
 				<StyledAnimatedView className="absolute" style={restingIconStyle}>
-					<Icon icon={icon} colorClassName="accent-muted-foreground" />
+					<Icon icon={icon} colorClassName="accent-tab-bar-icon" />
 				</StyledAnimatedView>
 				<StyledAnimatedView style={selectedIconStyle}>
-					<Icon icon={icon} weight="bold" colorClassName="accent-primary-foreground" />
+					<Icon icon={icon} weight="bold" colorClassName="accent-tab-bar-active-foreground" />
 				</StyledAnimatedView>
 			</View>
 			<StyledAnimatedView className="overflow-hidden" style={labelSlotStyle}>

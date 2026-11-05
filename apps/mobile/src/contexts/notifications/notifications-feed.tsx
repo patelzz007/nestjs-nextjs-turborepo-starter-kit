@@ -8,6 +8,7 @@
 // does; this screen owns only what is open, and the minute clock the times are read against.
 
 import { BroadcastReportReasonSchema, PLATFORM_DISPLAY_REGION, type BroadcastReportReason, type InAppNotificationResponse } from "@workspace/shared";
+import { Alert } from "@workspace/ui-native/components/alert";
 import { BottomSheet } from "@workspace/ui-native/components/bottom-sheet";
 import { Button } from "@workspace/ui-native/components/button";
 import { DropdownMenu, type DropdownMenuItemData } from "@workspace/ui-native/components/dropdown-menu";
@@ -35,6 +36,7 @@ import { formatDateTime } from "../../lib/time-format";
 import { useNow } from "../../lib/use-now";
 import { externalLinkOf, feedSectionsOf, isUnread, noticeKindOf, noticeSenderOf, type FeedSection, type InboxFilter } from "./feed-model";
 import { NOTIFICATIONS_COPY } from "./labels";
+import type { NotificationsFeedState } from "./inbox-state";
 
 /** The times ("25m") are read against a clock that ticks once a minute. */
 const CLOCK_TICK_MS = 60_000;
@@ -42,10 +44,6 @@ const CLOCK_TICK_MS = 60_000;
 const SKELETON_ROWS = 4;
 
 /** Where the feed stands: its first page loading, failed, or the notices so far. */
-export type NotificationsFeedState =
-	| { readonly kind: "loading" }
-	| { readonly kind: "error" }
-	| { readonly kind: "ready"; readonly notifications: readonly InAppNotificationResponse[]; readonly hasMore: boolean };
 
 export interface NotificationsFeedProps {
 	readonly state: NotificationsFeedState;
@@ -55,6 +53,8 @@ export interface NotificationsFeedProps {
 	readonly unreadCount: number;
 	/** A change is in flight: the actions wait for it. */
 	readonly busy: boolean;
+	/** The phone has no connection: reading, removing and reporting wait for it (the list stays readable). */
+	readonly offline: boolean;
 	readonly loadingMore: boolean;
 	readonly onLoadMore: () => void;
 	readonly onRetry: () => void;
@@ -76,7 +76,8 @@ export function NotificationsFeed({
 	filter,
 	onFilterChange,
 	unreadCount,
-	busy,
+	busy: changing,
+	offline,
 	loadingMore,
 	onLoadMore,
 	onRetry,
@@ -89,6 +90,7 @@ export function NotificationsFeed({
 	const now = useNow({ intervalMs: CLOCK_TICK_MS, running: true });
 	const [openedId, setOpenedId] = React.useState<string | null>(null);
 	const notifications = state.kind === "ready" ? state.notifications : [];
+	const busy = changing || offline;
 	const opened = notifications.find((notification: InAppNotificationResponse): boolean => notification.id === openedId) ?? null;
 
 	const changeFilter = React.useCallback(
@@ -129,7 +131,14 @@ export function NotificationsFeed({
 				<IconButton icon={SettingsIcon} label={NOTIFICATIONS_COPY.settings} variant="ghost" size="sm" onPress={onOpenSettings} />
 			</View>
 			{state.kind === "loading" ? <FeedSkeleton /> : null}
-			{state.kind === "error" ? <ErrorState message={NOTIFICATIONS_COPY.loadError} retryLabel={NOTIFICATIONS_COPY.retry} onRetry={onRetry} /> : null}
+			{state.kind === "error" ? (
+				<ErrorState
+					message={state.reason === "offline" ? NOTIFICATIONS_COPY.offlineError : NOTIFICATIONS_COPY.loadError}
+					retryLabel={NOTIFICATIONS_COPY.retry}
+					onRetry={onRetry}
+				/>
+			) : null}
+			{state.kind === "ready" && state.outOfDate !== null ? <Alert tone="warning" message={NOTIFICATIONS_COPY.outOfDate[state.outOfDate]} /> : null}
 			{state.kind === "ready" && notifications.length === 0 ? (
 				<EmptyState icon={BellIcon} message={filter === "unread" ? NOTIFICATIONS_COPY.emptyUnread : NOTIFICATIONS_COPY.empty} />
 			) : null}
@@ -294,11 +303,11 @@ function FeedSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonGroup accessibilityLabel={NOTIFICATIONS_COPY.description} className="gap-1">
 			{Array.from({ length: SKELETON_ROWS }, (_unused: undefined, row: number): React.JSX.Element => (
-				<View key={row} className="flex-row items-center gap-3 px-3 py-2.5">
-					<Skeleton className="size-14 rounded-full" />
+				<View key={row} className="flex-row items-center gap-3 px-3 py-2">
+					<Skeleton className="size-11 rounded-full" />
 					<View className="flex-1 gap-1">
-						<SkeletonText size="base" widthClassName="w-11/12" />
-						<SkeletonText size="base" widthClassName="w-2/3" />
+						<SkeletonText size="sm" widthClassName="w-11/12" />
+						<SkeletonText size="sm" widthClassName="w-2/3" />
 						<SkeletonText size="sm" widthClassName="w-12" />
 					</View>
 				</View>

@@ -15,6 +15,9 @@ import { SUPERADMIN_BOOTSTRAP_OPERATION } from "../../application/ports/identity
 /** Unique index on `User.email`: a violation means a concurrent signup took the address first. */
 export const USERS_EMAIL_UNIQUE_INDEX = "User_email_key";
 
+/** The tombstone's name (ADR 077). */
+export const ERASED_ACCOUNT_NAME = "Deleted user";
+
 /** The row the atomic failed-attempt statement returns. */
 const FailedAttemptRowSchema = z.object({
 	failedAttempts: z.number().int().nonnegative(),
@@ -32,7 +35,9 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
 	}
 
 	public async findByEmail(email: EmailAddress): Promise<UserAccount | null> {
-		const row = await this.db.user.findUnique({ where: { email: email.value }, select: USER_ACCOUNT_SELECT });
+		// Live accounts only: email is unique among them, so a soft-deleted account with the same email is never
+		// the one signed in to (or found for a reset).
+		const row = await this.db.user.findUnique({ where: { email: email.value, isDeleted: false }, select: USER_ACCOUNT_SELECT });
 		return row === null ? null : toUserAccount(row);
 	}
 
@@ -42,7 +47,8 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
 	}
 
 	public async existsByEmail(email: EmailAddress): Promise<boolean> {
-		return (await this.db.user.count({ where: { email: email.value } })) > 0;
+		// A soft-deleted account doesn't keep its email taken: signing up again with it is allowed.
+		return (await this.db.user.count({ where: { email: email.value, isDeleted: false } })) > 0;
 	}
 
 	public async add(account: UserAccount): Promise<void> {
@@ -193,6 +199,40 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
 						banReason: change.ban.reason,
 						tokenVersion: { increment: 1 },
 						updatedAt: change.ban.bannedAt,
+					},
+				});
+				if (written.count !== 1) {
+					throw new ConcurrentModificationError(userId);
+				}
+				return;
+			}
+			case "erased": {
+				const written = await this.db.user.updateMany({
+					where: { id: userId, tokenVersion: change.previousTokenVersion.value, erasedAt: null },
+					data: {
+						email: change.tombstoneEmail,
+						fullName: ERASED_ACCOUNT_NAME,
+						passwordHash: change.unusablePasswordHash,
+						phone: null,
+						phoneVerifiedAt: null,
+						emailVerifiedAt: null,
+						isActive: false,
+						twoFactorEnabled: false,
+						twoFactorSecretCiphertext: null,
+						twoFactorSecretIv: null,
+						twoFactorSecretKeyVersion: null,
+						twoFactorLastTotpStep: null,
+						mfaEnrolledAt: null,
+						mfaAssuredAt: null,
+						lastLoginAt: null,
+						lockedUntil: null,
+						failedLoginAttempts: 0,
+						pendingAttributionToken: null,
+						pendingAttributionExpiresAt: null,
+						tokenVersion: { increment: 1 },
+						erasedAt: change.at,
+						authorizationChangedAt: change.at,
+						updatedAt: change.at,
 					},
 				});
 				if (written.count !== 1) {

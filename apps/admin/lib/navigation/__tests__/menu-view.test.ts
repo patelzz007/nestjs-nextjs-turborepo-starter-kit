@@ -14,13 +14,14 @@ const ITEMS: readonly CompiledSidebarMenuItem[] = [
 	{
 		id: "settings",
 		title: "Settings",
+		labelKey: "settings",
 		url: "/settings",
 		children: [
-			{ id: "settings-general", title: "General", url: "/settings/general" },
-			{ id: "settings-security", title: "Security", url: "/settings/security" },
+			{ id: "settings-general", title: "General", labelKey: "general", url: "/settings/general" },
+			{ id: "settings-security", title: "Security", labelKey: "security", url: "/settings/security" },
 		],
 	},
-	{ id: "docs", title: "Docs", url: "/docs", children: [{ id: "docs-alpha", title: "Alpha", url: "/docs/alpha", disabled: true }] },
+	{ id: "docs", title: "Docs", labelKey: "docs", url: "/docs", children: [{ id: "docs-alpha", title: "Alpha", labelKey: "alpha", url: "/docs/alpha", disabled: true }] },
 ];
 
 const RAW_MENU: SidebarMenuData = {
@@ -28,17 +29,19 @@ const RAW_MENU: SidebarMenuData = {
 	sections: [
 		{
 			title: "Main",
+			labelKey: "main",
 			items: [
-				{ title: "Security", url: "/main/security" },
-				{ title: "Security", url: "/main/security-2" },
+				{ title: "Security", labelKey: "security", url: "/main/security" },
+				{ title: "Security", labelKey: "security", url: "/main/security-2" },
 			],
 		},
 		{
 			title: "Account",
-			items: [{ title: "Security", url: "/account/security" }],
+			labelKey: "account",
+			items: [{ title: "Security", labelKey: "security", url: "/account/security" }],
 		},
 	],
-	bottomItems: [{ title: "Support", url: "/support" }],
+	bottomItems: [{ title: "Support", labelKey: "support", url: "/support" }],
 };
 
 describe("isRouteActive", () => {
@@ -120,10 +123,11 @@ describe("computeRouteState", () => {
 			{
 				id: "my-rewards",
 				title: "My Rewards",
+				labelKey: "my-rewards",
 				url: "/t/jonker-street-kitchen/rewards",
 				children: [
-					{ id: "all-rewards", title: "All Rewards", url: "/t/jonker-street-kitchen/rewards" },
-					{ id: "rewards-new", title: "Create New", url: "/t/jonker-street-kitchen/rewards/new" },
+					{ id: "all-rewards", title: "All Rewards", labelKey: "all-rewards", url: "/t/jonker-street-kitchen/rewards" },
+					{ id: "rewards-new", title: "Create New", labelKey: "create-new", url: "/t/jonker-street-kitchen/rewards/new" },
 				],
 			},
 		];
@@ -155,10 +159,11 @@ describe("computeRouteState", () => {
 			{
 				id: "docs",
 				title: "Docs",
+				labelKey: "docs",
 				url: "/docs",
 				children: [
-					{ id: "docs-all", title: "View All Docs", url: "/docs" },
-					{ id: "docs-settings", title: "Settings", url: "/docs/settings" },
+					{ id: "docs-all", title: "View All Docs", labelKey: "view-all-docs", url: "/docs" },
+					{ id: "docs-settings", title: "Settings", labelKey: "settings", url: "/docs/settings" },
 				],
 			},
 		];
@@ -176,10 +181,11 @@ describe("computeRouteState", () => {
 			{
 				id: "docs",
 				title: "Docs",
+				labelKey: "docs",
 				url: "/docs",
 				children: [
-					{ id: "docs-all", title: "View All Docs", url: "/docs" },
-					{ id: "docs-settings", title: "Settings", url: "/docs/settings" },
+					{ id: "docs-all", title: "View All Docs", labelKey: "view-all-docs", url: "/docs" },
+					{ id: "docs-settings", title: "Settings", labelKey: "settings", url: "/docs/settings" },
 				],
 			},
 		];
@@ -230,11 +236,12 @@ describe("filterItemsBySearch", () => {
 			{
 				id: "analytics",
 				title: "Analytics",
+				labelKey: "analytics",
 				url: "/analytics",
 				disabled: true,
-				children: [{ id: "analytics-sales", title: "Sales", url: "/analytics/sales", disabled: true }],
+				children: [{ id: "analytics-sales", title: "Sales", labelKey: "sales", url: "/analytics/sales", disabled: true }],
 			},
-			{ id: "docs", title: "Docs", url: "/docs", children: [{ id: "docs-alpha", title: "Alpha", url: "/docs/alpha", disabled: true }] },
+			{ id: "docs", title: "Docs", labelKey: "docs", url: "/docs", children: [{ id: "docs-alpha", title: "Alpha", labelKey: "alpha", url: "/docs/alpha", disabled: true }] },
 		];
 		// "Sales" only exists inside the disabled "Analytics" parent, whose children
 		// are pruned at render — the match would be invisible, so it must not surface.

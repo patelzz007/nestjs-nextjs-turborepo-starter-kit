@@ -7,6 +7,7 @@
 // ============================================
 
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
+import { withSecurityHeaders, type SecurityHeadersOptions } from "@workspace/client/lib/security/security-headers";
 import { decodeJwtPayload } from "@workspace/client/lib/contexts/identity/edge/jwt";
 import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/contexts/identity/edge/restricted-session";
 import { isAllowedWebPostLoginRedirect, isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/contexts/identity/lib/routes";
@@ -47,6 +48,9 @@ const DEFAULT_AUTHENTICATED_PATH: string = ROUTES.dashboard.browse;
  * signed-in member sees their signed-in chrome there.
  */
 const HAS_PUBLIC_EXACT_ROUTE = false;
+
+/** The shared response security headers: a nonce CSP, no framing (@workspace/client lib/security/security-headers). */
+const SECURITY_HEADERS: SecurityHeadersOptions = { apiBaseUrl: API_BASE_URL, development: serverEnv.NODE_ENV === NodeEnvSchema.enum.development };
 
 function redirectToLogin(request: NextRequest, pathname: string, rotatedCookies: readonly string[]): NextResponse {
 	const loginUrl = new URL(ROUTES.auth.login, request.url);
@@ -100,7 +104,12 @@ function applyRotatedCookies(response: NextResponse, setCookies: readonly string
 	return response;
 }
 
-export async function proxy(request: NextRequest): Promise<NextResponse> {
+/** Every route runs with the shared security headers; `next` continues the request carrying them. */
+export function proxy(request: NextRequest): Promise<NextResponse> {
+	return withSecurityHeaders(request, routeRequest, SECURITY_HEADERS);
+}
+
+async function routeRequest(request: NextRequest, next: () => NextResponse): Promise<NextResponse> {
 	const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
 	const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 	const { pathname } = request.nextUrl;
@@ -133,7 +142,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		if (isProtectedRoute) {
 			return redirectToLogin(request, pathname, rotatedCookies);
 		}
-		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+		return serveGuestResponse(next(), rotatedCookies, accessToken);
 	}
 
 	const isAuthenticated = hasRouteSession(refreshToken);
@@ -160,14 +169,14 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	}
 
 	if (isAuthRoute && !isAuthenticated && accessToken !== undefined) {
-		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+		return serveGuestResponse(next(), rotatedCookies, accessToken);
 	}
 
 	if (isGuestBrowsable && !isAuthenticated && accessToken !== undefined) {
-		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+		return serveGuestResponse(next(), rotatedCookies, accessToken);
 	}
 
-	return applyRotatedCookies(NextResponse.next(), rotatedCookies);
+	return applyRotatedCookies(next(), rotatedCookies);
 }
 
 export const config = {
@@ -178,8 +187,9 @@ export const config = {
 		 * - _next/static (static files)
 		 * - _next/image (image optimization files)
 		 * - favicon.ico, sitemap.xml, robots.txt (static files)
+		 * - .well-known (the passkey app-association files, ADR 080: public, fetched by Google's and Apple's checkers)
 		 * - images, fonts, etc.
 		 */
-		"/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|otf)).*)",
+		"/((?!api|_next/static|_next/image|\\.well-known/|favicon.ico|sitemap.xml|robots.txt|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|otf)).*)",
 	],
 };

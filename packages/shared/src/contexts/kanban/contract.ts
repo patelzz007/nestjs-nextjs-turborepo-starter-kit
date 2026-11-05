@@ -19,6 +19,7 @@ import {
 	KanbanAttachmentSchema,
 	KanbanBoardQuerySchema,
 	KanbanBoardSchema,
+	KanbanImportReportSchema,
 	KanbanChecklistItemPathSchema,
 	KanbanColumnPathSchema,
 	KanbanCommentSchema,
@@ -48,6 +49,7 @@ export const kanbanContract = {
 	search: defineContract({ method: "GET", path: kanbanRoutes.search, input: KanbanSearchQuerySchema, response: singleResponse(KanbanSearchResultsSchema) }),
 	createTask: defineContract({ method: "POST", path: kanbanRoutes.createTask, input: CreateKanbanTaskSchema, response: singleResponse(KanbanTaskDetailSchema) }),
 	importTasks: defineContract({ method: "POST", path: kanbanRoutes.importTasks, input: ImportKanbanTasksSchema, response: singleResponse(KanbanBoardSchema) }),
+	previewImport: defineContract({ method: "POST", path: kanbanRoutes.previewImport, input: ImportKanbanTasksSchema, response: singleResponse(KanbanImportReportSchema) }),
 	task: defineContract({ method: "GET", path: kanbanRoutes.task, input: KanbanTaskPathSchema, response: singleResponse(KanbanTaskDetailSchema) }),
 	updateTask: defineContract({
 		method: "PATCH",

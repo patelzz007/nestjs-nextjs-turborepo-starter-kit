@@ -1,40 +1,33 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 
-import { SKELETON_MOTION } from "@workspace/tokens";
 import { describe, expect, it } from "vitest";
 
 /**
- * The docs site repeats the apps' skeleton sweep in its own stylesheet (it
- * doesn't load the UI kit's CSS). This keeps its timing and travel on
- * SKELETON_MOTION, the token the web kit and the mobile app share.
+ * The docs load the UI kit's stylesheet, so their one skeleton (a diagram while it renders) uses the
+ * kit's sweep: its `skeleton-sweep` keyframes and `--skeleton-sweep-duration` token (held to
+ * SKELETON_MOTION by the kit's own parity test), and the same sheen gradient as `.skeleton-bone`.
+ * The docs never define a sweep of their own.
  */
-const CSS = readFileSync(new URL("../global.css", import.meta.url), "utf8");
+const require = createRequire(import.meta.url);
+const DOCS_CSS = readFileSync(new URL("../app.css", import.meta.url), "utf8");
+const KIT_CSS = readFileSync(require.resolve("@workspace/ui/globals.css").replace(/globals\.css$/, "components.css"), "utf8");
 
-const PERCENT = 100;
-const MS_PER_SECOND = 1000;
-/** The gradient image is this many band-widths wide, with the band starting two band-widths in (its middle fifth). */
-const IMAGE_BAND_WIDTHS = 5;
-const BAND_OFFSET_BAND_WIDTHS = 2;
-
-function vw(viewportFraction: number): string {
-	return `${String(Math.round(viewportFraction * PERCENT))}vw`;
+function declaration(css: string, property: string, after: string): string {
+	const start = css.indexOf(after);
+	const match = new RegExp(`${property}:\\s*(?<value>[^;]+);`).exec(css.slice(start));
+	return match?.groups?.value ?? "";
 }
 
-describe("docs skeleton sweep matches SKELETON_MOTION", () => {
-	const bandOffset = SKELETON_MOTION.bandWidthViewport * BAND_OFFSET_BAND_WIDTHS;
-
-	it("runs one cycle in sweepCycleMs", () => {
-		expect(CSS).toContain(`--skeleton-sweep-duration: ${String(SKELETON_MOTION.sweepCycleMs / MS_PER_SECOND)}s;`);
-		expect(CSS).toContain("animation: skeleton-sweep var(--skeleton-sweep-duration) ease-in-out infinite;");
+describe("docs skeleton follows the kit's sweep", () => {
+	it("animates with the kit's keyframes and timing token", () => {
+		expect(declaration(DOCS_CSS, "animation", '.diagram[aria-busy="true"] .diagram-source')).toBe(declaration(KIT_CSS, "animation", ".skeleton-bone {"));
+		expect(DOCS_CSS).not.toContain("@keyframes skeleton-sweep");
 	});
 
-	it("travels for travelFraction of the cycle between the band's start and end", () => {
-		expect(CSS).toContain(`background-position-x: ${vw(SKELETON_MOTION.bandStartViewport - bandOffset)};`);
-		expect(CSS).toContain(`background-position-x: ${vw(SKELETON_MOTION.bandEndViewport - bandOffset)};`);
-		expect(CSS).toMatch(new RegExp(`${String(Math.round(SKELETON_MOTION.travelFraction * PERCENT))}%,\\s*to \\{`));
-	});
-
-	it("draws a band bandWidthViewport wide", () => {
-		expect(CSS).toContain(`background-size: ${vw(SKELETON_MOTION.bandWidthViewport * IMAGE_BAND_WIDTHS)} 100%;`);
+	it("draws the kit's sheen band", () => {
+		for (const property of ["background-image", "background-size", "background-attachment"]) {
+			expect(declaration(DOCS_CSS, property, '.diagram[aria-busy="true"] .diagram-source')).toBe(declaration(KIT_CSS, property, ".skeleton-bone {"));
+		}
 	});
 });

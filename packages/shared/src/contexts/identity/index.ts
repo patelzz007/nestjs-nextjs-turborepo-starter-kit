@@ -14,6 +14,7 @@ export * from "./schemas/enrollment";
 export * from "./schemas/identity-enums";
 export * from "./schemas/login-verification";
 export * from "./schemas/mfa-recovery";
+export * from "./schemas/passkeys";
 export * from "./schemas/password";
 export * from "./schemas/profile";
 export * from "./schemas/session-status";

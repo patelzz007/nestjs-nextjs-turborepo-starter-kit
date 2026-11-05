@@ -5,11 +5,12 @@ import { Text } from "react-native";
 
 import { createAppRuntime } from "../../runtime/app-runtime";
 import { createDeviceAppRuntime } from "../../runtime/device-runtime";
-import { createTestRuntime, markerScreen, SlotLayout, testRuntimeInputs, TEST_RAW_ENV } from "../../../test/app-harness";
+import { createTestRuntime, markerScreen, testRuntimeInputs, TEST_RAW_ENV, gatedMarkerScreen, gatedSlotLayout } from "../../../test/app-harness";
 import { memorySecureStore } from "../../../test/secure-store-memory";
-import AuthLayout from "../../app/(auth)/_layout";
+import AuthLayout from "../../app/auth/(forms)/_layout";
 import ConfigErrorScreen from "../../app/config-error";
 import RootLayout from "../../app/_layout";
+import AuthFolderLayout from "../../app/auth/_layout";
 
 jest.mock("expo-splash-screen", () => ({ hideAsync: jest.fn(() => Promise.resolve()), preventAutoHideAsync: jest.fn(() => Promise.resolve()) }));
 jest.mock("../../runtime/device-runtime", () => ({ createDeviceAppRuntime: jest.fn() }));
@@ -30,7 +31,7 @@ describe("RootLayout", () => {
 		jest
 			.mocked(createDeviceAppRuntime)
 			.mockReturnValue(createAppRuntime(testRuntimeInputs({ rawEnv: { ...TEST_RAW_ENV, isDevelopment: false, apiUrl: "http://plain.example.com" } })));
-		await renderRouter({ _layout: RootLayout, "config-error": ConfigErrorScreen, "(app)/index": HomeMarker }, { initialUrl: "/" });
+		await renderRouter({ _layout: RootLayout, "config-error": ConfigErrorScreen, "(app)/_layout": gatedSlotLayout(["app"]), "(app)/index": HomeMarker }, { initialUrl: "/" });
 
 		expect(screen.getByText("The app is not configured")).toBeOnTheScreen();
 		expect(screen.getByText("EXPO_PUBLIC_API_URL must be an https:// URL.")).toBeOnTheScreen();
@@ -48,8 +49,10 @@ describe("RootLayout with a valid environment", () => {
 		await renderRouter(
 			{
 				_layout: RootLayout,
-				"(auth)/_layout": SlotLayout,
-				"(auth)/sign-in": markerScreen("sign-in screen"),
+				"auth/_layout": AuthFolderLayout,
+				"auth/(forms)/_layout": gatedSlotLayout(["auth", "enroll-two-factor", "verify-email"]),
+				"auth/(forms)/sign-in": gatedMarkerScreen(["auth"], "sign-in screen"),
+				"(app)/_layout": gatedSlotLayout(["app"]),
 				"(app)/index": HomeMarker,
 			},
 			{ initialUrl: "/" },
@@ -67,19 +70,21 @@ describe("RootLayout with a valid environment", () => {
 		const view = await renderRouter(
 			{
 				_layout: RootLayout,
-				"(auth)/_layout": AuthLayout,
-				"(auth)/forgot-password": markerScreen("forgot-password screen"),
-				"(auth)/sign-in": markerScreen("sign-in screen"),
-				"(auth)/sign-up": markerScreen("sign-up screen"),
-				"(auth)/two-factor": markerScreen("two-factor screen"),
-				"(auth)/verify-device": markerScreen("verify-device screen"),
+				"auth/_layout": AuthFolderLayout,
+				"auth/(forms)/_layout": AuthLayout,
+				"auth/(forms)/forgot-password": markerScreen("forgot-password screen"),
+				"auth/(forms)/sign-in": gatedMarkerScreen(["auth"], "sign-in screen"),
+				"auth/(forms)/sign-up": markerScreen("sign-up screen"),
+				"auth/(forms)/two-factor": markerScreen("two-factor screen"),
+				"auth/(forms)/verify-device": markerScreen("verify-device screen"),
+				"(app)/_layout": gatedSlotLayout(["app"]),
 				"(app)/index": HomeMarker,
 			},
 			{ initialUrl: "/" },
 		);
 
 		expect(await screen.findByText("sign-in screen")).toBeOnTheScreen();
-		expect(view.getPathname()).toBe("/sign-in");
+		expect(view.getPathname()).toBe("/auth/sign-in");
 		expect(screen.queryByText("home screen")).toBeNull();
 		// The (auth) layout frames every signed-out screen in the AuthShell, branded with the app's name (ADR 039).
 		expect(screen.getByTestId("auth-shell")).toBeOnTheScreen();

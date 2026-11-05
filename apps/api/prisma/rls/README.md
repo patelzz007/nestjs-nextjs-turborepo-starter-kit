@@ -16,7 +16,7 @@ Instead:
 
 | Path                                           | Purpose                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `prisma/rls/00-app-helpers.sql`                | Base session helpers (`app_rls_bypass()`, `app_current_user_id()`, `app_current_tenant_id()`, `app_owns()`). Applied **first** — `01` and `rls.sql` call them, so a fresh database needs them before anything else.                                                                                                                                                                                          |
+| `prisma/rls/00-app-helpers.sql`                | Base session helpers (`app_rls_bypass()`, `app_current_user_id()`, `app_current_tenant_id()`, `app_owns()`). Applied **first** — `01` and `rls.sql` call them, so a fresh database needs them before anything else.                                                                                                                                                                                                |
 | `prisma/rls/00-system-operation-scopes.sql`    | **Generated** from `src/prisma/system-operation.registry.ts` by `system-operation-scopes.ts` (`pnpm db:generate-system-operation-scopes`): `app_rls_bypass_on(table)`, true only for an operation whose registry scope lists the table. Every policy calls it as `(SELECT app_rls_bypass_on('<its table>'))`. Never edit by hand; a spec fails when it is stale.                                                   |
 | `prisma/rls/01-acl-location-access.sql`        | ReBAC + ACL helpers (relationship checks only — they never grant a bypass) and location-scoped policies. Applied after the scopes.                                                                                                                                                                                                                                                                                 |
 | `prisma/rls.sql`                               | Main idempotent bundle (role, grants, enable RLS, baseline policies). Applied **third**.                                                                                                                                                                                                                                                                                                                           |
@@ -33,11 +33,11 @@ Add new fragments as `prisma/rls/NN-name.sql` and register them in `RLS_APPLY_OR
 
 ## Architecture (RBAC vs ACL vs RLS)
 
-| Layer           | Question                            | Stored as                                                       |
-| --------------- | ----------------------------------- | --------------------------------------------------------------- |
-| **RBAC**        | Can this user perform this action?  | `Role`, `Permission`, `RolePermission`, `UserRole`              |
-| **ACL / scope** | Which org/locations may they touch? | `Membership`, `MembershipLocationScope` |
-| **RLS**         | Which rows may this DB session see? | PostgreSQL policies (this folder) — **not** per-role            |
+| Layer           | Question                            | Stored as                                            |
+| --------------- | ----------------------------------- | ---------------------------------------------------- |
+| **RBAC**        | Can this user perform this action?  | `Role`, `Permission`, `RolePermission`, `UserRole`   |
+| **ACL / scope** | Which org/locations may they touch? | `Membership`, `MembershipLocationScope`              |
+| **RLS**         | Which rows may this DB session see? | PostgreSQL policies (this folder) — **not** per-role |
 
 Creating a role like `Cashier` or assigning `ORDER.UPDATE` is **data only** — no migration, no RLS change.
 
@@ -47,11 +47,11 @@ See [RBAC + ACL + RLS architecture](../../../../docs/technical/security/database
 
 Set **inside the same transaction** as tenant queries (`TenantTransactionService`):
 
-| Setting                       | Meaning                  |
-| ----------------------------- | ------------------------ |
-| `app.current_user_id`         | Authenticated user       |
+| Setting                 | Meaning                  |
+| ----------------------- | ------------------------ |
+| `app.current_user_id`   | Authenticated user       |
 | `app.current_tenant_id` | Active tenant            |
-| `app.rls_bypass`              | Trusted system path only |
+| `app.rls_bypass`        | Trusted system path only |
 
 Helpers: `app_rls_bypass()` / `app_rls_bypass_on(table)` (the only way a policy admits a system operation), `app_current_user_id()`, `app_current_tenant_id()`, `app_tenant_org_member(org_id)` (tenant context or legacy org membership), `app_tenant_member_of(org_id)`, `app_tenant_has_location_access(location_id)`.
 
@@ -67,10 +67,10 @@ A table added without `ALTER TABLE … FORCE ROW LEVEL SECURITY` beside its `ENA
 
 ## Commands
 
-| Command                      | When                                                    |
-| ---------------------------- | ------------------------------------------------------- |
-| `pnpm db:migrate`            | Dev schema change — migrates **and** applies RLS        |
-| `pnpm db:reset`              | Clean DB — migrate, apply RLS, seed                     |
+| Command                            | When                                                    |
+| ---------------------------------- | ------------------------------------------------------- |
+| `pnpm db:migrate`                  | Dev schema change — migrates **and** applies RLS        |
+| `pnpm db:reset`                    | Clean DB — migrate, apply RLS, seed                     |
 | `pnpm tools db:check-rls-manifest` | Verify Prisma tables ↔ manifest ↔ RLS SQL (CI-friendly) |
 | `pnpm tools db:deploy`             | Production — deploy migrations **and** apply RLS        |
 

@@ -255,7 +255,9 @@ function compileSchema(schema: ZodV4.ZodType, ajv: Ajv, cache: WeakMap<ZodV4.Zod
 		return cached;
 	}
 
-	const jsonSchema: JsonObject = JsonObjectSchema.parse(toJSONSchema(schema));
+	// The INPUT side: Ajv checks the request as it arrived, before Zod parses it. A transform (a browser's passkey
+	// transports, unknown ones dropped) has no JSON Schema on its output side, and the output is not what arrives.
+	const jsonSchema: JsonObject = JsonObjectSchema.parse(toJSONSchema(schema, { io: "input" }));
 	// Nullable unions become type lists, so the coercing check never turns a `null` into `0` / `""` / `false`.
 	const compiledSchema: JsonObject = JsonObjectSchema.parse(
 		nullableAsTypeLists(Object.fromEntries(Object.entries(jsonSchema).filter(([key]: readonly [string, JsonValue]): boolean => key !== "$schema"))),

@@ -9,6 +9,13 @@ const require = createRequire(import.meta.url);
 export default defineConfig({
 	plugins: [react()],
 	test: {
+		// Coverage floors (enhancement 3.1): measured on 2026-11-03, set just below. Raise them as tests are
+		// added; never lower them. `pnpm test` measures (`--coverage`); a single-file `vitest run` doesn't.
+		coverage: {
+			provider: "v8",
+			reporter: ["text-summary"],
+			thresholds: { lines: 87, statements: 87, functions: 84, branches: 79 },
+		},
 		environment: "node",
 		// Declares the React act environment for jsdom component tests.
 		setupFiles: ["./vitest.setup.ts"],

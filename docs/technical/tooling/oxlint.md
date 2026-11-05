@@ -73,8 +73,7 @@ Each workspace's `lint` script is:
 oxfmt --check "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}" && oxlint
 ```
 
-so formatting is checked first, then the rules. `apps/docs` runs `astro sync` first (its
-generated types).
+so formatting is checked first, then the rules.
 
 **Every category is off.** The rule set is exactly the explicit lists in `rules/*.js`, translated
 rule by rule from the ESLint configuration this package replaced. An oxlint upgrade that adds rules
@@ -118,7 +117,8 @@ export default composeConfigs(nextJsConfig, {
 | `packages/messaging` | `base` | NestJS naming + backend boundary for `src/nest/**` |
 | `apps/analytics-consumer` | `base` | backend boundary, env boundary, `console` allowed (`log`/`warn`/`error`) |
 | `packages/shared` | `base` | zod-schema `no-unsafe-*` relaxations ([§4](#4-per-repo-exceptions)) |
-| `apps/docs`, `apps/aws-infrastructure`, `packages/tokens`, `packages/tooling`, `packages/oxlint-config` | `base` | ignores (`.astro/`, `cdk.out/`) |
+| `apps/aws-infrastructure`, `packages/tokens`, `packages/tooling`, `packages/oxlint-config`, `packages/docs-renderer` | `base` | ignores (`cdk.out/`) |
+| `apps/docs` | `react-internal` | ignores the Start build output and the generated route tree (`dist/`, `.output/`, `.tanstack/`, `src/routeTree.gen.ts`) |
 
 ### `base.js` (everyone gets this)
 

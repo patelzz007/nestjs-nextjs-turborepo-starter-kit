@@ -12,7 +12,7 @@ order: 37
 
 ## Status
 
-Accepted (2026-10-09). Implemented (2026-10-09).
+Accepted (2026-10-09). Implemented (2026-10-09). Amended by [ADR 079](./079-mobile-visual-system.md) (2026-11-05): mobile headings are Geist SemiBold and Bold; Bricolage Grotesque is used for button labels only.
 
 ## Context
 

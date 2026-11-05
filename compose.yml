@@ -35,14 +35,14 @@
 # REDIS_PORT, REDIS_MAXMEMORY, KAFKA_PORT, RABBITMQ_AMQP_PORT, RABBITMQ_UI_PORT, BULL_BOARD_PORT,
 # MAILPIT_UI_PORT, MAILPIT_SMTP_PORT).
 
-name: hello-world
+name: starter-kit
 
 services:
   # Not started by default — see the header. Uncomment to run PostgreSQL in Docker.
   # postgres:
   #   # Same major as the documented local install (PostgreSQL 18) and the CI service container.
   #   image: postgres:18.6
-  #   container_name: hello-world-postgres
+  #   container_name: starter-kit-postgres
   #   restart: unless-stopped
   #   ports:
   #     - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
@@ -68,7 +68,7 @@ services:
 
   redis:
     image: redis:8.10.1
-    container_name: hello-world-redis
+    container_name: starter-kit-redis
     restart: unless-stopped
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
@@ -88,7 +88,7 @@ services:
 
   kafka:
     image: apache/kafka:4.3.1
-    container_name: hello-world-kafka
+    container_name: starter-kit-kafka
     hostname: kafka
     restart: unless-stopped
     ports:
@@ -135,7 +135,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:4.3.5
-    container_name: hello-world-rabbitmq
+    container_name: starter-kit-rabbitmq
     restart: unless-stopped
     ports:
       - "127.0.0.1:${RABBITMQ_AMQP_PORT:-5672}:5672"
@@ -162,7 +162,7 @@ services:
   load-runner:
     profiles: ["load"]
     build: { context: ., dockerfile: deploy/docker/Dockerfile, target: load-runner }
-    container_name: hello-world-load-runner
+    container_name: starter-kit-load-runner
     restart: unless-stopped
     environment:
       REDIS_URL: redis://redis:6379
@@ -176,7 +176,7 @@ services:
 
   mailpit:
     image: axllent/mailpit:v1.31.3
-    container_name: hello-world-mailpit
+    container_name: starter-kit-mailpit
     restart: unless-stopped
     ports:
       - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
@@ -192,7 +192,7 @@ services:
 
   bull-board:
     image: venatum/bull-board:3.4.14
-    container_name: hello-world-bull-board
+    container_name: starter-kit-bull-board
     restart: unless-stopped
     depends_on:
       redis:
@@ -217,4 +217,4 @@ volumes:
 
 networks:
   infra:
-    name: hello-world-infra
+    name: starter-kit-infra

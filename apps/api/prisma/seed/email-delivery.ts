@@ -244,7 +244,10 @@ async function upsertEvent(event: EmailDeliveryEventSeedRow, emailLogId: string 
 
 /** Idempotent upsert of the sample email logs + delivery events; returns the number of events seeded. */
 export async function seedEmailDelivery(nowMs: number = Date.now()): Promise<number> {
-	const admin = requireRow((await prisma.user.findUnique({ where: { email: TEST_SEND_ADMIN_EMAIL }, select: { id: true } })) ?? undefined, TEST_SEND_ADMIN_EMAIL);
+	const admin = requireRow(
+		(await prisma.user.findUnique({ where: { email: TEST_SEND_ADMIN_EMAIL, isDeleted: false }, select: { id: true } })) ?? undefined,
+		TEST_SEND_ADMIN_EMAIL,
+	);
 	const seed = buildEmailDeliverySeed(nowMs, admin.id);
 	let eventCount = 0;
 	for (const row of seed.logs) {

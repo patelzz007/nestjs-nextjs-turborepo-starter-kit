@@ -93,6 +93,8 @@ export const SessionDeviceNameHeaderSchema = sessionDeviceHeaderSchema(SessionDe
  * How a device session was signed in — the proofs the login flow required
  * (mirrors the Prisma enum `SessionSignInMethod`). The `_NEW_DEVICE_CODE`
  * variants add the emailed new-device code that login verification asks for.
+ * `PASSWORD_PASSKEY` is a password with a passkey as the second factor;
+ * `PASSKEY` a passwordless passkey sign-in (ADR 080).
  */
 export const SessionSignInMethodSchema = z.enum([
 	"PASSWORD",
@@ -103,6 +105,10 @@ export const SessionSignInMethodSchema = z.enum([
 	"PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE",
 	"TEAM_INVITE_REGISTRATION",
 	"TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE",
+	"PASSWORD_PASSKEY",
+	"PASSWORD_PASSKEY_NEW_DEVICE_CODE",
+	"PASSKEY",
+	"PASSKEY_NEW_DEVICE_CODE",
 ]);
 
 export type SessionSignInMethod = z.output<typeof SessionSignInMethodSchema>;
@@ -116,7 +122,14 @@ export type SessionSignInMethod = z.output<typeof SessionSignInMethodSchema>;
  * - `system:session-limit` — the sweep at sign-in retired the oldest sessions above the per-user cap;
  * - `system:rbac-mutation` — a scheduled authorization change (an expired temporary permission) signed the user out.
  */
-export const SessionSystemRevokerSchema = z.enum(["system:rotation-reuse", "system:logout-all", "system:expired-cleanup", "system:session-limit", "system:rbac-mutation"]);
+export const SessionSystemRevokerSchema = z.enum([
+	"system:rotation-reuse",
+	"system:logout-all",
+	"system:expired-cleanup",
+	"system:session-limit",
+	"system:rbac-mutation",
+	"system:account-erasure",
+]);
 
 export type SessionSystemRevoker = z.output<typeof SessionSystemRevokerSchema>;
 

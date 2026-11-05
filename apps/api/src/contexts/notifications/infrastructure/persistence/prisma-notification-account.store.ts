@@ -32,7 +32,7 @@ import {
 	toPrismaNullableComparableFilter,
 } from "../../../../platform/infrastructure/persistence/list-query/prisma-filter";
 import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../../../platform/infrastructure/persistence/list-page";
-import type { ConsentRecord, NewPushDevice, NotificationAccountStore, TenantLink } from "../../application/ports/notification-account-store.port";
+import type { ConsentRecord, NewPushDevice, NotificationAccountStore, PushDeviceTouch, TenantLink } from "../../application/ports/notification-account-store.port";
 import type { ActivePushDevice, StoredSchedule } from "../../application/ports/notification-store.port";
 import { PLATFORM_PREFERENCE_KEY, type StoredPreference } from "../../domain/policies/notification-rules";
 import { toDeliveryEntry, toInAppNotificationResponse, toPushDeviceResponse, toSuppressionEntry } from "./notification-row.mappers";
@@ -241,6 +241,7 @@ export class PrismaNotificationAccountStore implements NotificationAccountStore 
 			platform: PushPlatformSchema.parse(row.platform),
 			surface: NotificationSurfaceSchema.parse(row.surface),
 			tokenCiphertext: row.tokenCiphertext,
+			installationIdCiphertext: row.installationIdCiphertext,
 			deviceLabel: row.deviceLabel,
 			lastSeenAt: Number(row.lastSeenAt),
 		}));
@@ -254,11 +255,7 @@ export class PrismaNotificationAccountStore implements NotificationAccountStore 
 		await this.db.pushDevice.create({ data: { ...device, lastSeenAt: BigInt(now), createdBy: device.userId, updatedBy: device.userId } });
 	}
 
-	public async touchDevice(
-		deviceId: string,
-		update: { readonly deviceSessionId: string; readonly surface: NotificationSurface; readonly deviceLabel: string | null; readonly appVersion: string | null },
-		now: number,
-	): Promise<void> {
+	public async touchDevice(deviceId: string, update: PushDeviceTouch, now: number): Promise<void> {
 		await this.db.pushDevice.update({ where: { id: deviceId }, data: { ...update, lastSeenAt: BigInt(now), updatedAt: BigInt(now) } });
 	}
 

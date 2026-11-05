@@ -1,10 +1,8 @@
 import { z } from "zod";
 
-import { escapeHtml } from "./markdown/html";
-
 /**
  * Client-side search over a small JSON index built at `astro build` time
- * (`/search-index.json`). The site has ~130 pages, so one lazily-fetched
+ * (`/search-index.json`, src/routes/search-index[.]json.ts). The site has ~130 pages, so one lazily-fetched
  * index keeps search instant and dependency-free; revisit (e.g. Pagefind) if
  * the corpus grows past a few MB.
  *
@@ -122,20 +120,4 @@ export function searchIndex(index: readonly SearchEntry[], query: string, limit:
 		.filter((hit): hit is SearchHit => hit !== null)
 		.sort((a, b) => b.score - a.score || a.entry.title.localeCompare(b.entry.title))
 		.slice(0, limit);
-}
-
-function escapeRegExp(value: string): string {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/** HTML-escapes `text` and wraps every query term in `<mark>`. */
-export function highlightTerms(text: string, terms: readonly string[]): string {
-	if (terms.length === 0) {
-		return escapeHtml(text);
-	}
-	const pattern = new RegExp(`(${terms.map(escapeRegExp).join("|")})`, "gi");
-	return text
-		.split(pattern)
-		.map((part, index) => (index % 2 === 1 ? `<mark>${escapeHtml(part)}</mark>` : escapeHtml(part)))
-		.join("");
 }

@@ -19,7 +19,8 @@ import {
 
 export type SignInOutcome =
 	| { readonly kind: "session"; readonly tokens: BodyTokenPair }
-	| { readonly kind: "twoFactor"; readonly tempToken: string }
+	/** `passkeyAvailable`: the account has a passkey it may finish the sign-in with instead of a code (ADR 080). */
+	| { readonly kind: "twoFactor"; readonly tempToken: string; readonly passkeyAvailable: boolean }
 	| { readonly kind: "verifyDevice"; readonly verificationId: string }
 	/** A browser-shaped answer without tokens: the API did not treat this request as `mobile`. */
 	| { readonly kind: "unexpected" };
@@ -32,7 +33,7 @@ export function classifySignInResponse(response: LoginClientResponse): SignInOut
 	}
 	const twoFactor = LoginTwoFactorPendingResponseSchema.safeParse(response);
 	if (twoFactor.success) {
-		return { kind: "twoFactor", tempToken: twoFactor.data.tempToken };
+		return { kind: "twoFactor", tempToken: twoFactor.data.tempToken, passkeyAvailable: twoFactor.data.passkeyAvailable };
 	}
 	const verification = LoginVerificationPendingResponseSchema.safeParse(response);
 	if (verification.success) {

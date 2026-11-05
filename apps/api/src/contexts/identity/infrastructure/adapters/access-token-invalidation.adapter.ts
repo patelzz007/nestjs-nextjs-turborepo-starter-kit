@@ -18,6 +18,9 @@ const TRIGGER_OF: Readonly<Record<AccessTokenInvalidationReason, UserInvalidatio
 	mfa_recovery_completed: "mfa_recovery_completed",
 	account_banned: "logout_all_devices",
 	account_unbanned: "password_changed",
+	// Erasure ends every session, like a ban (ADR 077).
+	account_erased: "logout_all_devices",
+	account_erasure: "logout_all_devices",
 	session_revoked: "session_revoked",
 	logout_all_devices: "logout_all_devices",
 	refresh_token_reuse: "refresh_token_reuse",

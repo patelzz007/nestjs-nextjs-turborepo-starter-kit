@@ -10,7 +10,14 @@ export type LoginVerificationMode = "disabled" | "always" | "new-device";
  * The proofs a login flow collected BEFORE login verification: the sign-in method of a session
  * issued right away. The emailed new-device code, when asked for, upgrades it.
  */
-export const PendingSignInMethodSchema = SessionSignInMethodSchema.extract(["PASSWORD", "PASSWORD_TOTP", "PASSWORD_BACKUP_CODE", "TEAM_INVITE_REGISTRATION"]);
+export const PendingSignInMethodSchema = SessionSignInMethodSchema.extract([
+	"PASSWORD",
+	"PASSWORD_TOTP",
+	"PASSWORD_BACKUP_CODE",
+	"PASSWORD_PASSKEY",
+	"PASSKEY",
+	"TEAM_INVITE_REGISTRATION",
+]);
 
 export type PendingSignInMethod = z.output<typeof PendingSignInMethodSchema>;
 
@@ -19,6 +26,8 @@ export const SIGN_IN_METHOD_WITH_NEW_DEVICE_CODE: Readonly<Record<PendingSignInM
 	PASSWORD: "PASSWORD_NEW_DEVICE_CODE",
 	PASSWORD_TOTP: "PASSWORD_TOTP_NEW_DEVICE_CODE",
 	PASSWORD_BACKUP_CODE: "PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE",
+	PASSWORD_PASSKEY: "PASSWORD_PASSKEY_NEW_DEVICE_CODE",
+	PASSKEY: "PASSKEY_NEW_DEVICE_CODE",
 	TEAM_INVITE_REGISTRATION: "TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE",
 };
 

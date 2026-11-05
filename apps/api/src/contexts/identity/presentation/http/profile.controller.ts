@@ -1,8 +1,8 @@
-import { Controller, Get, Patch } from "@nestjs/common";
+import { Controller, Get, Patch, Put } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
-import { apiContract, apiPath, OwnProfileSchema, type AccessTokenPayload, type OwnProfile, type UpdateOwnProfileInput } from "@workspace/shared";
+import { apiContract, apiPath, OwnProfileSchema, type AccessTokenPayload, type OwnProfile, type SetOwnLanguageInput, type UpdateOwnProfileInput } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -11,6 +11,7 @@ import { self } from "../../../../platform/presentation/http/security/decorators
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { ZodBody } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { SetOwnLanguageCommand } from "../../application/commands/set-own-language/set-own-language.command";
 import { UpdateOwnProfileCommand } from "../../application/commands/update-own-profile/update-own-profile.command";
 import { GetOwnProfileQuery } from "../../application/queries/get-own-profile/get-own-profile.query";
 
@@ -50,5 +51,23 @@ export class ProfileController {
 		@CurrentActor() actor: ActorContext,
 	): Promise<OwnProfile> {
 		return this.commandBus.execute(new UpdateOwnProfileCommand(actor, { userId: user.sub, isImpersonating: user.isImpersonating === true, body }));
+	}
+
+	@SkipThrottle({ strict: true })
+	@ApiBearerAuth()
+	@Put("/profile/language")
+	@RequirePermission("UPDATE", "PROFILE", { resourceId: self(), description: "A user saves their own language (never during impersonation)" })
+	@ApiOperation({
+		summary: "Save the signed-in user's language",
+		description:
+			"The language the apps open in after sign-in (on a device that hasn't chosen one) and notifications are written in (enhancement 5.2). The latest choice wins; it doesn't change the profile `version`. Refused (403 PROFILE_UPDATE_DURING_IMPERSONATION) for an impersonation session.",
+	})
+	@ZodResponse(OwnProfileSchema, { description: "The profile, with its language" })
+	public async setOwnLanguage(
+		@GetUser() user: AccessTokenPayload,
+		@ZodBody(apiContract.auth.setLanguage.input) body: SetOwnLanguageInput,
+		@CurrentActor() actor: ActorContext,
+	): Promise<OwnProfile> {
+		return this.commandBus.execute(new SetOwnLanguageCommand(actor, { userId: user.sub, isImpersonating: user.isImpersonating === true, language: body.language }));
 	}
 }

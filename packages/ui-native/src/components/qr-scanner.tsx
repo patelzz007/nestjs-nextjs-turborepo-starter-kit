@@ -58,12 +58,12 @@ import * as React from "react";
 import { ActivityIndicator, Linking, Modal, Platform, Pressable, Text, useWindowDimensions, View, type ViewInstance, type ViewStyle } from "react-native";
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { scheduleOnRN } from "react-native-worklets";
 import { withUniwind } from "uniwind";
 
 import { cn } from "../lib/cn";
 import { playSuccessFeedback } from "../lib/haptics";
 import { SCAN_LINE_MOTION, SCANNER_SHEET_MOTION } from "../lib/motion";
+import { OVERLAY_SHOWN, useOverlayPresence } from "../lib/use-overlay-presence";
 import { scanQrFromGallery, type GalleryScanDevice, type GalleryScanOutcome } from "../lib/qr-gallery-scan";
 import { launchGoogleScanner, QR_BARCODE_TYPES, resolveQrScannerEngine, type GoogleScanOutcome, type QrScannerEngine } from "../lib/qr-scanner-engine";
 import { LOCK_HOLD_MS, SLOW_SCAN_AFTER_MS, scanStatusOf, type ScanPhase, VIEWFINDER_RADIUS, viewfinderLayout, type ViewfinderLayout } from "../lib/qr-viewfinder";
@@ -325,15 +325,6 @@ interface CameraScannerProps {
 }
 
 /** The sheet's offset as a fraction of the screen's height: 0 in place, 1 just below the screen. */
-const SHEET_SHOWN = 0;
-const SHEET_HIDDEN = 1;
-
-interface SheetState {
-	/** Counts the openings: each one mounts a fresh surface, and a slide away closes only its own. */
-	readonly opening: number;
-	readonly presented: boolean;
-}
-
 /**
  * The kit's own scanner: a full-screen modal over the live camera. The scanner animates itself rather
  * than leaving it to the Modal, which slides only its window: on Android the camera's own surface
@@ -348,42 +339,11 @@ const CameraScanner = React.forwardRef<ViewInstance, CameraScannerProps>(functio
 	ref,
 ): React.JSX.Element {
 	const { height } = useWindowDimensions();
-	/**
-	 * Which opening this is (it keys a fresh surface), and whether the sheet is presented: shown, or still
-	 * sliding away — the Modal stays up until the sheet is off screen.
-	 */
-	const [sheet, setSheet] = React.useState<SheetState>({ opening: 0, presented: visible });
-	const [wasVisible, setWasVisible] = React.useState(visible);
-	// Opened: present a fresh surface (adjusting state during render, React's documented pattern).
-	if (visible !== wasVisible) {
-		setWasVisible(visible);
-		if (visible) {
-			setSheet((current: SheetState): SheetState => ({ opening: current.opening + 1, presented: true }));
-		}
-	}
-
-	const offset = useSharedValue(visible ? SHEET_SHOWN : SHEET_HIDDEN);
-	// The end of a slide away reaches the JS thread later than the slide ends, and a slide that was
-	// already over can report after the scanner reopened: only the opening that slid away is closed.
-	const finishLeaving = React.useCallback((leftOpening: number): void => {
-		setSheet((current: SheetState): SheetState => (current.opening === leftOpening ? { ...current, presented: false } : current));
-	}, []);
-	const { opening } = sheet;
-	React.useEffect((): void => {
-		if (visible) {
-			offset.set(withTiming(SHEET_SHOWN, SCANNER_SHEET_MOTION.enter));
-			return;
-		}
-		offset.set(
-			withTiming(SHEET_HIDDEN, SCANNER_SHEET_MOTION.exit, (finished?: boolean): void => {
-				"worklet";
-				if (finished === true) {
-					scheduleOnRN(finishLeaving, opening);
-				}
-			}),
-		);
-	}, [finishLeaving, offset, opening, visible]);
-	const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.get() * height }] }));
+	// Which opening this is (it keys a fresh surface), whether the sheet is presented (shown, or still
+	// sliding away: the Modal stays up until it is off screen), and where it is on the way (lib/use-overlay-presence).
+	const sheet = useOverlayPresence(visible, SCANNER_SHEET_MOTION);
+	const { opening, progress } = sheet;
+	const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: (OVERLAY_SHOWN - progress.get()) * height }] }));
 
 	return (
 		<Modal visible={sheet.presented} animationType="none" transparent onRequestClose={onClose}>

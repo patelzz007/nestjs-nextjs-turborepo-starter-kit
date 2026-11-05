@@ -52,6 +52,7 @@ import {
 	UserRound,
 	Users,
 	UsersRound,
+	Webhook,
 	X,
 	type LucideIcon,
 } from "lucide-react";
@@ -115,5 +116,6 @@ export const ICON_MAP: Readonly<Record<string, LucideIcon>> = {
 	UserRound,
 	Users,
 	UsersRound,
+	Webhook,
 	X,
 };

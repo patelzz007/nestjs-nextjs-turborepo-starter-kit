@@ -16,13 +16,29 @@ export interface ProvisionedLoadTestTenant {
 	readonly staffEmails: readonly string[];
 }
 
+/** What one run needs provisioned. */
+export interface LoadTestProvisionRequest {
+	/** Customer users: one per virtual user. */
+	readonly customers: number;
+	/** Staff accounts the merchant scenarios share (`loadTestStaffCount`: none carries more sessions than a user may keep). */
+	readonly staff: number;
+	/** One fresh password hash for every load-test user. */
+	readonly passwordHash: string;
+	/** The tenant's READY reward picture (`LoadTestRewardImagePort`) every provisioned reward shows. */
+	readonly rewardImageFileId: string;
+}
+
 export interface LoadTestProvisioningPort {
+	/** Makes sure the Load Test tenant (and its merchant profile) exists, and returns its id. */
+	ensureTenant(): Promise<string>;
 	/**
-	 * Makes sure the tenant, its store, its roles, its published rewards and `customers` customer
-	 * users plus the staff exist, and gives every load-test user `passwordHash` (one fresh password per
-	 * run, so a password handed to an earlier run stops working).
+	 * Makes sure the tenant, its store, its roles, its published rewards — each showing
+	 * `rewardImageFileId`, as every published reward shows at least one READY image — and `customers`
+	 * customer users plus `staff` staff exist, and gives every load-test user `passwordHash` (one fresh
+	 * password per run, so a password handed to an earlier run stops working). Returns the first
+	 * `customers` customers and `staff` staff.
 	 */
-	provision(input: { readonly customers: number; readonly passwordHash: string }): Promise<ProvisionedLoadTestTenant>;
+	provision(input: LoadTestProvisionRequest): Promise<ProvisionedLoadTestTenant>;
 	/** How many load-test users exist. */
 	loadTestUserCount(): Promise<number>;
 }

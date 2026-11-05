@@ -295,3 +295,10 @@ Then report the root cause (for bug work), design decisions, files changed, test
 ## Feature and bug work share the same root-cause obligation
 
 Do not treat bug fixes as a special low-rigor category. A bug report is a description of an observed symptom, not necessarily an accurate diagnosis. Follow `rules/16-bug-fixing-and-debugging.md` before changing code for any defect, regression, flaky test, or unexplained operational failure.
+
+## Starting a new bounded context
+
+Run `pnpm scaffold:context <name>` (lower-case words joined by hyphens). It writes the context's public API,
+module, a reader port and a summary query with passing tests under `apps/api/src/contexts/<name>/`, formats
+them, and prints the remaining steps in order (Prisma model and migration, seed and RLS, the Prisma reader, the
+shared contract, the controller with its permissions, registering the module). It refuses an existing context.

@@ -47,6 +47,9 @@ import { IntegrationRedemptionsController } from "./presentation/http/integratio
 import { TenantRedemptionsController } from "./presentation/http/tenant-redemptions.controller";
 import { TenantTerminalsController, PosTerminalsController } from "./presentation/http/tenant-terminals.controller";
 import { RedemptionsController } from "./presentation/http/redemptions.controller";
+import { FeatureFlagsModule, STORE_FEATURE_FLAGS, type StoreFeatureFlags } from "../feature-flags/public-api";
+import { TILL_REDEMPTION_GATE, type TillRedemptionGate } from "./application/ports/till-redemption.port";
+import { FeatureFlagTillRedemptionGate } from "./infrastructure/feature-flags/feature-flag-till-redemption.gate";
 
 /**
  * The pos context: checking out at a till (validate, checkout as one unit of work over claims, rewards
@@ -55,7 +58,7 @@ import { RedemptionsController } from "./presentation/http/redemptions.controlle
  * ports to its transaction), mounted by `app.module.ts` only; `PosAccessModule` is its global leaf.
  */
 @Module({
-	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, TenantAccessModule],
+	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, TenantAccessModule, FeatureFlagsModule],
 	controllers: [
 		RedemptionsController,
 		TenantTerminalsController,
@@ -66,6 +69,11 @@ import { RedemptionsController } from "./presentation/http/redemptions.controlle
 	],
 	providers: [
 		REWARD_CODE_HASHER_PROVIDER,
+		{
+			provide: TILL_REDEMPTION_GATE,
+			inject: [STORE_FEATURE_FLAGS],
+			useFactory: (flags: StoreFeatureFlags): TillRedemptionGate => new FeatureFlagTillRedemptionGate(flags),
+		},
 		{
 			provide: POS_UNIT_OF_WORK,
 			inject: [TenantTransactionService, RewardCodeHasher, TransactionalEventDispatcher, AFTER_COMMIT_PUBLISHER],

@@ -40,10 +40,19 @@ export const BROWSER_SUITE_ENV = {
 	ADMIN_E2E_BASE_URL: localUrl(LOCAL_APP_PORTS.admin),
 	ADMIN_E2E_EMAIL: "superadmin@example.com",
 	ADMIN_E2E_PASSWORD: "SuperAdmin@123",
+	MERCHANT_E2E_BASE_URL: localUrl(LOCAL_APP_PORTS.merchant),
+	MERCHANT_E2E_EMAIL: "brew.owner@kl-rewards.demo",
+	MERCHANT_E2E_PASSWORD: "BrewOwner@123",
+	MERCHANT_E2E_TENANT_SLUG: "brew-bean-kl",
 };
 
 /** Readiness URLs the browser job waits on (API readiness probe, web, admin login). */
-export const BROWSER_READINESS_URLS = [localUrl(LOCAL_APP_PORTS.api, "/health/ready"), localUrl(LOCAL_APP_PORTS.web, "/"), localUrl(LOCAL_APP_PORTS.admin, "/auth/login")];
+export const BROWSER_READINESS_URLS = [
+	localUrl(LOCAL_APP_PORTS.api, "/health/ready"),
+	localUrl(LOCAL_APP_PORTS.web, "/"),
+	localUrl(LOCAL_APP_PORTS.admin, "/auth/login"),
+	localUrl(LOCAL_APP_PORTS.merchant, "/auth/login"),
+];
 /** Budget for the three servers to become ready. */
 export const BROWSER_READINESS_TIMEOUT_MS = 120_000;
 
@@ -231,6 +240,14 @@ export function databaseSteps({ databaseUrl, shadowDatabaseUrl, consumerLoginUrl
 		{ id: "e2e:seed-enterprise", job: "Database + API e2e", command: "pnpm", args: ["db:seed", "--", "--scenario", "enterprise", "--seed", "1"], env: api },
 	];
 	if (consumerLoginUrl !== undefined) {
+		// CI builds the consumer's workspace dependencies first (ci.yml → analytics-consumer-e2e); without it the
+		// suite could run against stale builds of the packages it imports.
+		steps.push({
+			id: "e2e:analytics-consumer-build",
+			job: "Analytics consumer e2e",
+			command: "pnpm",
+			args: ["turbo", "run", "build", "--filter=@workspace/analytics-consumer^..."],
+		});
 		steps.push({
 			id: "e2e:analytics-consumer",
 			job: "Analytics consumer e2e",
@@ -270,7 +287,7 @@ export function browserJob({ databaseUrl, apiEnvFile }) {
 				id: "browser:build",
 				job,
 				command: "pnpm",
-				args: ["turbo", "run", "build", "--filter=@workspace/api", "--filter=@workspace/web", "--filter=@workspace/admin"],
+				args: ["turbo", "run", "build", "--filter=@workspace/api", "--filter=@workspace/web", "--filter=@workspace/admin", "--filter=@workspace/merchant"],
 				env: { ...CI_BUILD_ENV, ...BROWSER_ADMIN_FEATURE_ENV },
 			},
 			{ id: "browser:deploy", job, command: "pnpm", args: ["tools", "db:deploy"], env: api },
@@ -301,6 +318,13 @@ export function browserJob({ databaseUrl, apiEnvFile }) {
 				env: BROWSER_ADMIN_FEATURE_ENV,
 				port: LOCAL_APP_PORTS.admin,
 			},
+			{
+				id: "browser:merchant",
+				job,
+				command: "pnpm",
+				args: ["--filter", "@workspace/merchant", "exec", "next", "start", "--port", String(LOCAL_APP_PORTS.merchant)],
+				port: LOCAL_APP_PORTS.merchant,
+			},
 		],
 		suites: [
 			{
@@ -311,6 +335,9 @@ export function browserJob({ databaseUrl, apiEnvFile }) {
 			},
 			{ id: "browser:web-suite", job, command: "pnpm", args: ["--filter", "@workspace/web", "test:browser"], env: BROWSER_SUITE_ENV },
 			{ id: "browser:admin-suite", job, command: "pnpm", args: ["--filter", "@workspace/admin", "test:browser"], env: BROWSER_SUITE_ENV },
+			// The UI kit's screenshots are Linux's (CI's renderer): on a Mac the same suite runs in Playwright's Linux image.
+			{ id: "browser:admin-visual-suite", job, command: "pnpm", args: ["--filter", "@workspace/admin", "test:visual:docker"], env: BROWSER_SUITE_ENV },
+			{ id: "browser:merchant-suite", job, command: "pnpm", args: ["--filter", "@workspace/merchant", "test:browser"], env: BROWSER_SUITE_ENV },
 		],
 	};
 }

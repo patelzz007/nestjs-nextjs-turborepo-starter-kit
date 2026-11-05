@@ -11,7 +11,7 @@
 import {
 	DAY_MS,
 	newRowId,
-	RichTextDocumentSchema,
+	RichTextDocumentResponseSchema,
 	type NotificationCategory,
 	type NotificationChannel,
 	type NotificationDeliveryReason,
@@ -28,7 +28,7 @@ import type { InAppRendering, NotificationRenderContext, NotificationType } from
 import { isInterruptive, resolveChannelEnabled } from "../../domain/policies/notification-rules";
 import { destinationHash } from "../../domain/policies/mask-destination";
 import { nextDigestAt, quietHoursRelease } from "../../domain/policies/quiet-hours";
-import { renderRichTextHtml, renderRichTextPlain, type RichTextRenderOptions } from "../../domain/rich-text/render-rich-text";
+import { renderRichTextHtml, renderRichTextPlain } from "../../domain/rich-text/render-rich-text";
 import type { EmailUnsubscribeLinks } from "../../domain/templates/base/base-email-template";
 import { BroadcastEmailTemplate } from "../../domain/templates/broadcast-email.template";
 import { NotificationEmailTemplate } from "../../domain/templates/notification-email.template";
@@ -85,7 +85,6 @@ export interface FanOutDependencies {
 	readonly settings: FanOutSettings;
 	readonly renderContext: Omit<NotificationRenderContext, "groupCount">;
 	readonly unsubscribe: UnsubscribeLinkFactory;
-	readonly richText: RichTextRenderOptions;
 }
 
 /** What one channel decided before rows are written. */
@@ -429,13 +428,14 @@ export class NotificationFanOut {
 	): NotificationEmailTemplate | BroadcastEmailTemplate | null {
 		const broadcast = this.pendingBroadcast;
 		if (broadcast !== null && unsubscribe !== null) {
-			const document = RichTextDocumentSchema.parse(broadcast.richBody);
+			// The stored body as the server answers it (its pictures carry `src`): the open response shape.
+			const document = RichTextDocumentResponseSchema.parse(broadcast.richBody);
 			const rendering = type.renderEmail(notification.payload, notification.locale, context);
 			return new BroadcastEmailTemplate({
 				to,
 				senderName: broadcast.senderName,
 				title: rendering?.subject ?? broadcast.senderName,
-				bodyHtml: renderRichTextHtml(document, this.deps.richText),
+				bodyHtml: renderRichTextHtml(document),
 				bodyText: renderRichTextPlain(document),
 				unsubscribeUrl: unsubscribe.pageUrl,
 				oneClickUnsubscribeUrl: unsubscribe.oneClickUrl,

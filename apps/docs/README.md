@@ -1,235 +1,168 @@
 # @workspace/docs — the documentation site
 
-A static [Astro](https://astro.build) site that renders the repository's own guides
-(`docs/*.md`) and engineering blog (`blog/*.md`) as a searchable "learning center" at
-**http://localhost:3002**. There is no server and no database: `astro build` writes plain HTML
-to `dist/`, which any static host can serve.
+The repository's own guides (`docs/*.md`) and engineering blog (`blog/*.md`) as a searchable site at
+**http://localhost:3002**, built with [TanStack Start](https://tanstack.com/start). Every page is
+pre-rendered at build (`dist/client/docs/x.html`); the small Start server renders on request only what
+cannot be static: the 404 page and search with `?q=`.
 
-> The markdown files are the single source of truth. They are written to read well on GitHub
-> **and** on this site; you never copy content into `apps/docs`.
+> The Markdown files are the single source of truth. They are written to read well on GitHub **and** on
+> this site; you never copy content into `apps/docs`.
 
 ## Commands
 
 Run these from `apps/docs` (or with `pnpm --filter @workspace/docs <script>` from the root).
 
-| Command              | What it does                                                          |
-| -------------------- | --------------------------------------------------------------------- |
-| `pnpm dev`           | Dev server on port 3002 (clears the rendered-Markdown cache on start) |
-| `pnpm build`         | Checks every internal link, then builds the static site into `dist/`  |
-| `pnpm preview`       | Serves the built `dist/` on port 3002                                 |
-| `pnpm test`          | Vitest: markdown plugins, navigation, search, and the browser scripts |
-| `pnpm lint`          | Oxfmt check + Oxlint (shared monorepo config)                         |
-| `pnpm typecheck`     | `astro check` — types **and** every guide's frontmatter               |
-| `pnpm check:links`   | Only the link checker (`scripts/check-links.mjs`)                     |
-| `pnpm tools docs:api`      | Re-render `docs/technical/api-reference/` from `docs/generated/` (vitest `--update`) |
+| Command                       | What it does                                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                    | Dev server on port 3002 (Vite; edits to guides and to the renderer reload the page)                      |
+| `pnpm build`                  | Checks every internal link, pre-renders the site into `dist/`, then checks it against the Astro baseline |
+| `pnpm preview` / `pnpm start` | Serves the built site on port 3002                                                                       |
+| `pnpm test`                   | Vitest with coverage: content model, search, reading progress, components, browser helpers, styles       |
+| `pnpm lint`                   | Oxfmt check + Oxlint (`react-internal` preset)                                                           |
+| `pnpm typecheck`              | `tsrs --noEmit` (TypeScript 7, like every workspace)                                                     |
+| `pnpm check:links`            | Only the link checker (`scripts/check-links.mjs`)                                                        |
+| `pnpm check:baseline`         | Only the regression check of `dist/` against `regression-baseline/`                                      |
+| `pnpm tools docs:api`         | Re-render `docs/technical/api-reference/` (lives in `packages/docs-renderer`)                            |
 
-## The generated API reference
+## TanStack, and the shared kit
 
-`docs/technical/api-reference/` is rendered by `src/lib/api-reference/` from the OpenAPI export
-(`docs/generated/openapi.json`), the API's controller decorators and the captured seed samples
-(`docs/generated/api-samples.json`, written by `scripts/capture-api-samples.mjs` against a throwaway
-seeded API — the script header lists the exact commands). `pnpm test` fails when the committed pages
-are stale; `pnpm tools docs:api` re-renders them. Full description:
-[API conventions → How the reference is generated](../../docs/technical/api/README.md#how-the-reference-is-generated).
+| Library                           | Job here                                                                                                                                                 |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Start + Router**                | File routes (`src/routes/`), pre-rendering, typed links, `?q=` validated with zod, the head tags of every page                                           |
+| **Start static server functions** | Page data (`src/server/functions.ts`) is written to JSON at build; client navigation reads those files, so a pre-rendered page never needs a live server |
+| **Query**                         | The search index and the endpoint list, loaded on first use and kept for the session                                                                     |
+| **Table**                         | The endpoint explorer (`/endpoints`), through the shared `DataTable`                                                                                     |
+| **Pacer**                         | Debounces the search box (dialog and `/search`)                                                                                                          |
 
-## Adding or editing a guide
-
-1. Create `docs/<name>.md` (sub-folders are fine: `docs/technical/authorization/backend.md`
-   becomes `/docs/technical/authorization/backend`; the id keeps its case, so `README.md` is
-   `/docs/README`).
-2. Start it with frontmatter. The schema lives in `src/content.config.ts` and **the build fails**
-   if a field is missing or misspelt:
-
-   ```yaml
-   ---
-   title: "Messaging Infrastructure"
-   description: "Operational reference for Redis, BullMQ, Kafka and the outbox." # optional
-   order: 4                     # optional
-   author: "Backend Team"
-   lastUpdated: 1790812800000   # epoch ms, UTC midnight of the day you edited it
-   coverImage: "https://images.unsplash.com/…" # the page's banner (PageCover.astro) and its link preview (og:image)
-   tags: ["infrastructure", "messaging"]        # optional; "superseded" hides it from the sidebar
-   ---
-   ```
-
-3. Add its id to `docs/meta.json` under the right `--- Section ---` separator. Guides not
-   listed there still build, and appear under **More Guides**.
-4. Optionally give it an icon in `DOC_ICONS` (`src/lib/icons.ts`); new sections get one in
-   `SECTION_ICONS`.
-5. Run `pnpm build` — it runs the link checker first.
-
-Blog posts work the same way in `blog/` (`title`, `description`, `author`, `date`, `category`)
-with their order in `blog/meta.json`.
-
-### Markdown features
-
-| Write this                                     | You get                                                   |
-| ---------------------------------------------- | --------------------------------------------------------- |
-| `[Database](./database.md#seed-data)`          | A link to `/docs/technical/database#seed-data` (from `docs/technical/`) |
-| `[registry](../apps/api/src/…/registry.ts)`    | A link to that file on GitHub                             |
-| `> [!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!CAUTION]` | A coloured callout (emoji markers like `> ⚠️` work too) |
-| ```` ```ts title="app.ts" {2-4} ````           | A `CodeBlock` with a title, language, copy button, line numbers and lines 2–4 lit |
-| ```` ```mermaid ````                           | A diagram (Mermaid syntax), drawn by Pele in the browser, coloured by role; it must parse or the build fails |
-| ```` ```qr title="Pairing QR" ````            | A scannable QR code of the fence's text, drawn at build time as inline SVG by the shared encoder (`src/lib/markdown/qr-code.ts`) |
-| ```` ```pdf title="Statement.pdf" ````        | The PDF at the fence's URL (a site path or `https://`), framed under a header with open-in-new-tab and download, drawn by the browser's own PDF engine (`src/lib/markdown/pdf-embed.ts`). `/files/pdf-viewer-sample.pdf` is a sample written at build time |
-| ```` ```carousel ratio="16/9" ````             | The `@workspace/ui` `ImageCarousel` (Embla) of the fence's images, one `![alt](url)` per line: rendered at build time, hydrated in the browser (`src/lib/markdown/media-embeds.ts`, `src/lib/media/`) |
-| ```` ```image-resize width="480" height="270" ```` | The `@workspace/ui` `ImageResizer` of the fence's one image, starting at that size and keeping its shape (`aspect="free"` lets the sides change independently) |
-| `![alt](./images/email/welcome.png)`           | The image, served from `docs/images/` at `/images/…`      |
-| A table whose cells are images                 | A responsive screenshot gallery                           |
-| `RBAC`, `RLS`, `ReBAC`, … in prose             | An `<abbr>` tooltip with the definition                   |
-
-The leading `# Heading` is dropped (the page title comes from `title`), and headings get the
-same anchors GitHub generates, so `#section` links work in both places.
+Every interface part that exists in `@workspace/ui` is the shared component: `Alert` (callouts), `CodeBlock`,
+`Command` (search), `Sheet` (phone menu and the "On this page" sheet), `DataTable`, `Badge`, `Button`, `Kbd`,
+`CoverImage`, `IconTile`, `InputGroup`, `NotFoundContent`, `Spinner`. The kit's stylesheet is loaded first
+(`@workspace/ui/globals.css`), so they look exactly as in the apps; the docs then redefine the semantic
+tokens for their own identity.
 
 ## How it is put together
 
 ```
 apps/docs/
-├── astro.config.ts            # markdown pipeline (remark/rehype plugins), sitemap, Tailwind
-├── turbo.json                 # adds repo-root docs/ + blog/ to the build cache inputs
-├── scripts/check-links.mjs    # fails the build on broken internal links / anchors
+├── vite.config.ts             # Start plugin: the page list (every guide, post, image), pre-rendering, sitemap
+├── regression-baseline/       # captured from the last Astro build: every page's title, h1, anchors; search results
+├── scripts/                   # check-links.mjs, check-baseline.ts (runs after `vite build`), capture-api-samples.mjs
 └── src/
-    ├── content.config.ts      # the docs + blog collections and their frontmatter schemas
-    ├── lib/                   # pure, unit-tested logic (navigation, search, TOC, dates, markdown plugins)
-    ├── components/ layouts/   # .astro markup — header, sidebar + mobile drawer (shared NavTree), TOC, cards, pager, search
-    ├── pages/                 # routes: /, /docs, /docs/[...slug], /blog, /images/…, /search-index.json, /feed.xml
-    ├── scripts/               # progressive enhancement: theme, drawer, search, TOC scroll spy, copy, diagrams
-    └── styles/global.css      # every colour, size and weight is a token (light + dark); colours map onto the packages/tokens palette
+    ├── routes/                # /, /docs, /docs/$, /blog, /blog/$, /search, /endpoints, feed.xml, robots.txt, …
+    ├── server/                # content.server.ts (Vite globs of docs/ and blog/), functions.ts (server functions)
+    ├── lib/                   # pure, tested logic: content model, navigation, search, reading progress, SEO, RSS
+    ├── components/            # header, guide tree, article, "On this page", search, endpoint explorer, …
+    ├── browser/               # DOM helpers the components call: theme, code theme, islands, diagrams, PDF embeds
+    ├── hooks/                 # search index (Query), reading progress
+    └── styles/app.css         # the kit's CSS, then the docs palette, reading styles and embeds
 ```
 
-- **Search** — `/search-index.json` is generated at build time (one entry per guide and per
-  h2/h3 heading, plus blog posts). The `⌘K` / `Ctrl K` / `/` dialog downloads it on first open,
-  validates it with zod, and ranks matches in the browser (`src/lib/search.ts`). If the corpus
-  ever grows past a few MB, swap in a chunked index such as Pagefind.
-- **Look** — layout modelled on docs.apidog.com; colours are the product's shared palette:
-  `global.css` imports `@workspace/tokens/palette.css` (the `--palette-*` primitives) and maps
-  its own names onto them, so the docs and the apps cannot drift. Light: white reading surfaces,
-  the cool "ink" grey text scale (`neutral-900` / `700` / `600`), `neutral-200` borders and the one
-  slate accent (`brand-800`; `brand-300` in dark mode) for links, the active state, bars and fills,
-  plus a soft glow at the top of the page. Dark: the apps' cool ink surface (`ink-900`). Text in
-  the accent colour uses `--brand-text`; `src/styles/theme-contrast.test.ts` holds every text pair
-  to WCAG AA (≥ 4.5:1) in every theme (light, dark and Nord). Callout and card-tile hues are docs-only and stay literal.
-  The tokens at the top of `global.css` are the only place to change any of it.
-- **Typography** — see [Typography](#typography) below.
-- **One reading column** — paragraphs, tables, code blocks and diagrams share one width
-  (`--type-measure`, 52rem / 832px, ~85 characters of body copy — at 1440px it fills the space
-  between the sidebar and the "On this page" rail), centred between the two, so nothing juts out past the text. Content wider than the column scrolls inside its
-  own frame; a table shows an edge shadow on the side that has more columns.
-- **Tables** — reference material, read across a row: no vertical rules, a tinted header, the first
-  column as the row's key (text colour, medium weight), a row highlight under the pointer and
-  tabular numerals. `rehypeTableWrapper` adds a `<wbr>` after each `.` and `/` of a code chip in a
-  cell, and after each `_` of an identifier longer than 22 characters, so a column of names wraps
-  at an identifier's joints instead of pushing the table past the column (copied text is
-  unchanged).
-- **Diagrams** — ```` ```mermaid ```` fences are drawn by [Pele](https://pele.run), a Mermaid-syntax
-  renderer that outputs plain SVG themed by CSS variables, so a theme switch recolours a diagram
-  without re-rendering it. Pele measures labels in the page's own font (no clipped labels) and
-  re-orients a flowchart that is too wide for the column instead of shrinking it.
-  `remarkDiagrams` parses every diagram at build time and fails the build on a syntax error, with
-  its line; `src/lib/markdown/__tests__/docs-diagrams.test.ts` reports the same in `pnpm test`.
-  Colour carries meaning, the same in every diagram (`src/scripts/diagrams.ts` tags the nodes,
-  `global.css` → "Diagrams" colours them):
+- **Rendering** — `packages/docs-renderer` turns each Markdown file into HTML with the plugin order the
+  Astro site used (GitHub-flavoured Markdown and SmartyPants first, then the docs' remark and rehype
+  plugins). Code fences become the shared `CodeBlock`, callouts the shared `Alert` (`role="note"`), media
+  fences carousels and resizable images. The HTML ships in the page; code blocks and media embeds are
+  hydrated as islands inside it (`src/browser/islands.ts`), diagrams are drawn by Pele.
+- **Regression baseline** — `regression-baseline/routes.json` records every page the Astro site published:
+  its title, h1, sharing image, canonical path and every heading anchor. `pnpm build` fails if the new site
+  loses any of them (`src/lib/baseline.ts`, `scripts/check-baseline.ts`), so no saved link breaks. Two
+  differences are deliberate and listed in `EXPECTED_CHANGES`: the 404 page is served by the Start server,
+  and the sitemap is one `/sitemap.xml`; a heading renamed on purpose is listed in `RENAMED_ANCHORS`.
+  `search-results.json` records the ranked results of 12 queries.
+- **Search** — `/search-index.json` is written at build (one entry per guide, per h2/h3 and per post). The
+  `⌘K` / `Ctrl K` / `/` dialog loads it on first open with TanStack Query, validates it with zod and ranks
+  matches in the browser (`src/lib/search.ts`); highlights are React nodes, so a query can never inject
+  markup. `/search?q=` shows every match and can be linked to.
+- **Endpoints** — `/api-endpoints.json` is built from the OpenAPI export and the controllers' decorators
+  (`packages/docs-renderer/src/api-reference/endpoint-index.ts`); `/endpoints` lists every operation with
+  its method, path, group and access, each linked to its section of the generated reference.
+- **"On this page"** — a progress ring (percent read, time left) over a vertical timeline: one node per h2,
+  filled up to where the reader is, subsections hanging from their section on a rule like the app sidebars.
+  The arithmetic is pure (`src/lib/reading-progress.ts`); each section's words are counted at build. Below
+  1280px it is a glass bar under the header that opens the same timeline in a sheet.
 
-  | Role | Hue | What it is |
-  | --- | --- | --- |
-  | Entry point | blue | a flowchart node nothing points to |
-  | Step | slate | everything in between |
-  | Store | teal | a cylinder — a table, cache or queue |
-  | Decision | amber | a diamond |
-  | Outcome | violet | a node that points to nothing |
-  | Person | rose | a circle |
+## Look
 
-  Sequence participants take the six hues in order; notes are neutral and dashed. A node the
-  author styled (`classDef` / `style`) keeps the author's colours. A `;` inside sequence message
-  text ends the statement — write `#59;` for a literal semicolon.
-- **Cover images** — a guide's `coverImage` (required) and a post's (optional) show as a 3:1
-  banner under the breadcrumbs (`src/components/PageCover.astro`) and as the page's link preview.
-- **Code block theme** — code has its own light / dark theme, independent of the site's: the
-  toggle in every code block's header cycles **Auto** (match the site) → **Light** → **Dark** and
-  applies to every block (`src/scripts/code-theme.ts`, stored as `docs:code-theme`, applied before
-  first paint by the bootstrap in `BaseLayout.astro`). It sets `data-code-theme` on `<html>`;
-  `global.css` re-declares the theme tokens inside `.code-block-island` and the `dark:` variant
-  follows that attribute inside code blocks only. The sidebar's active page is a solid slate pill
-  with white text (slate-900 light, slate-700 dark). The toggle renders all three states and CSS
-  shows the current one, so hydration never disagrees with the stored choice.
-- **Code blocks** — every fence renders the shared `CodeBlock` from `@workspace/ui` (the full
-  ReUI port, `packages/ui/src/components/code-block.tsx`). `src/lib/markdown/code-block.ts`
-  highlights each fence at build time with the component's own `highlightCode` (Shiki,
-  github-light + one-dark-pro, `src/lib/code-block/themes.ts`; dark code gets One Dark's own
-  charcoal `#282c34` and chrome, not the page's near-black), renders it to HTML and embeds its props; `src/scripts/code-blocks.ts`
-  then hydrates it with React (only on pages that have code) so copy, wrap, folding and
-  "Show more" work. Each block is its own React island with no app root above it, so
-  `src/lib/code-block/element.ts` wraps it in the kit's `UiKitLabelsProvider` with the English
-  pack (`UI_KIT_LABELS_EN`) — the docs declare no copy of their own. The fence glue stays
-  hast-based: ReUI's `markdownCodeProps` / `markdownFences` read react-markdown props and raw
-  markdown strings, not the rehype tree this pipeline works on. Two build details matter:
-  - `astro.config.ts` awaits `preloadCodeBlockHighlighter()`. Astro closes the module runner
-    that loaded the config, so lazy grammar imports during rendering would fail and every block
-    would silently render uncoloured; the build now throws if that ever happens.
-  - `dev` and `build` pass `--force`: Astro caches rendered Markdown and does not notice changes
-    to the remark/rehype plugins, so without it an old render survives code changes.
-- **Navigation** — the guide tree renders twice from one component (`NavTree.astro`): as the
-  sticky sidebar from 1024px up, and inside the full-height mobile drawer below that.
-- **Theme** — light / dark follows the OS until the reader picks one (stored in
-  `localStorage`); an inline script applies it before first paint to avoid a flash.
-- **No framework runtime** — pages ship as HTML; the only JavaScript is `src/scripts/*`
-  (~95 kB, mostly zod), plus the diagram renderer, which is downloaded only on pages that contain a diagram.
+B + F, chosen from six mocked directions: B's precise layout (drafting-grid header on frosted glass, the
+guide's source file as its breadcrumb, `#` anchors, numbered code lines, verb-coded endpoints) in F's
+palette (graphite and verdigris on a cool neutral `#f1f4f9` canvas, never pure white; `#1f1f1d` dark), with the guide's own `coverImage` as a band
+across the top and its page icon over the edge.
 
-## Typography
+- **Tokens** — every colour is a token at the top of `src/styles/app.css`: the shared semantic tokens
+  redefined for light and dark plus the docs' own (`--docs-*`).
+  `src/styles/__tests__/theme-contrast.test.ts` holds every text pair, the diagram tints and the dark code
+  chrome to WCAG AA in both themes.
+- **Typography** — IBM Plex Sans for everything and IBM Plex Mono for code, file paths and HTTP verbs,
+  self-hosted from Fontsource (no font CDN). Code ligatures stay off: readers copy what they see.
+- **Code theme** — code has its own light / dark theme, independent of the site's (the toggle in every code
+  block's header: Auto → Light → Dark, stored as `docs:code-theme`). Dark code keeps One Dark Pro's charcoal.
+- **Theme** — light / dark (the apps' Nord is not offered) is a class on `<html>` (the kit's contract), applied before first paint by
+  the inline script `THEME_BOOTSTRAP_SCRIPT` (`src/browser/theme.ts`); it follows the OS until the reader picks.
 
-| Role             | Face                         | Size / line height / weight                         |
-| ---------------- | ---------------------------- | --------------------------------------------------- |
-| Body copy        | Atkinson Hyperlegible Next   | 16px / 1.65 / 400, at most 52rem (~85ch) per line   |
-| Page title (h1)  | Atkinson Hyperlegible Next   | 36px (30px on phones) / 1.2 / 700, tracked −0.022em |
-| h2 · h3 · h4     | Atkinson Hyperlegible Next   | 24 · 20 · 18px / 1.2–1.35 / 600                     |
-| Card titles      | Atkinson Hyperlegible Next   | 20px / 1.35 / 600                                   |
-| Tables           | Atkinson Hyperlegible Next   | 15px / 1.5, tabular numerals                        |
-| Chrome           | Atkinson Hyperlegible Next   | 14px / 1.5 — nav tree, TOC, metadata, controls; 12px for tags and hints |
-| Code             | Atkinson Hyperlegible Mono   | 0.875em inline (follows the text around it), 14px in code blocks, ligatures off |
+## Adding or editing a guide
 
-- **One family** — headings, prose and UI are Atkinson Hyperlegible Next and code is Atkinson
-  Hyperlegible Mono (`--font-sans`, `--font-mono`; `--type-family-heading` is the sans).
-  Hierarchy comes from weight and size, not a second display face. The docs deliberately differ
-  from the apps (Bricolage Grotesque / Geist): they are a reading surface, not app UI.
-- **Why these faces** — designed by the Braille Institute so look-alike characters never blur
-  together: `0` / `O`, `1` / `l` / `I`, `rn` / `m`. Reference text full of identifiers, numbers and
-  environment variable names is where that matters most. The sizes follow the ui-ux-pro-max UX
-  rules: 16px minimum body text, line height 1.5–1.75, 65–75 characters per line, one consistent
-  scale (12 · 14 · 15 · 16 · 18 · 20 · 24 · 30 · 36px).
-- **Code ligatures are off** — readers copy what they see, so `!==`, `=>` and `>=` must look like
-  the characters they type.
-- **Self-hosted** — the font files come from the `@fontsource-variable/atkinson-hyperlegible-next`
-  and `@fontsource-variable/atkinson-hyperlegible-mono` packages and are served from this site (no
-  Google Fonts request, so no third-party tracking and no extra DNS/TLS handshake). The Astro
-  Fonts API (`fonts` in `astro.config.ts`, `<Font>` in `src/layouts/BaseLayout.astro`) emits the
-  `@font-face` rules with `font-display: swap`, preloads the upright sans file, and generates
-  metric-matched fallback faces (`size-adjust` and ascent/descent overrides) so text does not jump
-  when the web font arrives.
-- **Latin only, variable weights** — one variable file per style (≈34 kB upright, ≈38 kB italic
-  for the sans; ≈18 kB / ≈19 kB for the mono) covers every weight from 200 to 800. Characters
-  outside the Latin subset (box-drawing lines, most arrows, emoji) come from the fallback fonts.
-- **Tokens** — every size, weight, line height and letter spacing is a `--type-*` token at the top
-  of `src/styles/global.css`. Use them; never write a raw `font-size` / `font-weight` in a rule.
-  Fenced code blocks take their size from `--type-code-block-size` (passed to the shared
-  `CodeBlock` in `src/lib/code-block/element.ts`).
+1. Create `docs/<name>.md` (sub-folders are fine: `docs/technical/authorization/backend.md` becomes
+   `/docs/technical/authorization/backend`; the id keeps its case, so `README.md` is `/docs/README`).
+2. Start it with front matter — at the very first line (GitHub only reads it there). The schema is
+   `src/lib/frontmatter.ts` and **the build fails** if a field is missing or misspelt:
+
+   ```yaml
+   ---
+   title: "Messaging Infrastructure"
+   description: "Operational reference for Redis, BullMQ, Kafka and the outbox." # optional
+   order: 4 # optional
+   author: "Backend Team"
+   lastUpdated: 1790812800000 # epoch ms, UTC midnight of the day you edited it
+   coverImage: "https://images.unsplash.com/…" # the page's cover band and its link preview (og:image)
+   tags: ["infrastructure", "messaging"] # optional; "superseded" hides it from the sidebar
+   ---
+   ```
+
+3. Add its id to `docs/meta.json` under the right `--- Section ---` separator. Guides not listed there
+   still build, and appear under **More Guides**.
+4. Optionally give it an icon in `DOC_ICONS` (`src/lib/icons.ts`); new sections get one in `SECTION_ICONS`.
+5. Run `pnpm build` — it checks the links first and the baseline last.
+
+Blog posts work the same way in `blog/` (`title`, `description`, `author`, `date`, `category`) with their
+order in `blog/meta.json`.
+
+### Markdown features
+
+| Write this                                        | You get                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[Database](./database.md#seed-data)`             | A link to `/docs/technical/database#seed-data` (from `docs/technical/`)                                                                                                                                                                                                       |
+| `[registry](../apps/api/src/…/registry.ts)`       | A link to that file on GitHub                                                                                                                                                                                                                                                 |
+| `> [!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!CAUTION]` | A coloured callout (emoji markers like `> ⚠️` work too)                                                                                                                                                                                                                       |
+| ` ```ts title="app.ts" {2-4} `                    | The shared `CodeBlock` with a title, language, copy button, line numbers and lines 2–4 lit                                                                                                                                                                                    |
+| ` ```mermaid `                                    | A diagram (Mermaid syntax), drawn by Pele in the browser, coloured by role; it must parse or the build fails                                                                                                                                                                  |
+| ` ```qr title="Pairing QR" `                      | A scannable QR code of the fence's text, drawn at build time as inline SVG by the shared encoder (`packages/docs-renderer/src/markdown/qr-code.ts`)                                                                                                                           |
+| ` ```pdf title="Statement.pdf" `                  | The PDF at the fence's URL (a site path or `https://`), framed under a header with open-in-new-tab and download, drawn by the browser's own PDF engine (`packages/docs-renderer/src/markdown/pdf-embed.ts`). `/files/pdf-viewer-sample.pdf` is a sample written at build time |
+| ` ```carousel ratio="16/9" `                      | The `@workspace/ui` `ImageCarousel` (Embla) of the fence's images, one `![alt](url)` per line: rendered at build time, hydrated in the browser (`packages/docs-renderer/src/markdown/media-embeds.ts`, `packages/docs-renderer/src/media/`)                                   |
+| ` ```image-resize width="480" height="270" `      | The `@workspace/ui` `ImageResizer` of the fence's one image, starting at that size and keeping its shape (`aspect="free"` lets the sides change independently)                                                                                                                |
+| `![alt](./images/email/welcome.png)`              | The image, served from `docs/images/` at `/images/…`                                                                                                                                                                                                                          |
+| A table whose cells are images                    | A responsive screenshot gallery                                                                                                                                                                                                                                               |
+| `RBAC`, `RLS`, `ReBAC`, … in prose                | An `<abbr>` tooltip with the definition                                                                                                                                                                                                                                       |
+
+The leading `# Heading` is dropped (the page title comes from `title`), and headings get the
+same anchors GitHub generates, so `#section` links work in both places.
 
 ## Environment
 
 All optional — the defaults are the local dev ports.
 
-| Variable              | Used for                                     | Default                          |
-| --------------------- | -------------------------------------------- | -------------------------------- |
-| `PUBLIC_SITE_URL`     | Canonical URLs, sitemap, RSS, `og:url`        | `http://localhost:3002`          |
-| `PUBLIC_ADMIN_URL`    | The "Admin" header link                      | `http://localhost:3001`          |
-| `PUBLIC_API_DOCS_URL` | The "API Reference" header link              | `http://localhost:8080/v1/docs`  |
+| Variable              | Used for                               | Default                         |
+| --------------------- | -------------------------------------- | ------------------------------- |
+| `PUBLIC_SITE_URL`     | Canonical URLs, sitemap, RSS, `og:url` | `http://localhost:3002`         |
+| `PUBLIC_ADMIN_URL`    | The "Admin" header link                | `http://localhost:3001`         |
+| `PUBLIC_API_DOCS_URL` | The "Swagger" header link              | `http://localhost:8080/v1/docs` |
 
 ## Do / don't
 
-- ✅ Link between guides with relative `.md` paths — they work on GitHub and here.
+- ✅ Link between guides with relative `.md` paths — they work on GitHub and here, and the link checker sees them.
 - ✅ Bump `lastUpdated` whenever you change a guide.
-- ✅ Keep new logic in `src/lib/` as pure functions with a test next to them.
+- ✅ Keep new logic in `src/lib/` as pure functions with a test beside them (`__tests__/`).
+- ✅ Use the `@workspace/ui` component when one exists; style through tokens.
 - ❌ Don't put content in `apps/docs` — it belongs in `docs/` or `blog/`.
-- ❌ Don't hardcode colours, font sizes or weights in components — add or reuse a token in `global.css`.
-- ❌ Don't add a font from a CDN — add the Fontsource package and register it in `fonts` in `astro.config.ts`.
-- ❌ Don't link to `/docs/<slug>` for another guide by hand when a relative `.md` link will do;
-  the relative link is checked by the link checker and survives renames better.
+- ❌ Don't hardcode colours, font sizes or weights in components — add or reuse a token in `app.css`.
+- ❌ Don't add a font from a CDN — add the Fontsource package and import it in `app.css`.
+- ❌ Don't change `regression-baseline/` to make the build pass: it is the record of what was published. A
+  deliberate change goes into `EXPECTED_CHANGES` (a page or file) or `RENAMED_ANCHORS` (a heading) with its reason.

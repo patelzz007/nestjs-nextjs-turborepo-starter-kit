@@ -36,6 +36,8 @@ import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorizati
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
+import { useTranslatedSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
+import { ADMIN_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 
 const SKIP_TO_CONTENT_CLASS =
 	"sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg";
@@ -108,9 +110,11 @@ export function DashboardLayout({
 	// favorites: `permission allowed AND feature enabled` (spec semantics of the
 	// capability filter), then every item whose page the route guard would
 	// deny is removed (`@SuperAdminOnly` pages, per-page rules).
+	// In the language on screen (5.12); ids and the saved section order stay the English ones.
+	const menu = useTranslatedSidebarMenu(SIDEBAR_MENU, ADMIN_SIDEBAR_LABELS);
 	const filteredMenu = React.useMemo(
-		() => filterMenuByRouteAccess(filterCompiledSidebarMenu(SIDEBAR_MENU, capabilities, { enabledFeatureFlags }), ADMIN_ROUTE_AUTHORIZATION, routeSession),
-		[capabilities, enabledFeatureFlags, routeSession],
+		() => filterMenuByRouteAccess(filterCompiledSidebarMenu(menu, capabilities, { enabledFeatureFlags }), ADMIN_ROUTE_AUTHORIZATION, routeSession),
+		[capabilities, enabledFeatureFlags, menu, routeSession],
 	);
 
 	const canAccessPath = React.useCallback((href: string): boolean => canAccessRoute(ADMIN_ROUTE_AUTHORIZATION, href, routeSession), [routeSession]);

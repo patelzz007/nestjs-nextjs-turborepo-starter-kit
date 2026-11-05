@@ -71,7 +71,7 @@ describe("MerchantsAllTable URL state", () => {
 			expect.anything(),
 		);
 		expect(screen.getByDisplayValue("cafe")).toBeDefined();
-		expect(screen.getByRole("combobox", { name: "KYB status" }).textContent).toContain("Pending");
+		expect(screen.getByRole("combobox", { name: /^KYB status:/u }).textContent).toContain("Pending");
 	});
 
 	it("commits the search with replace, keeps the filters and returns to page 1", async () => {

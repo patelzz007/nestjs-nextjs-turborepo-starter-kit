@@ -4,14 +4,14 @@ Shared, **dumb** UI primitives for the monorepo. Components are stateless, fully
 
 ## Principles
 
-| Rule | Practice |
-|------|----------|
-| Smart vs dumb | No data fetching, routing, or `localStorage` in primitives — pages/containers own that logic. |
-| `forwardRef` | Every interactive root forwards a ref so form libraries and focus management can reach the native control. |
-| CVA | Styled components use `class-variance-authority` with `variant`, `size`, and `state` (`default` \| `loading` \| `disabled` \| `error`). |
-| Copy | No strings in components — every string comes from the app's label registry (see [Copy and languages](#copy-and-languages)); `labels` props override per usage. |
-| Tokens | Use design tokens (`bg-primary`, `text-destructive`, `z-overlay`) — no raw `z-50`, `bg-emerald-*`, or hex literals. |
-| Types | Zod at boundaries; no `any`, `unknown`, `never`, or runtime `typeof` checks in UI code. |
+| Rule          | Practice                                                                                                                                                        |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Smart vs dumb | No data fetching, routing, or `localStorage` in primitives — pages/containers own that logic.                                                                   |
+| `forwardRef`  | Every interactive root forwards a ref so form libraries and focus management can reach the native control.                                                      |
+| CVA           | Styled components use `class-variance-authority` with `variant`, `size`, and `state` (`default` \| `loading` \| `disabled` \| `error`).                         |
+| Copy          | No strings in components — every string comes from the app's label registry (see [Copy and languages](#copy-and-languages)); `labels` props override per usage. |
+| Tokens        | Use design tokens (`bg-primary`, `text-destructive`, `z-overlay`) — no raw `z-50`, `bg-emerald-*`, or hex literals.                                             |
+| Types         | Zod at boundaries; no `any`, `unknown`, `never`, or runtime `typeof` checks in UI code.                                                                         |
 
 ## Theming
 
@@ -41,7 +41,10 @@ throws without one — `sidebar`, `panelSidebarNav`, `breadcrumb`, `breadcrumbTr
 `labels` prop (`UiKitLabelsOverride<"<family>">`, a stable module constant) overrides individual
 strings for one usage; single-string props (`ariaLabel` on `Breadcrumb`, `label` on
 `BreadcrumbEllipsis` / `ScrollToTop` / `ShellThemeToggle`, `aria-label` on `Pagination`, the topbar
-search's `mobileAriaLabel` / `desktopAriaLabel`, the palette's `placeholder`) win over the family.
+search's `mobileAriaLabel`, the palette's `placeholder`) win over the family. A control that shows text is
+named by that text (WCAG 2.5.3 "label in name"): the topbar's wide search trigger by its `placeholder`, the
+sidebar account by the name and email it shows; a keyboard hint is `aria-hidden` and announced through
+`aria-keyshortcuts` instead.
 The `*Labels` interfaces stay in `lib/shell/labels`, `lib/navigation/labels`, `lib/palette/labels`
 and `lib/sidebar/labels`. Stateful shell pieces expose a controlled pair alongside their
 uncontrolled default: `AppCommandPalette` (`open`/`onOpenChange`, `searchText`/`onSearchTextChange`),
@@ -184,7 +187,7 @@ import path; a server component imports them from `code-block-highlight`):
   `pre` (`language-*` class, nested children flattened, one trailing newline dropped). Tolerant:
   a still-streaming fence with no language yet comes back as plain `code`.
 - `markdownFences(markdown)` → `CodeBlockMarkdownPart[]` (`{ type: "text" | "code", content,
-language?, open }`) for transcripts rendered without a markdown dependency. CommonMark
+  language?, open }`) for transcripts rendered without a markdown dependency. CommonMark
   backtick/tilde fences; an unterminated trailing fence is a `code` part with `open: true`
   (pass it as `streaming`).
 
@@ -265,6 +268,12 @@ lists its deliberate deviations; the common ones are:
   plus `-foreground` (text on a light tint, aliased to the tone palette so it keeps its AA
   contrast), `invert` / `invert-foreground`, and `status-foreground` (text on a solid status
   fill, in place of `text-white`). Badge's two smallest sizes use `--text-badge-xs|sm`.
+- **Alert look** — the one port whose look deliberately differs from ReUI (approved restyle):
+  the "Tile" design keeps every variant on the neutral card (`bg-card`, `border-border`) and
+  puts the status colour only in a 32px icon tile, `color-mix(in oklab, <tone> 62%, foreground)`.
+  Each variant has a default icon; a leading `<svg>` (or other media, such as an `Avatar`)
+  passed as a direct child replaces it. A description without a title uses the foreground
+  colour. `invert` keeps the inverted surface.
 - **Kit extras kept** — `Badge` keeps `ghost`, `link` and the categorical tone palette
   (`green` … `violet`); ReUI's `focus`, `focus-light` and `focus-outline` variants use the
   `--focus` / `--focus-foreground` tokens.
@@ -357,7 +366,7 @@ heroes. Data-agnostic (`src`, nothing domain-specific).
 
 ```tsx
 const [cover] = reward.images;
-<CoverImage src={cover?.url} sources={cover?.sources} sizes="(min-width: 1280px) 33vw, 100vw" priority={index === 0} className="rounded-t-[inherit]" />
+<CoverImage src={cover?.url} sources={cover?.sources} sizes="(min-width: 1280px) 33vw, 100vw" priority={index === 0} className="rounded-t-[inherit]" />;
 ```
 
 ## Image carousel (`image-carousel.tsx`)

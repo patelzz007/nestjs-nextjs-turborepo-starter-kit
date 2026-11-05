@@ -15,6 +15,8 @@ import { InMemoryBroadcastStore } from "./in-memory-broadcast.store";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
+import type { BroadcastImageFilesPort, BroadcastImageOwner } from "../../ports/broadcast-image-files.port";
+import { ValidationError } from "../../../../../platform/application/errors/app-error";
 
 export const EMAIL_LOG_ID = "6b1f3e2a-9c4d-4e5f-8a7b-1c2d3e4f5a6b";
 export const NOW: EpochMs = epochMs(1_800_000_000_000);
@@ -167,6 +169,30 @@ export class RecordingNotificationsUnitOfWork implements UnitOfWork<Notification
 	}
 }
 
+/** Broadcast pictures (enhancement 5.4): the ones a test registers are ready; locking records what was asked. */
+export class InMemoryBroadcastImages implements BroadcastImageFilesPort {
+	public readonly locked: { readonly owner: BroadcastImageOwner; readonly fileIds: readonly string[] }[] = [];
+
+	public constructor(private readonly ready: ReadonlyMap<string, string> = new Map()) {}
+
+	public lockUsable(owner: BroadcastImageOwner, fileIds: readonly string[]): Promise<void> {
+		this.locked.push({ owner, fileIds });
+		const refused = fileIds.filter((fileId) => !this.ready.has(fileId));
+		return refused.length === 0 ? Promise.resolve() : Promise.reject(new ValidationError({ message: "not ready", details: { fileIds: refused } }));
+	}
+
+	public sources(fileIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
+		return Promise.resolve(
+			new Map(
+				fileIds.flatMap((fileId): [string, string][] => {
+					const src = this.ready.get(fileId);
+					return src === undefined ? [] : [[fileId, src]];
+				}),
+			),
+		);
+	}
+}
+
 export function notificationsScope(
 	emailLogs: InMemoryEmailLogs,
 	emailRequests: EmailRequestTransactionalPort = new RecordingEmailRequests(),
@@ -174,8 +200,9 @@ export function notificationsScope(
 	accountStore: InMemoryNotificationAccountStore = new InMemoryNotificationAccountStore(),
 	broadcasts: InMemoryBroadcastStore = new InMemoryBroadcastStore(),
 	notify: RecordingNotify = new RecordingNotify(),
+	broadcastImages: InMemoryBroadcastImages = new InMemoryBroadcastImages(),
 ): NotificationsScope {
-	return { emailLogs, emailRequests, notify, notificationStore, accountStore, broadcasts, events: new TransactionalEventCollector() };
+	return { emailLogs, emailRequests, notify, notificationStore, accountStore, broadcasts, broadcastImages, events: new TransactionalEventCollector() };
 }
 
 export function failure(retryable: boolean, message = "provider error"): EmailDeliveryFailure {

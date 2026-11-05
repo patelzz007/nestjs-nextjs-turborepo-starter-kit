@@ -9,6 +9,13 @@ export default defineConfig({
 		},
 	},
 	test: {
+		// Coverage floors (enhancement 3.1): measured on 2026-11-03, set just below. Raise them as tests are
+		// added; never lower them. `pnpm test` measures (`--coverage`); a single-file `vitest run` doesn't.
+		coverage: {
+			provider: "v8",
+			reporter: ["text-summary"],
+			thresholds: { lines: 74, statements: 74, functions: 67, branches: 64 },
+		},
 		environment: "node",
 		// Existing src/**/*.spec.ts files use bare describe/it/expect globals.
 		globals: true,

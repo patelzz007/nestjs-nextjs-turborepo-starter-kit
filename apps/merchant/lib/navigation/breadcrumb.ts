@@ -8,7 +8,9 @@ import { identitySidebarResolveHref, type SidebarResolveHref } from "@workspace/
 import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { resolveTenantPageRoute, type TenantPageRoute } from "@/lib/navigation/tenant-route-authorization";
 import { toTenantRelativePath } from "@/lib/routes";
-import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
+import { MERCHANT_SIDEBAR_MENU, type CompiledSidebarMenuData } from "@/lib/navigation/sidebar-menu";
+import type { UiKitLanguage } from "@workspace/ui/lib/labels/language-packs";
+import { MERCHANT_MESSAGES } from "@/lib/i18n/app-messages";
 
 /** Crumb icons from the sidebar map; a page without one shows a document. */
 const resolveIcon = menuIconResolver(MERCHANT_MENU_ICON_MAP, FileText);
@@ -41,14 +43,19 @@ function resolveMerchantTrailPage(tenantRelativePath: string): SidebarTrailPage 
  * share the `/t` root segment and the first section would win), then each
  * crumb's href is mapped back to a browser href with `resolveHref`.
  */
-export function resolveMerchantTrail(pathname: string, resolveHref: SidebarResolveHref = identitySidebarResolveHref): readonly BreadcrumbItem[] {
+export function resolveMerchantTrail(
+	pathname: string,
+	resolveHref: SidebarResolveHref = identitySidebarResolveHref,
+	menu: CompiledSidebarMenuData = MERCHANT_SIDEBAR_MENU,
+	language: UiKitLanguage = "en",
+): readonly BreadcrumbItem[] {
 	const trail = resolveSidebarMenuTrail({
-		menu: MERCHANT_SIDEBAR_MENU,
+		menu,
 		pathname: toTenantRelativePath(pathname) ?? pathname,
 		resolveIcon,
-		rootCurrentLabel: "Dashboard",
+		rootCurrentLabel: MERCHANT_MESSAGES[language].navigation.breadcrumbRoot,
 		rootIcon: LayoutDashboard,
-		unknownFallbackLabel: "Dashboard",
+		unknownFallbackLabel: MERCHANT_MESSAGES[language].navigation.breadcrumbRoot,
 		resolvePage: resolveMerchantTrailPage,
 	});
 

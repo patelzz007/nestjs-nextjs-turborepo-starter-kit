@@ -11,18 +11,21 @@ import { Screen } from "../../../components/screen";
 import { BodyText, MutedText } from "@workspace/ui-native/components/text";
 import { turnAppLockOff, turnAppLockOn, type AppLockChangeResult } from "../../../features/app-lock/app-lock-enrollment";
 import { useAppLockEnabled, useAppLockTimeoutMs, usePreferencesCommands } from "../../../features/preferences/facade";
-import { APP_LOCK_TIMEOUT_OPTIONS, PREFERENCE_MESSAGES } from "../../../features/preferences/labels";
+import { APP_LOCK_LABELS, type AppLockLabels } from "../../../features/app-lock/labels";
+import { useLabels } from "../../../features/language/use-app-language";
+import { appLockTimeoutOptionsOf, PREFERENCES_LABELS } from "../../../features/preferences/labels";
 import { useToast } from "../../../features/toast/facade";
 import type { AppLockTimeoutMs } from "../../../lib/secure-store";
 
-export const APP_LOCK_UNAVAILABLE_MESSAGE = "Set up a device passcode (and biometrics, if you like) in your phone's settings to use the app lock.";
-export const APP_LOCK_FAILED_MESSAGE = "The check didn't pass, so nothing changed. Try again.";
+/** The English messages, for tests and readers (every language: features/app-lock/labels.ts). */
+export const APP_LOCK_UNAVAILABLE_MESSAGE = APP_LOCK_LABELS.en.settings.unavailable;
+export const APP_LOCK_FAILED_MESSAGE = APP_LOCK_LABELS.en.settings.failed;
 
-function failureMessageOf(result: AppLockChangeResult): string | null {
+function failureMessageOf(result: AppLockChangeResult, labels: AppLockLabels): string | null {
 	if (result.ok || result.reason === "cancelled") {
 		return null;
 	}
-	return result.reason === "unavailable" ? APP_LOCK_UNAVAILABLE_MESSAGE : APP_LOCK_FAILED_MESSAGE;
+	return result.reason === "unavailable" ? labels.settings.unavailable : labels.settings.failed;
 }
 
 export default function AppLockScreen(): React.JSX.Element {
@@ -30,25 +33,28 @@ export default function AppLockScreen(): React.JSX.Element {
 	const timeoutMs = useAppLockTimeoutMs();
 	const preferences = usePreferencesCommands();
 	const toast = useToast();
+	const labels = useLabels(APP_LOCK_LABELS);
+	const preferenceLabels = useLabels(PREFERENCES_LABELS);
+	const timeoutOptions = React.useMemo((): ReturnType<typeof appLockTimeoutOptionsOf> => appLockTimeoutOptionsOf(preferenceLabels), [preferenceLabels]);
 	const [pending, setPending] = React.useState(false);
 
 	const toggle = React.useCallback((): void => {
 		setPending(true);
-		const change = enabled ? turnAppLockOff("Confirm to turn off the app lock") : turnAppLockOn("Confirm to turn on the app lock");
+		const change = enabled ? turnAppLockOff(labels.settings.confirmTurnOff) : turnAppLockOn(labels.settings.confirmTurnOn);
 		change
 			.then((result: AppLockChangeResult): void => {
 				if (result.ok) {
 					if (enabled) {
 						preferences.appLockTurnedOff();
-						toast.success(PREFERENCE_MESSAGES.appLockTurnedOff);
+						toast.success(preferenceLabels.messages.appLockTurnedOff);
 					} else {
 						preferences.appLockTurnedOn();
-						toast.success(PREFERENCE_MESSAGES.appLockTurnedOn);
+						toast.success(preferenceLabels.messages.appLockTurnedOn);
 					}
 					return;
 				}
 				// Cancelling the check is the person's own choice: nothing changed, nothing to report.
-				const failure = failureMessageOf(result);
+				const failure = failureMessageOf(result, labels);
 				if (failure !== null) {
 					toast.error(failure);
 				}
@@ -58,35 +64,35 @@ export default function AppLockScreen(): React.JSX.Element {
 					setPending(false);
 				},
 				(): void => {
-					toast.error(APP_LOCK_FAILED_MESSAGE);
+					toast.error(labels.settings.failed);
 					setPending(false);
 				},
 			);
-	}, [enabled, preferences, toast]);
+	}, [enabled, labels, preferenceLabels, preferences, toast]);
 	const changeTimeout = React.useCallback(
 		(next: AppLockTimeoutMs): void => {
 			if (next === timeoutMs) {
 				return;
 			}
 			preferences.appLockTimeoutChanged(next);
-			toast.success(PREFERENCE_MESSAGES.appLockTimeoutChanged(next));
+			toast.success(preferenceLabels.messages.appLockTimeoutChanged[next]);
 		},
-		[preferences, timeoutMs, toast],
+		[preferenceLabels, preferences, timeoutMs, toast],
 	);
 
 	return (
-		<Screen description="Ask for Face ID, Touch ID, your fingerprint or the device passcode before the app opens.">
+		<Screen description={labels.settings.description}>
 			<Card>
-				<BodyText>{enabled ? "The app lock is on." : "The app lock is off."}</BodyText>
-				<Button label={enabled ? "Turn off app lock" : "Turn on app lock"} variant={enabled ? "secondary" : "primary"} onPress={toggle} loading={pending} />
-				<MutedText>The lock works on this device only. If the biometrics on this device change, it turns itself off and you sign in with your password again.</MutedText>
+				<BodyText>{enabled ? labels.settings.isOn : labels.settings.isOff}</BodyText>
+				<Button label={enabled ? labels.settings.turnOff : labels.settings.turnOn} variant={enabled ? "secondary" : "primary"} onPress={toggle} loading={pending} />
+				<MutedText>{labels.settings.deviceOnly}</MutedText>
 			</Card>
 			{enabled ? (
-				<Card title="Lock after">
-					<RadioGroup label="Lock after" options={APP_LOCK_TIMEOUT_OPTIONS} value={timeoutMs} onChange={changeTimeout} />
+				<Card title={labels.settings.lockAfter}>
+					<RadioGroup label={labels.settings.lockAfter} options={timeoutOptions} value={timeoutMs} onChange={changeTimeout} />
 				</Card>
 			) : null}
-			<MutedText>In Expo Go on iPhone the lock uses your device passcode instead of Face ID; a real build uses Face ID.</MutedText>
+			<MutedText>{labels.settings.expoGoNote}</MutedText>
 		</Screen>
 	);
 }

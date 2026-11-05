@@ -10,11 +10,14 @@ const TYPESCRIPT: LanguageShare = {
 	percentLabel: "82.4%",
 	color: "#3178c6",
 	tint: "#3178c629",
+	originalLogo: null,
 	logoPath: "M0 0h24v24H0z",
 	monogram: "Ty",
 };
-const CSHARP: LanguageShare = { name: "C#", percent: 17.6, percentLabel: "17.6%", color: null, tint: null, logoPath: null, monogram: "C#" };
-const UNUSED: LanguageShare = { name: "Shell", percent: 0, percentLabel: "0%", color: "#89e051", tint: "#89e05129", logoPath: null, monogram: "Sh" };
+const CSHARP: LanguageShare = { name: "C#", percent: 17.6, percentLabel: "17.6%", color: null, tint: null, originalLogo: null, logoPath: null, monogram: "C#" };
+const UNUSED: LanguageShare = { name: "Shell", percent: 0, percentLabel: "0%", color: "#89e051", tint: "#89e05129", originalLogo: null, logoPath: null, monogram: "Sh" };
+/** A tiny full-colour logo document, as devicon ships one. */
+const ORIGINAL_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#3178c6" d="M0 0h128v128H0z"/></svg>';
 
 describe("LanguageBreakdown", () => {
 	it("reads the bar as one sentence and each language as `name: share`", async () => {
@@ -36,8 +39,17 @@ describe("LanguageBreakdown", () => {
 });
 
 describe("LanguageLogo", () => {
-	it("draws the logo on the language's tint, hidden from screen readers", async () => {
-		await render(<LanguageLogo path={TYPESCRIPT.logoPath} monogram="Ty" tint="#3178c629" testID="logo" />);
+	it("draws the original, full-colour logo on the light logo chip when the language has one", async () => {
+		await render(<LanguageLogo original={ORIGINAL_SVG} path={TYPESCRIPT.logoPath} monogram="Ty" tint="#3178c629" testID="logo" />);
+
+		expect(screen.queryByTestId("logo")).toBeNull();
+		expect(screen.getByTestId("logo", { includeHiddenElements: true })).toHaveProp("className", expect.stringContaining("bg-logo-tile"));
+		expect(screen.getByTestId("logo-original", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.queryByText("Ty", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("falls back to the one-colour glyph on the language's tint, hidden from screen readers", async () => {
+		await render(<LanguageLogo original={null} path={TYPESCRIPT.logoPath} monogram="Ty" tint="#3178c629" testID="logo" />);
 
 		expect(screen.queryByTestId("logo")).toBeNull();
 		const tile = screen.getByTestId("logo", { includeHiddenElements: true });
@@ -46,7 +58,7 @@ describe("LanguageLogo", () => {
 	});
 
 	it("shows the monogram for a language without a logo", async () => {
-		await render(<LanguageLogo path={null} monogram="C#" tint={null} />);
+		await render(<LanguageLogo original={null} path={null} monogram="C#" tint={null} />);
 
 		expect(screen.getByText("C#", { includeHiddenElements: true })).toBeOnTheScreen();
 	});

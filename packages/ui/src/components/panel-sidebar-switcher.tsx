@@ -51,7 +51,7 @@ export interface PanelSidebarSwitcherProps {
 	readonly subtitle?: string | undefined;
 	/** …and its visual (an avatar or monogram, `size-9` like the brand tile it replaces). */
 	readonly visual: React.ReactNode;
-	/** The trigger's accessible name — what the menu switches ("Switch store or location"). */
+	/** What the menu does ("Switch store or location"): read after the trigger's visible title and subtitle. */
 	readonly triggerLabel: string;
 	readonly groups: readonly PanelSidebarSwitcherGroup[];
 	readonly actions?: readonly PanelSidebarSwitcherAction[];
@@ -133,10 +133,14 @@ export const PanelSidebarSwitcher = React.forwardRef<HTMLDivElement, PanelSideba
 							type="button"
 							className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-lg px-1 text-start transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-popup-open:bg-sidebar-accent"
 						/>
-					}
-					aria-label={`${triggerLabel}: ${subtitle === undefined ? title : `${title}, ${subtitle}`}`}>
-					<span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg">{visual}</span>
-					<span className="min-w-0 flex-1">
+					}>
+					{/* Its name is what it shows (the business, the store) and then what it does, as one phrase for screen
+					    readers (WCAG 2.5.3, label in name): the shown words stay in the name, with spaces a reader keeps.
+					    The logo is decoration. */}
+					<span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+						{visual}
+					</span>
+					<span aria-hidden="true" className="min-w-0 flex-1">
 						<span className="block truncate text-sm font-semibold text-sidebar-foreground" title={title}>
 							{title}
 						</span>
@@ -146,6 +150,7 @@ export const PanelSidebarSwitcher = React.forwardRef<HTMLDivElement, PanelSideba
 							</span>
 						)}
 					</span>
+					<span className="sr-only">{`${subtitle === undefined ? title : `${title}, ${subtitle}`}, ${triggerLabel}`}</span>
 					<ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent side="bottom" align="start" sideOffset={6} className="w-(--anchor-width) min-w-64 p-1.5">

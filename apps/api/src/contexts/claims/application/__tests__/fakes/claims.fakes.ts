@@ -51,7 +51,15 @@ import type {
 	ReferralAttributionPort,
 } from "../../ports/claims-transactional.ports";
 import type { ClaimCodeLookup } from "../../services/claim-redemption.application-service";
-import type { CustomerStandingPort, TenantCustomerLinksPort, TenantCustomerPage, TenantCustomerPageRequest, TenantCustomerSummary } from "../../../../tenancy/public-api";
+import type {
+	CustomerStandingPort,
+	ReviewNoticeFacts,
+	ReviewNoticeFactsPort,
+	TenantCustomerLinksPort,
+	TenantCustomerPage,
+	TenantCustomerPageRequest,
+	TenantCustomerSummary,
+} from "../../../../tenancy/public-api";
 
 /** The fixture reward's offer: one free coffee. */
 const FREE_COFFEE_OFFER: RewardOfferFacts = { rewardType: "FREE_ITEM", rewardValue: 1, freeItem: { name: "Coffee", sku: "BEV-COFFEE" } };
@@ -652,6 +660,15 @@ export class InMemorySignupSuccessNotices implements SignupSuccessNoticesPort {
 
 /** One claims database in memory; its unit of work rolls everything back when the work throws. */
 /** Tenants' customer standing in memory: every tenant operates unless stopped; bans are per tenant. */
+/** Review-notice facts per tenant, as tenancy's transactional port returns them. */
+export class InMemoryReviewNoticeFacts implements ReviewNoticeFactsPort {
+	public readonly tenants = new Map<string, ReviewNoticeFacts>();
+
+	public reviewNoticeFacts(tenantId: string): Promise<ReviewNoticeFacts | null> {
+		return Promise.resolve(this.tenants.get(tenantId) ?? null);
+	}
+}
+
 export class InMemoryCustomerStanding implements CustomerStandingPort {
 	private readonly stopped = new Set<string>();
 	private readonly bans = new Map<string, Set<string>>();
@@ -692,6 +709,8 @@ export class InMemoryClaimsStore {
 	public readonly legal = new ScriptedLegal();
 	public readonly rewardAudit = new RecordingRewardAudit();
 	public readonly customerStanding = new InMemoryCustomerStanding();
+	/** The reviewed tenant's slug and owners (none until a test sets them). */
+	public readonly tenantReviewNotices = new InMemoryReviewNoticeFacts();
 	public readonly emails = new RecordingEmails();
 	public readonly events = new TransactionalEventCollector();
 	public readonly uow: InMemoryClaimsUnitOfWork;
@@ -716,6 +735,7 @@ export class InMemoryClaimsStore {
 			rewardFacts: this.inventory,
 			customerStanding: this.customerStanding,
 			tenantCustomers: this.tenantCustomers,
+			tenantReviewNotices: this.tenantReviewNotices,
 			legal: this.legal,
 			rewardAudit: this.rewardAudit,
 			emails: this.emails,

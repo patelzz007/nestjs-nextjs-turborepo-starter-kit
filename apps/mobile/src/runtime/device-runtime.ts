@@ -4,6 +4,8 @@
 import Constants from "expo-constants";
 
 import { readAppVersion, readBuildNumber } from "../lib/app-version";
+import { readBuildIdentity } from "../lib/build-identity-device";
+import { reportError } from "../lib/crash-reporting/crash-reporter";
 import { readDeviceDetails } from "../lib/device-headers";
 import { readRawMobileEnv } from "../lib/env";
 import { savePreferences } from "../features/preferences/persistence";
@@ -19,11 +21,14 @@ export function createDeviceAppRuntime(): AppRuntime {
 		appName: Constants.expoConfig?.name ?? FALLBACK_APP_NAME,
 		readAppVersion,
 		buildNumber: readBuildNumber(),
+		build: readBuildIdentity(),
 		deviceDetails: readDeviceDetails(),
 		applyTheme: applyThemePreference,
 		savePreferences,
 		reportWarning: (message: string, error: Error): void => {
 			console.warn(message, error);
+			// A warning is an error the app recovered from: worth seeing in the crash reports too (6.2).
+			reportError(error, message);
 		},
 	});
 }

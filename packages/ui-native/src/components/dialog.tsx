@@ -22,7 +22,7 @@ import { cn } from "../lib/cn";
 import { resolveControlState } from "../lib/control-state";
 import { useReduceMotion } from "../lib/use-reduce-motion";
 
-export const dialogVariants = cva("w-full gap-4 rounded-xl border bg-popover p-5 shadow-lg", {
+export const dialogVariants = cva("w-full gap-4 rounded-3xl border bg-popover p-6 shadow-lg", {
 	variants: {
 		/** `destructive`: the dialog is about an irreversible action — its edge carries the destructive tone. */
 		variant: {

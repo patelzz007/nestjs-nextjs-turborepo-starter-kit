@@ -1,0 +1,14 @@
+# Chooses THEME ("System", "Light", "Dark" or "Nord", as the Appearance screen names them) and waits for
+# its confirmation toast to go, so the toast is in no screenshot.
+appId: ${APP_ID}
+---
+- openLink:
+    link: "${SCHEME}://settings/appearance"
+    autoVerify: false
+- extendedWaitUntil:
+    visible: "Follow the device's light or dark setting"
+    timeout: 20000
+- tapOn: "^${THEME}$"
+- extendedWaitUntil:
+    notVisible: "Theme set to .*"
+    timeout: 10000

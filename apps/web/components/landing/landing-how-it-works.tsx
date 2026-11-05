@@ -51,14 +51,15 @@ export function LandingHowItWorks(): React.JSX.Element {
 									"relative isolate overflow-hidden rounded-3xl border p-7 shadow-xs",
 									isPayoff ? "border-transparent bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "border-border/80 bg-card",
 								)}>
+								{/* A decorative watermark, drawn by CSS (`content`), so it is decoration, not low-contrast text. */}
 								<span
 									aria-hidden="true"
+									data-step={String(index + 1).padStart(2, "0")}
 									className={cn(
-										"absolute -top-3 right-4 -z-10 font-[family-name:var(--font-heading)] text-8xl leading-none font-medium tabular-nums",
+										"absolute -top-3 right-4 -z-10 font-[family-name:var(--font-heading)] text-8xl leading-none font-medium tabular-nums before:content-[attr(data-step)]",
 										isPayoff ? "text-primary-foreground/15" : "text-primary/10",
-									)}>
-									{String(index + 1).padStart(2, "0")}
-								</span>
+									)}
+								/>
 								<span
 									className={cn(
 										"flex size-11 items-center justify-center rounded-2xl",
@@ -66,9 +67,9 @@ export function LandingHowItWorks(): React.JSX.Element {
 									)}>
 									{step.icon}
 								</span>
-								<p className={cn("mt-8 text-xs font-semibold tracking-wide uppercase", isPayoff ? "text-primary-foreground/80" : "text-primary")}>Step {index + 1}</p>
+								<p className={cn("mt-8 text-xs font-semibold tracking-wide uppercase", isPayoff ? "text-primary-foreground" : "text-primary")}>Step {index + 1}</p>
 								<h3 className={cn("mt-1 text-lg font-semibold", isPayoff ? "text-primary-foreground" : "text-foreground")}>{step.title}</h3>
-								<p className={cn("mt-2 text-sm leading-relaxed text-pretty", isPayoff ? "text-primary-foreground/85" : "text-muted-foreground")}>{step.description}</p>
+								<p className={cn("mt-2 text-sm leading-relaxed text-pretty", isPayoff ? "text-primary-foreground" : "text-muted-foreground")}>{step.description}</p>
 							</li>
 						);
 					})}

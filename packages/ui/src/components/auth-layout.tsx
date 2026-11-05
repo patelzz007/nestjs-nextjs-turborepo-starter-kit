@@ -11,6 +11,7 @@ import { cn } from "../lib/core/utils";
 import type { UiKitLabelsOverride } from "../lib/labels/ui-kit-labels";
 import { BrandMark } from "./brand-mark";
 import { buttonVariants, Button } from "./button";
+import { ShellLanguageToggle } from "./shell-language-toggle";
 import { ShellThemeToggle } from "./shell-theme-toggle";
 import { useUiKitLabels } from "./ui-kit-labels-provider";
 
@@ -130,7 +131,8 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 						</div>
 					) : null}
 
-					<div className="ml-auto">
+					<div className="ml-auto flex items-center gap-1">
+						<ShellLanguageToggle />
 						<ShellThemeToggle label={labels.toggleThemeAria} />
 					</div>
 				</div>

@@ -2,6 +2,8 @@
 
 import { Calendar } from "@workspace/ui/components/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover";
+import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { parseOptionalDate, useCalendarBounds } from "@workspace/ui/lib/form/calendar-bounds";
 import { formatDateInputString } from "@workspace/ui/lib/form/date-input";
 import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
@@ -25,6 +27,12 @@ interface CalendarSelectionProps {
 }
 
 const NO_SELECTION: CalendarSelectionProps = {};
+
+/** The date picker's copy (`datePicker` label family). */
+export interface DatePickerLabels {
+	/** The open calendar's accessible name, announced when it opens. */
+	readonly dialog: string;
+}
 
 export interface DatePickerProps extends VariantProps<typeof inputVariants> {
 	readonly id?: string;
@@ -55,6 +63,8 @@ export interface DatePickerProps extends VariantProps<typeof inputVariants> {
 	readonly onValueChange?: (value: string) => void;
 	readonly onBlur?: React.FocusEventHandler<HTMLButtonElement>;
 	readonly onFocus?: React.FocusEventHandler<HTMLButtonElement>;
+	/** Per-usage copy, over the `datePicker` family (e.g. "Choose a start date"). */
+	readonly labels?: UiKitLabelsOverride<"datePicker">;
 }
 
 const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function DatePicker(
@@ -80,9 +90,11 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function
 		onValueChange,
 		onBlur,
 		onFocus,
+		labels: labelsOverride,
 	},
 	ref,
 ): React.JSX.Element {
+	const labels = useUiKitLabels("datePicker", labelsOverride);
 	const [openState, setOpenState] = React.useState(defaultOpen);
 	const isOpenControlled = openProp !== undefined;
 	const open = isOpenControlled ? openProp : openState;
@@ -150,7 +162,7 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function
 					</button>
 				}
 			/>
-			<PopoverContent className="w-auto p-0" align="start">
+			<PopoverContent className="w-auto p-0" align="start" aria-label={labels.dialog}>
 				<Calendar mode="single" onSelect={handleSelect} disabled={isDateDisabled} {...boundsProps} {...selectionProps} />
 			</PopoverContent>
 			{name !== undefined ? <input type="hidden" name={name} value={value ?? ""} readOnly /> : null}

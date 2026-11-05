@@ -530,6 +530,8 @@ export const apiRouter = {
 		profile: defineQuery(apiContract.auth.profile, { scope: (): ApiQueryKey => ["auth", "profile"] }),
 		/** Edits the own profile — refresh `profile` and `me` after it (see `useUpdateOwnProfile`). */
 		updateProfile: defineMutation(apiContract.auth.updateProfile),
+		/** Save the signed-in person's language (5.2). */
+		setLanguage: defineMutation(apiContract.auth.setLanguage),
 		/** The signed-in user's remembered choices (board grouping, Show subtasks). */
 		preferences: defineQuery(apiContract.auth.preferences, { scope: (): ApiQueryKey => ["auth", "preferences"] }),
 		setPreference: defineMutation(apiContract.auth.setPreference),
@@ -570,6 +572,25 @@ export const apiRouter = {
 		twoFactorRotate: defineMutation(apiContract.auth.twoFactorRotate),
 		twoFactorBackupCodesRemaining: defineQuery(apiContract.auth.twoFactorBackupCodesRemaining, { scope: (): ApiQueryKey => ["auth", "2fa-backup-codes-remaining"] }),
 		twoFactorVerifyBackupCode: defineMutation(apiContract.auth.twoFactorVerifyBackupCode),
+		/** The caller's passkeys (ADR 080) — invalidate this scope after adding, renaming or removing one. */
+		passkeys: defineQuery(apiContract.auth.passkeys, { scope: (): ApiQueryKey => ["auth", "passkeys"] }),
+		/** Starts adding a passkey (asks for the password again): the `navigator.credentials.create()` options. */
+		passkeyRegistrationOptions: defineMutation(apiContract.auth.passkeyRegistrationOptions),
+		passkeyRegistration: defineMutation(apiContract.auth.passkeyRegistration),
+		renamePasskey: defineMutation(apiContract.auth.renamePasskey),
+		removePasskey: defineMutation(apiContract.auth.removePasskey),
+		/** A passkey as the second step of a password sign-in (the client type travels in the `tempToken`). */
+		loginPasskeySecondFactorOptions: defineMutation(apiContract.auth.loginPasskeySecondFactorOptions),
+		loginPasskeySecondFactor: defineMutation(apiContract.auth.loginPasskeySecondFactor),
+		/** A passwordless sign-in. Admin and merchant send their `X-Client-Type`, as their password sign-ins do, on both steps. */
+		loginPasskeyOptions: defineMutation(apiContract.auth.loginPasskeyOptions),
+		loginPasskey: defineMutation(apiContract.auth.loginPasskey),
+		adminLoginPasskeyOptions: defineMutation(apiContract.auth.loginPasskeyOptions, { baseOptions: { headers: clientTypeHeader("admin") } }),
+		adminLoginPasskey: defineMutation(apiContract.auth.loginPasskey, { baseOptions: { headers: clientTypeHeader("admin") } }),
+		merchantLoginPasskeyOptions: defineMutation(apiContract.auth.loginPasskeyOptions, { baseOptions: { headers: clientTypeHeader("merchant") } }),
+		merchantLoginPasskey: defineMutation(apiContract.auth.loginPasskey, { baseOptions: { headers: clientTypeHeader("merchant") } }),
+		/** The native apps allowed to use this site's passkeys (the web app's `/.well-known/` files). */
+		passkeyAppAssociations: defineQuery(apiContract.auth.passkeyAppAssociations, { scope: (): ApiQueryKey => ["auth", "passkey-app-associations"] }),
 		mfaRecoveryInitiate: defineMutation(apiContract.auth.mfaRecoveryInitiate),
 		mfaRecoveryStatus: defineQuery(apiContract.auth.mfaRecoveryStatus, { scope: (): ApiQueryKey => ["auth", "mfa-recovery-status"] }),
 		adminMfaRecoveryReview: defineMutation(apiContract.auth.adminMfaRecoveryReview),
@@ -688,6 +709,12 @@ export const apiRouter = {
 		detail: defineQuery(apiContract.dataChanges.detail, { scope: ({ id }: { readonly id: string }): ApiQueryKey => ["data-changes", "detail", id] }),
 	},
 
+	// ── Received webhooks (admin viewer, ADR 081) ─────────────────────────────
+	receivedWebhooks: {
+		list: defineQuery(apiContract.receivedWebhooks.list, { scope: (): ApiQueryKey => ["received-webhooks", "list"] }),
+		detail: defineQuery(apiContract.receivedWebhooks.detail, { scope: ({ id }: { readonly id: string }): ApiQueryKey => ["received-webhooks", "detail", id] }),
+	},
+
 	// ── Email template preview procedures ─────────────────────────────────────
 	email: {
 		previewList: defineQuery(apiContract.email.previewList, { scope: (): ApiQueryKey => ["email", "preview-list"] }),
@@ -795,6 +822,54 @@ export const apiRouter = {
 		broadcastCustomers: defineQuery(apiContract.tenantNotifications.broadcastCustomers, {
 			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "notifications", "customers"],
 		}),
+	},
+	/** The signed-in person's account erasure (ADR 077); keyed under `["me", "erasure"]`. */
+	privacy: {
+		erasure: defineQuery(apiContract.privacy.erasure, { scope: (): ApiQueryKey => ["me", "erasure"] }),
+		requestErasure: defineMutation(apiContract.privacy.requestErasure),
+		cancelErasure: defineMutation(apiContract.privacy.cancelErasure),
+	},
+	/** Runtime feature flags (enhancement 5.6). */
+	featureFlags: {
+		list: defineQuery(apiContract.featureFlags.list, { scope: (): ApiQueryKey => ["admin", "feature-flags"] }),
+		settings: defineQuery(apiContract.featureFlags.settings, { scope: (): ApiQueryKey => ["admin", "feature-flags", "settings"] }),
+		update: defineMutation(apiContract.featureFlags.update),
+		/** A store flag's per-store settings (enhancement 5.11). */
+		overrides: defineQuery(apiContract.featureFlags.overrides, {
+			scope: ({ key }: { readonly key: string }): ApiQueryKey => ["admin", "feature-flags", key, "overrides"],
+		}),
+		/** The stores a store flag can be set for, by name. */
+		stores: defineQuery(apiContract.featureFlags.stores, { scope: (): ApiQueryKey => ["admin", "feature-flags", "stores"] }),
+		setOverride: defineMutation(apiContract.featureFlags.setOverride),
+		removeOverride: defineMutation(apiContract.featureFlags.removeOverride),
+	},
+	/** Saved views on admin lists (enhancement 5.10). */
+	savedViews: {
+		list: defineQuery(apiContract.savedViews.list, { scope: ({ listKey }: { readonly listKey: string }): ApiQueryKey => ["me", "saved-views", listKey] }),
+		create: defineMutation(apiContract.savedViews.create),
+		remove: defineMutation(apiContract.savedViews.remove),
+	},
+	/** Support erasing an account for someone who asked another way (ADR 077, Q13). */
+	adminPrivacy: {
+		userErasure: defineQuery(apiContract.adminPrivacy.userErasure, {
+			scope: ({ userId }: { readonly userId: string }): ApiQueryKey => ["admin", "users", userId, "erasure"],
+		}),
+		requestUserErasure: defineMutation(apiContract.adminPrivacy.requestUserErasure),
+		cancelUserErasure: defineMutation(apiContract.adminPrivacy.cancelUserErasure),
+	},
+	/** A tenant's payments (ADR 020); keyed under `["tenant", slug, "payments"]`. `createPayment` needs an `Idempotency-Key` header. */
+	tenantPayments: {
+		payments: defineQuery(apiContract.tenantPayments.payments, {
+			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "payments"],
+		}),
+		providers: defineQuery(apiContract.tenantPayments.providers, {
+			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "payments", "providers"],
+		}),
+		payment: defineQuery(apiContract.tenantPayments.payment, {
+			scope: ({ tenantSlug, paymentId }: TenantScope & { readonly paymentId: string }): ApiQueryKey => ["tenant", tenantSlug, "payments", paymentId],
+		}),
+		createPayment: defineMutation(apiContract.tenantPayments.createPayment),
+		refundPayment: defineMutation(apiContract.tenantPayments.refundPayment),
 	},
 	files: {
 		uploadUrl: defineMutation(apiContract.files.uploadUrl),
@@ -908,6 +983,24 @@ export const apiRouter = {
 			create: defineMutation(apiContract.tenants.apiKeys.create),
 			revoke: defineMutation(apiContract.tenants.apiKeys.revoke),
 		},
+		/** Outgoing webhooks (ADR 082): the tenant's endpoints and the delivery log (`merchant:manage_webhooks`). */
+		webhooks: {
+			endpoints: defineQuery(apiContract.tenantWebhooks.endpoints, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "webhooks", "endpoints"] }),
+			endpoint: defineQuery(apiContract.tenantWebhooks.endpoint, {
+				scope: ({ tenantSlug, endpointId }: TenantScope & { readonly endpointId: string }): ApiQueryKey => ["tenant", tenantSlug, "webhooks", "endpoint", endpointId],
+			}),
+			deliveries: defineQuery(apiContract.tenantWebhooks.deliveries, {
+				scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "webhooks", "deliveries"],
+			}),
+			createEndpoint: defineMutation(apiContract.tenantWebhooks.createEndpoint),
+			updateEndpoint: defineMutation(apiContract.tenantWebhooks.updateEndpoint),
+			deleteEndpoint: defineMutation(apiContract.tenantWebhooks.deleteEndpoint),
+			enableEndpoint: defineMutation(apiContract.tenantWebhooks.enableEndpoint),
+			disableEndpoint: defineMutation(apiContract.tenantWebhooks.disableEndpoint),
+			rotateSecret: defineMutation(apiContract.tenantWebhooks.rotateSecret),
+			sendTest: defineMutation(apiContract.tenantWebhooks.sendTest),
+			redeliver: defineMutation(apiContract.tenantWebhooks.redeliver),
+		},
 		terminals: {
 			list: defineQuery(apiContract.tenants.terminals.list, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "terminals", "list"] }),
 			summary: defineQuery(apiContract.tenants.terminals.summary, {
@@ -1007,6 +1100,7 @@ export const apiRouter = {
 		createTask: defineMutation(apiContract.kanban.createTask),
 		/** Several items at once (CSV import); answers their board. */
 		importTasks: defineMutation(apiContract.kanban.importTasks),
+		previewImport: defineMutation(apiContract.kanban.previewImport),
 		task: defineQuery(apiContract.kanban.task, { scope: ({ taskId }: KanbanTaskScope): ApiQueryKey => [KANBAN_QUERY_ROOT, "task", taskId] }),
 		updateTask: defineMutation(apiContract.kanban.updateTask),
 		deleteTask: defineMutation(apiContract.kanban.deleteTask),
@@ -1078,6 +1172,21 @@ export const apiRouter = {
 		/** The distributed cache (ADR 072): per-cache stats, Redis memory, flushes. */
 		cache: defineQuery(apiContract.operations.cache, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "cache"] }),
 		flushCache: defineMutation(apiContract.operations.flushCache),
+		/** Background job queues (enhancement 4.4). */
+		queues: defineQuery(apiContract.operations.queues, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "queues"] }),
+		queueFailedJobs: defineQuery(apiContract.operations.queueFailedJobs, {
+			scope: ({ queueName }: { readonly queueName: string }): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "queues", queueName, "failed"],
+		}),
+		retryQueueJob: defineMutation(apiContract.operations.retryQueueJob),
+		discardQueueJob: defineMutation(apiContract.operations.discardQueueJob),
+		/** The public status page and its incidents (enhancement 4.5). */
+		publicStatus: defineQuery(apiContract.operations.publicStatus, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "public-status"] }),
+		statusIncidents: defineQuery(apiContract.operations.statusIncidents, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "status-incidents"] }),
+		statusIncident: defineQuery(apiContract.operations.statusIncident, {
+			scope: ({ incidentId }: { readonly incidentId: string }): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "status-incident", incidentId],
+		}),
+		createStatusIncident: defineMutation(apiContract.operations.createStatusIncident),
+		postStatusIncidentUpdate: defineMutation(apiContract.operations.postStatusIncidentUpdate),
 	},
 	product: {
 		list: defineQuery(apiContract.product.list, { scope: (): ApiQueryKey => ["product", "list"] }),

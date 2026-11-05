@@ -6,19 +6,21 @@ import { sidebarMenuSkeletonShape } from "../sidebar-menu-skeleton";
 const MENU: CompiledSidebarMenuData = {
 	header: { title: "Merchant", subtitle: "Portal" },
 	sections: [
-		{ title: "Overview", items: [{ id: "dashboard", title: "Dashboard", url: "/dashboard" }] },
+		{ title: "Overview", key: "Overview", labelKey: "overview", items: [{ id: "dashboard", title: "Dashboard", labelKey: "dashboard", url: "/dashboard" }] },
 		{
 			title: "Rewards",
+			key: "Rewards",
+			labelKey: "rewards",
 			items: [
-				{ id: "rewards", title: "Rewards", url: "/rewards" },
-				{ id: "redemptions", title: "Redemptions", url: "/redemptions" },
+				{ id: "rewards", title: "Rewards", labelKey: "rewards", url: "/rewards" },
+				{ id: "redemptions", title: "Redemptions", labelKey: "redemptions", url: "/redemptions" },
 			],
 		},
 	],
 	bottomItems: [
-		{ id: "account", title: "Account", url: "/account" },
-		{ id: "help", title: "Help", url: "/help" },
-		{ id: "settings", title: "Settings", url: "/settings" },
+		{ id: "account", title: "Account", labelKey: "account", url: "/account" },
+		{ id: "help", title: "Help", labelKey: "help", url: "/help" },
+		{ id: "settings", title: "Settings", labelKey: "settings", url: "/settings" },
 	],
 };
 

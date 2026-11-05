@@ -11,23 +11,26 @@
 // may not read it (403) — there is nothing for the person to act on.
 // docs/technical/github-contributions.md
 
+import GitCommitVerticalIcon from "lucide-react-native/icons/git-commit-vertical";
 import { ApiError } from "@workspace/api-client";
 import type { GithubCommit, GithubContributor, GithubContributorStats, GithubRepositoryListItem, GithubRepositoryRef } from "@workspace/shared";
 import { useRouter } from "expo-router";
 import * as React from "react";
-import { Linking, View } from "react-native";
+import { Linking, Text, View } from "react-native";
 
 import { Avatar } from "@workspace/ui-native/components/avatar";
 import { Alert } from "@workspace/ui-native/components/alert";
 import { Button } from "@workspace/ui-native/components/button";
 import { Card } from "@workspace/ui-native/components/card";
 import { ChangeRow } from "../../../components/change-row";
+import { ListGroup } from "@workspace/ui-native/components/list-group";
+import { TimelineRailIcon, TimelineRailItem } from "@workspace/ui-native/components/timeline-rail";
 import { LanguageBreakdown } from "../../../components/language-breakdown";
 import { SelectField, type SelectOption } from "@workspace/ui-native/components/select-field";
 import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
 import { StatTiles } from "@workspace/ui-native/components/stat-tiles";
 import { EmptyState, ErrorState } from "@workspace/ui-native/components/empty";
-import { BodyText, Label, MutedText } from "@workspace/ui-native/components/text";
+import { BodyText, MutedText } from "@workspace/ui-native/components/text";
 import { useApi } from "../../../lib/api-context";
 import { errorMessageOf } from "../../../lib/error-messages";
 import { useNow } from "../../../lib/use-now";
@@ -47,6 +50,8 @@ import {
 } from "./labels";
 
 export const GITHUB_SECTION_TITLE = "GitHub contributions";
+/** The first group: the repository's description, its counts and its last push. */
+const OVERVIEW_TITLE = "Overview";
 
 /** Commits per page — small enough to read on a phone, "Show older commits" loads the next. */
 export const GITHUB_COMMIT_PAGE_SIZE = 10;
@@ -94,11 +99,18 @@ export function GithubContributionsSection(): React.JSX.Element | null {
 	}
 	const description = repositoryListDescription(listing);
 	return (
-		<Card title={GITHUB_SECTION_TITLE} {...(description === null ? {} : { description })} testID="github-contributions">
+		// Grouped like Settings (ADR 079): the section's title on the page, the picker, then one surface per part.
+		<View className="gap-4" testID="github-contributions">
+			<View className="gap-1 pt-2">
+				<Text accessibilityRole="header" className="font-sans-bold text-2xl tracking-tight text-foreground">
+					{GITHUB_SECTION_TITLE}
+				</Text>
+				{description === null ? null : <MutedText>{description}</MutedText>}
+			</View>
 			{listing.repositories.length > 1 ? <RepositoryPicker repositories={listing.repositories} selected={current} nowMs={nowMs} onSelect={setSelectedFullName} /> : null}
 			{/* Keyed by repository: switching starts the history from its newest page. */}
 			<RepositoryContributions key={current.fullName} repository={current} nowMs={nowMs} />
-		</Card>
+		</View>
 	);
 }
 
@@ -163,7 +175,7 @@ function RepositoryContributions({ repository, nowMs }: RepositoryContributionsP
 		[repository.owner, repository.repository, router],
 	);
 	return (
-		<View className="gap-5">
+		<View className="gap-6">
 			<RepositorySummary repository={repository} nowMs={nowMs} />
 			{openFailed ? <Alert tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
 			<TopContributors repository={repository} onOpen={openOnGithub} />
@@ -185,29 +197,42 @@ function RepositorySummary({ repository, nowMs }: RepositorySummaryProps): React
 
 	if (summary.isPending) {
 		return (
-			<SkeletonGroup className="gap-2">
-				<SkeletonText size="sm" widthClassName="w-56" />
-				<Skeleton className="h-16 w-full rounded-lg" />
-			</SkeletonGroup>
+			<ListGroup title={OVERVIEW_TITLE}>
+				<SkeletonGroup className="gap-2 py-4">
+					<SkeletonText size="sm" widthClassName="w-56" />
+					<Skeleton className="h-16 w-full rounded-lg" />
+				</SkeletonGroup>
+			</ListGroup>
 		);
 	}
 	if (summary.isError) {
-		return <ErrorState message={errorMessageOf(summary.error)} retryLabel="Try again" onRetry={retry} />;
+		return (
+			<ListGroup title={OVERVIEW_TITLE}>
+				<View className="py-4">
+					<ErrorState message={errorMessageOf(summary.error)} retryLabel="Try again" onRetry={retry} />
+				</View>
+			</ListGroup>
+		);
 	}
 	const data = summary.data.data;
 	const pushed = lastPushLabel(data, nowMs);
 	return (
-		<View className="gap-3">
-			{data.description === null ? null : <BodyText>{data.description}</BodyText>}
-			<StatTiles items={summaryTiles(data)} testID="github-summary-tiles" />
-			{data.languages.length === 0 ? null : (
-				<View className="gap-2">
-					<Label>Languages</Label>
-					<LanguageBreakdown title="Languages" languages={languageShares(data.languages)} testID="github-languages" />
+		<>
+			<ListGroup title={OVERVIEW_TITLE}>
+				<View className="gap-4 py-4">
+					{data.description === null ? null : <BodyText>{data.description}</BodyText>}
+					<StatTiles items={summaryTiles(data)} testID="github-summary-tiles" />
+					{pushed === null ? null : <MutedText>{pushed}</MutedText>}
 				</View>
+			</ListGroup>
+			{data.languages.length === 0 ? null : (
+				<ListGroup title="Languages">
+					<View className="py-4">
+						<LanguageBreakdown title="Languages" languages={languageShares(data.languages)} testID="github-languages" />
+					</View>
+				</ListGroup>
 			)}
-			{pushed === null ? null : <MutedText>{pushed}</MutedText>}
-		</View>
+		</>
 	);
 }
 
@@ -228,16 +253,17 @@ function TopContributors({ repository, onOpen }: OpenableProps): React.JSX.Eleme
 	}, []);
 
 	return (
-		<View className="gap-1">
-			<Label>Top contributors</Label>
-			{stats.isPending ? (
-				<SkeletonGroup className="gap-2">
-					<Skeleton className="h-12 w-full rounded-lg" />
-				</SkeletonGroup>
-			) : null}
-			{stats.isError ? <ErrorState message={errorMessageOf(stats.error)} retryLabel="Try again" onRetry={retry} /> : null}
-			{stats.data === undefined ? null : <ContributorTotals stats={stats.data.data} showAll={showAll} onToggleShowAll={toggleShowAll} onOpen={onOpen} />}
-		</View>
+		<ListGroup title="Top contributors">
+			<View className="gap-1 py-2">
+				{stats.isPending ? (
+					<SkeletonGroup className="gap-2 py-2">
+						<Skeleton className="h-12 w-full rounded-lg" />
+					</SkeletonGroup>
+				) : null}
+				{stats.isError ? <ErrorState message={errorMessageOf(stats.error)} retryLabel="Try again" onRetry={retry} /> : null}
+				{stats.data === undefined ? null : <ContributorTotals stats={stats.data.data} showAll={showAll} onToggleShowAll={toggleShowAll} onOpen={onOpen} />}
+			</View>
+		</ListGroup>
 	);
 }
 
@@ -323,21 +349,22 @@ function CommitHistory({ repository, nowMs, onOpenCommit }: CommitHistoryProps):
 	}, []);
 	const lastCursor = olderCursors.at(-1);
 	return (
-		<View className="gap-1">
-			<Label>Recent commits</Label>
-			<CommitHistoryPage repository={repository} cursor={undefined} isLast={lastCursor === undefined} nowMs={nowMs} onOpenCommit={onOpenCommit} onLoadOlder={loadOlder} />
-			{olderCursors.map((cursor: string): React.JSX.Element => (
-				<CommitHistoryPage
-					key={cursor}
-					repository={repository}
-					cursor={cursor}
-					isLast={cursor === lastCursor}
-					nowMs={nowMs}
-					onOpenCommit={onOpenCommit}
-					onLoadOlder={loadOlder}
-				/>
-			))}
-		</View>
+		<ListGroup title="Recent commits">
+			<View className="py-3">
+				<CommitHistoryPage repository={repository} cursor={undefined} isLast={lastCursor === undefined} nowMs={nowMs} onOpenCommit={onOpenCommit} onLoadOlder={loadOlder} />
+				{olderCursors.map((cursor: string): React.JSX.Element => (
+					<CommitHistoryPage
+						key={cursor}
+						repository={repository}
+						cursor={cursor}
+						isLast={cursor === lastCursor}
+						nowMs={nowMs}
+						onOpenCommit={onOpenCommit}
+						onLoadOlder={loadOlder}
+					/>
+				))}
+			</View>
+		</ListGroup>
 	);
 }
 
@@ -378,8 +405,19 @@ function CommitHistoryPage({ repository, cursor, isLast, nowMs, onOpenCommit, on
 	}
 	return (
 		<View>
-			{items.map((commit: GithubCommit): React.JSX.Element => (
-				<CommitRow key={commit.sha} commit={commit} nowMs={nowMs} onOpenCommit={onOpenCommit} />
+			{/* On a timeline rail, newest first: it starts at the newest commit and ends at the last one shown. */}
+			{items.map((commit: GithubCommit, position: number): React.JSX.Element => (
+				<TimelineRailItem
+					key={commit.sha}
+					node={<TimelineRailIcon icon={GitCommitVerticalIcon} />}
+					// The glyph centred on its row (a ChangeRow pads itself), the rail joining it to its neighbours.
+					align="center"
+					isFirst={cursor === undefined ? position === 0 : false}
+					isLast={isLast ? position === items.length - 1 : false}
+					size="sm"
+					testID={`github-commit-${commit.sha}`}>
+					<CommitRow commit={commit} nowMs={nowMs} onOpenCommit={onOpenCommit} />
+				</TimelineRailItem>
 			))}
 			{isLast && nextCursor !== null ? <LoadOlderButton cursor={nextCursor} onLoadOlder={onLoadOlder} /> : null}
 		</View>

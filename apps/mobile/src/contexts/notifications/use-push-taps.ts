@@ -21,7 +21,8 @@ export function usePushTaps(): void {
 				return;
 			}
 			mutate({ deliveryId: tap.deliveryId });
-			router.push(ROUTES.notifications);
+			// `withAnchor`: Settings underneath, so back (and the Settings tab) land on it (see the header bell).
+			router.push(ROUTES.notifications, { withAnchor: true });
 		});
 		return (): void => {
 			subscription.remove();

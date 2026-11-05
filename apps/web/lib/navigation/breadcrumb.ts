@@ -7,8 +7,10 @@ import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/s
 
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { resolveWebTrailPage } from "@/lib/navigation/route-access";
-import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
+import { USER_SIDEBAR_MENU, type CompiledSidebarMenuData } from "@/lib/navigation/sidebar-menu";
 import { isPathWithin, ROUTE_PREFIXES } from "@/lib/routes";
+import type { UiKitLanguage } from "@workspace/ui/lib/labels/language-packs";
+import { WEB_MESSAGES } from "@/lib/i18n/app-messages";
 
 /** Crumb icons from the sidebar map; a page without one shows a document. */
 const resolveIcon = menuIconResolver(WEB_MENU_ICON_MAP, FileText);
@@ -24,7 +26,7 @@ export { withTrailTailLabel };
  * `WEB_ROUTE_ACCESS`) — `/dashboard/rewards` has no page, so a reward detail
  * reads `Browse Rewards › Reward` until the page sets the reward's title.
  */
-export function resolveWebTrail(pathname: string): readonly BreadcrumbItem[] {
+export function resolveWebTrail(pathname: string, menu: CompiledSidebarMenuData = USER_SIDEBAR_MENU, language: UiKitLanguage = "en"): readonly BreadcrumbItem[] {
 	const normalizedPath = normalizePath(pathname);
 
 	if (isPathWithin(normalizedPath, ROUTE_PREFIXES.auth)) {
@@ -32,12 +34,12 @@ export function resolveWebTrail(pathname: string): readonly BreadcrumbItem[] {
 	}
 
 	return resolveSidebarMenuTrail({
-		menu: USER_SIDEBAR_MENU,
+		menu,
 		pathname,
 		resolveIcon,
-		rootCurrentLabel: "Dashboard",
+		rootCurrentLabel: WEB_MESSAGES[language].navigation.breadcrumbRoot,
 		rootIcon: LayoutDashboard,
-		unknownFallbackLabel: "Dashboard",
+		unknownFallbackLabel: WEB_MESSAGES[language].navigation.breadcrumbRoot,
 		includeSectionContext: false,
 		resolvePage: resolveWebTrailPage,
 	});

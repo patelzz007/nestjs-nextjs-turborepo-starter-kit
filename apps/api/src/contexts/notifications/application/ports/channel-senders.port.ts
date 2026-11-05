@@ -5,6 +5,8 @@ export interface PushMessage {
 	readonly deviceId: string;
 	readonly platform: PushPlatform;
 	readonly token: string;
+	/** Android's Firebase Installation ID: FCM sends by it when known, else by `token` (enhancement 5.3). */
+	readonly installationId: string | null;
 	readonly title: string;
 	/** One line or several (`\n`): an expanded notification shows them all. */
 	readonly body: string;
@@ -26,12 +28,21 @@ export type ChannelSendResult =
 	| { readonly kind: "failed"; readonly retryable: boolean; readonly error: string }
 	| { readonly kind: "disabled" };
 
+/** A data-only push to one device: its address, and the badge to show. */
+export interface SilentSyncMessage {
+	readonly platform: PushPlatform;
+	readonly token: string;
+	readonly installationId: string | null;
+	readonly deviceId: string;
+	readonly badge: number;
+}
+
 export interface PushSender {
 	readonly provider: string;
 	readonly live: boolean;
 	send(message: PushMessage): Promise<ChannelSendResult>;
 	/** Data-only message that removes a delivered notification from the tray and updates the badge. */
-	sendSilentSync(message: { readonly platform: PushPlatform; readonly token: string; readonly deviceId: string; readonly badge: number }): Promise<ChannelSendResult>;
+	sendSilentSync(message: SilentSyncMessage): Promise<ChannelSendResult>;
 }
 
 export interface SmsMessage {

@@ -18,6 +18,8 @@
  * (only that context's `infrastructure/` may call it).
  */
 export type { SessionDeviceContext, SessionDeviceDetails } from "./domain/value-objects/session-device.value-object";
+/** How many sessions one user keeps at once (operations sizes the load-test staff accounts by it). */
+export { MAX_ACTIVE_SESSIONS_PER_USER } from "./domain/aggregates/device-session.aggregate";
 export type { MerchantPortalAccess, MerchantPortalAccessPort } from "./application/ports/merchant-portal-access.port";
 export type { ConsumerClaimant, ConsumerClaimantPort } from "./application/ports/consumer-claimant.port";
 export type { RegistrationSignIn, RegistrationSignInPort } from "./application/ports/registration-sign-in.port";

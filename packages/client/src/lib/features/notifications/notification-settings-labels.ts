@@ -11,6 +11,8 @@ export interface NotificationSettingsLabels {
 	readonly kindsDescription: string;
 	readonly categories: Readonly<Record<NotificationCategory, { readonly title: string; readonly description: string }>>;
 	readonly channels: Readonly<Record<NotificationChannel, string>>;
+	/** What each channel is, the subtitle of an ordinary channel (every node of the tree has a title and a subtitle). */
+	readonly channelDescriptions: Readonly<Record<NotificationChannel, string>>;
 	/** Why a channel that is always on can't be turned off, per kind of message. */
 	readonly locked: Readonly<Record<NotificationCategory, string>>;
 	readonly unavailable: Readonly<Record<NotificationChannelUnavailableReason, string>>;
@@ -62,6 +64,12 @@ export const NOTIFICATION_SETTINGS_LABELS: NotificationSettingsLabels = {
 		OPERATIONS: { title: "Operations", description: "Alerts when a server, instance or service needs attention. Always in the app and on your phone." },
 	},
 	channels: { IN_APP: "In app", EMAIL: "Email", PUSH: "Phone", SMS: "SMS" },
+	channelDescriptions: {
+		IN_APP: "In the bell, in every app you use",
+		EMAIL: "To your sign-in email address",
+		PUSH: "A notification on your phone",
+		SMS: "A text to your verified phone number",
+	},
 	locked: {
 		SECURITY: "Always on, to keep your account safe",
 		ACCOUNT: "Always on",

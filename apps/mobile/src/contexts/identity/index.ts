@@ -8,6 +8,10 @@
 
 export { type DemoAccount, useDemoAccounts } from "./auth/demo-accounts";
 export { EXPIRED_STEP_MESSAGE, TwoFactorRouteParamsSchema, VerifyDeviceRouteParamsSchema } from "./auth/sign-in-steps";
+export { PasskeyDeviceError, passkeyErrorMessage, passkeysSupported } from "./passkeys/device-passkeys";
+export { PASSKEYS_COPY } from "./passkeys/labels";
+export { PasskeysSection } from "./passkeys/passkeys-section";
+export { usePasskeySignIn } from "./passkeys/use-passkey-sign-in";
 export { SignOutDialog } from "./auth/sign-out-dialog";
 export { useRefreshSession } from "./auth/use-refresh-session";
 export { useSignInStepHandler } from "./auth/use-sign-in-step";

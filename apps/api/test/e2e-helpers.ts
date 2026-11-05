@@ -3,6 +3,7 @@ import { randomInt } from "node:crypto";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import fastifyCookie from "@fastify/cookie";
 import fastifyMultipart from "@fastify/multipart";
+import type { ModuleMetadata } from "@nestjs/common";
 import { Test, type TestingModule, type TestingModuleBuilder } from "@nestjs/testing";
 import type { Prisma } from "@prisma/client";
 import { Pool } from "pg";
@@ -210,9 +211,22 @@ export function extractCookie(setCookieHeader: string | string[] | undefined, na
 export async function createE2eApp(
 	customize: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder: TestingModuleBuilder): TestingModuleBuilder => builder,
 ): Promise<NestFastifyApplication> {
+	return createE2eAppWith({}, customize);
+}
+
+/**
+ * {@link createE2eApp} with test-only modules or providers added beside the real `AppModule` (a probe
+ * processor on its own queue, for example). Never a replacement for a real provider: use `customize`
+ * overrides only where a test says why.
+ */
+export async function createE2eAppWith(
+	extra: Pick<ModuleMetadata, "imports" | "providers">,
+	customize: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder: TestingModuleBuilder): TestingModuleBuilder => builder,
+): Promise<NestFastifyApplication> {
 	const moduleFixture: TestingModule = await customize(
 		Test.createTestingModule({
-			imports: [AppModule],
+			imports: [AppModule, ...(extra.imports ?? [])],
+			providers: [...(extra.providers ?? [])],
 		}),
 	).compile();
 

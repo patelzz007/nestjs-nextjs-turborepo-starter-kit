@@ -16,6 +16,10 @@ const api = config.baseUrl + config.apiPrefix;
 
 export const options = {
 	discardResponseBodies: false,
+	// A virtual user signs in once and stays signed in (signedIn below), as a person does: k6 would
+	// otherwise empty its cookie jar before every iteration, and every request after the first
+	// iteration would go out without the session cookies (401) while signedIn still said yes.
+	noCookiesReset: true,
 	summaryTrendStats: ["p(50)"],
 	scenarios: {
 		load: {
@@ -73,6 +77,9 @@ function customer() {
 	return config.customers[(exec.vu.idInTest - 1) % config.customers.length];
 }
 
+// Virtual user n signs in once as staff account (n - 1) % staff. The API hands out
+// ceil(virtualUsers / MAX_ACTIVE_SESSIONS_PER_USER) accounts (loadTestStaffCount), so with at most
+// virtualUsers virtual users (maxVUs) no account is asked for more sessions than a user may keep.
 function staffMember() {
 	return config.staff[(exec.vu.idInTest - 1) % config.staff.length];
 }

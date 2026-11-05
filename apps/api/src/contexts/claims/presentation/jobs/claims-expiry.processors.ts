@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { MONITORED_WORKER_OPTIONS } from "@workspace/messaging/nest";
 import { Inject, Injectable } from "@nestjs/common";
 import { QUEUE_NAMES, RewardsMaintenanceJobSchema } from "@workspace/shared";
 import type { Job } from "bullmq";
@@ -10,7 +11,7 @@ import { ExpireOverdueReferrerClaimsCommand } from "../../application/commands/e
 import type { ClaimExpiryResult } from "../../application/services/claim-expiry.application-service";
 
 /** `claims.expire-pending` → ExpireOverdueClaims, audited by the dispatcher; a failure rethrows so BullMQ retries. */
-@Processor(QUEUE_NAMES.claimsExpirePending)
+@Processor(QUEUE_NAMES.claimsExpirePending, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class ClaimsExpirePendingProcessor extends WorkerHost {
 	public constructor(@Inject(SystemCommandDispatcher) private readonly commands: Pick<SystemCommandDispatcher, "dispatch">) {
@@ -25,7 +26,7 @@ export class ClaimsExpirePendingProcessor extends WorkerHost {
 }
 
 /** `claims.expire-referrer` → ExpireOverdueReferrerClaims, the referrer-credit claims on their own queue. */
-@Processor(QUEUE_NAMES.claimsExpireReferrer)
+@Processor(QUEUE_NAMES.claimsExpireReferrer, MONITORED_WORKER_OPTIONS)
 @Injectable()
 export class ClaimsExpireReferrerProcessor extends WorkerHost {
 	public constructor(@Inject(SystemCommandDispatcher) private readonly commands: Pick<SystemCommandDispatcher, "dispatch">) {

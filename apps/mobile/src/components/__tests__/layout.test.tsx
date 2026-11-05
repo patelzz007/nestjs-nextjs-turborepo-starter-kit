@@ -136,7 +136,7 @@ describe("Screen", () => {
 		expect(PINNED_ROW_BOTTOM + SUBTITLE_LINE).toBe(HEADER_HEIGHT);
 	});
 
-	it("under the app shell's header, sits its content on a sheet with a curved top, and follows the scrolling", async () => {
+	it("under the app shell's header, sits its content straight on the page, with no sheet, and follows the scrolling", async () => {
 		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<PageHeaderClearanceProvider value={HEADER_HEIGHT}>
@@ -147,11 +147,13 @@ describe("Screen", () => {
 			</SafeAreaProvider>,
 		);
 
-		expect(within(screen.getByTestId("screen-sheet")).getByText("Content")).toBeOnTheScreen();
+		expect(within(screen.getByTestId("screen-page")).getByText("Content")).toBeOnTheScreen();
+		expect(screen.getByTestId("screen-page")).not.toHaveProp("className", expect.stringContaining("bg-sheet"));
+		expect(screen.getByTestId("screen-page")).not.toHaveProp("className", expect.stringContaining("rounded-t"));
 		expect(screen.getByTestId("screen-content")).toHaveProp("scrollEventThrottle", 16);
 	});
 
-	it("keeps its content on the page, with no sheet, outside the shell", async () => {
+	it("draws its own title over the content outside the shell, with no page wrapper", async () => {
 		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<Screen title="Locked" testID="screen">
@@ -160,7 +162,7 @@ describe("Screen", () => {
 			</SafeAreaProvider>,
 		);
 
-		expect(screen.queryByTestId("screen-sheet")).toBeNull();
+		expect(screen.queryByTestId("screen-page")).toBeNull();
 		expect(screen.getByText("Content")).toBeOnTheScreen();
 	});
 

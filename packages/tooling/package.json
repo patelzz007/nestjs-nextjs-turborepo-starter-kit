@@ -5,8 +5,8 @@
 	"type": "module",
 	"description": "Repo-wide tooling scripts. Owns the syncpack dependency-hygiene commands so they can run as turbo tasks (turbo 2.x doesn't execute root package.json scripts).",
 	"scripts": {
-		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
-		"test": "vitest run",
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint && node scripts/project-identity.mjs --check",
+		"test": "vitest run --coverage",
 		"deps:check": "cd ../.. && syncpack lint && pnpm peers check",
 		"deps:fix": "cd ../.. && syncpack fix-mismatches",
 		"deps:list": "cd ../.. && syncpack list",
@@ -24,6 +24,7 @@
 		"pg": "^8.23.1",
 		"syncpack": "^15.3.3",
 		"typescript": "7.0.2",
-		"vitest": "^5.0.5"
+		"vitest": "^5.0.5",
+		"yaml": "^2.9.1"
 	}
 }

@@ -1,10 +1,11 @@
 // The page header, on the page's own colour like the status bar above it (the app draws edge to
 // edge). It has two parts:
 //
-// - the pinned row — the leading control (the menu, or back) on the left, the app's status (the
-//   `trailing` slot: connection and session) and the notifications button on the right (its unread
-//   count on its corner) and, between them, the page's title. The row never moves.
-// - the subtitle line — centred under the title, between the two buttons.
+// - the pinned row — the leading control (the menu, or back) on the left, search (the command palette)
+//   and the notifications button on the right (its unread count on its corner) and, between them, the
+//   page's title: large, bold and CENTRED on the screen (a spacer as wide as the second right-hand
+//   button balances the row, ADR 079). The row never moves.
+// - the subtitle line — centred under the title.
 //
 // As the page scrolls (`progress` 0 → 1, src/lib/page-header-scroll.tsx) the header shrinks in place:
 // its background pulls up from the bottom edge, so the content's curved top stays attached to it, and
@@ -12,13 +13,9 @@
 // header slides with the content: what is left is one slim bar with the menu, the title and
 // notifications, exactly where they were.
 //
-// The bar takes on the content's surface as it collapses: at the top the header is the page's colour
-// (`bg-background`) and the content a raised sheet (`bg-card`) under it; collapsed, the content runs
-// under the bar, so the bar becomes that same surface, with no line between the two — not a darker
-// band over a lighter page, which the dark and Nord themes
-// (where the two colours are far apart) made look broken. Both are token-coloured layers whose
-// opacity cross-fades (Reanimated cannot interpolate the tokens' `oklch()` colours), so every theme,
-// including ones added later, gets it for free.
+// The bar is the page's own colour (`bg-background`) all the way: the content sits straight on the page
+// (no sheet under the header, ADR 079), so as it scrolls under the bar the two are one colour, with no
+// line, band or shadow between them, in every theme — including ones added later.
 //
 // It is rendered once by the app shell for every signed-in screen — screens never draw their own
 // header. Presentational and controlled: the caller gives the title, subtitle, which control leads
@@ -28,6 +25,7 @@
 
 import ArrowLeftIcon from "lucide-react-native/icons/arrow-left";
 import BellIcon from "lucide-react-native/icons/bell";
+import SearchIcon from "lucide-react-native/icons/search";
 import MenuIcon from "lucide-react-native/icons/menu";
 import * as React from "react";
 import { Pressable, Text, View, type LayoutChangeEvent } from "react-native";
@@ -82,10 +80,10 @@ export interface PageHeaderProps {
 	readonly onMenu: () => void;
 	readonly onBack: () => void;
 	readonly onNotifications: () => void;
+	/** Opens the command palette. */
+	readonly onSearch: () => void;
 	/** Unread notifications: a count on the bell's corner, and in its spoken name. Nothing at zero. */
 	readonly notificationCount?: number;
-	/** What sits before the notifications button (the app's status pills). */
-	readonly trailing?: React.ReactNode;
 	/** The status bar's height: the header's colour runs up behind it. */
 	readonly topInset: number;
 	/** 0 expanded … 1 collapsed, from the page's scroll position. */
@@ -165,8 +163,8 @@ export function PageHeader({
 	onMenu,
 	onBack,
 	onNotifications,
+	onSearch,
 	notificationCount = 0,
-	trailing,
 	topInset,
 	progress,
 	collapseDistance,
@@ -198,8 +196,6 @@ export function PageHeader({
 	// Only the background moves: its bottom edge rises by the subtitle line's height as the header
 	// collapses (a transform, so the header's layout — and the content's clearance — never change).
 	const backgroundStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -progress.get() * collapseDistance.get() }] }));
-	// The bar turns into the content's surface as the content slides under it.
-	const surfaceStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
 	// The subtitle line's frame rises with the background's edge and clips the text, which is held in
 	// place by an equal and opposite shift: the edge passes over a still line, tucking it away.
 	const subtitleClipStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -progress.get() * collapseDistance.get() }] }));
@@ -211,16 +207,14 @@ export function PageHeader({
 
 	return (
 		<View pointerEvents="box-none" onLayout={reportHeight} className="absolute inset-x-0 top-0" style={topInsetStyle} testID={testID}>
-			{/* The header's colour, status bar included: it rises from below as the header collapses, and
-			    turns into the content's surface as it does, with no line along its bottom edge. The surface
-			    stays inside the moving layer, so it rises with its edge. */}
+			{/* The header's colour, status bar included: it rises from below as the header collapses, with
+			    no line along its bottom edge. */}
 			<StyledAnimatedView
 				pointerEvents="none"
 				className="absolute inset-0 bg-background"
 				style={backgroundStyle}
-				testID={testID === undefined ? undefined : `${testID}-background`}>
-				<StyledAnimatedView className="absolute inset-0 bg-card" style={surfaceStyle} testID={testID === undefined ? undefined : `${testID}-surface`} />
-			</StyledAnimatedView>
+				testID={testID === undefined ? undefined : `${testID}-background`}
+			/>
 			<View pointerEvents="box-none" className="px-3">
 				<View pointerEvents="box-none" className="h-14 flex-row items-center gap-2" testID={testID === undefined ? undefined : `${testID}-controls`}>
 					<View className="size-11">
@@ -234,6 +228,8 @@ export function PageHeader({
 							</StyledAnimatedView>
 						)}
 					</View>
+					{/* As wide as the second right-hand button, so the title is centred on the screen. */}
+					<View className="size-11" />
 					<View pointerEvents="none" className="h-11 flex-1 justify-center overflow-hidden">
 						{slots.leaving === null ? null : (
 							<StyledAnimatedView
@@ -249,11 +245,7 @@ export function PageHeader({
 							<Title title={slots.current.title} testID={testID} />
 						</StyledAnimatedView>
 					</View>
-					{trailing === undefined ? null : (
-						<View pointerEvents="none" className="flex-row items-center gap-1.5">
-							{trailing}
-						</View>
-					)}
+					<HeaderIconButton icon={SearchIcon} accessibilityLabel="Search" onPress={onSearch} testID={testID === undefined ? undefined : `${testID}-search`} />
 					<HeaderIconButton
 						icon={BellIcon}
 						accessibilityLabel={notificationsLabelOf(notificationCount)}
@@ -270,11 +262,11 @@ export function PageHeader({
 					/>
 				</View>
 			</View>
-			{/* Indented by the buttons' width, so the subtitle sits between them, under the title. */}
+			{/* Kept clear of the buttons on both sides, centred under the title. */}
 			<StyledAnimatedView
 				pointerEvents="none"
 				onLayout={reportCollapseDistance}
-				className="overflow-hidden px-16 pb-4"
+				className="overflow-hidden px-24 pb-4"
 				style={subtitleClipStyle}
 				testID={testID === undefined ? undefined : `${testID}-subtitle-clip`}>
 				<StyledAnimatedView style={subtitleStyle} testID={testID === undefined ? undefined : `${testID}-subtitle-text`}>
@@ -299,7 +291,7 @@ function Title({ title, testID }: TitleProps): React.JSX.Element {
 		<Text
 			accessibilityRole="header"
 			numberOfLines={1}
-			className="text-center font-heading text-xl text-foreground"
+			className="font-sans-bold text-center text-2xl tracking-tight text-foreground"
 			testID={testID === undefined ? undefined : `${testID}-title`}>
 			{title}
 		</Text>

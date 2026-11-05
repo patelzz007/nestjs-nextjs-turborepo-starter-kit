@@ -51,6 +51,18 @@ export class OpsBackupNotFoundError extends DomainError {
 	}
 }
 
+/** Only a failed job can be retried or discarded: one that is gone, or isn't failed (any more), is not found. */
+export class OpsQueueJobNotFoundError extends DomainError {
+	public readonly code: DomainErrorCode = "OPS_QUEUE_JOB_NOT_FOUND";
+
+	public constructor(
+		public readonly queueName: string,
+		public readonly jobId: string,
+	) {
+		super("Failed job not found", { queueName, jobId });
+	}
+}
+
 /** Only a finished backup can be downloaded, and only a finished or failed one deleted. */
 export class OpsBackupNotReadyError extends DomainError {
 	public readonly code: DomainErrorCode = "OPS_BACKUP_NOT_READY";
@@ -146,5 +158,23 @@ export class LoadTestPurgeBlockedError extends DomainError {
 
 	public constructor() {
 		super("Wait for the running load test to finish before purging its data.");
+	}
+}
+
+/** A status-page incident that doesn't exist (or was removed). */
+export class StatusIncidentNotFoundError extends DomainError {
+	public readonly code: DomainErrorCode = "STATUS_INCIDENT_NOT_FOUND";
+
+	public constructor(public readonly incidentId: string) {
+		super("Incident not found", { incidentId });
+	}
+}
+
+/** A resolved incident is final: nothing more is posted on it. */
+export class StatusIncidentResolvedError extends DomainError {
+	public readonly code: DomainErrorCode = "STATUS_INCIDENT_RESOLVED";
+
+	public constructor(public readonly incidentId: string) {
+		super("The incident is resolved; open a new one if it happens again", { incidentId });
 	}
 }

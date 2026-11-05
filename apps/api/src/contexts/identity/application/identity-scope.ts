@@ -4,6 +4,7 @@ import type { TransactionalSignupReferralPort } from "../../referrals/public-api
 import type { DeviceSessionRepository } from "../domain/repositories/device-session.repository";
 import type { ImpersonationSessionRepository } from "../domain/repositories/impersonation-session.repository";
 import type { MfaRecoveryRequestRepository } from "../domain/repositories/mfa-recovery-request.repository";
+import type { PasskeyRepository, WebAuthnChallengeRepository } from "../domain/repositories/passkey.repository";
 import type { PasswordResetTokenRepository } from "../domain/repositories/password-reset-token.repository";
 import type { TwoFactorEnrollmentRepository, TwoFactorLoginChallengeRepository } from "../domain/repositories/two-factor.repository";
 import type { UserAccountRepository } from "../domain/repositories/user-account.repository";
@@ -18,6 +19,8 @@ export interface IdentityScope {
 	readonly resetTokens: PasswordResetTokenRepository;
 	readonly twoFactor: TwoFactorEnrollmentRepository;
 	readonly challenges: TwoFactorLoginChallengeRepository;
+	readonly passkeys: PasskeyRepository;
+	readonly webAuthnChallenges: WebAuthnChallengeRepository;
 	readonly mfaRecoveries: MfaRecoveryRequestRepository;
 	readonly sessions: DeviceSessionRepository;
 	readonly impersonations: ImpersonationSessionRepository;

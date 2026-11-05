@@ -10,7 +10,9 @@ import { EmailAddress } from "../../../domain/value-objects/email-address.value-
 import type { IdentityScope } from "../../identity-scope";
 import type { CredentialCryptoPort } from "../../ports/credential-crypto.port";
 import type { IdGeneratorPort } from "../../ports/id-generator.port";
-import { CREDENTIAL_CRYPTO, ID_GENERATOR, IDENTITY_UNIT_OF_WORK, SUPERADMIN_BOOTSTRAP_OPERATION } from "../../ports/identity.tokens";
+import { BREACHED_PASSWORD_CHECK, CREDENTIAL_CRYPTO, ID_GENERATOR, IDENTITY_UNIT_OF_WORK, SUPERADMIN_BOOTSTRAP_OPERATION } from "../../ports/identity.tokens";
+import type { BreachedPasswordCheckPort } from "../../ports/breached-password.port";
+import { assertPasswordNotBreached } from "../../services/password-breach.policy";
 import { OPERATOR_IDENTITY, type OperatorIdentityPort } from "../../ports/operator-identity.port";
 import { BootstrapSuperAdminCommand } from "./bootstrap-super-admin.command";
 import type { BootstrapOutcome } from "./bootstrap-super-admin.types";
@@ -42,10 +44,12 @@ export class BootstrapSuperAdminHandler implements ICommandHandler<BootstrapSupe
 		@Inject(ID_GENERATOR) private readonly ids: IdGeneratorPort,
 		@Inject(OPERATOR_IDENTITY) private readonly operator: OperatorIdentityPort,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(BREACHED_PASSWORD_CHECK) private readonly breachCheck: BreachedPasswordCheckPort,
 	) {}
 
 	public async execute(command: BootstrapSuperAdminCommand): Promise<BootstrapOutcome> {
 		const { actor, input } = command;
+		await assertPasswordNotBreached(this.breachCheck, input.password);
 		const passwordHash: string = await this.crypto.hash(input.password);
 		const email: EmailAddress = EmailAddress.of(input.identity.email);
 		const detail: string = JSON.stringify({ email: email.value, ranBy: this.operator.current() });

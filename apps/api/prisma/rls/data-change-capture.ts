@@ -101,10 +101,15 @@ export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = 
 	ImpersonationAuditLog: AUDIT_TRAIL_REASON,
 	AuthorizationAudit: `${AUDIT_TRAIL_REASON} One row per authorization decision (a read-path record).`,
 	TenantAuditLog: AUDIT_TRAIL_REASON,
+	RetentionRun: `${AUDIT_TRAIL_REASON} The retention process's own run log (ADR 078).`,
+	OpsRestoreDrill: `${AUDIT_TRAIL_REASON} The weekly restore drill's own log (enhancement 2.6).`,
 	RewardAuditLog: AUDIT_TRAIL_REASON,
 	EmailLog: LOG_REASON,
 	EmailDeliveryEvent: LOG_REASON,
 	GithubWebhookDelivery: `${LOG_REASON} One row per GitHub webhook delivery, kept to ignore redeliveries.`,
+	ReceivedWebhook: `${LOG_REASON} One row per webhook a provider sent (ADR 081), updated as its delivery is claimed and answered.`,
+	WebhookEvent: `${MESSAGING_REASON} The outgoing webhook outbox (ADR 082): one row per public event, written with the change it describes.`,
+	WebhookDelivery: `${LOG_REASON} The outgoing webhook delivery log (ADR 082): one row per event and endpoint, updated on every attempt.`,
 	AnalyticsEvent: "Telemetry projected from domain events by the analytics consumer; the domain writes behind each event are captured.",
 	OutboxEvent: MESSAGING_REASON,
 	InboxProcessedEvent: MESSAGING_REASON,
@@ -127,6 +132,7 @@ export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string
 	PasswordResetToken: ["token", "tokenDigest"],
 	BackupCode: ["codeHash"],
 	TwoFactorPendingSetup: ["secretCiphertext", "secretIv", "backupCodesHashes"],
+	WebAuthnChallenge: ["challengeHash"],
 	RefreshToken: ["token", "previousTokenHash"],
 	TenantApiKey: ["keyHash"],
 	OpsServer: ["agentTokenHash"],
@@ -137,7 +143,8 @@ export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string
 	RewardReferral: ["attributionToken", "refereeDeviceHash"],
 	TenantEncryptionKey: ["wrappedKey"],
 	GithubAccountLink: ["tokenCiphertext"],
-	PushDevice: ["tokenCiphertext", "tokenHash"],
+	PushDevice: ["tokenCiphertext", "tokenHash", "installationIdCiphertext"],
+	WebhookEndpoint: ["secretCiphertext", "previousSecretCiphertext"],
 };
 
 const KEY_VERSION_REASON = "The version number of the key that encrypted a secret: it names a key and holds no key material.";
@@ -155,6 +162,10 @@ export const DATA_CHANGE_NON_SECRET_COLUMNS: Readonly<Record<string, Readonly<Re
 	TwoFactorPendingSetup: {
 		secretKeyVersion: KEY_VERSION_REASON,
 	},
+	WebAuthnCredential: {
+		credentialId:
+			"The authenticator's public identifier of a passkey (sent in every sign-in's allowCredentials): it names the key pair and proves nothing without the private key.",
+	},
 	GithubAccountLink: {
 		tokenKeyVersion: KEY_VERSION_REASON,
 		tokenExpiresAt: "When GitHub expires the linked token (epoch ms): a date the app shows to its owner, not part of the credential.",
@@ -167,6 +178,10 @@ export const DATA_CHANGE_NON_SECRET_COLUMNS: Readonly<Record<string, Readonly<Re
 	},
 	RewardSale: {
 		requestHash: "Fingerprint of a POS sale request used to detect idempotent replays; derived from the sale body, not from a credential.",
+	},
+	WebhookEndpoint: {
+		secretHint: "The last 4 characters of a 43-character random signing secret, shown so a tenant can tell secrets apart; the rest stays secret.",
+		previousSecretExpiresAt: "When the previous signing secret stops signing after a rotation (epoch ms): a date, not part of the secret.",
 	},
 };
 
@@ -512,9 +527,9 @@ CREATE OR REPLACE FUNCTION public.${DATA_CHANGE_GROUP_FUNCTION}()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY INVOKER
--- pg_catalog first, so no built-in can be shadowed; public for the RLS helpers the upsert's
--- policy check calls (app_rls_bypass_on → app_rls_bypass), which don't pin a search path.
-SET search_path = pg_catalog, public
+-- pg_catalog only, so nothing can be shadowed: the table is schema-qualified, and the RLS helpers the
+-- upsert's policy check calls (app_rls_bypass_on → app_rls_bypass) call each other as public.app_….
+SET search_path = pg_catalog
 AS $fn$
 BEGIN
   INSERT INTO ${table} AS g (${GROUP_COLUMNS})

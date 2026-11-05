@@ -1,6 +1,6 @@
 "use client";
 
-import { BROADCAST_TITLE_MAX_LENGTH, RICH_TEXT_MAX_TEXT_LENGTH, type BroadcastChannel, type BroadcastDraftInput, type RichTextDocument } from "@workspace/shared";
+import { BROADCAST_TITLE_MAX_LENGTH, type BroadcastChannel, type BroadcastDraftInput, type RichTextDocument } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card } from "@workspace/ui/components/card";
 import { Checkbox } from "@workspace/ui/components/checkbox";
@@ -8,11 +8,11 @@ import { DatePicker } from "@workspace/ui/components/date-picker";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";
-import { RichTextEditor, useRichTextEditor, type RichTextEditorContent } from "@workspace/ui/components/rich-text-editor";
+import type { RichTextEditorContent } from "@workspace/ui/components/rich-text-editor";
 import { RichTextView } from "@workspace/ui/components/rich-text-view";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { TimePicker } from "@workspace/ui/components/time-picker";
-import { richTextToEditorContent } from "@workspace/ui/lib/rich-text/editor-extensions";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import * as React from "react";
 import { z } from "zod";
 
@@ -26,6 +26,10 @@ import {
 	type BroadcastScheduleValues,
 	type BroadcastTiming,
 } from "./broadcast-draft";
+import type { BroadcastPictureUpload } from "./broadcast-body-editor";
+
+/** The editor engine loads on its own (enhancement 8.3), so the rest of the composer shows at once. */
+const BroadcastBodyEditor = React.lazy(() => import("./broadcast-body-editor"));
 
 /** What a save asks for: keep it as a draft, or send it (schedule) right after saving. */
 export const BroadcastSaveIntentSchema = z.enum(["draft", "send"]);
@@ -82,6 +86,8 @@ export interface BroadcastComposerFormProps<TValues extends BroadcastMessageValu
 	readonly savingIntent: BroadcastSaveIntent | undefined;
 	readonly onSave: (draft: BroadcastDraftInput, intent: BroadcastSaveIntent) => void;
 	readonly cancel: React.ReactNode;
+	/** The sender's picture upload (enhancement 5.4: a store's or the platform's file category); none hides the control. */
+	readonly picture?: BroadcastPictureUpload | undefined;
 }
 
 /**
@@ -100,6 +106,7 @@ export function BroadcastComposerForm<TValues extends BroadcastMessageValues>({
 	savingIntent,
 	onSave,
 	cancel,
+	picture,
 }: BroadcastComposerFormProps<TValues>): React.JSX.Element {
 	// Plain state, not TanStack Form: the body is a recursive document type the form's path types cannot expand.
 	const [values, setValues] = React.useState<TValues>(initialValues);
@@ -117,11 +124,10 @@ export function BroadcastComposerForm<TValues extends BroadcastMessageValues>({
 		return result.ok ? {} : result.errors;
 	}, [attemptedAt, toDraft, values]);
 
-	const [initialContent] = React.useState((): RichTextEditorContent | null => (initialValues.body === null ? null : richTextToEditorContent(initialValues.body)));
+	const [initialBody] = React.useState(initialValues.body);
 	const handleBodyChange = React.useCallback((content: RichTextEditorContent): void => {
 		setValues((current) => ({ ...current, body: toBroadcastBody(content) }));
 	}, []);
-	const editor = useRichTextEditor({ initialContent, onChange: handleBodyChange, placeholder: copy.bodyPlaceholder, label: "Message" });
 
 	const handleTitleChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		const title = event.currentTarget.value;
@@ -191,45 +197,16 @@ export function BroadcastComposerForm<TValues extends BroadcastMessageValues>({
 					</div>
 					<div className="flex flex-col gap-2">
 						<span className="text-sm font-medium text-foreground">Message</span>
-						<RichTextEditor editor={editor} disabled={isSaving} invalid={errors.body !== undefined}>
-							<RichTextEditor.Toolbar>
-								<RichTextEditor.ControlsGroup>
-									<RichTextEditor.H2 />
-									<RichTextEditor.H3 />
-								</RichTextEditor.ControlsGroup>
-								<RichTextEditor.ControlsGroup>
-									<RichTextEditor.Bold />
-									<RichTextEditor.Italic />
-									<RichTextEditor.Underline />
-									<RichTextEditor.Strikethrough />
-									<RichTextEditor.Code />
-								</RichTextEditor.ControlsGroup>
-								<RichTextEditor.ControlsGroup>
-									<RichTextEditor.BulletList />
-									<RichTextEditor.OrderedList />
-									<RichTextEditor.Blockquote />
-									<RichTextEditor.CodeBlock />
-									<RichTextEditor.Hr />
-								</RichTextEditor.ControlsGroup>
-								<RichTextEditor.ControlsGroup>
-									<RichTextEditor.Table />
-									<RichTextEditor.AddRow />
-									<RichTextEditor.AddColumn />
-									<RichTextEditor.DeleteTable />
-								</RichTextEditor.ControlsGroup>
-								<RichTextEditor.ControlsGroup>
-									<RichTextEditor.Link />
-									<RichTextEditor.Unlink />
-									<RichTextEditor.CallToAction />
-								</RichTextEditor.ControlsGroup>
-								<RichTextEditor.ControlsGroup>
-									<RichTextEditor.Undo />
-									<RichTextEditor.Redo />
-								</RichTextEditor.ControlsGroup>
-							</RichTextEditor.Toolbar>
-							<RichTextEditor.Content />
-							<RichTextEditor.Footer limit={RICH_TEXT_MAX_TEXT_LENGTH} />
-						</RichTextEditor>
+						<React.Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" data-testid="broadcast-body-editor-loading" />}>
+							<BroadcastBodyEditor
+								initialBody={initialBody}
+								onChange={handleBodyChange}
+								placeholder={copy.bodyPlaceholder}
+								disabled={isSaving}
+								invalid={errors.body !== undefined}
+								picture={picture}
+							/>
+						</React.Suspense>
 						<FieldError field="body" message={errors.body} />
 					</div>
 				</ComposerSection>

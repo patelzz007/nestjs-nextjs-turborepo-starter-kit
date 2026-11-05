@@ -2,7 +2,7 @@ import type { TransactionalEventCollector } from "../../../platform/application/
 import type { EmailRequestTransactionalPort, LegacyInboxImportPort, NotifyTransactionalPort } from "../../notifications/public-api";
 import type { ReferrerCreditNoticesPort, SignupSuccessNoticesPort } from "../../referrals/public-api";
 import type { LegalAcceptanceCheck, RewardAuditPort, RewardInventoryPort, RewardRedemptionFactsPort } from "../../rewards/public-api";
-import type { CustomerStandingPort, TenantCustomerLinksPort } from "../../tenancy/public-api";
+import type { CustomerStandingPort, TenantCustomerLinksPort, ReviewNoticeFactsPort } from "../../tenancy/public-api";
 import type { OtpChallengeRepository, RewardClaimRepository } from "../domain/repositories/claims.repositories";
 import type { ClaimantPort, ClaimViewPort, LegacyRewardNoticeStore, ReferralAttributionPort } from "./ports/claims-transactional.ports";
 
@@ -32,6 +32,8 @@ export interface ClaimsScope {
 	readonly customerStanding: CustomerStandingPort;
 	/** Tenants' tenant-customer links (ADR 073), in this same transaction. */
 	readonly tenantCustomers: TenantCustomerLinksPort;
+	/** Tenants' slug and owners for a review notice, in this same transaction. */
+	readonly tenantReviewNotices: ReviewNoticeFactsPort;
 	readonly emails: EmailRequestTransactionalPort;
 	readonly events: TransactionalEventCollector;
 }

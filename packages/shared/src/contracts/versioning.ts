@@ -89,6 +89,7 @@ export const VersionedRoutePrefixSchema = z.enum([
 	"/tenants/:tenantSlug/rewards",
 	"/tenants/:tenantSlug/notifications",
 	"/tenants/:tenantSlug/broadcasts",
+	"/tenants/:tenantSlug/payments",
 	"/tenants/:tenantSlug/api-keys",
 	"/tenants/:tenantSlug/terminals",
 	"/tenants/:tenantSlug/redemptions",
@@ -114,10 +115,16 @@ export const VersionedRoutePrefixSchema = z.enum([
 	"/authorization/decisions",
 	"/notifications",
 	"/webhooks/twilio",
+	"/payments/callbacks",
+	"/me",
+	"/admin/users",
+	"/admin/feature-flags",
 	"/admin/notifications",
 	"/admin/broadcasts",
 	"/admin/broadcast-reports",
 	"/broadcasts",
+	// Inbound webhooks (ADR 081): the received-webhook log
+	"/admin/webhooks/received",
 ]);
 
 export type VersionedRoutePrefix = z.output<typeof VersionedRoutePrefixSchema>;

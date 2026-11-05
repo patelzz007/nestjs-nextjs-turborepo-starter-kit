@@ -3,7 +3,8 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { activeAdminSettingsSection, AdminSettingsShell } from "@/components/settings/admin-settings-shell";
+import { AdminSettingsShell } from "@/components/settings/admin-settings-shell";
+import { activeAdminSettingsSection } from "@/lib/navigation/settings-sections";
 import { ROUTES } from "@/lib/routes";
 
 const mocks = vi.hoisted(() => ({ pathname: "/account/security", allowed: new Set<string>() }));

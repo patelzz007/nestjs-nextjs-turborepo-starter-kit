@@ -516,6 +516,136 @@ export async function seedOperations(
 		await prisma.opsBackup.upsert({ where: { id: backup.id ?? "" }, update: {}, create: backup });
 	}
 
+	// ── The public status page (enhancement 4.5): a resolved incident from yesterday (shown publicly for a week),
+	// one from last quarter (staff only), and one opened by mistake and removed. Updates are append-only.
+	const incidentOf = (name: string): string => deterministicUuid(NAMESPACE, `status-incident:${name}`);
+	const yesterday = hourNow - DAY_MS;
+	const lastQuarter = hourNow - 90 * DAY_MS;
+	const incidents: Prisma.StatusIncidentUncheckedCreateInput[] = [
+		{
+			id: incidentOf("emails-delayed"),
+			title: "Emails and notifications delayed",
+			impact: "MINOR",
+			state: "RESOLVED",
+			components: ["background-jobs"],
+			startedAt: BigInt(yesterday),
+			resolvedAt: BigInt(yesterday + 95 * 60_000),
+			openedById: input.developerId,
+			createdBy: input.developerId,
+			updatedBy: input.superAdminId,
+		},
+		{
+			id: incidentOf("database-failover"),
+			title: "Sign-in and checkout unavailable",
+			impact: "CRITICAL",
+			state: "RESOLVED",
+			components: ["database", "api"],
+			startedAt: BigInt(lastQuarter),
+			resolvedAt: BigInt(lastQuarter + 40 * 60_000),
+			openedById: input.superAdminId,
+			createdBy: input.superAdminId,
+			updatedBy: input.superAdminId,
+		},
+		{
+			id: incidentOf("opened-by-mistake"),
+			title: "Test incident",
+			impact: "MINOR",
+			state: "INVESTIGATING",
+			components: ["api"],
+			startedAt: BigInt(lastQuarter + DAY_MS),
+			openedById: input.developerId,
+			createdBy: input.developerId,
+			updatedBy: input.developerId,
+			isDeleted: true,
+			deletedAt: BigInt(lastQuarter + DAY_MS + 60_000),
+			deletedBy: input.superAdminId,
+		},
+	];
+	for (const incident of incidents) {
+		await prisma.statusIncident.upsert({ where: { id: incident.id ?? "" }, update: {}, create: incident });
+	}
+	const update = (
+		incident: string,
+		index: number,
+		state: Prisma.StatusIncidentUpdateUncheckedCreateInput["state"],
+		message: string,
+		postedById: string,
+		at: number,
+	): Prisma.StatusIncidentUpdateUncheckedCreateInput => ({
+		id: deterministicUuid(NAMESPACE, `status-incident:${incident}:update:${String(index)}`),
+		incidentId: incidentOf(incident),
+		state,
+		message,
+		postedById,
+		postedAt: BigInt(at),
+		createdBy: postedById,
+		updatedBy: postedById,
+	});
+	// Append-only: inserted once, never updated.
+	await prisma.statusIncidentUpdate.createMany({
+		skipDuplicates: true,
+		data: [
+			update("emails-delayed", 0, "INVESTIGATING", "Some emails and notifications are arriving late. We're looking into it.", input.developerId, yesterday),
+			update(
+				"emails-delayed",
+				1,
+				"IDENTIFIED",
+				"Our email provider is slow to accept messages. Nothing is lost: everything queued will be sent.",
+				input.developerId,
+				yesterday + 25 * 60_000,
+			),
+			update(
+				"emails-delayed",
+				2,
+				"RESOLVED",
+				"The provider has recovered and every delayed email and notification has been sent.",
+				input.superAdminId,
+				yesterday + 95 * 60_000,
+			),
+			update("database-failover", 0, "INVESTIGATING", "Signing in and checking out are failing. We're on it.", input.superAdminId, lastQuarter),
+			update(
+				"database-failover",
+				1,
+				"RESOLVED",
+				"The database moved to its standby. Everything works again; no data was lost.",
+				input.superAdminId,
+				lastQuarter + 40 * 60_000,
+			),
+			update("opened-by-mistake", 0, "INVESTIGATING", "Opened to try the status page; removed.", input.developerId, lastQuarter + DAY_MS),
+		],
+	});
+
+	// ── Restore drills (enhancement 2.6): last week's passed; the week before failed (RLS missing on a table) ──
+	const drillOf = (night: number): string => deterministicUuid(NAMESPACE, `backup:nightly:${String(night)}`);
+	// Append-only: inserted once, never updated.
+	await prisma.opsRestoreDrill.createMany({
+		skipDuplicates: true,
+		data: [
+			{
+				id: deterministicUuid(NAMESPACE, "restore-drill:passed"),
+				backupId: drillOf(0),
+				startedAt: BigInt(hourNow - 2 * DAY_MS + OPS_HOUR_MS),
+				finishedAt: BigInt(hourNow - 2 * DAY_MS + OPS_HOUR_MS + 214_000),
+				outcome: "PASSED",
+				tablesChecked: 121,
+				rowsRestored: BigInt(48_210),
+				failures: [],
+				migration: "20261103083410_init",
+			},
+			{
+				id: deterministicUuid(NAMESPACE, "restore-drill:failed"),
+				backupId: drillOf(6),
+				startedAt: BigInt(hourNow - 9 * DAY_MS + OPS_HOUR_MS),
+				finishedAt: BigInt(hourNow - 9 * DAY_MS + OPS_HOUR_MS + 198_000),
+				outcome: "FAILED",
+				tablesChecked: 121,
+				rowsRestored: BigInt(47_903),
+				failures: ["Row-level security isn't enabled and forced on: OpsRestoreDrill"],
+				migration: "20261103083410_init",
+			},
+		],
+	});
+
 	// ── Load tests ─────────────────────────────────────────────────────────
 	const runs: Prisma.LoadTestRunUncheckedCreateInput[] = [
 		{

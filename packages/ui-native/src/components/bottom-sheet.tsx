@@ -7,7 +7,9 @@
 // so a field low in a tall sheet can still be brought into view above it — in
 // the sheet's own scroll view, or, for content that is a virtualized list
 // (`scrollsItself`), in that list: a list is never nested in a scroll view.
-// It slides in, and simply appears under Reduce Motion.
+// It slides in while its backdrop fades in, and both leave together: one animated value drives
+// them (lib/use-overlay-presence), and the Modal stays up until the sheet is fully away. Under
+// Reduce Motion it simply appears and goes.
 // Presentational and controlled: the caller owns `visible` and is told when
 // the sheet asks to close.
 
@@ -16,15 +18,17 @@ import CheckIcon from "lucide-react-native/icons/check";
 import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
 import { Modal, Pressable, ScrollView, Text, View, type ViewInstance } from "react-native";
+import Animated from "react-native-reanimated";
+import { withUniwind } from "uniwind";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
-import { useReduceMotion } from "../lib/use-reduce-motion";
+import { useSheetMotion } from "../lib/use-sheet-motion";
 import { Icon } from "./icon";
 import { KeyboardAvoidingView } from "./keyboard-avoiding-view";
 import { Subheading } from "./text";
 
-export const bottomSheetVariants = cva("gap-3 rounded-t-2xl border border-border bg-popover pt-4", {
+export const bottomSheetVariants = cva("gap-3 rounded-t-3xl border border-b-0 border-border bg-popover pt-4", {
 	variants: {
 		variant: { default: "" },
 		/** How tall the sheet may grow before its body scrolls: `md` four fifths of the screen, `lg` nearly all of it. */
@@ -37,6 +41,8 @@ export const bottomSheetVariants = cva("gap-3 rounded-t-2xl border border-border
 type BottomSheetVariantProps = VariantProps<typeof bottomSheetVariants>;
 export type BottomSheetVariant = NonNullable<BottomSheetVariantProps["variant"]>;
 export type BottomSheetSize = NonNullable<BottomSheetVariantProps["size"]>;
+
+const StyledAnimatedView = withUniwind(Animated.View);
 
 /** The backdrop's generic name for touch-exploration users. */
 const DEFAULT_CLOSE_LABEL = "Close";
@@ -68,13 +74,25 @@ export const BottomSheet = React.memo(
 		{ visible, title, onClose, children, scrollsItself = false, variant = "default", size = "md", closeLabel = DEFAULT_CLOSE_LABEL, className, testID },
 		ref,
 	): React.JSX.Element {
-		const reduceMotion = useReduceMotion();
 		const bodyTestID = testID === undefined ? undefined : `${testID}-body`;
+		const { presented, backdropStyle, sheetStyle, measureSheet } = useSheetMotion(visible);
 		return (
-			<Modal visible={visible} transparent animationType={reduceMotion ? "none" : "slide"} onRequestClose={onClose}>
+			<Modal visible={presented} transparent animationType="none" onRequestClose={onClose}>
 				<KeyboardAvoidingView className="flex-1 justify-end" testID={testID === undefined ? undefined : `${testID}-keyboard`}>
-					<Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} className="absolute inset-0 bg-scrim opacity-50" />
-					<View ref={ref} accessibilityViewIsModal testID={testID} className={cn(bottomSheetVariants({ variant, size }), className)}>
+					<StyledAnimatedView
+						pointerEvents="box-none"
+						className="absolute inset-0 bg-scrim"
+						style={backdropStyle}
+						testID={testID === undefined ? undefined : `${testID}-backdrop`}>
+						<Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} className="flex-1" />
+					</StyledAnimatedView>
+					<StyledAnimatedView
+						ref={ref}
+						accessibilityViewIsModal
+						onLayout={measureSheet}
+						testID={testID}
+						style={sheetStyle}
+						className={cn(bottomSheetVariants({ variant, size }), className)}>
 						<View className="flex-row items-center justify-between px-4">
 							<Subheading>{title}</Subheading>
 							<Pressable
@@ -96,7 +114,7 @@ export const BottomSheet = React.memo(
 								{children}
 							</ScrollView>
 						)}
-					</View>
+					</StyledAnimatedView>
 				</KeyboardAvoidingView>
 			</Modal>
 		);

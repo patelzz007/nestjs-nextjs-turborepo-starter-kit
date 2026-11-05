@@ -5,13 +5,13 @@ import type { ViewInstance } from "react-native";
 
 import { StatusBadge, type StatusBadgeTone } from "../status-badge";
 
-/** Each tone's fill, its resting border and its emphasized border. */
+/** Each tone's fill, its resting border (none: a fill-only tint) and its emphasized border. */
 const TONE_CASES: readonly (readonly [StatusBadgeTone, string, string, string])[] = [
-	["neutral", "bg-muted", "border-border", "border-muted-foreground"],
-	["info", "bg-info-soft", "border-info/30", "border-info"],
-	["success", "bg-success-soft", "border-success/30", "border-success"],
-	["warning", "bg-warning-soft", "border-warning/30", "border-warning"],
-	["destructive", "bg-destructive-soft", "border-destructive/30", "border-destructive"],
+	["neutral", "bg-muted", "border-transparent", "border-muted-foreground"],
+	["info", "bg-info-soft", "border-transparent", "border-info"],
+	["success", "bg-success-soft", "border-transparent", "border-success"],
+	["warning", "bg-warning-soft", "border-transparent", "border-warning"],
+	["destructive", "bg-destructive-soft", "border-transparent", "border-destructive"],
 ];
 
 /** The utility classes on an element, one by one. */
@@ -36,11 +36,11 @@ describe("StatusBadge", () => {
 
 	it("draws the tone's full-strength border when emphasized", async () => {
 		const view = await render(<StatusBadge icon={WifiIcon} label="Refreshed" accessibilityLabel="Refreshed" tone="success" testID="pill" />);
-		expect(classesOf("pill")).toContain("border-success/30");
+		expect(classesOf("pill")).toContain("border-transparent");
 
 		await view.rerender(<StatusBadge icon={WifiIcon} label="Refreshed" accessibilityLabel="Refreshed" tone="success" emphasized testID="pill" />);
 		expect(classesOf("pill")).toContain("border-success");
-		expect(classesOf("pill")).not.toContain("border-success/30");
+		expect(classesOf("pill")).not.toContain("border-transparent");
 	});
 
 	it("sets a ticking label in fixed-width digits", async () => {

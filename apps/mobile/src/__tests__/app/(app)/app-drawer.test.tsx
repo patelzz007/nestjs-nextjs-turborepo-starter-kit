@@ -1,8 +1,11 @@
 import { act, fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 
 import { fail, ok, stubApi } from "../../../../test/api-stub";
-import { createTestRuntime, markerScreen, renderInApp } from "../../../../test/app-harness";
-import { githubAccountLinkedJson, profileJson, userJson } from "../../../../test/fixtures";
+import { createTestRuntime, markerScreen, renderInApp, TEST_BUILD_IDENTITY, type TestRuntimeOverrides } from "../../../../test/app-harness";
+import { formatBuildMoment } from "../../../lib/build-identity";
+import { PERMISSION } from "@workspace/shared";
+
+import { githubAccountLinkedJson, profileJson, sessionPermissionsJson, userJson } from "../../../../test/fixtures";
 import { testAccessToken } from "../../../../test/jwt";
 import { memorySecureStore } from "../../../../test/secure-store-memory";
 import AppTabsLayout from "../../../app/(app)/_layout";
@@ -29,8 +32,8 @@ const SCREENS = {
 	"(app)/settings/app-lock": markerScreen("app-lock screen"),
 };
 
-async function renderSignedIn(url: string): Promise<ReturnType<typeof createTestRuntime>> {
-	const runtime = createTestRuntime({}, { status: "signedIn", session: { scope: "full" } });
+async function renderSignedIn(url: string, overrides: TestRuntimeOverrides = {}): Promise<ReturnType<typeof createTestRuntime>> {
+	const runtime = createTestRuntime(overrides, { status: "signedIn", session: { scope: "full" } });
 	await runtime.tokenProvider.saveTokens({ accessToken: testAccessToken(), refreshToken: "refresh-1" });
 	await renderInApp(runtime, SCREENS, url);
 	return runtime;
@@ -39,6 +42,13 @@ async function renderSignedIn(url: string): Promise<ReturnType<typeof createTest
 async function openDrawer(): Promise<ReturnType<typeof within>> {
 	await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
 	return within(screen.getByTestId("app-drawer-panel"));
+}
+
+/** Folds open the drawer's branches named, top down (mobile-drawer-items.json nests screens under them). */
+async function unfold(drawer: ReturnType<typeof within>, branches: readonly string[]): Promise<void> {
+	for (const branch of branches) {
+		await fireEvent.press(await drawer.findByRole("button", { name: branch }));
+	}
 }
 
 describe("app drawer (ADR 038)", () => {
@@ -57,9 +67,21 @@ describe("app drawer (ADR 038)", () => {
 		expect(drawer.getByRole("header", { name: "Alex Morgan" })).toBeOnTheScreen();
 		expect(drawer.getByRole("header", { name: "Account" })).toBeOnTheScreen();
 		expect(drawer.getByRole("header", { name: "Preferences" })).toBeOnTheScreen();
-		expect(drawer.getByText("Version 1.0.0")).toBeOnTheScreen();
+		expect(drawer.getByText("Development build · Version 1.0.0")).toBeOnTheScreen();
 		// While it is open, screen readers see only the drawer.
 		expect(screen.queryByText("This is the starter shell")).toBeNull();
+	});
+
+	it("names the build at its foot: the type and version, and when an over-the-air update was made", async () => {
+		const updatedAt = new Date("2026-11-05T10:12:00Z");
+		await renderSignedIn("/", { build: { ...TEST_BUILD_IDENTITY, kind: "production", runningUpdateCreatedAt: updatedAt, isEmbeddedLaunch: false } });
+		await screen.findByText("This is the starter shell");
+
+		const drawer = await openDrawer();
+
+		const build = within(drawer.getByTestId("app-drawer-build"));
+		expect(build.getByText("Production build · Version 1.0.0")).toBeOnTheScreen();
+		expect(build.getByText(`Updated ${formatBuildMoment(updatedAt, "en")}`)).toBeOnTheScreen();
 	});
 
 	it("marks the screen on show as selected", async () => {
@@ -81,13 +103,14 @@ describe("app drawer (ADR 038)", () => {
 	});
 
 	it.each([
-		["Security", "security screen"],
-		["Signed-in devices", "devices screen"],
-		["Appearance, System", "appearance screen"],
-		["App lock, Off", "app-lock screen"],
-	])("opens %s from anywhere", async (item, target) => {
+		["Security", "security screen", ["Sign-in & security"]],
+		["Signed-in devices", "devices screen", ["Sign-in & security"]],
+		["Appearance, System", "appearance screen", ["Display"]],
+		["App lock, Off", "app-lock screen", []],
+	])("opens %s from anywhere", async (item, target, branches) => {
 		await renderSignedIn("/search");
 		const drawer = await openDrawer();
+		await unfold(drawer, branches);
 
 		await fireEvent.press(drawer.getByRole("button", { name: item }));
 
@@ -138,6 +161,7 @@ describe("app drawer (ADR 038)", () => {
 	it("keeps Settings under a sub-screen opened from the drawer, and resets the tab when it is left", async () => {
 		await renderSignedIn("/");
 		const drawer = await openDrawer();
+		await unfold(drawer, ["Display"]);
 		await fireEvent.press(drawer.getByRole("button", { name: "Appearance, System" }));
 		expect(await screen.findByText("appearance screen")).toBeOnTheScreen();
 
@@ -166,6 +190,7 @@ describe("app drawer (ADR 038)", () => {
 	it("leads with back instead of the menu deeper in a stack, and back returns to the tab's first screen", async () => {
 		await renderSignedIn("/");
 		const drawer = await openDrawer();
+		await unfold(drawer, ["Sign-in & security"]);
 		await fireEvent.press(drawer.getByRole("button", { name: "Security" }));
 		expect(await screen.findByText("security screen")).toBeOnTheScreen();
 
@@ -216,21 +241,36 @@ describe("app drawer: GitHub pull requests (ADR 052)", () => {
 		await renderInApp(runtime, GITHUB_SCREENS, "/");
 	}
 
-	it("shows a GitHub section to someone the API lets use pull requests, with the token's state", async () => {
-		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /github/account": ok(githubAccountLinkedJson()) });
+	/** A session holding the pull-request capabilities (READ, and UPDATE for the token). */
+	const GITHUB_PERMISSIONS = ok(sessionPermissionsJson([PERMISSION.GITHUB_PULL_REQUEST.READ, PERMISSION.GITHUB_PULL_REQUEST.UPDATE]));
+
+	it("shows a GitHub section to someone holding the pull-request capabilities, with the token's state", async () => {
+		stubApi({
+			"GET /auth/me": ok(userJson()),
+			"GET /auth/profile": ok(profileJson()),
+			"GET /auth/permissions": GITHUB_PERMISSIONS,
+			"GET /github/account": ok(githubAccountLinkedJson()),
+		});
 		await renderWithGithub();
 
 		const drawer = await openDrawer();
 
 		expect(await drawer.findByRole("header", { name: "GitHub" })).toBeOnTheScreen();
+		await unfold(drawer, ["Code review"]);
 		expect(drawer.getByRole("button", { name: "Pull requests" })).toBeOnTheScreen();
 		expect(drawer.getByRole("button", { name: "GitHub token, Linked" })).toBeOnTheScreen();
 	});
 
 	it("opens the pull requests from the drawer", async () => {
-		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /github/account": ok({ status: "unlinked" }) });
+		stubApi({
+			"GET /auth/me": ok(userJson()),
+			"GET /auth/profile": ok(profileJson()),
+			"GET /auth/permissions": GITHUB_PERMISSIONS,
+			"GET /github/account": ok({ status: "unlinked" }),
+		});
 		await renderWithGithub();
 		const drawer = await openDrawer();
+		await unfold(drawer, ["Code review"]);
 
 		await fireEvent.press(await drawer.findByRole("button", { name: "Pull requests" }));
 
@@ -238,10 +278,11 @@ describe("app drawer: GitHub pull requests (ADR 052)", () => {
 	});
 
 	it.each([
-		["the API refuses them (not an admin)", fail(403, "FORBIDDEN", "Forbidden")],
-		["the server has pull requests off", ok({ status: "off" })],
-	])("hides the GitHub section when %s", async (_case, account) => {
-		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /github/account": account });
+		["the session does not hold the capabilities", ok(sessionPermissionsJson()), ok(githubAccountLinkedJson())],
+		["the API refuses them (not an admin)", GITHUB_PERMISSIONS, fail(403, "FORBIDDEN", "Forbidden")],
+		["the server has pull requests off", GITHUB_PERMISSIONS, ok({ status: "off" })],
+	])("hides the GitHub section when %s", async (_case, permissions, account) => {
+		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /auth/permissions": permissions, "GET /github/account": account });
 		await renderWithGithub();
 
 		const drawer = await openDrawer();
@@ -250,5 +291,49 @@ describe("app drawer: GitHub pull requests (ADR 052)", () => {
 		await waitFor(() => {
 			expect(drawer.queryByRole("header", { name: "GitHub" })).toBeNull();
 		});
+	});
+});
+
+describe("app drawer: operations (ADR 068)", () => {
+	it("shows Operations only to a session that may list the servers", async () => {
+		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /auth/permissions": ok(sessionPermissionsJson([PERMISSION.SERVER_METRIC.LIST])) });
+		await renderSignedIn("/");
+
+		const drawer = await openDrawer();
+
+		expect(await drawer.findByRole("header", { name: "Operations" })).toBeOnTheScreen();
+		expect(drawer.getByRole("button", { name: "Servers" })).toBeOnTheScreen();
+	});
+
+	it("leaves Operations out for a session without that capability", async () => {
+		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /auth/permissions": ok(sessionPermissionsJson()) });
+		await renderSignedIn("/");
+
+		const drawer = await openDrawer();
+
+		expect(await drawer.findByRole("header", { name: "Preferences" })).toBeOnTheScreen();
+		expect(drawer.queryByRole("header", { name: "Operations" })).toBeNull();
+	});
+});
+
+describe("command palette (ADR 079)", () => {
+	it("opens from the header's search button with the drawer's places, and goes to the one chosen", async () => {
+		await renderSignedIn("/");
+
+		await fireEvent.press(await screen.findByRole("button", { name: "Search" }));
+		expect(await screen.findByRole("header", { name: "Go to" })).toBeOnTheScreen();
+		expect(screen.getByRole("header", { name: "Account" })).toBeOnTheScreen();
+
+		await fireEvent.press(screen.getByTestId("command-security"));
+		expect(await screen.findByText("security screen")).toBeOnTheScreen();
+	});
+
+	it("narrows the places to what is typed", async () => {
+		await renderSignedIn("/");
+		await fireEvent.press(await screen.findByRole("button", { name: "Search" }));
+
+		await fireEvent.changeText(screen.getByLabelText("Search the app"), "signed-in");
+		expect(screen.getByTestId("command-devices")).toBeOnTheScreen();
+		expect(screen.queryByTestId("command-security")).toBeNull();
 	});
 });

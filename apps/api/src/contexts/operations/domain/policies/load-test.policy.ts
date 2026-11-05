@@ -32,6 +32,18 @@ export function assertWithinCaps(run: Pick<StartLoadTestInput, "virtualUsers" | 
 	}
 }
 
+/**
+ * How many staff accounts a run's merchant scenarios sign in as. The load runner gives virtual user
+ * `n` (1 to `virtualUsers`: k6 never starts more) the staff account `(n - 1) % accounts`, and a
+ * virtual user signs in once and stays signed in, so an account holds one live session per virtual
+ * user given it. A user keeps at most `sessionsPerUser` sessions — signing in again retires the
+ * oldest, whose virtual user then gets 401 `SESSION_REVOKED` — so no account may be given more:
+ * ⌈virtualUsers / sessionsPerUser⌉ accounts.
+ */
+export function loadTestStaffCount(virtualUsers: number, sessionsPerUser: number): number {
+	return Math.ceil(virtualUsers / sessionsPerUser);
+}
+
 /** The share of failed requests, in percent; 0 when there were none. */
 export function errorPercent(requests: number, failures: number): number {
 	return requests === 0 ? 0 : (failures / requests) * HUNDRED;

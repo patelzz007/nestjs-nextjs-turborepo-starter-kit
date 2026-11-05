@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { BRAND_MARK_FACETS, BRAND_MARK_SIZE, BRAND_MARK_VIEW_BOX, type BrandMarkFacet } from "../brand";
+import { BRAND_MARK_FACETS, BRAND_MARK_SIZE, BRAND_MARK_VIEW_BOX, BRAND_NAME, type BrandMarkFacet } from "../brand";
+import { PROJECT_DISPLAY_NAME } from "../project-identity";
 
 const COORDINATE_PATTERN = /-?\d+(?:\.\d+)?/gu;
 
@@ -30,5 +31,13 @@ describe("brand mark", () => {
 			expect(coordinates).toHaveLength(8);
 			expect(coordinates.every((value) => value >= 0 && value <= BRAND_MARK_SIZE)).toBe(true);
 		}
+	});
+});
+
+describe("brand name", () => {
+	// project-identity.ts is generated from project.json; packages/tooling's project-identity test proves it is in sync.
+	it("is the project's display name", () => {
+		expect(BRAND_NAME).toBe(PROJECT_DISPLAY_NAME);
+		expect(BRAND_NAME.length).toBeGreaterThan(0);
 	});
 });

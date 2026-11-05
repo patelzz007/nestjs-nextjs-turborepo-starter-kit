@@ -43,6 +43,11 @@ export const SESSION_REFRESH_LIMIT = 10;
 /** The window of the per-minute security policies above. */
 export const SECURITY_POLICY_WINDOW_MS = MS_PER_MINUTE;
 
+/** "Download my data" (ADR 077): one export per person per day; the export reads every context. */
+export const PERSONAL_DATA_EXPORT_LIMIT = 1;
+const MINUTES_PER_DAY = 1_440;
+export const PERSONAL_DATA_EXPORT_WINDOW_MS = MINUTES_PER_DAY * MS_PER_MINUTE;
+
 /**
  * The coarse pre-authentication throttler: requests per client IP per
  * `throttleTtlMs`, counted BEFORE `AuthGuard`, so a flood of bad credentials on
@@ -87,6 +92,7 @@ export const RATE_LIMIT_POLICY: {
 	readonly webhook: RateLimitPolicy;
 	readonly adminSecurityMutation: RateLimitPolicy;
 	readonly sessionRefresh: RateLimitPolicy;
+	readonly personalDataExport: RateLimitPolicy;
 } = {
 	get credential(): RateLimitPolicy {
 		return policy("CREDENTIAL", "strict", "ip", CREDENTIAL_LOW_LIMIT);
@@ -115,5 +121,8 @@ export const RATE_LIMIT_POLICY: {
 	},
 	get sessionRefresh(): RateLimitPolicy {
 		return policy("SESSION_REFRESH", "strict", "ip", SESSION_REFRESH_LIMIT, SECURITY_POLICY_WINDOW_MS);
+	},
+	get personalDataExport(): RateLimitPolicy {
+		return policy("PERSONAL_DATA_EXPORT", "default", "principal", PERSONAL_DATA_EXPORT_LIMIT, PERSONAL_DATA_EXPORT_WINDOW_MS);
 	},
 };

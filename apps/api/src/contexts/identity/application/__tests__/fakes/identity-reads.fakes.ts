@@ -4,6 +4,7 @@ import type {
 	MfaRecoveryStatusResponse,
 	OwnProfile,
 	PaginatedServiceResult,
+	Passkey,
 	Session,
 	UserPreference,
 	UserPreferences,
@@ -25,6 +26,7 @@ export class InMemoryIdentityReads implements IdentityReadPort {
 	public readonly preferences = new Map<string, readonly UserPreference[]>();
 	public readonly sessions = new Map<string, Session[]>();
 	public readonly backupCodeHashes = new Map<string, readonly string[]>();
+	public readonly passkeys = new Map<string, readonly Passkey[]>();
 	public readonly recoveries = new Map<string, MfaRecoveryStatusResponse>();
 	public readonly recoveryList: AdminMfaRecoveryRequest[] = [];
 	public readonly resetTokens = new Map<string, { readonly userId: string; readonly tokenHash: string; readonly expiresAt: EpochMs }>();
@@ -53,6 +55,10 @@ export class InMemoryIdentityReads implements IdentityReadPort {
 
 	public listActiveSessions(_actor: ActorContext, userId: string, currentSessionId: string | null): Promise<PaginatedServiceResult<Session>> {
 		return Promise.resolve(singlePage((this.sessions.get(userId) ?? []).map((session: Session): Session => ({ ...session, isCurrent: session.id === currentSessionId }))));
+	}
+
+	public listPasskeys(_actor: ActorContext, userId: string): Promise<readonly Passkey[]> {
+		return Promise.resolve(this.passkeys.get(userId) ?? []);
 	}
 
 	public countUnusedBackupCodes(_actor: ActorContext, userId: string): Promise<number> {

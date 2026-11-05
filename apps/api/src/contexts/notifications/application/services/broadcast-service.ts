@@ -33,6 +33,8 @@ import {
 	type ReviewBroadcastReportInput,
 	type TenantCustomerEntry,
 	type TenantCustomerListQuery,
+	imageFileIdsOf,
+	withImageSources,
 } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
@@ -106,35 +108,41 @@ export class BroadcastService {
 		const authorUserId = userIdOf(actor);
 		await this.authorize(actor, sender, MERCHANT_CAPABILITY.manageBroadcasts);
 		this.assertDraftFits(sender, draft);
-		const stored = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
+		const { stored, sources } = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			if (sender.kind === "tenant") {
 				await this.assertTenantMayBroadcast(scope, sender.tenantId);
 			}
-			return scope.broadcasts.create(sender.kind === "tenant" ? sender.tenantId : null, authorUserId, draft, this.deps.clock.now());
+			await scope.broadcastImages.lockUsable(sender, imageFileIdsOf(draft.body));
+			return this.withSources(scope, await scope.broadcasts.create(sender.kind === "tenant" ? sender.tenantId : null, authorUserId, draft, this.deps.clock.now()));
 		});
-		return this.toResponse(stored, [], 0);
+		return this.toResponse(stored, [], 0, sources);
 	}
 
 	public async update(actor: ActorContext, sender: BroadcastSender, broadcastId: string, draft: BroadcastDraftInput): Promise<BroadcastResponse> {
 		await this.authorize(actor, sender, MERCHANT_CAPABILITY.manageBroadcasts);
 		this.assertDraftFits(sender, draft);
-		const stored = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
+		const { stored, sources } = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			await this.ownBroadcast(scope, sender, broadcastId);
+			await scope.broadcastImages.lockUsable(sender, imageFileIdsOf(draft.body));
 			const updated = await scope.broadcasts.updateDraft(broadcastId, draft, this.deps.clock.now());
 			if (updated === null) {
 				throw new ConflictError({ message: "Only a draft can be edited; move it back to draft first" });
 			}
-			return updated;
+			return this.withSources(scope, updated);
 		});
-		return this.toResponse(stored, [], 0);
+		return this.toResponse(stored, [], 0, sources);
 	}
 
 	public async get(actor: ActorContext, sender: BroadcastSender, broadcastId: string): Promise<BroadcastResponse> {
 		await this.authorize(actor, sender, MERCHANT_CAPABILITY.manageBroadcasts);
 		return this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			const stored = await this.ownBroadcast(scope, sender, broadcastId);
-			const [results, reports] = await Promise.all([scope.broadcasts.results(broadcastId), scope.broadcasts.openReportCounts([broadcastId])]);
-			return this.toResponse(stored, [...results], reports.get(broadcastId) ?? 0);
+			const [results, reports, sources] = await Promise.all([
+				scope.broadcasts.results(broadcastId),
+				scope.broadcasts.openReportCounts([broadcastId]),
+				scope.broadcastImages.sources(imageFileIdsOf(stored.body)),
+			]);
+			return this.toResponse(stored, [...results], reports.get(broadcastId) ?? 0, sources);
 		});
 	}
 
@@ -142,8 +150,11 @@ export class BroadcastService {
 		await this.authorize(actor, sender, MERCHANT_CAPABILITY.manageBroadcasts);
 		return this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			const page = await scope.broadcasts.list(sender.kind === "tenant" ? sender.tenantId : null, query);
-			const reports = await scope.broadcasts.openReportCounts(page.items.map((broadcast) => broadcast.id));
-			return { ...page, items: page.items.map((broadcast) => this.toResponse(broadcast, [], reports.get(broadcast.id) ?? 0)) };
+			const [reports, sources] = await Promise.all([
+				scope.broadcasts.openReportCounts(page.items.map((broadcast) => broadcast.id)),
+				scope.broadcastImages.sources(page.items.flatMap((broadcast) => imageFileIdsOf(broadcast.body))),
+			]);
+			return { ...page, items: page.items.map((broadcast) => this.toResponse(broadcast, [], reports.get(broadcast.id) ?? 0, sources)) };
 		});
 	}
 
@@ -176,7 +187,7 @@ export class BroadcastService {
 	public async schedule(actor: ActorContext, sender: BroadcastSender, broadcastId: string): Promise<BroadcastResponse> {
 		await this.authorize(actor, sender, MERCHANT_CAPABILITY.publishBroadcasts);
 		const now = this.deps.clock.now();
-		const stored = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
+		const { stored, sources } = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			const broadcast = await this.ownBroadcast(scope, sender, broadcastId);
 			this.assertLinksAllowed(broadcast);
 			if (sender.kind === "tenant") {
@@ -189,16 +200,16 @@ export class BroadcastService {
 				throw new ConflictError({ message: "Only a draft can be scheduled" });
 			}
 			const scheduled: StoredBroadcast = { ...broadcast, status: to, startsAt };
-			return scheduled;
+			return this.withSources(scope, scheduled);
 		});
-		return this.toResponse(stored, [], 0);
+		return this.toResponse(stored, [], 0, sources);
 	}
 
 	/** The second pair of eyes: another staff member approves a notice to every user. */
 	public async approve(actor: ActorContext, broadcastId: string): Promise<BroadcastResponse> {
 		const approverUserId = userIdOf(actor);
 		const now = this.deps.clock.now();
-		const stored = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
+		const { stored, sources } = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			const broadcast = await this.ownBroadcast(scope, { kind: "platform" }, broadcastId);
 			if (broadcast.authorUserId === approverUserId) {
 				throw new AuthorizationError({ message: "Someone other than the author must approve a notice to every user" });
@@ -208,23 +219,23 @@ export class BroadcastService {
 				throw new ConflictError({ message: "Only a broadcast waiting for approval can be approved" });
 			}
 			const scheduled: StoredBroadcast = { ...broadcast, status: "SCHEDULED", approverUserId, approvedAt: now };
-			return scheduled;
+			return this.withSources(scope, scheduled);
 		});
-		return this.toResponse(stored, [], 0);
+		return this.toResponse(stored, [], 0, sources);
 	}
 
 	public async cancel(actor: ActorContext, sender: BroadcastSender, broadcastId: string): Promise<BroadcastResponse> {
 		await this.authorize(actor, sender, MERCHANT_CAPABILITY.publishBroadcasts);
 		const now = this.deps.clock.now();
-		const stored = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
+		const { stored, sources } = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			const broadcast = await this.ownBroadcast(scope, sender, broadcastId);
 			if (!(await scope.broadcasts.move(broadcastId, broadcastStatusesBefore("CANCELLED"), "CANCELLED", { cancelledAt: now }, now))) {
 				throw new ConflictError({ message: "A broadcast that is sending or sent cannot be cancelled" });
 			}
 			const cancelled: StoredBroadcast = { ...broadcast, status: "CANCELLED", cancelledAt: now };
-			return cancelled;
+			return this.withSources(scope, cancelled);
 		});
-		return this.toResponse(stored, [], 0);
+		return this.toResponse(stored, [], 0, sources);
 	}
 
 	// ── Sending ──────────────────────────────────────────────────────────────────────────────────────
@@ -488,8 +499,13 @@ export class BroadcastService {
 		return due > now ? { notBefore: due } : {};
 	}
 
-	private toResponse(broadcast: StoredBroadcast, results: BroadcastResponse["results"], openReports: number): BroadcastResponse {
-		return toBroadcastResponse(broadcast, results, openReports);
+	/** A stored broadcast with its pictures' public addresses, read on the same transaction. */
+	private async withSources(scope: NotificationsScope, stored: StoredBroadcast): Promise<{ readonly stored: StoredBroadcast; readonly sources: ReadonlyMap<string, string> }> {
+		return { stored, sources: await scope.broadcastImages.sources(imageFileIdsOf(stored.body)) };
+	}
+
+	private toResponse(broadcast: StoredBroadcast, results: BroadcastResponse["results"], openReports: number, sources: ReadonlyMap<string, string>): BroadcastResponse {
+		return toBroadcastResponse({ ...broadcast, body: withImageSources(broadcast.body, sources) }, results, openReports);
 	}
 }
 

@@ -1,21 +1,27 @@
 // The app's inbox (ADR 070, the CUSTOMER surface), shown as a feed (notifications-feed.tsx): every
 // notice or only the unread, newest first, a page more on "See earlier notifications". Reading,
 // removing (archiving) and reporting go to the API; the list and the bell's count reload after each,
-// and the moment the live stream says the inbox changed (use-unread-notifications.ts).
+// and the moment the live stream says the inbox changed (use-unread-notifications.ts). Offline, the list
+// loaded last stays readable from memory, marked as possibly out of date (inbox-state.ts, enhancement 6.4),
+// and the list and the count reload when the connection comes back (TanStack Query can't see the phone's
+// connection on its own, so nothing else would).
 
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/api-client";
-import { ApiPaginatedMetaSchema, type ApiResponseMeta, type BroadcastReportReason, type InAppNotificationResponse } from "@workspace/shared";
+import type { BroadcastReportReason, InAppNotificationResponse } from "@workspace/shared";
 import { useRouter } from "expo-router";
 import * as React from "react";
 
+import { useConnectivity } from "../../features/app-status/facade";
 import { useToast } from "../../features/toast/facade";
 import { useApi } from "../../lib/api-context";
+import { useRisingEdge } from "../../lib/use-rising-edge";
 import { ROUTES } from "../../runtime/routes";
 import type { InboxFilter } from "./feed-model";
-import { INBOX_MAX_LIMIT, INBOX_PAGE_SIZE, inboxQueryOf, NOTIFICATIONS_SURFACE } from "./inbox-query";
+import { inboxQueryOf, NOTIFICATIONS_SURFACE } from "./inbox-query";
+import { feedStateOf } from "./inbox-state";
 import { NOTIFICATIONS_COPY } from "./labels";
-import { NotificationsFeed, type NotificationsFeedState } from "./notifications-feed";
+import { NotificationsFeed } from "./notifications-feed";
 
 const INBOX_SCOPE = apiRouter.notifications.inbox.scopeKey(undefined);
 
@@ -26,6 +32,7 @@ export function NotificationsInbox(): React.JSX.Element {
 	const router = useRouter();
 	const [filter, setFilter] = React.useState<InboxFilter>("all");
 	const [pages, setPages] = React.useState(1);
+	const offline = useConnectivity() === "offline";
 	// A longer list keeps the one shown while it loads; a new filter starts afresh.
 	const inbox = api.notifications.inbox.useQuery(inboxQueryOf(filter, pages), pages > 1 ? { placeholderData: keepPreviousData } : {});
 	const unread = api.notifications.unreadCount.useQuery({ surface: NOTIFICATIONS_SURFACE });
@@ -36,6 +43,7 @@ export function NotificationsInbox(): React.JSX.Element {
 	const refresh = React.useCallback((): void => {
 		void queryClient.invalidateQueries({ queryKey: INBOX_SCOPE });
 	}, [queryClient]);
+	useRisingEdge(!offline, refresh);
 	const changeFilter = React.useCallback((next: InboxFilter): void => {
 		setFilter(next);
 		setPages(1);
@@ -91,11 +99,12 @@ export function NotificationsInbox(): React.JSX.Element {
 
 	return (
 		<NotificationsFeed
-			state={feedStateOf(inbox.data, inbox.isError, pages)}
+			state={feedStateOf({ page: inbox.data, failed: inbox.isError, offline, pages })}
 			filter={filter}
 			onFilterChange={changeFilter}
 			unreadCount={unread.data?.data.unread ?? 0}
 			busy={markRead.isPending || archive.isPending || report.isPending}
+			offline={offline}
 			loadingMore={inbox.isPlaceholderData}
 			onLoadMore={loadMore}
 			onRetry={refresh}
@@ -106,18 +115,4 @@ export function NotificationsInbox(): React.JSX.Element {
 			onOpenSettings={openSettings}
 		/>
 	);
-}
-
-interface InboxPage {
-	readonly data: readonly InAppNotificationResponse[];
-	readonly meta: ApiResponseMeta;
-}
-
-/** The feed's state from the inbox's answer: more pages while the API has them and the list may still grow. */
-function feedStateOf(page: InboxPage | undefined, failed: boolean, pages: number): NotificationsFeedState {
-	if (page === undefined) {
-		return failed ? { kind: "error" } : { kind: "loading" };
-	}
-	const hasNext = ApiPaginatedMetaSchema.safeParse(page.meta).data?.hasNext ?? false;
-	return { kind: "ready", notifications: page.data, hasMore: hasNext && pages * INBOX_PAGE_SIZE < INBOX_MAX_LIMIT };
 }

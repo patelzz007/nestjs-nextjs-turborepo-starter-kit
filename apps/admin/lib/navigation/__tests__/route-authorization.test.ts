@@ -16,28 +16,31 @@ const MENU: SidebarMenuData = {
 	sections: [
 		{
 			title: "Main",
+			labelKey: "main",
 			items: [
-				{ title: "Overview", url: "/" },
+				{ title: "Overview", labelKey: "overview", url: "/" },
 				{
 					title: "Orders",
+					labelKey: "orders",
 					url: "/orders",
 					authorization: { permissions: [PERMISSION.ORDER.LIST] },
 					children: [
-						{ title: "Refunds", url: "/orders/refunds", authorization: { permissions: [PERMISSION.PAYMENT.UPDATE] } },
-						{ title: "Open orders", url: "/orders/open" },
+						{ title: "Refunds", labelKey: "refunds", url: "/orders/refunds", authorization: { permissions: [PERMISSION.PAYMENT.UPDATE] } },
+						{ title: "Open orders", labelKey: "open-orders", url: "/orders/open" },
 					],
 				},
 				{
 					title: "Admin",
+					labelKey: "admin",
 					url: "/admin",
 					authorization: { permissions: [PERMISSION.ROLE.UPDATE], cascade: true },
-					children: [{ title: "Roles", url: "/admin/roles" }],
+					children: [{ title: "Roles", labelKey: "roles", url: "/admin/roles" }],
 				},
-				{ title: "Beta", url: "/beta", featureFlag: "beta", children: [{ title: "Beta child", url: "/beta/child" }] },
+				{ title: "Beta", labelKey: "beta", url: "/beta", featureFlag: "beta", children: [{ title: "Beta child", labelKey: "beta-child", url: "/beta/child" }] },
 			],
 		},
 	],
-	bottomItems: [{ title: "Help", url: "#" }],
+	bottomItems: [{ title: "Help", labelKey: "help", url: "#" }],
 };
 
 const RULES = buildRouteAuthorizationRules(MENU, [{ prefix: "/orders/export", authorization: { permissions: [PERMISSION.REPORT.CREATE] } }]);
@@ -94,12 +97,14 @@ describe("buildRouteAuthorizationRules", () => {
 			sections: [
 				{
 					title: "Main",
+					labelKey: "main",
 					items: [
 						{
 							title: "Orders",
+							labelKey: "orders",
 							url: "/orders",
 							authorization: { permissions: [PERMISSION.ORDER.LIST] },
-							children: [{ title: "Archive", url: "/orders/archive", disabled: true }],
+							children: [{ title: "Archive", labelKey: "archive", url: "/orders/archive", disabled: true }],
 						},
 					],
 				},

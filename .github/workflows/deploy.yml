@@ -1,0 +1,111 @@
+# Production deploy of the API, web, admin and merchant apps to the Droplet (ADR 075).
+# Setup and the manual fallback: docs/technical/operations/digitalocean-deployment.md
+#
+# Runs after CI passes on main (a push), or by hand (Actions → Deploy → Run workflow) to deploy a chosen
+# commit of main or to roll back. GitHub only sends one line over SSH — `deploy <sha>` or `rollback` — to a
+# key that can run nothing but the Droplet's deploy gate. The Droplet does the rest and answers with its
+# log; a failed health check there rolls back on its own and fails this job.
+#
+# Off until you switch it on: set the repository variable DEPLOY_ENABLED=true and the `production`
+# environment's secrets (DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS). A fork without them
+# skips this workflow instead of failing.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy a commit of main, or roll back to the previous release"
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      commit:
+        description: "Full commit SHA to deploy (empty: the latest commit of main)"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# One deploy at a time; a queued deploy waits for the running one, never cancels it mid-migration.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    name: Deploy to production
+    # After CI: only a successful run for a push to main (never a pull request's run).
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Add required reviewers to this environment (Settings → Environments) to approve each deploy.
+    environment: production
+    steps:
+      - name: Choose what to send
+        id: request
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ inputs.action }}
+          INPUT_COMMIT: ${{ inputs.commit }}
+          CI_COMMIT: ${{ github.event.workflow_run.head_sha }}
+          MAIN_COMMIT: ${{ github.sha }}
+        run: |
+          if [[ "$EVENT" == "workflow_dispatch" && "$ACTION" == "rollback" ]]; then
+            echo "line=rollback" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$EVENT" == "workflow_run" ]]; then
+            commit="$CI_COMMIT"
+          elif [[ -n "$INPUT_COMMIT" ]]; then
+            commit="$INPUT_COMMIT"
+          else
+            commit="$MAIN_COMMIT"
+          fi
+          if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Not a full commit SHA: $commit"
+            exit 1
+          fi
+          echo "line=deploy $commit" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          REQUEST: ${{ steps.request.outputs.line }}
+        run: |
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::The production environment has no $name secret (see the deployment guide, step 15)."
+              exit 1
+            fi
+          done
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # The Droplet's host key is pinned: a changed key fails here instead of trusting a stranger.
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
+            "$DEPLOY_USER@$DEPLOY_HOST" "$REQUEST"
+
+      - name: Forget the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

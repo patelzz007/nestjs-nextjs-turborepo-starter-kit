@@ -3,6 +3,7 @@
 import { Button } from "@workspace/ui/components/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import { AppShellProfileMenu, type AppShellProfileMenuItem } from "@workspace/ui/components/app-shell-profile-dropdown";
+import { ShellLanguageToggle } from "@workspace/ui/components/shell-language-toggle";
 import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
 import { UserAvatar } from "@workspace/ui/components/user-avatar";
@@ -57,7 +58,9 @@ export const AppShellSidebarAccount = React.forwardRef<HTMLDivElement, AppShellS
 								className="flex min-w-0 flex-1 items-center gap-1 rounded-md p-1 text-start outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
 							/>
 						}
-						aria-label={`${labels.openMenuAriaLabel}, ${name}`}>
+						// Named by what it shows, the name and email (WCAG 2.5.3); it announces itself as a menu
+						// button through aria-haspopup, which the trigger sets.
+					>
 						<AccountIdentity name={name} email={email} avatar={avatar} />
 						<ChevronsUpDown className="ms-auto size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
 					</DropdownMenuTrigger>
@@ -65,6 +68,7 @@ export const AppShellSidebarAccount = React.forwardRef<HTMLDivElement, AppShellS
 						{menuContent ?? <AppShellProfileMenu name={name} email={email} avatar={avatar} menuItems={menuItems} onLogout={onLogout} logoutLabel={labels.logout} />}
 					</DropdownMenuContent>
 				</DropdownMenu>
+				<ShellLanguageToggle size="icon-xs" className={FOOTER_ICON_BUTTON_CLASS} />
 				<ShellThemeToggle size="icon-xs" className={FOOTER_ICON_BUTTON_CLASS} />
 				<Button type="button" variant="ghost" size="icon-xs" onClick={onLogout} className={FOOTER_ICON_BUTTON_CLASS} aria-label={labels.logout} title={labels.logout}>
 					<LogOut aria-hidden="true" />
@@ -87,13 +91,16 @@ const ACCOUNT_AVATAR_PX = 28;
 function AccountIdentity({ name, email, avatar }: AccountIdentityProps): React.JSX.Element {
 	return (
 		<span className="flex min-w-0 items-center gap-2.5">
-			<UserAvatar
-				name={name}
-				image={avatar}
-				drawnSize={ACCOUNT_AVATAR_PX}
-				className="size-7 ring-1 ring-sidebar-border/50"
-				fallbackClassName="bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground"
-			/>
+			{/* Decorative beside the name: its initials would otherwise be read before it ("AL Ada Lovelace"). */}
+			<span aria-hidden="true" className="flex shrink-0">
+				<UserAvatar
+					name={name}
+					image={avatar}
+					drawnSize={ACCOUNT_AVATAR_PX}
+					className="size-7 ring-1 ring-sidebar-border/50"
+					fallbackClassName="bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground"
+				/>
+			</span>
 			<span className="min-w-0">
 				<span className="block truncate text-sm leading-tight font-medium text-sidebar-foreground" title={name}>
 					{name}

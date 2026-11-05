@@ -95,6 +95,14 @@ enum SessionSignInMethod {
   TEAM_INVITE_REGISTRATION
   /// Team-invite registration, then the emailed new-device code.
   TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE
+  /// Password and a passkey as the second factor (ADR 080).
+  PASSWORD_PASSKEY
+  /// Password, a passkey, then the emailed new-device code.
+  PASSWORD_PASSKEY_NEW_DEVICE_CODE
+  /// A passwordless passkey sign-in: possession plus user verification (ADR 080).
+  PASSKEY
+  /// A passwordless passkey sign-in, then the emailed new-device code.
+  PASSKEY_NEW_DEVICE_CODE
 }
 
 enum TwoFactorLoginChallengePurpose {
@@ -107,6 +115,22 @@ enum MfaRecoveryRequestStatus {
   APPROVED
   DENIED
   COMPLETED
+}
+
+/// What one WebAuthn ceremony challenge is for (ADR 080). Mirrors the identity domain's `WebAuthnChallengePurpose`.
+enum WebAuthnChallengePurpose {
+  /// Adding a passkey to the signed-in account.
+  REGISTRATION
+  /// The second factor of a password sign-in (bound to its `TwoFactorLoginChallenge`).
+  SECOND_FACTOR
+  /// A passwordless, usernameless sign-in: no account is known until the passkey names it.
+  PASSWORDLESS
+}
+
+/// Whether a passkey lives on one authenticator or syncs between a person's devices. Mirrors `PasskeyDeviceTypeSchema`.
+enum WebAuthnDeviceType {
+  SINGLE_DEVICE
+  MULTI_DEVICE
 }
 
 // Tables
@@ -126,8 +150,9 @@ model User {
 
   fullName       String  @db.VarChar(100)
   /// Case-insensitive (citext): `Alice@x.com` and `alice@x.com` are one account. The API stores the
-  /// lower-cased canonical form (CanonicalEmailSchema, max 100 chars).
-  email          String  @unique @db.Citext
+  /// lower-cased canonical form (CanonicalEmailSchema, max 100 chars). Unique among live accounts only
+  /// (`@@unique` below): a soft-deleted account never blocks signing up again with its email.
+  email          String  @db.Citext
   passwordHash   String  @db.Text
   isActive       Boolean @default(true)
   isSuperAdmin   Boolean @default(false)
@@ -183,6 +208,8 @@ model User {
   /// The language notifications are rendered in (ADR 070); `en` is the only shipped locale.
   locale                      String                    @default("en") @db.VarChar(10)
   lastLoginAt                 BigInt?
+  /// When the account was erased (ADR 077): the row is then the tombstone ("Deleted user"), kept so every id resolves.
+  erasedAt                    BigInt?
   pendingAttributionToken     String?                   @db.VarChar(64)
   pendingAttributionExpiresAt BigInt?
   passwordResetTokens         PasswordResetToken[]
@@ -191,6 +218,8 @@ model User {
   twoFactorPendingSetup       TwoFactorPendingSetup?
   twoFactorLoginChallenges    TwoFactorLoginChallenge[]
   mfaRecoveryRequests         MfaRecoveryRequest[]
+  webAuthnCredentials         WebAuthnCredential[]
+  webAuthnChallenges          WebAuthnChallenge[]
   impersonatedBy              ImpersonationAuditLog[]   @relation("Impersonator")
   impersonatedUser            ImpersonationAuditLog[]   @relation("ImpersonationTarget")
   impersonationSessionsRun    ImpersonationSession[]    @relation("ImpersonationSessionImpersonator")
@@ -203,6 +232,7 @@ model User {
   tenantAccessRequestsReviewed     TenantAccessRequest[]       @relation("TenantAccessRequestReviewer")
   supportAccessGrants              SupportAccessGrant[]        @relation("SupportAccessGrantSupportUser")
   tenantApiKeysCreated             TenantApiKey[]              @relation("TenantApiKeyCreator")
+  webhookEndpointsCreated          WebhookEndpoint[]           @relation("WebhookEndpointCreator")
   bannedBy                         User?                       @relation("UserBannedBy", fields: [bannedByUserId], references: [id], onDelete: SetNull)
   usersBanned                      User[]                      @relation("UserBannedBy")
   tenantAppealsSubmitted           TenantSuspensionAppeal[]    @relation("TenantSuspensionAppealSubmitter")
@@ -238,8 +268,13 @@ model User {
   kanbanActivity                   KanbanTaskActivity[]        @relation("KanbanTaskActivityActor")
   preferences                      UserPreference[]
 
+  /// One live account per email (partial unique — soft-deleted rows ignored; keeps the `User_email_key` name
+  /// the sign-up race check matches).
+  @@unique([email], map: "User_email_key", where: { isDeleted: false })
   @@index([pendingAttributionToken])
   @@index([authorizationChangedAt])
+  /// The admin user list's default order (newest first, id as the tie-breaker): read in index order, never sorted whole.
+  @@index([createdAt, id])
 }
 
 // ---------------------------------------------------------------------------
@@ -373,10 +408,90 @@ model TwoFactorLoginChallenge {
   consumedAt   BigInt?
   expiresAt    BigInt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webAuthnChallenges WebAuthnChallenge[]
 
   @@index([expiresAt])
   @@index([userId])
+}
+
+/// A passkey (WebAuthn credential) of one account (ADR 080): a second factor after the password, or a
+/// passwordless sign-in on its own. Only the public key is stored. Removing one (its owner, or a completed
+/// MFA recovery) soft-deletes it; a removed passkey can never sign in again, and its `credentialId` stays
+/// taken, so the same credential can never be attached to another account.
+/// RLS: own row — `app_owns(userId)`. Sign-in looks a credential up by id before any account is known,
+/// so it reads under the allow-listed `auth.passkey.*` / `auth.login.*` system operations.
+/// @extends BaseModel
+model WebAuthnCredential {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId       String
+  /// The authenticator's credential id, base64url (at most 1023 bytes = 1364 characters). Unique for ever.
+  credentialId String             @unique @db.VarChar(1364)
+  /// The credential's COSE public key, base64url. Public by definition: it only verifies signatures.
+  publicKey    String             @db.Text
+  /// The signature counter last accepted (0 for authenticators without one, e.g. synced passkeys); a
+  /// lower or equal non-zero value is refused as a possibly cloned authenticator. Unsigned 32-bit, so BigInt.
+  counter      BigInt             @default(0)
+  /// How the browser can reach the authenticator (`usb`, `internal`, `hybrid`, …) — a hint for later ceremonies.
+  transports   String[]
+  deviceType   WebAuthnDeviceType
+  /// Whether the provider reports the (multi-device) passkey as backed up.
+  backedUp     Boolean
+  /// The authenticator model's AAGUID (all zeros when the authenticator does not say: attestation is "none").
+  aaguid       String             @db.VarChar(36)
+  /// The name the owner gave it ("Work laptop").
+  name         String             @db.VarChar(64)
+  lastUsedAt   BigInt?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDeleted])
+}
+
+/// One WebAuthn ceremony's challenge (ADR 080): single use, five minutes. Consumed by compare-and-set on
+/// `consumedAt IS NULL`, so one challenge can verify at most one response; the hourly cleanup soft-deletes
+/// challenges past their expiry. Only the SHA-256 digest of the challenge is stored.
+/// RLS: own row — `app_owns(userId)`. A passwordless challenge has no user yet (`userId` NULL) and is
+/// reached only through the allow-listed `auth.passkey.*` system operations.
+/// @extends BaseModel
+model WebAuthnChallenge {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The account the ceremony is for; NULL for a passwordless sign-in (the passkey names the account).
+  userId           String?
+  purpose          WebAuthnChallengePurpose
+  /// SHA-256 (hex) of the challenge sent to the browser.
+  challengeHash    String                   @db.VarChar(64)
+  /// The password sign-in a SECOND_FACTOR challenge belongs to.
+  loginChallengeId String?
+  expiresAt        BigInt
+  consumedAt       BigInt?
+
+  user           User?                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loginChallenge TwoFactorLoginChallenge? @relation(fields: [loginChallengeId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([loginChallengeId])
+  @@index([expiresAt])
 }
 
 /// Admin-reviewed MFA recovery / account unlock request.
@@ -717,6 +832,10 @@ enum PermissionResource {
   BROADCAST_REPORT
   RATE_LIMIT
   CACHE
+  BACKGROUND_JOB
+  STATUS_INCIDENT
+  FEATURE_FLAG
+  WEBHOOK
 }
 
 enum PermissionScope {
@@ -1239,6 +1358,8 @@ model Tenant {
 
   slugHistory              TenantSlugHistory[]
   locations                Location[]
+  /// Its own settings of store feature flags (enhancement 5.11).
+  featureFlagOverrides     FeatureFlagStoreOverride[]
   memberships              Membership[]
   roles                    Role[]
   grants                   UserPermission[]
@@ -1266,6 +1387,11 @@ model Tenant {
   rewardAudienceMembers    RewardAudienceMember[]
   suspensionAppeals        TenantSuspensionAppeal[]
   customerBans             TenantCustomerBan[]
+
+  paymentIntents PaymentIntent[]
+
+  webhookEndpoints WebhookEndpoint[]
+  webhookEvents    WebhookEvent[]
 
   @@index([lifecycleState])
 }
@@ -1324,6 +1450,8 @@ model Location {
   closureReason     String?        @db.Text
 
   tenant                   Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Its own settings of store feature flags (enhancement 5.11).
+  featureFlagOverrides     FeatureFlagStoreOverride[]
   requestedBy              User?                           @relation("LocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
   reviewedBy               User?                           @relation("LocationReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   locationScopes           MembershipLocationScope[]
@@ -1335,7 +1463,9 @@ model Location {
   apiKeys                  TenantApiKey[]
   grants                   UserPermission[]
 
-  @@unique([tenantId, code])
+  /// A store code is unique among the tenant's live stores (partial unique — a deleted store's code can be
+  /// reused for a new store).
+  @@unique([tenantId, code], where: { isDeleted: false })
   /// At most one live primary location per tenant (partial unique — soft-deleted rows ignored).
   @@unique([tenantId], where: { isPrimary: true, isDeleted: false })
   /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7): a child row
@@ -1842,6 +1972,10 @@ enum FileCategory {
   GITHUB_COMMENT_IMAGE
   /// A picture or PDF a staff member attaches to a kanban task — private, listed in `KanbanTaskAttachment`.
   KANBAN_TASK_ATTACHMENT
+  /// The one picture a store's broadcast may hold (enhancement 5.4) — public, named by the broadcast's body.
+  BROADCAST_IMAGE
+  /// The same for a platform notice, uploaded by a staff member.
+  PLATFORM_BROADCAST_IMAGE
 }
 
 enum FileVisibility {
@@ -3620,6 +3754,107 @@ model GithubWebhookDelivery {
   @@index([receivedAt])
 }
 
+// ── Inbound webhooks (ADR 081) ───────────────────────────────────────────────────────────────────
+
+/// Who sent a received webhook. Mirrors `ReceivedWebhookProviderSchema` in @workspace/shared.
+enum ReceivedWebhookProvider {
+  GITHUB
+  RESEND
+  BILLPLZ
+  CHIP
+  /// The fake payment gateway (development and tests only, ADR 020).
+  FAKE_PAYMENTS
+  TWILIO
+}
+
+/// What the signature check said. Mirrors `ReceivedWebhookVerificationSchema` in @workspace/shared.
+enum ReceivedWebhookVerification {
+  VALID
+  /// Signed, but not by the provider's key, over other bytes, or outside the provider's timestamp tolerance.
+  INVALID
+  /// No signature at all.
+  MISSING
+  /// This server has no key for the provider, so nothing could be checked (answered 503 so it retries).
+  NOT_CONFIGURED
+}
+
+/// What a received webhook came to. Mirrors `ReceivedWebhookOutcomeSchema` in @workspace/shared.
+enum ReceivedWebhookOutcome {
+  /// Claimed and handed to its owning context, which has not answered yet.
+  PROCESSING
+  /// The owning context applied or stored it.
+  RECORDED
+  /// The owning context already had it (a delivery recorded before this log, or under another id).
+  DUPLICATE
+  /// Verified, but nothing this server acts on (a GitHub ping, a tracking event, an unknown payment).
+  IGNORED
+  /// Refused: a bad or missing signature, an unconfigured provider, or a signed body the owner cannot read.
+  REJECTED
+  /// The owning context failed; the provider retries and the next delivery is processed again.
+  FAILED
+}
+
+/// Every webhook a provider sent this server (ADR 081), verified or not: the one log of inbound
+/// deliveries, and the idempotency guard — a delivery is claimed once by (provider, providerDeliveryId),
+/// so a redelivery answers the provider's 2xx without being processed again. Only a verified delivery
+/// carries an id (an unsigned request can never claim, and so never block, a real one). No payload is
+/// kept: its SHA-256 and size only, and an allowlist of non-secret headers (ADR 081 §Storage).
+/// Infrastructure log, not a business entity: never soft-deleted; rows past the retention are pruned.
+/// RLS: bypass-only (`app_rls_bypass_on('ReceivedWebhook')`, operations `webhooks.inbound.record` / `.read`).
+/// @extends BaseModel
+model ReceivedWebhook {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  provider           ReceivedWebhookProvider
+  /// The delivery's identity: the provider's own id (GitHub, Resend) or one derived from signed fields
+  /// (Billplz, CHIP, the fake gateway, Twilio — ADR 081 §Delivery ids). Null when the signature did not verify.
+  providerDeliveryId String?                     @db.VarChar(255)
+  /// The provider's name for what happened (`pull_request`, `email.delivered`, `paid`, `status.delivered`); null when unknown.
+  eventType          String?                     @db.VarChar(100)
+  verification       ReceivedWebhookVerification
+  outcome            ReceivedWebhookOutcome
+  /// The HTTP status this server answered with; null while PROCESSING.
+  httpStatus         Int?
+  /// Hex SHA-256 of the raw body, to tell two deliveries' bodies apart without keeping either.
+  payloadSha256      String                      @db.VarChar(64)
+  payloadBytes       Int
+  /// The allowlisted request headers (event and delivery headers, content type, user agent) — never a
+  /// signature, an authorization header or a cookie.
+  headers            Json
+  /// The request's correlation id: its row in the HTTP audit trail (ADR 025).
+  correlationId      String?                     @db.VarChar(128)
+  /// Why it was refused or failed, one line, no payload content.
+  errorSummary       String?                     @db.VarChar(500)
+  /// When it first arrived (epoch ms).
+  receivedAt         BigInt
+  /// When it last arrived — a redelivery moves it.
+  lastReceivedAt     BigInt
+  /// When processing was last claimed; a PROCESSING claim older than the lease is taken over by a redelivery.
+  claimedAt          BigInt?
+  /// When the owning context answered.
+  completedAt        BigInt?
+  /// How many times it was handed to its owning context (a FAILED or REJECTED delivery is handed over again).
+  attempts           Int                         @default(1)
+  /// Redeliveries answered without processing.
+  duplicateCount     Int                         @default(0)
+
+  @@unique([provider, providerDeliveryId])
+  @@index([receivedAt(sort: Desc), id])
+  @@index([provider, receivedAt(sort: Desc)])
+  @@index([outcome, receivedAt(sort: Desc)])
+  /// The retention prune (`lastReceivedAt < cutoff`): a row is kept while its delivery is still being redelivered.
+  @@index([lastReceivedAt])
+}
+
 // ============================================================================
 // Links
 // ============================================================================
@@ -4931,20 +5166,23 @@ model PushDevice {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  userId          String
+  userId                   String
   /// The device session (refresh token) it is bound to: signing out revokes it.
-  deviceSessionId String
-  platform        PushPlatform
-  surface         NotificationSurface
+  deviceSessionId          String
+  platform                 PushPlatform
+  surface                  NotificationSurface
   /// The native FCM/APNs token, encrypted at rest.
-  tokenCiphertext String              @db.Text
+  tokenCiphertext          String              @db.Text
   /// SHA-256 of the token, for lookup and uniqueness.
-  tokenHash       String              @db.VarChar(64)
-  deviceLabel     String?             @db.VarChar(120)
-  appVersion      String?             @db.VarChar(32)
-  lastSeenAt      BigInt
-  revokedAt       BigInt?
-  revokedReason   String?             @db.VarChar(48)
+  tokenHash                String              @db.VarChar(64)
+  /// The Firebase Installation ID (Android), encrypted at rest: FCM sends by it, the token only when it is unknown
+  /// (an older app build). Null on iOS, which APNs addresses by token (enhancement 5.3).
+  installationIdCiphertext String?             @db.Text
+  deviceLabel              String?             @db.VarChar(120)
+  appVersion               String?             @db.VarChar(32)
+  lastSeenAt               BigInt
+  revokedAt                BigInt?
+  revokedReason            String?             @db.VarChar(48)
 
   @@unique([tokenHash], where: { revokedAt: null, isDeleted: false })
   @@index([userId, revokedAt])
@@ -5108,4 +5346,609 @@ model TenantRateLimitOverride {
 
   @@unique([tenantId, policyName], where: { isDeleted: false })
   @@index([expiresAt])
+}
+
+// ── Payments (ADR 020) ───────────────────────────────────────────────────────────────────────────
+
+/// The gateway a payment is taken through (`PaymentProviderName` in @workspace/shared).
+enum PaymentProvider {
+  BILLPLZ
+  CHIP
+  FAKE
+}
+
+/// Where a payment stands (`PaymentStatus` in @workspace/shared).
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+/// What told the platform about a payment.
+enum PaymentEventSource {
+  /// The checkout was opened at the gateway.
+  CHECKOUT
+  /// The gateway's signed server-to-server callback.
+  CALLBACK
+  /// The reconciliation job asked the gateway.
+  RECONCILE
+  /// A refund the tenant asked for.
+  REFUND
+}
+
+/// What applying a status did (`PaymentStatusChange` in the payments domain).
+enum PaymentEventEffect {
+  APPLIED
+  UNCHANGED
+  IGNORED
+}
+
+/// RLS: tenant members read their tenant's payments; every write runs as a payments system operation.
+/// A payment a tenant asked a gateway to take. Amounts in minor units (sen).
+/// @extends BaseModel
+model PaymentIntent {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId          String
+  provider          PaymentProvider
+  status            PaymentStatus   @default(PENDING)
+  amountMinor       Int
+  currency          String          @db.VarChar(3)
+  description       String          @db.VarChar(200)
+  payerName         String          @db.VarChar(255)
+  payerEmail        String          @db.VarChar(320)
+  /// The caller's `Idempotency-Key` (8–128 characters, the platform's rule): the same key always means the same payment (unique per tenant).
+  idempotencyKey    String          @db.VarChar(128)
+  /// The gateway's id (Billplz bill id, CHIP purchase id), once checkout exists.
+  providerPaymentId String?         @db.VarChar(128)
+  checkoutUrl       String?         @db.Text
+  paidAt            BigInt?
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  events PaymentEvent[]
+
+  @@unique([tenantId, idempotencyKey])
+  @@unique([provider, providerPaymentId])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+}
+
+/// RLS: tenant members read their tenant's payment history; every write runs as a payments system operation.
+/// Append-only: one row per piece of news about a payment (checkout, callback, reconciliation, refund).
+/// @extends BaseModel
+model PaymentEvent {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId        String
+  paymentIntentId String
+  source          PaymentEventSource
+  /// The gateway's own status word, as it said it.
+  providerStatus  String             @db.VarChar(64)
+  status          PaymentStatus
+  effect          PaymentEventEffect
+  amountMinor     Int?
+  occurredAt      BigInt
+
+  paymentIntent PaymentIntent @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
+
+  @@index([paymentIntentId, occurredAt])
+  @@index([tenantId, occurredAt(sort: Desc)])
+}
+
+// ── Audit-record retention (ADR 078) ─────────────────────────────────────────────────────────────
+
+/// The audit tables the retention process trims (`app_purge_audit_batch`'s `target`).
+enum RetentionTarget {
+  AUDIT_LOG
+  DATA_CHANGE_LOG
+}
+
+/// How a retention run ended.
+enum RetentionRunOutcome {
+  COMPLETED
+  FAILED
+}
+
+/// RLS: platform-only; every read and write runs as a system operation (the platform's support tools,
+/// the retention job). While a hold is active (`liftedAt` null), audit rows naming its tenant and/or user
+/// are never purged, whatever their age. Never deleted: lifting a hold sets `liftedAt`.
+/// @extends BaseModel
+model AuditLegalHold {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The tenant whose records are held, or null for a hold on a user only.
+  tenantId       String? @db.VarChar(64)
+  /// The user whose records are held (as actor), or null for a hold on a tenant only.
+  userId         String? @db.VarChar(64)
+  reason         String  @db.VarChar(500)
+  placedByUserId String  @db.VarChar(64)
+  placedAt       BigInt
+  liftedAt       BigInt?
+  liftedByUserId String? @db.VarChar(64)
+
+  @@index([liftedAt])
+}
+
+/// RLS: platform-only; written by the retention job, read by the operations console.
+/// Append-only: one row per run of the retention process, dry or real (ADR 078).
+/// @extends BaseModel
+model RetentionRun {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  target        RetentionTarget
+  /// Records that happened before this instant were eligible (now minus the ten-year retention).
+  cutoff        BigInt
+  /// A dry run counts and deletes nothing.
+  dryRun        Boolean
+  /// Rows removed (or, in a dry run, that would be).
+  deletedCount  Int
+  /// Rows past retention kept because an active legal hold covers them.
+  heldBackCount Int
+  startedAt     BigInt
+  finishedAt    BigInt
+  outcome       RetentionRunOutcome
+  failureReason String?             @db.VarChar(500)
+
+  @@index([target, startedAt(sort: Desc)])
+}
+
+// ── Account erasure (ADR 077) ────────────────────────────────────────────────────────────────────
+
+/// Where an erasure request stands.
+enum AccountErasureStatus {
+  /// Waiting out the 30-day grace period; the person (or support) can still cancel.
+  PENDING
+  CANCELLED
+  /// Done: the account is the tombstone.
+  COMPLETED
+}
+
+/// RLS: the person reads their own requests; every write runs as a privacy system operation.
+/// The record that an account's erasure was asked for, by whom and why (support must give a reason, Q13),
+/// and how it ended. Never deleted: it is the evidence the erasure was requested and carried out.
+/// @extends BaseModel
+model AccountErasure {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId            String               @db.VarChar(64)
+  status            AccountErasureStatus @default(PENDING)
+  /// The person themselves, or the support user who asked on their behalf.
+  requestedByUserId String               @db.VarChar(64)
+  /// Required when support asked (Q13); null when the person asked themselves.
+  reason            String?              @db.VarChar(500)
+  requestedAt       BigInt
+  /// The end of the 30-day grace period (Q10): when the erasure runs.
+  scheduledFor      BigInt
+  cancelledAt       BigInt?
+  cancelledByUserId String?              @db.VarChar(64)
+  completedAt       BigInt?
+
+  /// At most one open request per person.
+  @@unique([userId], where: { status: "PENDING" })
+  @@index([status, scheduledFor])
+}
+
+// ── Backup restore drills (enhancement 2.6) ──────────────────────────────────────────────────────
+
+/// How a restore drill ended.
+enum OpsRestoreDrillOutcome {
+  PASSED
+  FAILED
+}
+
+/// How a feature flag is set (enhancement 5.6): DEFAULT follows the flag's own default.
+enum FeatureFlagMode {
+  DEFAULT
+  ON
+  OFF
+  PERCENTAGE
+}
+
+/// A runtime feature flag's setting (enhancement 5.6). One row per flag key once someone changes it; no row means
+/// DEFAULT. Platform data: bypass-only RLS under `feature_flags.*`; every change is change-captured.
+/// @extends BaseModel
+model FeatureFlagSetting {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// `FeatureFlagKeySchema` in @workspace/shared.
+  key        String          @db.VarChar(64)
+  mode       FeatureFlagMode
+  /// 1–99 with PERCENTAGE; null otherwise.
+  percentage Int?
+  /// Why it was last changed.
+  reason     String          @db.VarChar(500)
+
+  @@unique([key], where: { isDeleted: false })
+}
+
+/// A store's own setting of a store feature flag (enhancement 5.11): a whole merchant (`locationId` null) or one
+/// of its branches. The branch's setting decides over the merchant's, the merchant's over the deployment's
+/// (`FeatureFlagSetting`). One live setting per flag and store; a change replaces it (the old one soft-deleted).
+/// RLS: bypass-only, read and written under `feature_flags.*`.
+/// @extends BaseModel
+model FeatureFlagStoreOverride {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// `StoreFeatureFlagKeySchema` in @workspace/shared.
+  key        String    @db.VarChar(64)
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  /// `null`: every branch of the merchant.
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  enabled    Boolean
+  /// Why it was set.
+  reason     String    @db.VarChar(500)
+
+  @@unique([key, tenantId], where: { isDeleted: false, locationId: null })
+  @@unique([key, tenantId, locationId], where: { isDeleted: false })
+  @@index([tenantId, isDeleted])
+}
+
+/// A named filter a staff member saved on an admin list (enhancement 5.10), kept as the list's URL query so
+/// opening it is opening that URL. Shared ones are visible to the other platform staff; only the owner
+/// changes or removes one. RLS: the owner's own rows; others' shared rows under `saved_views.shared.read`.
+/// @extends BaseModel
+model SavedListView {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId  String
+  /// Which list it filters (`SavedListKeySchema` in @workspace/shared).
+  listKey String  @db.VarChar(64)
+  name    String  @db.VarChar(80)
+  /// The list's URL query, `?…` (empty for the unfiltered list).
+  query   String  @db.VarChar(2000)
+  shared  Boolean @default(false)
+
+  /// One name per person and list, among the views they still have.
+  @@unique([userId, listKey, name], where: { isDeleted: false })
+  @@index([listKey, shared, isDeleted])
+}
+
+/// How much of the service an incident takes away (enhancement 4.5): shown on the public status page.
+enum StatusIncidentImpact {
+  /// Slower, or one feature not working.
+  MINOR
+  /// A main part of the service not working.
+  MAJOR
+  /// The service down.
+  CRITICAL
+}
+
+/// Where an incident stands; RESOLVED is final.
+enum StatusIncidentState {
+  INVESTIGATING
+  IDENTIFIED
+  MONITORING
+  RESOLVED
+}
+
+/// An outage or degradation told to customers and merchants on the public status page (enhancement 4.5).
+/// Staff open it and post updates; its state is the latest update's. Platform data: bypass-only RLS.
+/// @extends BaseModel
+model StatusIncident {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  title      String               @db.VarChar(160)
+  impact     StatusIncidentImpact
+  /// The latest update's state.
+  state      StatusIncidentState
+  /// The public components affected (`STATUS_COMPONENT_KEYS` in @workspace/shared).
+  components String[]             @db.VarChar(40)
+  startedAt  BigInt
+  /// Set by the update that resolves it; nothing is posted after.
+  resolvedAt BigInt?
+  /// The staff member who opened it.
+  openedById String
+
+  updates StatusIncidentUpdate[]
+
+  @@index([isDeleted, resolvedAt, startedAt(sort: Desc)])
+}
+
+/// One update on an incident, as posted: append-only (never edited or deleted), newest shown first.
+/// @extends BaseModel
+model StatusIncidentUpdate {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  incidentId String
+  incident   StatusIncident      @relation(fields: [incidentId], references: [id])
+  state      StatusIncidentState
+  message    String              @db.VarChar(2000)
+  postedById String
+  postedAt   BigInt
+
+  @@index([incidentId, postedAt(sort: Desc)])
+}
+
+/// RLS: bypass-only (`operations.backup.restore_drill`); read by the operations console.
+/// Append-only: one row per drill. A drill restores the latest backup into a throwaway database, checks it
+/// (every table back, the latest migration, row-level security on every table, real rows) and drops it.
+/// @extends BaseModel
+model OpsRestoreDrill {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The backup restored (an `OpsBackup` id).
+  backupId      String                 @db.VarChar(64)
+  startedAt     BigInt
+  finishedAt    BigInt
+  outcome       OpsRestoreDrillOutcome
+  /// Application tables found in the restored copy.
+  tablesChecked Int
+  /// Rows in the restored copy, across those tables.
+  rowsRestored  BigInt
+  /// What failed, one line each (empty when it passed).
+  failures      Json
+  /// The latest migration in the restored copy.
+  migration     String?                @db.VarChar(255)
+
+  @@index([startedAt(sort: Desc)])
+}
+
+// ============================================================================
+// Outgoing webhooks for integrators (ADR 082)
+// ============================================================================
+
+/// Mirrors `WebhookEndpointStatusSchema` in @workspace/shared.
+enum WebhookEndpointStatus {
+  ACTIVE
+  DISABLED
+}
+
+/// Why an endpoint is off. Mirrors `WebhookEndpointDisabledReasonSchema` in @workspace/shared.
+enum WebhookEndpointDisabledReason {
+  /// A member turned it off.
+  MANUAL
+  /// The platform turned it off: too many deliveries in a row gave up (ADR 082).
+  FAILING
+}
+
+/// Where one delivery is. Mirrors `WebhookDeliveryStatusSchema` in @workspace/shared.
+enum WebhookDeliveryStatus {
+  /// Waiting for its first attempt, or for a redelivery a member asked for.
+  PENDING
+  /// The last attempt failed; the next one is due at `nextAttemptAt`.
+  FAILED
+  /// The endpoint answered 2xx.
+  SUCCEEDED
+  /// Every attempt failed; no more are made.
+  DEAD
+  /// The endpoint was disabled or removed before the delivery went out.
+  CANCELLED
+}
+
+/// An integrator's HTTPS endpoint that a tenant's events are POSTed to, signed with its secret (ADR 082).
+/// The aggregate: subscribed types, status (a member's switch, or the auto-disable after
+/// `consecutiveFailures` dead deliveries), and the secret with its rotation grace. Secrets are AES-256-GCM
+/// encrypted with `WEBHOOK_SECRET_ENCRYPTION_KEYS` (`v<key version>:iv:tag:ciphertext`, the endpoint id as
+/// additional authenticated data). Every change increments `version` (compare-and-set).
+/// RLS: tenant members read and write their tenant's endpoints; the delivery worker reaches them through
+/// the `webhooks.deliver` system operation.
+/// @extends BaseModel
+model WebhookEndpoint {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId                 String
+  url                      String                         @db.VarChar(2048)
+  description              String                         @default("") @db.VarChar(200)
+  /// The v1 catalog types it receives (`WebhookSubscribableEventTypeSchema`).
+  eventTypes               String[]                       @db.VarChar(64)
+  status                   WebhookEndpointStatus          @default(ACTIVE)
+  disabledReason           WebhookEndpointDisabledReason?
+  disabledAt               BigInt?
+  /// The current signing secret, encrypted (never returned after create / rotate).
+  secretCiphertext         String                         @db.Text
+  /// The current secret's last characters, to tell secrets apart in the console.
+  secretHint               String                         @db.VarChar(4)
+  /// The secret before the last rotation, encrypted; it also signs until `previousSecretExpiresAt`.
+  previousSecretCiphertext String?                        @db.Text
+  previousSecretExpiresAt  BigInt?
+  /// Deliveries in a row that went DEAD; any success resets it. At the threshold the endpoint disables itself.
+  consecutiveFailures      Int                            @default(0)
+  lastDeliveryAt           BigInt?
+  createdByUserId          String
+  /// Optimistic concurrency: every save is `WHERE version = <read version>` and increments it.
+  version                  Int                            @default(0)
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator    User              @relation("WebhookEndpointCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  deliveries WebhookDelivery[]
+
+  /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7).
+  @@unique([tenantId, id])
+  @@index([tenantId, isDeleted, createdAt(sort: Desc)])
+}
+
+/// One event of the public webhook catalog (ADR 082), written by an in-transaction handler in the SAME
+/// transaction as the change it describes: an event exists if and only if its change committed. The
+/// fan-out creates its deliveries and stamps `fannedOutAt`. A log, not a business entity: never
+/// soft-deleted; rows past the retention window are purged with their deliveries.
+/// RLS: append-only INSERT of a fresh (not fanned-out) row from any app session, like `OutboxEvent`;
+/// read and update are bypass-only (`webhooks.fan_out`, `webhooks.deliver`, `webhooks.retention`).
+/// @extends BaseModel
+model WebhookEvent {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId    String
+  /// The versioned catalog type (`WebhookEventTypeSchema`, e.g. `claim.redeemed`).
+  eventType   String  @db.VarChar(64)
+  /// The envelope version (`WEBHOOK_API_VERSION`).
+  apiVersion  String  @db.VarChar(16)
+  /// The type's public payload (`data` of the envelope): ids and business facts only, no personal data.
+  payload     Json
+  /// When the change happened (epoch ms) — the envelope's `createdAt`.
+  occurredAt  BigInt
+  /// When the fan-out created its deliveries; null until then.
+  fannedOutAt BigInt?
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@unique([tenantId, id])
+  @@index([fannedOutAt, occurredAt])
+  @@index([createdAt])
+}
+
+/// One event's delivery to one endpoint (ADR 082): the delivery log. Its id is the `Webhook-Id` header,
+/// stable across retries. Attempts back off exponentially with jitter up to a cap; after the last one the
+/// delivery is DEAD. A log, not a business entity: never soft-deleted; purged with its event.
+/// RLS: tenant members read their tenant's deliveries and queue a redelivery or a test; the fan-out and the
+/// delivery worker write through the `webhooks.fan_out` / `webhooks.deliver` system operations.
+/// @extends BaseModel
+model WebhookDelivery {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId       String
+  endpointId     String
+  eventId        String
+  /// The event's type, copied so the log filters and shows it without reading the event.
+  eventType      String                @db.VarChar(64)
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  /// When the next attempt is due (also the claim lease while an attempt runs); null once settled.
+  nextAttemptAt  BigInt?
+  lastAttemptAt  BigInt?
+  /// The endpoint's HTTP status on the last attempt; null when it never answered.
+  lastStatusCode Int?
+  /// What went wrong on the last attempt, cut to 500 characters.
+  lastError      String?               @db.VarChar(500)
+  lastDurationMs Int?
+  deliveredAt    BigInt?
+
+  endpoint WebhookEndpoint @relation(fields: [tenantId, endpointId], references: [tenantId, id], onDelete: Cascade)
+  event    WebhookEvent    @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([endpointId, eventId])
+  @@index([status, nextAttemptAt])
+  @@index([tenantId, createdAt(sort: Desc), id])
+  @@index([endpointId, createdAt(sort: Desc)])
+  @@index([eventId])
 }

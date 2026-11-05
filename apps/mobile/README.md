@@ -30,7 +30,8 @@ src/
   app/               Expo Router routes (smart components)
     _layout.tsx      root layout: stylesheet, app runtime, root guard
     config-error.tsx, update-required.tsx, lock.tsx
-    (auth)/          sign-in, verify-device, two-factor, sign-up, forgot-password, enroll-two-factor, verify-email
+    auth/            everything in front of the auth wall, at /auth/…: onboarding, and (forms)/ — sign-in, verify-device, two-factor,
+                     sign-up, forgot-password, enroll-two-factor, verify-email — inside the AuthShell
     (app)/           tabs: index (Home), analytics (sample data), search (placeholder), profile/ (index, commit, and the pull-request
                      screens: pull-requests, pull-request, pull-request-files, pull-request-commits, pull-request-commit, github-account), settings/ (index, appearance, security,
                      devices, app-lock, two-factor, till, components, pdf-viewer) — under the floating tab bar
@@ -204,12 +205,12 @@ Details: [ADR 056](../../docs/adr/056-in-house-pdf-viewer.md) and
   drawer on a tab's first screen too. Its menu is `src/features/navigation/drawer-destinations.ts`
   (the tabs, then sections with a divider and a tone dot before each title, as on the web sidebars); its open state is the `app-drawer` feature store.
   Tabs reset to their first screen when left (`popToTopOnBlur`).
-- Auth screens ([ADR 039](../../docs/adr/039-mobile-auth-layout.md)): the `(auth)` layout wraps the stack
+- Auth screens ([ADR 039](../../docs/adr/039-mobile-auth-layout.md)): the `auth/(forms)` layout wraps the stack
   in `AuthShell` (the brand mark — [ADR 040](../../docs/adr/040-brand-mark.md) — on the auth panel, a sheet below). A screen returns one `AuthPage` (title,
   description, the form, an optional footer of `TextLink`s) and nothing else. Every `secureTextEntry`
   `TextField` has a show/hide eye button.
 - Onboarding ([ADR 041](../../docs/adr/041-mobile-onboarding-and-transitions.md)): shown once per device,
-  before sign-in, by the root guard; the slides are in `src/app/onboarding.tsx`. To see it again in a
+  before sign-in, by the root guard; the slides are in `src/app/auth/onboarding.tsx` (`/auth/onboarding`). To see it again in a
   development build: Settings → About → "Sign out and replay onboarding" (the "seen" flag lives in
   the Keychain, which survives reinstalls on iOS; on Android, clearing Expo Go's storage also works).
 - Transitions and colours: every navigator uses `src/lib/screen-transitions.ts` (never a platform
@@ -290,7 +291,9 @@ Details: [`docs/technical/configuration/frontend.md` §10](../../docs/technical/
 | `EXPO_PUBLIC_IOS_STORE_URL` / `EXPO_PUBLIC_ANDROID_STORE_URL` | Store pages for the update screen                                 | No                  |
 | `EXPO_PUBLIC_SHOW_DEMO_ACCOUNT`                                   | `true`: the quick sign-in buttons in a release build (internal test APKs only, never a store build; ADR 042). `true`, `false` or unset; anything else is a configuration error | No (off) |
 | `EXPO_PUBLIC_ALLOW_LAN_HTTP_API` | `true`: a release build may use an `http://` API on a private LAN, with plain http allowed in its Android manifest (a LAN test APK; run `expo prebuild` after changing it; docs/technical/mobile/building-installable-apps.md §7). `true`, `false` or unset | No (off) |
+| `EAS_PROJECT_ID` | The EAS project's id (a UUID from `eas init`): turns on over-the-air updates ([guide](../../docs/technical/mobile/over-the-air-updates.md)). Cloud builds read it from `eas.json` | No (off) |
 | `MOBILE_APP_NAME`                                             | Display name (default `Starter`)                                  | No                  |
+| `MOBILE_PASSKEY_DOMAIN` | The API's `WEBAUTHN_RP_ID` (passkeys, ADR 080): the iOS build's `webcredentials:` associated domain. Read on the build machine by `build-env/app-config-env.ts` | No |
 | `MOBILE_APP_SLUG`                                             | Expo slug (default `starter`)                                     | No                  |
 | `MOBILE_BUNDLE_ID`                                            | iOS bundle id and Android package (default `com.example.starter`) | No                  |
 | `MOBILE_SCHEME`                                               | Deep-link scheme (default `starter`)                              | No                  |
@@ -320,6 +323,18 @@ face added to the same enrollment (that needs native keystore invalidation in a 
 privacy cover is drawn when the app becomes inactive; on Android the recents snapshot may be taken
 before it paints — a real build can add `FLAG_SECURE` (`expo-screen-capture`) if that matters.
 
+## Device tests and start-up time
+
+Enhancements 3.7 and 6.6. Both run against the app on a connected phone or emulator (`adb devices`), from `apps/mobile`.
+
+| | Command | What it does |
+|---|---|---|
+| The flows | `pnpm e2e:device` (extra Maestro options after `--`, e.g. `-- --include-tags smoke`) | Runs the Maestro flows in `.maestro/` (sign in, inbox, settings, the till) on the built app. They never clear its data: they sign in only when it is signed out (`MAESTRO_EMAIL` / `MAESTRO_PASSWORD`). Needs Maestro (`brew install mobile-dev-inc/tap/maestro`) and, on a phone with "Verify apps over USB" on, that setting off while Maestro installs its driver |
+| Cold start | `pnpm cold-start` (`-- --check` to hold it to `mobile-startup-budgets.json`) | Stops the app's process, launches it five times with `am start -W`, prints each launch's time (or why it failed) and the median. A development build is several times slower than a release one (it loads its code from Metro), so budgets are for release builds only |
+| README screenshots | `pnpm screenshots:device` (`-- --theme Nord` puts that theme back afterwards; the default is System) | Runs `.maestro/screenshots/readme.yaml` (not part of the flows above): every screen by its deep link in Light, then a few in Dark and Nord, with the status bar in Android's demo mode (noon, full battery, no icons) for the run only. Writes `docs/images/readme/mobile-*.webp` (540 px wide, `cwebp` from `brew install webp`), and only when the whole flow passed. Signed in already: it never signs out |
+| "INSTALL_FAILED_VERIFICATION_FAILURE: Install not allowed" | `adb install -r -t maestro-server.apk` (unzip it from `$(brew --prefix maestro)/libexec/lib/maestro-client.jar`) | Some phones (seen on a realme, Android 15) refuse the streamed install of Maestro's test-only server app; a plain `adb install -t` is allowed, and Maestro then reuses it |
+| Nightly | `.github/workflows/mobile-nightly.yml` (also "Run workflow" on GitHub) | A release APK on an Android emulator against a freshly seeded API on the runner (`http://10.0.2.2:8080`): the flows, then the cold start, with the Maestro report, the times and the API log kept for 14 days |
+
 ## Next steps (not in the starter)
 
 | Next step                               | Where it plugs in                                                                                                                                                                                                                  |
@@ -327,9 +342,8 @@ before it paints — a real build can add `FLAG_SECURE` (`expo-screen-capture`) 
 | Push notifications                      | Needs a development build and a push provider decision; a notification module in the API; ask for permission in context (rules/04)                                                                                                 |
 | Offline mode                            | TanStack Query persistence + an ADR on conflicts, retries and storage encryption (rules/04, "Offline behavior")                                                                                                                    |
 | Deep links / universal links            | `MOBILE_SCHEME` is set; add associated domains in a real build; validate every link's params with zod                                                                                                                              |
-| Mobile end-to-end tests                 | Maestro flows in `apps/mobile/e2e`, run against a development build                                                                                                                                                                |
 | Approximate location in the device list | The API's `SessionLocationResolver` adapter (GeoIP provider is a pending decision)                                                                                                                                                 |
-| EAS builds and store submission         | Add `eas.json` with `development` / `preview` / `production` profiles; set `EXPO_PUBLIC_API_URL` and the store URLs per profile; crash reporting before the first store build. Step by step: [Building the mobile app](../../docs/technical/mobile/building-installable-apps.md) |
+| EAS builds and store submission         | `eas.json` has `development` / `preview` / `production` profiles, each on its own update channel; over-the-air updates are on once `EAS_PROJECT_ID` is set. Left: the production API URL and store URLs per profile. Step by step: [Building the mobile app](../../docs/technical/mobile/building-installable-apps.md), [Over-the-air updates](../../docs/technical/mobile/over-the-air-updates.md) |
 | Avatar upload from the phone            | The phone uploads through the same file pipeline already (`src/lib/file-upload.ts`, used for GitHub comment pictures, with `expo-image-picker`); the avatar needs a square crop before `USER_AVATAR` accepts it                    |
 | Search                                  | Replace `src/app/(app)/search.tsx` (a `ComingSoon` placeholder) with a search field and results from the product's own source; server-backed search needs a contract, an authorized paginated endpoint and a TanStack Query screen |
 | Leaving Expo Go                         | `npx expo run:ios` / `run:android` (or EAS) for development builds; native folders stay generated (`npx expo prebuild`), never committed. APK, AAB and iOS builds: [Building the mobile app](../../docs/technical/mobile/building-installable-apps.md) |

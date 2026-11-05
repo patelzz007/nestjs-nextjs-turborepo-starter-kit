@@ -47,6 +47,11 @@ export function readPaginatedTotal(meta: ApiResponseMeta | undefined, fallback =
 	return readPagination(meta)?.total ?? fallback;
 }
 
+/** Whether a paginated envelope's `total` is a lower bound (the list's count stopped at its cap). */
+export function readPaginatedTotalIsCapped(meta: ApiResponseMeta | undefined): boolean {
+	return readPagination(meta)?.totalIsCapped === true;
+}
+
 /** `page` (1-indexed) of a paginated envelope meta; `fallback` only while there is no answer yet. */
 export function readPaginatedPage(meta: ApiResponseMeta | undefined, fallback = 1): number {
 	return readPagination(meta)?.page ?? fallback;

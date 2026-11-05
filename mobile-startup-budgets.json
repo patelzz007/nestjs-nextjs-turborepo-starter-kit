@@ -1,0 +1,8 @@
+{
+	"android": {
+		"coldStartMs": 1214,
+		"measuredMedianMs": 1103,
+		"measuredOn": "Android emulator (Medium Phone, API 36.1, arm64) on an Apple M1 Max, release build, the higher of two five-launch medians",
+		"measuredAt": "2026-11-05"
+	}
+}

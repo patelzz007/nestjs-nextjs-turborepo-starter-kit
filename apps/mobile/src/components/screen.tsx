@@ -2,8 +2,8 @@
 // keyboard avoidance and an optional title.
 //
 // Inside the app shell (ADR 046) the page header is laid over the top of the
-// screen: the content starts below it, on a sheet with a curved top (the auth
-// pages' curve), and the header — not the screen — shows the title (it comes
+// screen: the content starts below it, straight on the page's colour (no sheet:
+// ADR 079), and the header — not the screen — shows the title (it comes
 // from the route, features/navigation/app-screens.ts), so a screen there passes
 // no `title`. The screen feeds the header its scrolling, so the header collapses
 // with the content (src/lib/page-header-scroll.tsx). Outside it (the lock
@@ -102,10 +102,10 @@ export function Screen({ title, description, children, refreshing = false, onRef
 			{tabBarClearance > 0 ? <View style={clearanceStyle} testID="tab-bar-clearance" /> : null}
 		</>
 	);
-	// Inside the shell the content sits on a sheet with a curved top, right under the header — the
-	// same curve as the auth pages'. Outside it, the content sits on the page.
+	// Inside the shell the content sits straight on the page, under the header and in its colour: the
+	// sections' own surfaces (cards, grouped lists) are the only layer. Outside it, the same.
 	const page = hasHeader ? (
-		<View className="grow gap-5 rounded-t-4xl bg-card px-5 py-6" testID={testID === undefined ? undefined : `${testID}-sheet`}>
+		<View className="grow gap-6 px-5 pt-2 pb-8" testID={testID === undefined ? undefined : `${testID}-page`}>
 			{content}
 		</View>
 	) : (
@@ -124,7 +124,7 @@ export function Screen({ title, description, children, refreshing = false, onRef
 							testID={testID === undefined ? undefined : `${testID}-content`}
 							keyboardShouldPersistTaps="handled"
 							scrollIndicatorInsets={scrollIndicatorInsets}
-							contentContainerClassName={hasHeader ? "grow" : "grow gap-5 px-5 py-6"}
+							contentContainerClassName={hasHeader ? "grow" : "grow gap-6 px-5 py-6"}
 							contentContainerStyle={scrollContentStyle}
 							refreshControl={
 								onRefresh === undefined ? undefined : (
@@ -139,7 +139,7 @@ export function Screen({ title, description, children, refreshing = false, onRef
 							{page}
 						</StyledScrollView>
 					) : (
-						<View testID={testID === undefined ? undefined : `${testID}-content`} className={hasHeader ? "flex-1" : "flex-1 gap-5 px-5 py-6"} style={headerClearanceStyle}>
+						<View testID={testID === undefined ? undefined : `${testID}-content`} className={hasHeader ? "flex-1" : "flex-1 gap-6 px-5 py-6"} style={headerClearanceStyle}>
 							{page}
 						</View>
 					)}

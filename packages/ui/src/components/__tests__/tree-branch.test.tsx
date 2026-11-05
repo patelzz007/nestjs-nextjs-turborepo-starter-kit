@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { TreeBranch, treeBranchItemVariants } from "../tree-branch";
+import { TreeBranch, TreeNodeText, treeBranchItemVariants } from "../tree-branch";
 
 afterEach((): void => {
 	cleanup();
@@ -61,5 +61,22 @@ describe("TreeBranch", () => {
 		expect(classes).not.toContain("before:border-s");
 		expect(classes).toContain("before:border-muted-foreground/50");
 		expect(classes).toContain("after:border-muted-foreground/50");
+	});
+});
+
+describe("TreeNodeText", () => {
+	it("shows the node's title and, under it, its subtitle", (): void => {
+		render(<TreeNodeText title="Email" description="To your sign-in email address" />);
+		const title = screen.getByText("Email");
+		const description = screen.getByText("To your sign-in email address");
+		expect(title.dataset.slot).toBe("tree-node-title");
+		expect(description.dataset.slot).toBe("tree-node-description");
+		expect(title.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(title.className).toContain("text-foreground");
+	});
+
+	it("fades the title of a node that can't be changed yet", (): void => {
+		render(<TreeNodeText title="SMS" description="Add and verify your phone number first" muted />);
+		expect(screen.getByText("SMS").className).toContain("text-muted-foreground");
 	});
 });

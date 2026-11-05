@@ -14,6 +14,7 @@
       "ESNext"
     ],
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "declaration": false,
     "declarationMap": false,
     "allowJs": false,
@@ -31,6 +32,7 @@
   },
   "include": [
     "app.config.ts",
+    "build-env/**/*.ts",
     "config-plugins/**/*.ts",
     "index.ts",
     "jest.setup.ts",

@@ -137,10 +137,16 @@ Without `GOOGLE_SERVICES_JSON` the build simply has no FCM: the app runs, and it
 | Grouping | Notices of the same kind stack together (`thread-id` on iOS) |
 | Data | The notification id, its link and its kind — tapping it opens the app's notifications |
 
-The API addresses a phone by its **FCM registration token** (what the app gets from
-`getDevicePushTokenAsync`). `firebase-admin` 14 marks token addressing as deprecated in favour of
-Firebase Installation IDs (FIDs); FCM still delivers to tokens. Moving to FIDs means the app reporting
-its installation ID instead, and is tracked as a follow-up.
+An Android phone is addressed by its **Firebase Installation ID** (FID) when it reported one, and by its
+**FCM registration token** (from `getDevicePushTokenAsync`) otherwise (enhancement 5.3). `firebase-admin` 14
+deprecates token addressing in favour of FIDs.
+
+| | |
+|---|---|
+| The app | Reads its FID with `@react-native-firebase/installations` (`firebase-installation-id.ts`) and sends it with the token on every registration (`PUT /notifications/push-devices`, `installationId`). A build without that native module, or a failed read, sends none |
+| The API | Keeps it in `PushDevice.installationIdCiphertext`, encrypted with the same `NOTIFICATIONS_ENCRYPTION_KEYS` as the token and bound to its row under its own label. Re-registering refreshes it, so an app update starts sending it. iOS never has one (APNs goes by token); an FID with `platform: IOS` is refused |
+| Sending | `fcmTargetOf`: `{ fid }` when known, else `{ token }`, for every push and silent sync. A device still on an older app build keeps working by token |
+| Before `firebase-admin` drops tokens | Every Android install must have re-registered with an app build that reports its FID. Watch `PushDevice` rows where `platform = 'ANDROID'` and `installationIdCiphertext IS NULL`; once they're gone (or old enough to revoke), token addressing can be removed |
 
 ## iOS (APNs)
 

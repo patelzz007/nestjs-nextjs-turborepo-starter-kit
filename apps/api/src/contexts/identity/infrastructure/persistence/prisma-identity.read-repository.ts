@@ -7,6 +7,7 @@ import {
 	epochMs,
 	nowEpochMs,
 	parseUserPreferenceValue,
+	PasskeyTransportSchema,
 	UserPreferenceKeySchema,
 	UserPreferenceValueSchema,
 	type AdminMfaRecoveryListQuery,
@@ -19,6 +20,7 @@ import {
 	type MfaRecoveryStatusResponse,
 	type OwnProfile,
 	type PaginatedServiceResult,
+	type Passkey,
 	type Session,
 	type SessionListQuery,
 	type SessionListSortField,
@@ -227,7 +229,8 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 
 	public findAccountByEmail(actor: ActorContext, email: string): Promise<AccountView | null> {
 		return this.asNamedRead(actor, ACCOUNT_LOOKUP_OPERATION, async (db) => {
-			const row = await db.user.findUnique({ where: { email }, select: ACCOUNT_VIEW_SELECT });
+			// Live accounts only: email is unique among them (a soft-deleted account may share it).
+			const row = await db.user.findUnique({ where: { email, isDeleted: false }, select: ACCOUNT_VIEW_SELECT });
 			return row === null ? null : toAccountView(row);
 		});
 	}
@@ -285,6 +288,25 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 				mapListResult(result, (row: DeviceSessionRow): Session => toSession(row, currentSessionId)),
 				query,
 			);
+		});
+	}
+
+	public listPasskeys(actor: ActorContext, userId: string): Promise<readonly Passkey[]> {
+		return this.asActor(actor, async (db) => {
+			const rows = await db.webAuthnCredential.findMany({
+				where: { userId, isDeleted: false },
+				orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+				select: { id: true, name: true, deviceType: true, backedUp: true, transports: true, createdAt: true, lastUsedAt: true },
+			});
+			return rows.map((row): Passkey => ({
+				id: row.id,
+				name: row.name,
+				deviceType: row.deviceType,
+				backedUp: row.backedUp,
+				transports: PasskeyTransportSchema.array().parse(row.transports),
+				createdAt: epochMs(Number(row.createdAt)),
+				lastUsedAt: epochOrNull(row.lastUsedAt),
+			}));
 		});
 	}
 

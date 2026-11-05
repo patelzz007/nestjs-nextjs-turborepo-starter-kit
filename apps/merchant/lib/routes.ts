@@ -72,14 +72,30 @@ export interface TenantBroadcastRoutes {
 	readonly edit: (broadcastId: string) => AppPath;
 }
 
+/** The tenant's payments (ADR 020): the list, asking for one, one payment. Payments are never edited. */
+export interface TenantPaymentRoutes {
+	readonly list: AppPath;
+	readonly new: AppPath;
+	readonly detail: (paymentId: string) => AppPath;
+}
+
+export interface TenantWebhookRoutes {
+	readonly list: AppPath;
+	readonly detail: (endpointId: string) => AppPath;
+	readonly edit: (endpointId: string) => AppPath;
+}
+
 export interface TenantRouteTable {
 	readonly dashboard: AppPath;
 	readonly rewards: TenantRewardRoutes;
 	readonly broadcasts: TenantBroadcastRoutes;
+	readonly payments: TenantPaymentRoutes;
 	readonly redemptions: AppPath;
 	readonly analytics: AppPath;
 	readonly terminals: AppPath;
 	readonly apiKeys: AppPath;
+	/** Outgoing webhooks (ADR 082): the endpoint list, one endpoint, its editor. */
+	readonly webhooks: TenantWebhookRoutes;
 	readonly account: AppPath;
 	/** The member's own merchant inbox (ADR 070) — personal, not the tenant's. */
 	readonly notifications: AppPath;
@@ -142,10 +158,20 @@ export const TENANT_ROUTES: TenantRouteTable = {
 		detail: (broadcastId: string): AppPath => `/broadcasts/${encodeURIComponent(broadcastId)}`,
 		edit: (broadcastId: string): AppPath => `/broadcasts/${encodeURIComponent(broadcastId)}/edit`,
 	},
+	payments: {
+		list: "/payments",
+		new: "/payments/new",
+		detail: (paymentId: string): AppPath => `/payments/${encodeURIComponent(paymentId)}`,
+	},
 	redemptions: "/redemptions",
 	analytics: "/analytics",
 	terminals: "/terminals",
 	apiKeys: "/api-keys",
+	webhooks: {
+		list: "/webhooks",
+		detail: (endpointId: string): AppPath => `/webhooks/${encodeURIComponent(endpointId)}`,
+		edit: (endpointId: string): AppPath => `/webhooks/${encodeURIComponent(endpointId)}/edit`,
+	},
 	account: "/account",
 	notifications: "/notifications",
 	notificationSettings: "/notifications/settings",
@@ -179,6 +205,7 @@ export const TENANT_STATIC_ROUTES: readonly AppPath[] = [
 	TENANT_ROUTES.analytics,
 	TENANT_ROUTES.terminals,
 	TENANT_ROUTES.apiKeys,
+	TENANT_ROUTES.webhooks.list,
 	TENANT_ROUTES.account,
 	TENANT_ROUTES.notifications,
 	TENANT_ROUTES.notificationSettings,
@@ -286,15 +313,23 @@ export interface TenantBroadcastHrefs {
 	readonly edit: (broadcastId: string) => AppPath;
 }
 
+export interface TenantPaymentHrefs {
+	readonly list: AppPath;
+	readonly new: AppPath;
+	readonly detail: (paymentId: string) => AppPath;
+}
+
 export interface TenantHrefs {
 	readonly root: AppPath;
 	readonly dashboard: AppPath;
 	readonly rewards: TenantRewardHrefs;
 	readonly broadcasts: TenantBroadcastHrefs;
+	readonly payments: TenantPaymentHrefs;
 	readonly redemptions: AppPath;
 	readonly analytics: AppPath;
 	readonly terminals: AppPath;
 	readonly apiKeys: AppPath;
+	readonly webhooks: TenantWebhookRoutes;
 	readonly account: AppPath;
 	readonly notifications: AppPath;
 	readonly notificationSettings: AppPath;
@@ -319,11 +354,21 @@ export function tenantRoutes(slug: string): TenantHrefs {
 			detail: (broadcastId: string): AppPath => tenantPath(slug, TENANT_ROUTES.broadcasts.detail(broadcastId)),
 			edit: (broadcastId: string): AppPath => tenantPath(slug, TENANT_ROUTES.broadcasts.edit(broadcastId)),
 		},
+		payments: {
+			list: tenantPath(slug, TENANT_ROUTES.payments.list),
+			new: tenantPath(slug, TENANT_ROUTES.payments.new),
+			detail: (paymentId: string): AppPath => tenantPath(slug, TENANT_ROUTES.payments.detail(paymentId)),
+		},
 		redemptions: tenantPath(slug, TENANT_ROUTES.redemptions),
 		analytics: tenantPath(slug, TENANT_ROUTES.analytics),
 		// Built by the API into emails too — `APP_LINKS` is the shared source.
 		terminals: toAppPath(APP_LINKS.merchant.terminals(slug)),
 		apiKeys: toAppPath(APP_LINKS.merchant.apiKeys(slug)),
+		webhooks: {
+			list: toAppPath(APP_LINKS.merchant.webhooks(slug)),
+			detail: (endpointId: string): AppPath => toAppPath(APP_LINKS.merchant.webhookEndpoint(slug, endpointId)),
+			edit: (endpointId: string): AppPath => tenantPath(slug, TENANT_ROUTES.webhooks.edit(endpointId)),
+		},
 		account: tenantPath(slug, TENANT_ROUTES.account),
 		notifications: tenantPath(slug, TENANT_ROUTES.notifications),
 		notificationSettings: tenantPath(slug, TENANT_ROUTES.notificationSettings),

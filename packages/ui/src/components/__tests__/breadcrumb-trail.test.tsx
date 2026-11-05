@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
 import type { UiKitLabels, UiKitLabelsOverride } from "../../lib/labels/ui-kit-labels";
+import { accessibilityViolations } from "../../testing/axe";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import type { BreadcrumbItem } from "../breadcrumb-context";
 import { BreadcrumbTrail } from "../breadcrumb-trail";
@@ -112,5 +113,13 @@ describe("BreadcrumbTrail", () => {
 
 	it("throws without a UiKitLabelsProvider", (): void => {
 		expect(() => render(<BreadcrumbTrail items={ITEMS} status="ready" renderLink={renderLink} />)).toThrow('"breadcrumbTrail" labels');
+	});
+
+	it("keeps a proper list: every crumb, the collapsed ones and the copy action are the list's own items", async () => {
+		const { container } = render(<BreadcrumbTrail items={COLLAPSIBLE_ITEMS} status="ready" maxItems={2} renderLink={renderLink} />, { wrapper: UiKitTestProviders });
+		const list = container.querySelector("ol");
+		expect(list).not.toBeNull();
+		expect([...(list?.children ?? [])].map((child) => child.tagName)).toStrictEqual(Array.from({ length: list?.children.length ?? 0 }, () => "LI"));
+		await expect(accessibilityViolations(container)).resolves.toStrictEqual([]);
 	});
 });

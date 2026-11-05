@@ -1,94 +1,217 @@
+import HouseIcon from "lucide-react-native/icons/house";
+import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
+
+import { PERMISSION, type CapabilitySlug, type SidebarMenuData, type SidebarMenuItem } from "@workspace/shared";
+import { APP_TABS } from "../app-tabs";
 import {
-	DEVELOPER_DRAWER_GROUP,
-	DRAWER_GROUPS,
-	DRAWER_TABS,
-	drawerGroups,
-	GITHUB_DRAWER_GROUP,
-	OPERATIONS_DRAWER_GROUP,
+	compileDrawerMenu,
+	destinationsOf,
+	drawerGroupsFor,
+	drawerHeadingOf,
+	enabledDrawerFeatureFlags,
+	holdsScreen,
 	isTabRoot,
-	type DrawerDestination,
-	type DrawerDestinationGroup,
+	MAX_DRAWER_DEPTH,
+	type DrawerAccess,
+	type DrawerGroup,
+	type DrawerNode,
+	type DrawerScreen,
 } from "../drawer-destinations";
-import { setDevelopmentBuild } from "../../../../test/development-build";
+import { NAVIGATION_LABELS } from "../navigation-labels";
 
-function labelsOf(destinations: readonly DrawerDestination[]): readonly string[] {
-	return destinations.map((destination: DrawerDestination): string => destination.label);
+const EN = NAVIGATION_LABELS.en;
+
+const GITHUB_READ = PERMISSION.GITHUB_PULL_REQUEST.READ;
+const GITHUB_UPDATE = PERMISSION.GITHUB_PULL_REQUEST.UPDATE;
+const SERVERS = PERMISSION.SERVER_METRIC.LIST;
+
+const EVERYTHING: DrawerAccess = { capabilities: [GITHUB_READ, GITHUB_UPDATE, SERVERS], enabledFeatureFlags: ["developer-tools", "github-pull-requests"] };
+
+function accessWith(capabilities: readonly CapabilitySlug[], enabledFeatureFlags: DrawerAccess["enabledFeatureFlags"] = []): DrawerAccess {
+	return { capabilities, enabledFeatureFlags };
 }
 
-function routesOf(destinations: readonly DrawerDestination[]): readonly string[] {
-	return destinations.map((destination: DrawerDestination): string => destination.route);
+/** Each group's title in English ("tabs" for the untitled block) with the routes it opens. */
+function outline(groups: readonly DrawerGroup[]): readonly (readonly [string, readonly string[]])[] {
+	return groups.map((group: DrawerGroup): readonly [string, readonly string[]] => [
+		group.heading === null ? "tabs" : EN.sections[group.heading.section],
+		destinationsOf(group.nodes).map((screen: DrawerScreen): string => screen.route),
+	]);
 }
 
-describe("DRAWER_TABS", () => {
-	it("are the five tabs, switched to rather than pushed", () => {
-		expect(labelsOf(DRAWER_TABS)).toStrictEqual(["Home", "Analytics", "Search", "Profile", "Settings"]);
-		expect(routesOf(DRAWER_TABS)).toStrictEqual(["/", "/analytics", "/search", "/profile", "/settings"]);
-		expect(DRAWER_TABS.every((destination: DrawerDestination): boolean => destination.isTab)).toBe(true);
+describe("the drawer's menu (mobile-drawer-items.json)", () => {
+	it("leads with the five tabs, untitled, in the tab bar's order and with its glyphs, switched to rather than pushed", () => {
+		const [tabs] = drawerGroupsFor(accessWith([]));
+		const screens = destinationsOf(tabs?.nodes ?? []);
+
+		expect(tabs?.heading).toBeNull();
+		expect(screens.map((screen: DrawerScreen): string => screen.route)).toStrictEqual(APP_TABS.map((tab) => tab.route));
+		expect(screens.map((screen: DrawerScreen) => screen.icon)).toStrictEqual(APP_TABS.map((tab) => tab.icon));
+		expect(screens.every((screen: DrawerScreen): boolean => screen.isTab)).toBe(true);
+		expect(screens.at(0)?.icon).toBe(HouseIcon);
 	});
-});
 
-describe("DRAWER_GROUPS", () => {
-	it("groups the screens under Settings into Account, Preferences, Rewards and Documents, pushed onto the stack", () => {
-		const [account, preferences, rewards, documents] = DRAWER_GROUPS;
+	it("shows everyone Account, Preferences, Rewards and Documents, pushed onto the stack; nothing gated without its capability", () => {
+		expect(outline(drawerGroupsFor(accessWith([])))).toStrictEqual([
+			["tabs", ["/", "/analytics", "/search", "/profile", "/settings"]],
+			["Account", ["/settings/security", "/settings/devices"]],
+			["Preferences", ["/settings/notification-settings", "/settings/appearance", "/settings/language", "/settings/app-lock"]],
+			["Rewards", ["/settings/till"]],
+			["Documents", ["/settings/pdf-viewer"]],
+		]);
+	});
 
-		expect(DRAWER_GROUPS).toHaveLength(4);
-		expect(account?.title).toBe("Account");
-		expect(account?.tone).toBe("blue");
-		expect(routesOf(account?.destinations ?? [])).toStrictEqual(["/settings/security", "/settings/devices"]);
-		expect(preferences?.title).toBe("Preferences");
-		expect(preferences?.tone).toBe("purple");
-		expect(routesOf(preferences?.destinations ?? [])).toStrictEqual(["/settings/appearance", "/settings/app-lock"]);
-		expect(rewards?.title).toBe("Rewards");
-		expect(rewards?.tone).toBe("green");
-		expect(routesOf(rewards?.destinations ?? [])).toStrictEqual(["/settings/till"]);
-		expect(documents?.title).toBe("Documents");
-		expect(documents?.tone).toBe("blue");
-		expect(routesOf(documents?.destinations ?? [])).toStrictEqual(["/settings/pdf-viewer"]);
-		expect(
-			DRAWER_GROUPS.flatMap((group: DrawerDestinationGroup): readonly DrawerDestination[] => group.destinations).some(
-				(destination: DrawerDestination): boolean => destination.isTab,
-			),
-		).toBe(false);
+	it("gives each titled section its tone", () => {
+		const tones = drawerGroupsFor(EVERYTHING).map((group: DrawerGroup) => group.heading?.tone ?? null);
+
+		expect(tones).toStrictEqual([null, "blue", "purple", "green", "blue", "amber", "teal", "rose"]);
+	});
+
+	it("adds Developer, GitHub and Operations for a session holding their capabilities with their flags on", () => {
+		const titles = outline(drawerGroupsFor(EVERYTHING)).slice(-3);
+
+		expect(titles).toStrictEqual([
+			["Developer", ["/settings/components"]],
+			["GitHub", ["/profile/pull-requests", "/profile/github-account"]],
+			["Operations", ["/settings/servers"]],
+		]);
+	});
+
+	it("needs READ for the pull requests and READ and UPDATE together for the token", () => {
+		const readOnly = outline(drawerGroupsFor(accessWith([GITHUB_READ], ["github-pull-requests"])));
+
+		expect(readOnly).toContainEqual(["GitHub", ["/profile/pull-requests"]]);
+	});
+
+	it("hides GitHub while the server has pull requests off, whatever the capabilities", () => {
+		const titles = outline(drawerGroupsFor(accessWith([GITHUB_READ, GITHUB_UPDATE]))).map(([title]) => title);
+
+		expect(titles).not.toContain("GitHub");
+	});
+
+	it("lists the gallery (Developer) only with the developer tools on", () => {
+		expect(outline(drawerGroupsFor(accessWith([], ["developer-tools"]))).map(([title]) => title)).toContain("Developer");
+		expect(outline(drawerGroupsFor(accessWith([]))).map(([title]) => title)).not.toContain("Developer");
+	});
+
+	it("shows Operations only to a session that may list the servers", () => {
+		expect(outline(drawerGroupsFor(accessWith([SERVERS]))).at(-1)).toStrictEqual(["Operations", ["/settings/servers"]]);
 	});
 
 	it("never links the two-factor enrollment flow directly", () => {
-		const routes = DRAWER_GROUPS.flatMap((group: DrawerDestinationGroup): readonly string[] => routesOf(group.destinations));
+		const routes = drawerGroupsFor(EVERYTHING).flatMap((group: DrawerGroup) => destinationsOf(group.nodes).map((screen: DrawerScreen): string => screen.route));
 
 		expect(routes).not.toContain("/settings/two-factor");
 	});
 });
 
-describe("drawerGroups", () => {
-	const developmentBuild: boolean = __DEV__;
+/** A menu of one section holding `items`, around the real menu's shape. */
+function menuOf(items: readonly SidebarMenuItem[]): SidebarMenuData {
+	return { header: { title: "App", subtitle: "Menu" }, sections: [{ title: "Account", labelKey: "account", color: "blue", items: [...items] }], bottomItems: [] };
+}
 
-	afterEach(() => {
-		setDevelopmentBuild(developmentBuild);
+/** A chain of `levels` branches down to Security, each the only child of the one above. */
+function chainOf(levels: number): SidebarMenuItem {
+	const leaf: SidebarMenuItem = { title: "Security", labelKey: "security", url: "/settings/security", icon: "ShieldCheck" };
+	return Array.from({ length: levels - 1 }).reduce<SidebarMenuItem>(
+		(child: SidebarMenuItem, _unused, position: number): SidebarMenuItem => ({
+			title: `Level ${String(levels - 1 - position)}`,
+			labelKey: "level",
+			url: "",
+			icon: "Settings",
+			children: [child],
+		}),
+		leaf,
+	);
+}
+
+/** The node path from a group's first entry down its first children. */
+function depthOf(node: DrawerNode | undefined): number {
+	return node === undefined ? 0 : 1 + (node.kind === "branch" ? depthOf(node.children.at(0)) : 0);
+}
+
+describe("nesting", () => {
+	it("nests the shipped menu's Developer gallery the full six levels deep", () => {
+		const developer = drawerGroupsFor(EVERYTHING).find((group: DrawerGroup): boolean => group.heading?.section === "developer");
+
+		expect(depthOf(developer?.nodes.at(0))).toBe(MAX_DRAWER_DEPTH);
 	});
 
-	it("adds the UI kit gallery (Developer) in a development build, then GitHub for people allowed to use it", () => {
-		setDevelopmentBuild(true);
+	it(`folds branches up to ${String(MAX_DRAWER_DEPTH)} levels deep, the screen at the bottom`, () => {
+		const [group] = drawerGroupsFor(accessWith([]), compileDrawerMenu(menuOf([chainOf(MAX_DRAWER_DEPTH)])));
+		const top = group?.nodes.at(0);
 
-		expect(drawerGroups({ github: true, operations: false })).toStrictEqual([...DRAWER_GROUPS, DEVELOPER_DRAWER_GROUP, GITHUB_DRAWER_GROUP]);
-		expect(drawerGroups({ github: false, operations: false })).toStrictEqual([...DRAWER_GROUPS, DEVELOPER_DRAWER_GROUP]);
-		expect(DEVELOPER_DRAWER_GROUP.title).toBe("Developer");
-		expect(DEVELOPER_DRAWER_GROUP.tone).toBe("amber");
-		expect(routesOf(DEVELOPER_DRAWER_GROUP.destinations)).toStrictEqual(["/settings/components"]);
+		expect(depthOf(top)).toBe(MAX_DRAWER_DEPTH);
+		expect(destinationsOf(group?.nodes ?? []).map((screen: DrawerScreen) => screen.icon)).toStrictEqual([ShieldCheckIcon]);
 	});
 
-	it("never lists the gallery in a store build", () => {
-		setDevelopmentBuild(false);
-
-		expect(drawerGroups({ github: true, operations: false })).toStrictEqual([...DRAWER_GROUPS, GITHUB_DRAWER_GROUP]);
-		expect(drawerGroups({ github: false, operations: false })).toStrictEqual(DRAWER_GROUPS);
+	it("refuses a menu nested deeper, when it loads", () => {
+		expect(() => compileDrawerMenu(menuOf([chainOf(MAX_DRAWER_DEPTH + 1)]))).toThrow(/nests up to 6/u);
 	});
 
-	it("adds Operations (the platform's servers) for people the API lets watch them, after GitHub", () => {
-		setDevelopmentBuild(false);
+	it("keeps a branch only while a screen under it is visible, filtering every level by its capabilities", () => {
+		const gated: SidebarMenuItem = {
+			title: "Ops",
+			labelKey: "ops",
+			url: "",
+			icon: "Server",
+			children: [
+				{ title: "Deeper", labelKey: "deeper", url: "", icon: "Server", children: [{ title: "Servers", labelKey: "servers", url: "/settings/servers", icon: "Server" }] },
+			],
+		};
+		const menu = compileDrawerMenu(menuOf([gated]));
 
-		expect(drawerGroups({ github: true, operations: true })).toStrictEqual([...DRAWER_GROUPS, GITHUB_DRAWER_GROUP, OPERATIONS_DRAWER_GROUP]);
-		expect(drawerGroups({ github: false, operations: true })).toStrictEqual([...DRAWER_GROUPS, OPERATIONS_DRAWER_GROUP]);
-		expect(OPERATIONS_DRAWER_GROUP.title).toBe("Operations");
-		expect(routesOf(OPERATIONS_DRAWER_GROUP.destinations)).toStrictEqual(["/settings/servers"]);
+		expect(drawerGroupsFor(accessWith([]), menu)).toStrictEqual([]);
+		expect(destinationsOf(drawerGroupsFor(accessWith([SERVERS]), menu).at(0)?.nodes ?? []).map((screen: DrawerScreen): string => screen.route)).toStrictEqual([
+			"/settings/servers",
+		]);
+	});
+
+	it("knows which branches hold the screen on show", () => {
+		const [group] = drawerGroupsFor(accessWith([]), compileDrawerMenu(menuOf([chainOf(3)])));
+		const top = group?.nodes.at(0);
+
+		expect(top === undefined ? false : holdsScreen(top, "/settings/security")).toBe(true);
+		expect(top === undefined ? true : holdsScreen(top, "/settings/devices")).toBe(false);
+	});
+});
+
+describe("checks made when the menu loads", () => {
+	it.each([
+		["a route the app does not have", [{ title: "Nowhere", labelKey: "nowhere", url: "/settings/nowhere", icon: "Settings" }]],
+		["an icon the app does not bundle", [{ title: "Security", labelKey: "security", url: "/settings/security", icon: "Rocket" }]],
+		["no icon", [{ title: "Security", labelKey: "security", url: "/settings/security" }]],
+		["an unknown feature flag", [{ title: "Security", labelKey: "security", url: "/settings/security", icon: "ShieldCheck", featureFlag: "beta" }]],
+		["a branch with no children", [{ title: "Empty", labelKey: "empty", url: "", icon: "Settings" }]],
+		["a screen with children", [{ title: "Security", labelKey: "security", url: "/settings/security", icon: "ShieldCheck", children: [chainOf(1)] }]],
+	])("refuses %s", (_case: string, items: readonly SidebarMenuItem[]) => {
+		expect(() => compileDrawerMenu(menuOf(items))).toThrow();
+	});
+
+	it("refuses an unknown section, and a titled section without a colour", () => {
+		const unknown: SidebarMenuData = { ...menuOf([chainOf(1)]), sections: [{ title: "Misc", labelKey: "misc", color: "blue", items: [chainOf(1)] }] };
+		const colourless: SidebarMenuData = { ...menuOf([chainOf(1)]), sections: [{ title: "Account", labelKey: "account", items: [chainOf(1)] }] };
+
+		expect(() => compileDrawerMenu(unknown)).toThrow();
+		expect(() => compileDrawerMenu(colourless)).toThrow(/needs a color/u);
+	});
+});
+
+describe("enabledDrawerFeatureFlags", () => {
+	it("turns the developer tools on in a development build, and pull requests unless the server has them off", () => {
+		expect(enabledDrawerFeatureFlags({ developmentBuild: true, githubPullRequests: true })).toStrictEqual(["developer-tools", "github-pull-requests"]);
+		expect(enabledDrawerFeatureFlags({ developmentBuild: false, githubPullRequests: false })).toStrictEqual([]);
+	});
+});
+
+describe("drawerHeadingOf", () => {
+	it("names a screen by its heading, in the language on screen, and a branch by its own title", () => {
+		const [group] = drawerGroupsFor(accessWith([]), compileDrawerMenu(menuOf([chainOf(2)])));
+		const branch = group?.nodes.at(0);
+		const screen = destinationsOf(group?.nodes ?? []).at(0);
+
+		expect(screen === undefined ? null : drawerHeadingOf(screen, NAVIGATION_LABELS.ms).title).toBe(NAVIGATION_LABELS.ms.headings.security.title);
+		expect(branch === undefined ? null : drawerHeadingOf(branch, EN)).toStrictEqual({ title: "Level 1", subtitle: "" });
 	});
 });
 
@@ -101,6 +224,6 @@ describe("isTabRoot", () => {
 
 	it("is false deeper in a tab, where the edge swipe means back", () => {
 		expect(isTabRoot("/settings/security")).toBe(false);
-		expect(isTabRoot("/sign-in")).toBe(false);
+		expect(isTabRoot("/auth/sign-in")).toBe(false);
 	});
 });

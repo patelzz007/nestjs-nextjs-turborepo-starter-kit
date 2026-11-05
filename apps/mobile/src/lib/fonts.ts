@@ -1,6 +1,7 @@
-// The app's typefaces, the same as the web's (packages/ui src/fonts, ADR 037):
-// Geist for the UI and running text, Bricolage Grotesque for headings, Geist
-// Mono for codes and IDs.
+// The app's typefaces (ADR 037, ADR 079): Geist for everything — running text,
+// the UI and headings, which are Geist SemiBold and Bold in a real type ramp —
+// Geist Mono for codes and IDs, and Bricolage Grotesque SemiBold for one thing
+// only: the label of a button (`font-button`), so an action reads as an action.
 //
 // React Native picks a font by FAMILY NAME, not by weight: a custom font has
 // no "semibold" unless that weight is loaded as its own family. So every

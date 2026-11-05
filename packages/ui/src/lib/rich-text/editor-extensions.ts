@@ -19,11 +19,22 @@ export interface CallToActionAttributes {
 	readonly href: string;
 }
 
+/** A picture the body names: its file id, its alt text, and (for display only) the address the server gave it. */
+export interface BroadcastImageAttributes {
+	readonly fileId: string;
+	readonly alt: string;
+	readonly src: string;
+}
+
 declare module "@tiptap/core" {
 	interface Commands<ReturnType> {
 		callToAction: {
 			/** Insert the broadcast's call-to-action button (the schema allows one). */
 			insertCallToAction: (attributes: CallToActionAttributes) => ReturnType;
+		};
+		broadcastImage: {
+			/** Insert the broadcast's one picture (enhancement 5.4). */
+			insertBroadcastImage: (attributes: BroadcastImageAttributes) => ReturnType;
 		};
 	}
 }
@@ -64,6 +75,41 @@ export const CallToAction = Node.create({
 	},
 });
 
+const ImageAttributeSchema = z.string();
+
+/**
+ * The broadcast's picture (enhancement 5.4): a block holding a scanned file of the files context, never an
+ * outside address. `src` is only for showing it while editing; the composer drops it before saving.
+ */
+export const BroadcastImage = Node.create({
+	name: "image",
+	group: "block",
+	atom: true,
+	selectable: true,
+	draggable: false,
+	addAttributes() {
+		return {
+			fileId: { default: "", parseHTML: (element: HTMLElement): string => ImageAttributeSchema.catch("").parse(element.getAttribute("data-file-id")) },
+			alt: { default: "", parseHTML: (element: HTMLElement): string => ImageAttributeSchema.catch("").parse(element.getAttribute("alt")) },
+			src: { default: null },
+		};
+	},
+	parseHTML() {
+		return [{ tag: "img[data-file-id]" }];
+	},
+	renderHTML({ node, HTMLAttributes }) {
+		return ["img", mergeAttributes(HTMLAttributes, { "data-file-id": ImageAttributeSchema.catch("").parse(node.attrs.fileId), class: "rte-image", fileId: null })];
+	},
+	addCommands() {
+		return {
+			insertBroadcastImage:
+				(attributes: BroadcastImageAttributes) =>
+				({ commands }): boolean =>
+					commands.insertContent({ type: this.name, attrs: { fileId: attributes.fileId, alt: attributes.alt, src: attributes.src } }),
+		};
+	},
+});
+
 /** Whether a link may go into a broadcast: an absolute https URL (the server also checks shorteners and blocked domains). */
 export function isAllowedBroadcastLink(href: string): boolean {
 	return HttpsLinkSchema.safeParse(href).success;
@@ -95,6 +141,7 @@ export function broadcastEditorExtensions({ placeholder }: BroadcastEditorExtens
 		TableHeader.extend({ content: "paragraph+" }),
 		TableCell.extend({ content: "paragraph+" }),
 		CallToAction,
+		BroadcastImage,
 		Placeholder.configure({ placeholder }),
 		CharacterCount.configure({ limit: RICH_TEXT_MAX_TEXT_LENGTH }),
 	];

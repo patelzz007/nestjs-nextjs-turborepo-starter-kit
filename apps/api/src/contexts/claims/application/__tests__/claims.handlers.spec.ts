@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { DAY_MS, epochMs, type RewardClaimListQuery, type RewardClaimResponse, type PaginatedServiceResult } from "@workspace/shared";
 
 import { systemActor, type ActorContext } from "../../../../platform/application/actor-context";
-import type { TenantDisplayData, TenantReadPort } from "../../../tenancy/public-api";
 import { ReferrerCredited } from "../../../referrals/public-api";
 import { RewardApproved, RewardAutoPublished, RewardRejected } from "../../../rewards/public-api";
 import {
@@ -233,22 +232,15 @@ describe("Reward notices (ADR 070)", () => {
 	const REVIEWED_REWARD = "0193f2c4-0000-7000-8000-0000000000a1";
 	const REFERRER_REWARD = "0193f2c4-0000-7000-8000-0000000000a2";
 	const facts = { rewardId: REVIEWED_REWARD, tenantId: "org-1", title: "Free latte" };
-	const tenants: TenantReadPort = {
-		getDisplayData: (tenantIds: readonly string[]): Promise<ReadonlyMap<string, TenantDisplayData>> =>
-			Promise.resolve(
-				new Map(
-					tenantIds.map((tenantId: string): [string, TenantDisplayData] => [
-						tenantId,
-						{ tenantId, slug: "sunrise-cafe", displayName: "Sunrise Cafe", timeZone: "Asia/Kuala_Lumpur", logo: null },
-					]),
-				),
-			),
-		listOwnerUserIds: (): Promise<readonly string[]> => Promise.resolve(["owner-1", "owner-2"]),
-	};
+	/** The reviewed tenant, with two owners, as the decision's transaction reads it. */
+	function withOwners(ownerUserIds: readonly string[]): void {
+		store.tenantReviewNotices.tenants.set("org-1", { slug: "sunrise-cafe", ownerUserIds });
+	}
 
 	it("tells every owner about each review decision, with the tenant's slug for the merchant link", async () => {
-		await new RecordOwnerNoticesOnRewardReview(tenants).handle(new RewardApproved(NOW, facts, "admin-1"), store.scope);
-		await new RecordOwnerNoticesOnRewardReview(tenants).handle(new RewardRejected(epochMs(NOW + 1), facts, "admin-1", "Blurry photo"), store.scope);
+		withOwners(["owner-1", "owner-2"]);
+		await new RecordOwnerNoticesOnRewardReview().handle(new RewardApproved(NOW, facts, "admin-1"), store.scope);
+		await new RecordOwnerNoticesOnRewardReview().handle(new RewardRejected(epochMs(NOW + 1), facts, "admin-1", "Blurry photo"), store.scope);
 
 		expect(store.notify.notifications.map((notification) => [notification.userId, notification.typeKey, notification.tenantId])).toEqual([
 			["owner-1", "rewards.reward-approved", "org-1"],
@@ -260,7 +252,8 @@ describe("Reward notices (ADR 070)", () => {
 	});
 
 	it("keeps each review of the same reward apart, and a repeat of one decision writes nothing", async () => {
-		const handler = new RecordOwnerNoticesOnRewardReview(tenants);
+		withOwners(["owner-1", "owner-2"]);
+		const handler = new RecordOwnerNoticesOnRewardReview();
 		await handler.handle(new RewardRejected(NOW, facts, "admin-1", "Blurry photo"), store.scope);
 		await handler.handle(new RewardRejected(NOW, facts, "admin-1", "Blurry photo"), store.scope);
 		await handler.handle(new RewardRejected(epochMs(NOW + DAY_MS), facts, "admin-1", "Still blurry"), store.scope);
@@ -272,9 +265,15 @@ describe("Reward notices (ADR 070)", () => {
 	});
 
 	it("writes nothing for a tenant without owners", async () => {
-		const ownerless: TenantReadPort = { ...tenants, listOwnerUserIds: (): Promise<readonly string[]> => Promise.resolve([]) };
+		withOwners([]);
 
-		await new RecordOwnerNoticesOnRewardReview(ownerless).handle(new RewardAutoPublished(NOW, facts), store.scope);
+		await new RecordOwnerNoticesOnRewardReview().handle(new RewardAutoPublished(NOW, facts), store.scope);
+
+		expect(store.notify.notifications).toEqual([]);
+	});
+
+	it("writes nothing for a tenant that is not live (its facts are absent)", async () => {
+		await new RecordOwnerNoticesOnRewardReview().handle(new RewardApproved(NOW, facts, "admin-1"), store.scope);
 
 		expect(store.notify.notifications).toEqual([]);
 	});

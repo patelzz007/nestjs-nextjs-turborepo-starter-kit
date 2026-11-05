@@ -399,7 +399,7 @@ The PL agent was stopped before it reported, so **the status of each item below 
     - Make `test/support/__tests__/sql-statement-counter.spec.ts` an e2e spec without `context.skip`.
     - Restore the no-body case in `test/support/fastify-request.ts` and its http-audit assertions.
     - Re-cover the deleted `BaseService` 404 write-path cases in catalog, and assert `deletedInTransaction`.
-    - Derive the rate-limit numbers in `apps/docs/src/lib/api-reference/endpoint-access.ts` from the policy source.
+    - Derive the rate-limit numbers in `packages/docs-renderer/src/api-reference/endpoint-access.ts` from the policy source.
     - Regenerate `apps/mobile/uniwind-types.d.ts` (it was hand-edited).
 13. **web, admin and merchant regroup** (T31–T33, §14.3). Switch the chart and cropper call sites to the `*.client-only.tsx` wrappers; every page stays SSR.
 14. **API boot** (T42, §19.3, decisions #62/#68 — no caches):

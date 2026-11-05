@@ -1,29 +1,35 @@
 // The app drawer (ADR 038): the (app) group's menu. Connects the presentational
 // Drawer and drawer menu to the app — who is signed in, which screen is on
 // show, the current appearance and app lock settings, where each destination
-// goes, and signing out. Opened from the menu button in the corner of each
+// goes, and signing out. Its entries come from mobile-drawer-items.json, filtered by the
+// session's capabilities (drawer-destinations.ts); a branch folds open in place, nested up to
+// six levels, and starts open when it holds the screen on show. Opened from the menu button in the corner of each
 // tab's first screen, or by a swipe from the left edge there. Under the account
 // header, the connection and session pills in full (the corner shows them
 // compact).
 
-import { usePathname, useRouter } from "expo-router";
+import { usePathname } from "expo-router";
 import LogOutIcon from "lucide-react-native/icons/log-out";
 import * as React from "react";
 import { ScrollView, Text, View } from "react-native";
 
 import { Drawer } from "../../components/drawer";
-import { DrawerAccountHeader, DrawerRow, DrawerSection } from "../../components/drawer-menu";
+import { DrawerAccountHeader, DrawerRow, DrawerSection, DrawerSubmenu } from "../../components/drawer-menu";
 import { useApi } from "../../lib/api-context";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
-import { useReadyRuntime } from "../../runtime/runtime-context";
 import { useAppDrawerCommands, useAppDrawerOpen } from "../app-drawer/facade";
+import { useBuildInfo } from "../build-info/use-build-info";
 import { accountRowValue, useGithubPullRequestAccess } from "../../contexts/integrations-github";
-import { useOperationsAccess } from "../../contexts/operations";
 import { NetworkStatusPill, SessionStatusPill } from "../app-status/status-pills";
 import { SignOutDialog, useSignOutConfirmation } from "../../contexts/identity";
+import { APP_LANGUAGE_NAMES } from "../language/app-languages";
+import { useAppLanguage, useLabels } from "../language/use-app-language";
 import { useAppLockEnabled, useThemePreference } from "../preferences/facade";
-import { THEME_LABELS } from "../preferences/labels";
-import { DRAWER_TABS, drawerGroups, isTabRoot, type DrawerDestination, type DrawerDestinationGroup } from "./drawer-destinations";
+import { PREFERENCES_LABELS } from "../preferences/labels";
+import { useOpenDestination } from "./use-open-destination";
+import { NAVIGATION_LABELS, type NavigationLabels } from "./navigation-labels";
+import { drawerHeadingOf, holdsScreen, isTabRoot, type DrawerBranch, type DrawerGroup, type DrawerNode, type DrawerScreen } from "./drawer-destinations";
+import { useDrawerGroups } from "./use-drawer-groups";
 
 export interface AppDrawerProps {
 	/** The tabs. */
@@ -51,12 +57,14 @@ export function AppDrawer({ children }: AppDrawerProps): React.JSX.Element {
 
 function AppDrawerPanel(): React.JSX.Element {
 	const api = useApi();
-	const router = useRouter();
 	const pathname = usePathname();
 	const drawer = useAppDrawerCommands();
-	const { appVersion, buildNumber } = useReadyRuntime();
+	const buildInfo = useBuildInfo();
 	const theme = useThemePreference();
 	const appLockEnabled = useAppLockEnabled();
+	const language = useAppLanguage();
+	const labels = useLabels(NAVIGATION_LABELS);
+	const { themes } = useLabels(PREFERENCES_LABELS);
 	const signOut = useSignOutConfirmation();
 	const github = useGithubPullRequestAccess();
 	const githubAccountValue = github.kind === "available" ? accountRowValue(github.account) : undefined;
@@ -65,26 +73,30 @@ function AppDrawerPanel(): React.JSX.Element {
 	const user = me.data?.data;
 
 	/** Closes the drawer and goes there: a tab is switched to, any other screen pushed onto its tab's stack. */
+	const openDestination = useOpenDestination();
 	const goTo = React.useCallback(
 		(route: AppRoute, isTab: boolean): void => {
 			drawer.closed();
-			if (route === pathname) {
-				return;
-			}
-			if (isTab) {
-				router.navigate(route);
-			} else {
-				// `withAnchor`: the tab's first screen (Settings) goes underneath, so "back" lands on it.
-				router.push(route, { withAnchor: true });
-			}
+			openDestination(route, isTab);
 		},
-		[drawer, pathname, router],
+		[drawer, openDestination],
 	);
 	const open = React.useCallback(
-		(destination: DrawerDestination): void => {
-			goTo(destination.route, destination.isTab);
+		(screen: DrawerScreen): void => {
+			goTo(screen.route, screen.isTab);
 		},
 		[goTo],
+	);
+	// A branch the person folded or unfolded; any other starts open only when it holds the screen on show.
+	const [foldedOpen, setFoldedOpen] = React.useState<ReadonlyMap<string, boolean>>(new Map());
+	const isOpen = React.useCallback((branch: DrawerBranch): boolean => foldedOpen.get(branch.id) ?? holdsScreen(branch, pathname), [foldedOpen, pathname]);
+	const toggle = React.useCallback(
+		(branch: DrawerBranch): void => {
+			setFoldedOpen((current: ReadonlyMap<string, boolean>): ReadonlyMap<string, boolean> =>
+				new Map(current).set(branch.id, !(current.get(branch.id) ?? holdsScreen(branch, pathname))),
+			);
+		},
+		[pathname],
 	);
 	const openProfile = React.useCallback((): void => {
 		goTo(ROUTES.profile, true);
@@ -94,76 +106,120 @@ function AppDrawerPanel(): React.JSX.Element {
 	const valueOf = React.useCallback(
 		(route: AppRoute): string | undefined => {
 			if (route === ROUTES.appearance) {
-				return THEME_LABELS[theme];
+				return themes[theme];
+			}
+			if (route === ROUTES.language) {
+				return APP_LANGUAGE_NAMES[language];
 			}
 			if (route === ROUTES.appLock) {
-				return appLockEnabled ? "On" : "Off";
+				return appLockEnabled ? labels.settings.on : labels.settings.off;
 			}
 			if (route === ROUTES.githubAccount) {
 				return githubAccountValue;
 			}
 			return undefined;
 		},
-		[appLockEnabled, githubAccountValue, theme],
+		[appLockEnabled, githubAccountValue, labels, language, theme, themes],
 	);
-	const operations = useOperationsAccess();
-	const groups = drawerGroups({ github: github.kind === "available", operations: operations.kind === "available" });
-
-	const version = buildNumber === null ? `Version ${appVersion}` : `Version ${appVersion} (${buildNumber})`;
+	const groups = useDrawerGroups();
 
 	return (
 		<View className="flex-1">
-			<ScrollView contentContainerClassName="gap-3 pb-6">
+			<ScrollView contentContainerClassName="gap-5 pb-6">
 				{user === undefined ? null : (
 					<View className="px-4 pt-4 pb-1">
 						<DrawerAccountHeader
 							name={user.fullName}
 							email={user.email}
 							imageUrl={profile.data?.data.avatar?.url ?? null}
-							action={{ label: "Edit profile", onPress: openProfile }}
+							action={{ label: labels.drawer.editProfile, onPress: openProfile }}
 							testID="app-drawer-account"
 						/>
 					</View>
 				)}
 				<View className="flex-row flex-wrap gap-2 px-4" testID="app-drawer-status">
-					<NetworkStatusPill compact={false} testID="app-drawer-network" />
-					<SessionStatusPill compact={false} testID="app-drawer-session" />
+					<NetworkStatusPill testID="app-drawer-network" />
+					<SessionStatusPill testID="app-drawer-session" />
 				</View>
-				<DrawerSection>
-					{DRAWER_TABS.map((destination: DrawerDestination): React.JSX.Element => (
-						<DestinationRow key={destination.route} destination={destination} value={undefined} selected={destination.route === pathname} onOpen={open} />
-					))}
-				</DrawerSection>
-				{groups.map((group: DrawerDestinationGroup): React.JSX.Element => (
-					<DrawerSection key={group.title} heading={{ title: group.title, tone: group.tone }}>
-						{group.destinations.map((destination: DrawerDestination): React.JSX.Element => (
-							<DestinationRow key={destination.route} destination={destination} value={valueOf(destination.route)} selected={destination.route === pathname} onOpen={open} />
-						))}
+				{groups.map((group: DrawerGroup): React.JSX.Element => (
+					<DrawerSection key={group.key} {...(group.heading === null ? {} : { heading: { title: labels.sections[group.heading.section], tone: group.heading.tone } })}>
+						<DrawerNodeRows nodes={group.nodes} pathname={pathname} labels={labels} valueOf={valueOf} isOpen={isOpen} onToggle={toggle} onOpen={open} />
 					</DrawerSection>
 				))}
-				<View className="border-t border-border pt-1">
-					<DrawerRow icon={LogOutIcon} label="Sign out" tone="destructive" onPress={signOut.ask} testID="app-drawer-sign-out" />
+				<DrawerSection>
+					<DrawerRow icon={LogOutIcon} label={labels.drawer.signOut} tone="destructive" onPress={signOut.ask} testID="app-drawer-sign-out" />
+				</DrawerSection>
+				<View className="gap-0.5 px-6 pt-2" testID="app-drawer-build">
+					<Text className="font-sans text-xs text-muted-foreground">{buildInfo.summary}</Text>
+					{buildInfo.moment === null ? null : <Text className="font-sans text-xs text-muted-foreground">{buildInfo.moment.line}</Text>}
 				</View>
-				<Text className="px-6 pt-2 font-sans text-xs text-muted-foreground">{version}</Text>
 			</ScrollView>
 			<SignOutDialog confirmation={signOut} />
 		</View>
 	);
 }
 
-interface DestinationProps {
-	readonly destination: DrawerDestination;
-	readonly selected: boolean;
-	readonly onOpen: (destination: DrawerDestination) => void;
+interface DrawerNodeRowsProps {
+	readonly nodes: readonly DrawerNode[];
+	readonly pathname: string;
+	/** The navigation's words in the language on screen: a screen's row is labelled with its heading's title. */
+	readonly labels: NavigationLabels;
+	/** The current setting a screen's row shows on its right. */
+	readonly valueOf: (route: AppRoute) => string | undefined;
+	readonly isOpen: (branch: DrawerBranch) => boolean;
+	readonly onToggle: (branch: DrawerBranch) => void;
+	readonly onOpen: (screen: DrawerScreen) => void;
 }
 
-interface DestinationRowProps extends DestinationProps {
+/** The rows of `nodes`: a screen's row opens it; a branch's row folds its rows open or shut, in a submenu one step in. */
+function DrawerNodeRows({ nodes, pathname, labels, valueOf, isOpen, onToggle, onOpen }: DrawerNodeRowsProps): React.JSX.Element {
+	return (
+		<>
+			{nodes.map((node: DrawerNode): React.JSX.Element =>
+				node.kind === "screen" ? (
+					<ScreenRow key={node.id} screen={node} label={drawerHeadingOf(node, labels).title} value={valueOf(node.route)} selected={node.route === pathname} onOpen={onOpen} />
+				) : (
+					<React.Fragment key={node.id}>
+						<BranchRow branch={node} label={drawerHeadingOf(node, labels).title} open={isOpen(node)} onToggle={onToggle} />
+						{isOpen(node) ? (
+							<DrawerSubmenu testID={`app-drawer-${node.labelKey}-rows`}>
+								<DrawerNodeRows nodes={node.children} pathname={pathname} labels={labels} valueOf={valueOf} isOpen={isOpen} onToggle={onToggle} onOpen={onOpen} />
+							</DrawerSubmenu>
+						) : null}
+					</React.Fragment>
+				),
+			)}
+		</>
+	);
+}
+
+interface ScreenRowProps {
+	readonly screen: DrawerScreen;
+	readonly label: string;
 	readonly value: string | undefined;
+	readonly selected: boolean;
+	readonly onOpen: (screen: DrawerScreen) => void;
 }
 
-function DestinationRow({ destination, value, selected, onOpen }: DestinationRowProps): React.JSX.Element {
+function ScreenRow({ screen, label, value, selected, onOpen }: ScreenRowProps): React.JSX.Element {
 	const press = React.useCallback((): void => {
-		onOpen(destination);
-	}, [destination, onOpen]);
-	return <DrawerRow icon={destination.icon} label={destination.label} selected={selected} onPress={press} {...(value === undefined ? {} : { value })} />;
+		onOpen(screen);
+	}, [onOpen, screen]);
+	return (
+		<DrawerRow icon={screen.icon} label={label} selected={selected} onPress={press} testID={`app-drawer-${screen.labelKey}`} {...(value === undefined ? {} : { value })} />
+	);
+}
+
+interface BranchRowProps {
+	readonly branch: DrawerBranch;
+	readonly label: string;
+	readonly open: boolean;
+	readonly onToggle: (branch: DrawerBranch) => void;
+}
+
+function BranchRow({ branch, label, open, onToggle }: BranchRowProps): React.JSX.Element {
+	const press = React.useCallback((): void => {
+		onToggle(branch);
+	}, [branch, onToggle]);
+	return <DrawerRow icon={branch.icon} label={label} expanded={open} onPress={press} testID={`app-drawer-${branch.labelKey}`} />;
 }

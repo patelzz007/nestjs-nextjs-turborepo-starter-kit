@@ -6,6 +6,7 @@
 // URL from the configuration; without one (development) it explains how to update.
 
 import * as React from "react";
+import { withRootGate } from "../runtime/root-navigator";
 import { Linking, Platform } from "react-native";
 
 import { Alert } from "@workspace/ui-native/components/alert";
@@ -15,7 +16,7 @@ import { BodyText, MutedText } from "@workspace/ui-native/components/text";
 import { useMinimumVersion } from "../features/session/facade";
 import { useReadyRuntime } from "../runtime/runtime-context";
 
-export default function UpdateRequiredScreen(): React.JSX.Element {
+function UpdateRequiredScreen(): React.JSX.Element {
 	const { env, appVersion } = useReadyRuntime();
 	const minimumVersion = useMinimumVersion();
 	const storeUrl = Platform.select({ ios: env.iosStoreUrl, android: env.androidStoreUrl, default: null });
@@ -47,3 +48,5 @@ export default function UpdateRequiredScreen(): React.JSX.Element {
 		</Screen>
 	);
 }
+
+export default withRootGate(["update-required"], UpdateRequiredScreen);

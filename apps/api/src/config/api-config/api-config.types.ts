@@ -10,6 +10,7 @@ import type {
 	PushProvider,
 	SmsProvider,
 	LoginVerificationMode,
+	PasswordBreachCheck,
 	LogLevel,
 	MalwareScannerSetting,
 	StorageProviderSetting,
@@ -66,6 +67,12 @@ export interface ClientAppsConfig {
 
 export interface DatabaseConfig {
 	readonly url: string;
+	/**
+	 * For connections that need a real database session (enhancement 2.5): `LISTEN` (the audit trail's and the
+	 * GitHub pull requests' live signal) and the idempotency advisory locks. `DATABASE_SESSION_URL`, a direct
+	 * or session-mode connection, when `DATABASE_URL` goes through a transaction-mode pooler; else `DATABASE_URL`.
+	 */
+	readonly sessionUrl: string;
 	readonly poolMax: number;
 	readonly idleTimeoutMs: number;
 	/** Let the process exit while the pool is idle (dev/test convenience, never in production). */
@@ -81,7 +88,22 @@ export interface AuthConfig {
 	readonly twoFactorPendingSecret: string;
 	readonly twoFactorIssuer: string;
 	readonly loginVerificationMode: LoginVerificationMode;
+	readonly passwordBreachCheck: PasswordBreachCheck;
 	readonly bcryptSaltRounds: number;
+}
+
+/** Passkeys (WebAuthn, ADR 080): the relying party this deployment is, and the native apps that share its passkeys. */
+export interface PasskeysConfig {
+	/** The RP ID: `WEBAUTHN_RP_ID`, else `COOKIE_DOMAIN` without its leading dot, else `APP_URL`'s host. Every client app's host is it or a subdomain of it. */
+	readonly rpId: string;
+	/** The name authenticators show (`TWO_FACTOR_ISSUER`, else `APP_NAME`). */
+	readonly rpName: string;
+	/** Origins a ceremony may come from: the three client apps' origins, plus `android:apk-key-hash:…` for each Android signing certificate. */
+	readonly origins: readonly string[];
+	/** The Android app (`/.well-known/assetlinks.json`), or `null` when none is configured. */
+	readonly androidApp: { readonly packageName: string; readonly certFingerprints: readonly string[] } | null;
+	/** `TEAMID.bundle.id` of each iOS app (`/.well-known/apple-app-site-association`); empty when none. */
+	readonly appleAppIds: readonly string[];
 }
 
 export interface MfaConfig {
@@ -306,6 +328,11 @@ export interface OperationsConfig {
 	readonly cloudTokens: Readonly<Record<OpsCloudProvider, string | null>>;
 	/** The backup's own login (`BACKUP_DATABASE_URL`); `null` = backups are not set up here. */
 	readonly backupDatabaseUrl: string | null;
+	/**
+	 * A login that may CREATE and DROP a throwaway database on the same server (`RESTORE_DRILL_DATABASE_URL`),
+	 * for the weekly restore drill (enhancement 2.6); `null` = drills are not set up here.
+	 */
+	readonly restoreDrillDatabaseUrl: string | null;
 	/** The image `pg_dump` runs from when the installed client is older than the server. */
 	readonly pgDumpDockerImage: string;
 	/** Where `pg_dump` and `docker` are looked up (`PATH`). */
@@ -327,6 +354,7 @@ export interface ApiConfig {
 	readonly database: DatabaseConfig;
 	readonly auth: AuthConfig;
 	readonly mfa: MfaConfig;
+	readonly passkeys: PasskeysConfig;
 	readonly mobile: MobileConfig;
 	readonly sessions: SessionsConfig;
 	readonly github: GithubConfig;
@@ -340,4 +368,29 @@ export interface ApiConfig {
 	readonly observability: ObservabilityConfig;
 	readonly tenancy: TenancyConfig;
 	readonly operations: OperationsConfig;
+	readonly payments: PaymentsConfig;
+	readonly webhooks: WebhooksConfig;
+	readonly inboundWebhooks: InboundWebhooksConfig;
+}
+
+/** The received-webhook log (ADR 081). */
+export interface InboundWebhooksConfig {
+	/** `INBOUND_WEBHOOK_RETENTION_DAYS`: days a received webhook is kept (at least 7). */
+	readonly retentionDays: number;
+}
+
+/** Outgoing webhooks for integrators (ADR 082). */
+export interface WebhooksConfig {
+	/** `WEBHOOK_SECRET_ENCRYPTION_KEYS`: the key ring signing secrets are sealed with; `null` = outgoing webhooks are off. */
+	readonly secretEncryptionKeys: Readonly<Record<number, string>> | null;
+	/** `WEBHOOK_ALLOW_LOOPBACK_URLS`: endpoints on `http://localhost` / loopback are allowed (never in production). */
+	readonly allowLoopbackUrls: boolean;
+}
+
+/** The payment gateways this deployment can take payments through (ADR 020); null = not configured. */
+export interface PaymentsConfig {
+	readonly billplz: { readonly apiKey: string; readonly collectionId: string; readonly xSignatureKey: string; readonly sandbox: boolean } | null;
+	readonly chip: { readonly secretKey: string; readonly brandId: string; readonly publicKeyPem: string } | null;
+	/** The fake gateway's signing secret (never in production). */
+	readonly fakeSecret: string | null;
 }

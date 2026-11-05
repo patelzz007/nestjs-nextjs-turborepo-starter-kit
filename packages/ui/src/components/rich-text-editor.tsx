@@ -21,6 +21,7 @@ import {
 	ListIcon,
 	ListOrderedIcon,
 	MinusIcon,
+	ImageIcon,
 	MousePointerClickIcon,
 	QuoteIcon,
 	Redo2Icon,
@@ -521,6 +522,118 @@ function CallToAction(): React.JSX.Element {
 	);
 }
 
+/** A picture the app uploaded for the body: the file to name, and its address to show while editing. */
+export interface UploadedPicture {
+	readonly fileId: string;
+	readonly src: string;
+}
+
+export interface RichTextPictureProps {
+	/** Uploads the chosen file through the app's file pipeline and resolves once it is scanned and published. */
+	readonly upload: (file: File) => Promise<UploadedPicture>;
+	/** The picker's `accept` (the category's allowed types). */
+	readonly accept: string;
+}
+
+/** Add the body's one picture (enhancement 5.4): choose it, describe it, and it uploads before it goes in. */
+function Picture({ upload, accept }: RichTextPictureProps): React.JSX.Element {
+	const { editor, disabled } = useRichTextEditorContext();
+	const [open, setOpen] = React.useState(false);
+	const [file, setFile] = React.useState<File | null>(null);
+	const [alt, setAlt] = React.useState("");
+	const [pending, setPending] = React.useState(false);
+	const [error, setError] = React.useState<string | null>(null);
+	const fileId = React.useId();
+	const altId = React.useId();
+	const hasOne = useEditorState({
+		editor,
+		selector: ({ editor: current }): boolean => {
+			let found = false;
+			current?.state.doc.descendants((node): boolean => {
+				if (node.type.name === "image") {
+					found = true;
+				}
+				return !found;
+			});
+			return found;
+		},
+	});
+	const handleFile = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setFile(Array.from(event.currentTarget.files ?? []).at(0) ?? null);
+		setError(null);
+	}, []);
+	const handleAlt = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setAlt(event.currentTarget.value);
+	}, []);
+	const handleSubmit = React.useCallback(
+		async (event: React.SubmitEvent<HTMLFormElement>): Promise<void> => {
+			event.preventDefault();
+			if (file === null || alt.trim().length === 0) {
+				return;
+			}
+			setPending(true);
+			setError(null);
+			try {
+				const uploaded = await upload(file);
+				editor?.chain().focus().insertBroadcastImage({ fileId: uploaded.fileId, alt: alt.trim(), src: uploaded.src }).run();
+				setOpen(false);
+				setFile(null);
+				setAlt("");
+			} catch (caught) {
+				setError(caught instanceof Error ? caught.message : "The picture could not be uploaded. Try another one.");
+			} finally {
+				setPending(false);
+			}
+		},
+		[alt, editor, file, upload],
+	);
+	const handleFormSubmit = React.useCallback(
+		(event: React.SubmitEvent<HTMLFormElement>): void => {
+			void handleSubmit(event);
+		},
+		[handleSubmit],
+	);
+	const ready: boolean = file !== null && alt.trim().length > 0 && !pending;
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger
+				render={
+					<Toggle
+						size="sm"
+						pressed={false}
+						disabled={disabled || editor === null || hasOne === true}
+						aria-label="Add a picture"
+						className="h-8 min-w-8 px-1.5"
+						title={hasOne === true ? "A message holds one picture" : "Add a picture"}
+					/>
+				}>
+				<ImageIcon aria-hidden="true" />
+			</PopoverTrigger>
+			<PopoverContent align="start" aria-label="Add a picture">
+				<form className="flex flex-col gap-3" onSubmit={handleFormSubmit}>
+					<p className="text-sm font-medium">Add a picture</p>
+					<div className="flex flex-col gap-1.5">
+						<Label htmlFor={fileId}>Picture</Label>
+						<Input id={fileId} type="file" accept={accept} onChange={handleFile} />
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label htmlFor={altId}>Describe it (read aloud to people who can&apos;t see it)</Label>
+						<Input id={altId} value={alt} onChange={handleAlt} placeholder="e.g. A slice of chocolate cake" />
+					</div>
+					{error === null ? null : (
+						<p role="alert" className="text-sm text-destructive">
+							{error}
+						</p>
+					)}
+					<Button type="submit" size="sm" disabled={!ready}>
+						{pending ? "Uploading…" : "Add picture"}
+					</Button>
+				</form>
+			</PopoverContent>
+		</Popover>
+	);
+}
+
 export const RichTextEditor = Object.assign(RichTextEditorRoot, {
 	Toolbar,
 	ControlsGroup,
@@ -545,6 +658,7 @@ export const RichTextEditor = Object.assign(RichTextEditorRoot, {
 	Link,
 	Unlink,
 	CallToAction,
+	Picture,
 	Undo,
 	Redo,
 });

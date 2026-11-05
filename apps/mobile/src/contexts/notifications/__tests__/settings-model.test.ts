@@ -7,14 +7,14 @@ function cell(overrides: Partial<NotificationPreferenceCell> = {}): Notification
 }
 
 describe("the notification settings model", () => {
-	it("says why a channel is kept on, per kind, and what to do for one not available", () => {
+	it("gives every channel a subtitle: why it is kept on, what to do for one not available, or what the channel is", () => {
 		expect(channelNoteOf("SECURITY", cell({ locked: true }))).toBe("Always on, to keep your account safe");
 		expect(channelNoteOf("OPERATIONS", cell({ locked: true }))).toBe("Always on, so outages reach you at once");
 		expect(channelNoteOf("ACCOUNT", cell({ locked: true }))).toBe("Always on");
 		expect(channelNoteOf("MARKETING", cell({ channel: "PUSH", available: false, reason: "no-push-device" }))).toBe("Turn on notifications on this phone first");
-		expect(channelNoteOf("MARKETING", cell({ available: false, reason: null }))).toBeNull();
-		expect(channelNoteOf("MARKETING", cell())).toBeNull();
-		expect(channelNoteOf("MARKETING", cell({ enabled: false }))).toBeNull();
+		expect(channelNoteOf("MARKETING", cell({ available: false, reason: null }))).toBe("In the bell, in every app you use");
+		expect(channelNoteOf("MARKETING", cell())).toBe("In the bell, in every app you use");
+		expect(channelNoteOf("MARKETING", cell({ channel: "EMAIL", enabled: false }))).toBe("To your sign-in email address");
 	});
 
 	it("gives every channel its own symbol", () => {

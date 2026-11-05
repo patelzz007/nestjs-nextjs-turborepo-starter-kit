@@ -14,6 +14,7 @@ import type { UiKitLabels, UiKitLabelsOverride } from "@workspace/ui/lib/labels/
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { buildSidebarView, type SidebarMenuDataLike } from "@workspace/ui/lib/sidebar/menu-view";
 import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
+import { accessibilityViolations } from "../../testing/axe";
 
 /** The shell's mobile drawer, as `useSidebarControls()` reports it. */
 const mobile = vi.hoisted(() => ({ isMobile: false, setOpenMobile: vi.fn<(open: boolean) => void>() }));
@@ -143,6 +144,11 @@ afterEach((): void => {
 });
 
 describe("PanelSidebarNav", () => {
+	it("has no serious accessibility problems (enhancement 3.2)", async (): Promise<void> => {
+		render(<Harness pathname="/settings/general" />, { wrapper: UiKitTestProviders });
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+	});
+
 	it("renders the menu inside a named nav landmark and bottom items inside a second one", () => {
 		render(<Harness pathname="/" />, { wrapper: UiKitTestProviders });
 
@@ -165,14 +171,17 @@ describe("PanelSidebarNav", () => {
 		expect(screen.getByRole("link", { name: "General settings for the whole workspace" }).getAttribute("title")).toBe("General settings for the whole workspace");
 	});
 
-	it("renders branches as disclosure buttons that control their nested group", () => {
+	it("renders branches as disclosure buttons that control their nested list", () => {
 		const onToggleExpand = vi.fn<(itemId: string) => void>();
 		render(<Harness pathname="/" onToggleExpand={onToggleExpand} />, { wrapper: UiKitTestProviders });
 
 		const settings = screen.getByRole("button", { name: "Settings" });
 		expect(settings.getAttribute("aria-expanded")).toBe("false");
 		const group = document.getElementById(settings.getAttribute("aria-controls") ?? "");
-		expect(group?.getAttribute("role")).toBe("group");
+		// A real list (its items announced as "list, n items"), named by the branch it opens.
+		expect(group?.tagName).toBe("UL");
+		expect(group?.hasAttribute("role")).toBe(false);
+		expect(group?.getAttribute("aria-label")).toBe("Settings");
 		fireEvent.click(settings);
 		expect(onToggleExpand).toHaveBeenCalledWith("settings");
 	});

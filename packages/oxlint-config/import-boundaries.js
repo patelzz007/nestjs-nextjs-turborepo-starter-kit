@@ -269,7 +269,7 @@ export const backendImportBoundaryConfig = {
 
 // ── apps/api DDD layers (T10, docs/architecture/ddd-cqrs-migration-plan.md §12.1)
 
-/** The 14 bounded contexts (§6.1). */
+/** The bounded contexts (§6.1); payments joined with ADR 020 phase A, saved-views and feature-flags with 5.10 and 5.6 (2026-11-03). */
 export const DDD_CONTEXTS = [
 	"identity",
 	"authorization",
@@ -287,6 +287,13 @@ export const DDD_CONTEXTS = [
 	"integrations-github",
 	"kanban",
 	"operations",
+	"payments",
+	"privacy",
+	// Saved list views (enhancement 5.10) and runtime feature flags (5.6), 2026-11-03.
+	"saved-views",
+	"feature-flags",
+	// Inbound (ADR 081) and outbound (ADR 082) webhooks, enhancement 5.7 (2026-11-04).
+	"webhooks",
 ];
 
 const DOMAIN_PURITY_MESSAGE = "Domain is pure: no framework, no persistence, no outer layers (decision #6).";

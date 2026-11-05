@@ -3,7 +3,8 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as React from "react";
 
 import { ok, stubApi } from "../../../../../test/api-stub";
-import { createTestRuntime, markerScreen, renderInApp, TEST_API_URL, TEST_RAW_ENV, type TestRuntimeOverrides } from "../../../../../test/app-harness";
+import { createTestRuntime, markerScreen, renderInApp, TEST_API_URL, TEST_BUILD_IDENTITY, TEST_RAW_ENV, type TestRuntimeOverrides } from "../../../../../test/app-harness";
+import { formatBuildMoment } from "../../../../lib/build-identity";
 import { testAccessToken } from "../../../../../test/jwt";
 import { memorySecureStore } from "../../../../../test/secure-store-memory";
 import { savePreferences } from "../../../../features/preferences/persistence";
@@ -47,8 +48,24 @@ describe("Settings (§10.9)", () => {
 
 		expect(screen.getByRole("button", { name: "Appearance, System" })).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: "App lock, Off" })).toBeOnTheScreen();
+		expect(screen.getByLabelText("Build type: Development build")).toBeOnTheScreen();
 		expect(screen.getByLabelText("Version: 1.0.0")).toBeOnTheScreen();
 		expect(screen.getByLabelText(`API address: ${TEST_API_URL}`)).toBeOnTheScreen();
+	});
+
+	it("names a preview build and when its code was built, in the phone's time zone", async () => {
+		stubApi({});
+		const builtAt = new Date("2026-11-05T10:12:00Z");
+		await renderSettings(SETTINGS_SCREENS, "/settings", { build: { ...TEST_BUILD_IDENTITY, kind: "preview", runningUpdateCreatedAt: builtAt } });
+		expect(screen.getByLabelText("Build type: Preview build")).toBeOnTheScreen();
+		expect(screen.getByLabelText(`Built: ${formatBuildMoment(builtAt, "en")}`)).toBeOnTheScreen();
+	});
+
+	it("shows when a development build was installed, as it runs no update of its own", async () => {
+		stubApi({});
+		const installedAt = new Date("2026-11-04T09:30:00Z");
+		await renderSettings(SETTINGS_SCREENS, "/settings", { build: { ...TEST_BUILD_IDENTITY, readInstalledAt: (): Promise<Date | null> => Promise.resolve(installedAt) } });
+		expect(await screen.findByLabelText(`Installed: ${formatBuildMoment(installedAt, "en")}`)).toBeOnTheScreen();
 	});
 
 	it("hides the API address outside development", async () => {
@@ -141,8 +158,9 @@ describe("Appearance (§10.9)", () => {
 		expect(screen.getByRole("radio", { name: "System" })).toBeChecked();
 		await fireEvent.press(screen.getByRole("radio", { name: "Dark" }));
 
-		expect(applyTheme).toHaveBeenLastCalledWith("dark");
+		// Instant (6.7): the dot AND the theme answer the tap itself, with no wait for a frame or a fade.
 		expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
+		expect(applyTheme).toHaveBeenLastCalledWith("dark");
 		expect(within(screen.getByTestId("app-toast")).getByText("Theme set to Dark.")).toBeOnTheScreen();
 		expect(runtime.preferencesStore.getState().theme).toBe("dark");
 		await waitFor(() => {

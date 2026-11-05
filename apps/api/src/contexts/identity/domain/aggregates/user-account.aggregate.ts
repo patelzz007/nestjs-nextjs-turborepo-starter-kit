@@ -77,7 +77,9 @@ export type UserAccountChange =
 	/** Deactivates the account with the ban; compare-and-set on `previousTokenVersion` and on not being banned. */
 	| { readonly kind: "banned"; readonly ban: AccountBan; readonly previousTokenVersion: TokenVersion }
 	/** Re-activates the account; compare-and-set on the ban being the one that was loaded. */
-	| { readonly kind: "unbanned"; readonly bannedAt: EpochMs; readonly at: EpochMs };
+	| { readonly kind: "unbanned"; readonly bannedAt: EpochMs; readonly at: EpochMs }
+	/** The account becomes the tombstone (ADR 077); compare-and-set on `previousTokenVersion` and `erasedAt IS NULL`. */
+	| { readonly kind: "erased"; readonly tombstoneEmail: string; readonly unusablePasswordHash: string; readonly previousTokenVersion: TokenVersion; readonly at: EpochMs };
 
 /**
  * The account aggregate: credentials, lockout, email verification and the token generation.
@@ -322,6 +324,18 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 		this.changes.push({ kind: "unbanned", bannedAt: ban.bannedAt, at: now });
 		this.state = { ...this.state, isActive: true, ban: null, updatedAt: now };
 		this.record(new UserCredentialsChanged(this.state.id, "account_unbanned", now));
+	}
+
+	/**
+	 * Account erasure (ADR 077): the account becomes the tombstone that every id still points at. Its email is
+	 * replaced by an address that can never receive mail, its name by "Deleted user", every other personal value
+	 * and credential cleared, its password by a hash nothing matches; it is deactivated and its `tokenVersion`
+	 * moves, so no token it ever had works again.
+	 */
+	public eraseAsTombstone(tombstoneEmail: string, unusablePasswordHash: string, now: EpochMs): void {
+		this.changes.push({ kind: "erased", tombstoneEmail, unusablePasswordHash, previousTokenVersion: this.state.tokenVersion, at: now });
+		this.state = { ...this.state, isActive: false, tokenVersion: this.state.tokenVersion.next(), updatedAt: now };
+		this.record(new UserCredentialsChanged(this.state.id, "account_erased", now));
 	}
 
 	/** A provisioning flow (merchant onboarding of an existing account) refreshes the name. No change, no write. */

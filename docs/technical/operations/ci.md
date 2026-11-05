@@ -18,9 +18,34 @@ commit is what authorizes a merge, not "it passed on my machine". The workflow l
 
 | Trigger | Behaviour |
 | --- | --- |
-| Pull request (any branch) | Full pipeline. A new push to the same PR **cancels** the stale run. |
-| Push to `main` | Full pipeline. Runs are never cancelled, so `main` always has a verdict. |
-| Manual (`workflow_dispatch`) | Full pipeline on the chosen ref. |
+| Pull request (any branch) | Full pipeline, unless the PR changes **only documentation** (below). A new push to the same PR **cancels** the stale run. |
+| Push to `main` | Full pipeline, always. Runs are never cancelled, so `main` always has a verdict. |
+| Manual (`workflow_dispatch`) | Full pipeline on the chosen ref, always. |
+
+### Documentation-only pull requests
+
+The **Changes** job (`packages/tooling/scripts/ci-changes.mjs`) lists the files a pull request changes
+against its merge base. When **every** one is documentation, the jobs that can only prove something about
+code are **skipped** (GitHub counts a skipped job as passing):
+
+| Documentation | Still code |
+| --- | --- |
+| anything under `docs/` or `blog/` (the folders the docs site renders), and any `*.md` file | `docs/generated/` (the OpenAPI document the API's e2e suite checks against the code, and the docs build's API samples), and everything else, the docs site's own code included |
+
+| Runs for a documentation-only PR | Skipped |
+| --- | --- |
+| Lint, Build (it renders the docs site), Unit tests (docs), Secret scan, Docs link check | Typecheck, the other unit-test shards, RLS manifest, Dependency consistency, Migration history, Dependency audit, every e2e job |
+
+**Sharding the e2e job too** (enhancement 3.6's plan) is left until the sharded unit tests have run on
+GitHub: measured on 2026-11-02, the Database + API e2e job takes 11.5 min, of which the API suite is
+6.7 min and the development seed 4.4 min. Each e2e shard would need its own seeded database, so two
+shards save about 3 min; worth it only if this job turns out to be the longest one once the unit tests
+are split.
+
+Only the docs site reads documentation (no other workspace reads a Markdown file or `docs/`), which is
+what makes the skip safe. Skipping is only ever decided on positive evidence: a push, a manual run, a
+`git diff` that fails, or an empty list runs everything. The rule and its cases are unit-tested
+(`ci-changes.test.mjs`).
 
 The workflow token is **read-only** (`permissions: contents: read`), checkouts do not persist
 credentials, and every third-party action is pinned to a full commit SHA (the tag is in a trailing
@@ -35,7 +60,7 @@ them individually.
 | --- | --- | --- |
 | **Lint** | `turbo run lint` — in every workspace, `oxfmt --check` (formatting) then `oxlint` (rules, type-aware), zero errors | `pnpm lint` |
 | **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**`, `scripts/**` and tool configs (`tsconfig.json`) — Vitest itself never type-checks | `pnpm typecheck` |
-| **Unit tests** | `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own. Inside a suite, Vitest runs its files in parallel, one worker per core (the web, admin and merchant suites ran one file at a time until 2026-10-27: admin took 190 s instead of 46 s). A test must never depend on how fast the machine is: a component behind `next/dynamic` is preloaded in `beforeAll` (its first load is an on-demand Vite transform), never left to an async query's 1 s default wait | `pnpm test` |
+| **Unit tests (*shard*)** | Six runners at once, one **shard** each: `api`; `mobile` (mobile, ui-native); `web-apps` (admin, merchant, web); `ui` (ui, tokens, client); `docs` (docs, docs-renderer); `packages` (the rest). Each runs `turbo run test --concurrency=1` with its shard's `--filter`s; `ci-test-shards.test.mjs` fails when a workspace with a `test` script is in no shard, or in two. On one runner the suites took 16–19 min in a row (the API's alone is most of it); split, the longest shard sets the time. Locally `pnpm test` still runs them all in one step. Within a shard: `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own. Inside a suite, Vitest runs its files in parallel, one worker per core (the web, admin and merchant suites ran one file at a time until 2026-10-27: admin took 190 s instead of 46 s). A test must never depend on how fast the machine is: a component behind `next/dynamic` is preloaded in `beforeAll` (its first load is an on-demand Vite transform), never left to an async query's 1 s default wait | `pnpm test` |
 | **Build** | `turbo run build` — API bundle, all Next.js apps, docs site (which also link-checks), and the mobile app's bundle check (`expo export --platform ios --platform android` into `apps/mobile/dist`: proves Metro resolves every workspace package without Xcode or Android Studio) | `pnpm build` |
 | **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm tools db:check-rls-manifest` |
 | **Dependency consistency** | Shared dependencies (React, Zod, TypeScript, Next) use one version everywhere (syncpack); `apps/mobile` has its own groups for what Expo SDK 57 pins (React 19.2, React Native, Metro, Jest 29) | `pnpm tools deps:check` |
@@ -44,7 +69,7 @@ them individually.
 | **Secret scan (.env.example)** | No real-looking secrets in tracked `.env.example` files | `pnpm tools secrets:scan` |
 | **Docs link check** | Every internal link and anchor in `docs/` resolves | `pnpm tools docs:check-links` |
 | **Database + API e2e** | See below | See below |
-| **Browser e2e (Playwright — web + admin)** | Seeds a fresh Postgres, starts the API, web and admin apps, waits for `/health/ready`, then runs the web and admin Playwright suites in Chromium (admin login: the public seed SuperAdmin) | `pnpm ci:local --e2e-only` (runs it against a throwaway `<name>_ci_local_browser` database) |
+| **Browser e2e (Playwright — web, admin, merchant)** | Seeds a fresh Postgres, starts the API, web, admin and merchant apps, waits for `/health/ready` and each login page, then runs the web, admin and merchant Playwright suites in Chromium (admin login: the public seed SuperAdmin; merchant: the public seed store owner). Every suite includes an accessibility sweep (axe, serious and critical fail) | `pnpm ci:local --e2e-only` (runs it against a throwaway `<name>_ci_local_browser` database) |
 | **Analytics consumer e2e (Postgres + Kafka)** | Postgres (`postgres:18.6`) and Kafka (`apache/kafka:4.3.1`, KRaft, broker auto-create off) service containers; `pnpm tools db:deploy` (creates the `analytics_consumer` role), then `pnpm --filter @workspace/analytics-consumer test:e2e`: inbox idempotency, binary-safe parking, least-privilege role checks, retention + advisory locks, login provisioning, topic provisioning and the consumer start position. The consumer login password is random per run | `pnpm docker:up && pnpm tools db:deploy`, set `apps/analytics-consumer/.env`, then `pnpm --filter @workspace/analytics-consumer test:e2e` (also part of `pnpm test:e2e`) |
 
 The **Build** job sets the Next.js apps' public `NEXT_PUBLIC_*` config (local-dev origins, no
@@ -58,7 +83,16 @@ CI re-runs them independently because local environments drift.
 
 `pnpm ci:local` runs the same commands in the same order (lint, typecheck, test, build, RLS manifest, dependency consistency, migration history, audit, secret scan, docs links) and then the database jobs against **throwaway databases** (`<name>_ci_local`, `<name>_ci_local_shadow`) that it creates next to the one in `apps/api/.env`, migrates and seeds from scratch, and drops afterwards. A fresh database is what CI has, so state left behind by earlier local runs can no longer make a suite pass locally and fail in CI. **The same goes for configuration:** every API step reads the env CI itself writes, generated by one generator (`packages/tooling/scripts/lib/api-ci-env.mjs`, which `.github/actions/write-api-ci-env` also runs), one file per CI job's tenancy, under `.ci-logs/`. The API is pointed at it with `DOTENV_PATH`, which `dotenv run`, `dotenv/config` and every env loader in `apps/api` honour. Only infrastructure locations come from your machine (the database server, and Redis for the `e2e` job, as ci.yml sets `REDIS_URL` at job level). So a key or setting that only your `apps/api/.env` has can't make a step pass locally and fail in CI. That's exactly how the seed coverage check once passed locally and failed in CI: the developer's file had `NOTIFICATIONS_ENCRYPTION_KEYS`, CI's didn't, and without it the seed writes no push devices. The analytics consumer keeps its own `apps/analytics-consumer/.env`. Flags: `--skip-e2e`, `--e2e-only`, `--errors-only` (only failing tasks print their logs), `--only <ids>` (just these non-database steps, e.g. `--only lint,typecheck,test` — what the pre-push hook runs; an unknown id is an error), `--no-cache` (bypass the Turborepo cache), `--base <ref>` (default `origin/main`). A run with `--skip-e2e` / `--e2e-only` reports the skipped part as FAIL: it is not a full CI run. The summary lists every step with its duration, then the total, so the slow part of a run is visible at a glance. The analytics-consumer suite additionally needs `pnpm docker:up` (Kafka) and `apps/analytics-consumer/.env`.
 
-The plan lives in `packages/tooling/scripts/lib/ci-local-plan.mjs`; its test asserts every command appears in `ci.yml`, so the two cannot drift apart silently.
+The plan lives in `packages/tooling/scripts/lib/ci-local-plan.mjs`. Two tests keep it honest:
+
+| Test | Fails when |
+|---|---|
+| `ci-local-plan.test.mjs` | A key command, the build env or the browser env differs from `ci.yml` |
+| `ci-workflow-parity.test.mjs` (enhancement 7.9) | It **parses `ci.yml`**: any `run:` command of any job has no local twin; the plan runs something CI doesn't; a variable CI sets (on a step, or on its job) is set nowhere locally; or a listed exception is no longer needed |
+
+A CI command that genuinely can't run locally goes on that test's `CI_ONLY` list with the reason, a twin that differs
+on purpose on `DIFFERENT_TWINS`, and a variable that reaches the step another way on `ENV_FROM_ELSEWHERE`. The reason
+is the review.
 
 ### Database + API e2e
 
@@ -106,6 +140,29 @@ pnpm --filter @workspace/api db:check-seed-coverage
 pnpm test:e2e
 ```
 
+## Coverage floors
+
+Every Vitest package's `test` script runs with `--coverage` (V8), and its config sets **floors** for lines,
+statements, functions and branches, measured on 2026-11-03 and set just below. `pnpm test` (and so the
+*Unit tests* job and `ci:local`) fails when a package drops below its floor. Raise a floor when you add
+tests; never lower one without review. `packages/tooling/__tests__/coverage-floors.test.mjs` fails when a
+Vitest package has no floors. A single-file `pnpm exec vitest run <file>` doesn't measure, so it stays fast.
+The phone app and `ui-native` (Jest) set theirs in `jest.config.js` (`coverageThreshold`).
+
+## API breaking changes
+
+`.github/workflows/api-contract.yml` runs on pull requests that change `docs/generated/openapi.json`:
+oasdiff compares it with the target branch's document and fails on breaking changes (a removed endpoint
+or response field, a new required request field, a narrowed type). Phones in the field call the API
+version they shipped with, so a break must be deliberate: add the label `api-breaking-approved` to waive
+it, and write the migration in the changelog's *Upgrade notes*. Locally:
+`docker run --rm -v "$PWD:/w" -w /w tufin/oasdiff breaking <base.json> docs/generated/openapi.json`.
+
+## Deploys
+
+After CI passes on `main`, the separate **Deploy** workflow (`.github/workflows/deploy.yml`, ADR 075) ships
+the commit to the Droplet: [Deploying to DigitalOcean](./digitalocean-deployment.md).
+
 ## Migration baseline
 
 `apps/api/prisma/migrations-baseline.json` names the oldest migration that is still history:
@@ -147,9 +204,12 @@ The guard (`packages/tooling/scripts/check-migration-history.mjs`, rules in `scr
   everything else depends on those packages, and a stale replay of them hid real failures.
   Task hashes include each task's declared `env` (Turborepo strict env mode), so CI and local
   builds never share outputs built with different configuration.
-- Remote Caching (Vercel or self-hosted) is **not** configured. Enabling it later only needs
-  `TURBO_TOKEN` / `TURBO_TEAM` on the turbo jobs — see the installed Turborepo docs
-  (`docs/guides/ci-vendors/github-actions.mdx` inside the `turbo` package).
+- Remote Caching (Vercel or self-hosted) is **not** configured, on purpose: it would let a result
+  recorded for another commit stand in for this one, which the rule above forbids. Enhancement 3.6
+  (shorter CI) got its time back from sharding the unit tests and skipping code jobs on
+  documentation-only pull requests instead. Enabling a remote cache would be a decision to revisit
+  this rule (it also needs a `TURBO_TOKEN` / `TURBO_TEAM` from an outside account; see the installed
+  Turborepo docs, `docs/guides/ci-vendors/github-actions.mdx` inside the `turbo` package).
 
 ## Toolchain versions
 
@@ -211,3 +271,22 @@ pushes (`rules/13-ci-cd-and-quality-gates.md`, "Required status checks").
 | **Dependency audit** | New high/critical advisories, even in weeks with no pushes | `pnpm audit --audit-level=high` |
 
 Push CI only checks that every exception is **well-formed** (a written reason and a valid date — `packages/tooling/__tests__/dependency-exceptions.test.mjs`), so a calendar day passing never turns a push red. When the weekly run fails, follow the printed action (upgrade and delete an accepted advisory once a fix exists, or move its review-by date after re-checking it is still unreachable; delete a cooldown exception once its version is mature), then re-run the workflow.
+
+## Load test (nightly)
+
+`.github/workflows/load-nightly.yml` runs every night at 20:00 UTC (and on demand via *Run workflow*):
+a short load test against a CI-sized deployment on one runner (the production-built API, PostgreSQL,
+Redis and the load runner with k6, seeded with the `development` data), held to a **p95 threshold per
+endpoint group** (auth, marketplace, claims, merchant) and an error-rate ceiling, both in
+`load-baselines.json` at the repository root (enhancement 3.9). It is not part of push CI: a load test
+takes minutes and a shared runner's timings vary, so it reports nightly instead of blocking a merge.
+
+| Step | Command |
+|---|---|
+| Start the run through the API (as the seeded Platform Developer) and save its results | `pnpm tools load:run -- --api-url http://localhost:8080 --out .ci-logs/load-baseline.json` |
+| Compare with `load-baselines.json` (the table goes to the job summary) | `pnpm tools load:check -- --results .ci-logs/load-baseline.json --summary "$GITHUB_STEP_SUMMARY"` |
+| Recalibrate from a nightly artifact (measured p95 × 2) | `pnpm tools load:check -- --results <file> --write-baseline --source "load-nightly run <id>"` |
+
+The groups, what fails the job and how to recalibrate are in `apps/load-runner/README.md`. The committed
+thresholds are provisional (measured on a laptop, not the runner) until the first green nightly is used
+to recalibrate them.

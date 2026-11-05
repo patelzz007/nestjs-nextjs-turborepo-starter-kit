@@ -56,7 +56,7 @@ interface ReviewActors {
 }
 
 async function requireUserId(email: string): Promise<string> {
-	const user = await prisma.user.findUniqueOrThrow({ where: { email }, select: { id: true } });
+	const user = await prisma.user.findUniqueOrThrow({ where: { email, isDeleted: false }, select: { id: true } });
 	return user.id;
 }
 
@@ -205,7 +205,7 @@ async function seedRejectedLocationRequest(actors: ReviewActors, now: number): P
 	const requestedAt = now - 14 * DAY_MS;
 	const reviewedAt = requestedAt + 2 * DAY_MS;
 	await prisma.location.upsert({
-		where: { tenantId_code: { tenantId: TENANT_SEED_IDS.mlkTenant, code: "taman-desa-rejected" } },
+		where: { id: locationId },
 		create: {
 			id: locationId,
 			tenantId: TENANT_SEED_IDS.mlkTenant,
@@ -356,7 +356,7 @@ async function seedLifecycleTenant(spec: LifecycleTenant, platformAdminId: strin
 
 	const ownerId = id(`user:${spec.key}:owner`);
 	const owner = await prisma.user.upsert({
-		where: { email: spec.owner.email },
+		where: { id: ownerId },
 		create: {
 			id: ownerId,
 			email: spec.owner.email,
@@ -405,7 +405,7 @@ async function seedLifecycleTenant(spec: LifecycleTenant, platformAdminId: strin
 	await prisma.tenantPlacement.upsert({ where: { tenantId }, create: { tenantId, kind: "SHARED", regionCode: "default", createdAt: provisionedAt }, update: {} });
 	const locationId = id(`location:${spec.key}:primary`);
 	await prisma.location.upsert({
-		where: { tenantId_code: { tenantId, code: "primary" } },
+		where: { id: locationId },
 		create: {
 			id: locationId,
 			tenantId,
@@ -591,7 +591,7 @@ async function seedSuspensionAppeals(key: string, tenantId: string, ownerId: str
 async function seedDeletedUser(now: number): Promise<void> {
 	const removedAt = now - 60 * DAY_MS;
 	await prisma.user.upsert({
-		where: { email: "former.employee@example.com" },
+		where: { id: id("user:former-employee") },
 		create: {
 			id: id("user:former-employee"),
 			email: "former.employee@example.com",
@@ -614,7 +614,7 @@ async function seedBannedUser(platformAdminId: string, now: number): Promise<voi
 	const bannedAt = now - 9 * DAY_MS;
 	const ban = { isActive: false, bannedAt, bannedByUserId: platformAdminId, banReason: "Repeated chargeback fraud reported by three merchants." };
 	await prisma.user.upsert({
-		where: { email: "banned.customer@example.com" },
+		where: { id: id("user:banned-customer") },
 		create: {
 			id: id("user:banned-customer"),
 			email: "banned.customer@example.com",

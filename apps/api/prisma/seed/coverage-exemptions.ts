@@ -61,10 +61,25 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		"TenantLifecycleEvent",
 		"PasswordHistory",
 		"RewardAuditLog",
+		"PaymentEvent",
+		"RetentionRun",
+		"OpsRestoreDrill",
+		"StatusIncidentUpdate",
 	].map((table: string): SeedCoverageExemption => neverSoftDeleted(table, APPEND_ONLY_RECORD)),
-	...["GithubWebhookDelivery", "InboxDeadLetter", "InboxProcessedEvent", "OutboxEvent", "PlatformResourceIdempotencyRecord"].map((table: string): SeedCoverageExemption =>
-		neverSoftDeleted(table, DELIVERY_BOOKKEEPING),
-	),
+	// A legal hold ends by being lifted (`liftedAt`, `liftedByUserId`: both seeded), never deleted (ADR 078).
+	// An erasure request ends as CANCELLED or COMPLETED, never deleted: it is the evidence (ADR 077).
+	neverSoftDeleted("AccountErasure", "An erasure request ends as cancelled or completed, never deleted: it is the evidence it was asked for and carried out."),
+	neverSoftDeleted("AuditLegalHold", "A legal hold is lifted, never deleted: the record of who held what, and why, stays."),
+	...[
+		"GithubWebhookDelivery",
+		"InboxDeadLetter",
+		"InboxProcessedEvent",
+		"OutboxEvent",
+		"PlatformResourceIdempotencyRecord",
+		"ReceivedWebhook",
+		"WebhookDelivery",
+		"WebhookEvent",
+	].map((table: string): SeedCoverageExemption => neverSoftDeleted(table, DELIVERY_BOOKKEEPING)),
 	neverSoftDeleted(
 		"DataChangeGroup",
 		"The change trail's per-group index, written and updated only by its trigger on DataChangeLog (itself append-only); no endpoint, job or admin action soft-deletes a group.",
@@ -166,6 +181,10 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 	neverSoftDeleted(
 		"KanbanTaskComment",
 		"A task comment is written once and kept as the task's discussion record; no endpoint or job edits or soft-deletes one (a deleted task hides its comments with it).",
+	),
+	neverSoftDeleted(
+		"WebAuthnChallenge",
+		"A passkey ceremony's challenge ends through consumedAt or expiresAt, and the maintenance job purges stale ones outright (ADR 080); nothing soft-deletes one.",
 	),
 	neverSoftDeleted("TwoFactorLoginChallenge", "A login challenge ends through consumedAt or expiresAt and is kept for the sign-in audit; nothing soft-deletes one."),
 	neverSoftDeleted(

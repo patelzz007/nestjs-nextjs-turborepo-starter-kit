@@ -1,4 +1,5 @@
-/* Admin panel — layout chrome only; every colour comes from the shared palette (packages/tokens, generated into web.css). */
+/* Admin panel — layout chrome only; every colour comes from the shared palette (packages/tokens, generated into web.css;
+   the admin's graphite dark theme is written there too, under `.dark .admin-app`: ADMIN_THEME_OVERRIDES). */
 
 .admin-app .admin-shell-divider-b {
 	border-bottom: 1px solid var(--sidebar-border);

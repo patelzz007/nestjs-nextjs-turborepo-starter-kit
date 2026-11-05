@@ -14,6 +14,7 @@ import type { AnalyticsRangePickerLabels } from "../../components/analytics-rang
 import type { AuthLayoutLabels } from "../../components/auth-layout";
 import type { CodeBlockLabels } from "../../components/code-block";
 import type { ColorPickerLabels } from "../../components/color-picker-context";
+import type { DatePickerLabels } from "../../components/date-picker";
 import type { DateSelectorLabels } from "../../components/date-selector";
 import type { ComboboxLabels } from "../../components/combobox-context";
 import type { ImageCropperLabels } from "../../components/image-cropper";
@@ -85,6 +86,11 @@ export interface ShellThemeToggleLabels {
 	readonly system: string;
 }
 
+export interface ShellLanguageToggleLabels {
+	/** Accessible name of the language menu button. */
+	readonly toggle: string;
+}
+
 export interface ScrollToTopLabels {
 	/** Accessible name of the button. */
 	readonly label: string;
@@ -106,6 +112,7 @@ export interface UiKitLabels {
 	readonly combobox: ComboboxLabels;
 	readonly dataGrid: DataGridLabels;
 	readonly dataTable: DataTableLabels;
+	readonly datePicker: DatePickerLabels;
 	readonly dateSelector: DateSelectorLabels;
 	readonly imageCropper: ImageCropperLabels;
 	readonly imageResizer: ImageResizerLabels;
@@ -125,6 +132,7 @@ export interface UiKitLabels {
 	readonly select: SelectLabels;
 	readonly sheet: SheetLabels;
 	readonly shellThemeToggle: ShellThemeToggleLabels;
+	readonly shellLanguageToggle: ShellLanguageToggleLabels;
 	readonly sidebar: SidebarLabels;
 	readonly skeletonRegion: SkeletonRegionLabels;
 	readonly timePicker: TimePickerLabels;

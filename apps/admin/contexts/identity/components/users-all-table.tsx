@@ -13,6 +13,7 @@ import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { toUsersListQuery, USERS_PAGE_SIZE_OPTIONS, USERS_TABLE_URL_STATE } from "@/contexts/identity/url-state/users";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
+import { SavedViewsMenu } from "@/contexts/saved-views";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -273,13 +274,16 @@ export default function UsersAllTable({
 
 	const toolbarContent = React.useMemo(
 		() => (
-			<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+			<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
 				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={USER_SEARCH_PLACEHOLDER} />
 				<div className="w-full sm:max-w-xs">
 					<Label htmlFor={REFERRER_FILTER_ID} className="sr-only">
 						Referred by
 					</Label>
 					<ReferrerPicker id={REFERRER_FILTER_ID} value={urlState.referrerId ?? ""} onChange={handleReferrerChange} />
+				</div>
+				<div className="sm:ms-auto">
+					<SavedViewsMenu listKey="admin.users" />
 				</div>
 			</div>
 		),

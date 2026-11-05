@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveWebTrail } from "@/lib/navigation/breadcrumb";
+import { translateSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
+import { USER_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
+import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { rewardDetailPath, ROUTES, walletClaimPath } from "@/lib/routes";
 
 interface Crumb {
@@ -74,5 +77,13 @@ describe("resolveWebTrail — every signed-in page", () => {
 
 	it("has no trail on the full-screen auth pages", () => {
 		expect(resolveWebTrail(ROUTES.auth.login)).toEqual([]);
+	});
+});
+
+describe("resolveWebTrail in another language (enhancement 5.12)", () => {
+	it("names every crumb as the translated sidebar does, keeping the links", () => {
+		const tamil = resolveWebTrail(ROUTES.dashboard.browse, translateSidebarMenu(USER_SIDEBAR_MENU, USER_SIDEBAR_LABELS, "ta"), "ta");
+		expect(tamil.map((crumb) => crumb.href)).toEqual(resolveWebTrail(ROUTES.dashboard.browse).map((crumb) => crumb.href));
+		expect(tamil.map((crumb) => crumb.label)).toEqual([USER_SIDEBAR_LABELS.ta["rewards.browse-rewards"]]);
 	});
 });

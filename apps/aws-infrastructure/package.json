@@ -10,7 +10,7 @@
 		"synth": "cdk synth",
 		"deploy": "cdk deploy --all",
 		"diff": "cdk diff",
-		"test": "vitest run",
+		"test": "vitest run --coverage",
 		"typecheck": "tsrs --noEmit -p tsconfig.json",
 		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\""

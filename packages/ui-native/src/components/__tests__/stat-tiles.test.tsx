@@ -14,8 +14,20 @@ describe("StatTiles", () => {
 		await render(<StatTiles items={ITEMS} />);
 
 		expect(screen.getByLabelText("Stars: 1,204")).toBeOnTheScreen();
+		expect(screen.getByText("1,204")).toHaveProp("className", expect.stringContaining("text-xl"));
+	});
+
+	it("stands its figures on the surface by default, with no box of their own", async () => {
+		await render(<StatTiles items={ITEMS} />);
+
+		expect(screen.getByLabelText("Forks: 7")).not.toHaveProp("className", expect.stringContaining("bg-muted"));
+		expect(screen.getByLabelText("Forks: 7")).not.toHaveProp("className", expect.stringContaining("border"));
+	});
+
+	it("fills each tile softly in the muted variant", async () => {
+		await render(<StatTiles items={ITEMS} variant="muted" />);
+
 		expect(screen.getByLabelText("Forks: 7")).toHaveProp("className", expect.stringContaining("bg-muted"));
-		expect(screen.getByText("1,204")).toHaveProp("className", expect.stringContaining("text-lg"));
 	});
 
 	it("has an outline variant and a compact size", async () => {
@@ -32,6 +44,6 @@ describe("StatTiles", () => {
 		expect(ref.current).not.toBeNull();
 		const className = String(screen.getByTestId("tiles").props.className);
 		expect(className).toContain("gap-4");
-		expect(className).not.toContain("gap-2");
+		expect(className).not.toContain("gap-x-6");
 	});
 });

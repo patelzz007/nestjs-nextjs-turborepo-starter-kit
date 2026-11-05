@@ -7,7 +7,15 @@
 //   - Data Mapper: rows (BigInt epochs and byte counts) are mapped to the shared contract shapes
 //     (numbers, branded `EpochMs`) here, and nowhere else.
 
-import type { LoadTestRun as LoadTestRunRow, OpsAlert as OpsAlertRow, OpsBackup as OpsBackupRow, OpsServer as OpsServerRow, Prisma } from "@prisma/client";
+import type {
+	LoadTestRun as LoadTestRunRow,
+	OpsAlert as OpsAlertRow,
+	OpsBackup as OpsBackupRow,
+	OpsRestoreDrill as OpsRestoreDrillRow,
+	OpsServer as OpsServerRow,
+	Prisma,
+} from "@prisma/client";
+import { z } from "zod";
 import {
 	epochMs,
 	LOAD_TEST_DEFAULT_CAPS,
@@ -50,6 +58,9 @@ import type {
 	OpsServerRepository,
 	OpsSettingsRecord,
 	OpsSettingsRepository,
+	NewOpsRestoreDrill,
+	OpsRestoreDrillRecord,
+	OpsRestoreDrillRepository,
 } from "../../application/ports/operations-repositories.port";
 
 type Db = Prisma.TransactionClient;
@@ -661,6 +672,11 @@ export class PrismaOpsBackupRepository implements OpsBackupRepository {
 		return this.withNames(await this.db.opsBackup.findMany({ where: LIVE, orderBy: { createdAt: "desc" }, take: BACKUP_LIST_LIMIT }));
 	}
 
+	public async latestSucceeded(): Promise<OpsBackupRecord | null> {
+		const row = await this.db.opsBackup.findFirst({ where: { status: "SUCCEEDED", ...LIVE }, orderBy: { finishedAt: "desc" } });
+		return row === null ? null : ((await this.withNames([row])).at(0) ?? null);
+	}
+
 	public async find(backupId: string): Promise<OpsBackupRecord | null> {
 		const row = await this.db.opsBackup.findFirst({ where: { id: backupId, ...LIVE } });
 		return row === null ? null : ((await this.withNames([row])).at(0) ?? null);
@@ -904,5 +920,47 @@ export class PrismaLoadTestRepository implements LoadTestRepository {
 		const users = ids.length === 0 ? [] : await this.db.user.findMany({ where: { id: { in: ids } }, select: { id: true, fullName: true } });
 		const names = new Map<string, string>(users.map((user): [string, string] => [user.id, user.fullName]));
 		return rows.map((row) => toRun(row, names.get(row.requestedById) ?? "Unknown"));
+	}
+}
+
+const DrillFailuresSchema = z.array(z.string());
+
+function toRestoreDrill(row: OpsRestoreDrillRow): OpsRestoreDrillRecord {
+	return {
+		id: row.id,
+		backupId: row.backupId,
+		startedAt: epoch(row.startedAt),
+		finishedAt: epoch(row.finishedAt),
+		outcome: row.outcome,
+		tablesChecked: row.tablesChecked,
+		rowsRestored: Number(row.rowsRestored),
+		failures: DrillFailuresSchema.parse(row.failures),
+		migration: row.migration,
+	};
+}
+
+/** The restore drills' log (enhancement 2.6): append-only. */
+export class PrismaOpsRestoreDrillRepository implements OpsRestoreDrillRepository {
+	public constructor(private readonly db: Db) {}
+
+	public async record(drill: NewOpsRestoreDrill): Promise<OpsRestoreDrillRecord> {
+		return toRestoreDrill(
+			await this.db.opsRestoreDrill.create({
+				data: {
+					backupId: drill.backupId,
+					startedAt: BigInt(drill.startedAt),
+					finishedAt: BigInt(drill.finishedAt),
+					outcome: drill.outcome,
+					tablesChecked: drill.tablesChecked,
+					rowsRestored: BigInt(drill.rowsRestored),
+					failures: [...drill.failures],
+					migration: drill.migration,
+				},
+			}),
+		);
+	}
+
+	public async recent(limit: number): Promise<readonly OpsRestoreDrillRecord[]> {
+		return (await this.db.opsRestoreDrill.findMany({ where: LIVE, orderBy: { startedAt: "desc" }, take: limit })).map(toRestoreDrill);
 	}
 }

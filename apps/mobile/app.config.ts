@@ -5,36 +5,22 @@
 // never bundled into the app. Products built on the starter rename the app by
 // setting the MOBILE_* variables, never by editing this file
 // (docs/technical/mobile/mobile-app.md §9.3, docs/technical/configuration/frontend.md).
-// Every value is validated with zod; a wrong one stops `expo start` / `expo export`
-// with the variable's name.
+// Every variable it uses is read and validated once, by build-env/app-config-env.ts (the build's
+// twin of src/lib/env.ts); a wrong one stops `expo start` / `expo export` with the variable's name.
 
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import { z } from "zod";
 
 import generatedLaunchColors from "./assets/launch-colors.json";
+// With its extension: Expo's config loader (Node, not Metro) resolves only explicit `.ts` paths from here.
+import { passkeyAssociatedDomains, readAppConfigEnv } from "./build-env/app-config-env.ts";
 
 /**
  * The app's own semantic version, sent as `X-App-Version` on every request
  * (ADR 033). Raise it with every store release; the API's
  * `MOBILE_MIN_SUPPORTED_VERSION` is compared against it.
  */
-const APP_VERSION = "1.0.0";
-
-/** Longest display name the home screens of both platforms show without truncating. */
-const APP_NAME_MAX_LENGTH = 30;
-
-/** An Expo slug: lower-case letters, digits and dashes. */
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-/**
- * A bundle id valid on BOTH platforms: reverse-DNS segments of letters and
- * digits, each starting with a letter (Android package names forbid dashes,
- * iOS bundle ids forbid underscores — neither is allowed here).
- */
-const BUNDLE_ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)+$/;
-
-/** A URL scheme (RFC 3986): a letter, then letters, digits, `+`, `-` or `.`. */
-const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/;
+const APP_VERSION = "1.0.1";
 
 /** What iOS shows when the app lock first asks for Face ID (real builds only; Expo Go cannot use Face ID). */
 const FACE_ID_PERMISSION = "Allow $(PRODUCT_NAME) to use Face ID to unlock the app.";
@@ -49,44 +35,6 @@ const PHOTOS_PERMISSION = "Allow $(PRODUCT_NAME) to attach your photos to the co
  * scanner ask for it the moment the scanner opens.
  */
 const CAMERA_PERMISSION = "Allow $(PRODUCT_NAME) to use the camera to scan QR codes.";
-
-const AppIdentityEnvSchema = z.object({
-	MOBILE_APP_NAME: z.string().trim().min(1).max(APP_NAME_MAX_LENGTH).default("Starter"),
-	MOBILE_APP_SLUG: z.string().regex(SLUG_PATTERN, "must be lower-case letters, digits and dashes").default("starter"),
-	MOBILE_BUNDLE_ID: z.string().regex(BUNDLE_ID_PATTERN, "must be reverse-DNS segments of letters and digits, e.g. com.example.starter").default("com.example.starter"),
-	MOBILE_SCHEME: z.string().regex(SCHEME_PATTERN, "must be a URL scheme: a lower-case letter, then letters, digits, +, - or .").default("starter"),
-});
-
-type AppIdentityEnv = z.output<typeof AppIdentityEnvSchema>;
-
-function readAppIdentity(): AppIdentityEnv {
-	const parsed = AppIdentityEnvSchema.safeParse({
-		MOBILE_APP_NAME: process.env.MOBILE_APP_NAME,
-		MOBILE_APP_SLUG: process.env.MOBILE_APP_SLUG,
-		MOBILE_BUNDLE_ID: process.env.MOBILE_BUNDLE_ID,
-		MOBILE_SCHEME: process.env.MOBILE_SCHEME,
-	});
-	if (!parsed.success) {
-		const problems = parsed.error.issues.map((issue): string => `${issue.path.join(".")}: ${issue.message}`).join("; ");
-		throw new Error(`Invalid mobile app identity (apps/mobile/app.config.ts) — ${problems}`);
-	}
-	return parsed.data;
-}
-
-/**
- * `EXPO_PUBLIC_ALLOW_LAN_HTTP_API`: a test APK that talks to the API on the developer's machine over
- * the LAN in plain http (config-plugins/lan-http-api.ts, src/lib/env.ts). Read here because the
- * permission is written into the generated manifest at prebuild. `true`, `false` or unset.
- */
-const LanHttpApiEnvSchema = z.object({ EXPO_PUBLIC_ALLOW_LAN_HTTP_API: z.enum(["true", "false"]).optional() });
-
-function readLanHttpApiEnabled(): boolean {
-	const parsed = LanHttpApiEnvSchema.safeParse({ EXPO_PUBLIC_ALLOW_LAN_HTTP_API: process.env.EXPO_PUBLIC_ALLOW_LAN_HTTP_API?.trim() || undefined });
-	if (!parsed.success) {
-		throw new Error("Invalid EXPO_PUBLIC_ALLOW_LAN_HTTP_API (apps/mobile/app.config.ts) — must be true or false, or left unset");
-	}
-	return parsed.data.EXPO_PUBLIC_ALLOW_LAN_HTTP_API === "true";
-}
 
 /**
  * The launch assets, generated from the brand mark and the `splash` colour
@@ -111,22 +59,20 @@ function readLaunchColors(): LaunchColors {
 }
 
 /**
- * Firebase's Android config for direct FCM push (ADR 070): the path in `GOOGLE_SERVICES_JSON` (EAS's
- * file-secret convention; locally e.g. `./google-services.json`, never committed —
- * `google-services.example.json` shows its shape). Unset, the build has no FCM and the app simply
- * registers no push device.
+ * Crash reporting (enhancement 6.2): Firebase Crashlytics, in a build given Firebase's config. Without it the
+ * build has no Crashlytics and the app reports nothing (exactly as before).
  */
-const GoogleServicesEnvSchema = z.object({ GOOGLE_SERVICES_JSON: z.string().min(1).optional() });
-
-function googleServicesFile(): string | undefined {
-	return GoogleServicesEnvSchema.parse({ GOOGLE_SERVICES_JSON: process.env.GOOGLE_SERVICES_JSON?.trim() || undefined }).GOOGLE_SERVICES_JSON;
-}
+const FIREBASE_CRASH_REPORTING_PLUGINS: readonly string[] = ["@react-native-firebase/app", "@react-native-firebase/crashlytics"];
 
 export default function appConfig({ config }: ConfigContext): ExpoConfig {
-	const identity = readAppIdentity();
+	const identity = readAppConfigEnv();
 	const launchColors = readLaunchColors();
-	const lanHttpApi = readLanHttpApiEnabled();
-	const firebaseConfig = googleServicesFile();
+	const lanHttpApi = identity.EXPO_PUBLIC_ALLOW_LAN_HTTP_API;
+	// Firebase's Android (FCM push, ADR 070) and iOS (crash reporting, 6.2) config files, when the build has them.
+	const firebaseConfig = identity.GOOGLE_SERVICES_JSON;
+	const firebaseIosConfig = identity.GOOGLE_SERVICES_PLIST;
+	// The iOS passkey entitlement (ADR 080): `webcredentials:<MOBILE_PASSKEY_DOMAIN>`, or none.
+	const associatedDomains = passkeyAssociatedDomains(identity.MOBILE_PASSKEY_DOMAIN);
 	// The same slate splash in light and dark: launching looks the same whatever the theme.
 	const splash = { image: SPLASH_IMAGE, imageWidth: SPLASH_IMAGE_WIDTH, backgroundColor: launchColors.backgroundColor, resizeMode: "contain" };
 	return {
@@ -141,9 +87,15 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 		userInterfaceStyle: "automatic",
 		// The three Next.js apps cover the browser; the Expo web target is off (§2, decision 2).
 		platforms: ["ios", "android"],
+		// The React Compiler memoizes every component and hook of the app and the UI kit (not node_modules):
+		// a parent's re-render no longer re-renders children whose props did not change. The code already
+		// follows its rules (the `react-hooks-js` lint rules run in CI).
+		experiments: { ...config.experiments, reactCompiler: true },
 		ios: {
 			bundleIdentifier: identity.MOBILE_BUNDLE_ID,
 			supportsTablet: true,
+			...(associatedDomains.length === 0 ? {} : { associatedDomains }),
+			...(firebaseIosConfig === undefined ? {} : { googleServicesFile: firebaseIosConfig }),
 		},
 		android: {
 			package: identity.MOBILE_BUNDLE_ID,
@@ -165,6 +117,8 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 			"./config-plugins/release-keep-rules.ts",
 			// No yellow autofill highlight over a filled-in field, in any theme (Android draws it, not the app).
 			"./config-plugins/autofill-highlight.ts",
+			// Over-the-air updates (6.3): EAS Update on a channel per build, once EAS_PROJECT_ID is set.
+			["./config-plugins/over-the-air-updates.ts", { projectId: identity.EAS_PROJECT_ID }],
 			// A LAN test APK only: plain http to the developer's machine (off, and https-only, in every other build).
 			["./config-plugins/lan-http-api.ts", { enabled: lanHttpApi }],
 			["expo-splash-screen", { ...splash, dark: splash }],
@@ -173,6 +127,7 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 			"expo-sharing",
 			// Push (ADR 070): FCM on Android, APNs on iOS; the app asks for permission after its own primer.
 			["expo-notifications", { color: launchColors.backgroundColor }],
+			...(firebaseConfig === undefined ? [] : FIREBASE_CRASH_REPORTING_PLUGINS),
 		],
 	};
 }

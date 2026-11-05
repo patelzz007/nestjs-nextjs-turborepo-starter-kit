@@ -42,7 +42,7 @@ describe("system-operation scopes", () => {
 		const sql: string = buildSystemOperationScopesSql({ "outbox.publish": { scope: { kind: "tables", tables: ["OutboxEvent"] } } }, KNOWN);
 
 		expect(sql).toMatch(/ELSE false\s+END;/);
-		expect(sql).toContain("SELECT app_rls_bypass() AND CASE app_system_operation()");
+		expect(sql).toContain("SELECT public.app_rls_bypass() AND CASE public.app_system_operation()");
 	});
 
 	it("refuses a table the RLS manifest does not know, naming the operation", () => {

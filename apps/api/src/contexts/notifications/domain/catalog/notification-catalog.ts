@@ -16,6 +16,7 @@ import {
 	SIGNUP_REFERRAL_SUCCESS_NOTIFICATION,
 } from "./types/rewards.types";
 import { NEW_SIGN_IN_NOTIFICATION, PASSWORD_CHANGED_NOTIFICATION, PHONE_CODE_NOTIFICATION } from "./types/security.types";
+import { WEBHOOK_ENDPOINT_AUTO_DISABLED_NOTIFICATION } from "./types/webhooks.types";
 
 /** The time zone a person without their own is read in. */
 export const DEFAULT_NOTIFICATION_TIME_ZONE: string = PLATFORM_DISPLAY_REGION.timeZone;
@@ -33,6 +34,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationType[] = [
 	BROADCAST_MESSAGE_NOTIFICATION,
 	TEST_NOTIFICATION,
 	OPERATIONS_ALERT_NOTIFICATION,
+	WEBHOOK_ENDPOINT_AUTO_DISABLED_NOTIFICATION,
 ];
 
 export class UnknownNotificationTypeError extends Error {

@@ -1,4 +1,7 @@
-import { Global, Module, type OnModuleInit } from "@nestjs/common";
+import { Global, Inject, Module, type OnModuleInit } from "@nestjs/common";
+
+import { CLOCK, type Clock } from "../../platform/application/clock.port";
+import type { CredentialCryptoPort } from "./application/ports/credential-crypto.port";
 import { JwtModule } from "@nestjs/jwt";
 import type { Prisma } from "@prisma/client";
 
@@ -19,6 +22,10 @@ import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit
 import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrastructure/unit-of-work/unit-of-work.module";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
+import { PersonalDataExportRegistry } from "../../platform/application/personal-data/personal-data-export.registry";
+import { IdentityPersonalDataExporter } from "./infrastructure/personal-data/identity-personal-data.exporter";
+import { IdentityErasureGateway, IdentityPersonalDataEraser, OpenMfaRecoveryBlocker } from "./infrastructure/personal-data/identity-erasure";
+import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
 import { PrismaImpersonationTenantFacts } from "./infrastructure/adapters/prisma-impersonation-tenant-facts";
 import { FilesModule } from "../files/public-api";
 import { NotificationsModule, NotificationsTransactionalPortsFactory } from "../notifications/public-api";
@@ -31,6 +38,7 @@ import {
 	AUTH_FLOW_SUBJECT,
 	AUTHENTICATOR,
 	CREDENTIAL_CRYPTO,
+	BREACHED_PASSWORD_CHECK,
 	ID_GENERATOR,
 	IMPERSONATION_TENANT_FACTS,
 	IDENTITY_READ,
@@ -43,6 +51,7 @@ import {
 	SESSION_LOCATION_LOOKUP,
 	TOTP_SECRET_CIPHER,
 	USER_SESSION_CACHE,
+	WEB_AUTHN,
 	AUTHORIZATION_CHANGE_FEED,
 } from "./application/ports/identity.tokens";
 import { OPERATOR_IDENTITY } from "./application/ports/operator-identity.port";
@@ -76,6 +85,7 @@ import { StopImpersonationHandler } from "./application/commands/stop-impersonat
 import { UnlockAccountHandler } from "./application/commands/unlock-account/unlock-account.handler";
 import { BanUserHandler } from "./application/commands/ban-user/ban-user.handler";
 import { UnbanUserHandler } from "./application/commands/unban-user/unban-user.handler";
+import { SetOwnLanguageHandler } from "./application/commands/set-own-language/set-own-language.handler";
 import { UpdateOwnProfileHandler } from "./application/commands/update-own-profile/update-own-profile.handler";
 import { ResetOwnPreferenceHandler } from "./application/commands/reset-own-preference/reset-own-preference.handler";
 import { SetOwnPreferenceHandler } from "./application/commands/set-own-preference/set-own-preference.handler";
@@ -112,6 +122,8 @@ import { createIdentityTransactionalPorts } from "./infrastructure/persistence/i
 import { PrismaIdentityReadRepository } from "./infrastructure/persistence/prisma-identity.read-repository";
 import { AccessTokenStateService } from "./infrastructure/security/access-token-state.service";
 import { CryptoService } from "./infrastructure/security/crypto.service";
+import { breachedPasswordCheckFor } from "./infrastructure/security/breached-password.adapters";
+import type { BreachedPasswordCheckPort } from "./application/ports/breached-password.port";
 import { OtpAuthenticator } from "./infrastructure/security/otp-authenticator";
 import { SecretEncryptionService } from "./infrastructure/security/secret-encryption.service";
 import { TokenService } from "./infrastructure/security/token.service";
@@ -125,6 +137,19 @@ import { ProfileController } from "./presentation/http/profile.controller";
 import { SessionStatusController } from "./presentation/http/session-status.controller";
 import { SessionsController } from "./presentation/http/sessions.controller";
 import { TwoFactorController } from "./presentation/http/two-factor.controller";
+import { CompletePasskeyRegistrationHandler } from "./application/commands/complete-passkey-registration/complete-passkey-registration.handler";
+import { CompletePasskeySecondFactorHandler } from "./application/commands/complete-passkey-second-factor/complete-passkey-second-factor.handler";
+import { CompletePasswordlessPasskeyLoginHandler } from "./application/commands/complete-passwordless-passkey-login/complete-passwordless-passkey-login.handler";
+import { PurgeStaleWebAuthnChallengesHandler } from "./application/commands/purge-stale-web-authn-challenges/purge-stale-web-authn-challenges.handler";
+import { RemovePasskeyHandler } from "./application/commands/remove-passkey/remove-passkey.handler";
+import { RenamePasskeyHandler } from "./application/commands/rename-passkey/rename-passkey.handler";
+import { StartPasskeyRegistrationHandler } from "./application/commands/start-passkey-registration/start-passkey-registration.handler";
+import { StartPasskeySecondFactorHandler } from "./application/commands/start-passkey-second-factor/start-passkey-second-factor.handler";
+import { StartPasswordlessPasskeyLoginHandler } from "./application/commands/start-passwordless-passkey-login/start-passwordless-passkey-login.handler";
+import { GetPasskeyAppAssociationsHandler } from "./application/queries/get-passkey-app-associations/get-passkey-app-associations.handler";
+import { ListMyPasskeysHandler } from "./application/queries/list-my-passkeys/list-my-passkeys.handler";
+import { SimpleWebAuthnAdapter } from "./infrastructure/security/simple-web-authn.adapter";
+import { PasskeysController } from "./presentation/http/passkeys.controller";
 import { IdentityMaintenanceCron } from "./presentation/jobs/identity-maintenance.cron";
 import { AuthorizationChangeSweepScheduler } from "./presentation/jobs/authorization-change-sweep.scheduler";
 import { AuthorizationChangeSweep } from "./application/services/authorization-change-sweep";
@@ -158,6 +183,7 @@ const HANDLERS = [
 	BanUserHandler,
 	UnbanUserHandler,
 	UpdateOwnProfileHandler,
+	SetOwnLanguageHandler,
 	SetOwnPreferenceHandler,
 	ResetOwnPreferenceHandler,
 	ListOwnPreferencesHandler,
@@ -177,6 +203,18 @@ const HANDLERS = [
 	InvalidateAccessTokenStateHandler,
 	InvalidateMeCacheOnAuthorizationChanged,
 	InvalidateMeCacheOnProfileChangedHandler,
+	// Passkeys (ADR 080)
+	CompletePasskeyRegistrationHandler,
+	CompletePasskeySecondFactorHandler,
+	CompletePasswordlessPasskeyLoginHandler,
+	PurgeStaleWebAuthnChallengesHandler,
+	RemovePasskeyHandler,
+	RenamePasskeyHandler,
+	StartPasskeyRegistrationHandler,
+	StartPasskeySecondFactorHandler,
+	StartPasswordlessPasskeyLoginHandler,
+	ListMyPasskeysHandler,
+	GetPasskeyAppAssociationsHandler,
 ];
 
 /**
@@ -206,6 +244,7 @@ const HANDLERS = [
 	controllers: [
 		AuthController,
 		TwoFactorController,
+		PasskeysController,
 		MfaRecoveryController,
 		ProfileController,
 		PreferencesController,
@@ -254,6 +293,11 @@ const HANDLERS = [
 		// ── Credentials, tokens and second factors ──────────────────────
 		CryptoService,
 		{ provide: CREDENTIAL_CRYPTO, useExisting: CryptoService },
+		{
+			provide: BREACHED_PASSWORD_CHECK,
+			inject: [TypedConfigService],
+			useFactory: (config: TypedConfigService): BreachedPasswordCheckPort => breachedPasswordCheckFor(config.auth.passwordBreachCheck),
+		},
 		TokenService,
 		{ provide: IDENTITY_TOKENS, useExisting: TokenService },
 		{ provide: ACCESS_TOKEN_VERIFIER, useExisting: TokenService },
@@ -261,6 +305,8 @@ const HANDLERS = [
 		{ provide: AUTHENTICATOR, useExisting: OtpAuthenticator },
 		SecretEncryptionService,
 		{ provide: TOTP_SECRET_CIPHER, useExisting: SecretEncryptionService },
+		SimpleWebAuthnAdapter,
+		{ provide: WEB_AUTHN, useExisting: SimpleWebAuthnAdapter },
 		UuidIdGenerator,
 		{ provide: ID_GENERATOR, useExisting: UuidIdGenerator },
 		{ provide: OPERATOR_IDENTITY, useClass: NodeOperatorIdentity },
@@ -324,10 +370,22 @@ const HANDLERS = [
 	],
 })
 export class IdentityModule implements OnModuleInit {
-	public constructor(private readonly mappers: IntegrationEventMapperRegistry) {}
+	public constructor(
+		private readonly mappers: IntegrationEventMapperRegistry,
+		private readonly personalData: PersonalDataExportRegistry,
+		private readonly transactions: TenantTransactionService,
+		private readonly erasure: PersonalDataErasureRegistry,
+		@Inject(IDENTITY_UNIT_OF_WORK) private readonly uow: UnitOfWork<IdentityScope>,
+		@Inject(CREDENTIAL_CRYPTO) private readonly crypto: CredentialCryptoPort,
+		@Inject(CLOCK) private readonly clock: Clock,
+	) {}
 
-	/** Registers the `session.action` / `impersonation.action` outbox mapper (M3). */
+	/** Registers the `session.action` / `impersonation.action` outbox mapper (M3) and the account section of "Download my data" and identity's part of erasure (ADR 077). */
 	public onModuleInit(): void {
 		this.mappers.register(new IdentityIntegrationEventsMapper());
+		this.personalData.register(new IdentityPersonalDataExporter(this.transactions));
+		this.erasure.provideAccountGateway(new IdentityErasureGateway(this.transactions, this.uow, this.crypto, this.clock));
+		this.erasure.registerEraser(new IdentityPersonalDataEraser(this.transactions));
+		this.erasure.registerBlocker(new OpenMfaRecoveryBlocker(this.transactions));
 	}
 }

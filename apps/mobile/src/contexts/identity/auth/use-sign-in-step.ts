@@ -15,6 +15,7 @@ import { ROUTES } from "../../../runtime/routes";
 import { readSessionScope } from "../../../features/session/access-token-claims";
 import { useSessionCommands } from "../../../features/session/facade";
 import { classifySignInResponse } from "./sign-in-outcome";
+import { passkeyFlagParam } from "./sign-in-steps";
 
 /** Shown when the API answered without tokens or with a token the app cannot read. */
 export const UNEXPECTED_SIGN_IN_MESSAGE = "Sign-in could not be completed on this device. Please try again.";
@@ -52,7 +53,7 @@ export function useSignInStepHandler(): (response: LoginClientResponse) => Promi
 				case "session":
 					return (await completeSignIn(outcome.tokens)) ? null : UNEXPECTED_SIGN_IN_MESSAGE;
 				case "twoFactor":
-					router.push({ pathname: ROUTES.twoFactor, params: { tempToken: outcome.tempToken } });
+					router.push({ pathname: ROUTES.twoFactor, params: { tempToken: outcome.tempToken, passkey: passkeyFlagParam(outcome.passkeyAvailable) } });
 					return null;
 				case "verifyDevice":
 					router.push({ pathname: ROUTES.verifyDevice, params: { verificationId: outcome.verificationId } });

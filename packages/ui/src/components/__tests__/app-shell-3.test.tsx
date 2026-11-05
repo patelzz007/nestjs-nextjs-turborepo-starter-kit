@@ -68,7 +68,7 @@ describe("AppShellHeader", () => {
 		expect(ref.current).toBe(header);
 		expect(within(header).getByRole("navigation", { name: "Breadcrumb" }).textContent).toBe("Users");
 		expect(within(header).getByRole("button", { name: "Notifications" })).toBeTruthy();
-		fireEvent.click(within(header).getByRole("button", { name: UI_KIT_LABELS_EN.appShellTopbarSearch.desktopAriaLabel }));
+		fireEvent.click(within(header).getByRole("button", { name: UI_KIT_LABELS_EN.appShellTopbarSearch.mobileAriaLabel }));
 		expect(onOpenSearch).toHaveBeenCalledTimes(1);
 	});
 
@@ -134,7 +134,8 @@ describe("AppShellSidebarAccount", () => {
 
 		expect(screen.getByText("Online")).toBeTruthy();
 		expect(screen.getByText("ada@example.com")).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: `${UI_KIT_LABELS_EN.appShellProfileDropdown.openMenuAriaLabel}, Ada Lovelace` }));
+		// Named by what it shows (WCAG 2.5.3): the name, then the email (jsdom joins the two lines without a space).
+		fireEvent.click(screen.getByRole("button", { name: /^Ada Lovelace\s?ada@example\.com$/u }));
 		fireEvent.click(screen.getByRole("button", { name: "Browse rewards" }));
 		expect(onBrowse).toHaveBeenCalledTimes(1);
 	});
@@ -151,7 +152,7 @@ describe("AppShellSidebarAccount", () => {
 	it("shows an app's own menu instead of the shared one", (): void => {
 		render(<AppShellSidebarAccount name="Ada Lovelace" onLogout={vi.fn()} menuContent={<p>Admin profile</p>} />, { wrapper: UiKitTestProviders });
 
-		fireEvent.click(screen.getByRole("button", { name: `${UI_KIT_LABELS_EN.appShellProfileDropdown.openMenuAriaLabel}, Ada Lovelace` }));
+		fireEvent.click(screen.getByRole("button", { name: "Ada Lovelace" }));
 		expect(screen.getByText("Admin profile")).toBeTruthy();
 	});
 });

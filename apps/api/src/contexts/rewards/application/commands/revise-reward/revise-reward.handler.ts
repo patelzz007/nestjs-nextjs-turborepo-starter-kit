@@ -8,7 +8,8 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import { decideRewardAudience } from "../../../domain/policies/reward-audience.policy";
 import { RewardRulesValue } from "../../../domain/value-objects/reward-rules.value-object";
 import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
-import { REWARDS_UNIT_OF_WORK } from "../../ports/rewards.tokens";
+import { REWARDS_UNIT_OF_WORK, REWARD_MERCHANT_DISPLAY } from "../../ports/rewards.tokens";
+import type { RewardMerchantDisplayPort } from "../../ports/reward-merchant-display.port";
 import type { RewardsScope } from "../../rewards-scope";
 import { rewardManager } from "../merchant-manager-scope";
 import { ReviseRewardCommand } from "./revise-reward.command";
@@ -24,44 +25,48 @@ export class ReviseRewardHandler implements ICommandHandler<ReviseRewardCommand,
 		@Inject(REWARDS_UNIT_OF_WORK) private readonly uow: UnitOfWork<RewardsScope>,
 		@Inject(MERCHANT_ACCESS) private readonly merchantAccess: MerchantAccessPort,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(REWARD_MERCHANT_DISPLAY) private readonly merchantDisplay: RewardMerchantDisplayPort,
 	) {}
 
 	public async execute(command: ReviseRewardCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
 		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
 
-		return this.uow.run(actor, async (scope: RewardsScope): Promise<RewardResponse> => {
-			const reward = await scope.rewards.getConsumerInTenant(input.tenantId, input.rewardId);
-			const customerIds = input.audienceCustomerIds ?? [];
-			const audience =
-				input.audienceType === undefined
-					? undefined
-					: decideRewardAudience({ audienceType: input.audienceType, customerIds }, await scope.customers.customersAmong(input.tenantId, customerIds));
-			reward.revise(
-				{
-					title: input.title,
-					description: input.description,
-					rewardType: input.rewardType,
-					rewardValue: input.rewardValue,
-					freeItem: input.freeItem,
-					termsConditions: input.termsConditions,
-					imageFileIds: input.imageFileIds,
-					quantityTotal: input.quantityTotal,
-					startDate: input.startDate,
-					expiryDate: input.expiryDate,
-					referralsEnabled: input.referralsEnabled,
-					referralPoolTotal: input.referralPoolTotal,
-					referrerRewardTitle: input.referrerRewardTitle,
-					rules: input.rules === undefined ? undefined : RewardRulesValue.fromApi(input.rules),
-					audience,
-				},
-				rewardManager(actor, grant),
-				this.clock.now(),
-			);
-			await scope.imageFiles.lockUsable(input.tenantId, reward.imagesToBind());
-			await scope.rewards.save(reward);
-			scope.events.collectFrom(reward);
-			return scope.views.getResponse(reward.id);
-		});
+		// The merchant's name and logo after the commit (a read of its own: not inside this transaction).
+		return this.merchantDisplay.withMerchantDisplay(
+			await this.uow.run(actor, async (scope: RewardsScope): Promise<RewardResponse> => {
+				const reward = await scope.rewards.getConsumerInTenant(input.tenantId, input.rewardId);
+				const customerIds = input.audienceCustomerIds ?? [];
+				const audience =
+					input.audienceType === undefined
+						? undefined
+						: decideRewardAudience({ audienceType: input.audienceType, customerIds }, await scope.customers.customersAmong(input.tenantId, customerIds));
+				reward.revise(
+					{
+						title: input.title,
+						description: input.description,
+						rewardType: input.rewardType,
+						rewardValue: input.rewardValue,
+						freeItem: input.freeItem,
+						termsConditions: input.termsConditions,
+						imageFileIds: input.imageFileIds,
+						quantityTotal: input.quantityTotal,
+						startDate: input.startDate,
+						expiryDate: input.expiryDate,
+						referralsEnabled: input.referralsEnabled,
+						referralPoolTotal: input.referralPoolTotal,
+						referrerRewardTitle: input.referrerRewardTitle,
+						rules: input.rules === undefined ? undefined : RewardRulesValue.fromApi(input.rules),
+						audience,
+					},
+					rewardManager(actor, grant),
+					this.clock.now(),
+				);
+				await scope.imageFiles.lockUsable(input.tenantId, reward.imagesToBind());
+				await scope.rewards.save(reward);
+				scope.events.collectFrom(reward);
+				return scope.views.getResponse(reward.id);
+			}),
+		);
 	}
 }

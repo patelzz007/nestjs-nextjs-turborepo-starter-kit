@@ -4,48 +4,16 @@ import * as React from "react";
 
 import type { CapabilitySlug } from "@workspace/shared";
 
-import { createGrantedCapabilities, isCapabilityGranted, type GrantedCapabilities } from "./permission-check";
+import { createAuthorizationChecker, meetsRequirement, type AuthorizationChecker, type CapabilityCheckMode } from "./permission-check";
 
-/**
- * Requirement evaluation mode for multi-permission checks:
- * - "all" — every capability must be granted (AND).
- * - "any" — at least one capability must be granted (OR, default).
- */
-export type CapabilityCheckMode = "all" | "any";
-
-/**
- * Synchronous authorization checks backed by the session capability set
- * (each capability held exactly). For showing and
- * hiding UI only: the API checks every request again, record by record.
- */
-export interface AuthorizationChecker {
-	/** True when the permission is granted. */
-	readonly can: (permission: CapabilitySlug) => boolean;
-	/** Negation of `can` — reads better in disabled/hidden conditions. */
-	readonly cannot: (permission: CapabilitySlug) => boolean;
-	/** AND semantics — true when every permission is granted. */
-	readonly canAll: (permissions: readonly CapabilitySlug[]) => boolean;
-	/** OR semantics — true when at least one permission is granted. */
-	readonly canAny: (permissions: readonly CapabilitySlug[]) => boolean;
-}
+export type { AuthorizationChecker, CapabilityCheckMode } from "./permission-check";
 
 /** Back-compat name for {@link AuthorizationChecker}. */
 export type CapabilitiesChecker = AuthorizationChecker;
 
 const CapabilitiesContext = React.createContext<AuthorizationChecker | null>(null);
 
-function createChecker(granted: GrantedCapabilities): AuthorizationChecker {
-	const can = (permission: CapabilitySlug): boolean => isCapabilityGranted(granted, permission);
-
-	return {
-		can,
-		cannot: (permission) => !can(permission),
-		canAll: (permissions) => permissions.every(can),
-		canAny: (permissions) => permissions.some(can),
-	};
-}
-
-const DENY_ALL_CHECKER: AuthorizationChecker = createChecker(createGrantedCapabilities([]));
+const DENY_ALL_CHECKER: AuthorizationChecker = createAuthorizationChecker([]);
 
 export interface CapabilitiesProviderProps {
 	/** Granted capability slugs from `GET /auth/permissions`. */
@@ -58,7 +26,7 @@ export interface CapabilitiesProviderProps {
  * consumers. Purely advisory UX state — the backend remains authoritative.
  */
 export function CapabilitiesProvider({ capabilities, children }: CapabilitiesProviderProps): React.JSX.Element {
-	const checker = React.useMemo(() => createChecker(createGrantedCapabilities(capabilities)), [capabilities]);
+	const checker = React.useMemo(() => createAuthorizationChecker(capabilities), [capabilities]);
 
 	return <CapabilitiesContext.Provider value={checker}>{children}</CapabilitiesContext.Provider>;
 }
@@ -102,15 +70,9 @@ export interface CanProps {
  * </Can>
  * ```
  */
-export function Can({ permission, permissions, mode = "any", fallback = null, children }: CanProps): React.JSX.Element {
-	const { can, canAll, canAny } = useAuthorization();
-
-	const allowed = React.useMemo(() => {
-		if (permissions !== undefined) {
-			return mode === "all" ? canAll(permissions) : canAny(permissions);
-		}
-		return permission !== undefined && can(permission);
-	}, [can, canAll, canAny, mode, permission, permissions]);
+export function Can({ permission, permissions, mode, fallback = null, children }: CanProps): React.JSX.Element {
+	const checker = useAuthorization();
+	const allowed = React.useMemo(() => meetsRequirement(checker, { permission, permissions, mode }), [checker, mode, permission, permissions]);
 
 	if (!allowed) {
 		return <>{fallback}</>;

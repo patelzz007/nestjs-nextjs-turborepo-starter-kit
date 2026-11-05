@@ -57,6 +57,8 @@ export interface WebRoutes {
 	readonly dashboard: WebDashboardRoutes;
 	/** An email footer's one-click unsubscribe (`?token=`; no sign-in needed). */
 	readonly unsubscribe: string;
+	/** The public status page (no sign-in needed). */
+	readonly status: string;
 }
 
 export interface WebRoutePrefixes {
@@ -93,6 +95,7 @@ export const ROUTES: WebRoutes = {
 		notificationSettings: `${APP_LINKS.web.notifications}/settings`,
 	},
 	unsubscribe: APP_LINKS.web.unsubscribe,
+	status: APP_LINKS.web.status,
 };
 
 export const ROUTE_PREFIXES: WebRoutePrefixes = {

@@ -20,6 +20,14 @@ export const LOGIN_DEVICE_CODE_OPERATION: SystemOperationName = "auth.login.requ
 export const LOGIN_MFA_COMPLETE_OPERATION: SystemOperationName = "auth.login.complete_mfa";
 /** Count a wrong authenticator code, and lock the account when the challenge is exhausted. */
 export const LOGIN_MFA_FAILURE_OPERATION: SystemOperationName = "auth.login.record_mfa_failure";
+/** Read an open login challenge and the account's passkeys, and store a passkey second factor's WebAuthn challenge (ADR 080). */
+export const LOGIN_PASSKEY_OPTIONS_OPERATION: SystemOperationName = "auth.login.passkey_options";
+/** Store a passwordless sign-in's WebAuthn challenge (no account is known yet). */
+export const PASSKEY_SIGN_IN_OPTIONS_OPERATION: SystemOperationName = "auth.passkey.sign_in_options";
+/** Verify a passwordless sign-in: the challenge, the passkey found by credential id, its use, the lockout and MFA assurance. */
+export const PASSKEY_SIGN_IN_OPERATION: SystemOperationName = "auth.passkey.sign_in";
+/** Cron: soft-delete expired WebAuthn challenges. */
+export const WEB_AUTHN_CHALLENGE_CLEANUP_OPERATION: SystemOperationName = "maintenance.web_authn_challenge_cleanup";
 /** Store a new session and sweep expired ones. */
 export const SESSION_ISSUE_OPERATION: SystemOperationName = "auth.session.issue";
 /** Issue a password-reset link. */
@@ -52,9 +60,13 @@ export const SUPERADMIN_BOOTSTRAP_OPERATION: SystemOperationName = "auth.superad
 
 export const IDENTITY_UNIT_OF_WORK = Symbol("IDENTITY_UNIT_OF_WORK");
 export const CREDENTIAL_CRYPTO = Symbol("CREDENTIAL_CRYPTO");
+/** `BreachedPasswordCheckPort`: Have I Been Pwned, or switched off (`PASSWORD_BREACH_CHECK`). */
+export const BREACHED_PASSWORD_CHECK = Symbol("BREACHED_PASSWORD_CHECK");
 export const IDENTITY_TOKENS = Symbol("IDENTITY_TOKENS");
 export const AUTHENTICATOR = Symbol("AUTHENTICATOR");
 export const TOTP_SECRET_CIPHER = Symbol("TOTP_SECRET_CIPHER");
+/** `WebAuthnPort`: the passkey relying party (ADR 080). */
+export const WEB_AUTHN = Symbol("WEB_AUTHN");
 export const LOGIN_VERIFICATION_STORE = Symbol("LOGIN_VERIFICATION_STORE");
 export const USER_SESSION_CACHE = Symbol("USER_SESSION_CACHE");
 export const AUTHORIZATION_CHANGE_FEED = Symbol("AUTHORIZATION_CHANGE_FEED");

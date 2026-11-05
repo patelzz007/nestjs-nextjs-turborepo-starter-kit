@@ -12,7 +12,7 @@
 //         │   ▣   │                      accent chips — drifting slower than
 //         ╰───────╯                      the page as it is swiped (parallax)
 //
-//   Secure by design                     title (Bricolage) + description
+//   Secure by design                     title (Geist Bold) + description
 //   Two-factor, app lock and …
 //
 //   ━━━ • •                              page dots — the current one a pill
@@ -121,7 +121,7 @@ export function OnboardingCarousel({ brandName, slides, labels, onFinish, testID
 					<View className="size-8 items-center justify-center rounded-lg bg-primary">
 						<BrandMark size={BRAND_ROW_MARK_SIZE} colorClassName="accent-primary-foreground" />
 					</View>
-					<Text className="font-heading text-lg text-foreground">{brandName}</Text>
+					<Text className="font-sans-bold text-lg tracking-tight text-foreground">{brandName}</Text>
 				</View>
 				{isLastPage ? null : (
 					<Pressable accessibilityRole="button" accessibilityLabel={labels.skip} onPress={onFinish} hitSlop={8} className="min-h-11 justify-center px-1 active:opacity-60">
@@ -208,10 +208,10 @@ function OnboardingPage({ slide, index, width, scrollX }: OnboardingPageProps): 
 				</View>
 			</StyledAnimatedView>
 			<StyledAnimatedView className="gap-3" style={textStyle}>
-				<Text accessibilityRole="header" className="font-heading text-3xl text-foreground">
+				<Text accessibilityRole="header" className="font-sans-bold text-3xl tracking-tight text-foreground">
 					{slide.title}
 				</Text>
-				<Text className="font-sans text-base text-muted-foreground">{slide.description}</Text>
+				<Text className="font-sans text-lg leading-7 text-muted-foreground">{slide.description}</Text>
 			</StyledAnimatedView>
 		</View>
 	);

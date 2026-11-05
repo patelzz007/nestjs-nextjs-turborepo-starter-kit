@@ -343,7 +343,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 			{ wrapper: UiKitTestProviders },
 		);
 
-		expect(screen.getByRole("combobox", { name: "Status" })).toBeTruthy();
+		expect(screen.getByRole("combobox", { name: /^Status:/u })).toBeTruthy();
 	});
 
 	it("changes the client page size through the page-size select", () => {

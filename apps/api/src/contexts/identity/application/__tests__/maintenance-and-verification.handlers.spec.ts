@@ -4,6 +4,7 @@ import { epochMs } from "@workspace/shared";
 import { systemActor } from "../../../../platform/application/actor-context";
 import { PasswordResetToken, USED_RESET_TOKEN_RETENTION_MS } from "../../domain/entities/password-reset-token.entity";
 import {
+	PasswordBreachedError,
 	BootstrapEmailTakenError,
 	InvalidLoginVerificationCodeError,
 	LoginVerificationAttemptsExceededError,
@@ -24,6 +25,7 @@ import type { OperatorIdentity, OperatorIdentityPort } from "../ports/operator-i
 import { MAX_LOGIN_VERIFICATION_ATTEMPTS } from "../services/login-verification.gate";
 import { signInHarness, type SignInHarness } from "./fakes/identity-sign-in.fakes";
 import {
+	FakeBreachCheck,
 	FakeCredentialCrypto,
 	FixedClock,
 	InMemoryIdentityStore,
@@ -47,7 +49,11 @@ class FixedOperator implements OperatorIdentityPort {
 let store: InMemoryIdentityStore;
 let clock: FixedClock;
 
+/** Refuses nothing unless a test swaps in a breached password. */
+let breachCheck: FakeBreachCheck = new FakeBreachCheck();
+
 beforeEach(() => {
+	breachCheck = new FakeBreachCheck();
 	store = new InMemoryIdentityStore();
 	clock = new FixedClock();
 });
@@ -56,7 +62,7 @@ describe("BootstrapSuperAdminHandler", () => {
 	const actor = systemActor("auth.superadmin.bootstrap", "cli", null, "bootstrap the first SuperAdmin", null);
 
 	function bootstrap(email = "root@example.com"): ReturnType<BootstrapSuperAdminHandler["execute"]> {
-		return new BootstrapSuperAdminHandler(store.uow, new FakeCredentialCrypto(), new SequentialIds("root"), new FixedOperator(), clock).execute(
+		return new BootstrapSuperAdminHandler(store.uow, new FakeCredentialCrypto(), new SequentialIds("root"), new FixedOperator(), clock, breachCheck).execute(
 			new BootstrapSuperAdminCommand(actor, { identity: { email, fullName: "Root Admin" }, password: "A-Long-Bootstrap-Password-1" }),
 		);
 	}
@@ -80,6 +86,13 @@ describe("BootstrapSuperAdminHandler", () => {
 			precedingAuditActions: ["SUPER_ADMIN_BOOTSTRAPPED"],
 		});
 		expect(assignment?.detail).toContain('"osUser":"deploy"');
+	});
+
+	it("refuses a bootstrap password found in a data breach", async () => {
+		breachCheck = new FakeBreachCheck(new Set(["A-Long-Bootstrap-Password-1"]));
+
+		await expect(bootstrap()).rejects.toBeInstanceOf(PasswordBreachedError);
+		expect(store.accounts.rows.size).toBe(0);
 	});
 
 	it("refuses once a SuperAdmin exists, an address that is taken, and a catalog without the role", async () => {

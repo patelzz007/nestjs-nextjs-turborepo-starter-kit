@@ -1,6 +1,7 @@
 "use client";
 
 import { SecuritySettingsPanel } from "@workspace/client/lib/contexts/identity/mfa/security-settings-panel";
+import { PrivacySettingsSections } from "@workspace/client/lib/contexts/privacy";
 import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import * as React from "react";
 
@@ -15,7 +16,9 @@ export function DashboardSettingsView(): React.JSX.Element {
 				description="Set your profile picture, verify your email, manage your password, and configure two-factor authentication."
 			/>
 			<ProfilePictureSection />
-			<SecuritySettingsPanel />
+			<SecuritySettingsPanel>
+				<PrivacySettingsSections />
+			</SecuritySettingsPanel>
 		</div>
 	);
 }

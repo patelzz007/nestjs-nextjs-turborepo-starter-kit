@@ -2,8 +2,7 @@
 // network-indicators.ts - what the connection pill and sheet say
 // ============================================
 // Pure: how a connection reading (packages/shared lib/network-quality) reads
-// in the status pill — compact in the screens' top-right corner, full in the
-// app drawer — and in the speedtest-style sheet the pill opens. Green strong,
+// in the app drawer's status pill and in the speedtest-style sheet the pill opens. Green strong,
 // yellow moderate, red weak; the bars, the words and the sheet's headline say
 // the same, so colour is never the only signal. The same states and copy as
 // the web shells' NetworkQualityIndicator (@workspace/ui).
@@ -39,24 +38,24 @@ function pingText(pingMs: number): string {
 	return `${String(pingMs)} ms`;
 }
 
-export function networkPillContent(reading: NetworkQualityReading, compact: boolean): StatusPillContent {
+export function networkPillContent(reading: NetworkQualityReading): StatusPillContent {
 	switch (reading.status) {
 		case "measuring":
 			return {
 				...QUIET_PILL,
 				icon: SignalHighIcon,
-				label: compact ? null : "Measuring…",
+				label: "Measuring…",
 				accessibilityLabel: "Connection: measuring",
 				tone: "neutral",
 				pulsing: true,
 			};
 		case "offline":
-			return { ...QUIET_PILL, icon: WifiOffIcon, label: compact ? null : "Offline", accessibilityLabel: "Offline", tone: "destructive" };
+			return { ...QUIET_PILL, icon: WifiOffIcon, label: "Offline", accessibilityLabel: "Offline", tone: "destructive" };
 		case "unreachable":
 			return {
 				...QUIET_PILL,
 				icon: SignalZeroIcon,
-				label: compact ? null : "No response",
+				label: "No response",
 				accessibilityLabel: "Connection: no response from the server",
 				tone: "destructive",
 			};
@@ -66,7 +65,7 @@ export function networkPillContent(reading: NetworkQualityReading, compact: bool
 			return {
 				...QUIET_PILL,
 				icon: face.icon,
-				label: compact ? pingText(pingMs) : `${STRENGTH_WORDS[strength]}, ${pingText(pingMs)}`,
+				label: `${STRENGTH_WORDS[strength]}, ${pingText(pingMs)}`,
 				accessibilityLabel: `Connection: ${STRENGTH_WORDS[strength].toLowerCase()}, ${pingText(pingMs)} ping`,
 				tone: face.tone,
 				tabularLabel: true,

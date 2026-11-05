@@ -295,6 +295,12 @@ export type LeaveTenantInput = z.output<typeof LeaveTenantSchema>;
 /** FCM tokens are ~160 characters and APNs 64 hex; anything longer is not a device token. */
 export const PUSH_TOKEN_MAX_LENGTH = 4_096;
 
+/**
+ * A Firebase Installation ID: 22 URL-safe base64 characters, the first one of `c`–`f` (the FID's 4-bit
+ * header, as Firebase generates it). FCM addresses an Android install by it (enhancement 5.3).
+ */
+export const FirebaseInstallationIdSchema = z.string().regex(/^[c-f][A-Za-z0-9_-]{21}$/u, "Not a Firebase Installation ID");
+
 export const RegisterPushDeviceSchema = z
 	.object({
 		token: z.string().min(1).max(PUSH_TOKEN_MAX_LENGTH),
@@ -302,8 +308,14 @@ export const RegisterPushDeviceSchema = z
 		surface: NotificationSurfaceSchema,
 		deviceLabel: z.string().trim().min(1).max(120).nullable(),
 		appVersion: z.string().trim().min(1).max(32).nullable(),
+		// Android's install, which FCM sends by; an older app build doesn't report it (the token is used then).
+		installationId: FirebaseInstallationIdSchema.nullable().default(null),
 	})
-	.strict();
+	.strict()
+	.refine((device): boolean => device.platform === "ANDROID" || device.installationId === null, {
+		message: "Only an Android install has a Firebase Installation ID (APNs addresses iOS by token)",
+		path: ["installationId"],
+	});
 export type RegisterPushDeviceInput = z.output<typeof RegisterPushDeviceSchema>;
 
 export const PushDeviceResponseSchema = BaseResponseSchema.extend({
@@ -463,3 +475,36 @@ export type NotificationWebhookReceivedResponse = z.output<typeof NotificationWe
 export type UnsubscribeQuery = z.output<typeof UnsubscribeQuerySchema>;
 export const UnsubscribeResponseSchema = z.object({ category: NotificationCategorySchema, channel: NotificationChannelSchema, tenantName: z.string().nullable() });
 export type UnsubscribeResponse = z.output<typeof UnsubscribeResponseSchema>;
+
+/**
+ * The preferences with a save applied (the phone's instant tick: it shows the change before the server
+ * answers, then takes the server's answer). Only the cells the save names change; a locked or unavailable
+ * cell is never sent, so it never changes here either. Untouched rows and cells are the same objects as before.
+ */
+export function withPreferenceChanges(preferences: NotificationPreferencesResponse, input: UpdateNotificationPreferencesInput): NotificationPreferencesResponse {
+	const enabledOf = (category: NotificationCategory, channel: NotificationChannel): boolean | undefined =>
+		input.changes.find((change) => change.category === category && change.channel === channel)?.enabled;
+	// Untouched rows and cells keep their identity, so a screen redraws only what the save changed.
+	const cellWith = (category: NotificationCategory, cell: NotificationPreferenceCell): NotificationPreferenceCell => {
+		const enabled = enabledOf(category, cell.channel);
+		return enabled === undefined || enabled === cell.enabled ? cell : { ...cell, enabled };
+	};
+	const rowWith = (row: NotificationPreferenceRow): NotificationPreferenceRow => {
+		const channels = row.channels.map((cell) => cellWith(row.category, cell));
+		return channels.every((cell, index) => cell === row.channels.at(index)) ? row : { ...row, channels };
+	};
+	return { ...preferences, categories: preferences.categories.map(rowWith) };
+}
+
+/** The preferences with a new quiet-hours and digest schedule. */
+export function withSchedule(preferences: NotificationPreferencesResponse, schedule: NotificationSchedule): NotificationPreferencesResponse {
+	return { ...preferences, schedule };
+}
+
+/** The preferences with a marketing consent given or withdrawn: the platform's, or one store's. */
+export function withMarketingConsent(preferences: NotificationPreferencesResponse, input: SetMarketingConsentInput): NotificationPreferencesResponse {
+	if (input.scope === "PLATFORM") {
+		return { ...preferences, platformMarketingConsent: input.granted };
+	}
+	return { ...preferences, tenants: preferences.tenants.map((tenant) => (tenant.tenantId === input.tenantId ? { ...tenant, marketingConsent: input.granted } : tenant)) };
+}

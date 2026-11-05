@@ -108,11 +108,11 @@ export function AlertShowcase(): React.JSX.Element {
 					</p>
 				) : null}
 
-				{/* Composition without an icon, the compact size and the invert variant */}
+				{/* The variant's default icon, the compact size and the invert variant */}
 				<div className="mt-4 grid gap-3 lg:grid-cols-2">
 					<Alert variant="default" role="status">
-						<AlertTitle>No icon</AlertTitle>
-						<AlertDescription>The title and description take the full width when the alert has no leading icon.</AlertDescription>
+						<AlertTitle>Default icon</AlertTitle>
+						<AlertDescription>Pass no icon and the alert shows its variant&apos;s own; pass an icon or avatar to replace it.</AlertDescription>
 					</Alert>
 					<Alert variant="invert" role="status">
 						<Info aria-hidden="true" />

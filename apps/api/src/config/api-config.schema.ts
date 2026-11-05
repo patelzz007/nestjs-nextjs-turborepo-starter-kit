@@ -35,18 +35,29 @@ export {
 	type MemoryLeakDetectionConfig,
 	type MessagingConfig,
 	type MfaConfig,
+	type PasskeysConfig,
 	type MobileConfig,
 	type ObservabilityConfig,
 	type ObserveConfig,
 	type OperationsConfig,
+	type PaymentsConfig,
 	type RateLimitConfig,
 	type RuntimeConfig,
 	type SessionsConfig,
 	type StorageConfig,
 	type TenancyConfig,
 	type TransactionLogConfig,
+	type WebhooksConfig,
+	type InboundWebhooksConfig,
 } from "./api-config/api-config.types";
-export { resolveApiDocsPolicy, resolveLogLevel, resolveRedisNamespace, resolveStorageProvider } from "./api-config/api-config.derivations";
+export {
+	androidApkKeyHashOrigin,
+	resolveApiDocsPolicy,
+	resolveLogLevel,
+	resolveRedisNamespace,
+	resolveStorageProvider,
+	resolveWebAuthnRpId,
+} from "./api-config/api-config.derivations";
 export { checkApiEnvRules, isLoopbackUrl } from "./api-config/api-env.rules";
 export { toApiConfig } from "./api-config/api-config.grouping";
 

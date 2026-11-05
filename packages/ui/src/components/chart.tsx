@@ -66,6 +66,9 @@ const ChartContainer = React.forwardRef<
 	const uniqueId = React.useId();
 	const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`;
 	const contextValue = React.useMemo((): ChartContextProps => ({ config }), [config]);
+	// A named chart is a figure: `aria-label` on an element without a role is prohibited ARIA, and screen readers
+	// ignore it there. Unnamed, it stays a plain container; a caller's own role wins either way.
+	const named = props["aria-label"] !== undefined || props["aria-labelledby"] !== undefined;
 
 	return (
 		<ChartContext.Provider value={contextValue}>
@@ -73,6 +76,7 @@ const ChartContainer = React.forwardRef<
 				ref={ref}
 				data-slot="chart"
 				data-chart={chartId}
+				role={named ? "figure" : undefined}
 				className={cn(
 					"flex aspect-video text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
 					className,

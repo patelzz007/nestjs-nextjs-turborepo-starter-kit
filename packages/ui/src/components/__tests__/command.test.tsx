@@ -17,6 +17,7 @@ import {
 	createCommandRegistry,
 } from "../command";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { accessibilityViolations } from "../../testing/axe";
 
 /** Base UI measures the command list and scrolls the highlighted item into view — jsdom implements neither. */
 class NoopResizeObserver {
@@ -124,6 +125,11 @@ describe("createCommandRegistry", () => {
 });
 
 describe("Command", () => {
+	it("has no serious accessibility problems (enhancement 3.2)", async () => {
+		render(<Menu />, { wrapper: UiKitTestProviders });
+		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
+	});
+
 	it("lists every item under its heading, with the list named by the command's label", () => {
 		render(<Menu />, { wrapper: UiKitTestProviders });
 

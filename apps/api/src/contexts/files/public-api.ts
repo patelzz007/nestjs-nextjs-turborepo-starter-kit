@@ -15,6 +15,8 @@
  *   own projections (`IMAGE_RENDITIONS_SELECT`, `toImageSources`).
  * - `StoredFileAccess`: upload, completion, lookup, signed downloads, bytes, ZIP
  *   archives and deletion of a file the calling context already authorized.
+ * - `ServerFileIngest`: a file whose bytes the server itself produced, checked,
+ *   scanned and rendered exactly as an upload, returned READY (idempotent by content).
  */
 export { FileDeleted, type DeletedFileObject } from "./domain/events/file-deleted.event";
 export { FileVerdictReached, fileVerdictReached, type FileVerdictOutcome } from "./domain/events/file-verdict-reached.event";
@@ -42,6 +44,7 @@ export type { BindableFile, FileBindingRequest, FileReferencePort, FilesTransact
 export { createFilesTransactionalPorts } from "./infrastructure/persistence/files-transactional-ports";
 export { IMAGE_RENDITIONS_SELECT, toImageSources, type ImageRenditionRows } from "./infrastructure/persistence/image-renditions.select";
 export { StoredFileAccess } from "./infrastructure/adapters/stored-file-access";
+export { ServerFileIngest, ServerFileIngestFailedError, type ServerFileIngestRequest } from "./application/services/server-file-ingest";
 export type { StoredFileDbClient } from "./infrastructure/persistence/stored-file.mapper";
 
 // ── The Nest module (last: the values above must be initialised before its graph loads) ──

@@ -41,19 +41,22 @@ describe("AppShellTopbar", () => {
 		);
 
 		expect(ref.current?.dataset.slot).toBe("app-shell-topbar");
-		fireEvent.click(screen.getByRole("button", { name: UI_KIT_LABELS_EN.appShellTopbarSearch.desktopAriaLabel }));
+		// The wide trigger is named by its visible placeholder (WCAG 2.5.3), the shortcut announced as one.
+		const wide = screen.getByRole("button", { name: "Search…" });
+		expect(wide.getAttribute("aria-keyshortcuts")).toBe("Meta+K Control+K");
+		fireEvent.click(wide);
 		expect(onOpen).toHaveBeenCalledTimes(1);
 		expect(screen.getByRole("button", { name: UI_KIT_LABELS_EN.appShellTopbarSearch.mobileAriaLabel })).toBeTruthy();
 	});
 
-	it("search takes translated accessible names and forwards its ref to its layout-neutral wrapper", (): void => {
+	it("search takes a translated placeholder and icon-button name, and forwards its ref to its layout-neutral wrapper", (): void => {
 		const ref = React.createRef<HTMLDivElement>();
-		render(<AppShellTopbarSearch ref={ref} placeholder="Rechercher…" onOpen={vi.fn()} mobileAriaLabel="Rechercher" desktopAriaLabel="Rechercher des pages" />, {
+		render(<AppShellTopbarSearch ref={ref} placeholder="Rechercher…" onOpen={vi.fn()} mobileAriaLabel="Rechercher" />, {
 			wrapper: UiKitTestProviders,
 		});
 
 		expect(ref.current?.className).toContain("contents");
-		expect(screen.getByRole("button", { name: "Rechercher des pages" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Rechercher…" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Rechercher" })).toBeTruthy();
 	});
 });
@@ -117,7 +120,7 @@ describe("Panel shell parts", () => {
 /** A label set whose shell-chrome families differ from English — proves the provider supplies the copy. */
 const GERMAN_LABELS: UiKitLabels = {
 	...UI_KIT_LABELS_EN,
-	appShellTopbarSearch: { mobileAriaLabel: "Suchen", desktopAriaLabel: "Seiten durchsuchen" },
+	appShellTopbarSearch: { mobileAriaLabel: "Suchen" },
 	sidebar: { ...UI_KIT_LABELS_EN.sidebar, toggleSidebar: "Seitenleiste umschalten" },
 };
 
@@ -129,15 +132,15 @@ describe("appShellTopbarSearch labels", () => {
 			</UiKitLabelsProvider>,
 		);
 
-		expect(screen.getByRole("button", { name: GERMAN_LABELS.appShellTopbarSearch.desktopAriaLabel })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Suchen…" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: GERMAN_LABELS.appShellTopbarSearch.mobileAriaLabel })).toBeTruthy();
 	});
 
-	it("lets one per-usage name win while the other still comes from the family", (): void => {
+	it("lets the icon button's per-usage name win, the wide trigger keeping its placeholder", (): void => {
 		render(<AppShellTopbarSearch placeholder="Search…" onOpen={vi.fn()} mobileAriaLabel="Find" />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("button", { name: "Find" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: UI_KIT_LABELS_EN.appShellTopbarSearch.desktopAriaLabel })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Search…" })).toBeTruthy();
 	});
 
 	it("throws without a UiKitLabelsProvider", (): void => {

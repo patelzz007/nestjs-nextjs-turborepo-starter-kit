@@ -34,7 +34,7 @@ test("crops a portrait photo to a square profile picture, uploads it, and remove
 	await page.goto("/auth/login?redirect=/dashboard/account");
 	await page.getByLabel("Email").fill(MEMBER_EMAIL);
 	await page.getByLabel("Password", { exact: true }).fill(MEMBER_PASSWORD);
-	await page.getByRole("button", { name: "Sign in" }).click();
+	await page.getByRole("button", { name: "Sign in", exact: true }).click();
 	await page.waitForURL((url: URL) => url.pathname === "/dashboard/account");
 
 	await page.locator('input[type="file"]').setInputFiles({ name: "stripes.png", mimeType: "image/png", buffer: await portraitPhoto(page) });

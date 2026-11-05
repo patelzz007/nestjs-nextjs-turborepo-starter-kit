@@ -59,8 +59,8 @@ const SENTIMENT_CLASSES: Readonly<Record<KpiSentiment, { readonly container: str
 };
 
 const SIZE_CLASSES: Readonly<Record<"default" | "hero", { readonly value: string; readonly label: string }>> = {
-	default: { value: "text-2xl", label: "text-sm" },
-	hero: { value: "text-5xl", label: "text-base" },
+	default: { value: "text-2xl tracking-tight", label: "text-sm" },
+	hero: { value: "text-4xl tracking-tight", label: "text-base" },
 };
 
 /** What a screen reader says for the change ("Up 12.4% vs previous 30 days", "No change vs previous 7 days"). */
@@ -76,7 +76,7 @@ export function KpiTile({ label, value, change, comparisonLabel, trend, size = "
 	return (
 		<View className="gap-2" accessible accessibilityLabel={`${label}: ${value}. ${describeKpiChange(change, comparisonLabel)}`} testID={testID}>
 			<Text className={`font-sans-medium text-muted-foreground ${sizeClasses.label}`}>{label}</Text>
-			<Text className={`font-sans-semibold text-foreground ${sizeClasses.value}`} numberOfLines={1} adjustsFontSizeToFit>
+			<Text className={`font-sans-bold text-foreground tabular-nums ${sizeClasses.value}`} numberOfLines={1} adjustsFontSizeToFit>
 				{value}
 			</Text>
 			<View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">

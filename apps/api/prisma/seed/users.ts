@@ -1,10 +1,12 @@
 import type { Permission, PermissionAction, PermissionResource, Role, User } from "@prisma/client";
+import type { AppLanguage } from "@workspace/shared";
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
 import { upsertSeedGrant } from "./tenant-roles";
 import { assignSeedRole } from "./rbac-audit";
 import { requireRow } from "./require-row";
+import { upsertLiveUserByEmail } from "./live-user";
 
 /** Grace period before MFA enrollment is required for existing seed users. */
 const MFA_ENROLLMENT_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -23,6 +25,8 @@ export async function createUsers(): Promise<User[]> {
 		lockedUntil?: number | null;
 		emailVerifiedAt?: number | null;
 		mfaEnrollmentDeadline?: number;
+		/** The language the person chose (5.2); unset, English. */
+		locale?: AppLanguage;
 	}[] = [
 		// System accounts — verified so admin-panel ops pass EmailVerifiedGuard.
 		{
@@ -92,6 +96,8 @@ export async function createUsers(): Promise<User[]> {
 			email: "carol.white@example.com",
 			passwordHash: await hash("Carol@123"),
 			fullName: "Carol White",
+			// Reads the apps in Malay (enhancement 5.2).
+			locale: "ms",
 			isActive: true,
 			isSuperAdmin: false,
 		},
@@ -99,6 +105,7 @@ export async function createUsers(): Promise<User[]> {
 			email: "david.lee@example.com",
 			passwordHash: await hash("David@123"),
 			fullName: "David Lee",
+			locale: "zh-Hans",
 			isActive: true,
 			isSuperAdmin: false,
 		},
@@ -121,6 +128,7 @@ export async function createUsers(): Promise<User[]> {
 			email: "grace.wilson@example.com",
 			passwordHash: await hash("Grace@123"),
 			fullName: "Grace Wilson",
+			locale: "ta",
 			isActive: true,
 			isSuperAdmin: false,
 		},
@@ -149,20 +157,21 @@ export async function createUsers(): Promise<User[]> {
 
 	const users: User[] = [];
 	for (const u of usersData) {
-		const user = await prisma.user.upsert({
-			where: { email: u.email },
-			update: {
+		const user = await upsertLiveUserByEmail(
+			u.email,
+			{
 				fullName: u.fullName,
 				isActive: u.isActive,
 				isSuperAdmin: u.isSuperAdmin,
 				emailVerifiedAt: u.emailVerifiedAt ?? null,
 				mfaEnrollmentDeadline: u.mfaEnrollmentDeadline ?? mfaEnrollmentDeadline,
+				locale: u.locale ?? "en",
 			},
-			create: {
+			{
 				...u,
 				mfaEnrollmentDeadline: u.mfaEnrollmentDeadline ?? mfaEnrollmentDeadline,
 			},
-		});
+		);
 		users.push(user);
 	}
 	return users;

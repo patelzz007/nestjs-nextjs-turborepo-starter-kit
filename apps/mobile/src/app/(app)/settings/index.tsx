@@ -1,22 +1,32 @@
 // ============================================
-// Settings (§10.9) — appearance, security, devices, app lock, about, sign out
+// Settings (§10.9) — appearance, language, security, devices, app lock, about, sign out
 // ============================================
 
+import FileTextIcon from "lucide-react-native/icons/file-text";
+import LanguagesIcon from "lucide-react-native/icons/languages";
+import LockKeyholeIcon from "lucide-react-native/icons/lock-keyhole";
+import PaletteIcon from "lucide-react-native/icons/palette";
+import ScanQrCodeIcon from "lucide-react-native/icons/scan-qr-code";
+import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
+import SmartphoneIcon from "lucide-react-native/icons/smartphone";
 import { useRouter } from "expo-router";
 import * as React from "react";
 import { View } from "react-native";
 
 import { Button } from "@workspace/ui-native/components/button";
-import { Card } from "@workspace/ui-native/components/card";
 import { DetailList, type DetailItem } from "@workspace/ui-native/components/detail-list";
+import { ListGroup } from "@workspace/ui-native/components/list-group";
 import { ListRow } from "@workspace/ui-native/components/list-row";
 import { Screen } from "../../../components/screen";
 import { SignOutDialog, useSignOut, useSignOutConfirmation } from "../../../contexts/identity";
 import { useAppLockEnabled, usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
-import { THEME_LABELS } from "../../../features/preferences/labels";
+import { PREFERENCES_LABELS } from "../../../features/preferences/labels";
+import { APP_LANGUAGE_NAMES } from "../../../features/language/app-languages";
+import { useAppLanguage, useLabels } from "../../../features/language/use-app-language";
+import { BUILD_INFO_LABELS } from "../../../features/build-info/labels";
+import { useBuildInfo } from "../../../features/build-info/use-build-info";
+import { NAVIGATION_LABELS } from "../../../features/navigation/navigation-labels";
 import { canReplayOnboarding } from "../../../lib/env";
-import { PDF_VIEWER_TITLE } from "../../../features/pdf-viewer/labels";
-import { TILL_TITLE } from "../../../contexts/pos";
 import { ROUTES } from "../../../runtime/routes";
 import { useReadyRuntime } from "../../../runtime/runtime-context";
 
@@ -25,12 +35,20 @@ export default function SettingsScreen(): React.JSX.Element {
 	const { appVersion, buildNumber, env } = useReadyRuntime();
 	const theme = useThemePreference();
 	const appLockEnabled = useAppLockEnabled();
+	const language = useAppLanguage();
+	const { headings, sections, settings: labels } = useLabels(NAVIGATION_LABELS);
+	const { themes } = useLabels(PREFERENCES_LABELS);
+	const buildInfo = useBuildInfo();
+	const { buildType } = useLabels(BUILD_INFO_LABELS);
 	const signOut = useSignOutConfirmation();
 	const preferences = usePreferencesCommands();
 	const { signOut: signOutNow } = useSignOut();
 
 	const openAppearance = React.useCallback((): void => {
 		router.push(ROUTES.appearance);
+	}, [router]);
+	const openLanguage = React.useCallback((): void => {
+		router.push(ROUTES.language);
 	}, [router]);
 	const openSecurity = React.useCallback((): void => {
 		router.push(ROUTES.security);
@@ -54,42 +72,49 @@ export default function SettingsScreen(): React.JSX.Element {
 		void signOutNow();
 	}, [preferences, signOutNow]);
 
-	const about: DetailItem[] = [{ label: "Version", value: appVersion }];
+	const about: DetailItem[] = [
+		{ label: buildType, value: buildInfo.kindLabel },
+		{ label: labels.version, value: appVersion },
+	];
 	if (buildNumber !== null) {
-		about.push({ label: "Build", value: buildNumber });
+		about.push({ label: labels.build, value: buildNumber });
+	}
+	if (buildInfo.moment !== null) {
+		about.push({ label: buildInfo.moment.word, value: buildInfo.moment.when });
 	}
 	if (env.isDevelopment) {
-		about.push({ label: "API address", value: env.apiBaseUrl });
+		about.push({ label: labels.apiAddress, value: env.apiBaseUrl });
 	}
 
 	return (
 		<Screen>
-			<Card>
-				<View>
-					<ListRow label="Appearance" value={THEME_LABELS[theme]} onPress={openAppearance} />
-					<ListRow label="Security" description="Password, two-factor authentication, backup codes" onPress={openSecurity} />
-					<ListRow label="Signed-in devices" onPress={openDevices} />
-					<ListRow label="App lock" value={appLockEnabled ? "On" : "Off"} onPress={openAppLock} />
+			{/* Grouped as the drawer groups them (drawer-destinations.ts), with the drawer's glyphs, so the two never disagree. */}
+			<ListGroup title={sections.preferences}>
+				<ListRow icon={PaletteIcon} label={headings.appearance.title} value={themes[theme]} onPress={openAppearance} />
+				<ListRow icon={LanguagesIcon} label={headings.language.title} value={APP_LANGUAGE_NAMES[language]} onPress={openLanguage} />
+				<ListRow icon={LockKeyholeIcon} label={headings.appLock.title} value={appLockEnabled ? labels.on : labels.off} onPress={openAppLock} />
+			</ListGroup>
+			<ListGroup title={sections.account}>
+				<ListRow icon={ShieldCheckIcon} label={headings.security.title} description={labels.securityDescription} onPress={openSecurity} />
+				<ListRow icon={SmartphoneIcon} label={headings.devices.title} onPress={openDevices} />
+			</ListGroup>
+			<ListGroup title={sections.rewards}>
+				<ListRow icon={ScanQrCodeIcon} label={headings.till.title} description={labels.tillDescription} onPress={openTill} />
+			</ListGroup>
+			<ListGroup title={sections.documents}>
+				<ListRow icon={FileTextIcon} label={headings.pdfViewer.title} description={labels.pdfViewerDescription} onPress={openPdfViewer} />
+			</ListGroup>
+			<ListGroup title={labels.about}>
+				<View className="py-3">
+					<DetailList items={about} />
 				</View>
-			</Card>
-			<Card>
-				<ListRow label={TILL_TITLE} description="Scan and redeem customers' reward QR codes" onPress={openTill} />
-			</Card>
-			<Card>
-				<ListRow label={PDF_VIEWER_TITLE} description="Read a PDF from your phone" onPress={openPdfViewer} />
-			</Card>
-			<Card title="About">
-				<DetailList items={about} />
+			</ListGroup>
+			<View className="gap-3">
 				{canReplayOnboarding(env) ? (
-					<Button
-						label="Sign out and replay onboarding"
-						variant="secondary"
-						onPress={replayOnboarding}
-						accessibilityHint="Development and test builds only: shows the first-launch walkthrough again"
-					/>
+					<Button label={labels.replayOnboarding} variant="secondary" onPress={replayOnboarding} accessibilityHint={labels.replayOnboardingHint} />
 				) : null}
-			</Card>
-			<Button label="Sign out" onPress={signOut.ask} />
+				<Button label={labels.signOut} onPress={signOut.ask} />
+			</View>
 			<SignOutDialog confirmation={signOut} />
 		</Screen>
 	);
