@@ -240,16 +240,16 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 			await db.$executeRaw`SELECT pg_sleep(${BUSY_POOL_HOLD_SECONDS})`;
 		};
 		try {
+			const countRewards = (): Promise<number> =>
+				activity.countRewards({ tenantId: TENANT_SEED_IDS.klTenant, locationScope: { kind: "ALL_LOCATIONS" }, publishedOnly: false });
+			const owner = userRlsContext(KL_OWNER_USER_ID, TENANT_SEED_IDS.klTenant, true);
 			// The count waits behind both holds, longer than a transaction may wait for a connection.
-			const count = await rlsStorage.run(userRlsContext(KL_OWNER_USER_ID, TENANT_SEED_IDS.klTenant, true), async () => {
-				const [, , rewards] = await Promise.all([
-					sql.callerRead("e2e first hold", hold),
-					sql.callerRead("e2e second hold", hold),
-					activity.countRewards({ tenantId: TENANT_SEED_IDS.klTenant, locationScope: { kind: "ALL_LOCATIONS" }, publishedOnly: false }),
-				]);
+			const queued = await rlsStorage.run(owner, async () => {
+				const [, , rewards] = await Promise.all([sql.callerRead("e2e first hold", hold), sql.callerRead("e2e second hold", hold), countRewards()]);
 				return rewards;
 			});
-			expect(count).toBeGreaterThan(0);
+			// Waiting changes when a read runs, never its answer. The job without a seed has no rewards, so no fixed figure holds.
+			await expect(rlsStorage.run(owner, countRewards)).resolves.toBe(queued);
 		} finally {
 			await single.onModuleDestroy();
 		}

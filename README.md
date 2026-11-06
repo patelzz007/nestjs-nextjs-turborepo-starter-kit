@@ -1184,6 +1184,15 @@ pnpm run lint    # zero errors
 pnpm run test    # every test passes
 ```
 
+Git hooks run on your machine, and show their progress in the terminal so a commit or push never looks frozen:
+
+| You run | What happens first | How long |
+| --- | --- | --- |
+| `git commit` | Formats and lints the staged files | Seconds |
+| `git push` | Runs lint, typecheck and every unit test, the same as CI, and shows each test file as it finishes | Several minutes |
+
+If a check fails, the commit or push stops and the failing log is printed. Fix it and run the command again.
+
 CI also runs typecheck, build, bundle budgets, the RLS manifest check, dependency and migration
 history checks, a dependency audit, a secret scan, the docs link check, the database and API end-to-end
 suites (on throwaway databases) and the browser suites. `pnpm ci:local` runs the same set locally.

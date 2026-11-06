@@ -16,6 +16,10 @@ describe("PRE_PUSH_STEP_IDS", () => {
 });
 
 describe("pushesNothingNew", () => {
+	it("checks a push it can't read, rather than skip it", () => {
+		expect(pushesNothingNew("not-a-ref-line\n")).toBe(false);
+	});
+
 	it("is true when every pushed ref is a deletion, or nothing is pushed", () => {
 		expect(pushesNothingNew(`(delete) ${ZERO} refs/heads/old ${OID}\n`)).toBe(true);
 		expect(pushesNothingNew("")).toBe(true);

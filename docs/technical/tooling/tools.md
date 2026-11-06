@@ -32,7 +32,8 @@ Tools that only fit this starter's architecture are in `src/starter/`. This repo
 | `migration-history/cli.ts` | Fails when committed migration history changes. | GitHub CI, `ci:local` | `migrations` |
 | `playwright-in-docker/cli.ts` | Runs a Playwright suite in Playwright's Linux image. | You, `ci:local`, GitHub CI | — |
 | `playwright-in-docker/docker-forward-and-run.ts` | Forwards ports inside that container. | Inside the container | — |
-| `pre-push/cli.ts` | The git pre-push check. | Git hook | — |
+| `pre-commit/cli.ts` | The git pre-commit check, with a live display. | Git hook | — |
+| `pre-push/cli.ts` | The git pre-push check, with a live display. | Git hook | — |
 | `project-identity/cli.ts` | Applies or checks `project.json` everywhere. | You | `folders` |
 | `run-in-workspace/cli.ts` | Runs a command inside a workspace (lint-staged). | Git hook (lint-staged) | — |
 | `starter/certification-check/cli.ts` | Checks a sample field went through every layer. | You | — |

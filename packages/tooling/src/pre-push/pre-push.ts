@@ -5,6 +5,9 @@
 /** The `ci:local` step ids a push must pass (ci-local-plan.ts → staticSteps). */
 export const PRE_PUSH_STEP_IDS = ["lint", "typecheck", "test"];
 
+/** What each step is called on screen. */
+export const PRE_PUSH_LABELS: Readonly<Record<string, string>> = { lint: "Lint", typecheck: "Typecheck", test: "Unit tests" };
+
 /** The object id git writes for a ref that is being deleted. */
 const ZERO_OBJECT_ID = /^0+$/;
 

@@ -166,13 +166,9 @@ export const NetworkQualityIndicator = React.forwardRef<HTMLButtonElement, Netwo
 				data-slot="network-quality-indicator"
 				data-tone={face.tone}
 				aria-label={labels.triggerAriaLabel(spokenState(reading, labels))}
-				className={cn(
-					badgeVariants({ variant: STATUS_TONE_BADGE_VARIANT[face.tone], size: "lg", radius: "full" }),
-					"cursor-pointer gap-1.5 px-2.5",
-					reading.status === "measuring" && "motion-safe:animate-pulse",
-					className,
-				)}>
-				<Icon className="size-3.5" aria-hidden="true" />
+				className={cn(badgeVariants({ variant: STATUS_TONE_BADGE_VARIANT[face.tone], size: "lg", radius: "full" }), "cursor-pointer gap-1.5 px-2.5", className)}>
+				{/* Only the icon pulses: the fade would take the label below its contrast minimum. */}
+				<Icon className={cn("size-3.5", reading.status === "measuring" && "motion-safe:animate-pulse")} aria-hidden="true" />
 				<span className="tabular-nums">{pillText(reading, labels)}</span>
 			</PopoverTrigger>
 			<PopoverContent side="top" align="start" className="gap-0 overflow-hidden p-0">

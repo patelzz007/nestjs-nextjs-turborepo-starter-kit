@@ -87,6 +87,7 @@ const planSteps = ((): Step[] => {
 		...databaseSteps({
 			databaseUrl: "postgresql://u:p@h/db_ci_local",
 			shadowDatabaseUrl: "postgresql://u:p@h/db_ci_local_shadow",
+			singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
 			consumerLoginUrl: "postgresql://c:s@h/db_ci_local",
 			runId: "1",
 			apiEnvFiles: { e2e: "/repo/.artifacts/ci/api-ci-e2e.env", single: "/repo/.artifacts/ci/api-ci-single.env" },

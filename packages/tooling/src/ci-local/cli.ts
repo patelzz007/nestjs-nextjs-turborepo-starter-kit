@@ -13,9 +13,9 @@
  *   pnpm ci:local                    everything
  *   pnpm ci:local --skip-e2e         everything except the database jobs
  *   pnpm ci:local --e2e-only         only the database jobs (API, analytics consumer, browser)
- *   pnpm ci:local --only lint,test   only these non-database steps (the pre-push hook runs lint,typecheck,test)
+ *   pnpm ci:local --only lint,test   only these non-database steps
  *   pnpm ci:local --no-cache         bypass the Turborepo cache (like a cold CI cache)
- *   pnpm ci:local --errors-only      the same steps, printing only failing tasks' logs (the pre-push hook)
+ *   pnpm ci:local --errors-only      the same steps, printing only failing tasks' logs
  *   pnpm ci:local --base origin/main ref for the migration-history check (default origin/main)
  */
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
@@ -36,6 +36,7 @@ import {
 	THROWAWAY_BROWSER_SUFFIX,
 	THROWAWAY_DATABASE_SUFFIX,
 	THROWAWAY_SHADOW_SUFFIX,
+	THROWAWAY_SINGLE_SUFFIX,
 	throwawayDatabaseUrl,
 	withDatabaseName,
 	withoutQuery,
@@ -132,18 +133,27 @@ async function runDatabaseJobs(results: CiResult[]): Promise<void> {
 	}
 	const main = throwawayDatabaseUrl(developerUrl, THROWAWAY_DATABASE_SUFFIX);
 	const shadow = throwawayDatabaseUrl(developerUrl, THROWAWAY_SHADOW_SUFFIX);
+	const single = throwawayDatabaseUrl(developerUrl, THROWAWAY_SINGLE_SUFFIX);
 
 	const consumerLogin = readEnvFile(CONSUMER_ENV_FILE).ANALYTICS_CONSUMER_DATABASE_URL;
 	// The consumer's own least-privilege login, pointed at the throwaway database (its e2e suite provisions it).
 	const consumerLoginUrl = consumerLogin === undefined ? undefined : withDatabaseName(consumerLogin, main.database);
 
-	const recreate = [main.database, shadow.database].flatMap((name) => [`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`, `CREATE DATABASE "${name}"`]);
+	const recreate = [main.database, shadow.database, single.database].flatMap((name) => [`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`, `CREATE DATABASE "${name}"`]);
 	await onMaintenanceDatabase(developerUrl, recreate);
 	try {
-		const apiEnvFiles = { e2e: writeApiCiEnv("e2e", main.url), single: writeApiCiEnv("single", main.url) };
+		const apiEnvFiles = { e2e: writeApiCiEnv("e2e", main.url), single: writeApiCiEnv("single", single.url) };
 		// Infrastructure locations come from this machine (as ci.yml's job sets REDIS_URL); settings and secrets from CI's file.
 		const redisUrl = readEnvFile(API_ENV_FILE).REDIS_URL;
-		for (const step of databaseSteps({ databaseUrl: main.url, shadowDatabaseUrl: shadow.url, consumerLoginUrl, runId: String(Date.now()), apiEnvFiles, redisUrl })) {
+		for (const step of databaseSteps({
+			databaseUrl: main.url,
+			shadowDatabaseUrl: shadow.url,
+			singleDatabaseUrl: single.url,
+			consumerLoginUrl,
+			runId: String(Date.now()),
+			apiEnvFiles,
+			redisUrl,
+		})) {
 			const { ok, ms } = runStep(step);
 			results.push({ job: step.job, id: step.id, ok, ms });
 			if (!ok) {
@@ -161,7 +171,7 @@ async function runDatabaseJobs(results: CiResult[]): Promise<void> {
 	} finally {
 		await onMaintenanceDatabase(
 			developerUrl,
-			[main.database, shadow.database].map((name) => `DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`),
+			[main.database, shadow.database, single.database].map((name) => `DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`),
 		);
 	}
 }

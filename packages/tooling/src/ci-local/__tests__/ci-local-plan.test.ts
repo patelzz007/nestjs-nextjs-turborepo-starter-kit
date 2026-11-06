@@ -67,6 +67,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 			...databaseSteps({
 				databaseUrl: "postgresql://u:p@h/db_ci_local",
 				shadowDatabaseUrl: "x",
+				singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
 				consumerLoginUrl: "y",
 				runId: "1",
 				apiEnvFiles: API_ENV_FILES,
@@ -102,6 +103,22 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		expect(WORKFLOW).toContain("node packages/tooling/src/migration-history/cli.ts --base");
 	});
 
+	it("gives the single-tenant job its own database with migrations and no seed, as in CI", () => {
+		const steps = databaseSteps({
+			databaseUrl: "postgresql://u:p@h/db_ci_local",
+			shadowDatabaseUrl: "postgresql://u:p@h/db_ci_local_shadow",
+			singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
+			consumerLoginUrl: undefined,
+			runId: "1",
+			apiEnvFiles: API_ENV_FILES,
+		});
+		const single = steps.filter((step) => step.job === "Single-tenant e2e + RLS");
+
+		expect(single.map((step) => step.id)).toEqual(["e2e:single-deploy", "e2e:single-tenancy", "e2e:single-rls"]);
+		expect(single.every((step) => step.env?.DATABASE_URL === "postgresql://u:p@h/db_ci_local_single")).toBe(true);
+		expect(steps.filter((step) => step.args.includes("db:seed")).every((step) => step.env?.DATABASE_URL === "postgresql://u:p@h/db_ci_local")).toBe(true);
+	});
+
 	it("builds with the workflow's public build env", () => {
 		for (const [name, value] of Object.entries(CI_BUILD_ENV)) {
 			expect(WORKFLOW).toMatch(new RegExp(`${name}: "?${value}"?`));
@@ -121,12 +138,13 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		const steps = databaseSteps({
 			databaseUrl: "postgresql://u:p@h/db_ci_local?schema=public",
 			shadowDatabaseUrl: "postgresql://u:p@h/db_ci_local_shadow",
+			singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
 			consumerLoginUrl: "postgresql://c:s@h/db_ci_local",
 			runId: "1791005000000",
 			apiEnvFiles: API_ENV_FILES,
 			redisUrl: REDIS_URL,
 		});
-		for (const step of steps.filter((candidate) => candidate.env !== undefined)) {
+		for (const step of steps.filter((candidate) => candidate.env !== undefined && candidate.job !== "Single-tenant e2e + RLS")) {
 			expect(step.env?.DATABASE_URL).toBe("postgresql://u:p@h/db_ci_local?schema=public");
 		}
 		expect(steps.find((step) => step.id === "e2e:drift")?.env?.SHADOW_DATABASE_URL).toBe("postgresql://u:p@h/db_ci_local_shadow");
@@ -140,6 +158,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		const steps = databaseSteps({
 			databaseUrl: "postgresql://u:p@h/d",
 			shadowDatabaseUrl: "s",
+			singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
 			consumerLoginUrl: undefined,
 			runId: "1791005000000",
 			apiEnvFiles: API_ENV_FILES,
@@ -152,6 +171,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		const ids = databaseSteps({
 			databaseUrl: "postgresql://u:p@h/d",
 			shadowDatabaseUrl: "s",
+			singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
 			consumerLoginUrl: undefined,
 			runId: "1",
 			apiEnvFiles: API_ENV_FILES,
@@ -167,6 +187,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		const steps = databaseSteps({
 			databaseUrl: "postgresql://u:p@h/d",
 			shadowDatabaseUrl: "s",
+			singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
 			consumerLoginUrl: "c",
 			runId: "1",
 			apiEnvFiles: API_ENV_FILES,
@@ -190,6 +211,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		const steps = databaseSteps({
 			databaseUrl: "postgresql://u:p@h/d",
 			shadowDatabaseUrl: "s",
+			singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
 			consumerLoginUrl: "c",
 			runId: "1",
 			apiEnvFiles: API_ENV_FILES,
@@ -211,6 +233,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		const steps = databaseSteps({
 			databaseUrl: "postgresql://u:p@h/d",
 			shadowDatabaseUrl: "s",
+			singleDatabaseUrl: "postgresql://u:p@h/db_ci_local_single",
 			consumerLoginUrl: undefined,
 			runId: "1",
 			apiEnvFiles: API_ENV_FILES,

@@ -33,6 +33,8 @@ export const CI_BUILD_ENV = {
 /** Suffixes of the throwaway databases the e2e steps create and drop (CI uses fresh service containers). */
 export const THROWAWAY_DATABASE_SUFFIX = "_ci_local";
 export const THROWAWAY_SHADOW_SUFFIX = "_ci_local_shadow";
+/** The single-tenant job's database: CI gives that job a fresh one with migrations and no seed. */
+export const THROWAWAY_SINGLE_SUFFIX = "_ci_local_single";
 export const THROWAWAY_BROWSER_SUFFIX = "_ci_local_browser";
 
 /** The browser suites' config (ci.yml → jobs.browser-e2e.env). The admin login is the PUBLIC seed account. */
@@ -117,7 +119,7 @@ export const NON_INTERACTIVE_ENV = Object.freeze({ TURBO_UI: "false" });
 
 /**
  * The non-database steps, one per CI job (or job step), in workflow order.
- * `errorsOnly` (`ci:local --errors-only`, the pre-push hook) keeps the same
+ * `errorsOnly` (`ci:local --errors-only`) keeps the same
  * commands but shows only failing tasks' logs (`--output-logs=errors-only`).
  */
 
@@ -183,7 +185,9 @@ function apiStepEnv(envFile: string, databaseUrl: string, redisUrl?: string): Re
  * developer's apps/api/.env: a setting only the developer has (an encryption
  * key, a login mode) can't make a step pass locally and fail in CI. The `e2e`
  * job's steps also get the developer's Redis, as ci.yml's job sets REDIS_URL;
- * the single-tenant job has none, as in ci.yml.
+ * the single-tenant job has none, as in ci.yml. That job also gets its own
+ * database (`singleDatabaseUrl`), migrated and never seeded, as in ci.yml: on
+ * the seeded one, a test that leans on the seed passes here and fails in CI.
  * The API e2e step gets its own BullMQ key prefix (`E2E_BULLMQ_PREFIX`,
  * `ci-local:<runId>`): a dev API running on the same Redis can never steal its jobs.
  */
@@ -191,6 +195,7 @@ function apiStepEnv(envFile: string, databaseUrl: string, redisUrl?: string): Re
 export function databaseSteps({
 	databaseUrl,
 	shadowDatabaseUrl,
+	singleDatabaseUrl,
 	consumerLoginUrl,
 	runId,
 	apiEnvFiles,
@@ -198,13 +203,14 @@ export function databaseSteps({
 }: {
 	databaseUrl: string;
 	shadowDatabaseUrl: string;
+	singleDatabaseUrl: string;
 	consumerLoginUrl: string | undefined;
 	runId: string;
 	apiEnvFiles: { e2e: string; single: string };
 	redisUrl?: string | undefined;
 }): Step[] {
 	const api = apiStepEnv(apiEnvFiles.e2e, databaseUrl, redisUrl);
-	const single = apiStepEnv(apiEnvFiles.single, databaseUrl);
+	const single = apiStepEnv(apiEnvFiles.single, singleDatabaseUrl);
 	const steps: Step[] = [
 		{ id: "e2e:build", job: "Database + API e2e", command: "pnpm", args: ["turbo", "run", "build", `--filter=${ws.api}^...`] },
 		{ id: "e2e:deploy", job: "Database + API e2e", command: "pnpm", args: ["tools", "db:deploy"], env: api },
@@ -227,6 +233,7 @@ export function databaseSteps({
 		},
 		{ id: "e2e:tenancy", job: "Database + API e2e", command: "pnpm", args: ["--filter", ws.api, "test:e2e:tenancy"], env: api },
 		{ id: "e2e:rls", job: "Database + API e2e", command: "pnpm", args: ["--filter", ws.api, "test:e2e:rls"], env: api },
+		{ id: "e2e:single-deploy", job: "Single-tenant e2e + RLS", command: "pnpm", args: ["tools", "db:deploy"], env: single },
 		{
 			id: "e2e:single-tenancy",
 			job: "Single-tenant e2e + RLS",

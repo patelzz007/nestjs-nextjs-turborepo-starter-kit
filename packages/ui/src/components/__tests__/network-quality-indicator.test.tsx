@@ -59,7 +59,9 @@ describe("NetworkQualityIndicator", () => {
 		const { trigger } = renderIndicator({ status: "measuring" }, true);
 		expect(trigger.dataset.tone).toBe("muted");
 		expect(trigger.textContent).toBe("Measuring…");
-		expect(trigger.className).toContain("motion-safe:animate-pulse");
+		// The icon alone: the fade would take the label below its contrast minimum, which axe reads mid-pulse.
+		expect(trigger.querySelector("svg")?.getAttribute("class")).toContain("motion-safe:animate-pulse");
+		expect(trigger.className).not.toContain("animate-pulse");
 	});
 
 	it("is red when offline, and offers no test until the device is back online", () => {
