@@ -11,8 +11,8 @@ import { contentId } from "./content-id";
  * `../apps/api/src/...`). On the site those become:
  *
  * - another guide under `docs/`     → `/docs/<id>#anchor`
- * - a post under `blog/`            → `/blog/<id>#anchor`
- * - anything else in the repository → the file on GitHub
+ * - a post under `docs/blog/`            → `/blog/<id>#anchor`
+ * - anything else in the repository, `docs/history/` included → the file on GitHub
  *
  * Heading anchors survive unchanged: the site (rehypeHeadingIds) and GitHub both slug headings with
  * `github-slugger`.
@@ -29,6 +29,10 @@ interface SourceFile {
 	readonly path?: string | undefined;
 }
 
+/** Posts live inside `docs/`, but their pages stay at `/blog/…`. */
+const BLOG_FOLDER = "docs/blog/";
+/** Dated working notes, never published (the docs site skips them): a link to one goes to GitHub. */
+const HISTORY_FOLDER = "docs/history/";
 const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
 
 function toPosix(filePath: string): string {
@@ -53,11 +57,11 @@ export function resolveContentLink(href: string, fromFile: string, roots: Conten
 		return href;
 	}
 	const isMarkdown = /\.mdx?$/.test(relative);
-	if (isMarkdown && relative.startsWith("docs/")) {
-		return `/docs/${contentId(relative.slice("docs/".length))}${suffix}`;
+	if (isMarkdown && relative.startsWith(BLOG_FOLDER)) {
+		return `/blog/${contentId(relative.slice(BLOG_FOLDER.length))}${suffix}`;
 	}
-	if (isMarkdown && relative.startsWith("blog/")) {
-		return `/blog/${contentId(relative.slice("blog/".length))}${suffix}`;
+	if (isMarkdown && relative.startsWith("docs/") && !relative.startsWith(HISTORY_FOLDER)) {
+		return `/docs/${contentId(relative.slice("docs/".length))}${suffix}`;
 	}
 	if (relative.startsWith("docs/images/")) {
 		return `/${relative.slice("docs/".length)}${suffix}`;

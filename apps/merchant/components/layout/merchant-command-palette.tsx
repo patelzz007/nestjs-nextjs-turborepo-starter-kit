@@ -15,6 +15,7 @@ import { SunMoon, Ticket } from "lucide-react";
 import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface MerchantCommandPaletteProps {
 	readonly open?: boolean;
@@ -64,7 +65,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 				color: "text-success bg-success-soft",
 				keywords: ["home", "offers", "inventory"],
 				run: (): void => {
-					router.push(rewardsPath);
+					router.push(appRoute(rewardsPath));
 					closePalette();
 				},
 			});
@@ -89,10 +90,10 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 					title: "Account setup required",
 					description: enrollmentDisabledTooltip,
 				});
-				router.push(accountPath);
+				router.push(appRoute(accountPath));
 				return;
 			}
-			router.push(resolveNavHref(url));
+			router.push(appRoute(resolveNavHref(url)));
 			closePalette();
 		},
 		[accountPath, closePalette, enrollmentDisabledTooltip, isEnrollmentLocked, resolveNavHref, router],

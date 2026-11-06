@@ -65,7 +65,7 @@ function DialogDemo(): React.JSX.Element {
 				</DialogHeader>
 				<DialogFooter>
 					<Button label="Done" onPress={hide} />
-					<Button label="Cancel" variant="secondary" onPress={hide} />
+					<Button label="Cancel" variant="outline" onPress={hide} />
 				</DialogFooter>
 			</Dialog>
 		</DemoBlock>

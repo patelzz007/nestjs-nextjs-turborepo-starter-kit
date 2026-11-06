@@ -5,7 +5,7 @@ import { UpdateSampleCategorySchema } from "@workspace/shared";
 import { ConcurrentModificationError } from "../../../../../platform/infrastructure/persistence/persistence.errors";
 import { rootRepositoryDb } from "../../../../../platform/infrastructure/persistence/types";
 import { PrismaService } from "../../../../../prisma/prisma.service";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { PrismaSampleCategoryRepository } from "../prisma-sample-category.repository";
 
 const CATEGORY_ID = "5f2d1c4b-8a7e-4b6f-9c3d-2e1f0a9b8c7d";

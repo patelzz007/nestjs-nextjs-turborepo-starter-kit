@@ -72,7 +72,7 @@ function VerifyEmailScreen(): React.JSX.Element {
 			footer={<TextLink leadIn="Not you?" label="Sign out" role="button" onPress={handleSignOut} />}>
 			{message === null ? null : <Alert tone={message.tone} message={message.text} />}
 			<Button label="I've verified my email" onPress={checkVerified} loading={checking} />
-			<Button label="Send the link again" variant="secondary" onPress={resendLink} loading={resend.isPending} disabled={email === null} />
+			<Button label="Send the link again" variant="outline" onPress={resendLink} loading={resend.isPending} disabled={email === null} />
 		</AuthPage>
 	);
 }

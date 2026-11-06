@@ -8,6 +8,7 @@ import { TENANT_ROUTES } from "@/lib/routes";
 import type { RewardResponse } from "@workspace/shared";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface MerchantRewardCardProps {
 	readonly reward: RewardResponse;
@@ -35,7 +36,7 @@ export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardC
 			status={reward.status}
 			offer={formatRewardOffer(reward.rewardType, reward.rewardValue)}
 			title={
-				<Link href={rewardPath} className="outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']">
+				<Link href={appRoute(rewardPath)} className="outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']">
 					{reward.title}
 					<span className="sr-only">{canManageRewards ? ", manage reward" : ", view reward"}</span>
 				</Link>

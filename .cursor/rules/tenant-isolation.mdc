@@ -1,6 +1,6 @@
 ---
 description: Tenant isolation rules (tenant context, tenant-scoped queries, RLS, cross-tenant access)
-globs: apps/api/src/**,apps/api/prisma/**,apps/api/test/tenancy/**,apps/api/test/rls/**
+globs: apps/api/src/**,apps/api/prisma/**,apps/api/e2e/tenancy/**,apps/api/e2e/rls/**
 alwaysApply: false
 ---
 

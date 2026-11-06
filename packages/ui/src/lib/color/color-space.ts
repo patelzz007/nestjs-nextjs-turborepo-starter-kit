@@ -1,11 +1,15 @@
+import { z } from "zod";
+
 /**
  * Colour spaces and conversions for the colour picker (ported from reui).
  * Channels stay in the space they were given or edited in, so the hue of a
  * grey and an OKLCH colour outside sRGB survive a round trip.
  */
 
+export const ColorPickerFormatSchema = z.enum(["hex", "rgb", "hsl", "hsb", "oklch"]);
+
 /** How a value is written: what `onValueChange` emits and what the fields show. */
-export type ColorPickerFormat = "hex" | "rgb" | "hsl" | "hsb" | "oklch";
+export type ColorPickerFormat = z.output<typeof ColorPickerFormatSchema>;
 
 /** Where channels live. HSB is `hsv` here, after the math. */
 export type ColorPickerColorSpace = "rgb" | "hsl" | "hsv" | "oklch";

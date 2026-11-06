@@ -1,5 +1,6 @@
 // ============================================
-// Appearance (§10.9) — System / Light / Dark / Nord, applied and saved. Choosing one applies
+// Appearance (§10.9) — the theme (System / Light / Dark / Nord) and the side menu's look, applied and
+// saved. Choosing a theme applies
 // it on the tap itself: the radio and every colour change in the same frame, then the toast says so
 // (enhancement 6.7: instant, with no photo-and-fade step in between).
 // ============================================
@@ -9,15 +10,16 @@ import * as React from "react";
 import { Card } from "@workspace/ui-native/components/card";
 import { RadioGroup } from "@workspace/ui-native/components/radio-group";
 import { Screen } from "../../../components/screen";
-import { usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
+import { useDrawerStyle, usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
 import { useLabels } from "../../../features/language/use-app-language";
-import { PREFERENCES_LABELS, themeOptionsOf } from "../../../features/preferences/labels";
+import { drawerStyleOptionsOf, PREFERENCES_LABELS, themeOptionsOf } from "../../../features/preferences/labels";
 import { useToast } from "../../../features/toast/facade";
-import type { ThemePreference } from "../../../lib/secure-store";
+import type { DrawerStyle, ThemePreference } from "../../../lib/secure-store";
 
 export default function AppearanceScreen(): React.JSX.Element {
 	const theme = useThemePreference();
-	const { themeChanged } = usePreferencesCommands();
+	const drawerStyle = useDrawerStyle();
+	const { drawerStyleChanged, themeChanged } = usePreferencesCommands();
 	const toast = useToast();
 	const labels = useLabels(PREFERENCES_LABELS);
 	const options = React.useMemo((): ReturnType<typeof themeOptionsOf> => themeOptionsOf(labels), [labels]);
@@ -32,10 +34,24 @@ export default function AppearanceScreen(): React.JSX.Element {
 		},
 		[labels, theme, themeChanged, toast],
 	);
+	const drawerStyles = React.useMemo((): ReturnType<typeof drawerStyleOptionsOf> => drawerStyleOptionsOf(labels), [labels]);
+	const changeDrawerStyle = React.useCallback(
+		(next: DrawerStyle): void => {
+			if (next === drawerStyle) {
+				return;
+			}
+			drawerStyleChanged(next);
+			toast.success(labels.messages.drawerStyleChanged(labels.drawerStyles[next]));
+		},
+		[drawerStyle, drawerStyleChanged, labels, toast],
+	);
 	return (
 		<Screen description={labels.appearance.description}>
 			<Card>
 				<RadioGroup label={labels.appearance.theme} options={options} value={theme} onChange={changeTheme} />
+			</Card>
+			<Card>
+				<RadioGroup label={labels.appearance.drawerStyle} options={drawerStyles} value={drawerStyle} onChange={changeDrawerStyle} />
 			</Card>
 		</Screen>
 	);

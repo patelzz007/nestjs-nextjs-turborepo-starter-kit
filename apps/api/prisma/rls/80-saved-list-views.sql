@@ -14,7 +14,3 @@
 ALTER TABLE public."SavedListView" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."SavedListView" FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS saved_list_view_own ON public."SavedListView";
-CREATE POLICY saved_list_view_own ON public."SavedListView"
-  USING (app_owns("userId") OR (SELECT app_rls_bypass_on('SavedListView')))
-  WITH CHECK (app_owns("userId") OR (SELECT app_rls_bypass_on('SavedListView')));

@@ -44,6 +44,7 @@ import {
 	VERIFICATION_CODE_LENGTH,
 } from "@/contexts/tenancy/lib/team-invite/invite-form";
 import { TENANT_ROLE_LABELS } from "@/contexts/tenancy/lib/tenant/role-labels";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const ROLE_LABELS: Readonly<Record<MembershipRole, string>> = TENANT_ROLE_LABELS;
 
@@ -133,7 +134,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	const navigateAfterJoin = useCallback(
 		(tenantSlug: string): void => {
 			toastMessage.success({ title: "Welcome to the team" });
-			router.replace(tenantRoutes(tenantSlug).dashboard);
+			router.replace(appRoute(tenantRoutes(tenantSlug).dashboard));
 			router.refresh();
 		},
 		[router],
@@ -179,7 +180,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 				}
 				markEnrollmentMessage(loginResponse.message);
 				const tenantSlug = joinedTenantSlug ?? loginResponse.tenantSlug ?? preview?.tenantSlug;
-				router.replace(getEnrollmentRedirectPath("merchant", loginResponse.enrollmentReason, tenantSlug));
+				router.replace(appRoute(getEnrollmentRedirectPath("merchant", loginResponse.enrollmentReason, tenantSlug)));
 				router.refresh();
 				return;
 			}
@@ -414,7 +415,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 				</div>
 
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
+					<Link href={appRoute(ROUTES.home)} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
 						Back home
 					</Link>
 
@@ -424,7 +425,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 								{isAccepting ? "Joining team…" : "Accept invitation"}
 							</Button>
 						) : showSignInAction || signedInWrongAccount ? (
-							<Link href={loginHref} className={cn(buttonVariants(), "w-full sm:w-auto")}>
+							<Link href={appRoute(loginHref)} className={cn(buttonVariants(), "w-full sm:w-auto")}>
 								{showSignInAction ? "Sign in to accept" : "Sign in with invited email"}
 							</Link>
 						) : null
@@ -444,7 +445,7 @@ function InvalidInviteCard(): JSX.Element {
 					<h1 className="text-xl font-semibold tracking-tight text-foreground">Invalid invitation link</h1>
 					<p className="text-sm text-muted-foreground">This link is missing a token or has already been used. Ask your tenant admin to send a new team invitation.</p>
 				</div>
-				<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
+				<Link href={appRoute(ROUTES.home)} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
 					Back home
 				</Link>
 			</div>

@@ -39,7 +39,7 @@ env:
   DO_NOT_TRACK: "1"
 
 jobs:
-  # Does this pull request change anything but documentation (packages/tooling/scripts/lib/ci-changes.mjs)?
+  # Does this pull request change anything but documentation (packages/tooling/src/ci-changes/ci-changes.ts)?
   # The jobs that read only code `need` this one and run when `code` is true; it is true for every push and
   # manual run, and for any pull request whose changed files could not be listed.
   changes:
@@ -63,7 +63,7 @@ jobs:
         id: classify
         env:
           BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'origin/main' }}
-        run: node packages/tooling/scripts/ci-changes.mjs --event "$GITHUB_EVENT_NAME" --base "$BASE_REF" --output "$GITHUB_OUTPUT"
+        run: node packages/tooling/src/ci-changes/cli.ts --event "$GITHUB_EVENT_NAME" --base "$BASE_REF" --output "$GITHUB_OUTPUT"
 
   lint:
     name: Lint
@@ -102,7 +102,7 @@ jobs:
   # Every workspace's unit tests, split over several runners: one shard per runner, one workspace's suite
   # at a time inside it, each using every core (docs/technical/operations/ci.md, "Unit tests"). Every
   # workspace with a `test` script is in exactly one shard (ci-test-shards.test.mjs fails otherwise). The
-  # docs shard also runs for a documentation-only pull request: the docs site's tests read docs/ and blog/.
+  # docs shard also runs for a documentation-only pull request: the docs site's tests read docs/ and docs/blog/.
   unit-test:
     name: Unit tests (${{ matrix.shard }})
     needs: changes
@@ -142,7 +142,9 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A normal build takes about 6 minutes. A lost runner stops logging but stays "in progress"
+    # until this limit plus GitHub's 5-minute grace, so the limit stays close to the real time.
+    timeout-minutes: 15
     env:
       # The Next.js apps validate their public config (zod) at build/prerender
       # time. These are NON-secret, browser-visible values; CI only proves the
@@ -162,10 +164,12 @@ jobs:
         uses: ./.github/actions/setup-workspace
         with:
           node-version: ${{ env.NODE_VERSION }}
+      # Three tasks at a time: with no limit the Next.js, docs and Expo builds all overlap and
+      # peaked at 22.66 GB when measured, above the runner's 16 GB; three at once peaked at 10.66 GB.
       - name: Build every workspace
-        run: pnpm turbo run build
+        run: pnpm turbo run build --concurrency=3
       # Per-route first-load JS of the Next apps and the mobile Hermes bundles against
-      # bundle-budgets.json (baseline + 10%, decision #57). Raising a budget is a reviewed edit.
+      # budgets/bundle.json (baseline + 10%, decision #57). Raising a budget is a reviewed edit.
       - name: Bundle budgets
         run: pnpm tools bundle:check
 
@@ -235,7 +239,7 @@ jobs:
         # tip of main; manual runs with origin/main.
         env:
           BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || (github.event_name == 'push' && github.event.before) || 'origin/main' }}
-        run: node packages/tooling/scripts/check-migration-history.mjs --base "$BASE_REF"
+        run: node packages/tooling/src/migration-history/cli.ts --base "$BASE_REF"
 
   dependency-audit:
     name: Dependency audit (high + critical advisories)
@@ -277,7 +281,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
       - name: Reject real secrets in tracked .env.example files
-        run: node packages/tooling/scripts/check-env-example-secrets.mjs
+        run: node packages/tooling/src/env-example-secrets/cli.ts
 
   docs-links:
     name: Docs link check
@@ -294,7 +298,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
       - name: Validate internal links in docs/
-        run: node apps/docs/scripts/check-links.mjs
+        run: node apps/docs/scripts/check-links.ts
 
   e2e:
     name: Database + API e2e
@@ -434,7 +438,7 @@ jobs:
         uses: ./.github/actions/write-api-ci-env
         with:
           database-url: ${{ env.DATABASE_URL }}
-          # The two-tenant fixture's Tenant A (test/support/two-tenant-fixture.ts) is the default tenant.
+          # The two-tenant fixture's Tenant A (e2e/support/two-tenant-fixture.ts) is the default tenant.
           tenancy-mode: single
           default-tenant-id: 019b76da-a810-7000-8000-0000000000a1
 
@@ -528,18 +532,23 @@ jobs:
           pnpm db:seed -- --scenario development
 
       - name: Start the API, web, admin and merchant (background, logs kept)
+        env:
+          # All interfaces, not the 127.0.0.1 default: the visual suite's container reaches the API through the
+          # Docker bridge, and on Linux that is not the host's loopback. Its public URL stays what the browser opens.
+          HOST: 0.0.0.0
+          API_PUBLIC_URL: http://localhost:8080
         run: |
-          mkdir -p .ci-logs
-          nohup pnpm --filter @workspace/api start > .ci-logs/api.log 2>&1 &
-          nohup pnpm --filter @workspace/web exec next start --port 3000 > .ci-logs/web.log 2>&1 &
-          nohup pnpm --filter @workspace/admin exec next start --port 3001 > .ci-logs/admin.log 2>&1 &
-          nohup pnpm --filter @workspace/merchant exec next start --port 3003 > .ci-logs/merchant.log 2>&1 &
+          mkdir -p .artifacts/ci
+          nohup pnpm --filter @workspace/api start > .artifacts/ci/api.log 2>&1 &
+          nohup pnpm --filter @workspace/web exec next start --port 3000 > .artifacts/ci/web.log 2>&1 &
+          nohup pnpm --filter @workspace/admin exec next start --port 3001 > .artifacts/ci/admin.log 2>&1 &
+          nohup pnpm --filter @workspace/merchant exec next start --port 3003 > .artifacts/ci/merchant.log 2>&1 &
 
       - name: Install Chromium for Playwright
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Wait for readiness (API /health/ready, web, admin login, merchant login)
-        run: node packages/tooling/scripts/wait-for-http.mjs --timeout-ms 120000 http://localhost:8080/health/ready http://localhost:3000/ http://localhost:3001/auth/login http://localhost:3003/auth/login
+        run: node packages/tooling/src/wait-for-http/cli.ts --timeout-ms 120000 http://localhost:8080/health/ready http://localhost:3000/ http://localhost:3001/auth/login http://localhost:3003/auth/login
 
       - name: Web browser suite
         run: pnpm --filter @workspace/web test:browser
@@ -548,9 +557,11 @@ jobs:
         run: pnpm --filter @workspace/admin test:browser
 
       # Every UI-kit component page of the admin gallery, light and dark, against the committed Linux screenshots
-      # (enhancement 3.8). A failure's diff images are in the uploaded test-results.
+      # (enhancement 3.8), in Playwright's Linux image: the screenshots are taken there (test:visual:update) and
+      # the bare runner has other fallback fonts, so its glyphs for ⌘, ✓, emoji and Arabic differ.
+      # A failure's diff images are in the uploaded .artifacts/playwright/.
       - name: Admin visual suite (UI kit, light and dark)
-        run: pnpm --filter @workspace/admin test:visual
+        run: pnpm --filter @workspace/admin test:visual:docker
 
       - name: Merchant browser suite
         run: pnpm --filter @workspace/merchant test:browser
@@ -561,13 +572,13 @@ jobs:
         with:
           name: browser-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            apps/web/test-results/
+            .artifacts/playwright/web/
             apps/web/playwright-report/
-            apps/admin/test-results/
+            .artifacts/playwright/admin/
             apps/admin/playwright-report/
-            apps/merchant/test-results/
+            .artifacts/playwright/merchant/
             apps/merchant/playwright-report/
-            .ci-logs/
+            .artifacts/ci/
           if-no-files-found: warn
           retention-days: 14
 

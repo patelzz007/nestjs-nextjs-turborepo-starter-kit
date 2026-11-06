@@ -4,9 +4,9 @@ import type { MembershipRole } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
-import { TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { TWO_STORE_CONTEXT } from "@/test/tenant-context";
+import { TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { TWO_STORE_CONTEXT } from "@/testing/tenant-context";
 
 const { loadTenantContext } = vi.hoisted(() => ({
 	loadTenantContext: vi.fn(),

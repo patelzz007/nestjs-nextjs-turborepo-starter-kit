@@ -143,6 +143,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"SignupReferralCode",
 		"SignupReferral",
 		"RewardOtpChallenge",
+		"RewardClaimHold",
 		"RewardLegalAcceptance",
 		"RewardNotification",
 	],

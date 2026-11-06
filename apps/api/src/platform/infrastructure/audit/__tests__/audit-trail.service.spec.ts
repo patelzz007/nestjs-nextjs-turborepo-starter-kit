@@ -1,10 +1,10 @@
 import { Logger } from "@nestjs/common";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAuditTrailDouble } from "../../../../../test/support/audit-trail-double";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createAuditTrailDouble } from "../../../../../e2e/support/audit-trail-double";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../prisma/prisma.service";
-import { captureFastifyRequest } from "../../../../../test/support/fastify-request";
+import { captureFastifyRequest } from "../../../../../e2e/support/fastify-request";
 import { RequestContextService } from "../../context/request-context";
 import { SystemCommandAuditEntrySchema } from "../../../application/ports/command-audit.port";
 import { AuditContextMissingError, AuditLogWriteError } from "../audit-log.errors";

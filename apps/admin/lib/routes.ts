@@ -1,5 +1,7 @@
+import type { Route } from "next";
 import { APP_LINKS } from "@workspace/shared";
 import { routeParam } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /**
  * Every admin URL, in one typed module. Components, pages, the proxy, the
@@ -21,70 +23,70 @@ import { routeParam } from "@workspace/ui/lib/sidebar/navigation/route-patterns"
  */
 
 /** Builds a path from one dynamic value (an id, a key). */
-export type RouteBuilder = (value: string) => string;
+export type RouteBuilder = (value: string) => Route;
 
 /** List / create / detail / edit routes of one resource. */
 export interface CrudRoutes {
-	readonly list: string;
-	readonly create: string;
+	readonly list: Route;
+	readonly create: Route;
 	readonly detail: RouteBuilder;
 	readonly edit: RouteBuilder;
 }
 
 export interface AuthRoutes {
-	readonly login: string;
-	readonly forgotPassword: string;
-	readonly resetPassword: string;
-	readonly verifyEmail: string;
+	readonly login: Route;
+	readonly forgotPassword: Route;
+	readonly resetPassword: Route;
+	readonly verifyEmail: Route;
 }
 
 export interface AnalyticsRoutes {
 	/** The platform dashboard; `?range=` / `?from=&to=` / `?interval=` pick the view (ANALYTICS_URL_STATE). The old `/analytics/sales` redirects here. */
-	readonly index: string;
+	readonly index: Route;
 }
 
 export interface UsersRoutes {
 	/** Section prefix — the user list is the section index. */
-	readonly list: string;
+	readonly list: Route;
 	readonly detail: RouteBuilder;
 	/** Super-admin MFA-recovery queue (linked from API emails). */
-	readonly mfaRecovery: string;
+	readonly mfaRecovery: Route;
 	/** Super-admin just-in-time support access: request, list and revoke grants. */
-	readonly supportAccess: string;
+	readonly supportAccess: Route;
 }
 
 export interface MerchantsRoutes {
 	/** Section prefix — the merchant list is the section index. */
-	readonly list: string;
+	readonly list: Route;
 	/** One merchant's page: its lifecycle (suspend / reinstate) and appeals. */
 	readonly detail: RouteBuilder;
-	readonly invites: string;
-	readonly verification: string;
+	readonly invites: Route;
+	readonly verification: Route;
 	/** Verification queue with one merchant selected in the side panel. */
 	readonly verificationFor: RouteBuilder;
-	readonly storeRequests: string;
+	readonly storeRequests: Route;
 }
 
 export interface RewardsRoutes {
 	/** Section prefix — redirects to `review`. */
-	readonly index: string;
+	readonly index: Route;
 	/** The moderation queue — a compact list; each row opens `reviewDetail`. */
-	readonly review: string;
+	readonly review: Route;
 	/** One reward in full, where it is approved or rejected. */
 	readonly reviewDetail: RouteBuilder;
 }
 
 export interface EmailsRoutes {
 	/** Section prefix — redirects to `templates`. */
-	readonly index: string;
-	readonly templates: string;
+	readonly index: Route;
+	readonly templates: Route;
 	/** Template browser with one template preselected (`?key=`). */
 	readonly template: RouteBuilder;
-	readonly log: string;
+	readonly log: Route;
 	/** Broadcasts and their reports (ADR 073). */
-	readonly broadcasts: string;
+	readonly broadcasts: Route;
 	/** Write a platform broadcast. */
-	readonly broadcastNew: string;
+	readonly broadcastNew: Route;
 	/** One broadcast: its message, audience, status and results. */
 	readonly broadcast: RouteBuilder;
 	/** A platform draft in the composer. */
@@ -92,12 +94,12 @@ export interface EmailsRoutes {
 }
 
 export interface GeographyRoutes {
-	readonly index: string;
+	readonly index: Route;
 }
 
 export interface AuditLogsRoutes {
 	/** The audit log — one timeline of every HTTP request and every database write no request made (ADR 051). */
-	readonly list: string;
+	readonly list: Route;
 	/** One complete HTTP request record (payloads included). */
 	readonly detail: RouteBuilder;
 	/** One complete row change (the redacted row before and after). */
@@ -107,29 +109,29 @@ export interface AuditLogsRoutes {
 /** The log of webhooks providers sent the API (ADR 081). */
 export interface WebhooksRoutes {
 	/** Every received webhook, newest first; `?filter[provider]=` / `?filter[outcome]=` narrow it (RECEIVED_WEBHOOKS_URL_STATE). */
-	readonly received: string;
+	readonly received: Route;
 	/** One received webhook: its signature check, outcome and allowlisted headers. */
 	readonly receivedDetail: RouteBuilder;
 }
 
 export interface CatalogRoutes {
 	/** Section prefix — redirects to `products.list`. */
-	readonly index: string;
+	readonly index: Route;
 	readonly products: CrudRoutes;
 	readonly categories: CrudRoutes;
 }
 
 export interface SettingsRoutes {
 	/** Section prefix — redirects to `access`. */
-	readonly index: string;
-	readonly access: string;
+	readonly index: Route;
+	readonly access: Route;
 	/** Runtime feature flags (enhancement 5.6). */
-	readonly featureFlags: string;
+	readonly featureFlags: Route;
 }
 
 export interface ComponentsRoutes {
 	/** The UI kit's low-level component gallery — sample content only, no API calls. */
-	readonly index: string;
+	readonly index: Route;
 	/** One component's page: its live demo and its worked examples (`/components/<slug>`). */
 	readonly component: RouteBuilder;
 }
@@ -139,7 +141,7 @@ export interface KanbanRoutes {
 	 * The staff boards (in the Components section); `?board=planning|execution` picks the board and
 	 * `?view=` / `?lanes=` / `?search=` / `?priority=` / `?team=` / `?type=` / `?sort=` the view (KANBAN_BOARD_URL_STATE).
 	 */
-	readonly board: string;
+	readonly board: Route;
 	/** One task, read-only: its details, attachments and comments. */
 	readonly task: RouteBuilder;
 	/** One task's editor. */
@@ -149,43 +151,43 @@ export interface KanbanRoutes {
 /** The operations console (ADR 068): servers, instances, dependencies, alerts, backups and load tests. */
 export interface OperationsRoutes {
 	/** Section index: redirects to the servers overview (the sidebar lists it as a toggle-only parent). */
-	readonly index: string;
+	readonly index: Route;
 	/** The overview: every server, instance, dependency and open alert. */
-	readonly servers: string;
+	readonly servers: Route;
 	/** One server: its facts, live numbers and history. */
 	readonly server: RouteBuilder;
-	readonly alerts: string;
+	readonly alerts: Route;
 	/** SuperAdmin only. */
-	readonly backups: string;
+	readonly backups: Route;
 	/** Rate limiting (ADR 071): policies, refusals, tenant overrides, penalties. */
-	readonly rateLimits: string;
+	readonly rateLimits: Route;
 	/** The distributed cache (ADR 072): per-cache numbers, Redis memory, flushes. */
-	readonly cache: string;
+	readonly cache: Route;
 	/** Background job queues (enhancement 4.4): depth, failure rate, failed jobs, retry and discard. */
-	readonly queues: string;
+	readonly queues: Route;
 	/** The public status page's incidents (enhancement 4.5): the list, one incident, and opening one. */
-	readonly statusIncidents: string;
+	readonly statusIncidents: Route;
 	readonly statusIncident: RouteBuilder;
-	readonly newStatusIncident: string;
-	readonly loadTests: string;
+	readonly newStatusIncident: Route;
+	readonly loadTests: Route;
 	/** One load test: its timeline, steps and the servers' load. */
 	readonly loadTest: RouteBuilder;
 	/** Two load tests side by side (`?a=&b=`). */
-	readonly compare: (left: string, right: string) => string;
+	readonly compare: (left: string, right: string) => Route;
 }
 
 export interface AccountRoutes {
 	/** Section prefix — where restricted sessions land; redirects to `security`. */
-	readonly index: string;
+	readonly index: Route;
 	/** The signed-in admin's own profile (`GET`/`PATCH /auth/profile`). */
-	readonly profile: string;
-	readonly security: string;
+	readonly profile: Route;
+	readonly security: Route;
 	/** The signed-in admin's own GitHub token (`GET`/`PUT`/`DELETE /github/account`). */
-	readonly github: string;
+	readonly github: Route;
 }
 
 export interface AdminRoutes {
-	readonly home: string;
+	readonly home: Route;
 	readonly auth: AuthRoutes;
 	readonly analytics: AnalyticsRoutes;
 	readonly users: UsersRoutes;
@@ -202,17 +204,17 @@ export interface AdminRoutes {
 	readonly operations: OperationsRoutes;
 	readonly account: AccountRoutes;
 	/** The staff member's own inbox (ADR 070) — personal, so any admin may open it. */
-	readonly notifications: string;
+	readonly notifications: Route;
 }
 
 /** Appends one encoded path segment to `base`. */
-function childPath(base: string, segment: string): string {
-	return `${base}/${encodeURIComponent(segment)}`;
+function childPath(base: string, segment: string): Route {
+	return appRoute(`${base}/${encodeURIComponent(segment)}`);
 }
 
 /** `base?name=value`, with the value encoded. */
-function withQuery(base: string, name: string, value: string): string {
-	return `${base}?${new URLSearchParams({ [name]: value }).toString()}`;
+function withQuery(base: string, name: string, value: string): Route {
+	return appRoute(`${base}?${new URLSearchParams({ [name]: value }).toString()}`);
 }
 
 /** Trailing segment of every edit page (`/x/[id]/edit`). */
@@ -220,10 +222,10 @@ const EDIT_SEGMENT = "edit";
 
 function crudRoutes(list: string): CrudRoutes {
 	return {
-		list,
-		create: `${list}/new`,
-		detail: (id: string): string => childPath(list, id),
-		edit: (id: string): string => `${childPath(list, id)}/${EDIT_SEGMENT}`,
+		list: appRoute(list),
+		create: appRoute(`${list}/new`),
+		detail: (id: string): Route => childPath(list, id),
+		edit: (id: string): Route => appRoute(`${childPath(list, id)}/${EDIT_SEGMENT}`),
 	};
 }
 
@@ -276,56 +278,56 @@ const OPERATIONS_STATUS = `${OPERATIONS}/status`;
 export const LOAD_TEST_COMPARE_PARAMS = { left: "a", right: "b" } satisfies Record<string, string>;
 
 export const ROUTES: AdminRoutes = {
-	home: APP_LINKS.admin.home,
+	home: appRoute(APP_LINKS.admin.home),
 	auth: {
-		login: APP_LINKS.auth.login,
-		forgotPassword: APP_LINKS.auth.forgotPassword,
-		resetPassword: APP_LINKS.auth.resetPassword,
-		verifyEmail: APP_LINKS.auth.verifyEmail,
+		login: appRoute(APP_LINKS.auth.login),
+		forgotPassword: appRoute(APP_LINKS.auth.forgotPassword),
+		resetPassword: appRoute(APP_LINKS.auth.resetPassword),
+		verifyEmail: appRoute(APP_LINKS.auth.verifyEmail),
 	},
 	analytics: {
 		index: ANALYTICS,
 	},
 	users: {
 		list: USERS,
-		detail: (id: string): string => childPath(USERS, id),
-		mfaRecovery: APP_LINKS.admin.mfaRecoveryQueue,
+		detail: (id: string): Route => childPath(USERS, id),
+		mfaRecovery: appRoute(APP_LINKS.admin.mfaRecoveryQueue),
 		supportAccess: `${USERS}/support-access`,
 	},
 	merchants: {
 		list: MERCHANTS,
-		detail: (id: string): string => childPath(MERCHANTS, id),
+		detail: (id: string): Route => childPath(MERCHANTS, id),
 		invites: `${MERCHANTS}/invites`,
 		verification: MERCHANT_VERIFICATION,
-		verificationFor: (tenantId: string): string => withQuery(MERCHANT_VERIFICATION, MERCHANT_VERIFICATION_TENANT_PARAM, tenantId),
+		verificationFor: (tenantId: string): Route => withQuery(MERCHANT_VERIFICATION, MERCHANT_VERIFICATION_TENANT_PARAM, tenantId),
 		storeRequests: `${MERCHANTS}/store-requests`,
 	},
 	rewards: {
 		index: REWARDS,
 		review: REWARDS_REVIEW,
-		reviewDetail: (id: string): string => childPath(REWARDS_REVIEW, id),
+		reviewDetail: (id: string): Route => childPath(REWARDS_REVIEW, id),
 	},
 	emails: {
 		index: EMAILS,
 		templates: EMAIL_TEMPLATES,
-		template: (key: string): string => withQuery(EMAIL_TEMPLATES, EMAIL_TEMPLATE_KEY_PARAM, key),
+		template: (key: string): Route => withQuery(EMAIL_TEMPLATES, EMAIL_TEMPLATE_KEY_PARAM, key),
 		log: `${EMAILS}/log`,
 		broadcasts: EMAIL_BROADCASTS,
 		broadcastNew: `${EMAIL_BROADCASTS}/new`,
-		broadcast: (id: string): string => childPath(EMAIL_BROADCASTS, id),
-		broadcastEdit: (id: string): string => `${childPath(EMAIL_BROADCASTS, id)}/${EDIT_SEGMENT}`,
+		broadcast: (id: string): Route => childPath(EMAIL_BROADCASTS, id),
+		broadcastEdit: (id: string): Route => appRoute(`${childPath(EMAIL_BROADCASTS, id)}/${EDIT_SEGMENT}`),
 	},
 	geography: {
 		index: "/geography",
 	},
 	auditLogs: {
 		list: AUDIT_LOGS,
-		detail: (id: string): string => childPath(AUDIT_LOGS, id),
-		change: (id: string): string => childPath(AUDIT_LOG_CHANGES, id),
+		detail: (id: string): Route => childPath(AUDIT_LOGS, id),
+		change: (id: string): Route => childPath(AUDIT_LOG_CHANGES, id),
 	},
 	webhooks: {
 		received: WEBHOOKS_RECEIVED,
-		receivedDetail: (id: string): string => childPath(WEBHOOKS_RECEIVED, id),
+		receivedDetail: (id: string): Route => childPath(WEBHOOKS_RECEIVED, id),
 	},
 	catalog: {
 		index: CATALOG,
@@ -339,28 +341,28 @@ export const ROUTES: AdminRoutes = {
 	},
 	components: {
 		index: COMPONENTS,
-		component: (slug: string): string => childPath(COMPONENTS, slug),
+		component: (slug: string): Route => childPath(COMPONENTS, slug),
 	},
 	kanban: {
 		board: KANBAN,
-		task: (id: string): string => childPath(KANBAN_TASKS, id),
-		editTask: (id: string): string => `${childPath(KANBAN_TASKS, id)}/${EDIT_SEGMENT}`,
+		task: (id: string): Route => childPath(KANBAN_TASKS, id),
+		editTask: (id: string): Route => appRoute(`${childPath(KANBAN_TASKS, id)}/${EDIT_SEGMENT}`),
 	},
 	operations: {
 		index: OPERATIONS,
 		servers: OPERATIONS_SERVERS,
-		server: (id: string): string => childPath(OPERATIONS_SERVERS, id),
+		server: (id: string): Route => childPath(OPERATIONS_SERVERS, id),
 		alerts: `${OPERATIONS}/alerts`,
 		backups: `${OPERATIONS}/backups`,
 		rateLimits: `${OPERATIONS}/rate-limits`,
 		cache: `${OPERATIONS}/cache`,
 		queues: `${OPERATIONS}/queues`,
 		statusIncidents: OPERATIONS_STATUS,
-		statusIncident: (id: string): string => childPath(OPERATIONS_STATUS, id),
+		statusIncident: (id: string): Route => childPath(OPERATIONS_STATUS, id),
 		newStatusIncident: `${OPERATIONS_STATUS}/new`,
 		loadTests: OPERATIONS_LOAD_TESTS,
-		loadTest: (id: string): string => childPath(OPERATIONS_LOAD_TESTS, id),
-		compare: (left: string, right: string): string =>
+		loadTest: (id: string): Route => childPath(OPERATIONS_LOAD_TESTS, id),
+		compare: (left: string, right: string): Route =>
 			`${OPERATIONS_LOAD_TESTS}/compare?${new URLSearchParams({ [LOAD_TEST_COMPARE_PARAMS.left]: left, [LOAD_TEST_COMPARE_PARAMS.right]: right }).toString()}`,
 	},
 	account: {
@@ -369,13 +371,13 @@ export const ROUTES: AdminRoutes = {
 		security: `${ACCOUNT}/security`,
 		github: `${ACCOUNT}/github`,
 	},
-	notifications: APP_LINKS.admin.notifications,
+	notifications: appRoute(APP_LINKS.admin.notifications),
 };
 
 /** Detail / edit page patterns of one CRUD resource (App Router notation). */
 export interface CrudRoutePatterns {
-	readonly detail: string;
-	readonly edit: string;
+	readonly detail: Route;
+	readonly edit: Route;
 }
 
 export interface AdminRoutePatterns {
@@ -398,7 +400,7 @@ const ID_PARAM = "id";
 
 function crudRoutePatterns(list: string): CrudRoutePatterns {
 	const detail = `${list}/${routeParam(ID_PARAM)}`;
-	return { detail, edit: `${detail}/${EDIT_SEGMENT}` };
+	return { detail: appRoute(detail), edit: appRoute(`${detail}/${EDIT_SEGMENT}`) };
 }
 
 /**

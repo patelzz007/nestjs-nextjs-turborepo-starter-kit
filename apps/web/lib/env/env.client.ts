@@ -11,16 +11,15 @@
 //
 // Import this module anywhere (server or client). Everything in it is public.
 
-import { parseEnvOrThrow } from "@workspace/shared";
-import type { z } from "zod";
+import { parseAppEnv } from "@workspace/client/lib/env/parse-app-env";
 
 import { WEB_ENV_SCOPE, WebClientEnvSchema, type WebClientEnv } from "./env.schema";
 
-export const clientEnv: Readonly<WebClientEnv> = parseEnvOrThrow(
+export const clientEnv: Readonly<WebClientEnv> = parseAppEnv(
 	WebClientEnvSchema,
 	{
 		NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
 		NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-	} satisfies Record<keyof z.input<typeof WebClientEnvSchema>, string | undefined>,
+	},
 	WEB_ENV_SCOPE.client,
 );

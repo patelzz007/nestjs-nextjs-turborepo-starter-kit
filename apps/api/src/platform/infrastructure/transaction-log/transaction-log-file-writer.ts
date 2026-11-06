@@ -27,7 +27,7 @@ export interface TransactionLogPurgeResult {
 
 /**
  * Appends formatted transactions to the day file under the configured folder
- * (a relative folder is taken from the monorepo root: `<repo>/logs/transactions`),
+ * (a relative folder is taken from the monorepo root: `<repo>/.artifacts/logs/transactions`),
  * and deletes day files past their retention. All I/O is asynchronous (libuv's
  * thread pool), so no request thread ever waits on the disk.
  *

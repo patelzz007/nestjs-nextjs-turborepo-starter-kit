@@ -2,8 +2,8 @@ import { Logger } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { InMemoryCacheStore } from "../../../../../test/support/in-memory-cache-store";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { InMemoryCacheStore } from "../../../../../e2e/support/in-memory-cache-store";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { defineCache, PLATFORM_SCOPE, tenantScope, userScope, type CacheDefinition, type CacheTier } from "../../../application/ports/app-cache.port";
 import { RedisNamespace } from "../../redis/redis-namespace";
 import { GcmCacheCipher } from "../cache-cipher";

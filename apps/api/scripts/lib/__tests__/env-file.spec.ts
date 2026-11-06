@@ -18,6 +18,6 @@ describe("apiEnvFilePath", () => {
 	});
 
 	it("resolves a relative DOTENV_PATH against the working directory, as dotenv does", () => {
-		expect(apiEnvFilePath(API_ROOT, ".ci-logs/api.env")).toBe(resolve(process.cwd(), ".ci-logs/api.env"));
+		expect(apiEnvFilePath(API_ROOT, ".artifacts/ci/api.env")).toBe(resolve(process.cwd(), ".artifacts/ci/api.env"));
 	});
 });

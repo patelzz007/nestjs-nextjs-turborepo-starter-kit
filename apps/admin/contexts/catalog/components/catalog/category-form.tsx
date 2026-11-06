@@ -8,6 +8,7 @@ import * as React from "react";
 
 import { SwitchField, TextField, useFormSubmitHandler } from "@/components/common/form-fields";
 import { CategoryFormSchema, type CategoryFormValues } from "@/contexts/catalog/lib/form-values";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface CategoryFormProps {
 	readonly initialValues: CategoryFormValues;
@@ -80,7 +81,7 @@ export function CategoryForm({ initialValues, submitLabel, isPending, onSubmit, 
 				<Button type="submit" disabled={isPending}>
 					{isPending ? "Saving…" : submitLabel}
 				</Button>
-				<Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>
+				<Link href={appRoute(cancelHref)} className={buttonVariants({ variant: "outline" })}>
 					Cancel
 				</Link>
 			</div>

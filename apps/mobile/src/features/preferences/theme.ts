@@ -1,5 +1,5 @@
 // Applies the appearance preference through Uniwind (ADR 032): `system`
-// follows the OS (and its changes), `light` / `dark` / `nord` force one theme.
+// follows the OS (and its changes); any other preference forces that theme.
 
 import { isDarkTheme } from "@workspace/tokens";
 import { Appearance } from "react-native";
@@ -12,7 +12,7 @@ const ADAPTIVE_PREFERENCES: readonly ThemePreference[] = ["system", "light", "da
 
 export function applyThemePreference(theme: ThemePreference): void {
 	Uniwind.setTheme(theme);
-	// For a theme of its own (Nord) Uniwind leaves the OS colour scheme on the system setting, so native
+	// For a theme of its own (Nord, Harbour…) Uniwind leaves the OS colour scheme on the system setting, so native
 	// controls (keyboard, alerts, the status bar's `auto` style) would follow the OS, not the app. Pin them
 	// to the theme's own lightness.
 	if (!ADAPTIVE_PREFERENCES.includes(theme)) {

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
 
 import { SecretEncryptionService } from "../secret-encryption.service";
-import { createTestApiConfig } from "../../../../../../test/support/test-api-env";
+import { createTestApiConfig } from "../../../../../../e2e/support/test-api-env";
 
 const configState = vi.hoisted(() => {
 	const state: { mfaEncryptionKeys: Readonly<Record<number, string>> } = { mfaEncryptionKeys: {} };

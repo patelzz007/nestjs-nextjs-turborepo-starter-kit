@@ -60,7 +60,7 @@ If either fails, diagnose and fix the root cause, then run both again. Do not us
 | Bug, regression, flaky test, performance defect, operational failure | `16-bug-fixing-and-debugging.md`, `32-ai-agent-execution-protocol.md`, `skills/diagnosing-bugs/SKILL.md` |
 | Feature planning and implementation | `15-feature-development-process.md`, `32-ai-agent-execution-protocol.md`, `skills/tdd-vertical-slice/SKILL.md` |
 | Ambiguous product requirements or unresolved decisions | `skills/grill-and-spec/SKILL.md` |
-| Code review | `16-code-review-checklist.md`, `skills/independent-code-review/SKILL.md` |
+| Code review | `33-code-review-checklist.md`, `skills/independent-code-review/SKILL.md` |
 | Shared module, reusable abstraction, extension point, package boundary | `01-repository-architecture.md`, `21-oop-and-solid-principles.md`, `skills/codebase-design/SKILL.md` |
 | NestJS modules, controllers, services, Prisma access, request lifecycle | `02-backend-nestjs.md`, `21-oop-and-solid-principles.md` |
 | Commands and queries | `02-backend-nestjs.md`, `21-oop-and-solid-principles.md`, `23-quick-reference-decision-trees.md`, ADR 059, `30-cqrs.md` |
@@ -92,7 +92,7 @@ If either fails, diagnose and fix the root cause, then run both again. Do not us
 | DDD | `29-domain-driven-design.md` (subordinate to hand-written rules/ADRs/architecture docs) |
 | CQRS | `30-cqrs.md` (subordinate to hand-written rules/ADRs/architecture docs) |
 | Tenant isolation | `31-multi-tenancy-and-tenant-isolation.md` (subordinate to hand-written rules/ADRs/architecture docs) |
-| Wrapping up | `18-definition-of-done.md`, `14-documentation.md`, `16-code-review-checklist.md` |
+| Wrapping up | `18-definition-of-done.md`, `14-documentation.md`, `33-code-review-checklist.md` |
 
 ## Non-negotiables, quick reminder
 
@@ -129,3 +129,7 @@ When rules conflict, follow the existing precedence in `00-non-negotiables.md` a
 - Remaining risks, assumptions, and follow-ups.
 - Explain in simple English -- i.e. ELI5 me.
 - Whatever can be placed within a table, place it in a table.. Things within a table is much more readable.
+
+## Dated working notes
+
+Progress logs (`PROGRESS-<date>.md`) and other dated notes go in `docs/history/`. The docs site never publishes that folder.

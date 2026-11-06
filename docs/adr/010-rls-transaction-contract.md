@@ -63,5 +63,5 @@ Tenant-owned foreign keys include `organizationId` in parent and child keys to p
 ## References
 
 - `apps/api/src/prisma/tenant-transaction.service.ts`
-- `apps/api/prisma/rls.sql`
+- `apps/api/prisma/rls/10-policies.sql`
 - ADR 007 (superseded bypass defaults for tenant paths)

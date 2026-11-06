@@ -6,6 +6,7 @@ import { Store } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { BRAND_NAME } from "@workspace/tokens";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface MerchantOnboardingPageFrameProps {
 	readonly children: React.ReactNode;
@@ -31,7 +32,7 @@ export function MerchantOnboardingPageFrame({ children }: MerchantOnboardingPage
 						</div>
 					</div>
 					<div className="flex items-center gap-2">
-						<Link href={ROUTES.auth.login} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}>
+						<Link href={appRoute(ROUTES.auth.login)} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}>
 							Sign in
 						</Link>
 						<ShellThemeToggle />

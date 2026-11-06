@@ -5,7 +5,7 @@ import { epochMs, type NotificationPreferencesResponse, type PushDeviceResponse 
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../../test/auth-fixtures";
+import { envelopeFixture } from "../../../../testing/auth-fixtures";
 import { ClientTestProviders } from "../../../../testing/client-test-providers";
 import { minuteToTime, NotificationSettings, timeToMinute } from "../notification-settings";
 import { NOTIFICATION_SETTINGS_LABELS } from "../notification-settings-labels";

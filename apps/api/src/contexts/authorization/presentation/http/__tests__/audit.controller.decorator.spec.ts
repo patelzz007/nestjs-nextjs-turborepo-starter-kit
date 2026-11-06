@@ -8,7 +8,7 @@ import { CapabilitiesCatalogController } from "../capabilities-catalog.controlle
 import { SupportAccessController } from "../support-access.controller";
 import { PermissionsController } from "../permissions.controller";
 import { RolesController } from "../roles.controller";
-import { handlerOf } from "../../../../../../test/support/route-metadata";
+import { handlerOf } from "../../../../../../e2e/support/route-metadata";
 
 describe("capability catalog route", () => {
 	it("reads under authorization.capability_catalog.read and does not bypass every table", () => {

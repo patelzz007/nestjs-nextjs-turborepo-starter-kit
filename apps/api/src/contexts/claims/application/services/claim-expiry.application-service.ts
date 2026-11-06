@@ -61,4 +61,39 @@ export class ClaimExpiryApplicationService {
 		}
 		return result;
 	}
+
+	/** Ends overdue holds one transaction each and gives their units back; a hold a claim took first is skipped. */
+	public async expireOverdueHolds(actor: ActorContext): Promise<ClaimExpiryResult> {
+		const now = this.clock.now();
+		const overdue = await this.uow.run(actor, async (scope: ClaimsScope) => scope.holds.listOverdue(now, CLAIM_EXPIRY_BATCH_SIZE));
+		let expired = 0;
+		const failures: Error[] = [];
+		for (const { holdId, tenantId } of overdue) {
+			try {
+				const didExpire = await this.uow.run(actor, async (scope: ClaimsScope): Promise<boolean> => {
+					const hold = await scope.holds.findById(holdId);
+					if (!hold?.isOverdue(now)) {
+						return false;
+					}
+					hold.expire(now);
+					if (!(await scope.holds.saveIfUnchanged(hold))) {
+						return false;
+					}
+					await scope.rewards.release(hold.rewardId, now);
+					await scope.rewardAudit.append({ tenantId, actorUserId: null, action: "reward.claim_hold_expired", metadata: { holdId, rewardId: hold.rewardId } });
+					return true;
+				});
+				expired += didExpire ? 1 : 0;
+			} catch (error) {
+				failures.push(error instanceof Error ? error : new Error(String(error)));
+			}
+		}
+		const result: ClaimExpiryResult = { expired, skipped: overdue.length - expired - failures.length };
+		this.logger.log({ event: "claims.hold_expiry.run", ...result, failed: failures.length });
+		const [firstFailure] = failures;
+		if (firstFailure !== undefined) {
+			throw firstFailure;
+		}
+		return result;
+	}
 }

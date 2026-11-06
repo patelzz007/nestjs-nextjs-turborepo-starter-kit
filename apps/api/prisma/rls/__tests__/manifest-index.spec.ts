@@ -6,7 +6,7 @@ import { buildManifestTableToProfileMap, collectRlsEnabledTableNames, computeRls
 
 const apiDir = resolve(import.meta.dirname, "..", "..", "..");
 const schemaFile = resolve(apiDir, "prisma", "schema.prisma");
-const rlsBundleFile = resolve(apiDir, "prisma", "rls.sql");
+const rlsBundleFile = resolve(apiDir, "prisma", "rls", "10-policies.sql");
 
 describe("RLS manifest index", () => {
 	it("maps each manifest table to exactly one profile", () => {
@@ -15,7 +15,7 @@ describe("RLS manifest index", () => {
 		expect(map.size).toBe(tables.length);
 	});
 
-	it("has no drift against schema.prisma and rls.sql", () => {
+	it("has no drift against schema.prisma and 10-policies.sql", () => {
 		const schemaContent = readFileSync(schemaFile, "utf8");
 		const rlsSqlContent = readFileSync(rlsBundleFile, "utf8");
 

@@ -70,7 +70,7 @@ If you memorize one thing, memorize this list. "Where does my code go?" is almos
 5. Run the completion gate from the repo root: pnpm run lint (zero errors AND warnings) then pnpm run test.
    Fix root causes and re-run both until both pass. No suppression comments, no config edits, no skipped tests.
 6. Fill in the PR template (15-feature-development-process.md). Be honest in "Shortcuts or exceptions."
-7. Self-review against 16-code-review-checklist.md and 25-anti-pattern-catalog.md BEFORE asking for review.
+7. Self-review against 33-code-review-checklist.md and 25-anti-pattern-catalog.md BEFORE asking for review.
 ```
 
 ## Guided tour: "a customer cancels an order"

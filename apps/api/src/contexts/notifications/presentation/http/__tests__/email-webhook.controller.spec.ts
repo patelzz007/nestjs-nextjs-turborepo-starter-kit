@@ -2,7 +2,7 @@ import type { RawBodyRequest } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it } from "vitest";
 
-import { captureFastifyRequest } from "../../../../../../test/support/fastify-request";
+import { captureFastifyRequest } from "../../../../../../e2e/support/fastify-request";
 import { ActorContextSchema, type ActorContext } from "../../../../../platform/application/actor-context";
 import type { InboundWebhookRequest } from "../../../../webhooks/inbound/public-api";
 import type { NotificationWebhookReception } from "../../../application/services/notification-webhook-reception";
@@ -12,7 +12,7 @@ import { TwilioWebhooksController } from "../notification-webhooks.controller";
 /**
  * The provider routes hand the exact bytes and headers they received to the reception (verification, claiming
  * and applying are proved in notification-webhook-reception.spec.ts, the HTTP answers in
- * test/email-delivery-webhook.e2e-spec.ts) and answer `{ received: true }`.
+ * e2e/email-delivery-webhook.e2e-spec.ts) and answer `{ received: true }`.
  */
 
 const ACTOR: ActorContext = ActorContextSchema.parse({

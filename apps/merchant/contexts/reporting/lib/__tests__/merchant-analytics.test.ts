@@ -2,8 +2,8 @@ import { analyticsFormatters } from "@workspace/client/lib/contexts/reporting/an
 import { describe, expect, it } from "vitest";
 
 import { NO_STORE_LABEL, reportTimeZone, toRedemptionMethodSegments, toRewardItems, toStoreItems } from "@/contexts/reporting/lib/merchant-analytics";
-import { buildMerchantDashboard } from "@/test/analytics-dashboard";
-import { tenantContextFixture } from "@/test/tenant-context";
+import { buildMerchantDashboard } from "@/testing/analytics-dashboard";
+import { tenantContextFixture } from "@/testing/tenant-context";
 
 const FORMATTERS = analyticsFormatters("MYR", "en-MY");
 

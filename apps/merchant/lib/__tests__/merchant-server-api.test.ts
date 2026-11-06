@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadMerchantServerContext, loadMerchantServerSession, loadTenantContext } from "@/lib/merchant-server-api";
 import { UnexpectedServerQueryError } from "@workspace/client/lib/api/server-query-outcome";
-import { membershipFixture, TEST_ORG_SLUG } from "@/test/authorization";
-import { TWO_STORE_CONTEXT } from "@/test/tenant-context";
+import { membershipFixture, TEST_ORG_SLUG } from "@/testing/authorization";
+import { TWO_STORE_CONTEXT } from "@/testing/tenant-context";
 
 // The real SSR caller runs against a stubbed `fetch`, so these tests cover how
 // an actual HTTP answer (or outage) becomes the merchant's server context.

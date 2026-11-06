@@ -290,7 +290,7 @@ conversion), writing **one audit row per moved member**, as a system actor:
 
 Every line is one named e2e test, run **through the API** and **directly against RLS** — the latter as
 the `app_runtime` database role with only the request settings stamped, through no API code (the
-existing `apps/api/test/rls` harness). Phase 2 delivers all of them; Phase 3 adds the UI tests.
+existing `apps/api/e2e/rls` harness). Phase 2 delivers all of them; Phase 3 adds the UI tests.
 
 | # | Case | Expected | Path asserted |
 |---|---|---|---|
@@ -378,7 +378,7 @@ starts. **Phases 1 and 2 are built together, then work stops** so the owner can 
 - The 46-case edge matrix, through the API and against RLS.
 - **Then stop.** The owner resets the database, migrates, seeds and applies RLS on their machine
   (`prisma migrate reset`, `pnpm db:seed`, `pnpm db:apply-security`); the e2e suite
-  (`test/tenant-access.e2e-spec.ts`) shows the rules hold through the API and as `app_runtime`.
+  (`e2e/tenant-access.e2e-spec.ts`) shows the rules hold through the API and as `app_runtime`.
 
 ### Phase 3 — screens
 

@@ -15,7 +15,7 @@ import {
 } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { controllerOf, handlerOf, metadataOf, routeOf } from "../../../../../../test/support/route-metadata";
+import { controllerOf, handlerOf, metadataOf, routeOf } from "../../../../../../e2e/support/route-metadata";
 import { ALLOW_API_KEY_AUTH_KEY } from "../../../../../platform/presentation/http/security/api-keys/api-key-request";
 import { IS_PUBLIC_KEY } from "../../../../../platform/presentation/http/security/decorators/public.decorator";
 import { SKIP_MUTATION_INTENT_KEY } from "../../../../../platform/presentation/http/security/decorators/skip-mutation-intent.decorator";

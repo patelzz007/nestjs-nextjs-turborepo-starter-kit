@@ -189,7 +189,7 @@ Extends `base.json` with NestJS requirements:
 > `development` condition pointing at the raw `src/index.ts`, and web/admin set
 > `customConditions: ["development"]` so dev (and Next.js bundling) resolves source
 > directly. Every workspace that imports a `@workspace` package sets it, the API
-> included — `packages/tooling/__tests__/tsconfig-conditions.test.mjs` fails on a
+> included — `packages/tooling/src/repo-guards/__tests__/tsconfig-conditions.test.ts` fails on a
 > tsconfig without it, because types read from a built `dist/` pass on a laptop
 > with a stale build and fail in a clean CI checkout. Node still loads `dist/` at
 > runtime (rspack leaves workspace packages external). Type-aware lint (oxlint-tsgolint)
@@ -211,7 +211,7 @@ The API has three tsconfigs, each a different program:
 
 | File | Program | Used by |
 | --- | --- | --- |
-| `tsconfig.json` | **Everything**: `src/` (code and unit specs), `test/**`, `prisma/**`, `scripts/**`, the vitest and Prisma configs. `noEmit`, `rootDir: "."`, `types: ["node", "vitest/globals"]` | Editors, oxlint's type-aware rules (nearest tsconfig), the second `typecheck` pass |
+| `tsconfig.json` | **Everything**: `src/` (code and unit specs), `e2e/**`, `prisma/**`, `scripts/**`, the vitest and Prisma configs. `noEmit`, `rootDir: "."`, `types: ["node", "vitest/globals"]` | Editors, oxlint's type-aware rules (nearest tsconfig), the second `typecheck` pass |
 | `tsconfig.typecheck.json` | **Production**: `src/` without specs, `types: ["node"]`, so production code cannot lean on a test-only type | The first `typecheck` pass |
 | `tsconfig.build.json` | The production program with emit (`outDir: ./dist`) | Compiler-emitted builds only; the API itself bundles with Rspack + SWC, which reads no tsconfig |
 
@@ -278,7 +278,7 @@ What tsrs does and does not replace:
 - **Type checking, builds and watchers.** `typecheck` everywhere, plus `build` / `dev` in
   `packages/shared`, `packages/api-client` and `packages/messaging` (`tsrs -p tsconfig.build.json`,
   then `tsc-alias`; `dev` runs `tsrs … --watch --preserveWatchOutput` beside `tsc-alias --watch`
-  through the watch runner) and `apps/aws-infrastructure` (`build` / `watch`).
+  through the watch runner) and `infra/aws` (`build` / `watch`).
 - **Not the editor or Next.js.** Editors and `next build` (`experimental.useTypeScriptCli`, on by
   default) use the workspace's TypeScript 7 package (`typescript@7.0.2`).
 - **Verified before adoption.** Type checking (2026-10-24): the same diagnostics as `tsc` on every
@@ -404,6 +404,18 @@ cd packages/ui && pnpm typecheck
 ---
 
 ## 8. Zod-first type derivation (schema → `z.output`)
+
+**One source per set of values:** a union that repeats a `z.enum` must be derived from it (`z.output<typeof TheSchema>`). The
+guard `packages/tooling/src/repo-guards/__tests__/enum-unions.test.ts` fails otherwise. Two sets that share words but mean
+different things go on its list, with the reason.
+
+**Keyed objects:** an object with a known set of keys uses `satisfies`, so its keys stay exact and a misspelled lookup fails.
+`Record<string, …>` is for maps that really are looked up by an arbitrary string.
+
+**Branded ids:** `idSchema("User")` and `Id<"User">` from `@workspace/shared` make a tenant id passed as a user id stop
+compiling. `TenantId`, `UserId` and `LocationId` exist. Only `TenantId` is in use so far: new code should use them at the
+contract boundary, and the rollout across the existing `xxxId: string` parameters is still open (see the folder structure plan).
+
 
 **The rule:** every _data shape_ in the repo is exported from a zod schema —
 `export type X = z.output<typeof XSchema>` (or `z.infer`). Never hand-write an

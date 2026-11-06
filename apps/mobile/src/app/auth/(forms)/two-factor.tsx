@@ -179,7 +179,7 @@ function TwoFactorChallenge({ tempToken, passkeyAvailable, onStartOver }: TwoFac
 				</>
 			)}
 			{passkeyAvailable && canUsePasskeys ? (
-				<Button label={PASSKEYS_COPY.usePasskeyInstead} variant="secondary" onPress={finishWithPasskey} loading={passkeyPending} testID="two-factor-passkey" />
+				<Button label={PASSKEYS_COPY.usePasskeyInstead} variant="outline" onPress={finishWithPasskey} loading={passkeyPending} testID="two-factor-passkey" />
 			) : null}
 		</AuthPage>
 	);

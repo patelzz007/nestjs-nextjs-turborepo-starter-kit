@@ -47,6 +47,9 @@
 		"vitest": "^5.0.5"
 	},
 	"exports": {
+		"./lib/navigation/app-route": "./src/lib/navigation/app-route.ts",
+		"./lib/env/env-runtime": "./src/lib/env/env-runtime.ts",
+		"./lib/env/parse-app-env": "./src/lib/env/parse-app-env.ts",
 		"./lib/contexts/reporting/analytics-export-menu": "./src/lib/contexts/reporting/analytics-export-menu.tsx",
 		"./lib/contexts/identity/impersonation/impersonation-banner-bar": "./src/lib/contexts/identity/impersonation/impersonation-banner-bar.tsx",
 		"./lib/contexts/identity/impersonation/impersonate-user-panel": "./src/lib/contexts/identity/impersonation/impersonate-user-panel.tsx",

@@ -4,7 +4,7 @@ import type { Envelope, MfaRecoveryStatusResponse, UserResponse } from "@workspa
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import { MFA_RECOVERY_LOADING_LABELS, MFA_RECOVERY_STATUS_LOADING_LABELS, MfaRecoveryRequestPanel } from "../recovery-request-panel";
 
 /** What a stubbed query answers. */

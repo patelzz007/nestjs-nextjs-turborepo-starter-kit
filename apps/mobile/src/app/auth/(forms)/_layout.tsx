@@ -2,7 +2,7 @@
 // the auth panel, and a sheet that holds each screen's form. A signed-out device sees the sign-in
 // screens; a RESTRICTED session (§10.5, forced enrollment) sees only the step it must finish. Each
 // screen is gated to the root route it belongs to (runtime/root-navigator, `withRootGate`): no
-// protected screens here. Screens render only their form (AuthPage).
+// protected screens here, and no list of screens (runtime/root-navigator says why). Screens render only their form (AuthPage).
 
 import { Stack, ThemeProvider } from "expo-router";
 import * as React from "react";
@@ -37,15 +37,7 @@ function AuthLayout(): React.JSX.Element {
 	return (
 		<AuthShell brandName={appName} tagline={AUTH_TAGLINE} buildLines={buildLines} compact={keyboardVisible} testID="auth-shell">
 			<ThemeProvider value={sheetTheme}>
-				<Stack screenOptions={SCREEN_OPTIONS}>
-					<Stack.Screen name="sign-in" />
-					<Stack.Screen name="sign-up" />
-					<Stack.Screen name="forgot-password" />
-					<Stack.Screen name="two-factor" />
-					<Stack.Screen name="verify-device" />
-					<Stack.Screen name="enroll-two-factor" />
-					<Stack.Screen name="verify-email" />
-				</Stack>
+				<Stack screenOptions={SCREEN_OPTIONS} />
 			</ThemeProvider>
 		</AuthShell>
 	);

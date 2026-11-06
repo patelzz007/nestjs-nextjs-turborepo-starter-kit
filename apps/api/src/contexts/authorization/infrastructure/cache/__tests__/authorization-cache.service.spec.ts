@@ -3,8 +3,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
 
 import { AuthorizationCacheService, type CachedAuthorization } from "../authorization-cache.service";
-import { createTestApiConfig } from "../../../../../../test/support/test-api-env";
-import { localAppCache } from "../../../../../../test/support/local-app-cache";
+import { createTestApiConfig } from "../../../../../../e2e/support/test-api-env";
+import { localAppCache } from "../../../../../../e2e/support/local-app-cache";
 
 vi.mock("../../../../../config/typed-config.service", () => ({
 	TypedConfigService: class {

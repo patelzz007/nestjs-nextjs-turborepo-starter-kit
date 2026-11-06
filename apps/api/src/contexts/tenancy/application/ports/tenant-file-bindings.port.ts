@@ -1,7 +1,8 @@
-import type { FileCategory } from "@workspace/shared";
+import type { FileCategory, MerchantAssetTypeSchema } from "@workspace/shared";
+import type { z } from "zod";
 
 /** The tenant asset a store-branding category binds to. */
-export type TenantAssetSlot = "LOGO" | "BANNER";
+export type TenantAssetSlot = z.output<typeof MerchantAssetTypeSchema>;
 
 /** Tenants' file-backed rows (`TenantAsset`, `TenantKybFile`), bound to one transaction. */
 export interface TenantFileBindings {

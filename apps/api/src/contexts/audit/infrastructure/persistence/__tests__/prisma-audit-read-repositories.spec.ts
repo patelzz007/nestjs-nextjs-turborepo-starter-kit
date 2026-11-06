@@ -2,7 +2,7 @@ import type { AuditLog, DataChangeLog } from "@prisma/client";
 import { AuditTrailListQuerySchema, DataChangeLogListQuerySchema, HttpAuditLogListQuerySchema, LIST_SLOT_INDEX } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import { PrismaAuditReferenceReader } from "../prisma-audit-reference.reader";
 import { PrismaAuditTrailReadRepository } from "../prisma-audit-trail.read-repository";

@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { epochMs } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { firstLoggedFailure } from "../../../../../../test/support/logged-failure";
+import { firstLoggedFailure } from "../../../../../../e2e/support/logged-failure";
 
 import type { UserInvalidationTrigger } from "../../../../authorization/public-api";
 import type { AuthorizationChange, AuthorizationChangeFeedPort } from "../../../application/ports/authorization-change-feed.port";

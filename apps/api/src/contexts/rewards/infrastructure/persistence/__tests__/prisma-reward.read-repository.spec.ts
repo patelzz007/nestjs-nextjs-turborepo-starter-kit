@@ -1,8 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../test/support/public-urls";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../e2e/support/public-urls";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { RlsTransactionScope } from "../../../../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import type { RlsTransactionRunner } from "../../../../../platform/infrastructure/unit-of-work/prisma-unit-of-work";

@@ -13,7 +13,7 @@ export default composeConfigs(nextJsConfig, {
 		clientOnlyWidgetsConfig(CLIENT_ONLY_WIDGETS),
 		{
 			files: ["**/*.ts", "**/*.tsx"],
-			excludeFiles: ["lib/env/env.client.ts", "lib/env/env.server.ts", "lib/env/env.runtime.ts", "e2e/env.e2e.ts", "e2e/browser-env.e2e.ts"],
+			excludeFiles: ["lib/env/env.client.ts", "lib/env/env.server.ts", "e2e/env.e2e.ts", "e2e/browser-env.e2e.ts"],
 			rules: {
 				"no-restricted-properties": [
 					"error",

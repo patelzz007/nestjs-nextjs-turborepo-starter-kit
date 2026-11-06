@@ -7,6 +7,7 @@ import { apiRoutes, DEFAULT_SALE_CURRENCY, MAX_CHECKOUT_REWARDS } from "@workspa
 import { Link2, Lock, QrCode, ReceiptText, RefreshCcw, ScanLine } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The device label used in the examples (any letters, digits, `.`, `_`, `:` or `-`). */
 const EXAMPLE_TERMINAL_ID = "FRONT-COUNTER-01";
@@ -78,7 +79,7 @@ function buildSteps(terminalsHref: string): readonly Step[] {
 			body: (
 				<>
 					Add the till on{" "}
-					<Link href={terminalsHref} className="font-medium text-primary underline-offset-4 hover:underline">
+					<Link href={appRoute(terminalsHref)} className="font-medium text-primary underline-offset-4 hover:underline">
 						POS terminals
 					</Link>{" "}
 					then enter the one-time code on the till — it receives its own key. Keys created on this page remain for server-to-server integrations: send them as the{" "}

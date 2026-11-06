@@ -1,7 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { QUEUE_JOB_OPTIONS, type TransactionLogWriteJob } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { firstLoggedFailure } from "../../../../../test/support/logged-failure";
+import { firstLoggedFailure } from "../../../../../e2e/support/logged-failure";
 
 import { DirectTransactionLog, standaloneTransactionLog } from "../direct-transaction-log";
 import { QueuedTransactionLog, type TransactionLogQueue } from "../queued-transaction-log";
@@ -103,7 +103,7 @@ describe("transaction log sinks", () => {
 
 	it("is off without a config (the CLI with TRANSACTION_LOG_ENABLED=false), and direct with one", () => {
 		expect(standaloneTransactionLog(null)).toBeInstanceOf(DisabledTransactionLog);
-		expect(standaloneTransactionLog(transactionLogConfig("logs/transactions"))).toBeInstanceOf(DirectTransactionLog);
+		expect(standaloneTransactionLog(transactionLogConfig(".artifacts/logs/transactions"))).toBeInstanceOf(DirectTransactionLog);
 	});
 
 	describe("TransactionLogWriteProcessor", () => {

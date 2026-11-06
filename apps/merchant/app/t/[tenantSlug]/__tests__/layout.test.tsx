@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MerchantServerContext } from "@/lib/merchant-server-api";
 import { tenantRoutes, ROUTES } from "@/lib/routes";
-import { membershipFixture, TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { TWO_STORE_CONTEXT } from "@/test/tenant-context";
+import { membershipFixture, TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { TWO_STORE_CONTEXT } from "@/testing/tenant-context";
 
 import TenantLayout from "../layout";
 

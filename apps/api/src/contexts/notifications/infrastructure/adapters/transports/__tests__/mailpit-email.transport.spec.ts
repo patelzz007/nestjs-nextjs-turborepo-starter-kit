@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { RequestContextService } from "../../../../../../platform/infrastructure/context/request-context";
 import { LogService } from "../../../../../../platform/infrastructure/logging/logs.service";
-import { createTestApiConfig } from "../../../../../../../test/support/test-api-env";
+import { createTestApiConfig } from "../../../../../../../e2e/support/test-api-env";
 import { EmailTransportError, type OutboundEmail } from "../email-transport";
 import { MAILPIT_EMAIL_LOG_ID_HEADER, MailpitEmailTransport } from "../mailpit-email.transport";
 
@@ -29,6 +29,7 @@ const EMAIL: OutboundEmail = {
 	bcc: ["bcc@example.com"],
 	replyTo: "support@example.com",
 	headers: { "List-Unsubscribe": "<https://api.example.com/u?token=t>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+	attachments: [],
 };
 
 function transport(mode: "send" | "log-only" = "send"): MailpitEmailTransport {
@@ -75,7 +76,16 @@ describe("MailpitEmailTransport", () => {
 			HTML: "<p>Your code is <b>123456</b></p>",
 			Tags: ["login-verification"],
 			Headers: { ...EMAIL.headers, [MAILPIT_EMAIL_LOG_ID_HEADER]: EMAIL.emailLogId },
+			Attachments: [],
 		});
+	});
+
+	it("sends each file inside the message", async () => {
+		fetchMock.mockResolvedValue(reply(JSON.stringify({ ID: MAILPIT_MESSAGE_ID }), HTTP_OK));
+
+		await transport().deliver({ ...EMAIL, attachments: [{ filename: "statement.pdf", contentType: "application/pdf", contentBase64: "JVBERg==" }] });
+
+		expect(JSON.parse(sentBody())).toMatchObject({ Attachments: [{ Filename: "statement.pdf", ContentType: "application/pdf", Content: "JVBERg==" }] });
 	});
 
 	it("sends no Reply-To when the email has none", async () => {

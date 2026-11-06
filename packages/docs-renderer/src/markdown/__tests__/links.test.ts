@@ -16,8 +16,12 @@ describe("resolveContentLink", () => {
 		expect(resolveContentLink("../../README.md", "/repo/docs/technical/authorization/backend.md", ROOTS)).toBe("/docs/README");
 	});
 
+	it("sends a link to an unpublished history note to GitHub, never to a site page", () => {
+		expect(resolveContentLink("./history/PROGRESS-2026-11-05.md", "/repo/docs/telescope.md", ROOTS)).toBe(`${ROOTS.githubBlobBase}/docs/history/PROGRESS-2026-11-05.md`);
+	});
+
 	it("maps blog posts and doc images", () => {
-		expect(resolveContentLink("../blog/telescope.md", "/repo/docs/telescope.md", ROOTS)).toBe("/blog/telescope");
+		expect(resolveContentLink("./blog/telescope.md", "/repo/docs/telescope.md", ROOTS)).toBe("/blog/telescope");
 		expect(resolveContentLink("../../images/email/a.png", "/repo/docs/technical/email/templates.md", ROOTS)).toBe("/images/email/a.png");
 	});
 

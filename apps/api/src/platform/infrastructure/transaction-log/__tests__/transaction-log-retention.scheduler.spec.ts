@@ -1,7 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { firstLoggedFailure } from "../../../../../test/support/logged-failure";
+import { firstLoggedFailure } from "../../../../../e2e/support/logged-failure";
 
 import { TransactionLogFileWriter } from "../transaction-log-file-writer";
 import { TransactionLogRetentionScheduler } from "../transaction-log-retention.scheduler";

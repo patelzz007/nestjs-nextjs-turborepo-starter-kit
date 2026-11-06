@@ -1,8 +1,8 @@
 import { Logger } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createAuditTrailDouble } from "../../../../../../test/support/audit-trail-double";
-import { captureFastifyRequest } from "../../../../../../test/support/fastify-request";
+import { createAuditTrailDouble } from "../../../../../../e2e/support/audit-trail-double";
+import { captureFastifyRequest } from "../../../../../../e2e/support/fastify-request";
 import { AuditLogWriteError } from "../../../../../platform/infrastructure/audit/audit-log.errors";
 import { RequestContextService } from "../../../../../platform/infrastructure/context/request-context";
 import { AuditTrailReportExportAdapter } from "../audit-trail-report-export.adapter";

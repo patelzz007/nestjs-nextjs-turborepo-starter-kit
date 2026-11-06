@@ -1,7 +1,7 @@
 import type { StorageObjectLocator } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { FakeImageProcessor, FILE_ID, InMemoryObjectStorage, ORG_ID, imageRenditionsFor, storedFile } from "../../../../../../test/support/file-lifecycle-fakes";
+import { FakeImageProcessor, FILE_ID, InMemoryObjectStorage, ORG_ID, imageRenditionsFor, storedFile } from "../../../../../../e2e/support/file-lifecycle-fakes";
 import { UnreadableImageError, type RenderedImage } from "../../../../../platform/infrastructure/storage/domain/image-processor.port";
 import { ImageObjectMissingError, ImageRulesViolationError } from "../image-rendition.service";
 

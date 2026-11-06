@@ -1,4 +1,4 @@
-import { epochMs, type EpochMs } from "@workspace/shared";
+import { type EpochMs, epochMs, type MfaRecoveryRecordStatusSchema } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import {
@@ -11,8 +11,9 @@ import {
 import { UserCredentialsChanged, type IdentityEvent } from "../events/identity.events";
 import type { AuditOrigin } from "../value-objects/audit-origin.value-object";
 import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
+import type { z } from "zod";
 
-export type MfaRecoveryStatus = "PENDING" | "APPROVED" | "DENIED" | "COMPLETED";
+export type MfaRecoveryStatus = z.output<typeof MfaRecoveryRecordStatusSchema>;
 
 /** A reviewer's decision. */
 export type MfaRecoveryDecision = "APPROVED" | "DENIED";

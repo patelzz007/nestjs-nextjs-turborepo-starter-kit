@@ -28,7 +28,7 @@ Read the [storage overview](./overview.md) first. Offline or without an AWS acco
 - A region (examples use `ap-southeast-1`, the API's default `AWS_REGION`).
 - The browser origins of your apps (for CORS), e.g. `https://app.example.com,https://admin.example.com,https://merchant.example.com`.
 - Where the API runs: ECS/Fargate, EC2 or EKS — this decides who may assume the API role.
-- Node.js 22+ and `pnpm install` done at the repository root.
+- Node.js 24.22.1 (`.nvmrc`) and `pnpm install` done at the repository root.
 
 ### Install and sign in to the AWS CLI (v2)
 
@@ -55,7 +55,7 @@ users and use it everywhere: the stack, `CDK_DEFAULT_REGION` and the API's `AWS_
 
 ## Option A — deploy the CDK stack (recommended)
 
-`apps/aws-infrastructure` defines one stack per environment, `StoragePlatform-<environment>`. It
+`infra/aws` defines one stack per environment, `StoragePlatform-<environment>`. It
 creates, for a name prefix `app-<environment>`:
 
 | Resource | Details |
@@ -97,7 +97,7 @@ export AWS_REGION=ap-southeast-1
 export CDK_DEFAULT_REGION=$AWS_REGION
 export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 
-cd apps/aws-infrastructure
+cd infra/aws
 npx cdk bootstrap aws://$CDK_DEFAULT_ACCOUNT/$AWS_REGION        # once per account + region
 pnpm run synth -- -c environment=development                     # preview (optional)
 pnpm run diff  -- -c environment=development
@@ -159,7 +159,7 @@ destroy production.
 
    ```bash
    aws s3api put-bucket-cors --bucket <private-bucket> --region $AWS_REGION \
-     --cors-configuration file://apps/aws-infrastructure/config/private-bucket-cors.json
+     --cors-configuration file://infra/aws/config/private-bucket-cors.json
    ```
 
 3. Put a CloudFront distribution with Origin Access Control in front of the public-origin bucket.

@@ -45,7 +45,7 @@ describe("isTabActive", () => {
 describe("githubEditUrl", () => {
 	it("points at the file on the default branch", () => {
 		expect(githubEditUrl("docs", "technical/authorization/overview.md")).toBe(`${GITHUB_URL}/blob/main/docs/technical/authorization/overview.md`);
-		expect(githubEditUrl("blog", "telescope.md")).toBe(`${GITHUB_URL}/blob/main/blog/telescope.md`);
+		expect(githubEditUrl("blog", "telescope.md")).toBe(`${GITHUB_URL}/blob/main/docs/blog/telescope.md`);
 	});
 });
 

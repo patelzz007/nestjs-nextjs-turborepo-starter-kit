@@ -29,8 +29,8 @@ import { PLATFORM_OPERATION_KEY } from "../platform/presentation/http/security/d
 import { PUBLIC_OPERATION_KEY } from "../platform/presentation/http/security/decorators/public-operation.decorator";
 import { REQUIRED_PERMISSION_KEY, type RequiredPermission } from "../platform/presentation/http/security/decorators/route-requirements.metadata";
 import { SUPER_ADMIN_KEY } from "../platform/presentation/http/security/decorators/super-admin.decorator";
-import { discoverControllerRoutes, routeMetadataOf, type ControllerRoute } from "../../test/support/controller-routes";
-import { handlerOf } from "../../test/support/route-metadata";
+import { discoverControllerRoutes, routeMetadataOf, type ControllerRoute } from "../../e2e/support/controller-routes";
+import { handlerOf } from "../../e2e/support/route-metadata";
 
 const reflector = new Reflector();
 

@@ -30,6 +30,7 @@ import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The text boxes of the form; one change handler serves them all, by the input's `name`. */
 const TEXT_FIELDS: readonly PaymentFormField[] = ["amount", "description", "payerName", "payerEmail"];
@@ -152,7 +153,7 @@ function NewPaymentForm({ tenantSlug, providers }: NewPaymentFormProps): React.J
 					onSuccess: (payment): void => {
 						void queryClient.invalidateQueries({ queryKey: apiRouter.tenantPayments.payments.scopeKey({ tenantSlug }) });
 						toastMessage.success({ title: "Payment created", description: "Send the customer the checkout link, or open it here." });
-						router.push(routes.detail(payment.id));
+						router.push(appRoute(routes.detail(payment.id)));
 					},
 				},
 			);

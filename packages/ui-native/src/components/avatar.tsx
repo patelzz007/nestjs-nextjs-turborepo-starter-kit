@@ -29,10 +29,10 @@ export const avatarVariants = cva("shrink-0 items-center justify-center overflow
 	defaultVariants: { size: "lg", shape: "circle" },
 });
 
-/** The initials fallback's fill: `default` a soft grey disc with ink initials; `inverse` sits on a `primary` surface. */
+/** The initials fallback's fill: `default` a soft grey disc with ink initials; `inverse` sits on a `primary` surface; `panel` on the sign-in panel's ink; `solid` is a filled ink disc. */
 export const avatarFallbackVariants = cva("", {
 	variants: {
-		tone: { default: "bg-muted", inverse: "bg-primary-foreground" },
+		tone: { default: "bg-muted", inverse: "bg-primary-foreground", panel: "bg-auth-panel-foreground", solid: "bg-primary" },
 	},
 	defaultVariants: { tone: "default" },
 });
@@ -40,7 +40,7 @@ export const avatarFallbackVariants = cva("", {
 export const avatarInitialsVariants = cva("font-heading", {
 	variants: {
 		size: { sm: "text-xs", md: "text-sm", row: "text-base", lg: "text-lg" },
-		tone: { default: "text-foreground", inverse: "text-primary" },
+		tone: { default: "text-foreground", inverse: "text-primary", panel: "text-auth-panel", solid: "text-primary-foreground" },
 	},
 	defaultVariants: { size: "lg", tone: "default" },
 });

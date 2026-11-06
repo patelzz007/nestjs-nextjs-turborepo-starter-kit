@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type KafkaRecord, type MessageHandlerDeps, PgInboxStore } from "@workspace/messaging/inbox";
-import { closeE2eDatabase, openE2eDatabase, SILENT_LOGGER, type E2eDatabase } from "../../../test-support/e2e-database";
+import { closeE2eDatabase, openE2eDatabase, SILENT_LOGGER, type E2eDatabase } from "../../../testing/e2e-database";
 
 /**
  * Real-Postgres proof of the consumer inbox (ADR 015), running as the

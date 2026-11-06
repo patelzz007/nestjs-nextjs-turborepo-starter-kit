@@ -24,6 +24,7 @@ import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels
 import { keepPreviousData } from "@tanstack/react-query";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** Wait after the last keystroke before the search is written to the URL (and asked of the API). */
 const STORE_SEARCH_DEBOUNCE_MS = 300;
@@ -76,7 +77,7 @@ export function TenantStoresPageView({ tenantSlug }: TenantStoresPageViewProps):
 				<div className="space-y-3">
 					{stores.map((store: TenantRewardMembershipResponse): React.JSX.Element => (
 						<Card key={store.tenantId} className="gap-0 p-0">
-							<Link href={tenantRoutes(store.tenantSlug).dashboard} className="flex items-center gap-4 rounded-xl px-5 py-4 transition-colors hover:bg-muted/50">
+							<Link href={appRoute(tenantRoutes(store.tenantSlug).dashboard)} className="flex items-center gap-4 rounded-xl px-5 py-4 transition-colors hover:bg-muted/50">
 								<EntityAvatar name={store.displayName} size="sm" className="size-9" />
 								<div className="min-w-0 flex-1">
 									<p className="truncate font-medium text-foreground">{store.displayName}</p>

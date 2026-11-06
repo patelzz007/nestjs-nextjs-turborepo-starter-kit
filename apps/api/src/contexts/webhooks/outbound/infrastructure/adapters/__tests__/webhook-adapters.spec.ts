@@ -1,7 +1,7 @@
 import { WEBHOOK_DELIVERY_ERROR_MAX_LENGTH, WEBHOOK_SECRET_HINT_LENGTH, WEBHOOK_SECRET_PREFIX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { WebhooksNotConfiguredError } from "../../../domain/errors/webhooks.errors";
 import { sendOutcomeOf } from "../guarded-webhook-sender";
 import { WebhookIdsAdapter } from "../webhook-ids.adapter";

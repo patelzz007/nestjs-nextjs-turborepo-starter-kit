@@ -2,8 +2,8 @@ import { Logger } from "@nestjs/common";
 import { SessionPermissionsResponseSchema, UserResponseSchema, type SessionPermissionsResponse, type UserResponse } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { InMemoryCacheStore } from "../../../../../../test/support/in-memory-cache-store";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { InMemoryCacheStore } from "../../../../../../e2e/support/in-memory-cache-store";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { GcmCacheCipher } from "../../../../../platform/infrastructure/cache/cache-cipher";
 import { CacheInvalidationBus } from "../../../../../platform/infrastructure/cache/cache-invalidation-bus";
 import { TieredAppCache } from "../../../../../platform/infrastructure/cache/tiered-app-cache";

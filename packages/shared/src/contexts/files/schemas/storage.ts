@@ -43,6 +43,7 @@ export type FileStatus = z.output<typeof FileStatusSchema>;
  * `BROADCAST_IMAGE` is the one picture a store's broadcast may hold, uploaded to the tenant;
  * `PLATFORM_BROADCAST_IMAGE` is the same for a platform notice, uploaded by a staff member.
  * Both are public (an email loads them) and named by the broadcast's body when it is saved.
+ * `NOTIFICATION_DOCUMENT` is a PDF sent as a notification's attachment: public, for the same reason.
  */
 export const FileCategorySchema = z.enum([
 	"PRODUCT_IMAGE",
@@ -55,6 +56,7 @@ export const FileCategorySchema = z.enum([
 	"KANBAN_TASK_ATTACHMENT",
 	"BROADCAST_IMAGE",
 	"PLATFORM_BROADCAST_IMAGE",
+	"NOTIFICATION_DOCUMENT",
 ]);
 
 export type FileCategory = z.output<typeof FileCategorySchema>;
@@ -183,6 +185,14 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 		maxBytes: 10_485_760,
 		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
 		generatesVariants: true,
+	},
+	NOTIFICATION_DOCUMENT: {
+		category: "NOTIFICATION_DOCUMENT",
+		// Public: an email client opens it without signing in, so nothing private is ever one of these.
+		visibility: "PUBLIC",
+		maxBytes: 10_485_760,
+		allowedMimeTypes: ["application/pdf"],
+		generatesVariants: false,
 	},
 	STORE_BANNER: {
 		category: "STORE_BANNER",

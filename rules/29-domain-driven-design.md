@@ -484,7 +484,7 @@ against the glossary.
 **Exception policy:** Technical names remain appropriate for purely
 technical utilities.
 
-**Repository note:** Glossary: `rules/22-glossary.md`; tenancy vocabulary is fixed by ADR 062 ("tenant", never "organization", in code).
+**Repository note:** Glossary: `rules/22-architecture-terms.md`; tenancy vocabulary is fixed by ADR 062 ("tenant", never "organization", in code).
 
 ### DDD-20 — Refactor with characterization tests
 

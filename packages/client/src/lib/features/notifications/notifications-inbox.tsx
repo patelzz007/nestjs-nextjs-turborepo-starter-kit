@@ -9,6 +9,8 @@ import {
 	type BroadcastReportReason,
 	type DisplayRegion,
 	type InAppNotificationResponse,
+	formatBytes,
+	type NotificationAttachmentResponse,
 } from "@workspace/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
@@ -24,7 +26,7 @@ import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { Archive, Check, ExternalLink, Flag } from "lucide-react";
+import { Archive, Check, ExternalLink, FileText, Flag } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState, type JSX } from "react";
 
@@ -45,6 +47,7 @@ import {
 } from "./notifications-inbox-url-state";
 import { notificationsPollInterval, useNotificationsLive } from "./use-notifications-live";
 import { useOpenNotification } from "./use-open-notification";
+import { appRoute } from "../../navigation/app-route";
 
 const INBOX_SCOPE = apiRouter.notifications.inbox.scopeKey(undefined);
 
@@ -77,6 +80,41 @@ function NotificationPicture({ notification }: { readonly notification: InAppNot
 		<IconTile tone={look.tone} className="mt-0.5">
 			<KindIcon />
 		</IconTile>
+	);
+}
+
+/** A notification's attached file: a photo at its smaller copy, opening the full one, or a link to a PDF. */
+function NotificationAttachmentLink({ attachment, labels }: { readonly attachment: NotificationAttachmentResponse; readonly labels: NotificationsInboxLabels }): JSX.Element {
+	if (attachment.mimeType === "application/pdf") {
+		return (
+			<a
+				href={attachment.url}
+				target="_blank"
+				rel="noreferrer"
+				aria-label={labels.openAttachment(attachment.name)}
+				className="inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted">
+				<FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+				<span className="truncate">{attachment.name}</span>
+				<span className="shrink-0 text-xs font-normal text-muted-foreground">{formatBytes(attachment.sizeBytes)}</span>
+			</a>
+		);
+	}
+	return (
+		<a
+			href={attachment.url}
+			target="_blank"
+			rel="noreferrer"
+			aria-label={labels.openAttachment(attachment.name)}
+			className="block max-w-md overflow-hidden rounded-lg border border-border">
+			<img
+				src={attachment.previewUrl ?? attachment.url}
+				alt=""
+				loading="lazy"
+				width={attachment.width ?? undefined}
+				height={attachment.height ?? undefined}
+				className="h-auto w-full"
+			/>
+		</a>
 	);
 }
 
@@ -128,6 +166,7 @@ export function NotificationRow({ notification, region, labels, onOpen, onMarkRe
 				) : (
 					<p className="text-sm wrap-anywhere whitespace-pre-line text-muted-foreground">{notification.body}</p>
 				)}
+				{notification.attachment === null ? null : <NotificationAttachmentLink attachment={notification.attachment} labels={labels} />}
 				{opens || notification.richBody !== null ? (
 					<div className="flex flex-wrap items-center gap-3 pt-1">
 						{opens ? (
@@ -320,7 +359,7 @@ export function NotificationsInbox({ region = PLATFORM_DISPLAY_REGION, labels = 
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
 					{settingsHref === undefined ? null : (
-						<Link href={settingsHref} className={buttonVariants({ variant: "ghost" })}>
+						<Link href={appRoute(settingsHref)} className={buttonVariants({ variant: "ghost" })}>
 							{labels.settings}
 						</Link>
 					)}

@@ -40,7 +40,9 @@ docs/
 │   └── operations/    CI, local infrastructure, observability, multi-tenancy runbook
 ├── adr/               architecture decision records (history — never deleted)
 ├── generated/         openapi.json and api-samples.json (inputs of the API reference)
-├── images/, assets/   screenshots and logos
+├── images/            screenshots, logos and diagrams
+├── blog/              the engineering blog (served at /blog)
+├── history/           dated notes and audits (never published)
 └── meta.json          sidebar order of the docs site
 ```
 

@@ -51,6 +51,20 @@ describe("Button", () => {
 		expect(button).toHaveProp("hitSlop", 4);
 	});
 
+	it("draws a secondary button as solid as a primary one", async () => {
+		await render(<Button label="Review changes" variant="secondary" onPress={jest.fn()} />);
+
+		expect(screen.getByRole("button", { name: "Review changes" })).toHaveProp("className", expect.stringContaining("bg-primary"));
+		expect(screen.getByText("Review changes")).toHaveProp("className", expect.stringContaining("text-primary-foreground"));
+	});
+
+	it("draws an outline button with a border and no fill", async () => {
+		await render(<Button label="Cancel" variant="outline" onPress={jest.fn()} />);
+
+		expect(screen.getByRole("button", { name: "Cancel" })).toHaveProp("className", expect.stringContaining("border-input"));
+		expect(screen.getByText("Cancel")).toHaveProp("className", expect.stringContaining("text-foreground"));
+	});
+
 	it("keeps its label on one line, whatever width it is given", async () => {
 		await render(<Button label="Review changes" variant="secondary" onPress={jest.fn()} />);
 

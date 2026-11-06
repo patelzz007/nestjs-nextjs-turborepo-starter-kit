@@ -5,7 +5,7 @@ import { NotFoundError } from "../../../../../application/errors/app-error";
 import { Reflector } from "@nestjs/core";
 import type { AccessTokenPayload, AuthorizationRequest } from "@workspace/shared";
 
-import { accessToken, createHttpContext, testRequest, type TestHttpRequest, type TestRouteMetadata } from "../../../../../../../test/support/http-execution-context";
+import { accessToken, createHttpContext, testRequest, type TestHttpRequest, type TestRouteMetadata } from "../../../../../../../e2e/support/http-execution-context";
 
 import {
 	AuthorizationException,
@@ -19,7 +19,7 @@ import { self } from "../../decorators/permission-target";
 import { AuthorizationGuard } from "../authorization.guard";
 import { RequestContextService, type RequestTenant } from "../../../../../infrastructure/context/request-context";
 import { MembershipInactiveError, TENANT_LIFECYCLE_ROUTE_KEY, TenantBannedError, TenantSuspendedError } from "../../../../../../contexts/tenancy/public-api";
-import { createTestPrisma } from "../../../../../../../test/support/test-service-graph";
+import { createTestPrisma } from "../../../../../../../e2e/support/test-service-graph";
 import type { SystemDatabaseContext } from "../../../../../../prisma/tenant-context";
 
 const mocks = vi.hoisted(() => ({

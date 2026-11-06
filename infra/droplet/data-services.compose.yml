@@ -1,0 +1,98 @@
+# ============================================================================
+# The Droplet's data services (ADR 075): PostgreSQL and Redis in Docker; the API and the three Next.js apps
+# run under pm2 on the host (infra/pm2/ecosystem.config.cjs), behind nginx. Kafka is optional (profile).
+#
+#   cd /srv/<slug>/shared/data && docker compose -f data-services.compose.yml --env-file data.env up -d
+#   docker compose -f data-services.compose.yml --env-file data.env --profile kafka up -d   # with Kafka
+#
+# Every port binds to 127.0.0.1 only: nothing here is reachable from the internet (the DigitalOcean
+# firewall allows 22, 80 and 443 alone). data.env holds POSTGRES_PASSWORD and REDIS_PASSWORD
+# (docs/technical/operations/digitalocean-deployment.md, step 8). Redis speaks TLS only, because a deployed
+# API refuses a non-TLS Redis (ADR 072); its certificate comes from the CA made in step 8.
+# ============================================================================
+
+name: platform-data
+
+services:
+  postgres:
+    image: postgres:18.6
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: platform_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in data.env}
+      POSTGRES_DB: platform
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform_owner -d platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    image: redis:8.10.1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6380:6380"
+    command:
+      - redis-server
+      - --port
+      - "0"
+      - --tls-port
+      - "6380"
+      - --tls-cert-file
+      - /tls/redis.crt
+      - --tls-key-file
+      - /tls/redis.key
+      - --tls-ca-cert-file
+      - /tls/ca.crt
+      - --tls-auth-clients
+      - "no"
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in data.env}
+      - --appendonly
+      - "yes"
+      # BullMQ needs keys kept: evicting a queue key loses jobs.
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis_data:/data
+      - ../tls:/tls:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --tls --cacert /tls/ca.crt -p 6380 -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  kafka:
+    profiles: ["kafka"]
+    image: apache/kafka:4.3.1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://127.0.0.1:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:

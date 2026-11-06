@@ -5,12 +5,11 @@
 **/dist
 **/.turbo
 **/coverage
-**/test-results
 **/playwright-report
 **/.storage
 **/.env
 **/.env.*
 !**/.env.example
 .git
-.ci-logs
+.artifacts
 apps/mobile

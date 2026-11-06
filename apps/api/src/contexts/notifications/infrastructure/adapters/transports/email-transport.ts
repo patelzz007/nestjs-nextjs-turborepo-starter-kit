@@ -1,5 +1,12 @@
 import type { EmailProvider } from "../../../../../config/api-env.fields";
 
+/** A file travelling inside an email: what a mail app lists under Attachments. */
+export interface OutboundEmailAttachment {
+	readonly filename: string;
+	readonly contentType: string;
+	readonly contentBase64: string;
+}
+
 /** One fully rendered email, ready to hand to a provider. */
 export interface OutboundEmail {
 	/** Email log row id — the idempotency key of the send, and the tag that links provider events back to the row. */
@@ -16,6 +23,7 @@ export interface OutboundEmail {
 	readonly replyTo: string | undefined;
 	/** Extra headers, e.g. RFC 8058 `List-Unsubscribe` / `List-Unsubscribe-Post`. */
 	readonly headers: Readonly<Record<string, string>>;
+	readonly attachments: readonly OutboundEmailAttachment[];
 }
 
 /** What a provider returns for an accepted email. */

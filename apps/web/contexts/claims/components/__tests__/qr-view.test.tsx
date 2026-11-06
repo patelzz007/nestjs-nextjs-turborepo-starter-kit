@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CLAIM_QR_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ClaimQrView } from "@/contexts/claims/components/qr-view";
-import { buildRewardClaimResponse } from "@/test-support/claim";
-import { testEnvelope } from "@/test-support/envelope";
-import { expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { buildRewardClaimResponse } from "@/testing/claim";
+import { testEnvelope } from "@/testing/envelope";
+import { expectSingleLoadingStatus } from "@/testing/skeleton";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { resolveWebTrail } from "@/lib/navigation/breadcrumb";
 import { ROUTES, walletClaimPath } from "@/lib/routes";

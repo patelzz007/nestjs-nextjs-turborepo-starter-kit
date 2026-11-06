@@ -8,8 +8,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { DashboardAnalyticsPageView, type DashboardAnalyticsPageViewProps } from "@/contexts/reporting/components/analytics-page-view";
 import { ROUTES } from "@/lib/routes";
-import { buildCustomerDashboard } from "@/test-support/analytics-dashboard";
-import { testEnvelope } from "@/test-support/envelope";
+import { buildCustomerDashboard } from "@/testing/analytics-dashboard";
+import { testEnvelope } from "@/testing/envelope";
 
 interface DashboardQueryOptions {
 	readonly initialData?: Envelope<CustomerAnalyticsDashboard>;

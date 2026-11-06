@@ -23,7 +23,7 @@
 //      assignable to the schema's input (a Prisma row with a `bigint` / `Date`
 //      field does not compile — map it to the contract DTO first).
 //
-// `test/openapi-document.e2e-spec.ts` fails for any route without a contract
+// `e2e/openapi-document.e2e-spec.ts` fails for any route without a contract
 // and for any `apiContract` leaf whose handler uses a different schema.
 
 import { applyDecorators, HttpCode, HttpStatus } from "@nestjs/common";

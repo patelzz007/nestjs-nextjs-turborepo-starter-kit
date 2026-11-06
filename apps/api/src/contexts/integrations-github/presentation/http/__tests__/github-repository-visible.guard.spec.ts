@@ -4,7 +4,7 @@ import { Test } from "@nestjs/testing";
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it } from "vitest";
 
-import { accessToken, createHttpContext, testRequest } from "../../../../../../test/support/http-execution-context";
+import { accessToken, createHttpContext, testRequest } from "../../../../../../e2e/support/http-execution-context";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { ActorContextFactory } from "../../../../../platform/presentation/http/security/actor-context.factory";
 import { GITHUB_WEBHOOK_ENDPOINT, GITHUB_WEBHOOKS } from "../../../application/ports/github.tokens";

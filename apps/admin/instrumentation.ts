@@ -22,6 +22,6 @@ function reportEnvError(message: string): void {
 }
 
 export async function register(): Promise<void> {
-	const { resolveProcessExit } = await import("./lib/env/env.runtime");
+	const { resolveProcessExit } = await import("@workspace/client/lib/env/env-runtime");
 	await loadEnvOrExit({ loadEnv: loadEnvModules, exit: resolveProcessExit(), reportError: reportEnvError });
 }

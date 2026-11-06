@@ -13,6 +13,7 @@ import { formatCount } from "@workspace/ui/lib/format/number";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /**
  * Columns of the list: on narrow screens the cover thumbnail sits beside the
@@ -70,7 +71,7 @@ export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewa
 
 			<div className={cn("flex min-w-0 flex-col gap-1 lg:order-2", FACT_CELL_CLASS)}>
 				<h3 className="truncate text-sm font-semibold text-foreground sm:text-base">
-					<Link href={rewardPath} className="outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']">
+					<Link href={appRoute(rewardPath)} className="outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']">
 						{reward.title}
 						<span className="sr-only">{canManageRewards ? ", manage reward" : ", view reward"}</span>
 					</Link>

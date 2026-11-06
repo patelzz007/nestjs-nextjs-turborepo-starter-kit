@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ClientTestProviders } from "../../../../../testing/client-test-providers";
 
-import { envelopeFixture, META_FIXTURE, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, META_FIXTURE, userFixture } from "../../../../../testing/auth-fixtures";
 import { ApiError } from "../../../../api/use-api";
 import { SecuritySettingsPanel } from "../security-settings-panel";
 

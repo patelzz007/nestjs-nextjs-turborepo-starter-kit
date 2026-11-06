@@ -6,7 +6,7 @@ import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 
 import type { NotificationType } from "./notification-type";
 import { OPERATIONS_ALERT_NOTIFICATION } from "./types/operations.types";
-import { BROADCAST_MESSAGE_NOTIFICATION, TEST_NOTIFICATION } from "./types/platform.types";
+import { BROADCAST_MESSAGE_NOTIFICATION, SHOWCASE_NOTIFICATION, TEST_NOTIFICATION } from "./types/platform.types";
 import {
 	LEGACY_REWARD_NOTICE,
 	REFERRER_CREDITED_NOTIFICATION,
@@ -33,6 +33,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationType[] = [
 	LEGACY_REWARD_NOTICE,
 	BROADCAST_MESSAGE_NOTIFICATION,
 	TEST_NOTIFICATION,
+	SHOWCASE_NOTIFICATION,
 	OPERATIONS_ALERT_NOTIFICATION,
 	WEBHOOK_ENDPOINT_AUTO_DISABLED_NOTIFICATION,
 ];

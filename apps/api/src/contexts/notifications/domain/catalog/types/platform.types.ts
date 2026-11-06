@@ -51,6 +51,33 @@ export const BROADCAST_MESSAGE_NOTIFICATION: TypedNotificationType<BroadcastMess
 	},
 });
 
+const ShowcasePayloadSchema = z.object({ title: z.string().min(1).max(200), body: z.string().min(1).max(500) }).strict();
+export type ShowcasePayload = z.output<typeof ShowcasePayloadSchema>;
+
+/** A demo message with its words in the payload: what the demo command and the seed send with an attachment. */
+export const SHOWCASE_NOTIFICATION: TypedNotificationType<ShowcasePayload> = defineNotificationType({
+	key: "notifications.showcase",
+	description: "A demo message, usually with an attachment",
+	category: "ACCOUNT",
+	surfaces: ALL_SURFACES,
+	channels: ["IN_APP", "EMAIL", "PUSH"],
+	urgency: "immediate",
+	sensitive: false,
+	allowsContactRecipient: false,
+	digestible: false,
+	grouping: null,
+	payloadSchema: ShowcasePayloadSchema,
+	toJson: (payload: ShowcasePayload): JsonObject => ({ ...payload }),
+	samplePayload: { title: "Fresh from the kitchen", body: "A look at this week's cake." },
+	renderers: {
+		en: {
+			inApp: (payload) => ({ title: payload.title, body: payload.body, link: null, icon: "bell" }),
+			email: (payload) => ({ subject: payload.title, eyebrow: "A look inside", heading: payload.title, paragraphs: [payload.body], action: null }),
+			push: (payload) => ({ title: payload.title, body: payload.body, link: null }),
+		},
+	},
+});
+
 const TestPayloadSchema = z.object({ requestedBy: z.string().min(1).max(200) }).strict();
 type TestPayload = z.output<typeof TestPayloadSchema>;
 

@@ -14,7 +14,7 @@ import {
 	shortStoreName,
 	statusesOfGroup,
 } from "@/contexts/rewards/lib/presentation";
-import { rewardFixture } from "@/test/rewards";
+import { rewardFixture } from "@/testing/rewards";
 
 /** Per-status counts as the catalog summary answers them (every status present). */
 function counts(partial: Partial<Record<RewardStatus, number>>): Record<RewardStatus, number> {

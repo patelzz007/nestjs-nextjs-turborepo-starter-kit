@@ -1,7 +1,7 @@
 import { encodeSessionDeviceHeaderValue, SESSION_DEVICE_NAME_MAX_LENGTH } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { testRequest } from "../../../../../../test/support/http-execution-context";
+import { testRequest } from "../../../../../../e2e/support/http-execution-context";
 import { describeSessionDevice, readSessionDeviceContext, type SessionDeviceClaims } from "../session-device-context";
 
 /** Real User-Agent strings, as the clients send them. */

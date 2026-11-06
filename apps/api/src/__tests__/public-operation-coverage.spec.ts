@@ -5,7 +5,7 @@ import { SystemOperationNameSchema } from "../platform/application/system-operat
 import { IS_PUBLIC_KEY } from "../platform/presentation/http/security/decorators/public.decorator";
 import { PLATFORM_OPERATION_KEY } from "../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { PUBLIC_OPERATION_KEY } from "../platform/presentation/http/security/decorators/public-operation.decorator";
-import { discoverControllerRoutes, routeMetadataOf, type ControllerRoute } from "../../test/support/controller-routes";
+import { discoverControllerRoutes, routeMetadataOf, type ControllerRoute } from "../../e2e/support/controller-routes";
 
 /** Which decorator replaced a handler's old route-wide bypass, and the operation it names. */
 interface Replacement {

@@ -57,7 +57,7 @@ import {
 	TEAM_MEMBER_SKELETON_ROWS,
 } from "@/components/loading/merchant-page-skeletons";
 import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/tenancy/components/team-invite/team-invite-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 import { NOTIFICATIONS_INBOX_LOADING_LABELS } from "@workspace/client/lib/features/notifications/notifications-inbox-skeleton";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { MERCHANT_ONBOARDING_LOADING_LABELS, MERCHANT_ONBOARDING_STEP_COUNT } from "@workspace/client/lib/contexts/tenancy/onboarding/view";

@@ -5,10 +5,10 @@ import { z } from "zod";
 
 import { defineContract } from "../../contracts/define-contract";
 import { paginatedResponse, singleResponse } from "../../contracts/response";
-import { OkResponseSchema } from "../../schemas/api/message";
 import { UuidParamSchema } from "../../schemas/domain/platform/param-schemas";
 import {
 	CreateRewardClaimSchema,
+	RequestClaimOtpResponseSchema,
 	RequestClaimOtpSchema,
 	RewardClaimCreatedResponseSchema,
 	RewardClaimListQuerySchema,
@@ -19,7 +19,7 @@ import { claimsRoutes } from "./routes";
 
 /** Contract leaves composed into `apiContract.claims`. */
 export const claimsContract = {
-	otp: defineContract({ method: "POST", path: claimsRoutes.otp, input: RequestClaimOtpSchema, response: singleResponse(OkResponseSchema) }),
+	otp: defineContract({ method: "POST", path: claimsRoutes.otp, input: RequestClaimOtpSchema, response: singleResponse(RequestClaimOtpResponseSchema) }),
 	create: defineContract({ method: "POST", path: claimsRoutes.create, input: CreateRewardClaimSchema, response: singleResponse(RewardClaimCreatedResponseSchema) }),
 	list: defineContract({ method: "GET", path: claimsRoutes.list, input: RewardClaimListQuerySchema, response: paginatedResponse(RewardClaimResponseSchema) }),
 	/** One of the caller's own claims (read model for the server-rendered wallet QR page; never carries codes). */

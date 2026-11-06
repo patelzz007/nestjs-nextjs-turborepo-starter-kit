@@ -72,6 +72,7 @@ import { KanbanTaskList } from "./kanban-task-list";
 import { KanbanTaskTable } from "./kanban-task-table";
 import { KanbanToolbar } from "./kanban-toolbar";
 import { KanbanWipLimitDialog, type KanbanWipLimitTarget } from "./kanban-wip-limit-dialog";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** How long the search box waits after the last keystroke before it updates the URL. */
 const SEARCH_COMMIT_DELAY_MS = 300;
@@ -183,7 +184,7 @@ function LaneSection({
 				{lane.owner === null ? (
 					<span className="text-sm font-medium text-muted-foreground">{title}</span>
 				) : (
-					<Link href={taskHref(lane.owner.id)} className="truncate text-sm font-semibold hover:underline">
+					<Link href={appRoute(taskHref(lane.owner.id))} className="truncate text-sm font-semibold hover:underline">
 						{title}
 					</Link>
 				)}

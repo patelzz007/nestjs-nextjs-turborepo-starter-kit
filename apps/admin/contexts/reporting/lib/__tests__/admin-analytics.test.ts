@@ -2,7 +2,7 @@ import { analyticsFormatters } from "@workspace/client/lib/contexts/reporting/an
 import { describe, expect, it } from "vitest";
 
 import { cityLabel, merchantCategoryLabel, toCategoryItems, toCityItems, toTopMerchantItems, UNKNOWN_CITY_LABEL } from "@/contexts/reporting/lib/admin-analytics";
-import { buildAdminDashboard } from "@/test/analytics-dashboard-fixtures";
+import { buildAdminDashboard } from "@/testing/analytics-dashboard-fixtures";
 
 const FORMATTERS = analyticsFormatters("MYR", "en-MY");
 

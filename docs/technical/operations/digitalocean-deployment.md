@@ -30,11 +30,11 @@ flowchart LR
 
 | Piece | Where it runs | File in this repo |
 |---|---|---|
-| API, web, admin, merchant | pm2 on the host, bound to 127.0.0.1 | `deploy/pm2/ecosystem.config.cjs` |
-| PostgreSQL 18, Redis 8 (TLS), Kafka (optional) | Docker, bound to 127.0.0.1 | `deploy/droplet/data-services.compose.yml` |
-| HTTPS | nginx + certbot (Let's Encrypt) | `deploy/nginx/platform.conf.template` |
-| Server preparation | once, as root | `deploy/droplet/setup-droplet.sh` |
-| Deploys | the deploy gate (SSH forced command) + each release's own script | `packages/tooling/scripts/deploy/` |
+| API, web, admin, merchant | pm2 on the host, bound to 127.0.0.1 | `infra/pm2/ecosystem.config.cjs` |
+| PostgreSQL 18, Redis 8 (TLS), Kafka (optional) | Docker, bound to 127.0.0.1 | `infra/droplet/data-services.compose.yml` |
+| HTTPS | nginx + certbot (Let's Encrypt) | `infra/nginx/platform.conf.template` |
+| Server preparation | once, as root | `infra/droplet/setup-droplet.sh` |
+| Deploys | the deploy gate (SSH forced command) + each release's own script | `packages/tooling/src/deploy/` |
 | The trigger | GitHub Actions | `.github/workflows/deploy.yml` |
 
 The names below use the project's slug from `project.json` (here `starter-kit`) and a domain
@@ -99,7 +99,7 @@ Check with `dig +short api.example.com` before step 12 (certbot needs them).
 ## Step 5 — Prepare the server (one script)
 
 ```bash
-scp deploy/droplet/setup-droplet.sh ~/.ssh/id_ed25519.pub root@<droplet-ip>:/root/
+scp infra/droplet/setup-droplet.sh ~/.ssh/id_ed25519.pub root@<droplet-ip>:/root/
 ssh root@<droplet-ip>
 bash /root/setup-droplet.sh starter-kit /root/id_ed25519.pub
 ```
@@ -158,7 +158,7 @@ git clone --mirror git@github.com:<owner>/<repo>.git /srv/starter-kit/repository
 
 ```bash
 cd /srv/starter-kit/shared/data
-git -C /srv/starter-kit/repository.git show main:deploy/droplet/data-services.compose.yml > data-services.compose.yml
+git -C /srv/starter-kit/repository.git show main:infra/droplet/data-services.compose.yml > data-services.compose.yml
 umask 077
 cat > data.env <<EOF
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
@@ -262,7 +262,7 @@ Root login is disabled, so do this step from the DigitalOcean **Droplet console*
 Droplet Console), which signs you in as root:
 
 ```bash
-git -C /srv/starter-kit/repository.git show main:deploy/nginx/platform.conf.template \
+git -C /srv/starter-kit/repository.git show main:infra/nginx/platform.conf.template \
   | sed -e "s/__DOMAIN__/example.com/g" > /etc/nginx/sites-available/platform.conf
 ln -sf /etc/nginx/sites-available/platform.conf /etc/nginx/sites-enabled/platform.conf
 rm -f /etc/nginx/sites-enabled/default
@@ -289,18 +289,18 @@ ssh-keygen -t ed25519 -N "" -C "github-actions deploy" -f ./deploy_key
 On the Droplet, as `platform`, append one line to `~/.ssh/authorized_keys` (one line, no breaks):
 
 ```
-command="DEPLOY_ROOT=/srv/starter-kit /usr/local/bin/node /srv/starter-kit/bin/deploy/deploy-gate.mjs",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA…(deploy_key.pub)… github-actions deploy
+command="DEPLOY_ROOT=/srv/starter-kit /usr/local/bin/node /srv/starter-kit/bin/deploy/packages/tooling/src/deploy/gate-cli.ts",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA…(deploy_key.pub)… github-actions deploy
 ```
 
 ## Step 14 — Install the deploy gate
 
 ```bash
-mkdir -p /tmp/gate && git -C /srv/starter-kit/repository.git archive main packages/tooling/scripts/deploy | tar -x -C /tmp/gate
-rm -rf /srv/starter-kit/bin/deploy && mv /tmp/gate/packages/tooling/scripts/deploy /srv/starter-kit/bin/deploy
+mkdir -p /tmp/gate && git -C /srv/starter-kit/repository.git archive main packages/tooling/src/deploy tooling.config.ts | tar -x -C /tmp/gate
+rm -rf /srv/starter-kit/bin/deploy && mv /tmp/gate /srv/starter-kit/bin/deploy
 ```
 
 The gate is small and rarely changes; everything else a deploy does comes from the release being deployed.
-Repeat this step when `deploy-gate.mjs` or `lib/deploy-plan.mjs` change (the release notes say so).
+The gate reads `tooling.config.ts`, so it keeps the repository's folder layout. Repeat this step when `src/deploy/gate-cli.ts`, `src/deploy/deploy-plan.ts` or `tooling.config.ts` change (the release notes say so).
 
 ## Step 15 — GitHub settings
 

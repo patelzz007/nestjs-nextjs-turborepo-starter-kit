@@ -24,10 +24,10 @@ import { useReduceMotion } from "../lib/use-reduce-motion";
 
 export const dialogVariants = cva("w-full gap-4 rounded-3xl border bg-popover p-6 shadow-lg", {
 	variants: {
-		/** `destructive`: the dialog is about an irreversible action — its edge carries the destructive tone. */
+		/** `destructive`: the dialog is about an irreversible action: its confirm button says so in red, its edge stays quiet. */
 		variant: {
 			default: "border-border",
-			destructive: "border-destructive",
+			destructive: "",
 		},
 		size: {
 			sm: "max-w-sm",

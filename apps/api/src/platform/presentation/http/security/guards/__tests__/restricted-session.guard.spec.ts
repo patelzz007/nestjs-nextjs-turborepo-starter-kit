@@ -2,7 +2,7 @@ import { ForbiddenException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { describe, expect, it } from "vitest";
 
-import { accessToken, createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
+import { accessToken, createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
 import { ALLOW_RESTRICTED_SESSION_KEY, RestrictedSessionGuard } from "../restricted-session.guard";
 
 const guard = new RestrictedSessionGuard(new Reflector());
@@ -34,7 +34,7 @@ describe("RestrictedSessionGuard", () => {
 		).toThrow(ForbiddenException);
 	});
 
-	// SECURITY-AUDIT-2026-10-25 finding 2: Fastify drops the fragment (and the query) before routing, so the
+	// docs/history/SECURITY-AUDIT-2026-10-25 finding 2: Fastify drops the fragment (and the query) before routing, so the
 	// raw target's tail must never decide.
 	it("decides on the routed template, so a fragment or query naming an allowlisted route changes nothing", () => {
 		expect(allows("GET", "/api/v1/admin/users#/merchant/me", "/api/v1/admin/users")).toBe(false);

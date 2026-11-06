@@ -35,6 +35,7 @@ import { Card } from "@workspace/ui/components/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface MerchantEditRewardPageViewProps {
 	readonly tenantSlug: string;
@@ -84,7 +85,7 @@ function MerchantRewardLocked({ tenantSlug, reward }: MerchantRewardEditFormProp
 				<p className="max-w-prose text-sm text-muted-foreground">
 					{"Customers may already hold it, so its offer stays as it was published. Rewards can be edited while they're drafts or in review."}
 				</p>
-				<Link href={detailHref} className={cn(buttonVariants({ variant: "outline" }))}>
+				<Link href={appRoute(detailHref)} className={cn(buttonVariants({ variant: "outline" }))}>
 					View reward
 				</Link>
 			</Card>
@@ -154,7 +155,7 @@ function MerchantRewardEditForm({ tenantSlug, reward, audienceCustomers }: Merch
 		onSuccess: (response): void => {
 			void applyMerchantRewardChange(queryClient, tenantSlug, response);
 			toastMessage.success({ title: "Changes saved", description: "The reward shows your latest edits." });
-			router.push(routes.rewards.detail(response.data.id), { scroll: false });
+			router.push(appRoute(routes.rewards.detail(response.data.id)), { scroll: false });
 		},
 		onError: (): void => {
 			toastMessage.error({ title: "Changes not saved", description: "Check your connection and try again." });
@@ -230,7 +231,7 @@ function MerchantRewardEditForm({ tenantSlug, reward, audienceCustomers }: Merch
 					activity={{ claimCount: reward.claimCount, redemptionCount: reward.redemptionCount }}
 					actions={
 						<div className="grid grid-cols-2 gap-2">
-							<Link href={detailHref} className={cn(buttonVariants({ variant: "outline" }))}>
+							<Link href={appRoute(detailHref)} className={cn(buttonVariants({ variant: "outline" }))}>
 								Cancel
 							</Link>
 							<Button type="submit" disabled={isSaving}>

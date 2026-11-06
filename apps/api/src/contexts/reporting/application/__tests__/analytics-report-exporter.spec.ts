@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import { EpochMsSchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { captureFastifyRequest } from "../../../../../test/support/fastify-request";
+import { captureFastifyRequest } from "../../../../../e2e/support/fastify-request";
 import { AnalyticsReportExporter } from "../assemblers/analytics-report-exporter";
 import { ADMIN_DASHBOARD_FIXTURE, FIXTURE_FROM, FIXTURE_TO, MERCHANT_DASHBOARD_FIXTURE } from "./fakes/dashboard-fixtures";
 import { FrozenClock } from "./fakes/analytics-read-fakes";

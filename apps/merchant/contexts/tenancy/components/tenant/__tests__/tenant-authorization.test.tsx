@@ -9,9 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TenantDashboardPageView } from "@/contexts/tenancy/components/tenant/tenant-dashboard-page-view";
 import { LocationsPageView } from "@/contexts/tenancy/components/tenant/tenant-locations-page-view";
 import { TenantTeamPageView, TEAM_INVITES_LOADING_LABELS, TEAM_MEMBERS_LOADING_LABELS } from "@/contexts/tenancy/components/tenant/tenant-team-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
 import { LOCATION_SKELETON_CARDS, MERCHANT_LOCATIONS_LOADING_LABELS, MERCHANT_TEAM_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 const { contextQuery, listMembersQuery, listInvitesQuery, tenantMutation, rolesQuery } = vi.hoisted(() => ({
 	rolesQuery: vi.fn(),

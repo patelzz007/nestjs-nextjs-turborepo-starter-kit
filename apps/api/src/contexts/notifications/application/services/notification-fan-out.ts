@@ -19,6 +19,8 @@ import {
 	type NotificationSurface,
 	maskEmailAddress,
 	maskPhone,
+	type NotificationAttachmentResponse,
+	type NotificationEmailProps,
 } from "@workspace/shared";
 
 import type { Clock } from "../../../../platform/application/clock.port";
@@ -85,6 +87,18 @@ export interface FanOutDependencies {
 	readonly settings: FanOutSettings;
 	readonly renderContext: Omit<NotificationRenderContext, "groupCount">;
 	readonly unsubscribe: UnsubscribeLinkFactory;
+}
+
+/** The email's attachment fields: a picture shows its smaller copy, and every file links to itself. */
+function attachmentEmailProps(attachment: NotificationAttachmentResponse | null): Pick<NotificationEmailProps, "attachmentName" | "attachmentUrl" | "attachmentPreviewUrl"> {
+	if (attachment === null) {
+		return {};
+	}
+	return {
+		attachmentName: attachment.name,
+		attachmentUrl: attachment.url,
+		...(attachment.previewUrl === null ? {} : { attachmentPreviewUrl: attachment.previewUrl }),
+	};
 }
 
 /** What one channel decided before rows are written. */
@@ -335,6 +349,7 @@ export class NotificationFanOut {
 				richBody: broadcast?.richBody ?? null,
 				senderName: broadcast?.senderName ?? null,
 				senderLogoUrl: broadcast?.senderLogoUrl ?? null,
+				attachment: notification.attachment?.stored ?? null,
 				groupKey: input.groupKey,
 				broadcastId: notification.broadcastId,
 			});
@@ -452,6 +467,7 @@ export class NotificationFanOut {
 			heading: rendering.heading,
 			paragraphs: [...rendering.paragraphs],
 			...(rendering.action === null ? {} : { actionLabel: rendering.action.label, actionUrl: rendering.action.url }),
+			...attachmentEmailProps(notification.attachment?.links ?? null),
 			...(unsubscribe === null ? {} : { unsubscribeUrl: unsubscribe.pageUrl, oneClickUnsubscribeUrl: unsubscribe.oneClickUrl }),
 		});
 	}

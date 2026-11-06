@@ -105,7 +105,7 @@ export function TillPairingBody({ onPaired }: TillPairingProps): React.JSX.Eleme
 					returnKeyType="done"
 					onSubmitEditing={submitTypedCode}
 				/>
-				<Button label={TILL_COPY.pair} variant="secondary" onPress={submitTypedCode} disabled={pairing.isPending} />
+				<Button label={TILL_COPY.pair} variant="outline" onPress={submitTypedCode} disabled={pairing.isPending} />
 			</View>
 			<QrScanner visible={isScannerOpen} onScan={handleScan} onClose={closeScanner} labels={TILL_SCANNER_LABELS} />
 		</Card>

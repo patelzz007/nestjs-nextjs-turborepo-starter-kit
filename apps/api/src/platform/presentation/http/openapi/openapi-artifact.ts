@@ -12,7 +12,7 @@
 // (`required`, `enum`, `allOf`, parameter order).
 //
 //   pnpm --filter @workspace/api openapi:export   # rewrite the artifact
-//   test/openapi-artifact.e2e-spec.ts             # fails when it is stale
+//   e2e/openapi-artifact.e2e-spec.ts             # fails when it is stale
 
 import type { OpenAPIObject } from "@nestjs/swagger";
 import { isArrayValue, isJsonPrimitive, JsonValueSchema, type JsonValue } from "@workspace/shared";

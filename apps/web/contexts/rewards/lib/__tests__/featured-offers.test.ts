@@ -2,7 +2,7 @@ import { LIST_SLOT_INDEX, RewardResponseSchema, type RewardResponse } from "@wor
 import { describe, expect, it } from "vitest";
 
 import { FEATURED_OFFER_LIMIT, selectFeaturedOffers, selectMerchantNames } from "@/contexts/rewards/lib/featured-offers";
-import { rewardImageFixture } from "@/test-support/reward";
+import { rewardImageFixture } from "@/testing/reward";
 
 const NOW = 1_790_000_000_000;
 const DAY_MS = 86_400_000;

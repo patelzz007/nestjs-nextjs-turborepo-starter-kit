@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { ArrowLeftIcon, CheckIcon, CopyIcon, ExternalLinkIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** How often a payment waiting for its customer is re-read, so "Paid" appears without a refresh. */
 const PENDING_REFRESH_MS = 5_000;
@@ -64,7 +65,7 @@ function PaymentDetailContent({ tenantSlug, paymentId }: MerchantPaymentDetailPa
 function BackLink({ tenantSlug }: { readonly tenantSlug: string }): React.JSX.Element {
 	return (
 		<Link
-			href={tenantRoutes(tenantSlug).payments.list}
+			href={appRoute(tenantRoutes(tenantSlug).payments.list)}
 			className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
 			<ArrowLeftIcon className="size-4" aria-hidden="true" />
 			All payments

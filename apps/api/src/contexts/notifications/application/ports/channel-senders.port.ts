@@ -19,6 +19,8 @@ export interface PushMessage {
 	/** A grouped type re-sends under one key, so the device shows one notification. */
 	readonly collapseKey: string | null;
 	readonly badge: number | null;
+	/** A picture to show in the notification; null when it has none. */
+	readonly imageUrl: string | null;
 }
 
 export type ChannelSendResult =

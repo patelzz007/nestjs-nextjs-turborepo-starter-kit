@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import type { ListenConnection } from "../../../../../platform/infrastructure/database/pg-listen-connection";
 import { GithubPullRequestCache } from "../../github-api/github-pull-request.cache";
 import type { GithubChangeSignal } from "../../../application/ports/github-live-updates.port";

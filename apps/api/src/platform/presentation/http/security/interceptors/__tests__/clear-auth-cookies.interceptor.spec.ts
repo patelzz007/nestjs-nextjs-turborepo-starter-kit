@@ -3,9 +3,9 @@ import type { JsonValue } from "@workspace/shared";
 import { firstValueFrom, of, type Observable } from "rxjs";
 import { describe, expect, it } from "vitest";
 
-import { fakeCookieReply, type RecordedCookie } from "../../../../../../../test/support/fake-reply";
-import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { fakeCookieReply, type RecordedCookie } from "../../../../../../../e2e/support/fake-reply";
+import { createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { CookieConfigService } from "../../cookies/cookie.config";
 import { ClearAuthCookiesInterceptor, ClearAuthCookiesOnSessionEndInterceptor } from "../clear-auth-cookies.interceptor";
 

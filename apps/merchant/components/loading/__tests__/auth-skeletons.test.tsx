@@ -4,7 +4,7 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import { afterEach, describe, expect, it } from "vitest";
 
 import { VERIFY_EMAIL_LOADING_LABELS, VerifyEmailStatusSkeleton } from "@/components/loading/auth-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 afterEach((): void => {
 	cleanup();

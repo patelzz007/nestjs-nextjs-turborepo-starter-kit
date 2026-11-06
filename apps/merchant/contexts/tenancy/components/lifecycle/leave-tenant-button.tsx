@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { ROUTES } from "@/lib/routes";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface LeaveTenantButtonProps {
 	readonly tenantSlug: string;
@@ -29,7 +30,7 @@ export const LeaveTenantButton = React.forwardRef<HTMLDivElement, LeaveTenantBut
 	const leave = api.tenants.leaveTenant.useMutation({
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: apiRouter.tenants.membershipsBootstrap.scopeKey(undefined) });
-			router.push(ROUTES.home);
+			router.push(appRoute(ROUTES.home));
 		},
 		onError: (caught) => {
 			setError(resolveAuthErrorMessage(caught));

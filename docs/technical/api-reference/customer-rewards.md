@@ -1318,11 +1318,12 @@ Request claim OTP (emailed to your account — no SMS in dev)
 | `phone` | string | yes | length 8–20 |
 | `rewardId` | string (uuid) | yes |  |
 
-**Response 201 Created** (`application/json`) — OTP sent
+**Response 201 Created** (`application/json`) — OTP sent; one unit is held until holdExpiresAt
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `data.ok` | true | yes | The action was accepted |
+| `data.holdExpiresAt` | integer | yes |  |
+| `data.ok` | true | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 

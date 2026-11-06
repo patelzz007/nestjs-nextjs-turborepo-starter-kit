@@ -2,7 +2,7 @@ import { CqrsModule } from "@nestjs/cqrs";
 import { Test } from "@nestjs/testing";
 import { describe, expect, it } from "vitest";
 
-import { RECORDING_COMMAND_DISPATCHER, RecordingCommandDispatcher } from "../../../../../../test/support/recording-command-dispatcher";
+import { RECORDING_COMMAND_DISPATCHER, RecordingCommandDispatcher } from "../../../../../../e2e/support/recording-command-dispatcher";
 import { CLOCK } from "../../../../../platform/application/clock.port";
 import { InMemoryClaimsStore, NOW } from "../../../application/__tests__/fakes/claims.fakes";
 import { MigrateLegacyRewardNoticesCommand } from "../../../application/commands/migrate-legacy-reward-notices/migrate-legacy-reward-notices.command";

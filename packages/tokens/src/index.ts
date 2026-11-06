@@ -33,6 +33,8 @@ export type {
 	SharedColors,
 	TailwindTheme,
 	Theme,
+	MobileOnlyThemeName,
+	MobileThemeName,
 	ThemeName,
 	ThemeRole,
 	Themes,
@@ -41,6 +43,6 @@ export type {
 } from "./schema";
 export { DARK_THEME, LIGHT_THEME, NORD_THEME, SHARED_COLORS, THEMES } from "./semantic";
 export { TOKEN_SOURCE } from "./source";
-export { DARK_THEME_NAMES, isDarkTheme, nextThemeName, THEME_NAMES } from "./theme-names";
+export { DARK_THEME_NAMES, isDarkTheme, MOBILE_ONLY_THEME_NAMES, nextThemeName, THEME_NAMES } from "./theme-names";
 export { TAILWIND_THEME } from "./tailwind-theme";
 export { TYPOGRAPHY } from "./typography";

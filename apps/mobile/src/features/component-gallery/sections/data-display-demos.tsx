@@ -261,7 +261,7 @@ function StepperDemo(): React.JSX.Element {
 		<DemoBlock title="Stepper" description="A sequence of steps: completed, current and upcoming. Tap a step, or step through.">
 			<Stepper steps={CHECKOUT_STEPS} value={step} onChange={setStep} accessibilityLabel="Checkout progress" testID="gallery-stepper" />
 			<ButtonGroup variant="separated">
-				<Button label="Back" variant="secondary" onPress={goBack} disabled={step === 1} className="flex-1" />
+				<Button label="Back" variant="outline" onPress={goBack} disabled={step === 1} className="flex-1" />
 				<Button label="Continue" onPress={goOn} disabled={step === CHECKOUT_STEPS.length} className="flex-1" />
 			</ButtonGroup>
 			<Stepper steps={ORDER_PROGRESS_STEPS} value={ORDER_PROGRESS_STEP} orientation="vertical" size="sm" accessibilityLabel="Order progress" />
@@ -297,7 +297,7 @@ function ButtonGroupDemo(): React.JSX.Element {
 			<MutedText>Interval: {interval}</MutedText>
 			<ButtonGroup variant="separated" orientation="vertical">
 				<Button label={saved ? "Saved" : "Save changes"} onPress={save} />
-				<Button label="Cancel" variant="secondary" onPress={cancel} />
+				<Button label="Cancel" variant="outline" onPress={cancel} />
 			</ButtonGroup>
 		</DemoBlock>
 	);

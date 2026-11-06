@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { isNotFound } from "@tanstack/react-router";
 import { OpenApiDocumentSchema, listEndpoints } from "@workspace/docs-renderer/api-reference/openapi";
@@ -13,7 +13,7 @@ import { assertFound } from "../functions";
  */
 describe("relativeTo", () => {
 	it("should re-key glob paths below their folder and drop paths outside it", () => {
-		expect(relativeTo("/docs/", { "../../../../docs/technical/db.md": "a", "../../../../blog/x.md": "b" })).toEqual({ "technical/db.md": "a" });
+		expect(relativeTo("/docs/", { "../../../../docs/technical/db.md": "a", "../../../../apps/x.md": "b" })).toEqual({ "technical/db.md": "a" });
 	});
 });
 
@@ -28,6 +28,21 @@ describe("contentStore", () => {
 		expect((await store.guide("technical/api/list-queries"))?.html).toContain('data-slot="alert"');
 		expect(store.posts().length).toBeGreaterThan(0);
 		expect(store.pagePaths()).toContain("/docs/README");
+	});
+});
+
+describe("unpublished folders", () => {
+	it("should never build a page from docs/history, the security audit included", async () => {
+		const store = await contentStore();
+		expect(existsSync(new URL("../../../../../docs/history/SECURITY-AUDIT-2026-10-25.md", import.meta.url))).toBe(true);
+		expect(store.pagePaths().filter((page) => page.startsWith("/docs/history"))).toEqual([]);
+		expect(await store.guide("history/SECURITY-AUDIT-2026-10-25")).toBeNull();
+	});
+
+	it("should serve posts from docs/blog at /blog only", async () => {
+		const store = await contentStore();
+		expect(store.pagePaths().filter((page) => page.startsWith("/docs/blog"))).toEqual([]);
+		expect(store.pagePaths()).toContain("/blog/changelog");
 	});
 });
 

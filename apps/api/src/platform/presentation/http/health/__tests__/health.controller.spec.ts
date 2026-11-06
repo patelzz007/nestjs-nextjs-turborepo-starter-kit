@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import { HealthController } from "../health.controller";
 import { HealthService } from "../health.service";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 
 /**
  * Serves `GET /<path>` through a real Nest + Fastify app routing to the given

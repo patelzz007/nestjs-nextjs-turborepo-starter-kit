@@ -18,7 +18,7 @@ export interface PreferencesStoreDependencies {
 /** The appearance follows every restore and change at once. */
 function applyThemeEffect(dependencies: PreferencesStoreDependencies): FeatureEffect<PreferencesState, PreferencesAction> {
 	return (action: PreferencesAction, { getState }): void => {
-		if (action.type === "[ Preferences ] Restored" || action.type === "[ Preferences ] Theme Changed") {
+		if (action.type === "[ Preferences ] Restored" || action.type === "[ Preferences ] Theme Changed" || action.type === "[ Preferences ] Reset") {
 			dependencies.applyTheme(getState().theme);
 		}
 	};

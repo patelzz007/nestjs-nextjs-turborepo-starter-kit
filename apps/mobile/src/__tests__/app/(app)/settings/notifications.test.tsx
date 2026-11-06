@@ -29,6 +29,7 @@ function notice(overrides: Readonly<Record<string, DataValue>> = {}): DataValue 
 		icon: null,
 		senderName: "Kopi & Co",
 		senderLogoUrl: null,
+		attachment: null,
 		groupCount: 1,
 		broadcastId: BROADCAST_ID,
 		readAt: null,
@@ -141,6 +142,41 @@ describe("Notifications — the inbox", () => {
 		await waitFor(() => {
 			expect(api.callsTo("POST /notifications/read").at(0)?.body).toBe(JSON.stringify({ surface: "CUSTOMER", notificationIds: [NOTICE_ID] }));
 		});
+	});
+
+	it("shows a photo in the feed and the message, and opens the 4K original only when asked", async () => {
+		const photo = {
+			name: "cake.webp",
+			mimeType: "image/webp",
+			sizeBytes: 1_048_576,
+			width: 3840,
+			height: 2160,
+			url: "https://cdn.example.com/cake.webp",
+			previewUrl: "https://cdn.example.com/cake-1280.webp",
+		};
+		stubApi({ ...INBOX_ROUTES, [INBOX]: okPage([notice({ attachment: photo })]) });
+		await openInbox();
+
+		await fireEvent.press(screen.getByTestId(`notification-${NOTICE_ID}-attachment`));
+		await fireEvent.press(await screen.findByTestId("notification-message-attachment"));
+
+		expect(within(screen.getByTestId("image-viewer")).getByTestId("image-viewer-image")).toHaveProp("source", [expect.objectContaining({ uri: photo.url })]);
+	});
+
+	it("lists a PDF by its name and size", async () => {
+		const statement = {
+			name: "statement.pdf",
+			mimeType: "application/pdf",
+			sizeBytes: 24_012,
+			width: null,
+			height: null,
+			url: "https://cdn.example.com/statement.pdf",
+			previewUrl: null,
+		};
+		stubApi({ ...INBOX_ROUTES, [INBOX]: okPage([notice({ attachment: statement })]) });
+		await openInbox();
+
+		expect(screen.getByText("statement.pdf")).toBeOnTheScreen();
 	});
 
 	it("marks a notice read, reports a broadcast and removes a notice from its menu", async () => {

@@ -165,6 +165,8 @@ export const MailpitSendRequestSchema = z.object({
 	HTML: z.string(),
 	Tags: z.array(z.string().min(1)),
 	Headers: z.record(z.string(), z.string()),
+	/** Files sent inside the message, each base64-encoded. */
+	Attachments: z.array(z.object({ Filename: z.string().min(1), ContentType: z.string().min(1), Content: z.string().min(1) })),
 });
 
 export type MailpitSendRequest = z.output<typeof MailpitSendRequestSchema>;

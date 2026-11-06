@@ -182,6 +182,7 @@ export async function cleanupRewardSeedData(): Promise<void> {
 	await cleanupSeedInboxNotifications(seedConsumers.map((consumer) => consumer.id));
 	await prisma.rewardLegalAcceptance.deleteMany({ where: { userId } });
 	await prisma.rewardOtpChallenge.deleteMany({ where: { userId } });
+	await prisma.rewardClaimHold.deleteMany({ where: { userId } });
 	await prisma.rewardRedemption.deleteMany({ where: { tenantId } });
 	// After redemptions: they reference their sale (ON DELETE RESTRICT).
 	await prisma.rewardSale.deleteMany({ where: { tenantId } });
@@ -990,6 +991,24 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			failedAttempts: 0,
 			consumedAt: daysAgo(1),
 		},
+	});
+
+	// Finished holds only: an ACTIVE one would need a unit taken from the seeded stock, and a live hold ends within minutes.
+	await prisma.rewardClaimHold.createMany({
+		data: [
+			{ userId: alice.id, rewardId: REWARD_SEED_IDS.klRewardPublished, status: "CONVERTED", expiresAt: daysAgo(1), settledAt: daysAgo(1) },
+			{ userId: alice.id, rewardId: REWARD_SEED_IDS.klRewardPublished, status: "EXPIRED", expiresAt: daysAgo(2), settledAt: daysAgo(2) },
+			{
+				userId: alice.id,
+				rewardId: REWARD_SEED_IDS.klRewardPublished,
+				status: "EXPIRED",
+				expiresAt: daysAgo(3),
+				settledAt: daysAgo(3),
+				isDeleted: true,
+				deletedAt: daysAgo(1),
+				deletedBy: alice.id,
+			},
+		],
 	});
 
 	await linkRewardImages(imageLinks);

@@ -6,7 +6,7 @@ import SignalMediumIcon from "lucide-react-native/icons/signal-medium";
 import SignalZeroIcon from "lucide-react-native/icons/signal-zero";
 import WifiOffIcon from "lucide-react-native/icons/wifi-off";
 
-import { networkPillContent, networkSheetContent } from "../network-indicators";
+import { networkPillContent, networkShortLabel, networkSheetContent } from "../network-indicators";
 
 const MEASURED_AT_MS = 1_791_504_000_000;
 
@@ -21,6 +21,13 @@ const WEAK = measured({ pingMs: 640, jitterMs: 90, lossPercent: 25, strength: "w
 function fixedTime(epochMs: number): string {
 	return epochMs === MEASURED_AT_MS ? "14:02:31" : "unexpected";
 }
+
+describe("networkShortLabel", () => {
+	it("is the ping once measured, and the state otherwise", () => {
+		expect(networkShortLabel({ status: "offline" })).toBe("Offline");
+		expect(networkShortLabel({ status: "measuring" })).toBe("Measuring…");
+	});
+});
 
 describe("networkPillContent", () => {
 	it("is green, yellow or red by strength, with the ping after the strength", () => {
@@ -49,6 +56,13 @@ describe("networkPillContent", () => {
 		expect(networkPillContent({ status: "offline" })).toMatchObject({ icon: WifiOffIcon, label: "Offline", accessibilityLabel: "Offline", tone: "destructive" });
 		const unreachable: NetworkQualityReading = { status: "unreachable", measuredAtMs: MEASURED_AT_MS };
 		expect(networkPillContent(unreachable)).toMatchObject({ icon: SignalZeroIcon, label: "No response", tone: "destructive" });
+	});
+});
+
+describe("networkShortLabel", () => {
+	it("is the ping once measured, and the state otherwise", () => {
+		expect(networkShortLabel({ status: "offline" })).toBe("Offline");
+		expect(networkShortLabel({ status: "measuring" })).toBe("Measuring…");
 	});
 });
 

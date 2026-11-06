@@ -1,5 +1,5 @@
 // Each entry's SVG is checked byte for byte against the installed devicon package by
-// packages/tooling/__tests__/language-original-logos.test.mjs (it reads files, which Hermes-bound
+// packages/tooling/src/repo-guards/__tests__/language-original-logos.test.ts (it reads files, which Hermes-bound
 // code may not); this suite covers the lookup.
 import { LANGUAGE_ORIGINAL_LOGOS, languageOriginalLogoOf } from "../language-original-logos";
 

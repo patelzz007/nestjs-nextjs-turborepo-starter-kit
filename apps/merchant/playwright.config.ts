@@ -10,6 +10,7 @@ import { SIGNED_IN_STATE_PATH } from "./e2e/sign-in.e2e";
  */
 export default defineConfig({
 	testDir: "./e2e",
+	outputDir: "../../.artifacts/playwright/merchant",
 	forbidOnly: true,
 	fullyParallel: false,
 	reporter: "list",

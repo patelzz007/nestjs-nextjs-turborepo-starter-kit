@@ -118,7 +118,7 @@ function CommitsPage({ pullRequest, cursor, isLast, nowMs, onOpen, onLoadMore }:
 			))}
 			{isLast && nextCursor !== null ? (
 				<View className="pt-4">
-					<Button label="Load more" variant="secondary" onPress={loadMore} />
+					<Button label="Load more" variant="outline" onPress={loadMore} />
 				</View>
 			) : null}
 		</View>

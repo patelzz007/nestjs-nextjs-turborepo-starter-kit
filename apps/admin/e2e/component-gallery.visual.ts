@@ -6,7 +6,7 @@
 // That update rewrites only the screenshots that fail, and a pixel fails only past Playwright's colour tolerance:
 // a subtle theme change (the admin's dark theme moving to graphite, 2026-11-05) passes on most pages and leaves the
 // old colours committed. After a deliberate theme change, rewrite that theme's screenshots outright:
-// `node ../../packages/tooling/scripts/playwright-in-docker.mjs ADMIN_E2E_ --forward 3001 --forward 8080
+// `node ../../packages/tooling/src/playwright-in-docker/cli.ts ADMIN_E2E_ --forward 3001 --forward 8080
 // --forward 8025 --project=visual --grep "\(dark\)" --update-snapshots=all`.
 //
 // What keeps a screenshot the same from run to run: the page's own clock is Playwright's (`clock.install`),

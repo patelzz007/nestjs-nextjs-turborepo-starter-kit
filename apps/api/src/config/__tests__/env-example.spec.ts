@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { parse as parseDotenv } from "dotenv";
 import { describe, expect, it } from "vitest";
 
-import { TEST_API_DATA_KEYS, TEST_API_SECRETS } from "../../../test/support/test-api-env";
+import { TEST_API_DATA_KEYS, TEST_API_SECRETS } from "../../../e2e/support/test-api-env";
 import { parseApiConfig } from "../api-config";
 import { ApiEnvInputSchema } from "../api-config.schema";
 

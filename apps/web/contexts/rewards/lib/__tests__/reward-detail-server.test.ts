@@ -2,20 +2,20 @@ import type * as ServerApi from "@workspace/client/lib/api/server-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadRewardDetail } from "@/contexts/rewards/lib/reward-detail-server";
-import { pageExit } from "@/test-support/navigation";
-import { testEnvelope } from "@/test-support/envelope";
-import { buildRewardResponse } from "@/test-support/reward";
-import { failedQuery, httpFailure } from "@/test-support/server-query";
+import { pageExit } from "@/testing/navigation";
+import { testEnvelope } from "@/testing/envelope";
+import { buildRewardResponse } from "@/testing/reward";
+import { failedQuery, httpFailure } from "@/testing/server-query";
 
 const { rewardDetailQuery } = vi.hoisted(() => ({ rewardDetailQuery: vi.fn() }));
 
 vi.mock("@/lib/web-server-api", () => ({ createWebServerCaller: (): object => ({ rewards: { detail: { query: rewardDetailQuery } } }) }));
 vi.mock("@workspace/client/lib/api/server-api", async (importOriginal) => {
-	const { withTestFailureClassifier } = await import("@/test-support/server-query");
+	const { withTestFailureClassifier } = await import("@/testing/server-query");
 	return withTestFailureClassifier(await importOriginal<typeof ServerApi>());
 });
 vi.mock("next/navigation", async (importOriginal) => {
-	const { withNavigationSignals } = await import("@/test-support/navigation");
+	const { withNavigationSignals } = await import("@/testing/navigation");
 	return withNavigationSignals(await importOriginal<typeof import("next/navigation")>());
 });
 

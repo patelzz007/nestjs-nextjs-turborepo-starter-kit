@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LIST_SLOT_INDEX, PlatformEventEnvelopeSchema, type PlatformEventInput } from "@workspace/shared";
 
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { RequestContextService } from "../../context/request-context";
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
@@ -14,7 +14,7 @@ import { OUTBOX_ENQUEUE_OPERATION, OutboxEnqueueError, PlatformOutboxService, re
  * a transaction are only visible after the work resolves (COMMIT); a throw
  * discards them (ROLLBACK). Lets the unit tests prove the outbox writes ONLY
  * through the caller's transaction. The real-database proof lives in
- * `test/transactional-outbox.e2e-spec.ts`.
+ * `e2e/transactional-outbox.e2e-spec.ts`.
  */
 class FakeTransactionalStore {
 	public readonly committed: Prisma.OutboxEventCreateManyInput[] = [];

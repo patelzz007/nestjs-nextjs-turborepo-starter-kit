@@ -7,9 +7,9 @@ import { readCaughtErrorMessage } from "../../../../platform/infrastructure/util
 import { rejectAfter } from "../../../../platform/infrastructure/utils/promise-timeout";
 import { EmailDeliveryFailure, type EmailDeliveryPort, type EmailDeliveryReceipt } from "../../application/ports/email-delivery.port";
 import { EMAIL_RENDER_CONTEXT } from "../../application/ports/notifications.tokens";
-import type { BaseEmailProps, BaseEmailTemplate, EmailUnsubscribeLinks } from "../../domain/templates/base/base-email-template";
+import type { BaseEmailProps, BaseEmailTemplate, EmailAttachmentSource, EmailUnsubscribeLinks } from "../../domain/templates/base/base-email-template";
 import { maskEmail } from "./mask-email";
-import { EmailTransport, EmailTransportError } from "./transports/email-transport";
+import { EmailTransport, EmailTransportError, type OutboundEmailAttachment } from "./transports/email-transport";
 
 /** Thrown when one provider call exceeds `EMAIL_TIMEOUT_MS`. */
 class EmailTimeoutError extends Error {
@@ -33,6 +33,11 @@ export function listUnsubscribeHeaders(links: EmailUnsubscribeLinks | null): Rea
 	return links === null ? {} : { "List-Unsubscribe": `<${links.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
 }
 
+/** Mail servers refuse messages near 25 MB, and base64 adds a third to a file's size. */
+const EMAIL_ATTACHMENT_MAX_BYTES = 15 * 1024 * 1024;
+/** What a file is called when its server does not say. */
+const DEFAULT_ATTACHMENT_TYPE = "application/octet-stream";
+
 @Injectable()
 export class EmailDeliveryAdapter implements EmailDeliveryPort {
 	public constructor(
@@ -42,9 +47,31 @@ export class EmailDeliveryAdapter implements EmailDeliveryPort {
 		@Inject(EMAIL_RENDER_CONTEXT) private readonly renderContext: EmailRenderContext,
 	) {}
 
+	/**
+	 * Fetches each file to send inside the email. One that cannot be fetched, or is too large, is left out and logged:
+	 * the email still goes, and its body links to the file.
+	 */
+	private async downloadAttachments(sources: readonly EmailAttachmentSource[]): Promise<readonly OutboundEmailAttachment[]> {
+		const files: OutboundEmailAttachment[] = [];
+		for (const source of sources) {
+			try {
+				const response = await fetch(source.url, { signal: AbortSignal.timeout(this.config.email.timeoutMs) });
+				const bytes = Buffer.from(await response.arrayBuffer());
+				if (!response.ok || bytes.byteLength > EMAIL_ATTACHMENT_MAX_BYTES) {
+					throw new Error(`status ${String(response.status)}, ${String(bytes.byteLength)} bytes`);
+				}
+				files.push({ filename: source.filename, contentType: response.headers.get("content-type") ?? DEFAULT_ATTACHMENT_TYPE, contentBase64: bytes.toString("base64") });
+			} catch (error) {
+				this.logService.warn(`Sending without the attachment "${source.filename}": ${readCaughtErrorMessage(CaughtValueSchema.parse(error))}`, { context: "EmailDelivery" });
+			}
+		}
+		return files;
+	}
+
 	public async deliver(emailLogId: string, template: BaseEmailTemplate<BaseEmailProps>): Promise<EmailDeliveryReceipt> {
 		const props = template.props;
 		const to = this.effectiveRecipient(template.subject, props.to);
+		const attachments = await this.downloadAttachments(template.attachmentSources());
 		const delivery = this.transport.deliver({
 			emailLogId,
 			templateKey: template.key,
@@ -57,6 +84,7 @@ export class EmailDeliveryAdapter implements EmailDeliveryPort {
 			bcc: props.bcc ?? [],
 			replyTo: props.replyTo ?? this.config.email.replyTo,
 			headers: listUnsubscribeHeaders(template.unsubscribeLinks()),
+			attachments,
 		});
 		try {
 			// Not every provider SDK takes an AbortSignal — a hung call is cut by the timeout branch.

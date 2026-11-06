@@ -4,6 +4,7 @@
 //   schema [--check]                    pnpm db:schema — write (or verify) the base model's managed blocks
 //   apply-security                      pnpm tools db:apply-security — RLS, grants, capture + audit triggers
 //   check-rls-manifest                  pnpm tools db:check-rls-manifest — schema ⇄ manifest ⇄ RLS SQL drift
+//   generate-rls-policies               pnpm db:generate-rls-policies — render the standard policies SQL
 //   generate-system-operation-scopes    pnpm db:generate-system-operation-scopes — render the scopes SQL
 //   check-drift                         pnpm db:check-drift — prisma/migrations reproduce schema.prisma
 //   check-seed-coverage                 pnpm db:check-seed-coverage — every table and column seeded
@@ -31,6 +32,7 @@ import {
 	parsePrismaSchemaModels,
 	type RlsManifestDriftReport,
 } from "../prisma/rls/manifest-index";
+import { STANDARD_POLICIES_PATH, renderStandardPolicies } from "../prisma/rls/standard-policies";
 import { buildSystemOperationScopesSql, SYSTEM_OPERATION_SCOPES_SQL_PATH } from "../prisma/rls/system-operation-scopes";
 import { findHandWrittenAppRuntimeRevokes, findUnknownWithheldPrivilegeTables, listWithheldPrivileges } from "../prisma/rls/withheld-privileges";
 import { SEED_COVERAGE_EXEMPTIONS } from "../prisma/seed/coverage-exemptions";
@@ -115,9 +117,8 @@ async function applySecurity(): Promise<number> {
 
 // ── check-rls-manifest ────────────────────────────────────────────────────
 
-/** `rls.sql` followed by every `prisma/rls/*.sql` fragment, in name order. */
+/** Every `prisma/rls/*.sql` fragment, in name order. */
 function readRlsSqlBundle(): string {
-	const bundle = resolve(prismaDir, "rls.sql");
 	const fragmentsDir = resolve(prismaDir, "rls");
 	const fragments = existsSync(fragmentsDir)
 		? readdirSync(fragmentsDir)
@@ -125,7 +126,7 @@ function readRlsSqlBundle(): string {
 				.sort((left: string, right: string): number => left.localeCompare(right))
 				.map((name: string): string => resolve(fragmentsDir, name))
 		: [];
-	return [...(existsSync(bundle) ? [bundle] : []), ...fragments].map((file: string): string => `${readFileSync(file, "utf8")}\n`).join("");
+	return fragments.map((file: string): string => `${readFileSync(file, "utf8")}\n`).join("");
 }
 
 function formatSection(title: string, items: readonly string[]): string {
@@ -188,6 +189,13 @@ async function generateSystemOperationScopes(): Promise<number> {
 	const { SYSTEM_OPERATIONS } = await import("../src/prisma/system-operation.registry");
 	writeFileSync(resolve(apiDir, SYSTEM_OPERATION_SCOPES_SQL_PATH), buildSystemOperationScopesSql(SYSTEM_OPERATIONS, new Set(listAllManifestTables())));
 	out(`Wrote ${SYSTEM_OPERATION_SCOPES_SQL_PATH}`);
+	return EXIT_OK;
+}
+
+/** Renders prisma/rls/97-standard-policies.sql from the table list; run after changing `table-policies.ts`. */
+function generateRlsPolicies(): number {
+	writeFileSync(resolve(apiDir, STANDARD_POLICIES_PATH), renderStandardPolicies());
+	out(`Wrote ${STANDARD_POLICIES_PATH}`);
 	return EXIT_OK;
 }
 
@@ -307,6 +315,7 @@ const DB_COMMANDS: ReadonlyMap<string, CliCommand> = new Map<string, CliCommand>
 	["schema", { summary: "Write the base model into every model of prisma/schema.prisma (--check: verify only)", run: schema }],
 	["apply-security", { summary: "Apply RLS, grants, withheld privileges, data-change capture and row audit triggers", run: applySecurity }],
 	["check-rls-manifest", { summary: "Fail when the Prisma models, the RLS manifest and the RLS SQL disagree", run: checkRlsManifest }],
+	["generate-rls-policies", { summary: "Render prisma/rls/97-standard-policies.sql from prisma/rls/table-policies.ts", run: generateRlsPolicies }],
 	["generate-system-operation-scopes", { summary: "Render prisma/rls/00-system-operation-scopes.sql from the registry", run: generateSystemOperationScopes }],
 	["check-drift", { summary: "Fail when prisma/migrations does not reproduce prisma/schema.prisma", run: checkDrift }],
 	["check-seed-coverage", { summary: "Fail when a table or nullable column of the seeded database is empty", run: checkSeedCoverage }],

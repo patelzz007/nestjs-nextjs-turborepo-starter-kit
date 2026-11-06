@@ -75,6 +75,9 @@ export interface NavigationLabels {
 	readonly sections: Readonly<Record<DrawerSection, string>>;
 	readonly drawer: {
 		readonly editProfile: string;
+		/** The status cards' titles. */
+		readonly connection: string;
+		readonly session: string;
 		readonly signOut: string;
 	};
 	/** The command palette, opened from the page header's search button (ADR 079). */
@@ -123,6 +126,8 @@ const EN: NavigationLabels = {
 	},
 	drawer: {
 		editProfile: "Edit profile",
+		connection: "Connection",
+		session: "Session",
 		signOut: "Sign out",
 	},
 	commandPalette: {
@@ -183,6 +188,8 @@ const MS: NavigationLabels = {
 	},
 	drawer: {
 		editProfile: "Edit profil",
+		connection: "Sambungan",
+		session: "Sesi",
 		signOut: "Log keluar",
 	},
 	commandPalette: {
@@ -243,6 +250,8 @@ const ZH_HANS: NavigationLabels = {
 	},
 	drawer: {
 		editProfile: "编辑个人资料",
+		connection: "连接",
+		session: "会话",
 		signOut: "退出登录",
 	},
 	commandPalette: {
@@ -303,6 +312,8 @@ const TA: NavigationLabels = {
 	},
 	drawer: {
 		editProfile: "சுயவிவரத்தைத் திருத்து",
+		connection: "இணைப்பு",
+		session: "அமர்வு",
 		signOut: "வெளியேறு",
 	},
 	commandPalette: {

@@ -4,7 +4,7 @@ import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { RewardListRow } from "@/contexts/rewards/components/browse/list-row";
-import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL } from "@/test-support/reward";
+import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL } from "@/testing/reward";
 
 const LOGO_URL = "https://cdn.example.com/tenants/brew-bean/logo.png";
 

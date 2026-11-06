@@ -53,7 +53,7 @@ Every request gets `organizationId` in `RlsContext` (AsyncLocalStorage):
 - **Single-tenant:** always `DEFAULT_ORGANIZATION_ID` (a real organization, verified at boot)
 - **Multi-tenant:** only the organization `AuthorizationGuard` verified for the request; with none bound the RLS scope has no organization (`null`) and tenant-scoped access fails closed — there is no fallback organization
 
-`RlsPool` sets `app.current_organization_id` on checkout. SQL helper: `app_current_organization_id()` in `prisma/rls.sql`.
+`RlsPool` sets `app.current_organization_id` on checkout. SQL helper: `app_current_organization_id()` in `prisma/rls/10-policies.sql`.
 
 Future table policies can use org id without changing the interceptor contract.
 
@@ -92,5 +92,5 @@ Future table policies can use org id without changing the interceptor contract.
 - `apps/api/src/config/tenancy.config.ts` — mode resolution
 - `apps/api/src/common/interceptors/rls.interceptor.ts` — bypass rules
 - `apps/api/src/prisma/rls-pool.ts` — session variable stamping
-- `apps/api/prisma/rls.sql` — `app_current_organization_id()`
+- `apps/api/prisma/rls/10-policies.sql` — `app_current_organization_id()`
 - [Prisma & RLS — §10](../technical/security/database-security.md)

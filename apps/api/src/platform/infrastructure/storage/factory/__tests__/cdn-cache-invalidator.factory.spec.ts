@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { NoCdnCacheInvalidator } from "../../adapters/cdn/no-cdn-cache-invalidator";
 import { CloudFrontCacheInvalidator } from "../../adapters/s3/cloudfront-cache-invalidator";
 import { cloudFrontDistributionId, createCdnCacheInvalidator } from "../cdn-cache-invalidator.factory";

@@ -20,7 +20,7 @@ interface ScriptCall {
 
 /**
  * Records the calls the limiter makes and answers with a fixed reply. The scripts' behaviour itself
- * is proven against a real Redis in `test/rate-limiter-redis.e2e-spec.ts`; this spec proves the
+ * is proven against a real Redis in `e2e/rate-limiter-redis.e2e-spec.ts`; this spec proves the
  * adapter's side: which script, which keys, which arguments, and the NOSCRIPT fallback.
  */
 class RecordingScriptClient implements RateLimitScriptClient {

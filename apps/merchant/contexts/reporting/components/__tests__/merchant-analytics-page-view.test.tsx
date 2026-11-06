@@ -9,11 +9,11 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { MerchantAnalyticsPageView, type MerchantAnalyticsPageViewProps } from "@/contexts/reporting/components/merchant-analytics-page-view";
 import { tenantRoutes } from "@/lib/routes";
-import { buildMerchantDashboard } from "@/test/analytics-dashboard";
-import { CASHIER_GRANTED_ANALYTICS, renderWithAuthorization, TEST_ORG_SLUG, type AuthorizationFixture } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
-import { STORE_B } from "@/test/terminals";
+import { buildMerchantDashboard } from "@/testing/analytics-dashboard";
+import { CASHIER_GRANTED_ANALYTICS, renderWithAuthorization, TEST_ORG_SLUG, type AuthorizationFixture } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/testing/tenant-context";
+import { STORE_B } from "@/testing/terminals";
 
 const KUALA_LUMPUR = "Asia/Kuala_Lumpur";
 /** 5 Oct 2026 12:00 UTC (20:00 in Kuala Lumpur) — "last 30 days" is 6 Sep – 5 Oct there. */

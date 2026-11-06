@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { RecordingRateLimiter } from "../../../../../test/support/recording-rate-limiter";
+import { RecordingRateLimiter } from "../../../../../e2e/support/recording-rate-limiter";
 import { RateLimiterThrottlerStorage, throttlerPolicyName } from "../../throttling/rate-limiter-throttler.storage";
 import { SECURITY_PENALTY } from "../security-penalty";
 

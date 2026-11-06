@@ -5,7 +5,7 @@ import { epochMs, type DataValue } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import { AuthProvider, type AuthProviderProps } from "../../../../features/auth/facade";
 import { SESSION_CHECK_MAX_RETRIES, sessionCheckRetryDelayMs } from "../session-check";
 import { SessionCheckNotice } from "../session-check-notice";

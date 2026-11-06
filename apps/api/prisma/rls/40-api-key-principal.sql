@@ -1,5 +1,5 @@
 -- ============================================================================
--- 40 — the merchant API key as a database principal (applied after rls.sql)
+-- 40 — the merchant API key as a database principal (applied after 10-policies.sql)
 -- ============================================================================
 -- A request authenticated by a merchant API key (POS till or back-office
 -- integration) runs as the `api_key` RLS context (apps/api/src/prisma/
@@ -86,18 +86,7 @@ DROP POLICY IF EXISTS tenants_api_key_read ON public."Tenant";
 CREATE POLICY tenants_api_key_read ON public."Tenant"
   FOR SELECT TO app_runtime USING (app_api_key_org_access(id));
 
-DROP POLICY IF EXISTS locations_api_key_read ON public."Location";
-CREATE POLICY locations_api_key_read ON public."Location"
-  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS tenant_assets_api_key_read ON public."TenantAsset";
-CREATE POLICY tenant_assets_api_key_read ON public."TenantAsset"
-  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
-
 -- A till refuses the codes of a customer its merchant banned.
-DROP POLICY IF EXISTS tenant_customer_bans_api_key_read ON public."TenantCustomerBan";
-CREATE POLICY tenant_customer_bans_api_key_read ON public."TenantCustomerBan"
-  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
 
 DROP POLICY IF EXISTS stored_files_api_key_read ON public."StoredFile";
 CREATE POLICY stored_files_api_key_read ON public."StoredFile"
@@ -128,56 +117,6 @@ CREATE POLICY tenant_terminals_api_key_update ON public."TenantTerminal"
   WITH CHECK (app_api_key_store_access("tenantId", "locationId"));
 
 -- ── rewards (tenant API CRUD; checkout updates stock and referral pools)
-
-DROP POLICY IF EXISTS rewards_api_key_read ON public."Reward";
-CREATE POLICY rewards_api_key_read ON public."Reward"
-  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS rewards_api_key_insert ON public."Reward";
-CREATE POLICY rewards_api_key_insert ON public."Reward"
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS rewards_api_key_update ON public."Reward";
-CREATE POLICY rewards_api_key_update ON public."Reward"
-  FOR UPDATE TO app_runtime
-  USING (app_api_key_org_access("tenantId"))
-  WITH CHECK (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS reward_location_scopes_api_key_read ON public."RewardLocationScope";
-CREATE POLICY reward_location_scopes_api_key_read ON public."RewardLocationScope"
-  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS reward_location_scopes_api_key_insert ON public."RewardLocationScope";
-CREATE POLICY reward_location_scopes_api_key_insert ON public."RewardLocationScope"
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS reward_audience_members_api_key_read ON public."RewardAudienceMember";
-CREATE POLICY reward_audience_members_api_key_read ON public."RewardAudienceMember"
-  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS reward_audience_members_api_key_insert ON public."RewardAudienceMember";
-CREATE POLICY reward_audience_members_api_key_insert ON public."RewardAudienceMember"
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS reward_audience_members_api_key_update ON public."RewardAudienceMember";
-CREATE POLICY reward_audience_members_api_key_update ON public."RewardAudienceMember"
-  FOR UPDATE TO app_runtime
-  USING (app_api_key_org_access("tenantId"))
-  WITH CHECK (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS reward_images_api_key_read ON public."RewardImage";
-CREATE POLICY reward_images_api_key_read ON public."RewardImage"
-  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS reward_images_api_key_insert ON public."RewardImage";
-CREATE POLICY reward_images_api_key_insert ON public."RewardImage"
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("tenantId"));
-
-DROP POLICY IF EXISTS reward_images_api_key_update ON public."RewardImage";
-CREATE POLICY reward_images_api_key_update ON public."RewardImage"
-  FOR UPDATE TO app_runtime
-  USING (app_api_key_org_access("tenantId"))
-  WITH CHECK (app_api_key_org_access("tenantId"));
 
 -- ── claims of the tenant's rewards (POS lookup, PENDING → REDEEMED, referrer credit)
 

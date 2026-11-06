@@ -7,10 +7,10 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { clearAllLocationCookies, locationCookieName } from "@/contexts/tenancy/lib/tenant/location";
-import { TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { contextQueryState, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { contextQueryState, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/testing/tenant-context";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 import { MerchantErrorCodes, type Envelope, type TenantContextResponse } from "@workspace/shared";
 
 import {

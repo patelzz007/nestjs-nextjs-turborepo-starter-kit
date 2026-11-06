@@ -8,7 +8,6 @@ import { TypedConfigService } from "../../config/typed-config.service";
 import { AuditTrailService } from "../../platform/infrastructure/audit/audit-trail.service";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
 import { PrismaModule } from "../../prisma/prisma.module";
-import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
 import { MERCHANT_ACCESS, TENANT_READ, TenantAccessModule, type TenantReadPort } from "../tenancy/public-api";
 import { AnalyticsDashboardAssembler } from "./application/assemblers/analytics-dashboard.assembler";
 import { AnalyticsReportExporter } from "./application/assemblers/analytics-report-exporter";
@@ -80,13 +79,13 @@ import { TenantAnalyticsController } from "./presentation/http/tenant-analytics.
 		},
 		{
 			provide: SALES_READ,
-			inject: [TenantTransactionService],
-			useFactory: (transactions: TenantTransactionService): SalesReadPort => new PrismaSalesReadRepository(transactions),
+			inject: [AnalyticsSqlRunner],
+			useFactory: (sql: AnalyticsSqlRunner): SalesReadPort => new PrismaSalesReadRepository(sql),
 		},
 		{
 			provide: REWARD_ACTIVITY_READ,
-			inject: [TenantTransactionService],
-			useFactory: (transactions: TenantTransactionService): RewardActivityReadPort => new PrismaRewardActivityReadRepository(transactions),
+			inject: [AnalyticsSqlRunner],
+			useFactory: (sql: AnalyticsSqlRunner): RewardActivityReadPort => new PrismaRewardActivityReadRepository(sql),
 		},
 		{
 			provide: ANALYTICS_TENANT_READ,

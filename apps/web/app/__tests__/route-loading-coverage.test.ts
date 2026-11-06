@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { listAppPageFiles } from "@/test-support/app-routes";
+import { listAppPageFiles } from "@/testing/app-routes";
 
 const LOADING_FILE = "loading.tsx";
 

@@ -6,7 +6,7 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PAIRING_QR_CAPTION, PAIRING_QR_SIZE_PX, PairingCodeDialog } from "@/contexts/pos/components/terminals/pairing-code-dialog";
-import { buildPairing, buildTerminal, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
+import { buildPairing, buildTerminal, TERMINAL_FIXTURE_NOW } from "@/testing/terminals";
 
 const API = "https://api.example.com/";
 const PAIRING = buildPairing(buildTerminal({ name: "Front till" }), "KX7M2PQR");

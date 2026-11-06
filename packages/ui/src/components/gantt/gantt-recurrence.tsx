@@ -6,18 +6,15 @@
 import { TZDate } from "@date-fns/tz";
 import { isStringPrimitive } from "@workspace/shared";
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
-import { z } from "zod";
 
 import type { GanttData, GanttDateRange, GanttEvent, GanttOccurrence, GanttOrdinalWeekday, GanttRecurrenceFrequency, GanttRecurrenceRule, GanttWeekday } from "./gantt-types";
+import { GanttWeekdaySchema, GanttFrequencySchema } from "./gantt-types";
 
 /** Guard: max occurrences per event per expansion. */
 export const MAX_OCCURRENCES = 1000;
 
 /** Weekday codes in `Date#getDay()` order (0 = Sunday). */
 const WEEKDAYS: readonly [GanttWeekday, GanttWeekday, GanttWeekday, GanttWeekday, GanttWeekday, GanttWeekday, GanttWeekday] = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
-
-const GanttWeekdaySchema = z.enum(["MO", "TU", "WE", "TH", "FR", "SA", "SU"]);
-const GanttFrequencySchema = z.enum(["daily", "weekly", "monthly", "yearly"]);
 
 const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;

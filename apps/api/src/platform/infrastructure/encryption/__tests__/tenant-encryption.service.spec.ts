@@ -3,7 +3,7 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { TenantEncryptionKey } from "@prisma/client";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { createTestPrisma } from "../../../../../test/support/test-service-graph";
+import { createTestPrisma } from "../../../../../e2e/support/test-service-graph";
 import { RequestContextService } from "../../context/request-context";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { createTenantAuditPort } from "../../../../contexts/tenancy/public-api";

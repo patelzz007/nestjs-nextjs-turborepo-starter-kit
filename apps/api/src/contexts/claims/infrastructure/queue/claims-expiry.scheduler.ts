@@ -12,6 +12,9 @@ const CLAIM_EXPIRY_INTERVAL_MS = 10 * MS_PER_MINUTE;
 /** Byte-stable scheduler ids: the legacy rewards jobs registered the same ones, so a deploy replaces them. */
 const EXPIRE_PENDING_SCHEDULER_ID = "claims-expire-pending";
 const EXPIRE_REFERRER_SCHEDULER_ID = "claims-expire-referrer";
+/** Holds last minutes, so an unclaimed unit goes back within a minute of its hold ending. */
+const CLAIM_HOLD_EXPIRY_INTERVAL_MS = MS_PER_MINUTE;
+const EXPIRE_HOLDS_SCHEDULER_ID = "claims-expire-holds";
 /** Owed referrer-credit emails are swept every minute (the email is user-facing; the normal path requests it right after the checkout). */
 const REFERRER_CREDIT_EMAILS_INTERVAL_MS = MS_PER_MINUTE;
 /** Byte-stable: the legacy rewards job registered the same id. */
@@ -25,6 +28,7 @@ export class ClaimsExpiryScheduler implements OnModuleInit {
 		private readonly config: TypedConfigService,
 		@InjectQueue(QUEUE_NAMES.claimsExpirePending) private readonly expirePendingQueue: Queue,
 		@InjectQueue(QUEUE_NAMES.claimsExpireReferrer) private readonly expireReferrerQueue: Queue,
+		@InjectQueue(QUEUE_NAMES.claimsExpireHolds) private readonly expireHoldsQueue: Queue,
 		@InjectQueue(QUEUE_NAMES.rewardsReferralCreditNotify) private readonly referrerCreditEmailsQueue: Queue,
 	) {}
 
@@ -45,6 +49,13 @@ export class ClaimsExpiryScheduler implements OnModuleInit {
 			schedulerId: EXPIRE_REFERRER_SCHEDULER_ID,
 			everyMs: CLAIM_EXPIRY_INTERVAL_MS,
 			jobName: "expire-referrer",
+			data,
+		});
+		this.schedulers.add(this.expireHoldsQueue, {
+			queueName: QUEUE_NAMES.claimsExpireHolds,
+			schedulerId: EXPIRE_HOLDS_SCHEDULER_ID,
+			everyMs: CLAIM_HOLD_EXPIRY_INTERVAL_MS,
+			jobName: "expire-holds",
 			data,
 		});
 		this.schedulers.add(this.referrerCreditEmailsQueue, {

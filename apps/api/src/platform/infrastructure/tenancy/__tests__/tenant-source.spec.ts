@@ -1,6 +1,6 @@
 import { NotFoundError } from "../../../application/errors/app-error";
 import { TenancyConfigService } from "../../../../config/tenancy.config";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import type { TenantRouteLookup, TenantRouteRecord } from "../../../application/tenancy/tenant-source.port";
 import { FixedTenantSource } from "../fixed-tenant.source";
 import { RouteTenantSource } from "../route-tenant.source";

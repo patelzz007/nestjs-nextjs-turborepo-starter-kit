@@ -23,13 +23,13 @@
 | Platform admins may operate cross-tenant / break-glass (exceptions in TI-08, TI-15, TI-19, TI-26) | **No bypass** (ADR 062): platform staff are ordinary users on tenant routes unless an approved `SupportAccessGrant` exists; impersonation needs one too. A system operation is allowlisted and names its tables — the RLS bypass is per table (`app_rls_bypass_on(<table>)`), never global | ⚠️ **ADR 062 wins** — those exception clauses apply only through a `SupportAccessGrant` or a named system operation |
 | Neutral errors for foreign resources (TI-08, TI-28) | Mandatory, not "when appropriate": another tenant's resource returns 404 (ADR 062) | ✅ stricter |
 | Isolation strategy | Shared tables + PostgreSQL RLS (ADR 007, 010, 062) | ✅ matches |
-| RLS: runtime role cannot bypass; FORCE RLS (TI-29, TI-32) | `app_runtime` is `NOBYPASSRLS`; `FORCE ROW LEVEL SECURITY` on every RLS table (`apps/api/prisma/rls.sql`); boot + CI proof; `test/rls/runtime-role.e2e-spec.ts` | ✅ matches |
+| RLS: runtime role cannot bypass; FORCE RLS (TI-29, TI-32) | `app_runtime` is `NOBYPASSRLS`; `FORCE ROW LEVEL SECURITY` on every RLS table (`apps/api/prisma/rls/10-policies.sql`); boot + CI proof; `e2e/rls/runtime-role.e2e-spec.ts` | ✅ matches |
 | Context set transaction-locally on the executing connection (TI-31, TI-33) | `set_config(…, true)` for role, user, tenant and system operation in one statement inside the transaction (`src/prisma/tenant-transaction.service.ts`, ADR 010) | ✅ matches |
 | No mutable process-global tenant (TI-17) | Request context uses `AsyncLocalStorage` (ADR 017) — the rule's own exception, with propagation verified by the e2e suites; system work carries its actor explicitly | ✅ matches (exception clause) |
 | Cross-tenant references guarded in the database (TI-09, TI-27) | Composite `(tenantId, id)` foreign keys (ADR 062; 14 in `schema.prisma`) | ✅ matches |
-| Two-tenant isolation tests (TI-30) | Shared two-tenant fixture; `test/tenancy/multi/isolation.e2e-spec.ts` and 20+ cross-tenant suites; full e2e runs in multi mode | ✅ matches |
+| Two-tenant isolation tests (TI-30) | Shared two-tenant fixture; `e2e/tenancy/multi/isolation.e2e-spec.ts` and 20+ cross-tenant suites; full e2e runs in multi mode | ✅ matches |
 | Token claims are hints, not membership proof (TI-36) | JWTs carry identity only (ADR 003); per-session revocation is immediate (ADR 034) | ✅ stricter |
-| Migrations (stack constraint 3, TI-34) | Migrations are generated from `schema.prisma` (`pnpm db:migrate:create`), never hand-written; RLS SQL lives in `prisma/rls.sql` and is applied by `pnpm tools db:apply-security` | ✅ matches |
+| Migrations (stack constraint 3, TI-34) | Migrations are generated from `schema.prisma` (`pnpm db:migrate:create`), never hand-written; RLS SQL lives in `prisma/rls/10-policies.sql` and is applied by `pnpm tools db:apply-security` | ✅ matches |
 
 ## 0. Operating contract for the AI agent
 
@@ -724,7 +724,7 @@ transaction-locally and verify policy enforcement.
 **Exception policy:** Application-only scoping may be selected, but the
 threat model and compensating controls must be documented.
 
-**Repository note:** Enabled with `FORCE ROW LEVEL SECURITY` and a `NOBYPASSRLS` runtime role (`apps/api/prisma/rls.sql`).
+**Repository note:** Enabled with `FORCE ROW LEVEL SECURITY` and a `NOBYPASSRLS` runtime role (`apps/api/prisma/rls/10-policies.sql`).
 
 ### TI-30 — Test isolation as a security property
 
@@ -748,7 +748,7 @@ B's reward even with its valid ID.
 **Exception policy:** A focused unit test supplements but does not
 replace integration tests.
 
-**Repository note:** Use the shared two-tenant fixture (`test/tenancy/multi/`).
+**Repository note:** Use the shared two-tenant fixture (`e2e/tenancy/multi/`).
 
 ### TI-31 — Avoid tenant context leakage through pooled connections
 
@@ -794,7 +794,7 @@ cross-tenant access at SQL level.
 **Exception policy:** Administrative migration roles should be separate
 from runtime roles.
 
-**Repository note:** `test/rls/runtime-role.e2e-spec.ts` does this.
+**Repository note:** `e2e/rls/runtime-role.e2e-spec.ts` does this.
 
 ### TI-33 — Bind RLS context to the transaction
 

@@ -107,9 +107,9 @@ describe("Dialog", () => {
 		expect(classNameOf("dialog")).toContain(expected);
 	});
 
-	it("draws a destructive variant and an alert-dialog role", async () => {
+	it("keeps a destructive dialog's edge quiet, and takes an alert-dialog role", async () => {
 		await render(dialog({ variant: "destructive", role: "alertdialog" }));
-		expect(classNameOf("dialog")).toContain("border-destructive");
+		expect(classNameOf("dialog")).not.toContain("border-destructive");
 		expect(screen.getByTestId("dialog")).toHaveProp("role", "alertdialog");
 	});
 

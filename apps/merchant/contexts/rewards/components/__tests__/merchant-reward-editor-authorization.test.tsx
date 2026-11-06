@@ -7,11 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MerchantCreateRewardPageView } from "@/contexts/rewards/components/merchant-create-reward-page-view";
 import { MerchantEditRewardPageView } from "@/contexts/rewards/components/merchant-edit-reward-page-view";
 import { MerchantRewardDetailPageView } from "@/contexts/rewards/components/merchant-reward-detail-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { contextQueryState, TWO_STORE_CONTEXT } from "@/testing/tenant-context";
 import { MERCHANT_REWARD_EDITOR_LOADING_LABELS, MERCHANT_REWARD_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
-import { rewardFixture } from "@/test/rewards";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
+import { rewardFixture } from "@/testing/rewards";
 import { tenantRoutes } from "@/lib/routes";
 import { epochMs, type MembershipRole, type RewardResponse } from "@workspace/shared";
 

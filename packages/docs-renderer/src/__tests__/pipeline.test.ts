@@ -21,7 +21,7 @@ describe("createMarkdownRenderer", () => {
 	});
 
 	it("should resolve relative links to guides, posts and repository files", async () => {
-		const { html } = await render("[db](./database.md#seed) [post](../blog/epoch.md) [code](../apps/api/main.ts)", "/repo/docs/guide.md");
+		const { html } = await render("[db](./database.md#seed) [post](./blog/epoch.md) [code](../apps/api/main.ts)", "/repo/docs/guide.md");
 		expect(html).toContain('href="/docs/database#seed"');
 		expect(html).toContain('href="/blog/epoch"');
 		expect(html).toContain('href="https://github.com/acme/kit/blob/main/apps/api/main.ts"');

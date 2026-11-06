@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { epochMs } from "@workspace/shared";
 import { describe, expect, it, vi, type Mock } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { TenantApiKey } from "../../domain/aggregates/tenant-api-key.aggregate";
 import { TenantTerminal } from "../../domain/aggregates/tenant-terminal.aggregate";

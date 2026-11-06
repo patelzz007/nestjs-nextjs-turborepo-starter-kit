@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { createTestTypedConfig, type TestEnv } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig, type TestEnv } from "../../../../../../e2e/support/test-api-env";
 import { GithubCommitNotFoundError, GithubRepositoryNotConfiguredError, GithubUnavailableError } from "../../../application/errors/github.errors";
 import { GithubApiClient } from "../../github-api/github-api.client";
 import { TypedConfigService } from "../../../../../config/typed-config.service";

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantAuthorizationProvider, useMerchantAuthorizationStatus } from "@/contexts/tenancy/components/access/merchant-authorization-provider";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
-import { membershipFixture } from "@/test/authorization";
+import { membershipFixture } from "@/testing/authorization";
 
 const { merchantCapabilities } = vi.hoisted(() => ({
 	merchantCapabilities: vi.fn(),

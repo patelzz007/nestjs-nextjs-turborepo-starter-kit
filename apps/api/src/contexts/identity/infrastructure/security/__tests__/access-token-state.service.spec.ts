@@ -9,8 +9,8 @@ import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context
 
 import { AccessTokenStateService, REVOKED_SESSION_LOOKBACK_MARGIN_MS } from "../access-token-state.service";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
-import { createTestApiConfig, createTestTypedConfig } from "../../../../../../test/support/test-api-env";
-import { localAppCache } from "../../../../../../test/support/local-app-cache";
+import { createTestApiConfig, createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
+import { localAppCache } from "../../../../../../e2e/support/local-app-cache";
 
 const mocks = vi.hoisted(() => ({
 	userFindUnique: vi.fn(),

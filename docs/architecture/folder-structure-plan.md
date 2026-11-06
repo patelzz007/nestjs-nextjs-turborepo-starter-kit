@@ -1,6 +1,6 @@
 ---
 title: "Folder structure and type-safety plan"
-description: "The agreed plan (2026-11-05) to simplify the repository's folders, convert the tooling to typed, reusable TypeScript, generate the standard RLS policies, and tighten the types (branded IDs, enum-derived unions, keyed records, typed routes) without losing any behaviour. Not implemented yet."
+description: "The agreed plan (2026-11-05) to simplify the repository's folders, convert the tooling to typed, reusable TypeScript, generate the standard RLS policies, and tighten the types (branded IDs, enum-derived unions, keyed records, typed routes) without losing any behaviour. Most of it is done; the status table lists what is open."
 author: "Platform Team"
 lastUpdated: 1793865600000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
@@ -10,9 +10,16 @@ tags: ["architecture", "structure", "tooling", "rls", "typescript", "plan"]
 
 # Folder structure and type-safety plan
 
-**Status (2026-11-05): agreed, not implemented.** Every decision below was made with the owner in one grilling
-session (Q1–Q44). Nothing moves until the owner says to start; then it is done in **one sitting**, phase by phase in
-the order below.
+**Status (2026-11-06): phases 1, 2, 3, 4, 6 and 8 done; phases 5 and 7 have open items.**
+
+| Open item | Why it is open |
+|---|---|
+| Phase 5: `apps/docs/scripts/capture-api-samples.mjs` is still JavaScript | 1,500 lines of untyped API responses need real schemas |
+| Phase 5: the `ci:local` step list stays in `src/ci-local/ci-local-plan.ts` | It reads names and ports from `tooling.config.ts`, but the steps themselves did not move |
+| Phase 7: branded ids are not rolled out | `Id`, `idSchema`, `TenantId`, `UserId` and `LocationId` exist. About 1,125 `userId`, `tenantId` and `locationId: string` parameters in `apps/api/src` still use plain strings. Each needs a real parse at its source (Prisma rows, fixtures like `"user-1"`), because casts are banned. Go context by context |
+| Phase 8: merchant route builders return `AppPath` | Its tenant-relative paths aren't real routes, so they become routes through `appRoute()` where they are used | Every decision below was made with the owner in one
+grilling session (Q1–Q44). The tables below keep the original "from" paths as the record of what moved; see
+`docs/history/PROGRESS-2026-11-06.md`.
 
 ## Goal and ground rules
 

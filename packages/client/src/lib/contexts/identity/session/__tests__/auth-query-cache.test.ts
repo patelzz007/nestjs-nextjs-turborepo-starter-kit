@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { epochMs } from "@workspace/shared";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { envelopeFixture, META_FIXTURE, sessionPermissionsFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, META_FIXTURE, sessionPermissionsFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import { apiRouter } from "../../../../api/endpoints";
 import { createAuthQueryCache } from "../auth-query-cache";
 

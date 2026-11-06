@@ -2,6 +2,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { NotFoundContent as SharedNotFoundContent } from "@workspace/ui/components/not-found-content";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /**
  * Admin wrapper around the **shared** presentational 404 content (rule 6 —
@@ -26,7 +27,7 @@ export function AdminNotFoundContent({
 			message={message ?? "The page you're looking for doesn't exist or may have been moved."}
 			backLink={
 				<Link
-					href={backHref}
+					href={appRoute(backHref)}
 					className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
 					{backLabel}
 				</Link>

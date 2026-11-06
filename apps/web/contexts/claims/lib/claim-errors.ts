@@ -7,6 +7,9 @@ export function formatClaimApiError(error: Error): string {
 		if (error.error === "REWARD_OUT_OF_STOCK") {
 			return "This reward just sold out. Browse other offers.";
 		}
+		if (error.error === "CLAIM_HOLD_LIMIT_REACHED") {
+			return "You have too many rewards on hold. Finish a claim, or try again later.";
+		}
 		if (error.error === "REWARD_EXPIRED") {
 			return "This reward has expired.";
 		}

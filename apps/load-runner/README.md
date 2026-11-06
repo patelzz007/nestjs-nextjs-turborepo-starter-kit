@@ -21,7 +21,7 @@ them for the Operations console's **Load tests** screen.
 | --- | --- |
 | Local, Docker (k6 inside the image) | `pnpm load-runner`, and `LOAD_TESTING_ENABLED=true` in `apps/api/.env` |
 | Local, no Docker | Install k6, then `REDIS_URL=redis://localhost:6379 pnpm --filter @workspace/load-runner start` |
-| A droplet | The `load-runner` target of `deploy/docker/Dockerfile` |
+| A droplet | The `load-runner` target of `infra/docker/Dockerfile` |
 
 Start runs from the admin panel (**Operations → Load tests**, Platform Developer or SuperAdmin), or
 with `pnpm tools load:run` (below).
@@ -34,16 +34,16 @@ with `pnpm tools load:run` (below).
    18.6 and Redis 8.10.1 as service containers, seeded with the `development` scenario, plus this
    runner with k6 (the same release as the Docker image, checksum-verified).
 2. `pnpm tools load:run` signs in as the seeded Platform Developer (`developer@example.com`) on the
-   admin client and starts **`load-baselines.json`'s run** through the API, exactly as an operator
+   admin client and starts **`budgets/load.json`'s run** through the API, exactly as an operator
    would: the API provisions the Load Test tenant, queues the run, and this runner drives it. The
-   run's detail (`GET /admin/operations/load-tests/:runId`) is saved to `.ci-logs/load-baseline.json`.
-3. `pnpm tools load:check` compares it with `load-baselines.json` and fails the job on a regression.
+   run's detail (`GET /admin/operations/load-tests/:runId`) is saved to `.artifacts/ci/load-baseline.json`.
+3. `pnpm tools load:check` compares it with `budgets/load.json` and fails the job on a regression.
    The table goes to the job's summary; the results, the API log and the runner log are kept as an
    artifact for 30 days.
 
 ### What it checks
 
-The run is a traffic mix of every scenario (`run` in `load-baselines.json`: 5 iterations per second
+The run is a traffic mix of every scenario (`run` in `budgets/load.json`: 5 iterations per second
 for 2 minutes with 20 virtual users, ~13 requests/s — kept well below what the runner saturates at,
 so the p95s measure the service and not a queue). Each scenario step belongs to one **endpoint
 group**:
@@ -91,8 +91,8 @@ the Load Test tenant), start an API with `LOAD_TESTING_ENABLED=true` and Redis, 
 the same `BULLMQ_PREFIX`, then:
 
 ```bash
-pnpm tools load:run -- --api-url http://localhost:8080 --out .ci-logs/load-baseline.json
-pnpm tools load:check -- --results .ci-logs/load-baseline.json
+pnpm tools load:run -- --api-url http://localhost:8080 --out .artifacts/ci/load-baseline.json
+pnpm tools load:check -- --results .artifacts/ci/load-baseline.json
 ```
 
 When the runner and `load:run` share an address (one machine), set `RATE_LIMIT_EXEMPT_CIDRS=127.0.0.1/32,::1/128`
@@ -102,5 +102,5 @@ which would otherwise refuse the poller.
 ## Tests
 
 `pnpm --filter @workspace/load-runner test` (Vitest, with coverage floors). The gate's comparison,
-report and recalibration are tested in `packages/tooling/scripts/lib/__tests__/load-baselines.test.mjs`,
+report and recalibration are tested in `packages/tooling/src/load-baseline/__tests__/load-baselines.test.ts`,
 and the driver against a fake API in `load-baseline-run.test.mjs`.

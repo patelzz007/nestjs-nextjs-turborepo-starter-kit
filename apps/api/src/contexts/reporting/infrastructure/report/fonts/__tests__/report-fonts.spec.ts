@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { create } from "fontkit";
 import { describe, expect, it } from "vitest";
 
-import { testReportFontRegistry } from "../../../../../../../test/support/report-fonts";
+import { testReportFontRegistry } from "../../../../../../../e2e/support/report-fonts";
 import { ReportFontInvalidError, ReportFontLoader, ReportFontMissingError, ReportFontRegistry, reportFontName } from "../report-font-registry";
 import { FALLBACK_FONT_KEY, familyForCodePoint, REPORT_FONT_FAMILIES, REPORT_FONT_WEIGHTS, segmentByScript, type ReportFontFamily } from "../report-fonts";
 

@@ -4,11 +4,11 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
 	apiPath,
-	OkResponseSchema,
+	RequestClaimOtpResponseSchema,
 	RewardClaimCreatedResponseSchema,
 	RewardClaimQrResponseSchema,
 	RewardClaimResponseSchema,
-	type OkResponse,
+	type RequestClaimOtpResponse,
 	type PaginatedServiceResult,
 	type RewardClaimCreatedResponse,
 	type RewardClaimQrResponse,
@@ -43,8 +43,11 @@ export class ConsumerClaimsController {
 	@Post("otp")
 	@PlatformOperation(CLAIM_OTP_REQUEST_OPERATION)
 	@ApiOperation({ summary: "Request claim OTP (emailed to your account — no SMS in dev)" })
-	@ZodResponse(OkResponseSchema, { status: HttpStatus.CREATED, description: "OTP sent" })
-	public requestOtp(@CurrentActor() actor: ActorContext, @ZodBody(apiContract.claims.otp.input) body: z.output<typeof apiContract.claims.otp.input>): Promise<OkResponse> {
+	@ZodResponse(RequestClaimOtpResponseSchema, { status: HttpStatus.CREATED, description: "OTP sent; one unit is held until holdExpiresAt" })
+	public requestOtp(
+		@CurrentActor() actor: ActorContext,
+		@ZodBody(apiContract.claims.otp.input) body: z.output<typeof apiContract.claims.otp.input>,
+	): Promise<RequestClaimOtpResponse> {
 		return this.commandBus.execute(new RequestClaimOtpCommand(actor, body));
 	}
 

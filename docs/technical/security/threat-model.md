@@ -147,7 +147,7 @@ never influence authorization. A body-presented refresh token is audited as `REF
 - Job context tampering tests
 - Support grant expiry and revocation tests
 - Migration reconciliation checksums before cutover
-- Mobile client e2e (`apps/api/test/mobile-client.e2e-spec.ts`): body tokens and no cookies, wrong-source refresh rejection, rotation + reuse detection, logout / logout-all by body token, 426
+- Mobile client e2e (`apps/api/e2e/mobile-client.e2e-spec.ts`): body tokens and no cookies, wrong-source refresh rejection, rotation + reuse detection, logout / logout-all by body token, 426
 
 ## References
 

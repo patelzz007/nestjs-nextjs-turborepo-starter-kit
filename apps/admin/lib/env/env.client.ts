@@ -11,12 +11,11 @@
 //
 // Import this module anywhere (server or client). Everything in it is public.
 
-import { parseEnvOrThrow } from "@workspace/shared";
-import type { z } from "zod";
+import { parseAppEnv } from "@workspace/client/lib/env/parse-app-env";
 
 import { ADMIN_ENV_SCOPE, AdminClientEnvSchema, type AdminClientEnv } from "./env.schema";
 
-export const clientEnv: Readonly<AdminClientEnv> = parseEnvOrThrow(
+export const clientEnv: Readonly<AdminClientEnv> = parseAppEnv(
 	AdminClientEnvSchema,
 	{
 		NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
@@ -24,6 +23,6 @@ export const clientEnv: Readonly<AdminClientEnv> = parseEnvOrThrow(
 		NEXT_PUBLIC_WEB_URL: process.env.NEXT_PUBLIC_WEB_URL,
 		NEXT_PUBLIC_MERCHANT_URL: process.env.NEXT_PUBLIC_MERCHANT_URL,
 		NEXT_PUBLIC_SESSION_POLL_MS: process.env.NEXT_PUBLIC_SESSION_POLL_MS,
-	} satisfies Record<keyof z.input<typeof AdminClientEnvSchema>, string | undefined>,
+	},
 	ADMIN_ENV_SCOPE.client,
 );

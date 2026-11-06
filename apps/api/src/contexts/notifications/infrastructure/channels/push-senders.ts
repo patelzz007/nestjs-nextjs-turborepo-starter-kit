@@ -69,6 +69,7 @@ export class MailpitPushSender implements PushSender {
 			`category: ${message.category}`,
 			...Object.entries(message.data).map(([key, value]): string => `${key}: ${value}`),
 			...(message.badge === null ? [] : [`badge: ${String(message.badge)}`]),
+			...(message.imageUrl === null ? [] : [`image: ${message.imageUrl}`]),
 		];
 		try {
 			const receipt = await this.mailpit.deliver({
@@ -83,6 +84,7 @@ export class MailpitPushSender implements PushSender {
 				bcc: [],
 				replyTo: undefined,
 				headers: {},
+				attachments: [],
 			});
 			return { kind: "sent", providerMessageId: receipt.providerMessageId };
 		} catch (error) {

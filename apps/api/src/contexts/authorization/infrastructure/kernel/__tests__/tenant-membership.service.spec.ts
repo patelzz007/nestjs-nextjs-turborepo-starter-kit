@@ -5,8 +5,8 @@ import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 import { TenantMembershipService } from "../tenant-membership.service";
-import { SERVES_EVERY_TENANT, servesOnly } from "../../../../../../test/support/served-tenants";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { SERVES_EVERY_TENANT, servesOnly } from "../../../../../../e2e/support/served-tenants";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import type { ServedTenantPolicy } from "../../../../../platform/application/tenancy/served-tenant.port";
 
 const mocks = vi.hoisted(() => ({

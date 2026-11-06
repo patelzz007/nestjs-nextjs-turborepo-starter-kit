@@ -34,6 +34,10 @@ export default function OrderPage({ order }: { order: Order }) {
 
 Push the `use client` boundary as far down the tree as it can go — to the smallest leaf that genuinely needs it, not up to the nearest page or layout because that was easier to reason about in the moment.
 
+## Typed routes
+
+`typedRoutes` is on. Write literal links where you can, so the compiler checks them against the real pages. A path that only exists at runtime goes through `appRoute()`, never a cast. See `docs/technical/frontend/routing.md`.
+
 ## Smart vs dumb components — mandatory, no exceptions
 
 This is the single most load-bearing convention in the frontend codebase, and the one most likely to quietly erode over time if it isn't actively enforced in review.

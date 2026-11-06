@@ -85,7 +85,7 @@ interceptor. **Never read tenant ids from `request.headers` or the body yourself
 
 ## 3. PostgreSQL RLS — how the database knows who is asking
 
-Every tenant table has RLS enabled and **forced** (`prisma/rls.sql`, helpers in
+Every tenant table has RLS enabled and **forced** (`prisma/rls/10-policies.sql`, helpers in
 `prisma/rls/*.sql`). Policies compare rows with session settings:
 
 | Setting                           | Meaning                                                                |
@@ -231,7 +231,7 @@ registry, so no API code path can borrow them.
 ### 4.0 Roles, grants and shares in Postgres (ADR 067)
 
 RLS is the primary enforcer, and it decides with the same rules as the API's `AccessControlService`.
-`prisma/rls/02-access-model.sql` defines two helpers, read by the policies in `prisma/rls.sql`:
+`prisma/rls/02-access-model.sql` defines two helpers, read by the policies in `prisma/rls/10-policies.sql`:
 
 - `app_has_permission(resource, action, tenant, store)` — the caller's **active** membership in the
   tenant whose tenant role holds `resource.action` (role path), or a live grant of it (grant path, a
@@ -271,11 +271,11 @@ policies for it — helpers `app_api_key_org_access(org)`, `app_api_key_store_ac
 | `Tenant`, `TenantLocation`, `TenantAsset`, `StoredFile` | read                     | its tenant (reward responses embed name, stores, logo)                                                       |
 
 No policy lets a key DELETE anything, and a crafted id of another tenant or location matches no
-row (`test/api-key-rls-principal.e2e-spec.ts`). Published consumer rewards remain public
+row (`e2e/api-key-rls-principal.e2e-spec.ts`). Published consumer rewards remain public
 marketplace data for every session.
 
 Every new tenant table must be added to `prisma/rls/manifest-index.ts` and get policies in
-`prisma/rls.sql`. `pnpm --filter @workspace/api db:check-rls-manifest` fails if a table is
+`prisma/rls/10-policies.sql`. `pnpm --filter @workspace/api db:check-rls-manifest` fails if a table is
 missing. See [recipes → add a tenant table](./recipes.md#7-add-a-new-tenant-table-with-rls).
 
 **Dynamic roles never create RLS policies** (spec §50). RLS protects stable concepts — tenant,
@@ -360,7 +360,7 @@ no profile.
 | `tenant_location`                                                                            | belongs to a tenant **and** a location (terminals, API keys)                              | `app_tenant_row_org_location_access(tenant_id, location_id)`                     |
 | `reward_user`                                                                                | is a customer's claim, sale, referral or notification                                     | `app_owns(user_id)` for the customer, plus read policies for the reward's tenant |
 | `bypass_only`                                                                                | is written by jobs or platform audit (outbox, inbox, `AuditLog`, `AuthorizationAudit`, …) | `app_rls_bypass_on('<table>')` only                                              |
-| `geo_reference`, `product_catalog`, `append_log`, `file_derived`, `authorization_simulation` | special-purpose tables                                                                    | see the policies in `prisma/rls.sql`                                             |
+| `geo_reference`, `product_catalog`, `append_log`, `file_derived`, `authorization_simulation` | special-purpose tables                                                                    | see the policies in `prisma/rls/10-policies.sql`                                             |
 
 SQL helpers (all `STABLE`, granted to `app_runtime`; each returns `false` — never "allow all" — when
 the session variables are missing). Only `app_rls_bypass()` / `app_rls_bypass_on()` ever admit a

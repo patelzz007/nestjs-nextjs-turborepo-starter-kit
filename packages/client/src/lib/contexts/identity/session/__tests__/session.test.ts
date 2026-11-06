@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sessionPermissionsFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { sessionPermissionsFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import { composeAuthUser, isRestrictedAuthUser, PENDING_SESSION_SCOPE, resolveAuthEnrollmentReason, resolveSessionScope, type AuthUser } from "../session";
 
 const testUser = userFixture({ email: "user@example.com", fullName: "Test User", isEmailVerified: false, tokenVersion: 0 });

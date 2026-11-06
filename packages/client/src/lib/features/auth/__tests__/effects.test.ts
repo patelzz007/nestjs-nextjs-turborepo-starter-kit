@@ -1,7 +1,7 @@
 import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../testing/auth-fixtures";
 import type { AuthSyncEvent } from "../../../contexts/identity/session/sync";
 import { authActions } from "../actions";
 import type { AuthBroadcaster, AuthQueryCache } from "../effects";

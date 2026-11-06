@@ -106,4 +106,4 @@ context (verified tenant) plus the user flags on `request.user`.
 - Tests: `common/context/*.spec.ts`, `common/middleware/request-context.middleware.spec.ts`
   (Fastify integration incl. POST bodies), `modules/auth/guards/__tests__/auth-guards-request-context.spec.ts`,
   the authorization-guard and RLS-interceptor specs, `logs.service.spec.ts`,
-  `global-exception.filter.spec.ts` and `test/app.e2e-spec.ts`.
+  `global-exception.filter.spec.ts` and `e2e/app.e2e-spec.ts`.

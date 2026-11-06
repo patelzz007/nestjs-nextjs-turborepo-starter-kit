@@ -5,6 +5,7 @@ import { UnsubscribeBodySchema, type NotificationCategory, type NotificationChan
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const CATEGORY_WORDS: Readonly<Record<NotificationCategory, string>> = {
 	SECURITY: "security notices",
@@ -49,7 +50,7 @@ export function UnsubscribeView({ token, settingsHref }: UnsubscribeViewProps): 
 		return (
 			<div className="space-y-4" role="alert">
 				<p className="text-sm text-muted-foreground">This unsubscribe link is not valid any more. You can still choose what reaches you in your notification settings.</p>
-				<Link href={settingsHref} className={buttonVariants({ variant: "outline" })}>
+				<Link href={appRoute(settingsHref)} className={buttonVariants({ variant: "outline" })}>
 					Notification settings
 				</Link>
 			</div>
@@ -60,7 +61,7 @@ export function UnsubscribeView({ token, settingsHref }: UnsubscribeViewProps): 
 			<div className="space-y-4" role="status">
 				<p className="text-base font-medium text-foreground">Done.</p>
 				<p className="text-sm text-muted-foreground">{describeUnsubscribe(unsubscribe.data.data)}</p>
-				<Link href={settingsHref} className={buttonVariants({ variant: "outline" })}>
+				<Link href={appRoute(settingsHref)} className={buttonVariants({ variant: "outline" })}>
 					Manage everything else
 				</Link>
 			</div>

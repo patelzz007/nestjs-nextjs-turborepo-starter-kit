@@ -51,11 +51,11 @@ ESLint config deliberately allowed it, and:
   casts.
 - The flags apply to **test code too**. Vitest strips types without checking them, so `apps/api`'s
   `typecheck` script runs three programs: `tsconfig.typecheck.json` (production `src/`),
-  `tsconfig.check.json` (unit specs, `test/**` e2e + support, `prisma/**` seed and RLS manifest,
+  `tsconfig.check.json` (unit specs, `e2e/**` e2e + support, `prisma/**` seed and RLS manifest,
   tool configs, and scripts that import the Nest source graph) and `tsconfig.scripts.json`
   (node-only scripts, `NodeNext`). Specs and the seed are linted with the same rules as `src/`.
   Test doubles are built with their real constructor arguments
-  (`apps/api/test/support/test-service-graph.ts`), never cast into shape.
+  (`apps/api/e2e/support/test-service-graph.ts`), never cast into shape.
 - The `unknown` / `never` **type keywords** remain review-enforced, because catch clauses need
   `unknown` and exhaustiveness checks need `never`.
 

@@ -2,8 +2,8 @@ import { BadRequestException, ForbiddenException, ServiceUnavailableException } 
 import { maskPhone } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { inMemoryWebhookReceiver, type InMemoryReceivedWebhookStore } from "../../../../../../test/support/in-memory-received-webhooks";
-import { signResendWebhook, TEST_RESEND_WEBHOOK_SECRET } from "../../../../../../test/support/resend-webhook-signature";
+import { inMemoryWebhookReceiver, type InMemoryReceivedWebhookStore } from "../../../../../../e2e/support/in-memory-received-webhooks";
+import { signResendWebhook, TEST_RESEND_WEBHOOK_SECRET } from "../../../../../../e2e/support/resend-webhook-signature";
 import { ActorContextSchema, type ActorContext } from "../../../../../platform/application/actor-context";
 import {
 	inboundWebhookRequest,
@@ -26,7 +26,7 @@ import { NotificationWebhookReception, type DeliveryEventDispatch } from "../not
  * Resend's and Twilio's callbacks through the REAL inbound receiver (an in-memory received-webhook log) and the
  * REAL signature schemes, keyed with test-only secrets: nothing about verification or claiming is faked. The
  * command bus and the admin service are recording fakes (their behaviour has its own specs and
- * test/email-delivery-webhook.e2e-spec.ts).
+ * e2e/email-delivery-webhook.e2e-spec.ts).
  */
 
 const EMAIL_ID = "56715290-9fa9-482a-b098-ba4cc1e1d813";

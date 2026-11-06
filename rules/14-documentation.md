@@ -99,7 +99,7 @@ A six-month developer should be able to understand, from the docs: why this exis
 
 ## Keeping docs from rotting
 
-If you notice an existing doc is out of date while working on something unrelated: fix it inline if it's a small correction, or flag it explicitly for follow-up if it's a larger rewrite — never leave a known-wrong doc silently in place, since a wrong doc is often worse than no doc at all (it actively misleads the next reader with false confidence). "Were the docs updated?" is an explicit item in `16-code-review-checklist.md`.
+If you notice an existing doc is out of date while working on something unrelated: fix it inline if it's a small correction, or flag it explicitly for follow-up if it's a larger rewrite — never leave a known-wrong doc silently in place, since a wrong doc is often worse than no doc at all (it actively misleads the next reader with false confidence). "Were the docs updated?" is an explicit item in `33-code-review-checklist.md`.
 
 ## Code comments — what deserves one, and what doesn't
 

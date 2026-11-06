@@ -7,7 +7,7 @@ import { TenantTransactionService } from "../../../../../prisma/tenant-transacti
 import { mapMembershipLocationScope } from "../../persistence/tenant-membership.mapper";
 import { TenantContextService } from "../tenant-context.service";
 import { PublicUrlResolver } from "../../../../../config/public-url.resolver";
-import { createTestPublicUrls } from "../../../../../../test/support/public-urls";
+import { createTestPublicUrls } from "../../../../../../e2e/support/public-urls";
 import { LIVE_ROW_FIELDS } from "../../../../../platform/infrastructure/persistence/__tests__/base-row-fields";
 
 vi.mock("../../../../../prisma/tenant-transaction.service", () => ({ TenantTransactionService: class {} }));

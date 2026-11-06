@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantNewPaymentPageView } from "@/contexts/payments/components/merchant-new-payment-page-view";
 import { tenantRoutes } from "@/lib/routes";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { paymentFixture } from "@/test/payments";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { paymentFixture } from "@/testing/payments";
 import { accessibilityViolations } from "@workspace/ui/testing/axe";
 
 interface CreateCallOptions {

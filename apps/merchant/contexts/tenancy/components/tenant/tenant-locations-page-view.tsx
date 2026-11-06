@@ -16,6 +16,7 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Card } from "@workspace/ui/components/card";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface LocationsPageViewProps {
 	readonly tenantSlug: string;
@@ -145,7 +146,7 @@ export function LocationsPageView({ tenantSlug }: LocationsPageViewProps): React
 				</>
 			) : null}
 
-			<Link href={tenantRoutes(tenantSlug).dashboard} className="text-sm text-muted-foreground hover:text-foreground">
+			<Link href={appRoute(tenantRoutes(tenantSlug).dashboard)} className="text-sm text-muted-foreground hover:text-foreground">
 				Back to dashboard
 			</Link>
 		</div>

@@ -24,12 +24,12 @@ const CONTENT_SECURITY_POLICY_HEADER = "Content-Security-Policy";
 const NONCE_BYTES = 16;
 
 /** The headers every response carries, whatever its content. */
-export const STATIC_SECURITY_HEADERS: Readonly<Record<string, string>> = {
+export const STATIC_SECURITY_HEADERS = {
 	"X-Frame-Options": "DENY",
 	"X-Content-Type-Options": "nosniff",
 	"Referrer-Policy": "strict-origin-when-cross-origin",
 	"Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
-};
+} satisfies Readonly<Record<string, string>>;
 
 export interface ContentSecurityPolicyOptions {
 	/** This response's nonce: the only inline or first-party script allowed to run is one carrying it. */
@@ -52,8 +52,8 @@ export function createNonce(): string {
  * attributes and the chart kit's `<style>` need it, and CSS can't run code. Images and media may come from
  * any HTTPS host (merchant uploads, signed storage URLs) and from the API itself (local storage serves files
  * from the API's origin); `connect-src` adds the API and any HTTPS/WSS host for direct-to-storage uploads.
- * In development only, `connect-src` also allows any `http:` host: the API hands out local-storage upload
- * addresses on its LAN address there (so a phone on the same network can upload), which isn't the
+ * In development only, `connect-src` and `img-src` also allow any `http:` host: the API hands out local-storage
+ * upload and picture addresses on its LAN address there (so a phone on the same network can reach them), which isn't the
  * `localhost` origin the browser app calls. Deployed, every address is HTTPS and `API_PUBLIC_URL` is set.
  */
 export function buildContentSecurityPolicy({ nonce, development, apiOrigin }: ContentSecurityPolicyOptions): string {
@@ -61,7 +61,7 @@ export function buildContentSecurityPolicy({ nonce, development, apiOrigin }: Co
 		["default-src", "'self'"],
 		["script-src", "'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(development ? ["'unsafe-eval'"] : [])],
 		["style-src", "'self'", "'unsafe-inline'"],
-		["img-src", "'self'", "data:", "blob:", "https:", apiOrigin],
+		["img-src", "'self'", "data:", "blob:", "https:", apiOrigin, ...(development ? ["http:"] : [])],
 		["media-src", "'self'", "blob:", "https:"],
 		["font-src", "'self'", "data:"],
 		["connect-src", "'self'", apiOrigin, "https:", "wss:", ...(development ? ["ws:", "http:"] : [])],

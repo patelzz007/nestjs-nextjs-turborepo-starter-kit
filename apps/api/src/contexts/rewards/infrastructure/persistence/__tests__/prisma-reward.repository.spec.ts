@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi, type Mock } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { ConcurrentModificationError } from "../../../../../platform/infrastructure/persistence/persistence.errors";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import { Reward } from "../../../domain/aggregates/reward.aggregate";

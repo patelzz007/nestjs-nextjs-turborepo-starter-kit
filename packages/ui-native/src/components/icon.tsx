@@ -27,6 +27,8 @@ export const iconVariants = cva("shrink-0 items-center justify-center", {
 		size: {
 			/** Glyphs inside a small control (a compact switch's thumb). */
 			xs: "size-3",
+			/** Glyphs that fill a checkbox: the box's own 2 pt border takes the rest. */
+			control: "size-3.5",
 			sm: "size-4",
 			md: "size-5",
 			lg: "size-6",
@@ -42,6 +44,7 @@ export type IconSize = NonNullable<VariantProps<typeof iconVariants>["size"]>;
 /** Side of each size step, in points — one scale for the whole app. */
 export const ICON_SIZES: Readonly<Record<IconSize, number>> = {
 	xs: 12,
+	control: 14,
 	sm: 16,
 	md: 20,
 	lg: 24,
@@ -50,10 +53,11 @@ export const ICON_SIZES: Readonly<Record<IconSize, number>> = {
 	"2xl": 40,
 };
 
-export type IconWeight = "regular" | "bold";
+export type IconWeight = "light" | "regular" | "bold";
 
-/** Stroke width per weight: `bold` marks the selected or emphasised state. */
+/** Stroke width per weight: `bold` marks the selected or emphasised state, `light` a glyph inside a small control. */
 export const ICON_STROKE_WIDTHS: Readonly<Record<IconWeight, number>> = {
+	light: 1.5,
 	regular: 1.75,
 	bold: 2.25,
 };

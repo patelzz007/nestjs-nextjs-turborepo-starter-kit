@@ -2,7 +2,7 @@ import { epochMs, RewardStatusSchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { describeRewardStatusNote, formatClaimLimitCount, formatRewardClaimLimit, formatRewardMinimumSpend, formatRewardRunDates } from "@/contexts/rewards/lib/reward-detail";
-import { REWARD_FIXTURE_EXPIRY_MS } from "@/test/rewards";
+import { REWARD_FIXTURE_EXPIRY_MS } from "@/testing/rewards";
 
 /** 1 Nov 2026, 00:00 UTC. */
 const START_MS = 1_793_491_200_000;

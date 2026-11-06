@@ -96,6 +96,14 @@ const FAILURE_LABELS: Readonly<Record<SessionCheckFailure, { readonly full: stri
 	unreachable: { full: "Session check failed", spoken: "Session check failed, network or server error" },
 };
 
+/** The session in a few words, for the drawer's status line and card: the time left, or the state. */
+export function sessionShortLabel(indicator: SessionIndicator): string {
+	if (indicator.status === "verified" && indicator.secondsLeft !== null && indicator.secondsLeft > 0) {
+		return `${formatTimeLeft(indicator.secondsLeft)} left`;
+	}
+	return sessionPillContent(indicator).label;
+}
+
 export function sessionPillContent(indicator: SessionIndicator): StatusPillContent {
 	switch (indicator.status) {
 		case "checking":

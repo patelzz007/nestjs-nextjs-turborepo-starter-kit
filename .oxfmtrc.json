@@ -28,6 +28,7 @@
 		".pnpm-store/",
 		".expo/",
 		"**/uniwind-types.d.ts",
+		"**/router-routes.d.ts",
 		"**/routeTree.gen.ts"
 	]
 }

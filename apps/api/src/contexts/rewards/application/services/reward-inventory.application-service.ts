@@ -23,6 +23,18 @@ export class RewardInventoryApplicationService implements RewardInventoryPort {
 		return facts;
 	}
 
+	public async holdUnit(rewardId: string, now: EpochMs, customerUserId: string): Promise<void> {
+		const reward = await this.rewards.getForInventory(rewardId);
+		reward.holdUnit(now, customerUserId);
+		await this.rewards.save(reward);
+	}
+
+	public async claimHeldUnit(rewardId: string, now: EpochMs, _customerUserId: string): Promise<void> {
+		const reward = await this.rewards.getForInventory(rewardId);
+		reward.claimHeldUnit(now);
+		await this.rewards.save(reward);
+	}
+
 	public async release(rewardId: string, now: EpochMs): Promise<void> {
 		const reward = await this.rewards.getForInventory(rewardId);
 		reward.release(now);

@@ -491,7 +491,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	// ── Inventory (claims and checkout, through RewardInventoryPort) ────
 
 	/** A consumer may start a claim: published, unexpired, in stock. Otherwise 404 / 400 / 409 as today. */
-	public assertClaimable(now: EpochMs, customerUserId: string): ClaimableRewardFacts {
+	public assertClaimable(now: EpochMs, customerUserId: string, holdsUnit = false): ClaimableRewardFacts {
 		// A reward for chosen customers does not exist for anyone else (no existence oracle).
 		if (this.kind !== "CONSUMER" || this.review.status !== "PUBLISHED" || !this.audience.includes(customerUserId)) {
 			throw new RewardNotFoundError(this.id);
@@ -499,22 +499,29 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		if (this.expiryDate < now) {
 			throw new RewardExpiredError();
 		}
-		if (this.inventory.quantityRemaining <= 0) {
+		if (!holdsUnit && this.inventory.quantityRemaining <= 0) {
 			throw new RewardSoldOutError();
 		}
 		return { rewardId: this.id, tenantId: this.tenantId, title: this.title, expiryDate: this.expiryDate, maxClaimsPerUser: this.rules.maxUsePerUser() };
 	}
 
+	/** Holds one unit while a customer enters their claim code: remaining −1, reserved +1, so everyone sees the count drop. */
+	public holdUnit(now: EpochMs, customerUserId: string): void {
+		this.assertSellableTo(now, customerUserId);
+		this.inventory = { ...this.inventory, quantityRemaining: this.inventory.quantityRemaining - 1, quantityReserved: this.inventory.quantityReserved + 1 };
+		this.touch(now);
+	}
+
+	/** The customer's held unit becomes their claim: claims +1; the unit was already taken from stock. */
+	public claimHeldUnit(now: EpochMs): void {
+		this.assertReservedUnit();
+		this.inventory = { ...this.inventory, claimCount: this.inventory.claimCount + 1 };
+		this.touch(now);
+	}
+
 	/** Takes one unit for a claim: remaining −1, reserved +1, claims +1. */
 	public reserve(now: EpochMs, customerUserId: string): ClaimableRewardFacts {
-		if (!this.audience.includes(customerUserId)) {
-			throw new RewardNotFoundError(this.id);
-		}
-		const sellable =
-			this.kind === "CONSUMER" && this.review.status === "PUBLISHED" && this.expiryDate >= now && this.inventory.quantityRemaining > 0 && this.availableAtActiveStore;
-		if (!sellable) {
-			throw new RewardJustSoldOutError();
-		}
+		this.assertSellableTo(now, customerUserId);
 		this.inventory = {
 			...this.inventory,
 			quantityRemaining: this.inventory.quantityRemaining - 1,
@@ -557,6 +564,17 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	}
 
 	// ── Internals ───────────────────────────────────────────────────────
+
+	private assertSellableTo(now: EpochMs, customerUserId: string): void {
+		if (!this.audience.includes(customerUserId)) {
+			throw new RewardNotFoundError(this.id);
+		}
+		const sellable =
+			this.kind === "CONSUMER" && this.review.status === "PUBLISHED" && this.expiryDate >= now && this.inventory.quantityRemaining > 0 && this.availableAtActiveStore;
+		if (!sellable) {
+			throw new RewardJustSoldOutError();
+		}
+	}
 
 	/** The total may change only while the units already handed out still fit: remaining + delta ≥ 0. */
 	private changeQuantity(nextTotal: number): void {

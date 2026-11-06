@@ -7,13 +7,13 @@ import { describe, expect, it } from "vitest";
 import { remarkDiagrams } from "../remark-plugins";
 
 // ── Diagram guard ───────────────────────────────────────────────────────────
-// Every ```mermaid fence in docs/ and blog/ must parse: remarkDiagrams fails
+// Every ```mermaid fence in docs/ and docs/blog/ must parse: remarkDiagrams fails
 // the build on one that does not, and this test reports it in `pnpm test`
 // first, with its file and line. (The usual culprit: a `;` inside sequence
 // message text ends the statement — write `#59;` for a literal semicolon.)
 
 const REPOSITORY_ROOT: string = path.resolve(import.meta.dirname, "../../../../..");
-const CONTENT_FOLDERS: readonly string[] = ["docs", "blog"];
+const CONTENT_FOLDERS: readonly string[] = ["docs"];
 const MERMAID_FENCE = /^```mermaid\n(?<source>[\s\S]*?)^```/gmu;
 
 interface DiagramFence {
@@ -52,7 +52,7 @@ function buildError(fence: DiagramFence): string | null {
 	}
 }
 
-describe("diagrams in docs/ and blog/", () => {
+describe("diagrams in docs/", () => {
 	const fences = diagramFences();
 
 	it("finds the repository's diagrams (guards the scan itself)", () => {

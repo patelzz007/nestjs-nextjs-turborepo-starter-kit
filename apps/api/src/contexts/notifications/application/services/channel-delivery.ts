@@ -148,6 +148,8 @@ export class ChannelDelivery {
 				category: notification.category,
 				occurredAt: notification.createdAt,
 				data: { deliveryId, notificationId: notification.id, ...(rendering.link === null ? {} : { link: rendering.link }) },
+				// Never on a sensitive push, and a PDF has no picture to show: the smaller copy, as FCM refuses large pictures.
+				imageUrl: type.sensitive ? null : (notification.attachment?.links.previewUrl ?? null),
 				collapseKey: groupKey,
 				badge: unread,
 			},

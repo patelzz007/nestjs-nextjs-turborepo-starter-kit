@@ -23,7 +23,7 @@ import { cva } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { z } from "zod";
+import { ColorPickerFormatSchema } from "../lib/color/color-space";
 
 /* Arrows step a field, ten with Shift; Page keys always ten. A hue wraps. */
 const STEP_KEYS: ReadonlyMap<string, number> = new Map([
@@ -194,7 +194,6 @@ const FORMAT_FIELDS: Readonly<Record<ColorPickerFormat, FormatFields>> = {
 	oklch: { space: "oklch", channels: ["lightness", "chroma", "hue"] },
 };
 
-const ColorPickerFormatSchema = z.enum(["hex", "rgb", "hsl", "hsb", "oklch"]);
 const FUNCTION_WRAPPER_PATTERN = /^\w+\(|\)$/gu;
 
 /** The joined fields: a `state` axis dims the group while disabled. */

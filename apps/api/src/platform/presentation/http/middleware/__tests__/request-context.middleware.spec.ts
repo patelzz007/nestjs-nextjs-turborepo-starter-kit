@@ -8,7 +8,7 @@ import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fa
 import { Test } from "@nestjs/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createTestTypedConfig, TEST_E2E_PROXY } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig, TEST_E2E_PROXY } from "../../../../../../e2e/support/test-api-env";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
 import { RequestContextService, type RequestContext } from "../../../../infrastructure/context/request-context";
 import { MAX_USER_AGENT_LENGTH, readUserAgent } from "../../../../infrastructure/http/user-agent-header";

@@ -1,7 +1,7 @@
 -- ============================================================================
 -- ACL + ReBAC helpers and location-scoped policies
 -- ============================================================================
--- Applied BEFORE prisma/rls.sql so bundle policies can call these functions.
+-- Applied BEFORE prisma/rls/10-policies.sql so bundle policies can call these functions.
 -- ReBAC: tenant membership (relationship to org).
 -- ACL: branch/location scope within the active tenant session.
 -- ============================================================================

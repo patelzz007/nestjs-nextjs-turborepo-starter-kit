@@ -6,9 +6,9 @@ import { readFileSync } from "node:fs";
 import { create } from "fontkit";
 import { z } from "zod";
 
-import { buildFixtureReport } from "../../../../../../../test/support/analytics-report-fixture";
-import { pdfTextRuns, readAll, xlsxParts } from "../../../../../../../test/support/report-files";
-import { testReportFontLoader } from "../../../../../../../test/support/report-fonts";
+import { buildFixtureReport } from "../../../../../../../e2e/support/analytics-report-fixture";
+import { pdfTextRuns, readAll, xlsxParts } from "../../../../../../../e2e/support/report-files";
+import { testReportFontLoader } from "../../../../../../../e2e/support/report-fonts";
 import { REPORT_FONT_FAMILIES } from "../../fonts/report-fonts";
 import { AnalyticsRendererMismatchError, AnalyticsReportRendererRegistry } from "../analytics-report-renderer.registry";
 import { CSV_UTF8_BOM, CsvAnalyticsReportRenderer, csvRecord, escapeCsvField, protectFromFormula } from "../csv-analytics-report.renderer";

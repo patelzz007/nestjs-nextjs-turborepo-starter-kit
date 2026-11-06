@@ -10,9 +10,9 @@
 
 ## N+1 — the most common regression
 
-A list endpoint must run the same number of SQL statements for a 1-row page and a 25-row page. `expectNoNPlusOne` in `apps/api/test/support/sql-statement-counter.ts` is that assertion. `GET /product` is covered by `apps/api/test/n-plus-one.e2e-spec.ts`. Fix a miss by batching the query. Do not stub the counter. There is no CI gate on process startup time (ADR 059).
+A list endpoint must run the same number of SQL statements for a 1-row page and a 25-row page. `expectNoNPlusOne` in `apps/api/e2e/support/sql-statement-counter.ts` is that assertion. `GET /product` is covered by `apps/api/e2e/n-plus-one.e2e-spec.ts`. Fix a miss by batching the query. Do not stub the counter. There is no CI gate on process startup time (ADR 059).
 
-A list query must not read a growing table whole (audit, change, user, claim, payment, notification and similar tables that gain rows with traffic). `apps/api/test/query-plans.e2e-spec.ts` records the real statements of the busiest list endpoints, EXPLAINs each with sequential scans discouraged, and fails naming any growing table still scanned whole: a missing index, or a query shape no index can serve. Two such shapes to avoid:
+A list query must not read a growing table whole (audit, change, user, claim, payment, notification and similar tables that gain rows with traffic). `apps/api/e2e/query-plans.e2e-spec.ts` records the real statements of the busiest list endpoints, EXPLAINs each with sequential scans discouraged, and fails naming any growing table still scanned whole: a missing index, or a query shape no index can serve. Two such shapes to avoid:
 
 - **Sorting on an expression no index has**, such as `ORDER BY "createdAt" DESC, id DESC` without an index on `("createdAt", id)`.
 - **`ORDER BY … LIMIT` over a `UNION ALL`.** Postgres can't read the union in index order, so it collects and sorts every row first. Filter, order and `LIMIT` (to the page's end) inside each branch, then merge (`buildAuditTrailPageTimeline`). At 200,000 audit rows that took a 25-row page from 33,389 buffers to 35.
@@ -111,7 +111,7 @@ For a genuinely performance-sensitive endpoint, verify with a realistic dataset 
    slow now, not sure why."
 ```
 
-The budget is enforced: `bundle-budgets.json` (repo root) holds each Next route's first-load JS (gzip) and
+The budget is enforced: `budgets/bundle.json` (repo root) holds each Next route's first-load JS (gzip) and
 each mobile platform's Hermes bundle, at the measured baseline + 10%. CI and `pnpm ci:local` run
 `pnpm tools bundle:check` after the build; a route over its budget, a new route without one, or a budget for a
 removed route fails it. Raising a budget is a reviewed edit of that file; after a deliberate size change,

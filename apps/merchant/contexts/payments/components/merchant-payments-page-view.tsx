@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { CreditCardIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const PAGER_LABELS: UiKitLabelsOverride<"listPager"> = { ariaLabel: "Payment pages" };
 
@@ -45,7 +46,7 @@ export function MerchantPaymentsPageView({ tenantSlug }: MerchantPaymentsPageVie
 				title="Payments"
 				description="Send a customer a link to pay by online banking, card or e-wallet. Each payment shows here as it's paid."
 				actions={
-					<Link href={routes.new} className={buttonVariants()}>
+					<Link href={appRoute(routes.new)} className={buttonVariants()}>
 						New payment
 					</Link>
 				}
@@ -96,7 +97,7 @@ function PaymentList({ tenantSlug, payments, isError, newHref }: PaymentListProp
 					<EmptyDescription>Enter an amount and the customer&apos;s details, and they get a secure page to pay on.</EmptyDescription>
 				</EmptyHeader>
 				<EmptyContent>
-					<Link href={newHref} className={buttonVariants()}>
+					<Link href={appRoute(newHref)} className={buttonVariants()}>
 						Ask for your first payment
 					</Link>
 				</EmptyContent>
@@ -117,7 +118,7 @@ function PaymentList({ tenantSlug, payments, isError, newHref }: PaymentListProp
 function PaymentRow({ tenantSlug, payment }: { readonly tenantSlug: string; readonly payment: PaymentIntentResponse }): React.JSX.Element {
 	return (
 		<Card className="gap-0 p-0 transition-colors hover:bg-foreground/[0.03]">
-			<Link href={tenantRoutes(tenantSlug).payments.detail(payment.id)} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4">
+			<Link href={appRoute(tenantRoutes(tenantSlug).payments.detail(payment.id))} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4">
 				<span className="w-28 shrink-0 text-base font-semibold text-foreground tabular-nums">{formatPaymentAmount(payment.amountMinor, payment.currency)}</span>
 				<span className="flex min-w-0 flex-1 flex-col gap-1">
 					<span className="truncate text-sm font-medium text-foreground">{payment.description}</span>

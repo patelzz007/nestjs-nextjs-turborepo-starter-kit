@@ -11,9 +11,9 @@
 		"typecheck": "tsrs --noEmit",
 		"test": "jest --coverage && cross-env EXPO_OFFLINE=1 expo install --check",
 		"check:expo-latest": "expo install --check",
-		"e2e:device": "node ../../packages/tooling/scripts/mobile-device-tests.mjs",
-		"cold-start": "node ../../packages/tooling/scripts/mobile-cold-start.mjs",
-		"screenshots:device": "node ../../packages/tooling/scripts/mobile-readme-screenshots.mjs",
+		"e2e:device": "node ../../packages/tooling/src/starter/mobile-device-tests/cli.ts",
+		"cold-start": "node ../../packages/tooling/src/starter/mobile-cold-start/cli.ts",
+		"screenshots:device": "node ../../packages/tooling/src/starter/mobile-readme-screenshots/cli.ts",
 		"build": "expo export --platform ios --platform android --output-dir dist",
 		"clean": "rm -rf dist .expo"
 	},

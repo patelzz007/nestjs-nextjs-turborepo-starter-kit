@@ -48,6 +48,7 @@ export class MailpitSmsSender implements SmsSender {
 				bcc: [],
 				replyTo: undefined,
 				headers: {},
+				attachments: [],
 			});
 			return { kind: "sent", providerMessageId: receipt.providerMessageId };
 		} catch (error) {

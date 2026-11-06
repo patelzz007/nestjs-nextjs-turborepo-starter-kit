@@ -9,6 +9,7 @@
 // (lib/emoji-picker/data.ts): bundled or fetched, the picker trusts neither.
 
 import { z } from "zod";
+import type { EmojiPickerShortcodePresetSchema } from "./data";
 
 /** A JSON module of emojibase-data (an array or an object, parsed by the caller's schema). */
 interface BundledJson {
@@ -162,7 +163,7 @@ const EMOJIBASE_SHORTCODES: ReadonlyMap<EmojiPickerBundledLocale, BundledLoader>
 const GITHUB_SHORTCODES: BundledLoader = (): Promise<BundledJson> => import("emojibase-data/en/shortcodes/github.json");
 const IAMCAL_SHORTCODES: BundledLoader = (): Promise<BundledJson> => import("emojibase-data/en/shortcodes/iamcal.json");
 
-export type BundledShortcodePreset = "github" | "iamcal" | "emojibase" | "cldr";
+export type BundledShortcodePreset = z.output<typeof EmojiPickerShortcodePresetSchema>;
 
 async function loadOptional(loader: BundledLoader | undefined): Promise<object | undefined> {
 	return loader === undefined ? undefined : (await loader()).default;

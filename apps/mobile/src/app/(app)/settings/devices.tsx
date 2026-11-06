@@ -148,7 +148,7 @@ function DevicesPage({ cursor, isLast, onLoadMore, onRevokeRequest, revokingId }
 			))}
 			{isLast && nextCursor !== null ? (
 				<View className="pt-4">
-					<Button label={DEVICES_COPY.loadMore} variant="secondary" onPress={loadMore} testID="devices-load-more" />
+					<Button label={DEVICES_COPY.loadMore} variant="outline" onPress={loadMore} testID="devices-load-more" />
 				</View>
 			) : null}
 		</View>

@@ -9,10 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WALLET_CLAIMS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { MyClaimsPageView } from "@/contexts/claims/components/my-claims-page-view";
-import { expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { expectSingleLoadingStatus } from "@/testing/skeleton";
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import { WALLET_CLAIMS_PAGE_SIZE } from "@/contexts/claims/url-state/wallet-claims";
-import { buildRewardClaimResponse, claimsPageEnvelope } from "@/test-support/claim";
+import { buildRewardClaimResponse, claimsPageEnvelope } from "@/testing/claim";
 
 type ClaimsPage = Envelope<RewardClaimResponse[]>;
 type ClaimsListInput = Parameters<typeof apiRouter.claims.list.queryKey>[0];

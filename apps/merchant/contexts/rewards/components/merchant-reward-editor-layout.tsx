@@ -5,6 +5,7 @@ import type { RewardStatus } from "@workspace/shared";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The form column takes the rest; the preview column is a voucher's width. */
 export const REWARD_EDITOR_GRID_CLASS = "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8";
@@ -18,7 +19,7 @@ export interface RewardPageBackLinkProps {
 export function RewardPageBackLink({ href, label }: RewardPageBackLinkProps): React.JSX.Element {
 	return (
 		<Link
-			href={href}
+			href={appRoute(href)}
 			className="inline-flex min-h-8 w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
 			<ArrowLeft className="size-4" aria-hidden="true" />
 			{label}

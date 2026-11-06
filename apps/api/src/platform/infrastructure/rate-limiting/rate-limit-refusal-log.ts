@@ -17,6 +17,7 @@ import { TypedConfigService } from "../../../config/typed-config.service";
 import type { RateLimitSubject, RateLimitSubjectKind } from "../../application/ports/rate-limiter.port";
 import type { RateLimitRefusalsPort } from "../../application/ports/rate-limit-insights.port";
 import { REDIS_PUBLISHER } from "../redis/redis.tokens";
+import { RateLimitSubjectKindSchema } from "@workspace/shared";
 
 /** Entries the stream keeps (approximate trim, `MAXLEN ~`). */
 export const REFUSAL_STREAM_MAX_ENTRIES = 10_000;
@@ -48,7 +49,7 @@ export interface RecordedRefusal {
 	readonly atEpochMs: number;
 }
 
-const SubjectKindSchema = z.enum(["ip", "principal", "tenant", "apiKey", "destination"]);
+const SubjectKindSchema = RateLimitSubjectKindSchema;
 const StreamFieldsSchema = z.tuple([
 	z.literal("policy"),
 	z.string(),

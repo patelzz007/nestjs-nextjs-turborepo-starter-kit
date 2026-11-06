@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy/lib/tenant/location-prefetch";
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 
 const ROWS: readonly string[] = ["first", "second"];
 

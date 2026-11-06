@@ -7,6 +7,7 @@ import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import { ROUTES } from "@/lib/routes";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface UserProfileFieldProps {
 	readonly label: string;
@@ -27,7 +28,7 @@ export const UserProfileField = React.forwardRef<HTMLDivElement, UserProfileFiel
 				{href === undefined ? (
 					value
 				) : (
-					<Link href={href} className="text-primary hover:underline">
+					<Link href={appRoute(href)} className="text-primary hover:underline">
 						{value}
 					</Link>
 				)}

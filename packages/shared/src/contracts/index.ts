@@ -12,7 +12,7 @@
 // - The API validates at the HTTP boundary with the SAME input schemas
 //   (`@ZodBody(apiContract.auth.login.input)`) and decorates each handler with
 //   the SAME response schema (`@ZodResponse(…)` / `@ZodPaginatedResponse(…)`);
-//   `apps/api/test/openapi-document.e2e-spec.ts` fails when a leaf and its
+//   `apps/api/e2e/openapi-document.e2e-spec.ts` fails when a leaf and its
 //   handler disagree, so neither half can drift.
 //
 // Inputs are JSON-only (`SerializableInput`), mirroring the client pipeline's

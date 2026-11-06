@@ -699,7 +699,7 @@ The starter kit's `eas.json` (one update channel per profile, [11.1](#111-over-t
 profile extends `base`, which pins the **Node.js and pnpm the repository uses** (`.nvmrc`, `packageManager`):
 EAS's Android image ships Node 22 and an older pnpm, and `pnpm install` refused the repository's
 `engines` (`ERR_PNPM_UNSUPPORTED_ENGINE`, shown by EAS only as "Unknown error … Install dependencies").
-A test (`packages/tooling/scripts/lib/__tests__/ci-local-plan.test.mjs`) keeps the pins equal to the
+A test (`packages/tooling/src/ci-local/__tests__/ci-local-plan.test.ts`) keeps the pins equal to the
 repository's.
 
 ```json

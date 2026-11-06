@@ -84,7 +84,7 @@ export const ErrorState = React.memo(
 		return (
 			<View ref={ref} testID={testID} className={cn(errorStateVariants(), className)}>
 				<Alert tone="error" message={message} />
-				<Button label={retryLabel} variant="secondary" onPress={onRetry} loading={retrying} />
+				<Button label={retryLabel} variant="outline" onPress={onRetry} loading={retrying} />
 			</View>
 		);
 	}),

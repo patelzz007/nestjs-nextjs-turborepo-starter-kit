@@ -40,7 +40,7 @@ const MERCHANT_CLIENT_TYPE = "merchant";
  * field docs live on the group interfaces in `api-config.schema.ts`); the
  * remaining members DERIVE something from one or more groups.
  * Provided by the global `ConfigModule`; tests build one from a fixture with
- * `createTestTypedConfig()` (test/support/test-api-env.ts).
+ * `createTestTypedConfig()` (e2e/support/test-api-env.ts).
  */
 export class TypedConfigService {
 	public constructor(private readonly config: ApiConfig) {}

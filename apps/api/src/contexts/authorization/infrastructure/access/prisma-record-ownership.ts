@@ -29,7 +29,7 @@ const ownAccount: OwnerLookup = async (tx, resourceId) => (await tx.user.findFir
 
 /**
  * Every record type with an owner (a REGISTRY of lookup strategies: a new owned type is one entry).
- * The same owner column is what RLS checks for these tables (`app_owns("userId")` in `prisma/rls.sql`,
+ * The same owner column is what RLS checks for these tables (`app_owns("userId")` in `prisma/rls/10-policies.sql`,
  * e.g. `reward_claims_own`), so the API and the database agree on who owns what.
  */
 const OWNER_LOOKUPS: Readonly<Partial<Record<PermissionResource, OwnerLookup>>> = {

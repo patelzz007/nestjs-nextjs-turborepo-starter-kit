@@ -62,7 +62,7 @@ export function NetworkSheet({ visible, onClose }: NetworkSheetProps): React.JSX
 					<Button
 						label={testing ? "Testing…" : "Test again"}
 						onPress={testAgain}
-						variant="secondary"
+						variant="outline"
 						size="sm"
 						icon={RotateCwIcon}
 						loading={testing}

@@ -78,6 +78,7 @@ export const PERSONAL_DATA_CLASSES: Readonly<Record<string, PersonalDataDecision
 	RewardLegalAcceptance: { class: "KEEP_MASKED", reason: "Proof that terms were accepted, kept for the retention" },
 	RewardAuditLog: { class: "KEEP_MASKED", reason: AUDIT_TRAIL },
 	RewardClaim: { class: "ANONYMISE", reason: OTHERS_RECORD },
+	RewardClaimHold: { class: "ANONYMISE", reason: OTHERS_RECORD },
 	RewardOtpChallenge: { class: "ERASE", reason: "A one-time code sent to the person's phone" },
 	RewardNotification: { class: "ERASE", reason: OWN_SETTING },
 	RewardReferral: { class: "ANONYMISE", reason: `${OTHERS_RECORD}; the referee's IP cleared` },

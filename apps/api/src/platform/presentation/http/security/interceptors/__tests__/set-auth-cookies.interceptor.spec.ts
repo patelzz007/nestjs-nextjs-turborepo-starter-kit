@@ -3,9 +3,9 @@ import { LoginTokenFieldsSchema, RefreshClientResponseSchema, type JsonValue } f
 import { firstValueFrom, of, type Observable } from "rxjs";
 import { describe, expect, it } from "vitest";
 
-import { fakeCookieReply, type FakeCookieReply } from "../../../../../../../test/support/fake-reply";
-import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { fakeCookieReply, type FakeCookieReply } from "../../../../../../../e2e/support/fake-reply";
+import { createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { CookieConfigService } from "../../cookies/cookie.config";
 import { SetAuthCookiesInterceptor } from "../set-auth-cookies.interceptor";
 

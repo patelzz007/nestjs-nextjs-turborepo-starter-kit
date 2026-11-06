@@ -8,6 +8,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { Card } from "@workspace/ui/components/card";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const REWARD_LOAD_FAILED_MESSAGE = "This reward could not be loaded. Try again.";
 
@@ -39,7 +40,7 @@ export function MerchantRewardUnavailable({ state, rewardsHref }: MerchantReward
 				<>
 					<h1 className="text-xl font-semibold tracking-tight text-foreground">Reward not found</h1>
 					<p className="text-sm text-muted-foreground">{"It may have been removed, or your role can't see it."}</p>
-					<Link href={rewardsHref} className={cn(buttonVariants({ variant: "outline" }))}>
+					<Link href={appRoute(rewardsHref)} className={cn(buttonVariants({ variant: "outline" }))}>
 						Back to rewards
 					</Link>
 				</>

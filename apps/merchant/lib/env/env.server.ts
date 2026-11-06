@@ -10,16 +10,15 @@
 
 import "server-only";
 
-import { parseEnvOrThrow } from "@workspace/shared";
-import type { z } from "zod";
+import { parseAppEnv } from "@workspace/client/lib/env/parse-app-env";
 
 import { MERCHANT_ENV_SCOPE, MerchantServerEnvSchema, type MerchantServerEnv } from "./env.schema";
 
-export const serverEnv: Readonly<MerchantServerEnv> = parseEnvOrThrow(
+export const serverEnv: Readonly<MerchantServerEnv> = parseAppEnv(
 	MerchantServerEnvSchema,
 	{
 		NODE_ENV: process.env.NODE_ENV,
 		COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
-	} satisfies Record<keyof z.input<typeof MerchantServerEnvSchema>, string | undefined>,
+	},
 	MERCHANT_ENV_SCOPE.server,
 );

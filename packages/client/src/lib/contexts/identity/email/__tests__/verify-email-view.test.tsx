@@ -4,7 +4,7 @@ import type { ApiResponseMeta, Envelope, UserResponse, VerifyEmailResponse } fro
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import type { RefreshResult } from "../../../../api/api-request";
 import { ApiError } from "../../../../api/use-api";
 import { VerifyEmailView } from "../verify-email-view";

@@ -26,6 +26,7 @@ import {
 import { Layers, List, MapPin, MapPinPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The "All locations" choice's value (location ids are UUIDs, so it never collides). */
 export const ALL_LOCATIONS_VALUE = "all";
@@ -149,11 +150,11 @@ export function MerchantContextSwitcher({ memberships, hasMoreStores, tenantSlug
 	);
 
 	const handleManageLocations = React.useCallback((): void => {
-		router.push(locationsPath);
+		router.push(appRoute(locationsPath));
 	}, [locationsPath, router]);
 
 	const handleAllStores = React.useCallback((): void => {
-		router.push(storesPath);
+		router.push(appRoute(storesPath));
 	}, [router, storesPath]);
 
 	const activeStore = React.useMemo(

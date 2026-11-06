@@ -17,7 +17,7 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, META_FIXTURE } from "../../../../test/auth-fixtures";
+import { envelopeFixture, META_FIXTURE } from "../../../../testing/auth-fixtures";
 import type { LiveState } from "../../live-updates/reconnecting-event-stream";
 import { NOTIFICATIONS_DROPDOWN_LABELS } from "../notifications-dropdown-labels";
 import { NOTIFICATIONS_PREVIEW_LIMIT, NotificationsDropdown } from "../notifications-dropdown";
@@ -99,6 +99,7 @@ function notice(id: string, title: string, readAt: number | null, link: string |
 		icon: null,
 		senderName: null,
 		senderLogoUrl: null,
+		attachment: null,
 		groupCount: 1,
 		broadcastId: null,
 		readAt: readAt === null ? null : epochMs(readAt),

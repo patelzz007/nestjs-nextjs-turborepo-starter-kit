@@ -4,8 +4,8 @@ import type { StoredFile } from "@prisma/client";
 import type { FileStatus } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
-import { FakeImageProcessor, FILE_ID, InMemoryObjectStorage, ORG_ID, PDF_BYTES, imageRenditionsFor, storedFile } from "../../../../../../test/support/file-lifecycle-fakes";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
+import { FakeImageProcessor, FILE_ID, InMemoryObjectStorage, ORG_ID, PDF_BYTES, imageRenditionsFor, storedFile } from "../../../../../../e2e/support/file-lifecycle-fakes";
 import { toStoredFileView } from "../../persistence/stored-file.mapper";
 import { InactiveStorageProviderError, StorageFileObjectAdapter } from "../storage-file-object.adapter";
 

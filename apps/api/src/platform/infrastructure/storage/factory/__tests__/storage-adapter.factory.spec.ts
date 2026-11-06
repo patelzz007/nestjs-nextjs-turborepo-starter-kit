@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { LocalObjectStorageAdapter } from "../../adapters/local/local-object-storage.adapter";
 import { LocalTransferTokenService } from "../../adapters/local/local-transfer-token.service";
 import { S3ObjectStorageAdapter } from "../../adapters/s3/s3-object-storage.adapter";

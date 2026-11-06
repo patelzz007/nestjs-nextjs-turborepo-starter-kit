@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import type * as ServerApi from "../../../../api/server-api";
 import { loadServerSessionOutcome, serverRenderedSessionOf, type ServerSessionReader } from "../load-server-session";
 

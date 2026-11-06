@@ -38,9 +38,9 @@ import { z } from "zod";
 
 import { GALLERY_ENTRIES } from "@/components/component-gallery/gallery-catalog";
 import { ComponentSection, DemoRow, DemoSurface, DemoValue, ExampleOnlySections } from "@/components/component-gallery/gallery-section";
-import { ACCORDION_FAQ_ITEMS, ACCORDION_REORDER_ITEMS, ACCORDION_STATUS_ITEMS, ACCORDION_VARIANT_ITEMS } from "@/components/showcase/accordion-demo-items";
-import { AccordionShowcase } from "@/components/showcase/accordion-showcase";
-import { BreadcrumbShowcase } from "@/components/showcase/breadcrumb-showcase";
+import { ACCORDION_FAQ_ITEMS, ACCORDION_REORDER_ITEMS, ACCORDION_STATUS_ITEMS, ACCORDION_VARIANT_ITEMS } from "@/components/component-gallery/showcase/accordion-demo-items";
+import { AccordionShowcase } from "@/components/component-gallery/showcase/accordion-showcase";
+import { BreadcrumbShowcase } from "@/components/component-gallery/showcase/breadcrumb-showcase";
 
 // ── Collapsible ─────────────────────────────────────────────────────────────
 

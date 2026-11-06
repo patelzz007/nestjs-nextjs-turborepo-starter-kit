@@ -118,7 +118,7 @@ record; everything else is recorded here.
 | 20  | 2FA enrollment on phone | "Open in authenticator app" link + copyable secret + QR                                                                                                                                                                                                                | this page                                                      |
 | 21  | Email-link flows        | Reset password and email verification finish on the web pages                                                                                                                                                                                                          | this page                                                      |
 | 22  | Theme                   | System / Light / Dark, default System                                                                                                                                                                                                                                  | this page                                                      |
-| 23  | App lock                | Opt-in biometric lock, passcode fallback, 60 s default timeout, device-only                                                                                                                                                                                            | this page, [glossary](../../../rules/22-glossary.md)           |
+| 23  | App lock                | Opt-in biometric lock, passcode fallback, 60 s default timeout, device-only                                                                                                                                                                                            | this page, [glossary](../../../rules/22-architecture-terms.md)           |
 | 24  | Device list             | On every client (web, merchant, admin, mobile), full details, revoke one, sign out everywhere                                                                                                                                                                          | this page                                                      |
 | 25  | Single-device sign-out  | Immediate, via `sid` in access tokens                                                                                                                                                                                                                                  | [ADR 034](../../adr/034-immediate-per-session-revocation.md)   |
 | 26  | Revocation attribution  | `deletedBy` on sessions (user id or system marker)                                                                                                                                                                                                                     | [ADR 034](../../adr/034-immediate-per-session-revocation.md)   |
@@ -133,7 +133,7 @@ record; everything else is recorded here.
 
 ## 3. Vocabulary
 
-These terms are defined in [`rules/22-glossary.md`](../../../rules/22-glossary.md) under
+These terms are defined in [`rules/22-architecture-terms.md`](../../../rules/22-architecture-terms.md) under
 "Domain terms" and are used with exactly those meanings on this page.
 
 | Term                              | Meaning (short)                                                                                                           | Do not say                                |
@@ -600,7 +600,7 @@ separate setting later; the starter keeps one knob.
 - Unit: the interceptor chooses body vs cookies by client type; the refresh guard reads body vs
   cookie by client type and rejects the wrong source; the version guard accepts equal/newer,
   rejects older/missing/malformed, and ignores browser types.
-- e2e (`apps/api/test`): full mobile sign-in (password → verification code → 2FA → tokens in
+- e2e (`apps/api/e2e`): full mobile sign-in (password → verification code → 2FA → tokens in
   body), refresh rotation, reuse detection, logout and logout-all with body tokens, 426.
 - Contract: the OpenAPI document gains the token-bearing variants; the artifact test is updated
   with `--update` only after reviewing the diff.
@@ -1038,6 +1038,13 @@ session had ended; with the nested guards removed the error stopped at once (che
 device), and Expo Router 58.0.30 has the same guard code. Route params are parsed with zod
 (`Schema.parse(useLocalSearchParams())`), per `rules/04`.
 
+The root stack and the auth folder's stacks also list no `Stack.Screen`s (2026-11-06). A redirect's
+destination is built with the route files in Expo Router's sort order (`sortRoutes`), while a navigator
+with listed screens takes the listed order, so each one sent itself a `ROUTE_NAMES_CHANGED` as it
+mounted, reported as "not handled" if that navigator had been replaced by then. With no list both
+orders are the router's and the action is never sent; `rootScreenOptionsOf` gives each screen its
+options. The tabs still list theirs, because that list is the tab bar's order.
+
 ### 9.7 Secure Store usage
 
 One typed key registry, so nothing is stored under an ad-hoc key:
@@ -1093,7 +1100,7 @@ See [section 19, piece 5](#piece-5-appsmobile).
 - **`inlineRequires` on.** `metro.config.js` sets `transformer.getTransformOptions` to
   `inlineRequires: true`, so a module runs when first used rather than when its importer loads;
   cold start runs only what the first screen needs. App modules must stay side-effect free on
-  import. Checked by `packages/tooling/src/mobile-metro/__tests__/metro-config.test.mjs`; confirm
+  import. Checked by `packages/tooling/src/mobile-metro/__tests__/metro-config.test.ts`; confirm
   start-up on a device after Expo upgrades.
 - **URL polyfill.** React Native's built-in `URL` concatenates a base with a path instead of
   resolving it and implements `URLSearchParams` only partly; `react-native-url-polyfill` (4.0) is
@@ -1402,8 +1409,10 @@ places inside the `(app)` group:
   offline) and the token countdown (`14m 32s`, `2h 05m` past an hour, fixed-width digits), on every
   signed-in screen — the tab's first screen and deeper in a stack alike. Rendered once by the app
   shell. Tapping the connection pill opens a sheet with ping, jitter, packet loss and **Test again**.
-- **App drawer**, in full, under the account header: "Strong, 26 ms" / "Offline" and
-  "Token expires in 14m 32s".
+- **App drawer**, with the person: "Strong, 26 ms" / "Offline" and "14m 32s left", as one line or as
+  two small cards, whichever the side menu's look uses (Settings → Appearance; the five looks are rows
+  in `src/features/navigation/drawer-layouts.ts`, the choice is the `drawerStyle` preference). Tapping
+  the connection opens the same sheet.
 
 One `AppStatusProvider` (`src/features/app-status/facade.tsx`) derives both, once, for every pill:
 
@@ -2005,7 +2014,7 @@ it, so the reasoning survives.
 | Who is the app for?      | A generic starter shell for now                    |
 | Which platforms?         | iOS and Android                                    |
 | Expo account and builds? | No EAS, no store pipeline for now                  |
-| Where do terms go?       | `rules/22-glossary.md`, new "Domain terms" section |
+| Where do terms go?       | `rules/22-architecture-terms.md`, new "Domain terms" section |
 | Where do decisions go?   | New ADRs in `docs/adr/`, continuing the numbering  |
 
 Facts found before round 2: no mobile code existed; `rules/04` already prescribed Expo Router,

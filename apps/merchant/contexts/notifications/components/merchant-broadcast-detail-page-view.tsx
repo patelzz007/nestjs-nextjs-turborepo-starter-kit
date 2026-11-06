@@ -23,6 +23,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** How often a broadcast on its way is re-read, so its results fill in. */
 const SENDING_REFRESH_MS = 10_000;
@@ -136,7 +137,7 @@ function MerchantBroadcastDetail({ tenantSlug, broadcast }: MerchantBroadcastDet
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Link href={routes.list} className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+			<Link href={appRoute(routes.list)} className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
 				<ArrowLeftIcon className="size-4" aria-hidden="true" />
 				All broadcasts
 			</Link>
@@ -148,7 +149,7 @@ function MerchantBroadcastDetail({ tenantSlug, broadcast }: MerchantBroadcastDet
 				</div>
 				<div className="flex flex-wrap gap-2">
 					{isBroadcastEditable(broadcast.status) ? (
-						<Link href={routes.edit(broadcast.id)} className={cn(buttonVariants({ variant: "outline" }))}>
+						<Link href={appRoute(routes.edit(broadcast.id))} className={cn(buttonVariants({ variant: "outline" }))}>
 							Edit
 						</Link>
 					) : null}

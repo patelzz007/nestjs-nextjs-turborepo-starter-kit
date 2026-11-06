@@ -1,6 +1,6 @@
 # @workspace/docs — the documentation site
 
-The repository's own guides (`docs/*.md`) and engineering blog (`blog/*.md`) as a searchable site at
+The repository's own guides (`docs/*.md`) and engineering blog (`docs/blog/*.md`) as a searchable site at
 **http://localhost:3002**, built with [TanStack Start](https://tanstack.com/start). Every page is
 pre-rendered at build (`dist/client/docs/x.html`); the small Start server renders on request only what
 cannot be static: the 404 page and search with `?q=`.
@@ -20,7 +20,7 @@ Run these from `apps/docs` (or with `pnpm --filter @workspace/docs <script>` fro
 | `pnpm test`                   | Vitest with coverage: content model, search, reading progress, components, browser helpers, styles       |
 | `pnpm lint`                   | Oxfmt check + Oxlint (`react-internal` preset)                                                           |
 | `pnpm typecheck`              | `tsrs --noEmit` (TypeScript 7, like every workspace)                                                     |
-| `pnpm check:links`            | Only the link checker (`scripts/check-links.mjs`)                                                        |
+| `pnpm check:links`            | Only the link checker (`scripts/check-links.ts`)                                                        |
 | `pnpm check:baseline`         | Only the regression check of `dist/` against `regression-baseline/`                                      |
 | `pnpm tools docs:api`         | Re-render `docs/technical/api-reference/` (lives in `packages/docs-renderer`)                            |
 
@@ -46,10 +46,10 @@ tokens for their own identity.
 apps/docs/
 ├── vite.config.ts             # Start plugin: the page list (every guide, post, image), pre-rendering, sitemap
 ├── regression-baseline/       # captured from the last Astro build: every page's title, h1, anchors; search results
-├── scripts/                   # check-links.mjs, check-baseline.ts (runs after `vite build`), capture-api-samples.mjs
+├── scripts/                   # check-links.ts, check-baseline.ts (runs after `vite build`), capture-api-samples.mjs
 └── src/
     ├── routes/                # /, /docs, /docs/$, /blog, /blog/$, /search, /endpoints, feed.xml, robots.txt, …
-    ├── server/                # content.server.ts (Vite globs of docs/ and blog/), functions.ts (server functions)
+    ├── server/                # content.server.ts (Vite globs of docs/ and docs/blog/), functions.ts (server functions)
     ├── lib/                   # pure, tested logic: content model, navigation, search, reading progress, SEO, RSS
     ├── components/            # header, guide tree, article, "On this page", search, endpoint explorer, …
     ├── browser/               # DOM helpers the components call: theme, code theme, islands, diagrams, PDF embeds
@@ -122,8 +122,8 @@ across the top and its page icon over the edge.
 4. Optionally give it an icon in `DOC_ICONS` (`src/lib/icons.ts`); new sections get one in `SECTION_ICONS`.
 5. Run `pnpm build` — it checks the links first and the baseline last.
 
-Blog posts work the same way in `blog/` (`title`, `description`, `author`, `date`, `category`) with their
-order in `blog/meta.json`.
+Blog posts work the same way in `docs/blog/` (`title`, `description`, `author`, `date`, `category`) with their
+order in `docs/blog/meta.json`.
 
 ### Markdown features
 
@@ -161,7 +161,7 @@ All optional — the defaults are the local dev ports.
 - ✅ Bump `lastUpdated` whenever you change a guide.
 - ✅ Keep new logic in `src/lib/` as pure functions with a test beside them (`__tests__/`).
 - ✅ Use the `@workspace/ui` component when one exists; style through tokens.
-- ❌ Don't put content in `apps/docs` — it belongs in `docs/` or `blog/`.
+- ❌ Don't put content in `apps/docs` — it belongs in `docs/` or `docs/blog/`.
 - ❌ Don't hardcode colours, font sizes or weights in components — add or reuse a token in `app.css`.
 - ❌ Don't add a font from a CDN — add the Fontsource package and import it in `app.css`.
 - ❌ Don't change `regression-baseline/` to make the build pass: it is the record of what was published. A

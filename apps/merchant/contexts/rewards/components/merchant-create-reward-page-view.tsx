@@ -25,6 +25,7 @@ import { addDays, format } from "date-fns";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { z } from "zod";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** A new reward runs for this many days unless the merchant picks another end date. */
 const DEFAULT_RUN_DAYS = 30;
@@ -113,7 +114,7 @@ function MerchantCreateRewardPageContent({ tenantSlug, defaultCategory }: Mercha
 					? { title: "Draft saved", description: "Only your team can see it until you submit it for review." }
 					: { title: "Submitted for review", description: "It's reviewed before it goes live." },
 			);
-			router.push(routes.rewards.detail(response.data.id), { scroll: false });
+			router.push(appRoute(routes.rewards.detail(response.data.id)), { scroll: false });
 		},
 		onError: (): void => {
 			toastMessage.error({ title: "Reward not saved", description: "Check your connection and try again." });

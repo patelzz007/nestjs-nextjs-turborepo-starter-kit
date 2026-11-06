@@ -1,6 +1,6 @@
 {
 	// The API's FULL program: every TypeScript file in the workspace — src/ (production code
-	// AND unit specs), test/** (e2e specs + support), prisma/** (seed + RLS tooling), the
+	// AND unit specs), e2e/** (e2e specs + support), prisma/** (seed + RLS tooling), the
 	// tsx-run scripts and the tool configs — under the same strict flags.
 	//
 	// It is the program editors, oxlint's type-aware rules (oxlint-tsgolint reads the nearest
@@ -15,7 +15,7 @@
 		"types": ["node", "vitest/globals"],
 		// Resolve @workspace/* TYPES to their TypeScript source (the packages'
 		// `development` export condition), never to a dist/ build that may be
-		// missing or stale — packages/tooling/__tests__/tsconfig-conditions.test.mjs
+		// missing or stale — packages/tooling/src/repo-guards/__tests__/tsconfig-conditions.test.ts
 		// enforces this for every workspace tsconfig. Runtime still loads dist:
 		// rspack leaves workspace packages external.
 		"customConditions": ["development"]
@@ -24,7 +24,7 @@
 		// All of src/ (not just the specs) so ambient augmentations such as
 		// src/types/fastify.d.ts apply exactly as they do to the app.
 		"src/**/*.ts",
-		"test/**/*.ts",
+		"e2e/**/*.ts",
 		"prisma/**/*.ts",
 		"scripts/**/*.ts",
 		"vitest.config.unit.ts",

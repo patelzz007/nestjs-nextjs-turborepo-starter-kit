@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { REWARDS_CATALOG_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { DashboardCatalog } from "@/contexts/rewards/components/browse/catalog";
 import { WEB_UI_PREFERENCES_DEVTOOLS_NAME, WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
-import { buildRewardResponse } from "@/test-support/reward";
-import { countSlots, expectSingleLoadingStatus, SkeletonTestProviders } from "@/test-support/skeleton";
+import { buildRewardResponse } from "@/testing/reward";
+import { countSlots, expectSingleLoadingStatus, SkeletonTestProviders } from "@/testing/skeleton";
 
 const REWARD_TITLE = "Free flat white";
 

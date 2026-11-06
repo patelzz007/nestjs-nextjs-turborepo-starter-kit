@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { PLATFORM_OPERATION_KEY } from "../../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { PUBLIC_OPERATION_KEY } from "../../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { AuthController } from "../auth.controller";
-import { handlerOf } from "../../../../../../test/support/route-metadata";
+import { handlerOf } from "../../../../../../e2e/support/route-metadata";
 
 function handler(name: string): ReturnType<typeof handlerOf> {
 	return handlerOf(AuthController.prototype, name);

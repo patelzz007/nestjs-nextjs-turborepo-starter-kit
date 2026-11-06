@@ -9,7 +9,7 @@ import {
 	MerchantKybVerificationSectionSkeleton,
 	MerchantPageSkeleton,
 } from "@/components/loading/merchant-page-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 afterEach((): void => {
 	cleanup();

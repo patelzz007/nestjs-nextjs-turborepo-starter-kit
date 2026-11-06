@@ -13,6 +13,7 @@ import { resolveAuthErrorMessage } from "../../../api/error-messages";
 import { useAuth } from "../index";
 import { passwordStrength } from "../password";
 import { catchCaught } from "../../../caught";
+import { appRoute } from "../../../navigation/app-route";
 
 export interface SignupFormProps {
 	readonly loginHref?: string;
@@ -86,7 +87,7 @@ export function SignupForm({ loginHref = "/auth/login" }: SignupFormProps): JSX.
 				<div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
 					Account created. Check your email for a verification link before signing in.
 				</div>
-				<Link href={loginHref} className="inline-flex text-sm font-medium text-primary hover:underline">
+				<Link href={appRoute(loginHref)} className="inline-flex text-sm font-medium text-primary hover:underline">
 					Back to sign in
 				</Link>
 			</div>
@@ -125,7 +126,7 @@ export function SignupForm({ loginHref = "/auth/login" }: SignupFormProps): JSX.
 			</FormShell>
 			<p className="mt-6 text-center text-sm text-muted-foreground">
 				Already have an account?{" "}
-				<Link href={loginHref} className="font-medium text-primary hover:underline">
+				<Link href={appRoute(loginHref)} className="font-medium text-primary hover:underline">
 					Sign in
 				</Link>
 			</p>

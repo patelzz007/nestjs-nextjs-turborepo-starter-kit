@@ -49,7 +49,7 @@ function PasskeyItem({ passkey, onRemove }: PasskeyItemProps): React.JSX.Element
 					{ label: PASSKEYS_COPY.lastUsed, value: passkey.lastUsedAt === null ? PASSKEYS_COPY.neverUsed : formatRelativeTime(passkey.lastUsedAt, now) },
 				]}
 			/>
-			<Button label={PASSKEYS_COPY.remove} variant="secondary" size="sm" onPress={remove} accessibilityLabel={`${PASSKEYS_COPY.remove} ${passkey.name}`} />
+			<Button label={PASSKEYS_COPY.remove} variant="outline" size="sm" onPress={remove} accessibilityLabel={`${PASSKEYS_COPY.remove} ${passkey.name}`} />
 		</View>
 	);
 }

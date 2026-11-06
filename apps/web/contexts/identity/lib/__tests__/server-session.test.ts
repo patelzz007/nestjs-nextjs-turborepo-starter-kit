@@ -2,8 +2,8 @@ import type * as ServerApi from "@workspace/client/lib/api/server-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadWebServerSession } from "@/contexts/identity/lib/server-session";
-import { failedQuery, httpFailure } from "@/test-support/server-query";
-import { buildSessionPermissions, buildUserProfile, sessionPermissionsEnvelope, userProfileEnvelope } from "@/test-support/session";
+import { failedQuery, httpFailure } from "@/testing/server-query";
+import { buildSessionPermissions, buildUserProfile, sessionPermissionsEnvelope, userProfileEnvelope } from "@/testing/session";
 
 const { meQuery, permissionsQuery, hasServerAccessSession } = vi.hoisted(() => ({
 	meQuery: vi.fn(),
@@ -14,7 +14,7 @@ const { meQuery, permissionsQuery, hasServerAccessSession } = vi.hoisted(() => (
 vi.mock("@/lib/web-server-api", () => ({ createWebServerCaller: (): object => ({ auth: { me: { query: meQuery }, permissions: { query: permissionsQuery } } }) }));
 vi.mock("@/contexts/identity/lib/server", () => ({ hasServerAccessSession }));
 vi.mock("@workspace/client/lib/api/server-api", async (importOriginal) => {
-	const { withTestFailureClassifier } = await import("@/test-support/server-query");
+	const { withTestFailureClassifier } = await import("@/testing/server-query");
 	return withTestFailureClassifier(await importOriginal<typeof ServerApi>());
 });
 

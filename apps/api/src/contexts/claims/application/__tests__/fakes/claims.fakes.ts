@@ -35,10 +35,11 @@ import type {
 	RewardRedemptionFacts,
 	RewardRedemptionFactsPort,
 } from "../../../../rewards/public-api";
+import { ClaimHold, type ClaimHoldState } from "../../../domain/aggregates/claim-hold.aggregate";
 import { OtpChallenge, type OtpChallengeState } from "../../../domain/aggregates/otp-challenge.aggregate";
 import { RewardClaim, type RewardClaimSnapshot, type RewardClaimState } from "../../../domain/aggregates/reward-claim.aggregate";
 import { ClaimNotActiveError, ClaimNotFoundError } from "../../../domain/errors/claims.errors";
-import type { OtpChallengeRepository, OverdueClaim, RewardClaimRepository } from "../../../domain/repositories/claims.repositories";
+import type { OtpChallengeRepository, OverdueClaim, RewardClaimRepository, ClaimHoldRepository, OverdueClaimHold } from "../../../domain/repositories/claims.repositories";
 import { LIMIT_COUNTED_CLAIM_STATUSES } from "../../../domain/value-objects/claim-rules.value-object";
 import type { ClaimsScope } from "../../claims-scope";
 import type { ClaimCodesPort, IssuedClaimCodes, IssuedOtp } from "../../ports/claim-codes.port";
@@ -197,6 +198,54 @@ export class InMemoryClaims implements RewardClaimRepository, ClaimCodeLookup {
 		if (row !== undefined) {
 			this.rows.set(claimId, { ...row, status, redeemedAt: status === "REDEEMED" ? NOW : row.redeemedAt });
 		}
+	}
+}
+
+export class InMemoryClaimHolds implements ClaimHoldRepository {
+	public readonly rows = new Map<string, ClaimHoldState>();
+	/** When a hold was taken, per id, for the repeat-hold limit. */
+	public readonly takenAt = new Map<string, EpochMs>();
+	/** Answers `false` from `saveIfUnchanged`, as if the expiry job settled the hold first. */
+	public loseNextSave = false;
+
+	public add(hold: ClaimHold): Promise<void> {
+		this.rows.set(hold.id, hold.snapshot());
+		this.takenAt.set(hold.id, NOW);
+		return Promise.resolve();
+	}
+
+	public findById(holdId: string): Promise<ClaimHold | null> {
+		const row = this.rows.get(holdId);
+		return Promise.resolve(row === undefined ? null : ClaimHold.rehydrate(row));
+	}
+
+	public findLive(userId: string, rewardId: string, now: EpochMs): Promise<ClaimHold | null> {
+		const row = [...this.rows.values()].find((hold): boolean => hold.userId === userId && hold.rewardId === rewardId && hold.status === "ACTIVE" && hold.expiresAt >= now);
+		return Promise.resolve(row === undefined ? null : ClaimHold.rehydrate(row));
+	}
+
+	public countLive(userId: string, now: EpochMs): Promise<number> {
+		return Promise.resolve([...this.rows.values()].filter((hold): boolean => hold.userId === userId && hold.status === "ACTIVE" && hold.expiresAt >= now).length);
+	}
+
+	public countTakenSince(userId: string, rewardId: string, since: EpochMs): Promise<number> {
+		return Promise.resolve(
+			[...this.rows.values()].filter((hold): boolean => hold.userId === userId && hold.rewardId === rewardId && (this.takenAt.get(hold.id) ?? NOW) >= since).length,
+		);
+	}
+
+	public listOverdue(now: EpochMs, take: number): Promise<readonly OverdueClaimHold[]> {
+		const overdue = [...this.rows.values()].filter((hold): boolean => hold.status === "ACTIVE" && hold.expiresAt < now);
+		return Promise.resolve(overdue.slice(0, take).map((hold): OverdueClaimHold => ({ holdId: hold.id, tenantId: "org-1" })));
+	}
+
+	public saveIfUnchanged(hold: ClaimHold): Promise<boolean> {
+		if (this.loseNextSave) {
+			this.loseNextSave = false;
+			return Promise.resolve(false);
+		}
+		this.rows.set(hold.id, hold.snapshot());
+		return Promise.resolve(true);
 	}
 }
 
@@ -437,6 +486,7 @@ export class InMemoryInventory implements RewardInventoryPort, RewardRedemptionF
 	public remaining: number;
 	public reserved = 0;
 	public redemptions = 0;
+	public heldUnitsClaimed = 0;
 	public facts: ClaimableRewardFacts;
 
 	public constructor(quantity: number, overrides: Partial<ClaimableRewardFacts> = {}) {
@@ -444,8 +494,22 @@ export class InMemoryInventory implements RewardInventoryPort, RewardRedemptionF
 		this.facts = { rewardId: "reward-1", tenantId: "org-1", title: "Free latte", expiryDate: epochMs(NOW + 30 * 86_400_000), maxClaimsPerUser: null, ...overrides };
 	}
 
-	public assertClaimable(): Promise<ClaimableRewardFacts> {
-		return this.remaining > 0 ? Promise.resolve(this.facts) : Promise.reject(new Error("REWARD_OUT_OF_STOCK"));
+	public assertClaimable(_rewardId?: string, _now?: EpochMs, _customerUserId?: string, holdsUnit = false): Promise<ClaimableRewardFacts> {
+		return holdsUnit || this.remaining > 0 ? Promise.resolve(this.facts) : Promise.reject(new Error("REWARD_OUT_OF_STOCK"));
+	}
+
+	public holdUnit(): Promise<void> {
+		if (this.remaining <= 0) {
+			return Promise.reject(new Error("REWARD_OUT_OF_STOCK"));
+		}
+		this.remaining -= 1;
+		this.reserved += 1;
+		return Promise.resolve();
+	}
+
+	public claimHeldUnit(): Promise<void> {
+		this.heldUnitsClaimed += 1;
+		return Promise.resolve();
 	}
 
 	public reserve(): Promise<ClaimableRewardFacts> {
@@ -698,6 +762,7 @@ export class InMemoryClaimsStore {
 	public readonly clock = new FixedClock();
 	public readonly claims = new InMemoryClaims();
 	public readonly otpChallenges = new InMemoryOtpChallenges();
+	public readonly holds = new InMemoryClaimHolds();
 	public readonly notify = new RecordingNotify();
 	public readonly legacyNotices = new InMemoryLegacyRewardNotices();
 	public readonly legacyInbox = new RecordingLegacyInbox();
@@ -723,6 +788,7 @@ export class InMemoryClaimsStore {
 		return {
 			claims: this.claims,
 			otpChallenges: this.otpChallenges,
+			holds: this.holds,
 			notify: this.notify,
 			legacyNotices: this.legacyNotices,
 			legacyInbox: this.legacyInbox,
@@ -749,6 +815,7 @@ export class InMemoryClaimsStore {
 		const restorers: (() => void)[] = [
 			restorableMap(this.claims.rows),
 			restorableMap(this.otpChallenges.rows),
+			restorableMap(this.holds.rows),
 			restorableMap(this.claimants.profiles),
 			restorableMap(this.referrerCreditNotices.notified),
 			restorableMap(this.signupSuccessNotices.notified),

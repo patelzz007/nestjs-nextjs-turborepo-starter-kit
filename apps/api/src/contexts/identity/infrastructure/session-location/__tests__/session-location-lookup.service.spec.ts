@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import type { SessionLocation } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
-import { createTestApiConfig } from "../../../../../../test/support/test-api-env";
+import { createTestApiConfig } from "../../../../../../e2e/support/test-api-env";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
 import { NoneSessionLocationResolver } from "../none-session-location.resolver";
 import { createSessionLocationResolver } from "../session-location.factory";

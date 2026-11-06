@@ -18,7 +18,7 @@ import { z } from "zod";
 
 import { GALLERY_ENTRIES } from "@/components/component-gallery/gallery-catalog";
 import { ComponentSection, DemoRow, DemoSurface, ExampleOnlySections } from "@/components/component-gallery/gallery-section";
-import { DataTableShowcase } from "@/components/showcase/data-table-showcase";
+import { DataTableShowcase } from "@/components/component-gallery/showcase/data-table-showcase";
 
 // ── Card ────────────────────────────────────────────────────────────────────
 

@@ -10,16 +10,15 @@
 
 import "server-only";
 
-import { parseEnvOrThrow } from "@workspace/shared";
-import type { z } from "zod";
+import { parseAppEnv } from "@workspace/client/lib/env/parse-app-env";
 
 import { WEB_ENV_SCOPE, WebServerEnvSchema, type WebServerEnv } from "./env.schema";
 
-export const serverEnv: Readonly<WebServerEnv> = parseEnvOrThrow(
+export const serverEnv: Readonly<WebServerEnv> = parseAppEnv(
 	WebServerEnvSchema,
 	{
 		NODE_ENV: process.env.NODE_ENV,
 		COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
-	} satisfies Record<keyof z.input<typeof WebServerEnvSchema>, string | undefined>,
+	},
 	WEB_ENV_SCOPE.server,
 );

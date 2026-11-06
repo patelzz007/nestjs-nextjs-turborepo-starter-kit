@@ -19,6 +19,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { Archive, FilePen, Hourglass, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const VIEW_TOGGLE_LABELS: RewardsViewToggleLabels = { group: "Rewards layout", grid: "Grid view", list: "List view" };
 
@@ -428,7 +429,7 @@ export function MerchantRewardsCatalog({
 			return undefined;
 		}
 		return (
-			<Link href={createRewardHref} className={cn(buttonVariants(), "gap-2")}>
+			<Link href={appRoute(createRewardHref)} className={cn(buttonVariants(), "gap-2")}>
 				<Plus className="size-4" aria-hidden="true" />
 				Create a reward
 			</Link>

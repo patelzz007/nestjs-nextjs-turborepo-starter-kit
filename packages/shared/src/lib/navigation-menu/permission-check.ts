@@ -1,5 +1,7 @@
 import { parsePermissionSlug } from "../../authorization/permission";
 import type { CapabilitySlug } from "../../contexts/authorization/schemas/capabilities";
+import type { z } from "zod";
+import type { SidebarPermissionModeSchema } from "./sidebar-menu-schema";
 
 /** The session's grants, indexed once so repeated checks stay cheap. */
 export interface GrantedCapabilities {
@@ -37,7 +39,7 @@ export function isKnownPermissionSlug(slug: string): boolean {
  * - "all" — every capability must be granted (AND).
  * - "any" — at least one capability must be granted (OR, default).
  */
-export type CapabilityCheckMode = "all" | "any";
+export type CapabilityCheckMode = z.output<typeof SidebarPermissionModeSchema>;
 
 /**
  * Synchronous authorization checks backed by the session capability set

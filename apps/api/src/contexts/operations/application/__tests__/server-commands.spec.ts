@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { TypedConfigService } from "../../../../config/typed-config.service";
 import { parseApiConfig } from "../../../../config/api-config";
-import { TEST_API_ENV } from "../../../../../test/support/test-api-env";
+import { TEST_API_ENV } from "../../../../../e2e/support/test-api-env";
 import { OpsAgentTokenInvalidError, OpsServerNameTakenError, OpsServerNotFoundError } from "../../domain/errors/operations.errors";
 import { hashAgentToken } from "../../domain/policies/agent-token.policy";
 import { RecordAgentReportCommand } from "../commands/record-agent-report/record-agent-report.command";

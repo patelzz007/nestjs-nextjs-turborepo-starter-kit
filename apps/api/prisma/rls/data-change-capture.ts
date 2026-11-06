@@ -126,7 +126,7 @@ export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = 
 };
 
 /** Columns whose value never enters a change record — credentials, key material and their digests. */
-export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string[]>> = {
+export const DATA_CHANGE_SECRET_COLUMNS = {
 	User: ["passwordHash", "twoFactorSecretCiphertext", "twoFactorSecretIv", "pendingAttributionToken"],
 	PasswordHistory: ["passwordHash"],
 	PasswordResetToken: ["token", "tokenDigest"],
@@ -145,7 +145,7 @@ export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string
 	GithubAccountLink: ["tokenCiphertext"],
 	PushDevice: ["tokenCiphertext", "tokenHash", "installationIdCiphertext"],
 	WebhookEndpoint: ["secretCiphertext", "previousSecretCiphertext"],
-};
+} satisfies Readonly<Record<string, readonly string[]>>;
 
 const KEY_VERSION_REASON = "The version number of the key that encrypted a secret: it names a key and holds no key material.";
 

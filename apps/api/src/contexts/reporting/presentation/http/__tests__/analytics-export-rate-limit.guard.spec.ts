@@ -3,8 +3,8 @@ import { ANALYTICS_EXPORT_RATE_LIMIT, ANALYTICS_EXPORT_RATE_LIMIT_WINDOW_MS } fr
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it, vi } from "vitest";
 
-import { captureFastifyRequest } from "../../../../../../test/support/fastify-request";
-import { RecordingRateLimiter } from "../../../../../../test/support/recording-rate-limiter";
+import { captureFastifyRequest } from "../../../../../../e2e/support/fastify-request";
+import { RecordingRateLimiter } from "../../../../../../e2e/support/recording-rate-limiter";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { anonymousActor, apiKeyActor, userActor } from "../../../application/__tests__/fakes/analytics-actors";
 import {

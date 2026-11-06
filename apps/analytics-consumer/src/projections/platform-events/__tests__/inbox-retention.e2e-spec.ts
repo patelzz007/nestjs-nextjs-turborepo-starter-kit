@@ -4,7 +4,7 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { RETENTION_LOCK_NAMES, runLedgerRetention, type RetentionDeps, ANALYTICS_CONSUMER_ID, PgInboxStore } from "@workspace/messaging/inbox";
-import { closeE2eDatabase, openE2eDatabase, SILENT_LOGGER, type E2eDatabase } from "../../../test-support/e2e-database";
+import { closeE2eDatabase, openE2eDatabase, SILENT_LOGGER, type E2eDatabase } from "../../../testing/e2e-database";
 
 /**
  * Real-Postgres proof of retention as the least-privilege role: inbox claims

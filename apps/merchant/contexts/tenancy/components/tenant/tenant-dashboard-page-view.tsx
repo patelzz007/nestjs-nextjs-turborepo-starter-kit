@@ -18,6 +18,7 @@ import { Card } from "@workspace/ui/components/card";
 import { BarChart3, Building2, ChevronRight, Gift, LayoutDashboard, MapPin, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 interface TenantNavLinkProps {
 	readonly href: string;
@@ -32,7 +33,7 @@ interface TenantNavLinkProps {
 function TenantNavLink({ href, title, description, icon, tone, external = false }: TenantNavLinkProps): React.JSX.Element {
 	return (
 		<Link
-			href={href}
+			href={appRoute(href)}
 			className="group flex items-start gap-4 rounded-xl border border-border bg-card p-4 shadow-xs transition-colors hover:border-foreground/20 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
 			<IconTile tone={tone}>{icon}</IconTile>
 			<div className="min-w-0 flex-1 space-y-1">
@@ -224,7 +225,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 							</p>
 						</div>
 						<Can permission={MERCHANT_CAPABILITY.viewLocations}>
-							<Link href={tenantRoutes(tenantSlug).settings.locations} className={cn(buttonVariants({ size: "sm" }), "gap-2")}>
+							<Link href={appRoute(tenantRoutes(tenantSlug).settings.locations)} className={cn(buttonVariants({ size: "sm" }), "gap-2")}>
 								<MapPin className="size-4" aria-hidden="true" />
 								{canManageLocations ? "Manage locations" : "View locations"}
 							</Link>
@@ -271,7 +272,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 								</div>
 							) : null}
 						</div>
-						<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "gap-2 bg-transparent")}>
+						<Link href={appRoute(ROUTES.home)} className={cn(buttonVariants({ variant: "outline" }), "gap-2 bg-transparent")}>
 							<Gift className="size-4" aria-hidden="true" />
 							Open merchant home
 						</Link>
@@ -279,7 +280,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 				</Card>
 			) : (
 				<div className="flex flex-wrap gap-3">
-					<Link href={ROUTES.home}>
+					<Link href={appRoute(ROUTES.home)}>
 						<Button variant="outline" className="gap-2 bg-transparent">
 							<Gift className="size-4" aria-hidden="true" />
 							Go to merchant home

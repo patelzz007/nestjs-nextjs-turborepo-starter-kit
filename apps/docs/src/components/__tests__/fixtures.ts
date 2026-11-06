@@ -68,7 +68,7 @@ export function postPage(overrides: Partial<PostPage> = {}): PostMeta {
 		toc: [],
 		words: 120,
 		readingMinutes: 1,
-		sourcePath: "blog/fastify-migration.md",
+		sourcePath: "docs/blog/fastify-migration.md",
 		editUrl: "https://github.com/acme/kit/blob/main/blog/fastify-migration.md",
 		previous: { title: "Changelog", href: "/blog/changelog" },
 		next: null,

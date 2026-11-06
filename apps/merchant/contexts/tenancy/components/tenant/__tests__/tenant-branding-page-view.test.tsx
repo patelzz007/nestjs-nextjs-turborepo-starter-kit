@@ -8,9 +8,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TenantBrandingPageView } from "@/contexts/tenancy/components/tenant/tenant-branding-page-view";
 import type { StoreLogoUploadInput, UseStoreLogoOptions } from "@/contexts/tenancy/lib/tenant/use-store-logo";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { tenantContextFixture } from "@/test/tenant-context";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { tenantContextFixture } from "@/testing/tenant-context";
 
 const LOGO_FILE_ID = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b";
 const LOGO_URL = `https://cdn.example.com/stores/logo/${LOGO_FILE_ID}.webp`;

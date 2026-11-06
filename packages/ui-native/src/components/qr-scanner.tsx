@@ -228,7 +228,7 @@ export const QrScanFromGalleryButton = React.memo(
 		const { scan, busy, message } = useGalleryScan(onScan, text, galleryDevice);
 		return (
 			<View ref={ref} className="gap-2">
-				<Button label={text.scanFromGallery} variant="secondary" icon={ImagesIcon} onPress={scan} loading={busy} {...(testID === undefined ? {} : { testID })} />
+				<Button label={text.scanFromGallery} variant="outline" icon={ImagesIcon} onPress={scan} loading={busy} {...(testID === undefined ? {} : { testID })} />
 				{message === null ? null : (
 					<Text accessibilityLiveRegion="polite" className="text-center font-sans text-sm text-muted-foreground">
 						{message}

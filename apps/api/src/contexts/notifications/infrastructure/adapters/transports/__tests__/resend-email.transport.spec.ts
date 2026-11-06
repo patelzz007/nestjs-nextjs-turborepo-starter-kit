@@ -25,6 +25,7 @@ const EMAIL: OutboundEmail = {
 	bcc: [],
 	replyTo: undefined,
 	headers: {},
+	attachments: [],
 };
 
 function failure(name: string): { data: null; error: { name: string; message: string; statusCode: number } } {
@@ -43,6 +44,18 @@ describe("ResendEmailTransport", () => {
 		expect(mocks.resendSend).toHaveBeenCalledWith(
 			{ from: EMAIL.from, to: EMAIL.to, subject: EMAIL.subject, html: EMAIL.html, text: EMAIL.text, tags: [{ name: EMAIL_LOG_ID_TAG, value: EMAIL.emailLogId }] },
 			{ idempotencyKey: `email-log/${EMAIL.emailLogId}` },
+		);
+	});
+
+	it("sends each file inside the message", async () => {
+		await new ResendEmailTransport("re_test_only").deliver({
+			...EMAIL,
+			attachments: [{ filename: "statement.pdf", contentType: "application/pdf", contentBase64: "JVBERg==" }],
+		});
+
+		expect(mocks.resendSend).toHaveBeenCalledWith(
+			expect.objectContaining({ attachments: [{ filename: "statement.pdf", contentType: "application/pdf", content: "JVBERg==" }] }),
+			expect.anything(),
 		);
 	});
 

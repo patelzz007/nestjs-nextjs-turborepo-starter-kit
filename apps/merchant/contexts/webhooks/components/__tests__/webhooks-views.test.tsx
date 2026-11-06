@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebhookEndpointDetailView } from "@/contexts/webhooks/components/webhook-endpoint-detail-view";
 import { WebhookEndpointEditView } from "@/contexts/webhooks/components/webhook-endpoint-edit-view";
 import { WebhooksPageView } from "@/contexts/webhooks/components/webhooks-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
 import {
 	DEFAULT_WEBHOOK_SECRET_GRACE_HOURS,
 	WebhookDeliverySummarySchema,

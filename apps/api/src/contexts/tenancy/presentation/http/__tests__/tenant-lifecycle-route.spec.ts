@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { TENANT_LIFECYCLE_ROUTE_KEY } from "../tenant-lifecycle-route.decorator";
 import { TenantController } from "../tenant.controller";
 import { TenantKybController } from "../tenant-kyb.controller";
-import { handlerOf } from "../../../../../../test/support/route-metadata";
+import { handlerOf } from "../../../../../../e2e/support/route-metadata";
 
 describe("tenant lifecycle routes", () => {
 	const reflector = new Reflector();

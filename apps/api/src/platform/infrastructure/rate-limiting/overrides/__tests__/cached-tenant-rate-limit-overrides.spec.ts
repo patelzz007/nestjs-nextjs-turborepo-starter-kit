@@ -8,7 +8,7 @@ import {
 } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { localAppCache } from "../../../../../../test/support/local-app-cache";
+import { localAppCache } from "../../../../../../e2e/support/local-app-cache";
 import type { Clock } from "../../../../application/clock.port";
 import { CachedTenantRateLimitOverrides, type TenantRateLimitOverrideSource } from "../cached-tenant-rate-limit-overrides";
 

@@ -52,6 +52,7 @@ import type { DemoAccount, LoginFormProps } from "./login-form-types";
 
 import { passwordStrength } from "../password";
 import { catchCaught } from "../../../caught";
+import { appRoute } from "../../../navigation/app-route";
 
 export type { DemoAccount, LoginFormMode, LoginFormProps } from "./login-form-types";
 
@@ -115,11 +116,11 @@ export function LoginForm({
 	const navigateAfterLogin = useCallback(
 		(targetPath: string): void => {
 			if (mode === "merchant") {
-				router.push(targetPath);
+				router.push(appRoute(targetPath));
 				router.refresh();
 				return;
 			}
-			router.push(targetPath);
+			router.push(appRoute(targetPath));
 		},
 		[mode, router],
 	);
@@ -469,7 +470,7 @@ export function LoginForm({
 						<div className="flex items-center justify-between">
 							<Label htmlFor="password">Password</Label>
 							{forgotPasswordHref === null ? null : (
-								<Link href={forgotPasswordHref} className="text-sm font-medium text-primary hover:underline">
+								<Link href={appRoute(forgotPasswordHref)} className="text-sm font-medium text-primary hover:underline">
 									Forgot password?
 								</Link>
 							)}

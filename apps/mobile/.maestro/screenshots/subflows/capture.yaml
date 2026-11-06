@@ -9,6 +9,10 @@ appId: ${APP_ID}
     visible:
       id: "app-header"
     timeout: 20000
+# A list still loading names itself for screen readers: wait for what it loads.
+- extendedWaitUntil:
+    notVisible: "Everything we've told you in this app."
+    timeout: 10000
 - waitForAnimationToEnd:
     timeout: 8000
 - takeScreenshot: ${NAME}

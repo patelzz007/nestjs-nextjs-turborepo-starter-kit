@@ -32,7 +32,7 @@ ADMIN_E2E_BASE_URL=http://localhost:3001 pnpm --filter @workspace/admin exec vit
 - An off-origin `?redirect=` on the login page is never echoed into the page.
 
 Add more scenarios here as the panel grows (authenticated session flows need a
-real login — pair with the API e2e in `apps/api/test/`).
+real login — pair with the API e2e in `apps/api/e2e/`).
 
 ## Browser suite (Playwright)
 

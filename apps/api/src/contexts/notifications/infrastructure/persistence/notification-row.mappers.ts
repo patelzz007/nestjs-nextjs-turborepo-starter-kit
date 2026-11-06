@@ -15,6 +15,9 @@ import {
 	type PushDeviceResponse,
 } from "@workspace/shared";
 
+import type { PublicUrlResolve } from "../../../../config/public-url.resolver";
+import { attachmentResponseOf, parseStoredAttachment } from "./notification-attachment.mapper";
+
 export function epochOf(value: bigint): EpochMs {
 	return EpochMsSchema.parse(Number(value));
 }
@@ -32,7 +35,7 @@ function base(row: { readonly createdAt: bigint; readonly updatedAt: bigint; rea
 	return { createdAt: epochOf(row.createdAt), updatedAt: epochOf(row.updatedAt), isDeleted: row.isDeleted, deletedAt: epochOrNull(row.deletedAt) };
 }
 
-export function toInAppNotificationResponse(row: InAppNotification): InAppNotificationResponse {
+export function toInAppNotificationResponse(row: InAppNotification, resolve: PublicUrlResolve): InAppNotificationResponse {
 	const rich = row.richBody === null ? null : RichTextDocumentSchema.safeParse(row.richBody);
 	return {
 		...base(row),
@@ -47,6 +50,7 @@ export function toInAppNotificationResponse(row: InAppNotification): InAppNotifi
 		icon: row.icon,
 		senderName: row.senderName,
 		senderLogoUrl: row.senderLogoUrl,
+		attachment: attachmentResponseOf(parseStoredAttachment(row.attachment), resolve),
 		groupCount: row.groupCount,
 		broadcastId: row.broadcastId,
 		readAt: epochOrNull(row.readAt),

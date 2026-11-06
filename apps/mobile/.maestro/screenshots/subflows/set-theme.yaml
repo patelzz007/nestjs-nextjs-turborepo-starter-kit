@@ -5,6 +5,15 @@ appId: ${APP_ID}
 - openLink:
     link: "${SCHEME}://settings/appearance"
     autoVerify: false
+# The screen keeps its scroll: back to the top, where the themes are.
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 85%"
+    duration: 300
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 85%"
+    duration: 300
 - extendedWaitUntil:
     visible: "Follow the device's light or dark setting"
     timeout: 20000

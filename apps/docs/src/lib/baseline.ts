@@ -30,6 +30,8 @@ export const EXPECTED_CHANGES: Readonly<Record<string, string>> = {
 	"/404": "rendered on request by the Start server (it answers 404 for any unknown path) instead of as a static file",
 	"/sitemap-index.xml": "the Start build writes one /sitemap.xml (robots.txt points at it)",
 	"/sitemap-0.xml": "the Start build writes one /sitemap.xml (robots.txt points at it)",
+	"/images/readme/merchant-roles.webp": "an old README screenshot, removed 2026-11-06: nothing shows or retakes it",
+	"/images/readme/mobile-pdf-search.webp": "an old README screenshot, removed 2026-11-06: nothing shows or retakes it",
 };
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FILE_ID, storedFile } from "../../../../../../test/support/file-lifecycle-fakes";
+import { FILE_ID, storedFile } from "../../../../../../e2e/support/file-lifecycle-fakes";
 import { storedLocatorOf, toStoredFileAggregate, toStoredFileView } from "../stored-file.mapper";
 import { CorruptAggregateStateError } from "../../../../../platform/domain/errors/corrupt-aggregate-state.error";
 

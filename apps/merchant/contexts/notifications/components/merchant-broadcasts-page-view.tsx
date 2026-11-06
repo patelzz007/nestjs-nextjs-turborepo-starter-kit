@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { MegaphoneIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const PAGER_LABELS: UiKitLabelsOverride<"listPager"> = { ariaLabel: "Broadcast pages" };
 
@@ -50,7 +51,7 @@ export function MerchantBroadcastsPageView({ tenantSlug }: MerchantBroadcastsPag
 				title="Broadcasts"
 				description="Write to your customers in the app, by email and on their phones. Only customers who agreed to hear from you get them."
 				actions={
-					<Link href={routes.broadcasts.new} aria-disabled={!canWrite} className={cn(buttonVariants(), !canWrite && "pointer-events-none opacity-50")}>
+					<Link href={appRoute(routes.broadcasts.new)} aria-disabled={!canWrite} className={cn(buttonVariants(), !canWrite && "pointer-events-none opacity-50")}>
 						New broadcast
 					</Link>
 				}
@@ -125,7 +126,7 @@ function BroadcastList({ tenantSlug, broadcasts, isError, newHref, canWrite }: B
 				</EmptyHeader>
 				{canWrite ? (
 					<EmptyContent>
-						<Link href={newHref} className={buttonVariants()}>
+						<Link href={appRoute(newHref)} className={buttonVariants()}>
 							Write your first broadcast
 						</Link>
 					</EmptyContent>
@@ -161,7 +162,7 @@ export function describeBroadcastWhen(broadcast: BroadcastResponse): string {
 function BroadcastRow({ tenantSlug, broadcast }: { readonly tenantSlug: string; readonly broadcast: BroadcastResponse }): React.JSX.Element {
 	return (
 		<Card className="gap-0 p-0 transition-colors hover:bg-foreground/[0.03]">
-			<Link href={tenantRoutes(tenantSlug).broadcasts.detail(broadcast.id)} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+			<Link href={appRoute(tenantRoutes(tenantSlug).broadcasts.detail(broadcast.id))} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
 				<span className="flex min-w-0 flex-col gap-1">
 					<span className="truncate text-sm font-semibold text-foreground">{broadcast.title}</span>
 					<span className="text-xs text-muted-foreground">

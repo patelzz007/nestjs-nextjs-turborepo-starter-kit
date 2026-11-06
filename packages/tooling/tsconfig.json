@@ -1,0 +1,17 @@
+{
+	"extends": "@workspace/typescript-config/base.json",
+	"compilerOptions": {
+		// Scripts run on Node directly (type stripping): no build step, so erasable syntax only.
+		"allowImportingTsExtensions": true,
+		"declaration": false,
+		"declarationMap": false,
+		"erasableSyntaxOnly": true,
+		"lib": ["esnext"],
+		"noEmit": true,
+		"target": "ESNext",
+		"types": ["node"],
+		"verbatimModuleSyntax": true
+	},
+	"include": ["src", "*.ts", "../../tooling.config.ts"],
+	"exclude": ["node_modules", "**/fixtures/**"]
+}

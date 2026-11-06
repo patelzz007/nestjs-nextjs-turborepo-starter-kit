@@ -1,7 +1,8 @@
+import type { AppVersion, GithubRepositoryParams, NodeEnv, OpsCloudProvider, TenantId } from "@workspace/shared";
+
 // config/api-config/api-config.types.ts — The grouped, typed configuration the API reads (`ApiConfig`).
 // Part of the API environment contract; `../api-config.schema.ts` is its public entry.
 
-import type { AppVersion, GithubRepositoryParams, NodeEnv, OpsCloudProvider } from "@workspace/shared";
 import type { KafkaSecurityOptions } from "@workspace/messaging/kafka";
 
 import type {
@@ -319,7 +320,7 @@ export interface ObservabilityConfig {
  * (verified to exist at boot by `DefaultTenantService`); multi mode
  * scopes every request to its guard-verified tenant only.
  */
-export type TenancyConfig = { readonly mode: "single"; readonly defaultTenantId: string } | { readonly mode: "multi" };
+export type TenancyConfig = { readonly mode: "single"; readonly defaultTenantId: TenantId } | { readonly mode: "multi" };
 
 /** The API's complete, validated configuration. Built once at startup. */
 /** The operations console (ADR 068): cloud facts, backups and load tests. */

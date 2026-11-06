@@ -32,6 +32,7 @@ import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const ROLE_CHANGE_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Change role", loading: "Changing…" };
 const REVOKE_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Take it back", loading: "Taking back…" };
@@ -458,7 +459,7 @@ function RemoveMemberCard({ tenantSlug, member }: { readonly tenantSlug: string;
 			setConfirming(false);
 			toastMessage.success({ title: `${member.fullName} removed from the team` });
 			await queryClient.invalidateQueries({ queryKey: apiRouter.tenants.listMembers.scopeKey({ tenantSlug }) });
-			router.push(tenantRoutes(tenantSlug).settings.team);
+			router.push(appRoute(tenantRoutes(tenantSlug).settings.team));
 		},
 	});
 	const open = React.useCallback((): void => {
@@ -477,7 +478,7 @@ function RemoveMemberCard({ tenantSlug, member }: { readonly tenantSlug: string;
 				<Button type="button" variant="destructive" onClick={open}>
 					Remove {member.fullName}
 				</Button>
-				<Link href={tenantRoutes(tenantSlug).settings.team} className="text-sm text-muted-foreground hover:text-foreground">
+				<Link href={appRoute(tenantRoutes(tenantSlug).settings.team)} className="text-sm text-muted-foreground hover:text-foreground">
 					Back to the team
 				</Link>
 			</div>

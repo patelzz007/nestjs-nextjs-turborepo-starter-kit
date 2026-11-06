@@ -5,7 +5,7 @@ import { ExecutionContextHost } from "@nestjs/core/helpers/execution-context-hos
 import { lastValueFrom, of, type Observable } from "rxjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { captureFastifyRequest } from "../../../../../../test/support/fastify-request";
+import { captureFastifyRequest } from "../../../../../../e2e/support/fastify-request";
 import { PerformanceInterceptor, SLOW_REQUEST_THRESHOLD_MS } from "../performance.interceptor";
 
 /** Past the threshold: what a slow JSON response, or any open event stream, has taken. */

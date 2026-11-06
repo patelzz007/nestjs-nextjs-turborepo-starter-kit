@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { idSchema } from "../../../schemas/api/id";
 
 /**
  * Whether this process serves one tenant or many.
@@ -9,6 +10,6 @@ export const TenancyModeSchema = z.enum(["single", "multi"]);
 export type TenancyMode = z.output<typeof TenancyModeSchema>;
 
 /** The id of the one tenant a single-mode deployment serves. */
-export const TenantIdSchema = z.uuid();
+export const TenantIdSchema = idSchema("Tenant");
 
 export type TenantId = z.output<typeof TenantIdSchema>;

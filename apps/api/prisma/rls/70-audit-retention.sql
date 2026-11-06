@@ -50,16 +50,6 @@ BEGIN
   END LOOP;
 END $$;
 
-DROP POLICY IF EXISTS audit_legal_hold_bypass ON public."AuditLegalHold";
-CREATE POLICY audit_legal_hold_bypass ON public."AuditLegalHold"
-  USING ((SELECT public.app_rls_bypass_on('AuditLegalHold')))
-  WITH CHECK ((SELECT public.app_rls_bypass_on('AuditLegalHold')));
-
-DROP POLICY IF EXISTS retention_run_bypass ON public."RetentionRun";
-CREATE POLICY retention_run_bypass ON public."RetentionRun"
-  USING ((SELECT public.app_rls_bypass_on('RetentionRun')))
-  WITH CHECK ((SELECT public.app_rls_bypass_on('RetentionRun')));
-
 -- `app_retention` reads holds and reads + deletes audit rows; these policies name it alone, so they
 -- grant nothing to `app_runtime` or anyone else.
 DROP POLICY IF EXISTS audit_legal_hold_retention_read ON public."AuditLegalHold";

@@ -149,7 +149,7 @@ function SignInScreen(): React.JSX.Element {
 			{canUsePasskeys ? (
 				<Button
 					label={PASSKEYS_COPY.signInWithPasskey}
-					variant="secondary"
+					variant="outline"
 					onPress={signInWithPasskey}
 					loading={passkeyPending}
 					disabled={login.isPending}

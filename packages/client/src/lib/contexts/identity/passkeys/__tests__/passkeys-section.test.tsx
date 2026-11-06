@@ -17,7 +17,7 @@ import {
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture } from "../../../../../testing/auth-fixtures";
 import { ClientTestProviders } from "../../../../../testing/client-test-providers";
 import { PasskeysSection } from "../passkeys-section";
 

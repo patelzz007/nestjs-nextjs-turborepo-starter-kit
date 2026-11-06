@@ -6,6 +6,8 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import { isPublishedGuide } from "./src/lib/publishing";
+
 /** Public origin for canonical URLs, the sitemap and RSS (see `src/lib/site.ts`). */
 const SITE_URL: string = process.env["PUBLIC_SITE_URL"] ?? "http://localhost:3002";
 const REPO_ROOT: string = path.resolve(import.meta.dirname, "../..");
@@ -35,14 +37,16 @@ const PAGES: readonly string[] = [
 	"/feed.xml",
 	"/robots.txt",
 	"/files/pdf-viewer-sample.pdf",
-	...filesBelow("docs", /\.md$/).map((file) => `/docs/${file.replace(/\.md$/, "")}`),
-	...filesBelow("blog", /\.md$/).map((file) => `/blog/${file.replace(/\.md$/, "")}`),
+	...filesBelow("docs", /\.md$/)
+		.filter(isPublishedGuide)
+		.map((file) => `/docs/${file.replace(/\.md$/, "")}`),
+	...filesBelow("docs/blog", /\.md$/).map((file) => `/blog/${file.replace(/\.md$/, "")}`),
 	...filesBelow("docs/images", IMAGE_FILE).map((file) => `/images/${file}`),
 ];
 
 /**
  * The docs site: TanStack Start, every page pre-rendered at build (`/docs/x.html`, the layout the Astro
- * site used). Content comes from the repo-root `docs/` and `blog/` folders (`src/server/content.server.ts`).
+ * site used). Content comes from the repo-root `docs/` and `docs/blog/` folders (`src/server/content.server.ts`).
  * The Start server renders on request only what cannot be static: the 404 page and search with `?q=`.
  */
 export default defineConfig({

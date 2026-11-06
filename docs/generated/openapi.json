@@ -41429,6 +41429,7 @@
                                   "rewards.auto-publish",
                                   "claims.expire-pending",
                                   "claims.expire-referrer",
+                                  "claims.expire-holds",
                                   "outbox.publish",
                                   "storage.cleanup",
                                   "storage.delete",
@@ -41570,6 +41571,7 @@
                 "rewards.auto-publish",
                 "claims.expire-pending",
                 "claims.expire-referrer",
+                "claims.expire-holds",
                 "outbox.publish",
                 "storage.cleanup",
                 "storage.delete",
@@ -41654,6 +41656,7 @@
                             "rewards.auto-publish",
                             "claims.expire-pending",
                             "claims.expire-referrer",
+                            "claims.expire-holds",
                             "outbox.publish",
                             "storage.cleanup",
                             "storage.delete",
@@ -41776,6 +41779,7 @@
                 "rewards.auto-publish",
                 "claims.expire-pending",
                 "claims.expire-referrer",
+                "claims.expire-holds",
                 "outbox.publish",
                 "storage.cleanup",
                 "storage.delete",
@@ -41940,6 +41944,7 @@
                 "rewards.auto-publish",
                 "claims.expire-pending",
                 "claims.expire-referrer",
+                "claims.expire-holds",
                 "outbox.publish",
                 "storage.cleanup",
                 "storage.delete",
@@ -69743,17 +69748,21 @@
                   "properties": {
                     "data": {
                       "properties": {
+                        "holdExpiresAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "ok": {
-                          "description": "The action was accepted",
                           "enum": [
                             true
                           ],
-                          "example": true,
                           "type": "boolean"
                         }
                       },
                       "required": [
-                        "ok"
+                        "ok",
+                        "holdExpiresAt"
                       ],
                       "type": "object"
                     },
@@ -69796,7 +69805,7 @@
                 }
               }
             },
-            "description": "OTP sent"
+            "description": "OTP sent; one unit is held until holdExpiresAt"
           },
           "4XX": {
             "content": {
@@ -70719,7 +70728,8 @@
                                 "GITHUB_COMMENT_IMAGE",
                                 "KANBAN_TASK_ATTACHMENT",
                                 "BROADCAST_IMAGE",
-                                "PLATFORM_BROADCAST_IMAGE"
+                                "PLATFORM_BROADCAST_IMAGE",
+                                "NOTIFICATION_DOCUMENT"
                               ],
                               "type": "string"
                             },
@@ -70939,7 +70949,8 @@
                                 "GITHUB_COMMENT_IMAGE",
                                 "KANBAN_TASK_ATTACHMENT",
                                 "BROADCAST_IMAGE",
-                                "PLATFORM_BROADCAST_IMAGE"
+                                "PLATFORM_BROADCAST_IMAGE",
+                                "NOTIFICATION_DOCUMENT"
                               ],
                               "type": "string"
                             },
@@ -94929,6 +94940,63 @@
                             "nullable": true,
                             "type": "integer"
                           },
+                          "attachment": {
+                            "nullable": true,
+                            "properties": {
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "mimeType": {
+                                "enum": [
+                                  "image/jpeg",
+                                  "image/png",
+                                  "image/webp",
+                                  "image/avif",
+                                  "application/pdf"
+                                ],
+                                "type": "string"
+                              },
+                              "name": {
+                                "maxLength": 255,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "previewUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "sizeBytes": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "url": {
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "mimeType",
+                              "sizeBytes",
+                              "width",
+                              "height",
+                              "url",
+                              "previewUrl"
+                            ],
+                            "type": "object"
+                          },
                           "body": {
                             "type": "string"
                           },
@@ -95062,6 +95130,7 @@
                           "icon",
                           "senderName",
                           "senderLogoUrl",
+                          "attachment",
                           "groupCount",
                           "broadcastId",
                           "readAt",
@@ -107461,7 +107530,8 @@
                                 "GITHUB_COMMENT_IMAGE",
                                 "KANBAN_TASK_ATTACHMENT",
                                 "BROADCAST_IMAGE",
-                                "PLATFORM_BROADCAST_IMAGE"
+                                "PLATFORM_BROADCAST_IMAGE",
+                                "NOTIFICATION_DOCUMENT"
                               ],
                               "type": "string"
                             },

@@ -2,8 +2,8 @@ import type { Prisma } from "@prisma/client";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createAuditTrailDouble } from "../../../../../../test/support/audit-trail-double";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createAuditTrailDouble } from "../../../../../../e2e/support/audit-trail-double";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { systemActor, type ActorContext } from "../../../../../platform/application/actor-context";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";

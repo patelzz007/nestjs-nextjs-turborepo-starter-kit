@@ -23,8 +23,8 @@ describe("findWorkspaceRoot", () => {
 
 describe("resolveFromWorkspaceRoot", () => {
 	it("takes a relative path from the monorepo root, whatever the working directory", () => {
-		expect(resolveFromWorkspaceRoot("logs/transactions", "/home/dev/repo/apps/api", REPO_FILES)).toBe("/home/dev/repo/logs/transactions");
-		expect(resolveFromWorkspaceRoot("logs/transactions", "/home/dev/repo", REPO_FILES)).toBe("/home/dev/repo/logs/transactions");
+		expect(resolveFromWorkspaceRoot(".artifacts/logs/transactions", "/home/dev/repo/apps/api", REPO_FILES)).toBe("/home/dev/repo/.artifacts/logs/transactions");
+		expect(resolveFromWorkspaceRoot(".artifacts/logs/transactions", "/home/dev/repo", REPO_FILES)).toBe("/home/dev/repo/.artifacts/logs/transactions");
 	});
 
 	it("keeps an absolute path as it is", () => {
@@ -32,6 +32,6 @@ describe("resolveFromWorkspaceRoot", () => {
 	});
 
 	it("falls back to the working directory without a monorepo around it (a deployed bundle)", () => {
-		expect(resolveFromWorkspaceRoot("logs/transactions", "/srv/app", only())).toBe("/srv/app/logs/transactions");
+		expect(resolveFromWorkspaceRoot(".artifacts/logs/transactions", "/srv/app", only())).toBe("/srv/app/.artifacts/logs/transactions");
 	});
 });

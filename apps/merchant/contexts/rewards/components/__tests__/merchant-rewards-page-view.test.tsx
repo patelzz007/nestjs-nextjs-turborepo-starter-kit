@@ -6,16 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { REWARDS_CATALOG_LOADING_LABELS } from "@/contexts/rewards/components/merchant-rewards-catalog";
 import { MerchantRewardsPageView } from "@/contexts/rewards/components/merchant-rewards-page-view";
 import { MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME, MERCHANT_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
-import { STORE_A } from "@/test/terminals";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/testing/tenant-context";
+import { STORE_A } from "@/testing/terminals";
 import type { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
 import { MERCHANT_REWARDS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 import { REWARD_CATALOG_PAGE_SIZE } from "@/contexts/rewards/url-state/rewards";
-import { rewardFixture } from "@/test/rewards";
+import { rewardFixture } from "@/testing/rewards";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 type RewardsListInput = Parameters<typeof apiRouter.tenants.rewards.list.queryKey>[0];
@@ -38,7 +38,7 @@ const { rewardsListQuery, prefetchRewards, rewardsSummaryQuery, contextQuery } =
 // A reward card links into the tenant, whose slug comes from the route.
 vi.mock("next/navigation", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("next/navigation")>();
-	const { TEST_ORG_SLUG: tenantSlug } = await import("@/test/authorization");
+	const { TEST_ORG_SLUG: tenantSlug } = await import("@/testing/authorization");
 	return { ...actual, useParams: (): Record<string, string> => ({ tenantSlug }) };
 });
 

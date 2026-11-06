@@ -124,8 +124,8 @@ export const DEFAULT_MEMORY_LEAK_WINDOW_MS = 30 * MS_PER_MINUTE;
 export const MIN_MEMORY_LEAK_WINDOW_MS = 5 * MS_PER_MINUTE;
 /** Rise of the post-GC heap floor from the earlier to the later half of the window that counts as a suspected leak. */
 export const DEFAULT_MEMORY_LEAK_GROWTH_THRESHOLD_MB = 64;
-/** Where the plain-text transaction log is written when TRANSACTION_LOG_DIR is unset (relative to the monorepo root: `<repo>/logs/transactions`). */
-export const DEFAULT_TRANSACTION_LOG_DIR = "logs/transactions";
+/** Where the plain-text transaction log is written when TRANSACTION_LOG_DIR is unset (relative to the monorepo root: `<repo>/.artifacts/logs/transactions`). */
+export const DEFAULT_TRANSACTION_LOG_DIR = ".artifacts/logs/transactions";
 /** Days of transaction log files kept when TRANSACTION_LOG_RETENTION_DAYS is unset: the record retention (ten years). */
 export const DEFAULT_TRANSACTION_LOG_RETENTION_DAYS: number = RECORD_RETENTION_DAYS;
 

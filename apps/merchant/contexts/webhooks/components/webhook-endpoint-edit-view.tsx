@@ -16,6 +16,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const SAVE_FAILED_MESSAGE = "The changes could not be saved. Try again.";
 
@@ -47,7 +48,7 @@ function WebhookEndpointEditLoader({ tenantSlug, endpointId }: WebhookEndpointEd
 		return (
 			<div className="space-y-6">
 				<MerchantPageHeader title="Endpoint not found" description="It may have been removed." />
-				<Button variant="outline" render={<Link href={tenantRoutes(tenantSlug).webhooks.list} />}>
+				<Button variant="outline" render={<Link href={appRoute(tenantRoutes(tenantSlug).webhooks.list)} />}>
 					Back to webhooks
 				</Button>
 			</div>
@@ -76,7 +77,7 @@ function WebhookEndpointEditForm({ tenantSlug, endpoint }: WebhookEndpointEditFo
 		onSuccess: (): void => {
 			invalidateAll();
 			void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.webhooks.endpoint.scopeKey({ tenantSlug, endpointId: endpoint.id }) });
-			router.push(routes.detail(endpoint.id));
+			router.push(appRoute(routes.detail(endpoint.id)));
 		},
 	});
 
@@ -104,7 +105,7 @@ function WebhookEndpointEditForm({ tenantSlug, endpoint }: WebhookEndpointEditFo
 					<Button type="submit" disabled={input === undefined || saveMutation.isPending}>
 						{saveMutation.isPending ? "Saving…" : "Save changes"}
 					</Button>
-					<Button variant="ghost" render={<Link href={routes.detail(endpoint.id)} />}>
+					<Button variant="ghost" render={<Link href={appRoute(routes.detail(endpoint.id))} />}>
 						Cancel
 					</Button>
 				</div>

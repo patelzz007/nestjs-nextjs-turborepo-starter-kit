@@ -1,5 +1,6 @@
 import type { EpochMs } from "@workspace/shared";
 
+import type { ClaimHold } from "../aggregates/claim-hold.aggregate";
 import type { OtpChallenge } from "../aggregates/otp-challenge.aggregate";
 import type { RewardClaim } from "../aggregates/reward-claim.aggregate";
 
@@ -33,6 +34,34 @@ export interface RewardClaimRepository {
 export interface OverdueClaim {
 	readonly claimId: string;
 	readonly tenantId: string;
+}
+
+/** An overdue hold the expiry job will end, with its reward's tenant. */
+export interface OverdueClaimHold {
+	readonly holdId: string;
+	readonly tenantId: string;
+}
+
+/** Persistence port of {@link ClaimHold}, bound to one transaction. */
+export interface ClaimHoldRepository {
+	add(hold: ClaimHold): Promise<void>;
+
+	findById(holdId: string): Promise<ClaimHold | null>;
+
+	/** The customer's unexpired ACTIVE hold of this reward, or null. */
+	findLive(userId: string, rewardId: string, now: EpochMs): Promise<ClaimHold | null>;
+
+	/** The customer's unexpired ACTIVE holds across all rewards. */
+	countLive(userId: string, now: EpochMs): Promise<number>;
+
+	/** Holds the customer took on this reward since `since`, however they ended. */
+	countTakenSince(userId: string, rewardId: string, since: EpochMs): Promise<number>;
+
+	/** ACTIVE holds past their expiry (oldest first), for the expiry job. */
+	listOverdue(now: EpochMs, take: number): Promise<readonly OverdueClaimHold[]>;
+
+	/** Compare-and-set on ACTIVE: `false` when a claim or the expiry job settled the hold first. */
+	saveIfUnchanged(hold: ClaimHold): Promise<boolean>;
 }
 
 /** Persistence port of {@link OtpChallenge}. */

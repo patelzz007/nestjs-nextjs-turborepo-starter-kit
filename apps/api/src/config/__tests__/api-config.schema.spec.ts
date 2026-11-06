@@ -2,7 +2,7 @@ import { LIST_SLOT_INDEX, EnvValidationError } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SINGLE_TENANT_SEED_TENANT_ID } from "../../../prisma/seed/tenant-seed-ids";
-import { TEST_API_ENV, type TestEnv } from "../../../test/support/test-api-env";
+import { TEST_API_ENV, type TestEnv } from "../../../e2e/support/test-api-env";
 import { API_ENV_SCOPE, parseApiConfig } from "../api-config";
 import { isLoopbackUrl, resolveApiDocsPolicy, resolveLogLevel, resolveRedisNamespace, type ApiConfig } from "../api-config.schema";
 
@@ -102,11 +102,15 @@ describe("API env schema", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("is off under tests and on everywhere else, in logs/transactions for the ten-year record retention, in the server's time zone", () => {
+		it("is off under tests and on everywhere else, in .artifacts/logs/transactions for the ten-year record retention, in the server's time zone", () => {
 			vi.stubEnv("TZ", "Asia/Kuala_Lumpur");
 			expect(parse().observability.transactionLog).toBeNull();
-			expect(parse({ NODE_ENV: "development" }).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 3653, timeZone: "Asia/Kuala_Lumpur" });
-			expect(parse(PRODUCTION).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 3653, timeZone: "Asia/Kuala_Lumpur" });
+			expect(parse({ NODE_ENV: "development" }).observability.transactionLog).toEqual({
+				directory: ".artifacts/logs/transactions",
+				retentionDays: 3653,
+				timeZone: "Asia/Kuala_Lumpur",
+			});
+			expect(parse(PRODUCTION).observability.transactionLog).toEqual({ directory: ".artifacts/logs/transactions", retentionDays: 3653, timeZone: "Asia/Kuala_Lumpur" });
 		});
 
 		it("follows TRANSACTION_LOG_ENABLED, TRANSACTION_LOG_DIR, TRANSACTION_LOG_RETENTION_DAYS and TRANSACTION_LOG_TIME_ZONE when set", () => {
@@ -126,7 +130,7 @@ describe("API env schema", () => {
 			expect(captureEnvError({ TRANSACTION_LOG_RETENTION_DAYS: "0" }).variables).toEqual(["TRANSACTION_LOG_RETENTION_DAYS"]);
 			expect(captureEnvError({ TRANSACTION_LOG_TIME_ZONE: "Malaysia/Somewhere" }).variables).toEqual(["TRANSACTION_LOG_TIME_ZONE"]);
 			expect(parse({ TRANSACTION_LOG_ENABLED: "true", TRANSACTION_LOG_DIR: " " }).observability.transactionLog).toEqual({
-				directory: "logs/transactions",
+				directory: ".artifacts/logs/transactions",
 				retentionDays: 3653,
 				timeZone: "UTC",
 			});

@@ -3,7 +3,7 @@ title: "Getting started"
 description: "From git clone to every app running, step by step: tools, PostgreSQL (native or Docker), every environment file including the mobile app's, the phone's API address, the database, the dev servers and a first sign-in."
 order: 2
 author: "Platform Team"
-lastUpdated: 1793145600000
+lastUpdated: 1793923200000
 coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&h=630&fit=crop"
 tags: ["getting-started", "setup", "local-development"]
 ---
@@ -38,9 +38,14 @@ pg_isready -h 127.0.0.1 -p 5432
 
 | What it prints | Meaning | What to do |
 | --- | --- | --- |
-| `127.0.0.1:5432 - accepting connections` | A native PostgreSQL is running | Use it. Create the database: `createdb nestjs-nextjs-turborepo-starter-kit` |
+| `127.0.0.1:5432 - accepting connections` | A native PostgreSQL is running | Use it. Create the database: `createdb -h 127.0.0.1 -U postgres nestjs-nextjs-turborepo-starter-kit` |
 | `no response` | Nothing listens on 5432 | Start the one you installed (`brew services start postgresql@18`), or use Docker (below) |
 | `command not found: pg_isready` | No PostgreSQL client installed | Use Docker (below), or install PostgreSQL 18 natively |
+
+The default `DATABASE_URL` signs in as user `postgres` with password `postgres`. Homebrew only creates a
+user named after your Mac account, so add the role once with `createuser -s postgres`. On Linux, set the
+password once with `sudo -u postgres psql -c "ALTER ROLE postgres PASSWORD 'postgres'"`. Or keep your own
+user and change `DATABASE_URL` in step 3.
 
 **No PostgreSQL? Run it in Docker.** The `postgres` service in `compose.yml` is commented out, so that
 it never fights a native install for port 5432. To use it, open `compose.yml` and uncomment the whole
@@ -83,8 +88,9 @@ Then open `apps/api/.env` and check:
   [AWS S3](./storage/aws-s3.md) or [Firebase](./storage/firebase.md) for cloud storage.
 - `MALWARE_SCANNER=none` is required and has no default.
 
-The web, admin and merchant examples already point at `http://localhost:8080`; they need no edits. The
-mobile app's `.env` needs this machine's network address, which is the next step.
+The web, admin, merchant and mobile examples need no edits for local work. Keys for outside services
+(Firebase, S3, Resend and others) are all optional: the
+[README](../../README.md#getting-keys-for-outside-services) says where each one comes from.
 
 Every variable, its default and its cross-field rules: [API configuration](./configuration/api.md) and
 [frontend configuration](./configuration/frontend.md). The API refuses to start, and names every invalid
@@ -93,7 +99,11 @@ variable, if anything is wrong.
 ## 4. The API address a phone can reach
 
 A phone cannot use `localhost`: on the phone, that is the phone. It reaches the API at this machine's
-address on your Wi-Fi. Find it:
+address on your Wi-Fi.
+
+**With Expo Go, the app finds that address by itself**: leave `EXPO_PUBLIC_API_URL` unset, and only do
+item 2 below. Set the address by hand when the API runs on another machine, or when the app cannot find it.
+Find it:
 
 ```bash
 ipconfig getifaddr en0        # macOS, Wi-Fi (try en1 when it prints nothing)
@@ -141,7 +151,7 @@ optional (`KAFKA_BROKERS` unset means the outbox keeps events pending).
 ## 6. Run the apps
 
 ```bash
-pnpm dev              # api :8080, web :3000, admin :3001, docs :3002, merchant :3003
+pnpm dev              # every app with a dev script (see the note below)
 pnpm dev:stack        # just api :8080, web :3000 and admin :3001 (lighter)
 pnpm dev:api          # or one app at a time: dev:web, dev:admin, dev:merchant, dev:mobile
 pnpm kill:all         # free the dev ports (3000–3003, 8080, 8081) if a previous run is stuck
@@ -158,6 +168,10 @@ pnpm kill:all         # free the dev ports (3000–3003, 8080, 8081) if a previo
 | Mailpit / Bull Board | `http://localhost:8025` / `http://localhost:3030` |
 
 Check: `curl -s http://localhost:8080/health` answers, and each app's login page opens.
+
+`pnpm dev` also starts Metro, the server agent and the analytics consumer. Until the consumer has its own
+`.env` (step 8) it prints `Invalid environment configuration for apps/analytics-consumer` and stops; the
+other apps keep running, so you can ignore it, or use `pnpm dev:stack`.
 
 ## 7. Sign in
 

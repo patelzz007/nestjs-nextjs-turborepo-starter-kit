@@ -1,7 +1,7 @@
 // ============================================
 // prisma-github-webhook.store.ts - Live-update subscriptions and webhook deliveries (ADR 052)
 // ============================================
-// Both tables are bypass-only platform plumbing (prisma/rls.sql), reached only
+// Both tables are bypass-only platform plumbing (prisma/rls/10-policies.sql), reached only
 // through allowlisted system operations: `github.webhook.subscriptions` after
 // the caller's GITHUB_PULL_REQUEST check, `github.webhook.deliveries` after a
 // delivery's signature is verified. Owner and repository are stored lower-case

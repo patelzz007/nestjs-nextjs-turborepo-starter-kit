@@ -3,11 +3,13 @@
 	"extends": ["//"],
 	"tasks": {
 		"test": {
+			// Set by the mobile route-type generator for Expo Router; never read from the machine.
+			"env": ["EXPO_ROUTER_APP_ROOT", "EXPO_ROUTER_IMPORT_MODE"],
 			// The tests check REPO-WIDE files, not this package's own: every
 			// workspace tsconfig resolves @workspace imports through the
-			// `development` condition (__tests__/tsconfig-conditions.test.mjs), and the
+			// `development` condition (src/repo-guards/__tests__/tsconfig-conditions.test.ts), and the
 			// workspace manifests agree with pnpm-workspace.yaml's overrides and
-			// exceptions (__tests__/dependency-*.test.mjs). Without these inputs a
+			// exceptions (the dependency tests in src/). Without these inputs a
 			// change to one of those files is a cache hit here: the suite passes
 			// locally on a stale result and fails in CI's cold cache. Globs are
 			// depth-bounded (no `**`): explicit inputs stop honouring .gitignore,
@@ -17,8 +19,10 @@
 				"$TURBO_DEFAULT$",
 				"$TURBO_ROOT$/pnpm-workspace.yaml",
 				"$TURBO_ROOT$/apps/*/package.json",
+				"$TURBO_ROOT$/infra/*/package.json",
 				"$TURBO_ROOT$/packages/*/package.json",
 				"$TURBO_ROOT$/apps/*/tsconfig*.json",
+				"$TURBO_ROOT$/infra/*/tsconfig*.json",
 				"$TURBO_ROOT$/apps/*/*/tsconfig*.json",
 				"$TURBO_ROOT$/packages/*/tsconfig*.json",
 				"$TURBO_ROOT$/packages/*/*/tsconfig*.json",

@@ -69,7 +69,7 @@ export default function SecurityScreen(): React.JSX.Element {
 						<Badge label="On" tone="success" />
 						{remainingCount === null ? null : <MutedText>{`${String(remainingCount)} unused backup ${remainingCount === 1 ? "code" : "codes"} remaining.`}</MutedText>}
 						{lowCodesNotice === null ? null : <Alert tone="warning" message={lowCodesNotice} />}
-						<Button label="Generate new backup codes" variant="secondary" onPress={openBackupCodeRotation} />
+						<Button label="Generate new backup codes" variant="outline" onPress={openBackupCodeRotation} />
 					</>
 				) : (
 					<>

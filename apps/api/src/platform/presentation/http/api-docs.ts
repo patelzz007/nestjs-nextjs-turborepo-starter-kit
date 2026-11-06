@@ -81,7 +81,7 @@ const RouteHandlerSchema = z.custom<RouteHandler>((value) => CallableSchema.safe
 
 /**
  * Build the OpenAPI document for `app` — the ONE builder used by bootstrap
- * (served at `/v1/docs-json`) and by `test/openapi-document.e2e-spec.ts`, so
+ * (served at `/v1/docs-json`) and by `e2e/openapi-document.e2e-spec.ts`, so
  * what the regression test asserts is exactly what developers see.
  *
  *   1. `SwaggerModule.createDocument` scans every controller. Request bodies,

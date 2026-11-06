@@ -1,4 +1,4 @@
-// The nightly gate's load-baselines.json (enhancement 3.9) against the load runner's own contract: the
+// The nightly gate's budgets/load.json (enhancement 3.9) against the load runner's own contract: the
 // run it starts must be one the API accepts within the default caps, and its endpoint groups must hold
 // exactly the steps the run's scenarios make (a scenario that gains a step must put it in a group).
 
@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import { scenarioWeights } from "../k6-config";
 
-/** The parts of load-baselines.json checked here (packages/tooling/scripts/lib/load-baselines.mjs owns the full shape). */
+/** The parts of budgets/load.json checked here (packages/tooling/src/load-baseline/load-baselines.ts owns the full shape). */
 const BaselinesSchema = z.object({
 	run: z.object({
 		name: z.string(),
@@ -25,12 +25,12 @@ const BaselinesSchema = z.object({
 	groups: z.record(z.string(), z.object({ steps: z.array(z.string()) })),
 });
 
-const baselines = BaselinesSchema.parse(JSON.parse(readFileSync(resolve(import.meta.dirname, "../../../../load-baselines.json"), "utf8")));
+const baselines = BaselinesSchema.parse(JSON.parse(readFileSync(resolve(import.meta.dirname, "../../../../budgets/load.json"), "utf8")));
 const SECONDS_PER_MINUTE = 60;
 /** Every scenario signs its user in first (k6-script.ts `signIn`), whichever scenarios the mix holds. */
 const SIGN_IN_STEP = "login";
 
-describe("load-baselines.json", () => {
+describe("budgets/load.json", () => {
 	it("starts a traffic mix the API accepts, within the default load-test caps", () => {
 		const { run, total } = baselines;
 		const body = StartLoadTestSchema.parse({

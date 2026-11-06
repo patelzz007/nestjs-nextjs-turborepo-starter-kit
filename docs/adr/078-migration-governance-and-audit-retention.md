@@ -12,7 +12,7 @@ order: 78
 
 ## Status
 
-Accepted (2026-11-03). The owner's answer to Q8 (`PROGRESS-2026-11-02.md`): **Option E now, with a path to
+Accepted (2026-11-03). The owner's answer to Q8 (`docs/history/PROGRESS-2026-11-02.md`): **Option E now, with a path to
 Option C**. Enhancement 2.1. Amends the "migrations are generated only" convention everywhere it is stated.
 
 ## Context

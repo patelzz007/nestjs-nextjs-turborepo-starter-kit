@@ -6,7 +6,7 @@ import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../testing/auth-fixtures";
 import { SessionRefreshUnavailableError, type RefreshResult } from "../../../api/api-request";
 import { apiRouter } from "../../../api/endpoints";
 import { isRestrictedAuthUser } from "../../../contexts/identity/session/session";

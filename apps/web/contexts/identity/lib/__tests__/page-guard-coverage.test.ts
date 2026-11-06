@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { isWebProtectedPath } from "@/contexts/identity/lib/routes";
-import { listAppPageFiles } from "@/test-support/app-routes";
+import { listAppPageFiles } from "@/testing/app-routes";
 
 /** A dynamic `[id]` segment, replaced by a sample value to build a concrete path. */
 const DYNAMIC_SEGMENT_PATTERN = /^\[.+\]$/;

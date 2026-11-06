@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { epochMs, type AuthorizationContext, type AuthorizationRequest, type PermissionPair } from "@workspace/shared";
 
-import { createTestAuthorizationKernel } from "../../../../../../test/support/test-service-graph";
+import { createTestAuthorizationKernel } from "../../../../../../e2e/support/test-service-graph";
 import type { AccessFacts } from "../../../domain/access/access-facts";
 import { StoreScope } from "../../../domain/access/store-scope";
 import { AccessDeniedError } from "../../../domain/errors/authorization.errors";
@@ -12,7 +12,7 @@ import type { TenantVerification } from "../tenant-membership.service";
  * The kernel is a FACADE (ADR 067): tenant verification → `AccessControlService` → an audited result.
  * Its I/O collaborators are faked — the tenant verification, the caller's standing (facts) and the
  * record-owner lookup — while the decision service and every allow path run for real, built through
- * the real constructor graph (test/support/test-service-graph.ts).
+ * the real constructor graph (e2e/support/test-service-graph.ts).
  */
 const mocks = vi.hoisted(() => ({
 	verify: vi.fn(),

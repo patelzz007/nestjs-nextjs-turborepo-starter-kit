@@ -30,7 +30,7 @@ import { addMonths, isBefore, subMonths } from "date-fns";
 import { ChevronLeftIcon, ChevronRightIcon, CornerUpLeftIcon, CornerUpRightIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-import { z } from "zod";
+import { DateSelectorFilterTypeSchema, DateSelectorPeriodTypeSchema } from "../lib/date-selector/value";
 
 export { formatDateValue } from "@workspace/ui/lib/date-selector/value";
 export type {
@@ -96,9 +96,6 @@ export function useDateSelectorContext(): DateSelectorContextValue {
 	}
 	return context;
 }
-
-const DateSelectorFilterTypeSchema = z.enum(["is", "before", "after", "between"]);
-const DateSelectorPeriodTypeSchema = z.enum(["day", "month", "quarter", "half-year", "year"]);
 
 type WeekStartsOn = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 

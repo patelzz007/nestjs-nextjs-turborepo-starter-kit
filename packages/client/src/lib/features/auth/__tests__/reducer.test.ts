@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../testing/auth-fixtures";
 import { SESSION_CHECK_MAX_RETRIES } from "../../../contexts/identity/session/session-check";
 import { authActions } from "../actions";
 import { authReducer } from "../reducer";

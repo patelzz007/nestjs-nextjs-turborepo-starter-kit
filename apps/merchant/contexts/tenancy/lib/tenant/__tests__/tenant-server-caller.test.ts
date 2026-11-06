@@ -4,10 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { loadTenantServerCaller } from "@/contexts/tenancy/lib/tenant/tenant-server-caller";
 import type { ServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
-import { TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { STORE_A_LOCATION, tenantContextFixture } from "@/test/tenant-context";
-import { STORE_A } from "@/test/terminals";
+import { TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { STORE_A_LOCATION, tenantContextFixture } from "@/testing/tenant-context";
+import { STORE_A } from "@/testing/terminals";
 
 const { loadScope, createCaller } = vi.hoisted(() => ({
 	loadScope: vi.fn<(tenantSlug: string) => Promise<ServerLocationScope>>(),

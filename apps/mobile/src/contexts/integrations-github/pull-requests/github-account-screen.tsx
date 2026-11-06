@@ -161,7 +161,7 @@ function LinkTokenForm({ replacing }: { readonly replacing: boolean }): React.JS
 					</Text>
 				))}
 			</View>
-			<Button label="Create a token on GitHub" variant="secondary" onPress={openGithub} accessibilityHint="Opens GitHub's token settings in your browser" />
+			<Button label="Create a token on GitHub" variant="outline" onPress={openGithub} accessibilityHint="Opens GitHub's token settings in your browser" />
 			{openFailed ? <Alert tone="warning" message={OPEN_GITHUB_TOKENS_FAILED_MESSAGE} /> : null}
 			{requestError === null ? null : <Alert tone="error" message={requestError} />}
 			<form.Field name="personalAccessToken">

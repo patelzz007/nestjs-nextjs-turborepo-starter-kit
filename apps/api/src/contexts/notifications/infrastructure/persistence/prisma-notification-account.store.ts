@@ -35,6 +35,7 @@ import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../..
 import type { ConsentRecord, NewPushDevice, NotificationAccountStore, PushDeviceTouch, TenantLink } from "../../application/ports/notification-account-store.port";
 import type { ActivePushDevice, StoredSchedule } from "../../application/ports/notification-store.port";
 import { PLATFORM_PREFERENCE_KEY, type StoredPreference } from "../../domain/policies/notification-rules";
+import type { PublicUrlResolve } from "../../../../config/public-url.resolver";
 import { toDeliveryEntry, toInAppNotificationResponse, toPushDeviceResponse, toSuppressionEntry } from "./notification-row.mappers";
 
 const IN_APP_KEYSET: ListKeyset<InAppNotification, Prisma.InAppNotificationWhereInput> = timestampIdKeyset(
@@ -74,7 +75,11 @@ export function buildInAppNotificationListWhere(userId: string, query: InAppNoti
 
 /** The person's own notification data and the admin readers (ADR 070), on one transaction. */
 export class PrismaNotificationAccountStore implements NotificationAccountStore {
-	public constructor(private readonly db: Prisma.TransactionClient) {}
+	public constructor(
+		private readonly db: Prisma.TransactionClient,
+		/** Gives an inbox row's attachment its public address. */
+		private readonly resolve: PublicUrlResolve,
+	) {}
 
 	public async listInbox(userId: string, query: InAppNotificationListQuery): Promise<PaginatedServiceResult<InAppNotificationResponse>> {
 		const where = buildInAppNotificationListWhere(userId, query);
@@ -89,7 +94,10 @@ export class PrismaNotificationAccountStore implements NotificationAccountStore 
 			count: (filter): Promise<number> => this.db.inAppNotification.count({ where: filter }),
 			findMany: (args): Promise<InAppNotification[]> => this.db.inAppNotification.findMany(args),
 		});
-		return toPaginatedServiceResult(mapListResult(page, toInAppNotificationResponse), query);
+		return toPaginatedServiceResult(
+			mapListResult(page, (row): InAppNotificationResponse => toInAppNotificationResponse(row, this.resolve)),
+			query,
+		);
 	}
 
 	public async markRead(userId: string, surface: NotificationSurface, selection: readonly string[] | "all", now: number): Promise<readonly string[]> {

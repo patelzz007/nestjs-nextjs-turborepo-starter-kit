@@ -1,7 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it } from "vitest";
 
-import { createHttpContext, testRequest } from "../../../../../test/support/http-execution-context";
+import { createHttpContext, testRequest } from "../../../../../e2e/support/http-execution-context";
 import { AppError } from "../../../application/errors/app-error";
 import { rejectMachineTenantSelector } from "../machine-tenant-selector";
 

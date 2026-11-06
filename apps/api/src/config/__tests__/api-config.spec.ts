@@ -1,7 +1,7 @@
 import { EnvValidationError } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { TEST_API_ENV } from "../../../test/support/test-api-env";
+import { TEST_API_ENV } from "../../../e2e/support/test-api-env";
 import { getApiConfig, parseApiConfig } from "../api-config";
 
 describe("parseApiConfig", () => {

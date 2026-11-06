@@ -68,7 +68,7 @@ The owner chose the first gateways: **Billplz** and **CHIP** (Malaysia).
 | Config | `BILLPLZ_*`, `CHIP_*`, `PAYMENTS_FAKE_SECRET` (`apps/api/.env.example`). A gateway is on only when all its settings are set; a half-set gateway, Billplz's sandbox on deployed production, and the fake gateway in production are refused at boot |
 | Refunds | `PAYMENT_PROVIDER_REFUNDS` in `@workspace/shared` says which gateways refund through their API (CHIP, fake: yes; Billplz: no). The API's `refundable` and the merchant screens both read it |
 | Merchant portal | `apps/merchant/contexts/payments/`: `/t/:slug/payments` (list), `/payments/new` (choose a configured gateway, amount in ringgit, customer), `/payments/:id` (status, checkout link to copy or open, refund behind a confirmation). Gated by `merchant:manage_payments`; "Payments" in the sidebar under Operations |
-| Tests | `payments.service.spec.ts` (in-memory repository plus the fake gateway), config rules, `test/payments.e2e-spec.ts` over HTTP against a real database |
+| Tests | `payments.service.spec.ts` (in-memory repository plus the fake gateway), config rules, `e2e/payments.e2e-spec.ts` over HTTP against a real database |
 
 **Idempotency.** `POST` is `@Idempotent({ required: true })`, the platform's rule (8–128 characters; a concurrent duplicate waits for the first and replays it), and the key is also stored on the payment (unique per tenant) as the final guard. Retrying with the same key and the same request returns the same payment. The same key with a different request is refused (409 `IDEMPOTENCY_KEY_REUSED`). The checkout is opened at the gateway *outside* the database transaction; if the gateway refuses, the payment is closed as CANCELLED, so no half-made payment stays open.
 

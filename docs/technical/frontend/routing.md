@@ -33,6 +33,10 @@ consistent across the three Next.js apps.
 - **Each app owns its routes** in `apps/<app>/lib/routes.ts` — typed static paths and builders
   (`ROUTES.users.detail(id)`). Every internal link, `router.push`, `redirect`, proxy list,
   route-authorization rule, palette entry and breadcrumb uses it — no hand-typed paths.
+- **Links are type-checked.** `typedRoutes` is on in all three apps, so a literal `href`, `redirect` or `router.push`
+  to a page that doesn't exist stops compiling. `typecheck` runs `next typegen` first. A path known only at runtime (menu
+  data, `returnTo`, one built from `APP_LINKS`) goes through `appRoute()` from `@workspace/client/lib/navigation/app-route`:
+  the compiler can't see those, so the route-coverage tests hold them to real pages. Never cast a path to `Route`.
 - **The sidebar** stays data (`*-sidebar-menu.json`) with the same URLs; guard tests in each app
   fail when an enabled menu URL has no page, two enabled items share a URL, or a child is not
   under its parent.

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useWebSession, WebAuthorizationProvider } from "@/contexts/identity/components/web-authorization-provider";
 import { SESSION_PERMISSIONS_REFETCH_INTERVAL_MS } from "@/lib/session/capabilities";
-import { buildSessionPermissions, FIXTURE_ANSWERED_AT, sessionPermissionsEnvelope } from "@/test-support/session";
+import { buildSessionPermissions, FIXTURE_ANSWERED_AT, sessionPermissionsEnvelope } from "@/testing/session";
 
 interface PermissionsQueryOptions {
 	readonly enabled?: boolean;

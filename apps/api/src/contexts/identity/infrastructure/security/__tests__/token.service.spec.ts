@@ -2,7 +2,7 @@ import { JwtService } from "@nestjs/jwt";
 import type { FlatUserResponse } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { TokenService } from "../token.service";
 
 const tokens = new TokenService(new JwtService(), createTestTypedConfig());

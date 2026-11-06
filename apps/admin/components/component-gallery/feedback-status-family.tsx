@@ -15,8 +15,8 @@ import { z } from "zod";
 
 import { GALLERY_ENTRIES } from "@/components/component-gallery/gallery-catalog";
 import { ComponentSection, DemoRow, DemoSurface, ExampleOnlySections } from "@/components/component-gallery/gallery-section";
-import { AlertShowcase } from "@/components/showcase/alert-showcase";
-import { ToastShowcase } from "@/components/showcase/toast-showcase";
+import { AlertShowcase } from "@/components/component-gallery/showcase/alert-showcase";
+import { ToastShowcase } from "@/components/component-gallery/showcase/toast-showcase";
 
 // ── Progress ────────────────────────────────────────────────────────────────
 

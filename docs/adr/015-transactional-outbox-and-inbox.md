@@ -85,6 +85,6 @@ The wire message now requires `eventId`, and both sides use strict schemas. Depl
 - `apps/api/src/infrastructure/outbox/` (`platform-outbox.service.ts`, `outbox-dispatcher.ts`, `outbox-dispatch.repository.ts`)
 - `apps/analytics-consumer/src/` (`message-handler.ts`, `pg-inbox-store.ts`, `inbox-retention.ts`)
 - `packages/shared/src/schemas/infrastructure/kafka.ts` (`PlatformEventMessageSchema`, `PLATFORM_EVENT_TOPICS`)
-- `apps/api/prisma/rls.sql` (`outbox_events_append`, inbox policies)
-- `apps/api/test/transactional-outbox.e2e-spec.ts`, `apps/analytics-consumer/src/projections/platform-events/__tests__/pg-inbox-store.e2e-spec.ts`
+- `apps/api/prisma/rls/10-policies.sql` (`outbox_events_append`, inbox policies)
+- `apps/api/e2e/transactional-outbox.e2e-spec.ts`, `apps/analytics-consumer/src/projections/platform-events/__tests__/pg-inbox-store.e2e-spec.ts`
 - [Messaging operations](../technical/messaging.md), ADR 010, ADR 012

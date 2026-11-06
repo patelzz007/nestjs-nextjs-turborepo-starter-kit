@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { epochMs } from "@workspace/shared";
 import { describe, expect, it, vi, type Mock } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { RlsTransactionScope } from "../../../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { toImageSources } from "../image-renditions.select";
-import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../test/support/public-urls";
+import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../e2e/support/public-urls";
 
 describe("toImageSources", () => {
 	it("serves every published rendition, in the order given (smallest first)", () => {

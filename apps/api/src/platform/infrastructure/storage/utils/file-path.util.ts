@@ -71,6 +71,7 @@ const CATEGORY_KEY_LAYOUT: Readonly<Record<FileCategory, CategoryKeyLayout>> = {
 	KANBAN_TASK_ATTACHMENT: { root: "users", folder: "kanban-attachments", variantsReplaceFolder: false },
 	BROADCAST_IMAGE: { root: "stores", folder: "broadcast-images", variantsReplaceFolder: false },
 	PLATFORM_BROADCAST_IMAGE: { root: "users", folder: "broadcast-images", variantsReplaceFolder: false },
+	NOTIFICATION_DOCUMENT: { root: "users", folder: "notification-documents", variantsReplaceFolder: false },
 };
 
 /** `<root>/<ownerId>[/<folder>]` — the directory a category's original files live in. */

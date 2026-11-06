@@ -23,6 +23,7 @@ function notice(id: string, createdAt: number, overrides: Partial<InAppNotificat
 		icon: null,
 		senderName: null,
 		senderLogoUrl: null,
+		attachment: null,
 		groupCount: 1,
 		broadcastId: null,
 		readAt: null,

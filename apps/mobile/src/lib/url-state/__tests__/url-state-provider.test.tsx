@@ -27,7 +27,7 @@ function ListScreen(): React.JSX.Element {
 		update({ page: page + 1, status: "locked" });
 	}, [page, update]);
 	const openMember = React.useCallback((): void => {
-		router.push({ pathname: "/team/[id]", params: { id: "3" } });
+		router.push({ pathname: "./team/[id]", params: { id: "3" } });
 	}, [router]);
 	return (
 		<>

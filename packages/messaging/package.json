@@ -5,7 +5,7 @@
 	"private": true,
 	"scripts": {
 		"build": "tsrs -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths",
-		"dev": "node ../tooling/src/watch-runner/cli.mjs \"tsrs -p tsconfig.build.json --watch --preserveWatchOutput\" \"tsc-alias -p tsconfig.build.json --resolve-full-paths --watch\"",
+		"dev": "node ../tooling/src/watch-runner/cli.ts \"tsrs -p tsconfig.build.json --watch --preserveWatchOutput\" \"tsc-alias -p tsconfig.build.json --resolve-full-paths --watch\"",
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
 		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"typecheck": "tsrs --noEmit",

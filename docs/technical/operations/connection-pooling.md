@@ -86,4 +86,4 @@ DATABASE_SESSION_URL=postgresql://app_pooled_login:<password>@127.0.0.1:5432/sta
 | | |
 |---|---|
 | Code | `DATABASE_SESSION_URL` (optional, defaults to `DATABASE_URL`) for the two listeners and the advisory-lock pool |
-| CI job through PgBouncer | **Not yet**: it needs the `edoburu/pgbouncer` image pulled to verify locally first (question Q14 in `PROGRESS-2026-11-02.md`) |
+| CI job through PgBouncer | **Not yet**: it needs the `edoburu/pgbouncer` image pulled to verify locally first (question Q14 in `docs/history/PROGRESS-2026-11-02.md`) |

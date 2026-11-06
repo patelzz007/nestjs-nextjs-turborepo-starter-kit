@@ -70,12 +70,12 @@ not contracts at all:
    is the only response parser — used by the browser transport and the SSR pipeline — and turns a
    mismatch into a typed `ApiResponseContractError` (method, URL, real HTTP status, bounded issue
    list).
-6. **Drift is a test failure.** `test/openapi-document.e2e-spec.ts` fails for a route without a
+6. **Drift is a test failure.** `e2e/openapi-document.e2e-spec.ts` fails for a route without a
    contract, a status mismatch, missing success / `4XX` / `5XX` docs, a closed response schema, or
    an `apiContract` leaf whose handler uses a different schema reference or envelope kind.
 7. **Exported artifact (C3).** `docs/generated/openapi.json` is the committed document, serialized
    deterministically (sorted keys, two-space indent, trailing newline).
-   `pnpm tools openapi:export` regenerates it; `test/openapi-artifact.e2e-spec.ts` fails while it is
+   `pnpm tools openapi:export` regenerates it; `e2e/openapi-artifact.e2e-spec.ts` fails while it is
    stale.
 
 ## Alternatives considered

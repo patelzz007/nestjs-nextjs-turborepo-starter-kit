@@ -2,7 +2,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 /**
- * Front matter of the repo-root `docs/` guides and `blog/` posts — the schemas the Astro content
+ * Front matter of the repo-root `docs/` guides and `docs/blog/` posts — the schemas the Astro content
  * collections used, unchanged, so a field that is missing or misspelt still fails the build.
  *
  * `author`, `lastUpdated` (epoch ms) and `coverImage` are required on guides so no page ships undated or

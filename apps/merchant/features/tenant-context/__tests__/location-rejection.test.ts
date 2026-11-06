@@ -4,8 +4,8 @@ import { ApiError } from "@workspace/client/lib/api/use-api";
 import { MerchantErrorCodes } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { TEST_ORG_SLUG } from "@/test/authorization";
-import { STORE_A } from "@/test/terminals";
+import { TEST_ORG_SLUG } from "@/testing/authorization";
+import { STORE_A } from "@/testing/terminals";
 
 import { readRejectedLocationId, subscribeToLocationRejections } from "../location-rejection";
 

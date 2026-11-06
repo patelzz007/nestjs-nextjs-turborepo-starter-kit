@@ -16,6 +16,7 @@ import type { JSX } from "react";
 
 import { LeaveTenantCard } from "../lifecycle/leave-tenant-card";
 import { SupportAccessApprovalsCard } from "../support-access/support-access-approvals-card";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The business's standing, in words, and the badge tone it reads in. */
 export const LIFECYCLE_LABELS: Readonly<Record<TenantLifecycleState, { readonly label: string; readonly variant: React.ComponentProps<typeof Badge>["variant"] }>> = {
@@ -97,12 +98,12 @@ function BusinessProfileCard({ tenantSlug, context, canEditBranding, canReviewKy
 				</div>
 				<div className="flex flex-wrap gap-2">
 					{canEditBranding ? (
-						<Link href={routes.branding} className={buttonVariants({ variant: "outline", size: "sm" })}>
+						<Link href={appRoute(routes.branding)} className={buttonVariants({ variant: "outline", size: "sm" })}>
 							Change logo
 						</Link>
 					) : null}
 					{canReviewKyb ? (
-						<Link href={routes.verification} className={buttonVariants({ variant: "outline", size: "sm" })}>
+						<Link href={appRoute(routes.verification)} className={buttonVariants({ variant: "outline", size: "sm" })}>
 							Verification details
 						</Link>
 					) : null}

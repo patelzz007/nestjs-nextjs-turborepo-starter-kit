@@ -314,5 +314,5 @@ environment), but it behaves like a presigned-URL provider:
 | Locators and keys | `apps/api/src/platform/infrastructure/storage/utils/storage-locator.util.ts`, `file-path.util.ts` |
 | Categories, sizes, types | `packages/shared/src/schemas/domain/platform/storage.ts` |
 | Browser upload helper | `packages/client/src/lib/storage/direct-upload.ts` |
-| CDK stack (S3) | `apps/aws-infrastructure/lib/storage-platform-stack.ts` |
+| CDK stack (S3) | `infra/aws/lib/storage-platform-stack.ts` |
 | API reference | [Files API](../api-reference/files.md) |

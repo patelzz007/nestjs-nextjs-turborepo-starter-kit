@@ -51,3 +51,5 @@ Photos downloaded from Unsplash under the [Unsplash License](https://unsplash.co
 | weekend-dinner/02.webp        | Kittitep Khotchalee      | https://unsplash.com/photos/WsxnuEo_C4w | Unsplash License |
 | weekend-dinner/03.webp        | Thilina Alagiyawanna     | https://unsplash.com/photos/ai8Rn8PFDeE | Unsplash License |
 | yoga-class/01.webp            | Kaylee Garrett           | https://unsplash.com/photos/GaprWyIw66o | Unsplash License |
+
+The notifications' demo photos (`prisma/seed/notification-attachments.ts`) are the 4K photos above, sent as attachments. `assets/notification-attachments/october-statement.pdf` is sample data written for this repository.

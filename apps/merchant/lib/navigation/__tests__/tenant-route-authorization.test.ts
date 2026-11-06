@@ -18,7 +18,7 @@ import {
 } from "@/lib/navigation/tenant-route-authorization";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
-import { membershipFixture } from "@/test/authorization";
+import { membershipFixture } from "@/testing/authorization";
 
 const ORG_APP_DIR: string = fileURLToPath(new URL("../../../app/t/[tenantSlug]", import.meta.url));
 

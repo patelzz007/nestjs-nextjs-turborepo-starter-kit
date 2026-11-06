@@ -8,7 +8,7 @@ export default composeConfigs(config, {
 		clientOnlyWidgetsConfig(CLIENT_ONLY_WIDGETS),
 		{
 			files: ["**/*.ts", "**/*.tsx"],
-			excludeFiles: ["src/lib/api/config.ts"],
+			excludeFiles: ["src/lib/api/config.ts", "src/lib/env/env-runtime.ts"],
 			rules: {
 				"no-restricted-properties": [
 					"error",

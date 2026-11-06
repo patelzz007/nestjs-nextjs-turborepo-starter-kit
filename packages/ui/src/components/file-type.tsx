@@ -435,7 +435,7 @@ const MIME_TYPES: Readonly<Record<string, FileTypeName>> = {
  * Names that carry their type with no extension of their own, or with one
  * that names something else ("go.mod" is not a tracker module).
  */
-const FILE_NAMES: Readonly<Record<string, FileTypeName>> = {
+const FILE_NAMES = {
 	containerfile: "dockerfile",
 	gnumakefile: "makefile",
 	".dev.vars": "env",
@@ -488,15 +488,15 @@ const FILE_NAMES: Readonly<Record<string, FileTypeName>> = {
 	".ruby-version": "txt",
 	".tool-versions": "txt",
 	".terraform-version": "txt",
-};
+} satisfies Readonly<Record<string, FileTypeName>>;
 
 /** Other extensions of a known type. */
-const EXTENSION_ALIASES: Readonly<Record<string, FileTypeName>> = {
+const EXTENSION_ALIASES = {
 	cer: "crt",
 	mak: "makefile",
 	mk: "makefile",
 	sqlite3: "sqlite",
-};
+} satisfies Readonly<Record<string, FileTypeName>>;
 
 /**
  * Name families, read only when the name does not end in a known extension:
@@ -509,13 +509,13 @@ const NAME_PATTERNS: readonly (readonly [pattern: RegExp, type: FileTypeName])[]
 	[/^\.[\w-]+ignore$/, "ignore"],
 ];
 
-const MIME_FAMILIES: Readonly<Record<string, FileTypeName>> = {
+const MIME_FAMILIES = {
 	image: "image",
 	video: "video",
 	audio: "audio",
 	font: "font",
 	text: "txt",
-};
+} satisfies Readonly<Record<string, FileTypeName>>;
 
 const MIME_PATTERN = /^(application|audio|font|image|message|model|multipart|text|video)\/[\w.+-]+$/;
 const URL_ORIGIN = /^[a-z][\w+.-]*:\/\/[^/]*/;

@@ -1,7 +1,7 @@
 import { DAY_MS, epochMs, MERCHANT_CAPABILITY } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { captureFastifyRequest } from "../../../../../test/support/fastify-request";
+import { captureFastifyRequest } from "../../../../../e2e/support/fastify-request";
 import { selectedAnalyticsLocations } from "../../domain/value-objects/analytics-scope.value-object";
 import { ExportMerchantReportHandler } from "../queries/export-merchant-report/export-merchant-report.handler";
 import { ExportMerchantReportQuery } from "../queries/export-merchant-report/export-merchant-report.query";

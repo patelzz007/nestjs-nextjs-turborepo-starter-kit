@@ -1253,7 +1253,7 @@ Every background job queue: what is waiting, running, delayed and failed, and th
 | `data.queues[].failed` | integer | yes |  |
 | `data.queues[].failedLastHour` | integer | yes |  |
 | `data.queues[].failureRatePercent` | number \| null | yes | range 0–100 |
-| `data.queues[].name` | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `data.queues[].name` | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "claims.expire-holds" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| … (+11 more) | yes |  |
 | `data.queues[].paused` | boolean | yes |  |
 | `data.queues[].waiting` | integer | yes |  |
 
@@ -1282,7 +1282,7 @@ A queue's failed jobs, newest first (without their data)
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "claims.expire-holds" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| … (+11 more) | yes |  |
 
 **Response 200 OK** (`application/json`) — The failed jobs
 
@@ -1296,7 +1296,7 @@ A queue's failed jobs, newest first (without their data)
 | `data.jobs[].id` | string | yes |  |
 | `data.jobs[].maxAttempts` | integer | yes |  |
 | `data.jobs[].name` | string | yes |  |
-| `data.queue` | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `data.queue` | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "claims.expire-holds" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| … (+11 more) | yes |  |
 | `data.total` | integer | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1327,7 +1327,7 @@ Discard a failed job for good (with a reason); 404 unless the job is failed
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "claims.expire-holds" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| … (+11 more) | yes |  |
 | `jobId` | path | string | yes |  |
 
 **Request body** (`application/json`, required)
@@ -1370,7 +1370,7 @@ Run a failed job again, attempts reset (with a reason); 404 unless the job is fa
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| "outbox.retention" \| … (+10 more) | yes |  |
+| `queueName` | path | "email.send" \| "rewards.auto-publish" \| "claims.expire-pending" \| "claims.expire-referrer" \| "claims.expire-holds" \| "outbox.publish" \| "storage.cleanup" \| "storage.delete" \| "idempotency.retention" \| "storage.scan" \| … (+11 more) | yes |  |
 | `jobId` | path | string | yes |  |
 
 **Request body** (`application/json`, required)

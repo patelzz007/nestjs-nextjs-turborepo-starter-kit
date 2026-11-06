@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { loadKafkaConnectionEnv, type ConsumerStartPosition } from "../env";
 import { buildConsumerConfig, createKafkaClient } from "../kafka";
-import { SILENT_LOGGER } from "../../test-support/e2e-database";
+import { SILENT_LOGGER } from "../../testing/e2e-database";
 
 /**
  * Real-broker proof (KAFKA_BROKERS) of explicit topic provisioning and of the

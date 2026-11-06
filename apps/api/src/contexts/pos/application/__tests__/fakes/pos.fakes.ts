@@ -136,7 +136,7 @@ export class InMemoryClaimRedemption implements ClaimRedemptionPort {
 	): { readonly token: string; readonly backupCode: string } {
 		const rewardId = patch.rewardId ?? "reward-1";
 		if ((patch.status ?? "PENDING") === "PENDING") {
-			this.rewards.holdUnit(rewardId);
+			this.rewards.seedReservedUnit(rewardId);
 		}
 		this.claims.set(claimId, {
 			claim: {
@@ -221,7 +221,7 @@ export class InMemoryRewards implements RewardInventoryPort, RewardRedemptionFac
 	/** A reward whose redemption write fails with `error`, after the claims were already redeemed. */
 	public failRedemption: { readonly rewardId: string; readonly error: Error } | null = null;
 
-	public holdUnit(rewardId: string): void {
+	public seedReservedUnit(rewardId: string): void {
 		this.reserved.set(rewardId, (this.reserved.get(rewardId) ?? 0) + 1);
 	}
 
@@ -231,6 +231,14 @@ export class InMemoryRewards implements RewardInventoryPort, RewardRedemptionFac
 
 	public reserve(): Promise<ClaimableRewardFacts> {
 		return Promise.reject(new Error("checkout never reserves"));
+	}
+
+	public holdUnit(): Promise<void> {
+		return Promise.reject(new Error("checkout never holds"));
+	}
+
+	public claimHeldUnit(): Promise<void> {
+		return Promise.reject(new Error("checkout never claims"));
 	}
 
 	public release(): Promise<void> {

@@ -2,8 +2,8 @@
 // lib/env/env.schema.ts - apps/web environment contract
 // ============================================
 // Pure zod schemas (no `process.env` access) so they can be unit-tested in
-// isolation. `env.client.ts`, `env.server.ts` and `env.runtime.ts` (the
-// NEXT_RUNTIME check) are the only modules that read `process.env`; see
+// isolation. `env.client.ts` and `env.server.ts` (and the shared NEXT_RUNTIME check in
+// `@workspace/client/lib/env/env-runtime`) are the only modules that read `process.env`; see
 // docs/technical/configuration/frontend.md.
 
 import { createPublicEnvSchema, HttpUrlEnvSchema, NextAppServerEnvSchema } from "@workspace/shared";

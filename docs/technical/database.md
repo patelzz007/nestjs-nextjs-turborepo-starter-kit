@@ -23,7 +23,7 @@ side.
 | `apps/api/prisma/schema.prisma` | The schema — single source of truth for tables, columns, indexes. Models `/// @extends BaseModel`; `pnpm db:schema` writes the base fields into each ([rules/08](../../rules/08-database-prisma.md#the-schema-and-the-base-model)) |
 | `apps/api/prisma/migrations/` | Prisma-generated migrations; immutable once committed |
 | `apps/api/prisma/migrations-baseline.json` | The [baseline marker](#migration-baseline) |
-| `apps/api/prisma/rls.sql`, `apps/api/prisma/rls/*.sql` | Row-level security, roles and grants — applied after every migrate ([database security](./security/database-security.md)) |
+| `apps/api/prisma/rls/10-policies.sql`, `apps/api/prisma/rls/*.sql` | Row-level security, roles and grants — applied after every migrate ([database security](./security/database-security.md)) |
 | `apps/api/prisma/seed.ts`, `apps/api/prisma/seed/` | Seed orchestrator, per-domain seeders, scenarios |
 | `apps/api/prisma.config.ts` | Prisma CLI configuration |
 
@@ -134,7 +134,7 @@ idempotently by `db:apply-security` (and every `db:migrate`, `db:deploy`, `db:re
 { "baseline": "<timestamp>_init", "reason": "why earlier history was dropped", "since": "<YYYY-MM-DD>" }
 ```
 
-CI's migration-history job (`packages/tooling/scripts/check-migration-history.mjs`) ignores
+CI's migration-history job (`packages/tooling/src/migration-history/cli.ts`) ignores
 migrations older than the baseline, treats the baseline and everything after it as immutable, and
 requires the baseline to name a migration directory that exists. Moving it forward is the only way
 to drop history and is allowed **only if no shared or deployed database ever applied the dropped
@@ -148,7 +148,7 @@ migrations**. The procedure is in [CI → Migration baseline](./operations/ci.md
 | Scenario | Contents |
 | --- | --- |
 | `development` (default) | Reference data (126 permissions, 6 roles), platform accounts, demo customers, two demo merchants (Brew & Bean KL, Jonker Street Kitchen) with stores, staff, invites, rewards in every lifecycle state, claims, referrals, POS keys and terminals, sales plus a year of POS history for the analytics dashboards and exports (`prisma/seed/analytics-history.ts`: ~2,000 bills across the three stores, six campaign rewards, QR and backup-code redemptions, expired claims, customers joining month by month, campaign titles in Chinese, Tamil, Hindi and Malay — through the same invariants as checkout), KYB files, geography, sample catalog, email log, audit trail, account-security history, merchants in each lifecycle state (pending deletion, deleted, suspended with appeals, banned — `prisma/seed/tenant-review-states.ts`) and Brew & Bean's customer bans (one active, one lifted — `prisma/seed/customer-bans.ts`) |
-| `minimal` | Reference data and **one** verified super admin (`superadmin@example.com` / `SuperAdmin@123`, local only), nothing else: what a new product starts from (enhancement 2.4). `test/minimal-seed.e2e-spec.ts` runs it on a brand-new database in every API e2e run |
+| `minimal` | Reference data and **one** verified super admin (`superadmin@example.com` / `SuperAdmin@123`, local only), nothing else: what a new product starts from (enhancement 2.4). `e2e/minimal-seed.e2e-spec.ts` runs it on a brand-new database in every API e2e run |
 | `empty` | Reference data only (permissions and roles); no users or tenants. Deployments use `db:sync-reference-data` instead (same loader, no seed guard needed) |
 | `enterprise --seed <n>` | One large tenant, **Northwind Retail Group** (`/tenants/northwind-enterprise/dashboard`): 25 stores, 250 members, 500 products; deterministic for a given seed and additive (other tenants are left alone) |
 
@@ -188,7 +188,7 @@ Enterprise accounts (in addition to the development platform accounts):
 > dropped, with CI's own generated API env rather than your `apps/api/.env`), or `pnpm db:reset` first.
 > The seed's coverage also depends on configuration: rows sealed with an encryption key (GitHub links,
 > push devices) are seeded only when that key ring is set, so a key ring the seed needs belongs in CI's
-> env generator (`packages/tooling/scripts/lib/api-ci-env.mjs`) too. `AnalyticsEvent` and `InboxProcessedEvent` are seeded by replaying the
+> env generator (`packages/tooling/src/api-ci-env/api-ci-env.ts`) too. `AnalyticsEvent` and `InboxProcessedEvent` are seeded by replaying the
 > PUBLISHED outbox events through the analytics consumer's own handler and SQL
 > (`packages/messaging/src/inbox`, `prisma/seed/analytics-ingest.ts`), so they match what the consumer writes.
 

@@ -1,10 +1,14 @@
 import type { AppLanguage } from "@workspace/shared";
 
-import type { AppLockTimeoutMs, ThemePreference } from "../../lib/secure-store";
+import type { AppLockTimeoutMs, DrawerStyle, ThemePreference } from "../../lib/secure-store";
 import type { PreferencesState } from "./state";
 
 export function selectTheme(state: PreferencesState): ThemePreference {
 	return state.theme;
+}
+
+export function selectDrawerStyle(state: PreferencesState): DrawerStyle {
+	return state.drawerStyle;
 }
 
 export function selectAppLockEnabled(state: PreferencesState): boolean {

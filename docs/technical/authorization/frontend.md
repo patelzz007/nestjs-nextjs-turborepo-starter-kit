@@ -260,7 +260,7 @@ first needs its owner lookup in `ResourceOwnershipResolver` (see [backend](./bac
 ## 7. Sidebar filtering (all apps)
 
 Menus are **application-owned config** (spec §14): admin `lib/navigation/sidebar-menu.json` +
-`menu-authorization.ts`; merchant `data/merchant-sidebar-menu.json` (each item's `authorization`
+`menu-authorization.ts`; merchant `lib/navigation/merchant-sidebar-menu.json` (each item's `authorization`
 must equal its page's rule in `ORG_PAGE_RULES`). The schema is in
 `packages/shared/src/lib/navigation-menu/sidebar-menu-schema.ts` (re-exported from `packages/client`; the mobile drawer's `mobile-drawer-items.json` uses it too, see ADR 038):
 

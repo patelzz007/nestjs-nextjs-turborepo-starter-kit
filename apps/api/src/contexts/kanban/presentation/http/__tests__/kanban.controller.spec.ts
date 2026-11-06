@@ -13,7 +13,7 @@ import { PLATFORM_OPERATION_KEY } from "../../../../../platform/presentation/htt
 import { REQUIRED_PERMISSION_KEY } from "../../../../../platform/presentation/http/security/decorators/route-requirements.metadata";
 import { AdminAccessGuard } from "../../../../../platform/presentation/http/security/guards/admin-access.guard";
 import { ResponseContract } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
-import { handlerOf } from "../../../../../../test/support/route-metadata";
+import { handlerOf } from "../../../../../../e2e/support/route-metadata";
 import { AddKanbanCommentCommand } from "../../../application/commands/add-kanban-comment/add-kanban-comment.command";
 import { DeleteKanbanTaskCommand } from "../../../application/commands/delete-kanban-task/delete-kanban-task.command";
 import { MoveKanbanTaskCommand } from "../../../application/commands/move-kanban-task/move-kanban-task.command";

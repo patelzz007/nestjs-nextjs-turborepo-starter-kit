@@ -23,7 +23,7 @@ import {
 } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import { ApiError } from "../../../../api/use-api";
 import { LoginForm } from "../login-form";
 

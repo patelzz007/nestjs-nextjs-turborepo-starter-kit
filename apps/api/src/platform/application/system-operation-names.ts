@@ -51,6 +51,7 @@ export const SystemOperationNameSchema = z.enum([
 	"queue.storage.delete",
 	"queue.rewards.auto_publish",
 	"queue.claims.expire_pending",
+	"queue.claims.expire_holds",
 	"queue.claims.expire_referrer",
 	"claims.otp.request",
 	"claims.reward.claim",

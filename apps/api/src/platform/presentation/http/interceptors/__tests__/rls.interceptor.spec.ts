@@ -3,15 +3,8 @@ import type { CallHandler } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { firstValueFrom, Observable } from "rxjs";
 
-import {
-	accessToken,
-	createHttpContext,
-	refreshToken,
-	testRequest,
-	type TestHttpRequest,
-	type TestRouteMetadata,
-} from "../../../../../../test/support/http-execution-context";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { accessToken, createHttpContext, refreshToken, testRequest, type TestHttpRequest, type TestRouteMetadata } from "../../../../../../e2e/support/http-execution-context";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 
 import { TenancyConfigService } from "../../../../../config/tenancy.config";
 import { PLATFORM_OPERATION_KEY } from "../../security/decorators/platform-operation.decorator";

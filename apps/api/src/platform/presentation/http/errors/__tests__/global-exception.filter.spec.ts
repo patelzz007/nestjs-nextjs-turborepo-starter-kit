@@ -16,8 +16,8 @@ import { ZodValidationPipe } from "../../validation/pipes/zod-validation.pipe";
 import { ConflictError, DependencyUnavailableError, RateLimitError } from "../../../../application/errors/app-error";
 import { DomainError } from "../../../../domain/errors/domain-error";
 import { GlobalExceptionFilter } from "../global-exception.filter";
-import { createAuditTrailDouble } from "../../../../../../test/support/audit-trail-double";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createAuditTrailDouble } from "../../../../../../e2e/support/audit-trail-double";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { RequestContextService } from "../../../../infrastructure/context/request-context";
 
 const CreateThingSchema = z.object({ name: z.string().min(1), quantity: z.number().int() }).strict();

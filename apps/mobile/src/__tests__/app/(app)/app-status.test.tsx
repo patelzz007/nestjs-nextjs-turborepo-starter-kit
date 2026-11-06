@@ -63,14 +63,14 @@ describe("app status: connection and session (the web shells' indicators)", () =
 		const status = within(screen.getByTestId("app-drawer-status"));
 
 		expect(await status.findByText("Strong, 0 ms")).toBeOnTheScreen();
-		expect(await status.findByText("Token expires in 14m 32s")).toBeOnTheScreen();
+		expect(await status.findByText("14m 32s left")).toBeOnTheScreen();
 		expect(status.getByRole("button", { name: MEASURED_CONNECTION })).toBeOnTheScreen();
 	});
 
 	it("turns offline in the drawer when the connection drops", async () => {
 		await renderSignedIn("/");
 		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
-		await within(screen.getByTestId("app-drawer-status")).findByText("Token expires in 14m 32s");
+		await within(screen.getByTestId("app-drawer-status")).findByText("14m 32s left");
 
 		await act(async (): Promise<void> => {
 			setState(OFFLINE_STATE);
@@ -84,7 +84,7 @@ describe("app status: connection and session (the web shells' indicators)", () =
 		await renderSignedIn("/");
 		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
 		const status = within(screen.getByTestId("app-drawer-status"));
-		await status.findByText("Token expires in 14m 32s");
+		await status.findByText("14m 32s left");
 
 		await act(async (): Promise<void> => {
 			jest.advanceTimersByTime(2_000);
@@ -92,7 +92,7 @@ describe("app status: connection and session (the web shells' indicators)", () =
 		});
 
 		await waitFor(() => {
-			expect(status.getByText("Token expires in 14m 30s")).toBeOnTheScreen();
+			expect(status.getByText("14m 30s left")).toBeOnTheScreen();
 		});
 	});
 
@@ -202,7 +202,7 @@ describe("app status: this phone stays registered for push (ADR 070)", () => {
 		await renderSignedIn("/");
 		// The session has settled (its countdown is in the drawer) by the time registration would have run.
 		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
-		await within(screen.getByTestId("app-drawer-status")).findByText("Token expires in 14m 32s");
+		await within(screen.getByTestId("app-drawer-status")).findByText("14m 32s left");
 
 		expect(api.callsTo("PUT /notifications/push-devices")).toHaveLength(0);
 		expect(permissionRequests()).toBe(0);

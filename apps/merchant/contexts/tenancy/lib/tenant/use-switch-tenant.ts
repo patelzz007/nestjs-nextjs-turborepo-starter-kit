@@ -4,6 +4,7 @@ import { useTenantSlug } from "@/contexts/tenancy/lib/tenant/use-tenant-slug";
 import { tenantRoutes } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /**
  * Tenant switcher action: the URL owns the active tenant, so switching is
@@ -22,7 +23,7 @@ export function useSwitchTenant(): (tenantSlug: string) => void {
 			if (tenantSlug === currentTenantSlug) {
 				return;
 			}
-			router.push(tenantRoutes(tenantSlug).dashboard);
+			router.push(appRoute(tenantRoutes(tenantSlug).dashboard));
 		},
 		[currentTenantSlug, router],
 	);

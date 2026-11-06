@@ -1,7 +1,7 @@
 import type { ApiResponseMeta, Envelope, UserResponse } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import type { RefreshResult } from "../../../../api/api-request";
 import { syncSessionAfterEmailVerification, type EmailVerificationSessionApi, type EmailVerificationSessionCommands } from "../sync-after-verification";
 

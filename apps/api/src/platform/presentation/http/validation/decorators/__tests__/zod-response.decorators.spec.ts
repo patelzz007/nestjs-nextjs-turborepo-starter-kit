@@ -8,8 +8,8 @@ import { LIST_SLOT_INDEX, ApiErrorResponseSchema, ApiPaginatedMetaSchema, ApiRes
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createAuditTrailDouble } from "../../../../../../../test/support/audit-trail-double";
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { createAuditTrailDouble } from "../../../../../../../e2e/support/audit-trail-double";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { LogService } from "../../../../../infrastructure/logging/logs.service";
 import { buildOpenApiDocument } from "../../../api-docs";
 import { RequestContextService } from "../../../../../infrastructure/context/request-context";

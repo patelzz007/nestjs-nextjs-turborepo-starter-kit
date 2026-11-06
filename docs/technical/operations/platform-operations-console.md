@@ -186,17 +186,17 @@ Developer). Resolved incidents stay on the public page for 7 days.
   picture stays in use and cannot be deleted), the load-test users' claims, sessions and the rest.
   Runs and their results stay.
 - A nightly CI job runs a short traffic mix through this same path and fails when an endpoint group's
-  p95 or error rate regresses against `load-baselines.json` ([CI: Load test (nightly)](./ci.md#load-test-nightly)).
+  p95 or error rate regresses against `budgets/load.json` ([CI: Load test (nightly)](./ci.md#load-test-nightly)).
 
 ## Deploying to a droplet
 
-`deploy/docker/Dockerfile` builds every deployable with `--target` (`api` ships `pg_dump` 18;
-`load-runner` ships k6). `deploy/droplet/compose.yml` runs the platform on one machine, with
+`infra/docker/Dockerfile` builds every deployable with `--target` (`api` ships `pg_dump` 18;
+`load-runner` ships k6). `infra/droplet/compose.yml` runs the platform on one machine, with
 PostgreSQL and Redis as the provider's managed services:
 
 ```bash
-docker compose -f deploy/droplet/compose.yml up -d --build                       # the platform
-docker compose -f deploy/droplet/compose.yml --profile agent up -d server-agent   # its server agent
+docker compose -f infra/droplet/compose.yml up -d --build                       # the platform
+docker compose -f infra/droplet/compose.yml --profile agent up -d server-agent   # its server agent
 ```
 
 Register the server in **Operations → Servers** first; the dialog shows the token and the exact

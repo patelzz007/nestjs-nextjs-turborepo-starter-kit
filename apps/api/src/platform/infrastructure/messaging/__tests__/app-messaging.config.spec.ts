@@ -1,7 +1,7 @@
 import { EnvValidationError, ALL_QUEUE_NAMES, QUEUE_NAMES } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createTestApiConfig } from "../../../../../test/support/test-api-env";
+import { createTestApiConfig } from "../../../../../e2e/support/test-api-env";
 import { buildAppMessagingConfig } from "../app-messaging.config";
 
 /** `KAFKA_DELIVERY_TIMEOUT_MS` default (30 s). */

@@ -15,6 +15,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { toastMutationError } from "@/lib/api/mutation-error";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The list's URL query as a saved view keeps it (`?…`, or empty). */
 export function currentQuery(search: string): string {
@@ -86,7 +87,7 @@ export function SavedViewsMenu({ listKey }: SavedViewsMenuProps): React.JSX.Elem
 	const handleOpenView = React.useCallback(
 		(view: SavedListView): void => {
 			setOpen(false);
-			router.push(`${pathname}${view.query}`);
+			router.push(appRoute(`${pathname}${view.query}`));
 		},
 		[pathname, router, setOpen],
 	);

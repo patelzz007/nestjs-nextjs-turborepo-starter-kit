@@ -14,7 +14,7 @@ import type { PersonalDataArchiveFile, PersonalDataArchivePort, PersonalDataExpo
 import { ExportPersonalDataHandler } from "../application/queries/export-personal-data/export-personal-data.handler";
 import { ExportPersonalDataQuery } from "../application/queries/export-personal-data/export-personal-data.query";
 import { ZipPersonalDataArchiveAdapter } from "../infrastructure/adapters/zip-personal-data-archive.adapter";
-import { captureFastifyRequest } from "../../../../test/support/fastify-request";
+import { captureFastifyRequest } from "../../../../e2e/support/fastify-request";
 
 const NOW = Date.UTC(2026, 10, 3, 9, 30);
 const REQUEST_META = { requestId: "corr-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null };

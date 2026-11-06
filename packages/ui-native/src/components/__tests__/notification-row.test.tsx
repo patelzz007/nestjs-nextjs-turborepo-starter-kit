@@ -40,8 +40,8 @@ describe("NotificationRow", () => {
 	it("tints an unread row, puts its time in the brand colour, ends it with a dot and says so", async () => {
 		await render(<NotificationRow {...BASE} unread />);
 
-		expect(String(row().props.className)).toContain("bg-primary/10");
-		expect(String(screen.getByText("25m").props.className)).toContain("text-primary");
+		expect(String(row().props.className)).toContain("bg-card");
+		expect(String(screen.getByText("25m").props.className)).toContain("text-link");
 		expect(screen.getByTestId("row-unread", { includeHiddenElements: true })).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: /^Unread\. New sign-in/u })).toBeOnTheScreen();
 	});
@@ -49,7 +49,7 @@ describe("NotificationRow", () => {
 	it("leaves a read row plain", async () => {
 		await render(<NotificationRow {...BASE} />);
 
-		expect(String(row().props.className)).not.toContain("bg-primary/10");
+		expect(String(row().props.className)).not.toContain("bg-card");
 		expect(screen.queryByTestId("row-unread", { includeHiddenElements: true })).toBeNull();
 	});
 

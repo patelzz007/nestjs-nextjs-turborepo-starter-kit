@@ -7,8 +7,8 @@ import {
 	resolveAllLocations,
 	resolveMemberLocationAccess,
 } from "@/contexts/tenancy/lib/tenant/location-access";
-import { locationFixture, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION } from "@/test/tenant-context";
-import { STORE_B } from "@/test/terminals";
+import { locationFixture, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION } from "@/testing/tenant-context";
+import { STORE_B } from "@/testing/terminals";
 
 const PENDING_LOCATION = locationFixture({ id: "0f0f0f0f-0000-4000-8000-00000000000c", name: "Cheras" }, "PENDING_APPROVAL");
 

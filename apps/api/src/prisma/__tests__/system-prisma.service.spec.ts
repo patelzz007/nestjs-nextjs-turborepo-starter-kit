@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../e2e/support/test-api-env";
 
 import { DATABASE_APPLICATION_NAME, DATABASE_CONNECT_TIMEOUT_MS } from "../database-pool.constants";
 import { databasePoolBudget } from "../prisma-client-setup";

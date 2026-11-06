@@ -12,15 +12,21 @@ export type { ClaimableRewardFacts, ReferrerCreditFacts };
  */
 export interface RewardInventoryPort {
 	/**
-	 * Whether `customerUserId` may start a claim; throws `RewardNotFoundError` (also for a reward given
+	 * Whether `customerUserId` may start a claim (`holdsUnit`: they already hold one, so stock is not checked); throws `RewardNotFoundError` (also for a reward given
 	 * to other customers) / `RewardExpiredError` / `RewardSoldOutError`.
 	 */
-	assertClaimable(rewardId: string, now: EpochMs, customerUserId: string): Promise<ClaimableRewardFacts>;
+	assertClaimable(rewardId: string, now: EpochMs, customerUserId: string, holdsUnit?: boolean): Promise<ClaimableRewardFacts>;
 
 	/** Takes one unit for `customerUserId`'s new claim; throws `RewardJustSoldOutError` when it cannot. */
 	reserve(rewardId: string, now: EpochMs, customerUserId: string): Promise<ClaimableRewardFacts>;
 
-	/** Gives an expired claim's unit back. */
+	/** Holds one unit for `customerUserId` while they enter a claim code; throws `RewardJustSoldOutError` when it cannot. */
+	holdUnit(rewardId: string, now: EpochMs, customerUserId: string): Promise<void>;
+
+	/** The customer's held unit becomes their new claim; no second unit is taken. */
+	claimHeldUnit(rewardId: string, now: EpochMs, customerUserId: string): Promise<void>;
+
+	/** Gives an expired claim's or hold's unit back. */
 	release(rewardId: string, now: EpochMs): Promise<void>;
 
 	/**

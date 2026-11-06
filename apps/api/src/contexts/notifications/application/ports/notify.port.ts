@@ -1,4 +1,4 @@
-import type { NotificationCategory } from "@workspace/shared";
+import type { NotificationAttachment, NotificationCategory } from "@workspace/shared";
 
 import type { TypedNotificationType } from "../../domain/catalog/notification-type";
 
@@ -20,6 +20,8 @@ export interface NotifyRequest<TPayload> {
 	readonly broadcastId?: string;
 	/** Not delivered before this instant (a broadcast at the recipient's own local time). */
 	readonly notBefore?: number;
+	/** A public file to send with it, in the inbox, the email and the push. Refused for a sensitive type. */
+	readonly attachment?: NotificationAttachment;
 }
 
 export type NotifyResult =

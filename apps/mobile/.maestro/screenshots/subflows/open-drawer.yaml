@@ -1,0 +1,25 @@
+# Opens the drawer at its top with its branches folded, whatever an earlier shot left, and saves it as NAME.png.
+# Needs a tab's first screen: only that has the menu button.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: "app-header-menu"
+- waitForAnimationToEnd:
+    timeout: 8000
+- swipe:
+    start: "35%, 35%"
+    end: "35%, 85%"
+    duration: 300
+- swipe:
+    start: "35%, 35%"
+    end: "35%, 85%"
+    duration: 300
+- runFlow:
+    when:
+      visible: "Region"
+    commands:
+      - tapOn: "^Display$"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: ${NAME}
+- back

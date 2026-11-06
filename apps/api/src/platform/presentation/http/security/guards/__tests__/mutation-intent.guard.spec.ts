@@ -3,8 +3,8 @@ import { Reflector } from "@nestjs/core";
 import { MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { SKIP_MUTATION_INTENT_KEY } from "../../decorators/skip-mutation-intent.decorator";
 import { MutationIntentGuard } from "../mutation-intent.guard";
 

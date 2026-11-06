@@ -333,7 +333,7 @@ For work spanning sessions:
 | New behavior/feature | `15-feature-development-process.md` + `skills/tdd-vertical-slice/SKILL.md` |
 | Ambiguous product/architecture request | `skills/grill-and-spec/SKILL.md` |
 | Shared module/package/API design | `01-repository-architecture.md`, `21-oop-and-solid-principles.md`, `skills/codebase-design/SKILL.md` |
-| Code review | `16-code-review-checklist.md` + `skills/independent-code-review/SKILL.md` |
+| Code review | `33-code-review-checklist.md` + `skills/independent-code-review/SKILL.md` |
 | DDD/CQRS/tenant work | Existing ADRs and `29-*`, `30-*`, `31-*` with their documented precedence |
 | Security/auth/RBAC/RLS | `10-security-auth-authorization.md` and applicable tenancy docs |
 | Database/schema/migration | `08-database-prisma.md`, `11-testing-vitest.md`, applicable ADRs |

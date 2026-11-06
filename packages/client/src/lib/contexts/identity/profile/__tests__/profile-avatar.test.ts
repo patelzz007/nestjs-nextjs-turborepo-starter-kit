@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { epochMs, FILE_CATEGORY_POLICIES } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { envelopeFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture } from "../../../../../testing/auth-fixtures";
 import { apiRouter } from "../../../../api/endpoints";
 import { AVATAR_ACCEPT, AvatarFileRejectedError, assertAvatarFileAllowed, refreshProfileAfterAvatarChange } from "../profile-avatar";
 

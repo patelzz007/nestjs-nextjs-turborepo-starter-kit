@@ -3,13 +3,14 @@ import type { EmailRequestTransactionalPort, LegacyInboxImportPort, NotifyTransa
 import type { ReferrerCreditNoticesPort, SignupSuccessNoticesPort } from "../../referrals/public-api";
 import type { LegalAcceptanceCheck, RewardAuditPort, RewardInventoryPort, RewardRedemptionFactsPort } from "../../rewards/public-api";
 import type { CustomerStandingPort, TenantCustomerLinksPort, ReviewNoticeFactsPort } from "../../tenancy/public-api";
-import type { OtpChallengeRepository, RewardClaimRepository } from "../domain/repositories/claims.repositories";
+import type { ClaimHoldRepository, OtpChallengeRepository, RewardClaimRepository } from "../domain/repositories/claims.repositories";
 import type { ClaimantPort, ClaimViewPort, LegacyRewardNoticeStore, ReferralAttributionPort } from "./ports/claims-transactional.ports";
 
 /** Everything one claims transaction can touch. Every member is bound to that transaction. */
 export interface ClaimsScope {
 	readonly claims: RewardClaimRepository;
 	readonly otpChallenges: OtpChallengeRepository;
+	readonly holds: ClaimHoldRepository;
 	/** `notify()` (ADR 070): every notice claims sends, in this same transaction. */
 	readonly notify: NotifyTransactionalPort;
 	/** The earlier reward inbox, read only to move it (ADR 070). */

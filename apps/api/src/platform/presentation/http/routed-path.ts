@@ -4,7 +4,7 @@
 // Fastify routes on the percent-decoded path, without the query string or a `#` fragment, while
 // `request.url` is the raw request target. A gate that decides on `request.url` can therefore disagree
 // with the router about which handler runs: `/v1/%64ocs-json` reaches the docs route, and
-// `/admin/users#/merchant/me` reaches `/admin/users` (SECURITY-AUDIT-2026-10-25, findings 1 and 2).
+// `/admin/users#/merchant/me` reaches `/admin/users` (docs/history/SECURITY-AUDIT-2026-10-25, findings 1 and 2).
 // Every security decision on "which route is this" uses these helpers instead of `request.url`.
 
 /** The parts of a Fastify request the helpers read. */

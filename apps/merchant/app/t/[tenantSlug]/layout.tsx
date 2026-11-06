@@ -6,6 +6,7 @@ import { isCanonicalTenantSlug } from "@/contexts/tenancy/lib/tenant/resolve-slu
 import { loadServerLocationScope, type ServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
 import { tenantRoutes, ROUTES } from "@/lib/routes";
 import { redirect } from "next/navigation";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 interface TenantLayoutProps {
 	readonly children: React.ReactNode;
@@ -33,7 +34,7 @@ export default async function TenantLayout({ children, params }: TenantLayoutPro
 	const resolvedTenant = urlContext?.data.tenant;
 
 	if (!isCanonicalTenantSlug(tenantSlug) && resolvedTenant !== undefined) {
-		redirect(tenantRoutes(resolvedTenant.slug).dashboard);
+		redirect(appRoute(tenantRoutes(resolvedTenant.slug).dashboard));
 	}
 
 	// The preference is looked up only when the URL's tenant did not resolve: an ordinary
@@ -41,10 +42,10 @@ export default async function TenantLayout({ children, params }: TenantLayoutPro
 	if (resolvedTenant === undefined) {
 		const preferredSlug: string | undefined = await loadPreferredTenantSlug();
 		if (!isCanonicalTenantSlug(tenantSlug)) {
-			redirect(preferredSlug !== undefined ? tenantRoutes(preferredSlug).dashboard : ROUTES.onboarding);
+			redirect(appRoute(preferredSlug !== undefined ? tenantRoutes(preferredSlug).dashboard : ROUTES.onboarding));
 		}
 		if (preferredSlug !== undefined && preferredSlug !== tenantSlug) {
-			redirect(tenantRoutes(preferredSlug).dashboard);
+			redirect(appRoute(tenantRoutes(preferredSlug).dashboard));
 		}
 	}
 

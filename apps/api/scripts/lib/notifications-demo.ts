@@ -37,7 +37,7 @@ export function describeDemoNotificationsOutcome(query: DemoRecipientQuery, outc
 			return {
 				ok: true,
 				message: [
-					`Sent ${String(count)} notifications to ${outcome.email}: two new sign-ins and a test notification. ${timing}`,
+					`Sent ${String(count)} notifications to ${outcome.email}: two new sign-ins, a test notification and any seeded attachments. ${timing}`,
 					"See them under the bell in the admin panel and on the mobile app's notifications screen; the emails are in Mailpit (pnpm mail:latest).",
 				].join("\n"),
 			};

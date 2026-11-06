@@ -11,7 +11,7 @@
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
 		"test": "vitest run --coverage",
 		"test:browser": "playwright test",
-		"typecheck": "tsrs --noEmit"
+		"typecheck": "next typegen && tsrs --noEmit"
 	},
 	"dependencies": {
 		"@tanstack/react-query": "^5.105.0",

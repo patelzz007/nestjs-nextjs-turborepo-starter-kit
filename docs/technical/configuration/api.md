@@ -160,7 +160,7 @@ missing). Summary, grouped as in the schema:
 | Brokers | `REDIS_URL`, `BULLMQ_PREFIX`, `REDIS_NAMESPACE`, `KAFKA_BROKERS`, `RABBITMQ_URL`, `MESSAGING_CLIENT_ID`, `MESSAGING_CONNECTION_NAME` | `redis(s)://`, `host:port` list, `amqp(s)://`; Redis **required in production** |
 | Kafka security / delivery | `KAFKA_SSL`, `KAFKA_SSL_CA_LOCATION`, `KAFKA_SASL_MECHANISM`, `KAFKA_SASL_USERNAME`, `KAFKA_SASL_PASSWORD`, `KAFKA_DELIVERY_TIMEOUT_MS` | `true`/`false`; CA PEM path (needs `KAFKA_SSL=true`); `plain` (needs TLS) / `scram-sha-256` / `scram-sha-512` with username + password; publish budget ms (≥ 1000, default 30000). Schema: `KafkaSecurityEnvShape` from `@workspace/messaging/kafka` |
 | Storage | `STORAGE_PROVIDER`, `STORAGE_PRIVATE_CONTAINER` (+ aliases), `STORAGE_PUBLIC_CONTAINER` (+ alias), `STORAGE_CLOUDFRONT_PUBLIC_DOMAIN`, `FIREBASE_*`, `AWS_*`, `STORAGE_DOWNLOAD_TTL_SECONDS` (+ legacy alias), `STORAGE_PHYSICAL_DELETE_DELAY_MS`, `STORAGE_PROCESSING_CALLBACK_SECRET` | provider auto-detect; s3/firebase need a private container; AWS keys both-or-neither; callback secret optional (callbacks rejected when unset) |
-| Observability | `LOG_LEVEL`, `MEMORY_MONITORING`, `MEMORY_LEAK_WARMUP_MS`, `MEMORY_LEAK_WINDOW_MS`, `MEMORY_LEAK_GROWTH_THRESHOLD_MB`, `TRANSACTION_LOG_ENABLED`, `TRANSACTION_LOG_DIR`, `TRANSACTION_LOG_RETENTION_DAYS`, `TRANSACTION_LOG_TIME_ZONE`, `OBSERVE_ENABLED`, `OBSERVE_APP_KEY`, `OBSERVE_APP_SECRET`, `OBSERVE_SERVICE_ID` | THE log level for pino, every Nest logger (info → LOG, debug → DEBUG, trace → VERBOSE; `silent` turns Nest logging off) and Prisma events (`warn`; same in every environment — `info` shows the route map, `debug` developer detail); memory monitoring always on in production — leak check on the heap measured after each major GC: warm-up ≥ 0 ms (300000), window ≥ 300000 ms (1800000, also the minimum gap between two `memory.leak_suspected` warnings), floor rise between the window halves ≥ 1 MB (64); the [transaction log](../operations/transaction-log.md) is on except under `NODE_ENV=test` (`logs/transactions`, 3653 days — the ten-year record retention — ≥ 1; times and day files in `TRANSACTION_LOG_TIME_ZONE`, an IANA zone, default the server's own — production sets `Asia/Kuala_Lumpur`); Observe needs both credentials |
+| Observability | `LOG_LEVEL`, `MEMORY_MONITORING`, `MEMORY_LEAK_WARMUP_MS`, `MEMORY_LEAK_WINDOW_MS`, `MEMORY_LEAK_GROWTH_THRESHOLD_MB`, `TRANSACTION_LOG_ENABLED`, `TRANSACTION_LOG_DIR`, `TRANSACTION_LOG_RETENTION_DAYS`, `TRANSACTION_LOG_TIME_ZONE`, `OBSERVE_ENABLED`, `OBSERVE_APP_KEY`, `OBSERVE_APP_SECRET`, `OBSERVE_SERVICE_ID` | THE log level for pino, every Nest logger (info → LOG, debug → DEBUG, trace → VERBOSE; `silent` turns Nest logging off) and Prisma events (`warn`; same in every environment — `info` shows the route map, `debug` developer detail); memory monitoring always on in production — leak check on the heap measured after each major GC: warm-up ≥ 0 ms (300000), window ≥ 300000 ms (1800000, also the minimum gap between two `memory.leak_suspected` warnings), floor rise between the window halves ≥ 1 MB (64); the [transaction log](../operations/transaction-log.md) is on except under `NODE_ENV=test` (`.artifacts/logs/transactions`, 3653 days — the ten-year record retention — ≥ 1; times and day files in `TRANSACTION_LOG_TIME_ZONE`, an IANA zone, default the server's own — production sets `Asia/Kuala_Lumpur`); Observe needs both credentials |
 | Tenancy | `TENANCY_ENABLED`, `DEFAULT_TENANT_ID` | `.env.example` sets `true` (multi-tenant, no default tenant; setting `DEFAULT_TENANT_ID` then fails boot). In single-tenant mode (`false`) the tenant id is **required** (a real tenant, verified at boot — `pnpm db:seed` creates `019b76da-a800-7a94-a198-23ad1b4cfdd9`). The retired `DEFAULT_ORGANIZATION_ID` fails boot and names the new variable. |
 
 Swagger (`SWAGGER_ENABLED`, `0`/`1`/`false`/`true`): development/test — on by
@@ -259,7 +259,7 @@ whenever `NODE_ENV=test`; it is now only ever off when explicitly `disabled`.
    It is then readable as `config.<group>.<name>`; add a `TypedConfigService`
    getter only if the value is derived.
 4. Document it in `apps/api/.env.example` (`env-example.spec.ts` fails until you do).
-5. Add a TEST-ONLY fixture value to `test/support/test-api-env.ts` if it is required.
+5. Add a TEST-ONLY fixture value to `e2e/support/test-api-env.ts` if it is required.
 6. Extend `api-config.schema.spec.ts` (missing → named error, default, format).
 7. If it affects the build output, declare it in `turbo.json`.
 
@@ -276,12 +276,12 @@ whenever `NODE_ENV=test`; it is now only ever off when explicitly `disabled`.
 | `src/__tests__/lint-boundaries.spec.ts` | `process.env` ban and frontend-import ban actually fire |
 | `packages/shared/src/runtime/__tests__/app-env.test.ts` | Shared building blocks |
 
-Unit tests are hermetic: `test/setup-unit-env.ts` installs the TEST-ONLY
-fixture from `test/support/test-api-env.ts` and never reads `apps/api/.env`.
-e2e (`test/setup-env.ts`) loads `apps/api/.env` for infrastructure values
+Unit tests are hermetic: `e2e/setup-unit-env.ts` installs the TEST-ONLY
+fixture from `e2e/support/test-api-env.ts` and never reads `apps/api/.env`.
+e2e (`e2e/setup-env.ts`) loads `apps/api/.env` for infrastructure values
 (database, Redis, tenant master key), fills gaps from the fixture, and **forces**
 test-only signing secrets (including a test-only `RESEND_WEBHOOK_SECRET`),
-`LOGIN_VERIFICATION_MODE=disabled` (one suite, `test/login-verification.e2e-spec.ts`,
+`LOGIN_VERIFICATION_MODE=disabled` (one suite, `e2e/login-verification.e2e-spec.ts`,
 boots with `always` to prove the code is required), a fixed
 `CORS_ORIGINS` and `EMAIL_MODE=noop` (a test run never sends real email).
 Build config for a test with `createTestApiConfig({ … })` /

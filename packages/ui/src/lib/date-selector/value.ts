@@ -1,10 +1,14 @@
 import { format, isSameMonth, isValid, parse } from "date-fns";
+import { z } from "zod";
+
+export const DateSelectorFilterTypeSchema = z.enum(["is", "before", "after", "between"]);
+export const DateSelectorPeriodTypeSchema = z.enum(["day", "month", "quarter", "half-year", "year"]);
 
 /** The granularity a date selector picks at. */
-export type DateSelectorPeriodType = "day" | "month" | "quarter" | "half-year" | "year";
+export type DateSelectorPeriodType = z.output<typeof DateSelectorPeriodTypeSchema>;
 
 /** How the picked date / period filters: on it, before it, after it, or between two of them. */
-export type DateSelectorFilterType = "is" | "before" | "after" | "between";
+export type DateSelectorFilterType = z.output<typeof DateSelectorFilterTypeSchema>;
 
 /** One period of a year: the year plus the period's zero-based index (month 0–11, quarter 0–3, half 0–1; 0 for a whole year). */
 export interface DateSelectorPeriodPoint {

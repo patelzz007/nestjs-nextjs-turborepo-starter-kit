@@ -11,15 +11,10 @@
 import { Stack } from "expo-router";
 import * as React from "react";
 
-import { PINNED, ROOT_SCREEN_OPTIONS, withRootGate } from "../../runtime/root-navigator";
+import { rootScreenOptionsOf, withRootGate } from "../../runtime/root-navigator";
 
 function AuthFolderLayout(): React.JSX.Element {
-	return (
-		<Stack screenOptions={ROOT_SCREEN_OPTIONS}>
-			<Stack.Screen name="onboarding" options={PINNED} />
-			<Stack.Screen name="(forms)" />
-		</Stack>
-	);
+	return <Stack screenOptions={rootScreenOptionsOf} />;
 }
 
 export default withRootGate(["onboarding", "auth", "enroll-two-factor", "verify-email"], AuthFolderLayout);

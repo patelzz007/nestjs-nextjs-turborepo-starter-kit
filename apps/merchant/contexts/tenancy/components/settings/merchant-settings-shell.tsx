@@ -11,6 +11,7 @@ import { BadgeCheck, Ban, Building2, Palette, Plug, ShieldCheck, Store, Users } 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** One settings section: where it lives (tenant-relative) and how the navigation names it. */
 interface SettingsSection {
@@ -58,7 +59,7 @@ export function activeSettingsSection(tenantRelativePath: string | undefined): s
 }
 
 function renderLink(href: string): React.ReactElement<SettingsLinkProps> {
-	return <Link href={href} />;
+	return <Link href={appRoute(href)} />;
 }
 
 export interface MerchantSettingsShellProps {

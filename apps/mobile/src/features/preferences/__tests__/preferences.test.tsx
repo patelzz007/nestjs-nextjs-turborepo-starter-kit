@@ -15,7 +15,13 @@ function dependencies(overrides: Partial<PreferencesStoreDependencies> = {}): Pr
 
 describe("preferencesReducer", () => {
 	it("defaults to System, lock off, 60 s, onboarding not seen yet (§9.7, §11.2, ADR 041)", () => {
-		expect(DEFAULT_PREFERENCES).toEqual({ theme: "system", appLock: { enabled: false, timeoutMs: 60_000 }, language: null, onboardingCompleted: false });
+		expect(DEFAULT_PREFERENCES).toEqual({
+			theme: "system",
+			drawerStyle: "centred-ink",
+			appLock: { enabled: false, timeoutMs: 60_000 },
+			language: null,
+			onboardingCompleted: false,
+		});
 	});
 
 	it("applies each change", () => {
@@ -26,10 +32,39 @@ describe("preferencesReducer", () => {
 			preferencesActions.languageChanged("ms"),
 			preferencesActions.onboardingCompleted(),
 		].reduce(preferencesReducer, DEFAULT_PREFERENCES);
-		expect(changed).toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 0 }, language: "ms", onboardingCompleted: true });
-		expect(preferencesReducer(changed, preferencesActions.onboardingReset()).onboardingCompleted).toBe(false);
+		expect(changed).toEqual({ theme: "dark", drawerStyle: "centred-ink", appLock: { enabled: true, timeoutMs: 0 }, language: "ms", onboardingCompleted: true });
+		expect(preferencesReducer(changed, preferencesActions.reset())).toEqual(DEFAULT_PREFERENCES);
 		expect(preferencesReducer(changed, preferencesActions.appLockTurnedOff()).appLock).toEqual({ enabled: false, timeoutMs: 0 });
 		expect(preferencesReducer(changed, preferencesActions.restored(DEFAULT_PREFERENCES))).toEqual(DEFAULT_PREFERENCES);
+	});
+});
+
+describe("resetting the preferences", () => {
+	it("applies the default theme and saves the defaults, so a restart stays reset", () => {
+		const applyTheme = jest.fn();
+		const save = jest.fn((): Promise<void> => Promise.resolve());
+		const store = createPreferencesStore({ applyTheme, save, onSaveFailed: jest.fn() });
+		store.dispatch(preferencesActions.themeChanged("harbour"));
+		store.dispatch(preferencesActions.drawerStyleChanged("wash-cards"));
+
+		store.dispatch(preferencesActions.reset());
+
+		expect(store.getState()).toEqual(DEFAULT_PREFERENCES);
+		expect(applyTheme).toHaveBeenLastCalledWith("system");
+		expect(save).toHaveBeenLastCalledWith(DEFAULT_PREFERENCES);
+	});
+});
+
+describe("the drawer's look", () => {
+	it("starts on the centred ink drawer and follows the choice", () => {
+		expect(DEFAULT_PREFERENCES.drawerStyle).toBe("centred-ink");
+		expect(preferencesReducer(DEFAULT_PREFERENCES, preferencesActions.drawerStyleChanged("wash-cards")).drawerStyle).toBe("wash-cards");
+	});
+
+	it("survives a restart", async () => {
+		await savePreferences({ ...DEFAULT_PREFERENCES, drawerStyle: "ink-cards" });
+
+		await expect(loadPreferences()).resolves.toMatchObject({ drawerStyle: "ink-cards" });
 	});
 });
 
@@ -54,7 +89,13 @@ describe("theme persistence (§10.9)", () => {
 		await waitFor(() => {
 			expect(memorySecureStore.peek("prefs.theme")).toBe(JSON.stringify("dark"));
 		});
-		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: false, timeoutMs: 60_000 }, language: null, onboardingCompleted: false });
+		await expect(loadPreferences()).resolves.toEqual({
+			theme: "dark",
+			drawerStyle: "centred-ink",
+			appLock: { enabled: false, timeoutMs: 60_000 },
+			language: null,
+			onboardingCompleted: false,
+		});
 	});
 
 	it("reports a failed save and keeps the preference for this run", async () => {
@@ -80,7 +121,13 @@ describe("loadPreferences", () => {
 		memorySecureStore.seed("prefs.appLock.enabled", JSON.stringify(true));
 		memorySecureStore.seed("prefs.appLock.timeoutMs", "not-json");
 
-		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 60_000 }, language: null, onboardingCompleted: false });
+		await expect(loadPreferences()).resolves.toEqual({
+			theme: "dark",
+			drawerStyle: "centred-ink",
+			appLock: { enabled: true, timeoutMs: 60_000 },
+			language: null,
+			onboardingCompleted: false,
+		});
 		expect(memorySecureStore.peek("prefs.appLock.timeoutMs")).toBe("60000");
 	});
 

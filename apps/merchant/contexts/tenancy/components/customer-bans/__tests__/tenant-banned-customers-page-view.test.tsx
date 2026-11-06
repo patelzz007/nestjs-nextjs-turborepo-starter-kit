@@ -14,8 +14,8 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { banSourceLabel, TenantBannedCustomersPageView } from "@/contexts/tenancy/components/customer-bans/tenant-banned-customers-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
 
 const REDEEMED_AT = epochMs(1_792_368_000_000);
 

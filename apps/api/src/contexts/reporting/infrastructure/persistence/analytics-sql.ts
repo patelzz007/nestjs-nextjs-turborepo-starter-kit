@@ -7,6 +7,7 @@ import { TypedConfigService } from "../../../../config/typed-config.service";
 import { ConcurrencyLimiter } from "../../../../platform/application/concurrency-limiter";
 import { DependencyUnavailableError } from "../../../../platform/application/errors/app-error";
 import { databasePoolBudget } from "../../../../prisma/prisma-client-setup";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { AnalyticsScope, AnalyticsWindow } from "../../domain/value-objects/analytics-scope.value-object";
 import { PLATFORM_ANALYTICS_READ_OPERATION } from "../../application/ports/reporting.tokens";
@@ -127,6 +128,16 @@ export class AnalyticsSqlRunner {
 		config: TypedConfigService,
 	) {
 		this.limiter = new ConcurrencyLimiter(analyticsConcurrencyLimit(databasePoolBudget(config.database.poolMax).request));
+	}
+
+	/** A repository's read in the caller's bound session, counted against the same limit as the aggregates. */
+	public callerRead<TResult>(reason: string, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
+		return this.limiter.run(() => this.transactions.withBoundSession(reason, work));
+	}
+
+	/** A repository's read as a system operation, counted against the same limit as the aggregates. */
+	public systemRead<TResult>(context: SystemDatabaseContext, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
+		return this.limiter.run(() => this.transactions.withSystemOperation(context, work));
 	}
 
 	public rowsFor<TRow>(scope: AnalyticsScope, schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow[]> {

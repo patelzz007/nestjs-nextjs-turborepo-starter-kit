@@ -6,9 +6,9 @@ import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { MerchantCapabilityGate } from "@/contexts/tenancy/components/access/merchant-capability-gate";
-import { CASHIER_GRANTED_ANALYTICS, renderWithAuthorization } from "@/test/authorization";
+import { CASHIER_GRANTED_ANALYTICS, renderWithAuthorization } from "@/testing/authorization";
 import { MERCHANT_ACCESS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 function ManageRewardsProbe(): React.JSX.Element {
 	const { can } = useAuthorization();

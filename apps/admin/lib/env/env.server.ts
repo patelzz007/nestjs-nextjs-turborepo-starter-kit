@@ -10,17 +10,16 @@
 
 import "server-only";
 
-import { parseEnvOrThrow } from "@workspace/shared";
-import type { z } from "zod";
+import { parseAppEnv } from "@workspace/client/lib/env/parse-app-env";
 
 import { ADMIN_ENV_SCOPE, AdminServerEnvSchema, type AdminServerEnv } from "./env.schema";
 
-export const serverEnv: Readonly<AdminServerEnv> = parseEnvOrThrow(
+export const serverEnv: Readonly<AdminServerEnv> = parseAppEnv(
 	AdminServerEnvSchema,
 	{
 		NODE_ENV: process.env.NODE_ENV,
 		COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
 		ADMIN_COMPONENT_GALLERY: process.env.ADMIN_COMPONENT_GALLERY,
-	} satisfies Record<keyof z.input<typeof AdminServerEnvSchema>, string | undefined>,
+	},
 	ADMIN_ENV_SCOPE.server,
 );

@@ -35,6 +35,9 @@ export const NOTIFICATIONS_COPY = {
 	settings: "Notification settings",
 	seeEarlier: "See earlier notifications",
 	openLink: "Open link",
+	openAttachment: "Opens the attachment",
+	attachmentDetail: (size: string): string => `PDF, ${size}`,
+	attachmentDescription: (name: string): string => `Attached photo: ${name}`,
 	copied: "Copied.",
 };
 

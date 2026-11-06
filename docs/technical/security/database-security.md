@@ -26,6 +26,8 @@ a forbidden action. The full model (tenants, stores, policies per table) is in
 | System operation | `app_runtime` or `app_enumerator` | `app.rls_bypass` + `app.system_operation = <name>` | Allow-listed background / cross-tenant work |
 | Analytics consumer | `analytics_consumer` (own LOGIN) | — | `apps/analytics-consumer` only |
 
+Policies that repeat across tables are generated from `prisma/rls/table-policies.ts` into `prisma/rls/97-standard-policies.sql` ([ADR 083](../../adr/083-generated-standard-rls-policies.md)); one-offs are hand-written in the numbered fragments.
+
 The API-key principal gets **additional** permissive policies (`prisma/rls/40-api-key-principal.sql`):
 exactly its tenant's rows, and for store-owned tables (redemptions, sales, terminals) only its
 store's rows when the key is store-scoped. It never deletes anything and has **no RLS bypass**.
@@ -44,7 +46,7 @@ lets anyone read a **published** consumer reward, the reward's tenant members re
 rewards, and — through `app_holds_reward_claim(reward_id)` — **a user who holds a claim reads the
 reward they claimed, whatever its state now** (expired, disabled, archived, soft-deleted), so the
 wallet and claim history can still name it. Nobody else gains access: a user with no claim, or a
-session with no user, still sees only published rewards (`test/rls-hardening.e2e-spec.ts`).
+session with no user, still sees only published rewards (`e2e/rls-hardening.e2e-spec.ts`).
 
 A helper like this that reads another RLS table is `SECURITY DEFINER` with a pinned `search_path`:
 policies on the two tables reference each other (`reward_claims_merchant_read` reads `Reward`), and
@@ -122,7 +124,7 @@ bare `prisma migrate reset` recreates the schema without them. Re-apply the secu
 8. **`TENANCY_ENABLED=true` for multi-tenant SaaS**: staff with admin access then no longer bypass
    RLS ([ADR 007](../../adr/007-tenancy-and-rls-bypass.md)).
 9. **Every new table** gets an RLS manifest entry and a policy profile, and a test in
-   `apps/api/test/rls-hardening.e2e-spec.ts` (cross-org denial) when it holds tenant data.
+   `apps/api/e2e/rls-hardening.e2e-spec.ts` (cross-org denial) when it holds tenant data.
 
 ## Related
 

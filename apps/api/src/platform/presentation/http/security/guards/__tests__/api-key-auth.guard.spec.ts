@@ -4,7 +4,7 @@ import { Test } from "@nestjs/testing";
 import type { CapabilitySlug, TenantApiKeyScope } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
+import { createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
 import { API_KEY_VERIFICATION, type MerchantApiKeyAuthContext } from "../../../../../application/ports/api-key-verification.port";
 import { RequestContextService } from "../../../../../infrastructure/context/request-context";
 import { ALLOW_API_KEY_AUTH_KEY } from "../../api-keys/api-key-request";

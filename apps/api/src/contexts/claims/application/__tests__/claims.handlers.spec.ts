@@ -17,6 +17,7 @@ import {
 	OtpMissingError,
 	OtpRequiredError,
 } from "../../domain/errors/claims.errors";
+import { CLAIM_HOLD_TTL_MS } from "../../domain/value-objects/claim-rules.value-object";
 import { ClaimRewardCommand } from "../commands/claim-reward/claim-reward.command";
 import { ClaimRewardHandler } from "../commands/claim-reward/claim-reward.handler";
 import { ExpireOverdueClaimsCommand } from "../commands/expire-overdue-claims/expire-overdue-claims.command";
@@ -150,7 +151,7 @@ describe("RequestClaimOtpHandler", () => {
 			new RequestClaimOtpHandler(store.uow, codes, new SequentialIds("otp"), store.clock).execute(
 				new RequestClaimOtpCommand(customer(USER), { rewardId: REWARD, phone: PHONE }),
 			),
-		).resolves.toEqual({ ok: true });
+		).resolves.toEqual({ ok: true, holdExpiresAt: NOW + CLAIM_HOLD_TTL_MS });
 
 		expect(store.otpChallenges.rows.get("otp-1")).toMatchObject({ userId: USER, phone: PHONE, codeHash: "hash:123456" });
 		const [email] = store.emails.sent;

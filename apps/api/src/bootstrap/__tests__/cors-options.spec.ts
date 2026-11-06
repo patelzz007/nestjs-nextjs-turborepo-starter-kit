@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createTestApiConfig } from "../../../test/support/test-api-env";
+import { createTestApiConfig } from "../../../e2e/support/test-api-env";
 
 import { buildCorsOptions, CORS_ALLOWED_HEADERS } from "../cors-options";
 

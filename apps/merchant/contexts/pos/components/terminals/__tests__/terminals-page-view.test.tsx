@@ -4,10 +4,10 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PAIRING_STATUS_POLL_INTERVAL_MS, TERMINAL_STATS_LOADING_LABELS, TerminalsPageView } from "@/contexts/pos/components/terminals/terminals-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG, type TenantContextSeed } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { contextQueryState, tenantContextFixture, type ContextQueryState } from "@/test/tenant-context";
-import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
+import { renderWithAuthorization, TEST_ORG_SLUG, type TenantContextSeed } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { contextQueryState, tenantContextFixture, type ContextQueryState } from "@/testing/tenant-context";
+import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/testing/terminals";
 import {
 	LIST_SLOT_INDEX,
 	ApiPaginatedMetaSchema,
@@ -27,7 +27,7 @@ import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { QueryClient } from "@tanstack/react-query";
 import { TERMINAL_LIST_LOADING_LABELS } from "@/contexts/pos/components/terminals/terminal-list";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 const {
 	terminalsListQuery,

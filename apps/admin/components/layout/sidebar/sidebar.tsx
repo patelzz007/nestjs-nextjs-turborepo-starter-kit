@@ -17,6 +17,7 @@ import { ICON_MAP } from "@/lib/navigation/menu-icons";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import type { AdminShellLabels } from "@/lib/sidebar-labels";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface SidebarProps {
 	readonly user: SidebarUser;
@@ -48,7 +49,7 @@ export interface SidebarProps {
 }
 
 function renderAdminLink(href: string): React.ReactElement<PanelSidebarLinkProps> {
-	return <Link href={href} />;
+	return <Link href={appRoute(href)} />;
 }
 
 function renderAdminIcon(iconName: string | undefined, className: string): React.ReactNode {

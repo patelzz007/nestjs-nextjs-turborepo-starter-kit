@@ -2,6 +2,7 @@ import { LoginForm, type DemoAccount } from "@workspace/client/lib/contexts/iden
 import Link from "next/link";
 
 import { AdminAuthLayout } from "@/contexts/identity/components/auth/admin-auth-layout";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface LoginViewProps {
 	/** Safe, normalized in-app path to land on after a successful login (from `?redirect=`). */
@@ -28,7 +29,7 @@ export function LoginView({ redirectPath, webBaseUrl, demoAccounts }: LoginViewP
 				footer={
 					<p className="text-center text-xs text-balance text-muted-foreground">
 						Returning to{" "}
-						<Link href={webBaseUrl} className="font-medium text-primary underline-offset-4 hover:underline">
+						<Link href={appRoute(webBaseUrl)} className="font-medium text-primary underline-offset-4 hover:underline">
 							main website
 						</Link>
 					</p>

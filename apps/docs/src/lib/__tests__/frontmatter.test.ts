@@ -22,7 +22,7 @@ describe("parseMarkdownFile", () => {
 	});
 
 	it("should accept Windows line endings and a file that is only front matter", () => {
-		const parsed = parseMarkdownFile("blog/x.md", '---\r\ntitle: "X"\r\ndescription: "D"\r\nauthor: "A"\r\ndate: 1\r\ncategory: "C"\r\n---', PostFrontmatterSchema);
+		const parsed = parseMarkdownFile("docs/blog/x.md", '---\r\ntitle: "X"\r\ndescription: "D"\r\nauthor: "A"\r\ndate: 1\r\ncategory: "C"\r\n---', PostFrontmatterSchema);
 		expect(parsed.data.category).toBe("C");
 		expect(parsed.body).toBe("");
 	});

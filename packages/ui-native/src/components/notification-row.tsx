@@ -2,8 +2,8 @@
 // picture on the left (who it is from, with a small glyph on its corner saying
 // what kind of notice it is — or the glyph alone, large, when it is from the
 // app itself), the title in bold running into the message, and how long ago
-// under it. An unread one is tinted, its time in the brand colour, with a dot
-// at the end. The whole row is one button (open it); `trailing` holds the
+// under it. An unread one sits on the card's surface, its time and a dot at its end in the link colour,
+// and a read one lies flat on the page. The whole row is one button (open it); `trailing` holds the
 // row's own menu ("…"), outside that button so the two never swallow each
 // other's taps.
 //
@@ -21,10 +21,10 @@ import { Icon, type LucideIcon } from "./icon";
 import { iconTileGlyphVariants, iconTileVariants, type IconTileTone } from "./icon-tile";
 import { RelativeTime, SHORT_RELATIVE_TIME_LABELS, formatRelativeTime } from "./relative-time";
 
-export const notificationRowVariants = cva("flex-row items-center rounded-xl pe-1", {
+export const notificationRowVariants = cva("rounded-2xl", {
 	variants: {
-		/** An unread notice is tinted, so the new ones stand out of a long list at a glance. */
-		unread: { true: "bg-primary/10", false: "" },
+		/** An unread notice is lifted onto the card's surface, so the new ones stand out of a long list at a glance without tinting the page. */
+		unread: { true: "bg-card", false: "" },
 	},
 	defaultVariants: { unread: false },
 });
@@ -38,7 +38,7 @@ export const notificationRowMessageVariants = cva("font-sans text-sm leading-snu
 
 export const notificationRowTimeVariants = cva("", {
 	variants: {
-		unread: { true: "text-primary", false: "" },
+		unread: { true: "text-link", false: "" },
 	},
 	defaultVariants: { unread: false },
 });
@@ -104,6 +104,8 @@ export interface NotificationRowProps {
 	readonly onPress: (event: GestureResponderEvent) => void;
 	/** The row's own controls, after it (its "…" menu). */
 	readonly trailing?: React.ReactNode;
+	/** What came with it (a photo, a file), under the message and inside the row's surface. */
+	readonly media?: React.ReactNode;
 	/** Spoken before an unread row's message ("Unread"). */
 	readonly unreadLabel?: string;
 	readonly accessibilityHint?: string;
@@ -128,6 +130,7 @@ export const NotificationRow = React.memo(
 			unread,
 			onPress,
 			trailing,
+			media,
 			unreadLabel = DEFAULT_UNREAD_LABEL,
 			accessibilityHint,
 			className,
@@ -139,23 +142,26 @@ export const NotificationRow = React.memo(
 		const when = formatRelativeTime(createdAt, now, SHORT_RELATIVE_TIME_LABELS);
 		return (
 			<View ref={ref} testID={testID} className={cn(notificationRowVariants({ unread }), className)}>
-				<Pressable
-					accessibilityRole="button"
-					accessibilityLabel={unread ? `${unreadLabel}. ${message}. ${when}` : `${message}. ${when}`}
-					accessibilityHint={accessibilityHint}
-					onPress={onPress}
-					testID={testID === undefined ? undefined : `${testID}-open`}
-					className="flex-1 flex-row items-center gap-3 py-2 ps-3 active:opacity-70">
-					<Leading sender={sender} icon={icon} tone={tone} />
-					<View className="flex-1 gap-0.5">
-						<Text numberOfLines={MESSAGE_LINES} className={notificationRowMessageVariants({ unread })}>
-							<Text className="font-sans-semibold text-foreground">{title}</Text> {body}
-						</Text>
-						<RelativeTime value={createdAt} now={now} locale={locale} labels={SHORT_RELATIVE_TIME_LABELS} size="sm" className={notificationRowTimeVariants({ unread })} />
-					</View>
-					{unread ? <View className="size-2.5 rounded-full bg-primary" testID={testID === undefined ? undefined : `${testID}-unread`} /> : null}
-				</Pressable>
-				{trailing}
+				<View className="flex-row items-center pe-1">
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel={unread ? `${unreadLabel}. ${message}. ${when}` : `${message}. ${when}`}
+						accessibilityHint={accessibilityHint}
+						onPress={onPress}
+						testID={testID === undefined ? undefined : `${testID}-open`}
+						className="flex-1 flex-row items-center gap-3 py-3 ps-3 active:opacity-70">
+						<Leading sender={sender} icon={icon} tone={tone} />
+						<View className="flex-1 gap-0.5">
+							<Text numberOfLines={MESSAGE_LINES} className={notificationRowMessageVariants({ unread })}>
+								<Text className="font-sans-semibold text-foreground">{title}</Text> {body}
+							</Text>
+							<RelativeTime value={createdAt} now={now} locale={locale} labels={SHORT_RELATIVE_TIME_LABELS} size="sm" className={notificationRowTimeVariants({ unread })} />
+						</View>
+						{unread ? <View className="size-2.5 rounded-full bg-link" testID={testID === undefined ? undefined : `${testID}-unread`} /> : null}
+					</Pressable>
+					{trailing}
+				</View>
+				{media === undefined ? null : <View className="ps-17 pe-3 pb-3">{media}</View>}
 			</View>
 		);
 	}),

@@ -3,7 +3,7 @@ import { buildEndpointIndex, type EndpointRow } from "@workspace/docs-renderer/a
 import { OpenApiDocumentSchema } from "@workspace/docs-renderer/api-reference/openapi";
 import { createMarkdownRenderer } from "@workspace/docs-renderer/pipeline";
 
-import rawBlogMeta from "../../../../blog/meta.json";
+import rawBlogMeta from "../../../../docs/blog/meta.json";
 import rawDocsMeta from "../../../../docs/meta.json";
 import { imageRouteParam } from "../lib/assets";
 import { BlogMetaSchema } from "../lib/blog";
@@ -13,11 +13,17 @@ import { GITHUB_BRANCH, GITHUB_URL } from "../lib/site";
 
 /**
  * The site's content, server-only (the `.server.ts` suffix keeps it out of the browser bundle). The
- * repo-root `docs/` and `blog/` folders are the single source of truth; Vite's glob reads them at build
+ * repo-root `docs/` and `docs/blog/` folders are the single source of truth; Vite's glob reads them at build
  * time, so a change to any guide rebuilds the pages that show it, and the dev server reloads on edit.
  */
-const DOCS_FILES: Readonly<Record<string, string>> = import.meta.glob<string>("../../../../docs/**/*.md", { query: "?raw", import: "default", eager: true });
-const BLOG_FILES: Readonly<Record<string, string>> = import.meta.glob<string>("../../../../blog/**/*.md", { query: "?raw", import: "default", eager: true });
+// The exclusions must be here, not only in a later filter: anything the glob matches is compiled into the
+// server bundle, and `docs/history/` holds the security audit, which is never published.
+const DOCS_FILES: Readonly<Record<string, string>> = import.meta.glob<string>(["../../../../docs/**/*.md", "!../../../../docs/blog/**", "!../../../../docs/history/**"], {
+	query: "?raw",
+	import: "default",
+	eager: true,
+});
+const BLOG_FILES: Readonly<Record<string, string>> = import.meta.glob<string>("../../../../docs/blog/**/*.md", { query: "?raw", import: "default", eager: true });
 /** `docs/images/` is served at `/images/…`, so guides use paths that also work on GitHub. */
 const IMAGE_FILES: Readonly<Record<string, string>> = import.meta.glob<string>("../../../../docs/images/**/*.{png,jpg,jpeg,gif,webp,avif,svg}", {
 	query: "?inline",

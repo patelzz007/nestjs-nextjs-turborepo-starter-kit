@@ -132,7 +132,7 @@ export function systemRlsContext(operation: SystemOperation, actorUserId: string
 }
 
 /**
- * The session variables the RLS policies read (prisma/rls.sql:
+ * The session variables the RLS policies read (prisma/rls/10-policies.sql:
  * `app.current_user_id`, `app.current_tenant_id`, …). SQL has no
  * "absent" for a GUC, so a missing user / tenant is encoded as `''`
  * here — a database-encoding detail, not a domain value.

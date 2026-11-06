@@ -8,6 +8,7 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { Mail, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** Persistent banner shown while a merchant account still needs enrollment. */
 export function EmailVerificationBanner(): React.JSX.Element | null {
@@ -31,7 +32,7 @@ export function EmailVerificationBanner(): React.JSX.Element | null {
 							: "Verify your email to unlock the merchant portal. Other pages stay locked and redirect here until verification is complete."}
 					</span>
 				</div>
-				<Link href={accountPath} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
+				<Link href={appRoute(accountPath)} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
 					Go to account
 				</Link>
 			</div>

@@ -6,7 +6,7 @@ import { PrismaService } from "../../../../../prisma/prisma.service";
 import { DeepHealthResponseSchema } from "@workspace/shared";
 
 import { HEALTH_PROBE_TIMEOUT_MS, HealthService, toModuleHealthDetails, type ModuleHealthIndicator, type RegisteredModuleHealthIndicator } from "../health.service";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 
 function indicator(healthy: boolean | "throws" | "hangs"): ModuleHealthIndicator {
 	return {

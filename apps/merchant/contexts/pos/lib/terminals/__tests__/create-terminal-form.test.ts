@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseCreateTerminalForm } from "@/contexts/pos/lib/terminals/create-terminal-form";
-import { STORE_A } from "@/test/terminals";
+import { STORE_A } from "@/testing/terminals";
 
 describe("parseCreateTerminalForm", () => {
 	it("omits a blank terminal id so the API generates one", () => {

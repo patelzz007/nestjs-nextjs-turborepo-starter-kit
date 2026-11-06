@@ -128,6 +128,6 @@ page) but changes shape. Where this section and the Decision above disagree, thi
 - **Tabs are preloaded when idle** (`src/features/navigation/use-preloaded-tabs.ts`, one tab per idle
   callback via `router.prefetch`), so even the first switch to a heavy tab is smooth.
 - **Testing.** `Screen` reads its focus from the router, so a test renders it inside a route
-  (`renderRouter`); Jest's React Native environment has no idle callbacks, so `test/idle-callbacks.ts`
+  (`renderRouter`); Jest's React Native environment has no idle callbacks, so `e2e/idle-callbacks.ts`
   supplies them (next timer tick).
 

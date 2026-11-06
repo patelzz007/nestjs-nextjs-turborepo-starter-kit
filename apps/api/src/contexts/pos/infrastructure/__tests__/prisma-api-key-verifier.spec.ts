@@ -4,8 +4,8 @@ import type { Prisma } from "@prisma/client";
 import { epochMs } from "@workspace/shared";
 import { describe, expect, it, vi, type Mock } from "vitest";
 
-import { SERVES_EVERY_TENANT, servesOnly } from "../../../../../test/support/served-tenants";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { SERVES_EVERY_TENANT, servesOnly } from "../../../../../e2e/support/served-tenants";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import type { ServedTenantPolicy } from "../../../../platform/application/tenancy/served-tenant.port";
 import { FixedClock } from "../../../../platform/application/__tests__/fixed-clock";
 import { PrismaService } from "../../../../prisma/prisma.service";

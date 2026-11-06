@@ -5,24 +5,29 @@
 	"type": "module",
 	"description": "Repo-wide tooling scripts. Owns the syncpack dependency-hygiene commands so they can run as turbo tasks (turbo 2.x doesn't execute root package.json scripts).",
 	"scripts": {
-		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint && node scripts/project-identity.mjs --check",
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint && node src/project-identity/cli.ts --check",
 		"test": "vitest run --coverage",
+		"typecheck": "tsrs --noEmit",
 		"deps:check": "cd ../.. && syncpack lint && pnpm peers check",
 		"deps:fix": "cd ../.. && syncpack fix-mismatches",
 		"deps:list": "cd ../.. && syncpack list",
-		"deps:review": "node scripts/check-dependency-exceptions.mjs",
+		"deps:review": "node src/dependency-exceptions/cli.ts",
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\""
 	},
 	"dependencies": {
 		"zod": "4.6.7"
 	},
 	"devDependencies": {
+		"@types/node": "^26.6.6",
+		"@types/pg": "8.23.1",
 		"@workspace/oxlint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
 		"oxfmt": "0.75.0",
 		"oxlint": "1.90.0",
 		"oxlint-tsgolint": "7.0.2005",
 		"pg": "^8.23.1",
 		"syncpack": "^15.3.3",
+		"tsrs": "0.20.1-ts7.1.0-beta",
 		"typescript": "7.0.2",
 		"vitest": "^5.0.5",
 		"yaml": "^2.9.1"

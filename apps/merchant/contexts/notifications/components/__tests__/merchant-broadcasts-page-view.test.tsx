@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BroadcastAllowanceNotice, describeBroadcastWhen, MerchantBroadcastsPageView } from "@/contexts/notifications/components/merchant-broadcasts-page-view";
 import { tenantRoutes } from "@/lib/routes";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { broadcastFixture } from "@/test/broadcasts";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { broadcastFixture } from "@/testing/broadcasts";
 
 const { broadcastsQuery, allowanceQuery } = vi.hoisted(() => ({ broadcastsQuery: vi.fn(), allowanceQuery: vi.fn() }));
 

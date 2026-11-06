@@ -5,7 +5,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { ThrottlerStorage } from "@nestjs/throttler";
 import { describe, expect, it } from "vitest";
 
-import { RecordingRateLimiter } from "../../../../../../../test/support/recording-rate-limiter";
+import { RecordingRateLimiter } from "../../../../../../../e2e/support/recording-rate-limiter";
 import { ConfigModule } from "../../../../../../config/config.module";
 import { RATE_LIMITER } from "../../../../../application/ports/rate-limiter.port";
 import { FailoverRateLimiter } from "../../../../../infrastructure/rate-limiting/failover-rate-limiter";

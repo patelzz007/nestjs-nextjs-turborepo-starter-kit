@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AccessGate } from "@/contexts/identity/components/access-gate";
 import { WebSessionTestProvider, type WebSessionState } from "@/contexts/identity/components/web-authorization-provider";
-import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
+import { GUEST_SESSION_STATE, signedInSession } from "@/testing/session";
 
 vi.mock("next/navigation", () => ({
 	usePathname: (): string => "/dashboard/wallet",

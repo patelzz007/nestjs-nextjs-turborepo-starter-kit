@@ -15,7 +15,7 @@ import { sidebarSections, type SidebarSection } from "../lib/navigation";
  * is not part of the returned data (src/lib/article-body.ts): it is remembered for the page being rendered.
  */
 
-/** A content id: a path below `docs/` or `blog/` without `.md` (it keeps its case, `README`). */
+/** A content id: a path below `docs/` or `docs/blog/` without `.md` (it keeps its case, `README`). */
 const ContentIdSchema = z.object({ id: z.string().min(1).max(300) }).strict();
 
 /**

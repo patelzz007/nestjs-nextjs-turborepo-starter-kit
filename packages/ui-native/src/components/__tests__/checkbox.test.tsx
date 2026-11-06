@@ -3,6 +3,7 @@ import * as React from "react";
 import type { ViewInstance } from "react-native";
 
 import { Checkbox } from "../checkbox";
+import { ICON_SIZES, ICON_STROKE_WIDTHS } from "../icon";
 
 /** Every class name in the rendered tree (Uniwind is not compiled under Jest, so classes are checked as written). */
 function renderedClassNames(): string {
@@ -81,6 +82,20 @@ describe("Checkbox", () => {
 		await rerender(<Checkbox label="Email" checked={false} onChange={jest.fn()} />);
 		expect(screen.queryByTestId("checkbox-tick", { includeHiddenElements: true })).toBeNull();
 		expect(screen.queryByTestId("checkbox-dash", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("draws the lock light and small so it does not outweigh the ticks", async () => {
+		await render(<Checkbox label="In the app" checked locked onChange={jest.fn()} />);
+
+		const lock = screen.getByTestId("checkbox-lock", { includeHiddenElements: true });
+		expect(lock).toHaveProp("width", ICON_SIZES.control);
+		expect(lock).toHaveProp("strokeWidth", ICON_STROKE_WIDTHS.light);
+	});
+
+	it("rings an unticked box in the control colour, not the fields' softer one", async () => {
+		await render(<Checkbox label="Weekly digest" checked={false} onChange={jest.fn()} />);
+
+		expect(renderedClassNames()).toContain("border-control-ring");
 	});
 
 	it("shows a lock, takes no presses and is not faded while locked", async () => {

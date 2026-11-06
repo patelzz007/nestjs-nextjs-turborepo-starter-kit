@@ -1,6 +1,6 @@
 # 16A — Bug Fixing and Root-Cause Debugging
 
-> This document supplements `16-code-review-checklist.md`. It does not replace the numbered code-review rule or change existing precedence. The agent must load this file for bugs, regressions, flaky tests, performance defects, and unexplained operational failures.
+> This document supplements `33-code-review-checklist.md`. It does not replace the numbered code-review rule or change existing precedence. The agent must load this file for bugs, regressions, flaky tests, performance defects, and unexplained operational failures.
 
 ## 1. Purpose and operating principle
 

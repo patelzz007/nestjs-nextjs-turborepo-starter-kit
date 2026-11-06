@@ -19,7 +19,7 @@ function readRlsSql(): string {
 	const fragments = readdirSync(resolve(prismaDir, "rls"))
 		.filter((name: string) => name.endsWith(".sql"))
 		.map((name: string) => readFileSync(resolve(prismaDir, "rls", name), "utf8"));
-	return [readFileSync(resolve(prismaDir, "rls.sql"), "utf8"), ...fragments].join("\n");
+	return fragments.join("\n");
 }
 
 describe("withheld app_runtime privileges", () => {

@@ -9,6 +9,7 @@ import { RelativeTime } from "@workspace/ui/components/relative-time";
 import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /**
  * The building blocks of the access screens (ADR 067). Each is controlled and data-agnostic: the page
@@ -19,7 +20,7 @@ import * as React from "react";
 export function TeamBackLink({ tenantSlug, tab = "members" }: { readonly tenantSlug: string; readonly tab?: "members" | "roles" }): React.JSX.Element {
 	const href = `${tenantRoutes(tenantSlug).settings.team}${tab === "roles" ? "?tab=roles" : ""}`;
 	return (
-		<Link href={href} className="inline-flex min-h-9 items-center text-sm text-muted-foreground transition-colors hover:text-foreground">
+		<Link href={appRoute(href)} className="inline-flex min-h-9 items-center text-sm text-muted-foreground transition-colors hover:text-foreground">
 			← Team &amp; permissions
 		</Link>
 	);

@@ -2,7 +2,7 @@ import { RequestMethod } from "@nestjs/common";
 import { API_VERSION_PREFIX, SignupReferralDashboardSchema, SignupReferralRefereeItemSchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { controllerOf, handlerOf, metadataOf, routeOf } from "../../../../../../test/support/route-metadata";
+import { controllerOf, handlerOf, metadataOf, routeOf } from "../../../../../../e2e/support/route-metadata";
 import { IS_PUBLIC_KEY } from "../../../../../platform/presentation/http/security/decorators/public.decorator";
 import { SignupReferralController } from "../signup-referral.controller";
 

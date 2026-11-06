@@ -1,34 +1,74 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import HouseIcon from "lucide-react-native/icons/house";
 import * as React from "react";
+import { Text } from "react-native";
 
-import { DrawerAccountHeader, DrawerRow, DrawerSection, DrawerSubmenu } from "../drawer-menu";
+import { DrawerDivider, DrawerProfile, DrawerRow, DrawerSection, DrawerSelectionContext, DrawerSubmenu, DrawerWash, type DrawerProfileProps } from "../drawer-menu";
 
-describe("DrawerAccountHeader", () => {
-	it("shows the person on a solid primary block, their initials on the inverse avatar, and one action", async () => {
+const PERSON: Omit<DrawerProfileProps, "imageUrl"> = {
+	name: "Alex Morgan",
+	email: "alex@example.com",
+	actionLabel: "Edit profile",
+	onPress: jest.fn(),
+	layout: "row",
+	action: "none",
+	onInk: false,
+};
+
+describe("DrawerProfile", () => {
+	it("shows the person, and pressing them is the action", async () => {
 		const onPress = jest.fn();
-		await render(<DrawerAccountHeader name="Alex Morgan" email="alex@example.com" imageUrl={null} action={{ label: "Edit profile", onPress }} testID="account" />);
+		await render(<DrawerProfile {...PERSON} imageUrl={null} onPress={onPress} />);
 
 		expect(screen.getByRole("header", { name: "Alex Morgan" })).toBeOnTheScreen();
 		expect(screen.getByText("alex@example.com")).toBeOnTheScreen();
 		expect(screen.getByLabelText("Alex Morgan's initials")).toHaveTextContent("AM");
-		await fireEvent.press(screen.getByRole("button", { name: "Edit profile" }));
+		await fireEvent.press(screen.getByRole("button", { name: "Alex Morgan, Edit profile" }));
 		expect(onPress).toHaveBeenCalledTimes(1);
 	});
 
 	it("shows the profile picture when there is one", async () => {
-		await render(
-			<DrawerAccountHeader name="Alex Morgan" email="alex@example.com" imageUrl="https://cdn.example.com/a.png" action={{ label: "Edit profile", onPress: jest.fn() }} />,
-		);
+		await render(<DrawerProfile {...PERSON} imageUrl="https://cdn.example.com/a.png" />);
 
 		expect(screen.getByLabelText("Alex Morgan's profile picture")).toBeOnTheScreen();
+	});
+
+	it("takes the sign-in panel's colours on ink, and the page's anywhere else", async () => {
+		const view = await render(<DrawerProfile {...PERSON} imageUrl={null} onInk />);
+		expect(screen.getByRole("header", { name: "Alex Morgan" })).toHaveProp("className", expect.stringContaining("text-auth-panel-foreground"));
+
+		await view.rerender(<DrawerProfile {...PERSON} imageUrl={null} />);
+		expect(screen.getByRole("header", { name: "Alex Morgan" })).toHaveProp("className", expect.stringContaining("text-foreground"));
+	});
+
+	it("spells the action out as a link only when the look asks", async () => {
+		const view = await render(<DrawerProfile {...PERSON} imageUrl={null} action="link" />);
+		expect(screen.getByText("Edit profile")).toBeOnTheScreen();
+
+		await view.rerender(<DrawerProfile {...PERSON} imageUrl={null} action="chevron" />);
+		expect(screen.queryByText("Edit profile")).toBeNull();
+	});
+
+	it("puts a detail under the email", async () => {
+		await render(<DrawerProfile {...PERSON} imageUrl={null} detail={<Text>Strong, 42 ms</Text>} />);
+
+		expect(screen.getByText("Strong, 42 ms")).toBeOnTheScreen();
+	});
+});
+
+describe("DrawerWash", () => {
+	it("is decoration: nothing a screen reader or a touch reaches", async () => {
+		await render(<DrawerWash />);
+
+		expect(screen.getByTestId("drawer-wash", { includeHiddenElements: true })).toHaveProp("pointerEvents", "none");
+		expect(screen.getByTestId("drawer-wash", { includeHiddenElements: true })).toHaveProp("accessibilityElementsHidden", true);
 	});
 });
 
 describe("DrawerSection", () => {
 	it("titles a section as a header", async () => {
 		await render(
-			<DrawerSection heading={{ title: "Preferences", tone: "purple" }}>
+			<DrawerSection title="Preferences">
 				<DrawerRow icon={HouseIcon} label="Appearance" onPress={jest.fn()} />
 			</DrawerSection>,
 		);
@@ -110,46 +150,60 @@ describe("DrawerRow in a nested menu", () => {
 		);
 
 		const classes = String(screen.getByTestId("rows").props.className).split(" ");
-		expect(classes).toEqual(expect.arrayContaining(["border-l", "border-border", "ml-6.5"]));
+		expect(classes).toEqual(expect.arrayContaining(["border-l", "border-border", "ml-6"]));
 		expect(screen.getByRole("button", { name: "Security" })).toBeOnTheScreen();
 	});
 });
 
-describe("DrawerRow glyph tiles", () => {
-	function tileClassOf(testID: string): string {
-		return String(screen.getByTestId(`${testID}-tile`, { includeHiddenElements: true }).props.className);
-	}
+describe("DrawerDivider", () => {
+	it("is a hairline only sighted people need", async () => {
+		await render(<DrawerDivider />);
 
-	it("tints a titled section's rows in the section's tone", async () => {
-		await render(
-			<DrawerSection heading={{ title: "Account", tone: "blue" }}>
-				<DrawerRow icon={HouseIcon} label="Security" onPress={jest.fn()} testID="security" />
-			</DrawerSection>,
-		);
-
-		expect(tileClassOf("security")).toContain("bg-tone-blue-soft");
+		const line = screen.getByTestId("drawer-divider", { includeHiddenElements: true });
+		expect(line).toHaveProp("className", expect.stringContaining("bg-border"));
+		expect(line).toHaveProp("accessibilityElementsHidden", true);
 	});
+});
 
-	it("gives the main section's rows a neutral tile, and the destructive row its own tint", async () => {
-		await render(
-			<DrawerSection>
-				<DrawerRow icon={HouseIcon} label="Home" onPress={jest.fn()} testID="home" />
-				<DrawerRow icon={HouseIcon} label="Sign out" tone="destructive" onPress={jest.fn()} testID="sign-out" />
-			</DrawerSection>,
-		);
+describe("DrawerRow capsule", () => {
+	it("draws the screen on show as a solid capsule by default", async () => {
+		await render(<DrawerRow icon={HouseIcon} label="Security" selected onPress={jest.fn()} testID="security" />);
 
-		expect(tileClassOf("home")).toContain("bg-muted");
-		expect(tileClassOf("sign-out")).toContain("bg-destructive-soft");
-	});
-
-	it("inverts the tile inside the selected capsule", async () => {
-		await render(
-			<DrawerSection heading={{ title: "Account", tone: "blue" }}>
-				<DrawerRow icon={HouseIcon} label="Security" selected onPress={jest.fn()} testID="security" />
-			</DrawerSection>,
-		);
-
-		expect(tileClassOf("security")).toContain("bg-primary-foreground/15");
 		expect(screen.getByTestId("security")).toHaveProp("className", expect.stringContaining("bg-primary"));
+		expect(screen.getByText("Security")).toHaveProp("className", expect.stringContaining("text-primary-foreground"));
+	});
+
+	it("draws it as a soft capsule when the look says so", async () => {
+		await render(
+			<DrawerSelectionContext.Provider value="soft">
+				<DrawerRow icon={HouseIcon} label="Security" selected onPress={jest.fn()} testID="security" />
+			</DrawerSelectionContext.Provider>,
+		);
+
+		expect(screen.getByTestId("security")).toHaveProp("className", expect.stringContaining("bg-muted"));
+		expect(screen.getByText("Security")).toHaveProp("className", expect.stringContaining("text-foreground"));
+	});
+
+	it("makes the soft capsule slate in the light theme, its text and icon light on it", async () => {
+		await render(
+			<DrawerSelectionContext.Provider value="soft">
+				<DrawerRow icon={HouseIcon} label="Security" selected onPress={jest.fn()} testID="security" />
+			</DrawerSelectionContext.Provider>,
+		);
+
+		expect(screen.getByTestId("security")).toHaveProp("className", expect.stringContaining("light:bg-primary"));
+		expect(screen.getByText("Security")).toHaveProp("className", expect.stringContaining("light:text-primary-foreground"));
+	});
+
+	it("leaves other rows bare, and a destructive one red", async () => {
+		await render(
+			<>
+				<DrawerRow icon={HouseIcon} label="Home" onPress={jest.fn()} testID="home" />
+				<DrawerRow icon={HouseIcon} label="Sign out" tone="destructive" onPress={jest.fn()} />
+			</>,
+		);
+
+		expect(screen.getByTestId("home")).toHaveProp("className", expect.not.stringContaining("bg-primary"));
+		expect(screen.getByText("Sign out")).toHaveProp("className", expect.stringContaining("text-destructive-foreground"));
 	});
 });

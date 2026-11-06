@@ -12,6 +12,7 @@ import { useCallback, useState, type JSX } from "react";
 import { resolveAuthErrorMessage } from "../../../api/error-messages";
 import { useAuth } from "../index";
 import { catchCaught } from "../../../caught";
+import { appRoute } from "../../../navigation/app-route";
 
 export interface ForgotPasswordFormProps {
 	readonly loginHref?: string;
@@ -63,7 +64,7 @@ export function ForgotPasswordForm({ loginHref = APP_LINKS.auth.login }: ForgotP
 				<div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
 					If an account exists with this email, we&apos;ve sent a password reset link. The link expires in 1 hour.
 				</div>
-				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
+				<Link href={appRoute(loginHref)} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
 					Back to sign in
 				</Link>
 			</div>
@@ -80,7 +81,7 @@ export function ForgotPasswordForm({ loginHref = APP_LINKS.auth.login }: ForgotP
 			</FormShell>
 			<p className="mt-6 text-center text-sm text-muted-foreground">
 				Remember your password?{" "}
-				<Link href={loginHref} className="font-medium text-primary hover:underline">
+				<Link href={appRoute(loginHref)} className="font-medium text-primary hover:underline">
 					Sign in
 				</Link>
 			</p>

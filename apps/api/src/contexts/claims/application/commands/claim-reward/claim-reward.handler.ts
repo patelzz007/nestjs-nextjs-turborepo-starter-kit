@@ -5,36 +5,17 @@ import type { CreateRewardClaimInput, EpochMs, RewardClaimCreatedResponse } from
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { RewardClaim } from "../../../domain/aggregates/reward-claim.aggregate";
-import {
-	ClaimantNotFoundError,
-	ClaimCustomerBannedError,
-	ClaimRewardUnavailableError,
-	LegalAcceptanceRequiredError,
-	OtpInvalidError,
-	OtpMissingError,
-	OtpRequiredError,
-} from "../../../domain/errors/claims.errors";
+import { ClaimantNotFoundError, LegalAcceptanceRequiredError, OtpInvalidError, OtpMissingError, OtpRequiredError } from "../../../domain/errors/claims.errors";
 import { assertWithinClaimLimit } from "../../../domain/policies/claim-limit.policy";
 import { claimNeedsOtp, liveAttributionToken } from "../../../domain/policies/phone-verification.policy";
 import type { ClaimsScope } from "../../claims-scope";
 import type { ClaimCodesPort } from "../../ports/claim-codes.port";
 import type { ClaimantProfile } from "../../ports/claims-transactional.ports";
 import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIMS_UNIT_OF_WORK, CLAIM_REWARD_OPERATION, type ClaimIdGenerator } from "../../ports/claims.tokens";
+import type { ClaimHold } from "../../../domain/aggregates/claim-hold.aggregate";
 import { actingUserId } from "../acting-user";
+import { assertCustomerMayClaim } from "../customer-may-claim";
 import { ClaimRewardCommand } from "./claim-reward.command";
-
-/**
- * A merchant that does not operate (suspended, banned, not live yet) offers nothing — answered like
- * a missing reward, as the marketplace hides it — and a customer the merchant banned takes nothing.
- */
-async function assertCustomerMayClaim(scope: ClaimsScope, tenantId: string, userId: string, rewardId: string): Promise<void> {
-	if (!(await scope.customerStanding.tenantOperates(tenantId))) {
-		throw new ClaimRewardUnavailableError(rewardId);
-	}
-	if ((await scope.customerStanding.bannedCustomers(tenantId, [userId])).has(userId)) {
-		throw new ClaimCustomerBannedError();
-	}
-}
 
 /** How the claim transaction ended: a claim, or a wrong OTP whose spent attempt must still commit. */
 type ClaimOutcome = { readonly kind: "created"; readonly response: RewardClaimCreatedResponse } | { readonly kind: "otp_rejected" };
@@ -94,11 +75,24 @@ export class ClaimRewardHandler implements ICommandHandler<ClaimRewardCommand, R
 		return valid;
 	}
 
+	/** The customer's held unit when the hold is still theirs; otherwise one from stock, if any is left. */
+	private async takeUnit(scope: ClaimsScope, hold: ClaimHold | null, userId: string, rewardId: string, now: EpochMs): Promise<void> {
+		if (hold !== null) {
+			hold.convert(now);
+			if (await scope.holds.saveIfUnchanged(hold)) {
+				await scope.rewards.claimHeldUnit(rewardId, now, userId);
+				return;
+			}
+		}
+		await scope.rewards.reserve(rewardId, now, userId);
+	}
+
 	private async claim(scope: ClaimsScope, userId: string, claimant: ClaimantProfile, input: CreateRewardClaimInput, now: EpochMs): Promise<RewardClaimCreatedResponse> {
-		const reward = await scope.rewards.assertClaimable(input.rewardId, now, userId);
+		const hold = await scope.holds.findLive(userId, input.rewardId, now);
+		const reward = await scope.rewards.assertClaimable(input.rewardId, now, userId, hold !== null);
 		await assertCustomerMayClaim(scope, reward.tenantId, userId, input.rewardId);
 		assertWithinClaimLimit(await scope.claims.countHeld(userId, input.rewardId), reward.maxClaimsPerUser);
-		await scope.rewards.reserve(input.rewardId, now, userId);
+		await this.takeUnit(scope, hold, userId, input.rewardId, now);
 
 		const attributionToken = liveAttributionToken(claimant.pendingAttributionToken, claimant.pendingAttributionExpiresAt, now);
 		const referralId = attributionToken === null ? null : await scope.referralAttribution.attach(attributionToken, input.rewardId, userId);

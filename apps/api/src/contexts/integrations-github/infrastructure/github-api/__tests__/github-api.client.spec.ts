@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { GITHUB_GRAPHQL_API_URL, GITHUB_REST_API_URL, GITHUB_REST_API_VERSION } from "../github.constants";
 import { GithubCommitNotFoundError, GithubRepositoryNotFoundError, GithubResponseError, GithubUnavailableError } from "../../../application/errors/github.errors";
 import { GITHUB_COMMIT_HISTORY_QUERY, GITHUB_CONTRIBUTION_HISTORY_QUERY, GITHUB_REPOSITORY_SUMMARY_QUERY, GITHUB_VIEWER_REPOSITORIES_QUERY } from "../github.queries";

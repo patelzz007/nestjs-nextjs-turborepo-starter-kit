@@ -12,6 +12,7 @@ import { seedSavedViews } from "../saved-views";
 import { seedFeatureFlags } from "../feature-flags";
 import { seedAuditRetention } from "../audit-retention";
 import { seedPayments } from "../payments";
+import { seedAttachmentNotices } from "../notification-attachments";
 import { seedNotificationsDemo } from "../notifications-demo";
 import { alignCustomerAccountAges } from "../customer-account-age";
 import { SeededRandom } from "../prng";
@@ -234,6 +235,17 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog(
 		`✅ ${String(notificationsDemo.tenantCustomers)} customer links, ${String(notificationsDemo.testAccountConsents)} test-account consents (opted in), ${String(notificationsDemo.notifications)} notifications, ${String(notificationsDemo.broadcasts)} broadcasts, ${notificationsDemo.devices === "skipped" ? "no push devices (set NOTIFICATIONS_ENCRYPTION_KEYS)" : `${String(notificationsDemo.devices)} push devices`}`,
 	);
+	seedLog("Seeding notices with a 4K photo or a PDF attached...");
+	const attachmentNotices = await seedAttachmentNotices(
+		[
+			{ userId: superAdminUser.id, surface: "CUSTOMER" },
+			{ userId: superAdminUser.id, surface: "ADMIN" },
+			{ userId: customerUser.id, surface: "CUSTOMER" },
+		],
+		superAdminUser.id,
+		Date.now(),
+	);
+	seedLog(`✅ ${String(attachmentNotices)} notices with an attachment`);
 	seedLog("Seeding global HTTP audit trail (incl. POS rows), a soft-deleted geo city and an idempotency record...");
 	const auditSummary = await seedHttpAuditTrail({ superAdminId: superAdminUser.id, adminId: adminUser.id, userId: customerUser.id });
 	seedLog(

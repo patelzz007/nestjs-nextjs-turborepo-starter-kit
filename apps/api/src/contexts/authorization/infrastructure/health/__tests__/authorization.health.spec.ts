@@ -2,7 +2,7 @@ import type { Role, Prisma } from "@prisma/client";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 import { SYSTEM_ROLE_CATALOG } from "../../reference-data/system-role-catalog";

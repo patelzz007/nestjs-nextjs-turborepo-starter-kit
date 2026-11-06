@@ -8,7 +8,7 @@
 // and a parity test keeps the CSS in step. Distances are fractions of the
 // viewport width, so the sweep looks the same on a phone and a monitor.
 
-import type { CubicBezier, ThemeName, ThemeRole } from "./schema";
+import type { CubicBezier, MobileThemeName, ThemeRole } from "./schema";
 import { cubicBezier } from "./value";
 
 /** The highlight's colour in one theme: a token role, at an opacity. */
@@ -36,7 +36,7 @@ export interface SkeletonMotion {
 	/** The region's fade-in once the delay has passed. */
 	readonly revealMs: number;
 	/** Per theme: light lifts the bone toward the card, dark toward the foreground — never darkening it. */
-	readonly sheen: Readonly<Record<ThemeName, SkeletonSheen>>;
+	readonly sheen: Readonly<Record<MobileThemeName, SkeletonSheen>>;
 }
 
 export const SKELETON_MOTION: SkeletonMotion = {
@@ -52,5 +52,8 @@ export const SKELETON_MOTION: SkeletonMotion = {
 		light: { role: "card", opacity: 0.85 },
 		dark: { role: "foreground", opacity: 0.07 },
 		nord: { role: "foreground", opacity: 0.07 },
+		"current-dark": { role: "foreground", opacity: 0.07 },
+		harbour: { role: "foreground", opacity: 0.07 },
+		mocha: { role: "foreground", opacity: 0.07 },
 	},
 };

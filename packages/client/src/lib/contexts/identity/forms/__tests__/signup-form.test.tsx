@@ -4,7 +4,7 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import type { ConsumerWebSignupInput, Envelope, SignupInput, SignupResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture } from "../../../../../testing/auth-fixtures";
 import { ApiError } from "../../../../api/use-api";
 import { SignupForm } from "../signup-form";
 

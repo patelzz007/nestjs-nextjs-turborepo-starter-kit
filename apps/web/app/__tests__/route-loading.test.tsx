@@ -27,7 +27,7 @@ import {
 	SIGN_IN_LOADING_LABELS,
 	WALLET_LOADING_LABELS,
 } from "@/components/loading/loading-labels";
-import { expectSingleLoadingStatus, SkeletonTestProviders } from "@/test-support/skeleton";
+import { expectSingleLoadingStatus, SkeletonTestProviders } from "@/testing/skeleton";
 import { NOTIFICATIONS_INBOX_LOADING_LABELS } from "@workspace/client/lib/features/notifications/notifications-inbox-skeleton";
 
 // The public chrome reads the session for its sign-in actions; it is not what these cases check.

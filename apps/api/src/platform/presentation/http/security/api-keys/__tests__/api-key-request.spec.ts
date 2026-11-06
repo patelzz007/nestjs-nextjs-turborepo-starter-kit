@@ -1,7 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it } from "vitest";
 
-import { createHttpContext, testRequest, type TestHttpRequest } from "../../../../../../../test/support/http-execution-context";
+import { createHttpContext, testRequest, type TestHttpRequest } from "../../../../../../../e2e/support/http-execution-context";
 import { extractApiKeyFromRequest, getTillPointFromRequest, isJwtShapedToken, requestHeader, setTillPointOnRequest, TillPointMissingError } from "../api-key-request";
 
 /** A test request as the HTTP layer hands it to guards and helpers. */

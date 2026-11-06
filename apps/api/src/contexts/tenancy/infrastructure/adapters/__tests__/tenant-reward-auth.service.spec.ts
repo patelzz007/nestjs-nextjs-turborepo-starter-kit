@@ -11,8 +11,8 @@ import {
 	type PermissionPair,
 } from "@workspace/shared";
 
-import { createTestPrisma } from "../../../../../../test/support/test-service-graph";
-import { createTestPublicUrls } from "../../../../../../test/support/public-urls";
+import { createTestPrisma } from "../../../../../../e2e/support/test-service-graph";
+import { createTestPublicUrls } from "../../../../../../e2e/support/public-urls";
 import { TenantTransactionService } from "../../../../../prisma/tenant-transaction.service";
 import { RequestContextService } from "../../../../../platform/infrastructure/context/request-context";
 import { type AccessControlPort, type AccessDecision, type AccessRequest } from "../../../../authorization/public-api";

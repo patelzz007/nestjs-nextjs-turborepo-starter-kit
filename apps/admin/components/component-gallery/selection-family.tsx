@@ -16,8 +16,8 @@ import { z } from "zod";
 
 import { GALLERY_ENTRIES } from "@/components/component-gallery/gallery-catalog";
 import { ComponentSection, DemoRow, DemoSurface, DemoValue, ExampleOnlySections } from "@/components/component-gallery/gallery-section";
-import { ComboboxShowcase } from "@/components/showcase/combobox-showcase";
-import { SelectShowcase } from "@/components/showcase/select-showcase";
+import { ComboboxShowcase } from "@/components/component-gallery/showcase/combobox-showcase";
+import { SelectShowcase } from "@/components/component-gallery/showcase/select-showcase";
 
 // ── Checkbox ────────────────────────────────────────────────────────────────
 

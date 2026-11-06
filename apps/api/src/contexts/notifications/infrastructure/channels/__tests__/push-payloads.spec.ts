@@ -21,7 +21,10 @@ const MESSAGE: PushMessage = {
 	data: { deliveryId: "0193f2c4-0000-7000-8000-0000000000f1", link: "https://admin.example.com/operations/alerts" },
 	collapseKey: null,
 	badge: UNREAD,
+	imageUrl: null,
 };
+
+const PICTURE = "https://cdn.example.com/cake-1280.webp";
 
 describe("push payloads", () => {
 	it("posts an Android push on its kind's channel, at the time it happened, with every line and the badge", () => {
@@ -31,6 +34,17 @@ describe("push payloads", () => {
 			data: { deliveryId: MESSAGE.deliveryId, link: "https://admin.example.com/operations/alerts", category: "OPERATIONS" },
 			android: { priority: "high", notification: { channelId: "notifications-operations", eventTimestamp: new Date(OCCURRED_AT), notificationCount: UNREAD } },
 		});
+	});
+
+	it("shows a push's picture on Android through FCM's own image field", () => {
+		expect(fcmMessageOf({ ...MESSAGE, imageUrl: PICTURE })).toMatchObject({ notification: { imageUrl: PICTURE }, data: { imageUrl: PICTURE } });
+	});
+
+	it("asks iOS to fetch the picture (mutable-content) and sends its address, and neither without one", () => {
+		expect(apnsPayloadOf({ ...MESSAGE, imageUrl: PICTURE })).toMatchObject({ aps: { "mutable-content": 1 }, imageUrl: PICTURE });
+		const plain = apnsPayloadOf(MESSAGE);
+		expect(plain).not.toHaveProperty("imageUrl");
+		expect(plain).not.toHaveProperty("aps.mutable-content");
 	});
 
 	it("sends by the install's Firebase Installation ID when the app reported one, and by token only otherwise (enhancement 5.3)", () => {

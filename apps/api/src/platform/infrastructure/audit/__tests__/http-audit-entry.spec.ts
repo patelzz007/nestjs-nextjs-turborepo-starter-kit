@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { captureFastifyRequest } from "../../../../../test/support/fastify-request";
+import { captureFastifyRequest } from "../../../../../e2e/support/fastify-request";
 import type { RequestContext, RequestPrincipal } from "../../context/request-context";
 import { REDACTED } from "../../nest-logging/redaction";
 import { AUDIT_PAYLOAD_MAX_BYTES, PII_MASK } from "../audit-data-policy";

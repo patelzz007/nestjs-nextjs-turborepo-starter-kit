@@ -1,6 +1,7 @@
 import { resolveMerchantEntryTenantSlug } from "@/lib/merchant-server-api";
 import { tenantRoutes, ROUTES } from "@/lib/routes";
 import { redirect } from "next/navigation";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +10,8 @@ export default async function MerchantAccountEntryPage(): Promise<React.ReactNod
 	const slug = await resolveMerchantEntryTenantSlug();
 
 	if (slug !== undefined) {
-		redirect(tenantRoutes(slug).account);
+		redirect(appRoute(tenantRoutes(slug).account));
 	}
 
-	redirect(ROUTES.onboarding);
+	redirect(appRoute(ROUTES.onboarding));
 }

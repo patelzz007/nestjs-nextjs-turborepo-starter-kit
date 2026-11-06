@@ -122,7 +122,7 @@ flowchart TD
   only to its own `notion-sync/*` branches and open or update pull requests.
 - Each sync updates **one** open docs pull request (or opens it), so rapid edits don't pile up.
 - A CI check enforces that the pull request touches **only Notion-owned paths**: `docs/**` except
-  `docs/generated/`, `docs/assets/notion/`, and the generated manifest, sidebar and redirects.
+  `docs/generated/`, `docs/images/notion/`, and the generated manifest, sidebar and redirects.
 - **Auto-merge** applies only when every change in the pull request is a routine edit to an existing page.
   **Human review** is required when the pull request:
   - adds or removes a page;
@@ -271,7 +271,7 @@ Notion API responses, and conversion tests.
 ### Assets
 
 - Notion's file links expire after an hour, so every image and file is **downloaded** and stored by
-  content hash in `docs/assets/notion/`. The manifest records which pages use each one.
+  content hash in `docs/images/notion/`. The manifest records which pages use each one.
 - **The downloader is locked down:**
   - HTTPS only;
   - Notion's file hosts only;

@@ -15,6 +15,8 @@ import {
 	imageFileIdsOf,
 	withImageSources,
 } from "@workspace/shared";
+import type { PublicUrlResolve } from "../../../../config/public-url.resolver";
+import { attachmentResponseOf, parseStoredAttachment } from "./notification-attachment.mapper";
 import { z } from "zod";
 
 import { ADMIN_PANEL_ROLE_NAMES } from "../../../authorization/public-api";
@@ -54,6 +56,8 @@ export class PrismaNotificationStore implements NotificationStore {
 		private readonly platformName: string,
 		/** Gives a broadcast body's pictures their public address (enhancement 5.4). */
 		private readonly images: Pick<BroadcastImageFilesPort, "sources">,
+		/** Gives an attachment its public address when it is read. */
+		private readonly resolve: PublicUrlResolve,
 	) {}
 
 	public async findNotification(notificationId: string): Promise<StoredNotification | null> {
@@ -61,6 +65,8 @@ export class PrismaNotificationStore implements NotificationStore {
 		if (row === null) {
 			return null;
 		}
+		const stored = parseStoredAttachment(row.attachment);
+		const links = attachmentResponseOf(stored, this.resolve);
 		return {
 			id: row.id,
 			recipientUserId: row.recipientUserId,
@@ -74,6 +80,7 @@ export class PrismaNotificationStore implements NotificationStore {
 			fannedOutAt: row.fannedOutAt === null ? null : Number(row.fannedOutAt),
 			notBefore: row.notBefore === null ? null : Number(row.notBefore),
 			createdAt: Number(row.createdAt),
+			attachment: stored === null || links === null ? null : { stored, links },
 		};
 	}
 
@@ -258,6 +265,7 @@ export class PrismaNotificationStore implements NotificationStore {
 				...(row.richBody === null ? {} : { richBody: row.richBody }),
 				senderName: row.senderName,
 				senderLogoUrl: row.senderLogoUrl,
+				...(row.attachment === null ? {} : { attachment: row.attachment }),
 				groupKey: row.groupKey,
 				broadcastId: row.broadcastId,
 			})),

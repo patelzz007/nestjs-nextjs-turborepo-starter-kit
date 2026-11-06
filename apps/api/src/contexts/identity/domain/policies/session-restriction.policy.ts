@@ -1,7 +1,8 @@
-import type { EnrollmentReason, EpochMs } from "@workspace/shared";
+import type { EnrollmentReason, EpochMs, SessionScopeSchema } from "@workspace/shared";
+import type { z } from "zod";
 
 /** A session is `full`, or `restricted` to finishing an enrollment step (verify email, enroll MFA). */
-export type SessionScope = "full" | "restricted";
+export type SessionScope = z.output<typeof SessionScopeSchema>;
 
 export type SessionRestriction = { readonly restricted: false } | { readonly restricted: true; readonly reason: EnrollmentReason; readonly message: string };
 

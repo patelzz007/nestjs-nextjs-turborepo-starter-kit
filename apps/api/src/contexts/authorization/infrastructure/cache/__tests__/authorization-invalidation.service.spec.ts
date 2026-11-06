@@ -5,10 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import type { AccessTokenStatePort } from "../../../../../platform/application/ports/access-token.port";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { AuthorizationCacheService, type CachedAuthorization } from "../authorization-cache.service";
 import { AUTHORIZATION_INVALIDATION_CHANNEL, AuthorizationInvalidationService, MAX_USER_IDS_PER_INVALIDATION_MESSAGE } from "../authorization-invalidation.service";
-import { localAppCache } from "../../../../../../test/support/local-app-cache";
+import { localAppCache } from "../../../../../../e2e/support/local-app-cache";
 
 /**
  * A real ioredis client that never connects (`lazyConnect`), with its network

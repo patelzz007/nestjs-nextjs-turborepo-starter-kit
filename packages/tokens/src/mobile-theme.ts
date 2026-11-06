@@ -7,16 +7,19 @@
 // mobile renderer applies them; the web never sees these values. Any themed role may be re-mapped
 // (MobileThemeOverridesSchema); a role left out keeps the shared value (the status tones, the tiers).
 //
-// - light: a soft grey page (gray-50), near-white surfaces (gray-10, never pure white) with hairline
-//   edges (gray-200); slate instead of black (owner, 2026-11-05): slate-900 (brand-900) for text and
-//   slate-800 (brand-800, the tab bar's capsule) for buttons, selection and the drawer's account card.
+// - light: a calm sky blue page under cards that carry the same blue, outlines in neutral grey, #2563eb
+//   links; slate instead of black (owner, 2026-11-05): Tailwind's slate-800 (LIGHT_ACTION, owner, 2026-11-06) for
+//   text, buttons, selection, the tab bar's capsule and the sign-in panel.
 // - dark: graphite (owner's pick, 2026-11-05): neutral greys leaning faintly cool — page #1c1d20 <
-//   cards #292b2f < raised #313337, hairlines #3a3c40 — with #f0f1f4 ink for text and buttons, #a9adb6
+//   cards #292b2f < raised #313337, hairlines #3a3c40 — with #f0f1f4 ink for text, pure white for buttons and selection (owner, 2026-11-06), #a9adb6
 //   for secondary text and a soft blue (#8ab4ff) for links and focus.
 // - nord: the owner's editor slate (the `dusk` scale) — a cool blue-grey page (#2b2d36) under lifted
 //   surfaces (#303540, raised #343a47) with soft hairlines (#3b4150) — read at a glance: text #e6e9f0,
 //   secondary #b8bfcb, WHITE for buttons and the active items (with dusk text), steel blue (#8aa4c8) for
 //   links and focus; the status tints keep their Aurora hues.
+//
+// - current-dark, harbour, mocha: dark themes only the phone has (the palettes page), each a DarkPalette below
+//   on top of graphite. Harbour is the one whose accent is a colour: its buttons are cornflower, not white.
 //
 // Colour does jobs only: blue for links, focus and the lead chart series; the shared status tones for
 // state. The floating tab bar never follows these roles: it has its own colours
@@ -25,13 +28,36 @@
 import type { MobileComponentColors, MobileThemeOverrides } from "./schema";
 import { hex, oklch, paletteColor } from "./value";
 
+/**
+ * The light theme (owner's pick, 2026-11-06, judged on the phone): a calm sky blue, leaning away from violet, which
+ * Tailwind's blue-50 showed on an OLED screen. Blue lives in the surfaces and text; outlines are neutral grey.
+ */
+const LIGHT_PAGE = hex("#e7f3fb");
+/** Cards carry the page's blue, a step lighter, so they sit in the page rather than on it. */
+const LIGHT_CARD = hex("#f2f9fd");
+/** Soft fills: as deep as the page can go while #2563eb links on them keep 4.5:1. */
+const LIGHT_RAISED = hex("#e5f2fb");
+/** Dividers and card edges: neutral grey with no blue in it (owner, 2026-11-06). */
+const LIGHT_HAIRLINE = hex("#e5e5e5");
+/** Field and outlined-button edges: a soft neutral grey. */
+const LIGHT_FIELD = hex("#c7c7c7");
+/** Checkbox and radio rings: a stronger grey than the fields, 3:1 on the cards, as a control's edge needs. */
+const LIGHT_CONTROL_RING = hex("#8c8c8c");
+const LIGHT_INK = hex("#1e293b");
+const LIGHT_SECONDARY = hex("#3f6285");
+/** The sign-in panel's secondary text, on the slate-800 panel. */
+const LIGHT_PANEL_MUTED = hex("#b4c0d0");
+/** Light theme buttons and selection: Tailwind's slate-800, 14:1 under their near-white text. */
+const LIGHT_ACTION = hex("#1e293b");
 /** Dark theme links and focus: a soft clear blue, 6.8:1 on the graphite cards (#292b2f). */
 const DARK_LINK = hex("#8ab4ff");
-/** Light theme links and focus: a clear blue, 6.5:1 on the near-white surfaces. */
-const LIGHT_LINK = oklch(0.5, 0.19, 262);
+/** Light theme links and focus: Tailwind's blue-600. */
+const LIGHT_LINK = hex("#2563eb");
 /** Light theme's teal and violet chart series: the third and fourth series, after blue and amber. */
 const LIGHT_CHART_TEAL = oklch(0.6, 0.1, 190);
 const LIGHT_CHART_VIOLET = oklch(0.55, 0.17, 295);
+/** Light theme's fifth chart series: a soft blue instead of grey, 3:1 on the page and the cards. */
+const LIGHT_CHART_SKY = hex("#5e8cb7");
 /** Dark theme's teal and violet chart series, lifted to read on the dark surfaces. */
 const DARK_CHART_TEAL = oklch(0.72, 0.1, 190);
 const DARK_CHART_VIOLET = oklch(0.7, 0.14, 295);
@@ -133,45 +159,196 @@ export const GRAPHITE_DARK_THEME: NonNullable<MobileThemeOverrides["dark"]> = {
 	link: DARK_LINK,
 };
 
+/** A tone on the phone's own themes: the colour, and its soft tint (the colour at 22% over the theme's card). */
+interface DarkTone {
+	readonly full: ReturnType<typeof hex>;
+	readonly soft: ReturnType<typeof hex>;
+}
+
+/** One of the phone's own dark palettes (the palettes page): the surfaces, text, accent and tones it sets. */
+interface DarkPalette {
+	readonly page: ReturnType<typeof hex>;
+	readonly card: ReturnType<typeof hex>;
+	readonly raised: ReturnType<typeof hex>;
+	readonly hairline: ReturnType<typeof hex>;
+	readonly ink: ReturnType<typeof hex>;
+	readonly muted: ReturnType<typeof hex>;
+	readonly primary: ReturnType<typeof hex>;
+	readonly primaryForeground: ReturnType<typeof hex>;
+	readonly link: ReturnType<typeof hex>;
+	readonly blue: DarkTone;
+	readonly violet: DarkTone;
+	readonly green: DarkTone;
+	readonly yellow: DarkTone;
+	readonly red: DarkTone;
+}
+
+/** Current Dark: the pure greys the phone shipped before graphite. */
+const CURRENT_DARK_PALETTE: DarkPalette = {
+	page: hex("#1d1d1d"),
+	card: hex("#2b2b2b"),
+	raised: hex("#333333"),
+	hairline: hex("#393939"),
+	ink: hex("#f5f5f5"),
+	muted: hex("#a4a4a4"),
+	primary: hex("#f5f5f5"),
+	primaryForeground: hex("#1d1d1d"),
+	link: hex("#7ab0ff"),
+	blue: { full: hex("#7aa7ff"), soft: hex("#3c465a") },
+	violet: { full: hex("#b49cff"), soft: hex("#49445a") },
+	green: { full: hex("#62cf96"), soft: hex("#374f43") },
+	yellow: { full: hex("#e9b45c"), soft: hex("#554936") },
+	red: { full: hex("#f08a8a"), soft: hex("#564040") },
+};
+
+/** Harbour: a deep blue slate with a cornflower accent, the one palette whose accent is a colour. */
+const HARBOUR_PALETTE: DarkPalette = {
+	page: hex("#1a2030"),
+	card: hex("#252d3f"),
+	raised: hex("#2d3547"),
+	hairline: hex("#363e50"),
+	ink: hex("#e9eef8"),
+	muted: hex("#a5b0c6"),
+	primary: hex("#9bbcff"),
+	primaryForeground: hex("#121a2b"),
+	link: hex("#9bbcff"),
+	blue: { full: hex("#9bbcff"), soft: hex("#3f4c69") },
+	violet: { full: hex("#bba8ff"), soft: hex("#464869") },
+	green: { full: hex("#6fd3a6"), soft: hex("#355256") },
+	yellow: { full: hex("#eebd6c"), soft: hex("#514d49") },
+	red: { full: hex("#f39494"), soft: hex("#524452") },
+};
+
+/** Mocha: greys warmed toward coffee, the hue kept low so it never turns amber. */
+const MOCHA_PALETTE: DarkPalette = {
+	page: hex("#201d1b"),
+	card: hex("#2d2a28"),
+	raised: hex("#353230"),
+	hairline: hex("#3e3b39"),
+	ink: hex("#f4efe9"),
+	muted: hex("#b5ada4"),
+	primary: hex("#f4efe9"),
+	primaryForeground: hex("#201d1b"),
+	link: hex("#e3b48c"),
+	blue: { full: hex("#8eb0f0"), soft: hex("#424754") },
+	violet: { full: hex("#c0a6f0"), soft: hex("#4d4554") },
+	green: { full: hex("#7ccf9c"), soft: hex("#3e4e42") },
+	yellow: { full: hex("#e9b86a"), soft: hex("#564937") },
+	red: { full: hex("#ef9488"), soft: hex("#58413d") },
+};
+
+/** A palette as theme roles; the generator lays them over the dark theme, which fills in the rest (shadows, the other chart series). */
+function darkThemeOf(palette: DarkPalette): NonNullable<MobileThemeOverrides["harbour"]> {
+	return {
+		background: palette.page,
+		foreground: palette.ink,
+		card: palette.card,
+		"card-foreground": palette.ink,
+		popover: palette.raised,
+		"popover-foreground": palette.ink,
+		topbar: palette.page,
+		"shell-frame": palette.page,
+		"shell-panel": palette.page,
+		sheet: palette.card,
+		primary: palette.primary,
+		"primary-foreground": palette.primaryForeground,
+		secondary: palette.hairline,
+		"secondary-foreground": palette.ink,
+		muted: palette.hairline,
+		"muted-foreground": palette.muted,
+		accent: palette.hairline,
+		"accent-foreground": palette.ink,
+		border: palette.hairline,
+		input: palette.hairline,
+		ring: palette.link,
+		"chart-1": palette.link,
+		sidebar: palette.page,
+		"sidebar-foreground": palette.ink,
+		"sidebar-primary": palette.primary,
+		"sidebar-primary-foreground": palette.primaryForeground,
+		"sidebar-accent": palette.hairline,
+		"sidebar-accent-foreground": palette.ink,
+		"sidebar-border": palette.hairline,
+		"sidebar-ring": palette.link,
+		"sidebar-active": palette.primary,
+		"sidebar-active-foreground": palette.primaryForeground,
+		"sidebar-active-border": palette.primary,
+		"search-mark-bg": palette.link,
+		"search-mark-fg": palette.page,
+		"auth-panel": palette.page,
+		"auth-panel-muted": palette.muted,
+		"auth-brand-from": palette.hairline,
+		"auth-brand-to": palette.raised,
+		"success-soft": palette.green.soft,
+		"warning-soft": palette.yellow.soft,
+		"info-soft": palette.blue.soft,
+		"destructive-soft": palette.red.soft,
+		"tone-green": palette.green.full,
+		"tone-green-soft": palette.green.soft,
+		"tone-blue": palette.blue.full,
+		"tone-blue-soft": palette.blue.soft,
+		"tone-yellow": palette.yellow.full,
+		"tone-yellow-soft": palette.yellow.soft,
+		"tone-red": palette.red.full,
+		"tone-red-soft": palette.red.soft,
+		"tone-violet": palette.violet.full,
+		"tone-violet-soft": palette.violet.soft,
+		link: palette.link,
+	};
+}
+
+/** A palette's tab bar: the card's pill and edge, a capsule in its accent, its secondary text for the icons. */
+function darkTabBarOf(palette: DarkPalette): MobileComponentColors["harbour"] {
+	return {
+		"tab-bar": palette.card,
+		"tab-bar-border": palette.hairline,
+		"tab-bar-active": palette.primary,
+		"tab-bar-active-foreground": palette.primaryForeground,
+		"tab-bar-icon": palette.muted,
+		"control-ring": palette.hairline,
+		"logo-tile": paletteColor("gray", "300"),
+	};
+}
+
 export const MOBILE_THEME_OVERRIDES: MobileThemeOverrides = {
 	light: {
-		background: paletteColor("gray", "50"),
-		foreground: paletteColor("brand", "900"),
-		card: paletteColor("gray", "10"),
-		"card-foreground": paletteColor("brand", "900"),
-		popover: paletteColor("gray", "10"),
-		"popover-foreground": paletteColor("brand", "900"),
-		topbar: paletteColor("gray", "50"),
-		"shell-frame": paletteColor("gray", "50"),
-		"shell-panel": paletteColor("gray", "50"),
-		sheet: paletteColor("gray", "10"),
-		primary: paletteColor("brand", "800"),
+		background: LIGHT_PAGE,
+		foreground: LIGHT_INK,
+		card: LIGHT_CARD,
+		"card-foreground": LIGHT_INK,
+		popover: LIGHT_CARD,
+		"popover-foreground": LIGHT_INK,
+		topbar: LIGHT_PAGE,
+		"shell-frame": LIGHT_PAGE,
+		"shell-panel": LIGHT_PAGE,
+		sheet: LIGHT_CARD,
+		primary: LIGHT_ACTION,
 		"primary-foreground": paletteColor("gray", "25"),
-		secondary: paletteColor("gray", "100"),
-		"secondary-foreground": paletteColor("brand", "900"),
-		muted: paletteColor("gray", "100"),
-		"muted-foreground": paletteColor("gray", "600"),
-		accent: paletteColor("gray", "100"),
-		"accent-foreground": paletteColor("brand", "900"),
-		border: paletteColor("gray", "200"),
-		input: paletteColor("gray", "300"),
+		secondary: LIGHT_RAISED,
+		"secondary-foreground": LIGHT_INK,
+		muted: LIGHT_RAISED,
+		"muted-foreground": LIGHT_SECONDARY,
+		accent: LIGHT_RAISED,
+		"accent-foreground": LIGHT_INK,
+		border: LIGHT_HAIRLINE,
+		input: LIGHT_FIELD,
 		ring: LIGHT_LINK,
 		"chart-1": LIGHT_LINK,
 		"chart-2": paletteColor("warm", "500"),
 		"chart-3": LIGHT_CHART_TEAL,
 		"chart-4": LIGHT_CHART_VIOLET,
-		"chart-5": paletteColor("gray", "500"),
-		sidebar: paletteColor("gray", "50"),
-		"sidebar-foreground": paletteColor("brand", "900"),
-		"sidebar-primary": paletteColor("brand", "800"),
+		"chart-5": LIGHT_CHART_SKY,
+		sidebar: LIGHT_PAGE,
+		"sidebar-foreground": LIGHT_INK,
+		"sidebar-primary": LIGHT_ACTION,
 		"sidebar-primary-foreground": paletteColor("gray", "25"),
-		"sidebar-accent": paletteColor("gray", "100"),
-		"sidebar-accent-foreground": paletteColor("brand", "900"),
-		"sidebar-border": paletteColor("gray", "200"),
+		"sidebar-accent": LIGHT_RAISED,
+		"sidebar-accent-foreground": LIGHT_INK,
+		"sidebar-border": LIGHT_HAIRLINE,
 		"sidebar-ring": LIGHT_LINK,
-		"sidebar-active": paletteColor("brand", "800"),
+		"sidebar-active": LIGHT_ACTION,
 		"sidebar-active-foreground": paletteColor("gray", "25"),
-		"sidebar-active-border": paletteColor("brand", "800"),
+		"sidebar-active-border": LIGHT_ACTION,
 		"search-mark-bg": LIGHT_LINK,
 		"search-mark-fg": paletteColor("gray", "25"),
 		"shadow-ambient": LIGHT_SHADOW_AMBIENT,
@@ -179,8 +356,16 @@ export const MOBILE_THEME_OVERRIDES: MobileThemeOverrides = {
 		"warning-soft": LIGHT_WARNING_SOFT,
 		"tone-yellow-soft": LIGHT_YELLOW_SOFT,
 		link: LIGHT_LINK,
+		"auth-panel": LIGHT_ACTION,
+		"auth-panel-muted": LIGHT_PANEL_MUTED,
 	},
-	dark: GRAPHITE_DARK_THEME,
+	dark: {
+		...GRAPHITE_DARK_THEME,
+		primary: paletteColor("neutral", "0"),
+		"sidebar-primary": paletteColor("neutral", "0"),
+		"sidebar-active": paletteColor("neutral", "0"),
+		"sidebar-active-border": paletteColor("neutral", "0"),
+	},
 	nord: {
 		background: paletteColor("dusk", "900"),
 		foreground: paletteColor("dusk", "25"),
@@ -230,6 +415,9 @@ export const MOBILE_THEME_OVERRIDES: MobileThemeOverrides = {
 		"tone-teal-soft": NORD_TEAL_SOFT,
 		"tone-violet-soft": NORD_VIOLET_SOFT,
 	},
+	"current-dark": darkThemeOf(CURRENT_DARK_PALETTE),
+	harbour: darkThemeOf(HARBOUR_PALETTE),
+	mocha: darkThemeOf(MOCHA_PALETTE),
 };
 
 /**
@@ -242,19 +430,21 @@ export const MOBILE_THEME_OVERRIDES: MobileThemeOverrides = {
  */
 export const MOBILE_COMPONENT_COLORS: MobileComponentColors = {
 	light: {
-		"tab-bar": paletteColor("neutral", "25"),
-		"tab-bar-border": paletteColor("neutral", "200"),
-		"tab-bar-active": paletteColor("brand", "800"),
+		"tab-bar": LIGHT_CARD,
+		"tab-bar-border": LIGHT_HAIRLINE,
+		"tab-bar-active": LIGHT_ACTION,
 		"tab-bar-active-foreground": paletteColor("neutral", "0"),
-		"tab-bar-icon": paletteColor("neutral", "600"),
-		"logo-tile": paletteColor("gray", "100"),
+		"tab-bar-icon": LIGHT_SECONDARY,
+		"control-ring": LIGHT_CONTROL_RING,
+		"logo-tile": LIGHT_RAISED,
 	},
 	dark: {
 		"tab-bar": paletteColor("graphite", "850"),
 		"tab-bar-border": paletteColor("graphite", "750"),
-		"tab-bar-active": paletteColor("graphite", "25"),
+		"tab-bar-active": paletteColor("neutral", "0"),
 		"tab-bar-active-foreground": paletteColor("graphite", "950"),
 		"tab-bar-icon": paletteColor("graphite", "400"),
+		"control-ring": paletteColor("graphite", "700"),
 		"logo-tile": paletteColor("gray", "300"),
 	},
 	nord: {
@@ -263,6 +453,10 @@ export const MOBILE_COMPONENT_COLORS: MobileComponentColors = {
 		"tab-bar-active": paletteColor("neutral", "0"),
 		"tab-bar-active-foreground": paletteColor("dusk", "950"),
 		"tab-bar-icon": paletteColor("dusk", "200"),
+		"control-ring": paletteColor("dusk", "600"),
 		"logo-tile": paletteColor("dusk", "25"),
 	},
+	"current-dark": darkTabBarOf(CURRENT_DARK_PALETTE),
+	harbour: darkTabBarOf(HARBOUR_PALETTE),
+	mocha: darkTabBarOf(MOCHA_PALETTE),
 };

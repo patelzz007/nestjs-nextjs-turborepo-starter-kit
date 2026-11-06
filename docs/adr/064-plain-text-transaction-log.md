@@ -47,7 +47,7 @@ deliberate. A second synchronous write would double it for no gain in safety.
    read and hid what was missing. One file per day in the log's time zone (`TRANSACTION_LOG_TIME_ZONE`, by default the
    server's own; times carry their UTC offset, `2026-10-27 00:30:00.079 +08:00`; UTC-only until
    2026-10-27, which read 4 pm for a Kuala Lumpur midnight): `transactions-YYYY-MM-DD.txt` under
-   `TRANSACTION_LOG_DIR` (default `logs/transactions`, taken from the repository root since
+   `TRANSACTION_LOG_DIR` (default `.artifacts/logs/transactions`, taken from the repository root since
    2026-10-26; it was relative to the API's working directory, `apps/api`).
 4. **Retention per instance.** Day files past `TRANSACTION_LOG_RETENTION_DAYS` (default 30) are
    deleted at boot and hourly, in-process on every instance, because the files live on each

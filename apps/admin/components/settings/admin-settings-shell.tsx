@@ -6,9 +6,10 @@ import { SettingsShell, type SettingsLinkProps, type SettingsNavGroup } from "@w
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 function renderLink(href: string): React.ReactElement<SettingsLinkProps> {
-	return <Link href={href} />;
+	return <Link href={appRoute(href)} />;
 }
 
 /** The admin settings page: sections on the left, the open one on the right. */

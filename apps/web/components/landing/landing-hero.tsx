@@ -11,6 +11,7 @@ import Link from "next/link";
 import * as React from "react";
 import { REWARD_LIST_ROW_COVER_RATIO, REWARD_THUMBNAIL_SIZES } from "@/contexts/rewards/lib/reward-cover";
 import { landingSectionPath, LANDING_SECTION_IDS, publicRewardDetailPath } from "@/lib/routes";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** Cities in the pilot — the only places offers are redeemable today. */
 const PILOT_CITIES: readonly string[] = ["Kuala Lumpur", "Melaka"];
@@ -65,7 +66,9 @@ export function LandingHero({ featuredOffers, liveOfferCount, secondaryAction }:
 						<Link href={landingSectionPath(LANDING_SECTION_IDS.rewards)} className={cn(buttonVariants({ size: "lg" }), "h-12 min-w-44 px-5 shadow-lg shadow-primary/25")}>
 							Browse offers
 						</Link>
-						<Link href={secondaryAction.href} className={cn(buttonVariants({ size: "lg", variant: "outline" }), "h-12 min-w-44 bg-background/70 px-5 backdrop-blur-sm")}>
+						<Link
+							href={appRoute(secondaryAction.href)}
+							className={cn(buttonVariants({ size: "lg", variant: "outline" }), "h-12 min-w-44 bg-background/70 px-5 backdrop-blur-sm")}>
 							{secondaryAction.label}
 						</Link>
 					</div>

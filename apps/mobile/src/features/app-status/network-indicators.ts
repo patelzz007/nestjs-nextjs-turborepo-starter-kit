@@ -38,6 +38,11 @@ function pingText(pingMs: number): string {
 	return `${String(pingMs)} ms`;
 }
 
+/** The connection in a card's width: the ping once measured (the dot's colour says the strength), else the state. */
+export function networkShortLabel(reading: NetworkQualityReading): string {
+	return reading.status === "measured" ? pingText(reading.quality.pingMs) : networkPillContent(reading).label;
+}
+
 export function networkPillContent(reading: NetworkQualityReading): StatusPillContent {
 	switch (reading.status) {
 		case "measuring":

@@ -4,8 +4,8 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { describeBroadcastAudience, MerchantBroadcastDetailPageView } from "@/contexts/notifications/components/merchant-broadcast-detail-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { broadcastFixture } from "@/test/broadcasts";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { broadcastFixture } from "@/testing/broadcasts";
 import type { BroadcastResponse } from "@workspace/shared";
 
 const { broadcastQuery, scheduleMutate, cancelMutate } = vi.hoisted(() => ({ broadcastQuery: vi.fn(), scheduleMutate: vi.fn(), cancelMutate: vi.fn() }));

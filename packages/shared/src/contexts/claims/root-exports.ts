@@ -5,6 +5,7 @@
 
 export {
 	CreateRewardClaimSchema,
+	RequestClaimOtpResponseSchema,
 	RequestClaimOtpSchema,
 	RewardClaimCreatedResponseSchema,
 	RewardClaimListQuerySchema,
@@ -17,6 +18,7 @@ export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, 
 export type {
 	CreateRewardClaimInput,
 	RequestClaimOtpInput,
+	RequestClaimOtpResponse,
 	RewardClaimCreatedResponse,
 	RewardClaimListQuery,
 	RewardClaimListSortField,

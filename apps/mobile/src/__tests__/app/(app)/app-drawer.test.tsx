@@ -121,7 +121,7 @@ describe("app drawer (ADR 038)", () => {
 		await renderSignedIn("/");
 		const drawer = await openDrawer();
 
-		await fireEvent.press(await drawer.findByRole("button", { name: "Edit profile" }));
+		await fireEvent.press(await drawer.findByRole("button", { name: "Alex Morgan, Edit profile" }));
 
 		expect(await screen.findByText("profile screen")).toBeOnTheScreen();
 	});

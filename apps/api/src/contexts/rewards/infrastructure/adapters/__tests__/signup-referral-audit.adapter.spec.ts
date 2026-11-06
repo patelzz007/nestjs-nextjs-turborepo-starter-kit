@@ -3,7 +3,7 @@ import { Test } from "@nestjs/testing";
 import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { SIGNUP_REFERRAL_AUDIT_FACTORY, type SignupReferralAuditFactory } from "../../../../referrals/public-api";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import { RewardsAccessModule } from "../../rewards-access.module";

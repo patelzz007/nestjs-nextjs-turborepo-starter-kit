@@ -9,9 +9,9 @@ import type { FastifyRequest } from "fastify";
 import { lastValueFrom, of, type Observable } from "rxjs";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
-import { createAuditTrailDouble } from "../../../../../test/support/audit-trail-double";
-import { createHttpContext, testRequest } from "../../../../../test/support/http-execution-context";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createAuditTrailDouble } from "../../../../../e2e/support/audit-trail-double";
+import { createHttpContext, testRequest } from "../../../../../e2e/support/http-execution-context";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { LogService } from "../../logging/logs.service";
 import { RequestContextService } from "../../context/request-context";

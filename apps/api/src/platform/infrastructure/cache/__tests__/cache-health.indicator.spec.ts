@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { localAppCache } from "../../../../../test/support/local-app-cache";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { localAppCache } from "../../../../../e2e/support/local-app-cache";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { cacheMemoryOverAlert } from "../../../application/ports/app-cache.port";
 import { CacheHealthIndicator } from "../cache-health.indicator";
 

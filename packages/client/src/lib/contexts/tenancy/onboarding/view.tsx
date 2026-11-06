@@ -32,6 +32,7 @@ import { MerchantOnboardingCompactProgress, MerchantOnboardingTimeline } from ".
 import { catchCaught } from "../../../caught";
 import { classifyOnboardingFailure, type OnboardingFailure } from "./onboarding-outcome";
 import { runOnboardingSubmission } from "./onboarding-submission";
+import { appRoute } from "../../../navigation/app-route";
 
 type FlowStep = "loading" | "invalid" | "expired" | "documents-closed" | "wizard" | "success";
 type WizardPanel = "business" | "stores" | "registration" | "documents" | "account";
@@ -87,7 +88,7 @@ function OnboardingNotice({ title, message, href, linkLabel, isPrimaryLink = fal
 		<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "mx-auto w-full max-w-lg space-y-4 p-6 text-center sm:p-8")}>
 			<h2 className="text-xl font-semibold tracking-tight">{title}</h2>
 			<p className="text-sm text-muted-foreground">{message}</p>
-			<Link href={href} className={isPrimaryLink ? cn(buttonVariants(), "h-11 w-full sm:w-auto") : cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
+			<Link href={appRoute(href)} className={isPrimaryLink ? cn(buttonVariants(), "h-11 w-full sm:w-auto") : cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
 				{linkLabel}
 			</Link>
 		</div>
@@ -382,7 +383,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 						application.
 					</p>
 				</div>
-				<Link href={loginUrl} className={cn(buttonVariants(), "h-11 w-full sm:w-auto")}>
+				<Link href={appRoute(loginUrl)} className={cn(buttonVariants(), "h-11 w-full sm:w-auto")}>
 					Continue to sign in
 				</Link>
 			</div>
@@ -484,7 +485,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 
 				<p className="mt-6 text-center text-xs text-muted-foreground sm:text-left">
 					Already have an account?{" "}
-					<Link href={loginUrl} className="font-medium text-primary hover:underline">
+					<Link href={appRoute(loginUrl)} className="font-medium text-primary hover:underline">
 						Sign in
 					</Link>
 				</p>

@@ -30,7 +30,7 @@ import { CLAIM_QR_SIZE_PX } from "@/contexts/claims/components/claim-qr-layout";
 import { CUSTOMER_REFERRAL_KPIS, CUSTOMER_REWARD_KPIS, CUSTOMER_SPENDING_KPIS } from "@/contexts/reporting/lib/customer-analytics";
 import { FEATURED_OFFER_LIMIT } from "@/contexts/rewards/lib/featured-offers";
 import { WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
-import { countSlots, expectSingleLoadingStatus, SkeletonTestProviders } from "@/test-support/skeleton";
+import { countSlots, expectSingleLoadingStatus, SkeletonTestProviders } from "@/testing/skeleton";
 
 /** What the `ui-preferences` store reads back for a visitor who chose the list layout. */
 const LIST_LAYOUT_SNAPSHOT = "list";

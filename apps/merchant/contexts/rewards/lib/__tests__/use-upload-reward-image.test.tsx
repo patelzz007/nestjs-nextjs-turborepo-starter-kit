@@ -3,7 +3,7 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { epochMs, type CompleteFileUploadResponse } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { TestQueryClientProvider } from "@/test/query-client";
+import { TestQueryClientProvider } from "@/testing/query-client";
 
 import { REWARD_IMAGE_FILE_RULES, REWARD_IMAGE_RULES, RewardImageNotPublishedError, useUploadRewardImage, type UploadedRewardImage } from "../use-upload-reward-image";
 

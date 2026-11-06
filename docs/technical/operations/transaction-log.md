@@ -15,7 +15,7 @@ read with `tail`, `less` or `grep`, with no database or admin panel in between. 
 day, midnight to midnight in the log's time zone:
 
 ```text
-logs/transactions/transactions-2026-10-26.txt        (at the repository root)
+.artifacts/logs/transactions/transactions-2026-10-26.txt        (at the repository root)
 ```
 
 The `AuditLog` table ([ADR 025](../../adr/025-global-http-audit-log.md), read under
@@ -171,7 +171,7 @@ it up. On a shared folder, concurrent runs are harmless.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `TRANSACTION_LOG_ENABLED` | on (off under `NODE_ENV=test`) | `true` / `false`. |
-| `TRANSACTION_LOG_DIR` | `logs/transactions` | Folder of the day files. A relative path is taken from the repository root (the folder holding `pnpm-workspace.yaml`), so `<repo>/logs/transactions` whichever folder the API runs from (git-ignored). Without a repository around it, as in a deployed bundle, it is taken from the working directory. Before 2026-10-26 the default landed in `apps/api/logs/transactions`; older files there are not moved. |
+| `TRANSACTION_LOG_DIR` | `.artifacts/logs/transactions` | Folder of the day files. A relative path is taken from the repository root (the folder holding `pnpm-workspace.yaml`), so `<repo>/.artifacts/logs/transactions` whichever folder the API runs from (git-ignored). Without a repository around it, as in a deployed bundle, it is taken from the working directory. Before 2026-10-26 the default landed in `apps/api/logs/transactions`; older files there are not moved. |
 | `TRANSACTION_LOG_RETENTION_DAYS` | `30` | Day files older than this many days are deleted (min 1). |
 | `TRANSACTION_LOG_TIME_ZONE` | the server's own zone (`TZ`, else the operating system's) | An IANA zone such as `Asia/Kuala_Lumpur`. Every entry's time is the wall clock in this zone followed by its UTC offset, which also pins the exact instant (`00:30 +08:00` is `16:30 UTC` the day before), and a day file runs from midnight to midnight in it. On a laptop in Kuala Lumpur the default is Kuala Lumpur time. A container without `TZ` runs in UTC, so set this in production to the zone your operators read logs in: RewardHub sets `Asia/Kuala_Lumpur` (`apps/api/.env.example` ships it set). Write the name as the IANA database spells it (`Asia/Kuala_Lumpur`): Node also accepts other casings, but that is a convenience of its `Intl`, not something every tool reading the setting shares. Before 2026-10-27 times were always UTC and files rolled over at midnight UTC. |
 

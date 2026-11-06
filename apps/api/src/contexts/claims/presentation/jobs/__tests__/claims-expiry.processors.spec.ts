@@ -5,8 +5,9 @@ import { describe, expect, it } from "vitest";
 import type { SystemCommandOrigin } from "../../../../../platform/application/ports/command-audit.port";
 import type { SystemCommandDispatcher } from "../../../../../platform/application/system-command-dispatcher";
 import { ExpireOverdueClaimsCommand } from "../../../application/commands/expire-overdue-claims/expire-overdue-claims.command";
+import { ExpireOverdueClaimHoldsCommand } from "../../../application/commands/expire-overdue-claim-holds/expire-overdue-claim-holds.command";
 import { ExpireOverdueReferrerClaimsCommand } from "../../../application/commands/expire-overdue-referrer-claims/expire-overdue-referrer-claims.command";
-import { ClaimsExpirePendingProcessor, ClaimsExpireReferrerProcessor } from "../claims-expiry.processors";
+import { ClaimsExpirePendingProcessor, ClaimsExpireHoldsProcessor, ClaimsExpireReferrerProcessor } from "../claims-expiry.processors";
 
 /** Raised after the dispatch was recorded: BullMQ sees the rejection and retries. */
 class JobFailed extends Error {}
@@ -26,10 +27,12 @@ describe("claim expiry processors", () => {
 
 		await expect(new ClaimsExpirePendingProcessor(dispatcher).process({ data: {} })).rejects.toBeInstanceOf(JobFailed);
 		await expect(new ClaimsExpireReferrerProcessor(dispatcher).process({ data: {} })).rejects.toBeInstanceOf(JobFailed);
+		await expect(new ClaimsExpireHoldsProcessor(dispatcher).process({ data: {} })).rejects.toBeInstanceOf(JobFailed);
 
 		expect(dispatcher.dispatched.map(({ command, origin }) => [command.constructor, origin])).toEqual([
 			[ExpireOverdueClaimsCommand, { kind: "job", name: QUEUE_NAMES.claimsExpirePending }],
 			[ExpireOverdueReferrerClaimsCommand, { kind: "job", name: QUEUE_NAMES.claimsExpireReferrer }],
+			[ExpireOverdueClaimHoldsCommand, { kind: "job", name: QUEUE_NAMES.claimsExpireHolds }],
 		]);
 		expect(dispatcher.dispatched.at(1)?.command).toMatchObject({ actor: { kind: "system", operation: "queue.claims.expire_referrer", origin: "job" } });
 	});

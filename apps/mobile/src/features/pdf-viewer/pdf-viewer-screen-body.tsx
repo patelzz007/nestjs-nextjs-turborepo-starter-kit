@@ -78,7 +78,7 @@ export function PdfViewerScreenBody(): React.JSX.Element {
 			<Card title={PDF_VIEWER_COPY.chooseTitle}>
 				<MutedText>{PDF_VIEWER_COPY.chooseDescription}</MutedText>
 				<Button label={PDF_VIEWER_COPY.choose} icon={FileUpIcon} onPress={choose} loading={isPicking} testID="pdf-viewer-choose" />
-				<Button label={PDF_VIEWER_COPY.sample} variant="secondary" onPress={openSample} testID="pdf-viewer-sample" />
+				<Button label={PDF_VIEWER_COPY.sample} variant="outline" onPress={openSample} testID="pdf-viewer-sample" />
 			</Card>
 		</Screen>
 	);

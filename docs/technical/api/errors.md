@@ -236,4 +236,4 @@ never refreshes or retries. 426 is not in Nest's `HttpStatus` enum, so `AppError
   Prisma P2002, unexpected errors (logged, not leaked), rate limiting.
 - `packages/shared/src/schemas/api/__tests__/api-error.test.ts` — the envelope schema.
 - `packages/client/src/lib/api/__tests__/api-error.test.ts` — client parsing and backwards compatibility.
-- `apps/api/test/app.e2e-spec.ts` — the envelope from the real `AppModule`.
+- `apps/api/e2e/app.e2e-spec.ts` — the envelope from the real `AppModule`.

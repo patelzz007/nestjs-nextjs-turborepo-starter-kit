@@ -1,0 +1,25 @@
+# Chooses THEME (as the Appearance screen names it) and saves the same screens in it, each named PREFIX-<screen>.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: set-theme.yaml
+    env:
+      THEME: ${THEME}
+- runFlow:
+    file: capture.yaml
+    env: { LINK: "/", NAME: "${PREFIX}-home" }
+- runFlow:
+    file: open-drawer.yaml
+    env: { NAME: "${PREFIX}-drawer" }
+- runFlow:
+    file: capture.yaml
+    env: { LINK: "/analytics", NAME: "${PREFIX}-analytics" }
+- runFlow:
+    file: capture.yaml
+    env: { LINK: "/settings", NAME: "${PREFIX}-settings" }
+- runFlow:
+    file: capture.yaml
+    env: { LINK: "/settings/notifications", NAME: "${PREFIX}-notifications" }
+- runFlow:
+    file: capture.yaml
+    env: { LINK: "/settings/security", NAME: "${PREFIX}-security" }

@@ -81,7 +81,7 @@ END $$;
 -- `pnpm tools db:apply-security` (prisma/rls/apply.ts) appends the generated
 -- REVOKEs to THIS file's transaction — right after the blanket grant above —
 -- and then verifies against the live catalog that app_runtime lacks each one.
--- Do not hand-write `REVOKE … FROM app_runtime` here or in rls.sql:
+-- Do not hand-write `REVOKE … FROM app_runtime` here or in 10-policies.sql:
 -- `db:check-rls-manifest` rejects it.
 
 -- ============================================================================

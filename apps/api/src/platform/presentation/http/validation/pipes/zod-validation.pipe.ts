@@ -231,11 +231,11 @@ const ajvWithFormats = new WeakSet<Ajv>();
  * `z.url({ protocol })` emits plain `uri` (the protocol rule has no JSON Schema
  * form): a schema that needs it must use the pipe's `zod` engine.
  */
-export const AJV_STRING_FORMATS: Readonly<Record<string, ZodV4.ZodType>> = {
+export const AJV_STRING_FORMATS = {
 	email: EmailAddressSchema,
 	uuid: UuidParamSchema,
 	uri: url(),
-};
+} satisfies Readonly<Record<string, ZodV4.ZodType>>;
 
 /** Register {@link AJV_STRING_FORMATS} on an Ajv instance (once). */
 function registerAjvFormats(ajv: Ajv): void {

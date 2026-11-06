@@ -12,6 +12,11 @@ import { NotifyRequestError, type NotifyRequest, type NotifyResult, type NotifyT
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** The one table notify() writes, on the caller's transaction. */
+export interface NotifyDatabase {
+	readonly notification: { createMany(args: Prisma.NotificationCreateManyArgs): Promise<{ readonly count: number }> };
+}
+
 /**
  * `notify()` on ONE caller transaction (ADR 070). It writes the notification row only; everything else
  * (preferences, devices, caps, rendering) happens in the fan-out after commit. A repeated request (same
@@ -19,7 +24,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export class TransactionalNotify implements NotifyTransactionalPort {
 	public constructor(
-		private readonly db: Prisma.TransactionClient,
+		private readonly db: NotifyDatabase,
 		private readonly events: TransactionalEventCollector,
 		private readonly clock: Clock,
 	) {}
@@ -32,6 +37,9 @@ export class TransactionalNotify implements NotifyTransactionalPort {
 		}
 		if (request.category !== undefined && !(type.categoryOverridable ?? false)) {
 			throw new NotifyRequestError(`"${type.key}" does not take a category from its producer`);
+		}
+		if (request.attachment !== undefined && type.sensitive) {
+			throw new NotifyRequestError(`"${type.key}" is sensitive: its content is not kept, so it takes no attachment`);
 		}
 		const recipient = this.recipientFields(request);
 		const id = newRowId();
@@ -48,6 +56,7 @@ export class TransactionalNotify implements NotifyTransactionalPort {
 					locale: DEFAULT_NOTIFICATION_LOCALE,
 					broadcastId: request.broadcastId ?? null,
 					notBefore: request.notBefore === undefined ? null : BigInt(request.notBefore),
+					...(request.attachment === undefined ? {} : { attachment: request.attachment }),
 				},
 			],
 			skipDuplicates: true,

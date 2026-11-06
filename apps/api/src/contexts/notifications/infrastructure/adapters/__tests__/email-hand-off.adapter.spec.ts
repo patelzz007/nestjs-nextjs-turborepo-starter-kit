@@ -2,7 +2,7 @@ import type { Command } from "@nestjs/cqrs";
 import type { EmailSendJob, NotificationEmailRequestedPayload } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import type { SystemCommandOrigin } from "../../../../../platform/application/ports/command-audit.port";
 import type { SystemCommandDispatcher } from "../../../../../platform/application/system-command-dispatcher";
 import { DeliverEmailCommand } from "../../../application/commands/deliver-email/deliver-email.command";

@@ -78,7 +78,7 @@ From `rules/00`, `rules/27`, `rules/28`, and memory of past reviews:
 - No magic numbers. Every limit, TTL, and window is a named constant with a comment explaining it.
 - Explicit return types and access modifiers on every function, method, and constructor parameter property.
 - Every business entity is soft-deleted (`isDeleted`, `deletedAt`, `deletedBy`). Never a hard `DELETE`.
-- Tests live in a `__tests__/` folder **next to** the code they test. Never colocated, never in a top-level `tests/` folder (except the existing `apps/api/test/*.e2e-spec.ts` suite, which stays where it is).
+- Tests live in a `__tests__/` folder **next to** the code they test. Never colocated, never in a top-level `tests/` folder (except the existing `apps/api/e2e/*.e2e-spec.ts` suite, which stays where it is).
 
 ---
 
@@ -211,7 +211,7 @@ Modules by size, in files:
 - **One Prisma schema:** `apps/api/prisma/schema.prisma` (89 models), configured by `apps/api/prisma.config.ts`.
 - `PrismaService extends PrismaClient` and is built on `RlsPool` (`apps/api/src/prisma/rls-pool.ts`). `RlsPool` is a `pg.Pool` subclass that runs `SET ROLE app_runtime` and sets session variables on every checkout.
 - **Tenancy is Postgres RLS:**
-  - SQL: `apps/api/prisma/rls.sql`, `apps/api/prisma/rls/*.sql`
+  - SQL: `apps/api/prisma/rls/10-policies.sql`, `apps/api/prisma/rls/*.sql`
   - AsyncLocalStorage `rlsStorage` in `apps/api/src/prisma/rls-context.ts`, a union of user / system / api_key / anonymous
   - `common/interceptors/rls.interceptor.ts` (the outermost interceptor)
   - `prisma/tenant-transaction.service.ts`: `withTenantTransaction(ctx, tx => …)` and `withSystemOperation(ctx, tx => …)`
@@ -254,7 +254,7 @@ Modules by size, in files:
   - The API validates with `@ZodBody` / `@ZodParams` / `@ZodListQuery` / `@ZodResponse` (`common/decorators/`).
 - **Tests:**
   - Unit: `apps/api/vitest.config.unit.ts` runs `src/**/*.spec.ts` (~296 files).
-  - e2e: `apps/api/vitest.config.e2e.ts` runs `apps/api/test/*.e2e-spec.ts` (58 files, real Postgres and Redis, no file parallelism).
+  - e2e: `apps/api/vitest.config.e2e.ts` runs `apps/api/e2e/*.e2e-spec.ts` (58 files, real Postgres and Redis, no file parallelism).
 
 ### 2.7 Lint, throttling, mobile versioning
 
@@ -286,7 +286,7 @@ Modules by size, in files:
 
 ## 3. Glossary for this migration (juniors: read once)
 
-These terms go into `rules/22-glossary.md` in T48. Use them exactly.
+These terms go into `rules/22-architecture-terms.md` in T48. Use them exactly.
 
 | Term | Meaning in this repo |
 |---|---|
@@ -1337,7 +1337,7 @@ Create `platform/presentation/http/security/throttling/rate-limit-policy.ts`. Th
 | analytics export | custom guard | unchanged |
 
 **Tests (T27):**
-- `test/rate-limits.e2e-spec.ts`: one test **per policy**, calling a representative endpoint `limit + 1` times and asserting the last response is `429` with the ADR 016 envelope code the throttler produces today.
+- `e2e/rate-limits.e2e-spec.ts`: one test **per policy**, calling a representative endpoint `limit + 1` times and asserting the last response is `429` with the ADR 016 envelope code the throttler produces today.
 - One unit test per policy constant file, asserting the values are positive integers.
 - Do **not** add a test per endpoint: the per-policy test plus a lint-free decorator is the contract. Add a unit test that walks controller metadata (Nest `Reflector` over every controller in `AppModule`) and asserts every `POST|PUT|PATCH|DELETE` route has either a `@RateLimit` policy or an explicit `@SkipThrottle` with a reason constant. This is how gaps stay closed after the migration.
 
@@ -1355,7 +1355,7 @@ Create `platform/presentation/http/security/throttling/rate-limit-policy.ts`. Th
 
 ### 11.2 The statement counter (T28)
 
-- **File:** `apps/api/test/support/sql-statement-counter.ts`.
+- **File:** `apps/api/e2e/support/sql-statement-counter.ts`.
 - **How it works:** wrap `pg.Client.prototype.query` with `vi.spyOn(…)` so that the **real implementation still runs** (call-through). This is instrumentation, not mocking. Prisma 7's driver adapter may not emit `$on('query')` (see the note in `prisma.service.ts`), which is why we count at the `pg` client.
 - **API:** `countStatements(run: () => Promise<void>): Promise<number>` counts statements issued during `run`.
 - **Ignored statements**, as they are infrastructure noise (put them in a regex constant with a comment):
@@ -1366,7 +1366,7 @@ Create `platform/presentation/http/security/throttling/rate-limit-policy.ts`. Th
   1. seeds 1 row and counts the statements of a page-size-1 request;
   2. seeds up to 25 rows and counts a page-size-25 request;
   3. asserts the counts are **equal**.
-- **Coverage:** every list endpoint in §7 marked "N+1 test", plus every other `GET` list endpoint whose handler joins cross-context data. Put them in `test/n-plus-one.e2e-spec.ts`, grouped by context.
+- **Coverage:** every list endpoint in §7 marked "N+1 test", plus every other `GET` list endpoint whose handler joins cross-context data. Put them in `e2e/n-plus-one.e2e-spec.ts`, grouped by context.
 - **Why equal counts and not a fixed number:** the absolute count changes legitimately when a projection gains a join. Growth with page size never does.
 
 ---
@@ -1408,7 +1408,7 @@ Create `platform/presentation/http/security/throttling/rate-limit-policy.ts`. Th
 - `contexts/<x>/application/__tests__/<use-case>.handler.spec.ts`: handlers with **in-memory fakes** of ports (§13.3). No `vi.mock` of Prisma.
 - `contexts/<x>/infrastructure/__tests__/`: mappers (pure unit) and repositories. Repository behaviour against real Postgres goes in e2e.
 - `contexts/<x>/presentation/__tests__/`: controller metadata (decorators present, `@ZodResponse` count = 1), job → command mapping.
-- `apps/api/test/*.e2e-spec.ts`: unchanged location. New e2e files from this plan (`rate-limits`, `n-plus-one`, the `*-race` files) go here.
+- `apps/api/e2e/*.e2e-spec.ts`: unchanged location. New e2e files from this plan (`rate-limits`, `n-plus-one`, the `*-race` files) go here.
 
 ### 13.2 Minimum cases per kind (edge cases the owner asked for)
 
@@ -1583,7 +1583,7 @@ The new structure in each app is `contexts/<context>/{components,hooks,forms,tab
 - **Context map:** `docs/architecture/context-map.md` = §6.3 + a Mermaid diagram.
 - **Glossary:**
   - Root `GLOSSARY.md` (the domain glossary): add context-scoped terms. Claim, Sale, Referral credit, KYB decision, Terminal pairing and Store closure are each defined by the context that owns them.
-  - `rules/22-glossary.md`: the §3 terms.
+  - `rules/22-architecture-terms.md`: the §3 terms.
 - **Rules rewrite (T48):**
   - **01:** fix the monorepo map (no `packages/contracts`, `packages/database`, `packages/observability`; real `packages/shared`, `apps/api/prisma`). Add `contexts/` and `platform/`, and the context-boundary rules.
   - **02:** layering, handler shape, UnitOfWork, ActorContext, controllers dispatch commands and queries, the three event mechanisms, jobs through `SystemCommandDispatcher`.
@@ -1617,12 +1617,12 @@ The new structure in each app is `contexts/<context>/{components,hooks,forms,tab
 ### Phase A: foundations
 
 **T01: Baseline and safety nets**
-- **Read first:** `AGENTS.md`, `rules/00`, `rules/11`, `packages/shared/src/contracts/index.ts` (skim), `apps/api/vitest.config.e2e.ts`, `apps/api/test/support/*`.
+- **Read first:** `AGENTS.md`, `rules/00`, `rules/11`, `packages/shared/src/contracts/index.ts` (skim), `apps/api/vitest.config.e2e.ts`, `apps/api/e2e/support/*`.
 - **Do:**
   1. Create branch `refactor/ddd-cqrs` from `main`.
   2. Run the full gate `+tc +e2e` and record the pass counts in the PR description draft (baseline).
   3. Add the contract snapshot test (§14.1).
-  4. Add `test/support/sql-statement-counter.ts` and `expectNoNPlusOne` (§11.2), with a self-test in `test/support/__tests__/sql-statement-counter.spec.ts` that issues known queries through a scratch connection (follow `scratch-database.ts`).
+  4. Add `e2e/support/sql-statement-counter.ts` and `expectNoNPlusOne` (§11.2), with a self-test in `e2e/support/__tests__/sql-statement-counter.spec.ts` that issues known queries through a scratch connection (follow `scratch-database.ts`).
 - **Why first:** the snapshot and the counter are the nets that catch accidental contract changes and N+1 regressions in every later task.
 - **Gate:** `+tc +e2e`.
 
@@ -1668,7 +1668,7 @@ The new structure in each app is `contexts/<context>/{components,hooks,forms,tab
 - **Do:** implement §5.2. Add the `DomainError` branch and the status map to `GlobalExceptionFilter`.
 - **Tests:**
   - The map covers all codes.
-  - The filter renders the ADR 016 envelope for a sample `DomainError` (unit, Fastify reply fake from `test/support/fake-reply.ts`).
+  - The filter renders the ADR 016 envelope for a sample `DomainError` (unit, Fastify reply fake from `e2e/support/fake-reply.ts`).
 - **Gate:** standard.
 
 **T06: Aggregates, events, clock, UnitOfWork, dispatcher, registry**
@@ -1688,7 +1688,7 @@ The new structure in each app is `contexts/<context>/{components,hooks,forms,tab
     - rollback publishes nothing
     - loop guard
     - a handler adding events is processed in the next round
-  - e2e: `test/unit-of-work.e2e-spec.ts` against real Postgres, with a scratch outbox row:
+  - e2e: `e2e/unit-of-work.e2e-spec.ts` against real Postgres, with a scratch outbox row:
     - commit writes business row + outbox row
     - a thrown error leaves neither
     - RLS context is applied (reading another tenant's row returns nothing)
@@ -1919,7 +1919,7 @@ Each task: the §16 definition of done.
 
 **T45: Bundle budgets**
 - **Do:**
-  - §19.6: the script, the committed `bundle-budgets.json` (baseline + 10%), and the CI step in `.github/workflows/ci.yml`.
+  - §19.6: the script, the committed `budgets/bundle.json` (baseline + 10%), and the CI step in `.github/workflows/ci.yml`.
   - Prove the gate works by adding a temporary eager recharts import to a layout **in a scratch commit you do not push**. CI-equivalent locally: run the script and see it fail. Then drop that commit.
 - **Gate:** standard + the budget script exit 0.
 
@@ -2060,7 +2060,7 @@ unit tests: <n> → <n>   e2e files: <n> → <n>
 - **Modes:**
   - **cold:** delete `.turbo`, `.next`, `apps/api/dist`, the Metro cache (`--clear`)
   - **warm:** a second run with no deletions
-- **Output:** print a table and write `.dev-timing/latest.json` (gitignored).
+- **Output:** print a table and write `.artifacts/dev-timing/latest.json` (gitignored).
 - **Targets** (decision #54): every phase ≥ 40% faster than its T40 warm median, and phase B ≤ 5,000 ms warm. Put them in `rules/19` as named constants in prose. Don't add them to CI.
 - **Tests:**
   - `packages/tooling/src/dev-timing/__tests__/` covers the readiness probes and timer maths, using fake servers on ephemeral ports.
@@ -2137,7 +2137,7 @@ unit tests: <n> → <n>   e2e files: <n> → <n>
 - **Script:** `packages/tooling/src/bundle-budget/` with `pnpm tools bundle:check` at the root.
   - **Next apps:** read `node_modules/next/dist/docs` for 16.3 to identify the build manifest that maps each App Router route to its client chunks (for example the app build manifest or client reference manifests). For each route, sum the **gzip** size (`node:zlib` `gzipSync`, default level) of its unique first-load JS chunks. If no manifest maps routes to chunks, stop and report.
   - **Mobile:** read the bundle size from the `expo export` output the CI build already produces (the Hermes bytecode bundle per platform).
-- **Budgets file:** `bundle-budgets.json` at the repo root: `{ "web": { "<route>": <bytes> }, "admin": {...}, "merchant": {...}, "mobile": { "ios": <bytes>, "android": <bytes> } }`.
+- **Budgets file:** `budgets/bundle.json` at the repo root: `{ "web": { "<route>": <bytes> }, "admin": {...}, "merchant": {...}, "mobile": { "ios": <bytes>, "android": <bytes> } }`.
   - Generate it once after T43/T44 with `pnpm tools bundle:check --write-baseline`, which writes measured × `BUDGET_HEADROOM = 1.10` (named constant: 10% headroom, decision #57), rounded up to the next KiB.
   - Commit it.
   - Raising a budget later requires a PR that edits this file. That diff is the review signal.

@@ -64,10 +64,7 @@ ALTER TABLE public."AccountErasure" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS account_erasure_owner_read ON public."AccountErasure";
 CREATE POLICY account_erasure_owner_read ON public."AccountErasure" FOR SELECT
   USING (public.app_owns("userId") OR (SELECT public.app_rls_bypass_on('AccountErasure')));
-DROP POLICY IF EXISTS account_erasure_system_write ON public."AccountErasure";
-CREATE POLICY account_erasure_system_write ON public."AccountErasure"
-  USING ((SELECT public.app_rls_bypass_on('AccountErasure')))
-  WITH CHECK ((SELECT public.app_rls_bypass_on('AccountErasure')));
+
 DROP POLICY IF EXISTS account_erasure_erasure_read ON public."AccountErasure";
 CREATE POLICY account_erasure_erasure_read ON public."AccountErasure" FOR SELECT TO app_erasure USING (true);
 

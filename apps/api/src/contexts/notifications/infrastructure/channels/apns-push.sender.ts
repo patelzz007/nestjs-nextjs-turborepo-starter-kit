@@ -47,8 +47,11 @@ export function apnsPayloadOf(message: PushMessage): JsonObject {
 			// One thread per kind of message in Notification Centre.
 			"thread-id": message.category.toLowerCase(),
 			...(message.badge === null ? {} : { badge: message.badge }),
+			// iOS shows a picture only through a Notification Service Extension, which downloads `imageUrl`.
+			...(message.imageUrl === null ? {} : { "mutable-content": 1 }),
 		},
 		...message.data,
+		...(message.imageUrl === null ? {} : { imageUrl: message.imageUrl }),
 	};
 }
 

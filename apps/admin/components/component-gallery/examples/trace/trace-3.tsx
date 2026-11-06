@@ -8,6 +8,7 @@ import { Message, MessageContent } from "@workspace/ui/components/message";
 import { Trace, TraceCollapsible, TraceCollapsibleContent, TraceCollapsibleTrigger, TraceDescription, TraceIcon, TraceLine, TraceTitle } from "@workspace/ui/components/trace";
 
 import { ROUTES } from "@/lib/routes";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 interface Query {
 	readonly id: string;
@@ -108,7 +109,7 @@ export function Trace3Example(): React.JSX.Element {
 								<TraceCollapsibleContent>
 									<Trace>
 										{DASHBOARDS.map((dashboard: Dashboard): React.JSX.Element => (
-											<Link key={dashboard.title} href={dashboard.href}>
+											<Link key={dashboard.title} href={appRoute(dashboard.href)}>
 												<TraceLine>
 													<TraceTitle>{dashboard.title}</TraceTitle>
 													<TraceIcon>

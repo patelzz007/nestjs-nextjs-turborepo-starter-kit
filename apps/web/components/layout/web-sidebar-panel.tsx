@@ -31,13 +31,14 @@ import * as React from "react";
 import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
 import { useTranslatedSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
 import { USER_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface WebSidebarPanelProps {
 	readonly userName: string | null;
 }
 
 function renderWebLink(href: string): React.ReactElement<PanelSidebarLinkProps> {
-	return <Link href={href} />;
+	return <Link href={appRoute(href)} />;
 }
 
 /** Sidebar icons from the app's map; an unknown name shows an alert so the typo is visible. */
@@ -93,7 +94,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 
 	const navigate = React.useCallback(
 		(path: string): void => {
-			router.push(path);
+			router.push(appRoute(path));
 		},
 		[router],
 	);

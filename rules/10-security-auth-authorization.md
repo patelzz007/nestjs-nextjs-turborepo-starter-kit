@@ -66,7 +66,7 @@ Every new (or modified) endpoint must have its authorization requirements explic
 | ReBAC rule (if any) | Caller must be a `manager` of the `location` the reward belongs to |
 | RLS coverage (if enabled) | `Reward` table policy scopes by `tenantId` |
 
-This mapping lives two places, kept in sync: as an explicit `@UseGuards(...)`/permission-decorator chain on the controller method (so it's enforced), and as a short entry in the feature's module documentation (so it's reviewable without reading every guard's implementation — see `14-documentation.md`). A PR adding an endpoint without this mapping is incomplete — see `16-code-review-checklist.md` and `18-definition-of-done.md`.
+This mapping lives two places, kept in sync: as an explicit `@UseGuards(...)`/permission-decorator chain on the controller method (so it's enforced), and as a short entry in the feature's module documentation (so it's reviewable without reading every guard's implementation — see `14-documentation.md`). A PR adding an endpoint without this mapping is incomplete — see `33-code-review-checklist.md` and `18-definition-of-done.md`.
 
 ```ts
 // ❌ DON'T — a new endpoint with no guards at all, added quickly to
@@ -495,7 +495,7 @@ successful ones.
    (copy-pasted from a neighboring endpoint and never updated to match
    this endpoint's actual action) — this passes review at a glance
    because "a guard is there," but doesn't actually protect anything
-   correctly. See 16-code-review-checklist.md's "common false-pass
+   correctly. See 33-code-review-checklist.md's "common false-pass
    patterns" section — this is exactly the kind of thing that needs a
    reviewer to actually READ which permission is named, not just confirm one exists.
 

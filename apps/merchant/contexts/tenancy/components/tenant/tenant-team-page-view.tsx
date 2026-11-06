@@ -47,6 +47,7 @@ import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels
 import { Lock, MoreHorizontal, UserPlus } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** What the roster announces while the members load. */
 export const TEAM_MEMBERS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading team members…" };
@@ -458,7 +459,7 @@ function MemberRow({ tenantSlug, member, roles, storesLabel, timeZone, isYou, on
 						<MoreHorizontal />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="w-56">
-						<DropdownMenuItem render={<Link href={accessHref} />}>Role & extra permissions</DropdownMenuItem>
+						<DropdownMenuItem render={<Link href={appRoute(accessHref)} />}>Role & extra permissions</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</td>

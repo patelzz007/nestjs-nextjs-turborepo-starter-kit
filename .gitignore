@@ -27,8 +27,12 @@ dist
 # turbo
 .turbo
 
-# `pnpm tools dev:timing` results and dev logs (packages/tooling/src/dev-timing)
-.dev-timing/
+# Everything tools write: ci (ci:local and CI server logs), dev-timing, logs (the API's plain-text
+# transaction log, TRANSACTION_LOG_DIR), playwright/<app> (browser-suite output)
+/.artifacts/
+# The transaction log's folder before `.artifacts/`: an existing .env or server may still write here, and it
+# must never be committed.
+/logs/
 
 # misc
 .DS_Store
@@ -57,18 +61,11 @@ next-env.d.ts
 # Astro generated types (apps/docs)
 .astro
 
-# Playwright browser-suite output (apps/*/e2e/*.browser.ts)
-test-results/
 # Playwright sessions saved by a sign-in setup project (apps/admin/e2e/sign-in.setup.ts)
 **/e2e/.auth/
 playwright-report/
 
-# Server logs written by the CI browser e2e job / pnpm ci:local
-.ci-logs/
-
-# The API's plain-text transaction log (TRANSACTION_LOG_DIR, default <repo>/logs/transactions)
-/logs/
-# Where it was written before 2026-10-26 (relative to apps/api)
+# Where the transaction log was written before 2026-10-26 (relative to apps/api)
 apps/api/logs/
 # The seed's pinned geo dataset, downloaded once (prisma/seed/geo-dataset.ts); CI caches it.
 apps/api/.cache/

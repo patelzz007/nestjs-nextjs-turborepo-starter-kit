@@ -25,6 +25,7 @@ import { KeyRound, Pencil, Power, PowerOff, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const REMOVE_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Remove endpoint", loading: "Removing…" };
 const ROTATE_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Replace secret", loading: "Replacing…" };
@@ -125,7 +126,7 @@ function WebhookEndpointDetailContent({ tenantSlug, endpointId }: WebhookEndpoin
 	const removeMutation = api.tenants.webhooks.deleteEndpoint.useMutation({
 		onSuccess: (): void => {
 			invalidateAll();
-			router.push(routes.list);
+			router.push(appRoute(routes.list));
 		},
 	});
 
@@ -191,7 +192,7 @@ function WebhookEndpointDetailContent({ tenantSlug, endpointId }: WebhookEndpoin
 		return (
 			<div className="space-y-6">
 				<MerchantPageHeader title="Endpoint not found" description="It may have been removed." />
-				<Button variant="outline" render={<Link href={routes.list} />}>
+				<Button variant="outline" render={<Link href={appRoute(routes.list)} />}>
 					Back to webhooks
 				</Button>
 			</div>
@@ -213,7 +214,7 @@ function WebhookEndpointDetailContent({ tenantSlug, endpointId }: WebhookEndpoin
 							<Send className="size-4" aria-hidden="true" />
 							{testMutation.isPending ? "Sending…" : "Send test event"}
 						</Button>
-						<Button variant="outline" render={<Link href={routes.edit(endpointId)} />}>
+						<Button variant="outline" render={<Link href={appRoute(routes.edit(endpointId))} />}>
 							<Pencil className="size-4" aria-hidden="true" />
 							Edit
 						</Button>

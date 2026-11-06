@@ -6,10 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSessionTestProvider, type WebSessionState } from "@/contexts/identity";
 import { CLAIM_OPTIONS_LOADING_LABELS, REWARD_DETAIL_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { RewardDetailView } from "@/contexts/rewards/components/detail/view";
-import { expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { expectSingleLoadingStatus } from "@/testing/skeleton";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
-import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
-import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL, rewardImageFixture, type RewardFixtureOverrides } from "@/test-support/reward";
+import { GUEST_SESSION_STATE, signedInSession } from "@/testing/session";
+import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL, rewardImageFixture, type RewardFixtureOverrides } from "@/testing/reward";
 import type { RewardResponse } from "@workspace/shared";
 
 interface CheckoutStub {

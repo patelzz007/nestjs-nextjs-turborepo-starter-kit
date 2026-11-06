@@ -8,7 +8,7 @@ import * as React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PlatformAnalyticsDashboard } from "@/contexts/reporting/components/platform-analytics-dashboard";
-import { buildAdminDashboard } from "@/test/analytics-dashboard-fixtures";
+import { buildAdminDashboard } from "@/testing/analytics-dashboard-fixtures";
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 /** Only the query fields the dashboard reads. */

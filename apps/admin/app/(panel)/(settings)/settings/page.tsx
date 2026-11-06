@@ -7,6 +7,7 @@ import { ADMIN_ROUTE_AUTHORIZATION, canAccessRoute, type RouteAccessSession } fr
 import { firstSettingsSectionHref } from "@/lib/navigation/settings-sections";
 import { ROUTES } from "@/lib/routes";
 import { loadEnabledFeatureFlags } from "@/lib/server/feature-flag-settings";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /**
  * `/settings` — the sidebar's Settings link (one link, no dropdown: enhancement 5.13). Opens the first
@@ -28,5 +29,5 @@ export default async function SettingsIndexPage(): Promise<React.ReactNode> {
 		enabledFeatureFlags,
 		isSuperAdmin: session.session.profile.data.isSuperAdmin,
 	};
-	redirect(firstSettingsSectionHref((href: string): boolean => canAccessRoute(ADMIN_ROUTE_AUTHORIZATION, href, access)));
+	redirect(appRoute(firstSettingsSectionHref((href: string): boolean => canAccessRoute(ADMIN_ROUTE_AUTHORIZATION, href, access))));
 }

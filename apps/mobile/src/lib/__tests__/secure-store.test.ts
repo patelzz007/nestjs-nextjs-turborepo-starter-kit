@@ -8,6 +8,7 @@ describe("the Secure Store registry", () => {
 			"auth.accessToken",
 			"auth.refreshToken",
 			"prefs.theme",
+			"prefs.drawer.style",
 			"prefs.appLock.enabled",
 			"prefs.appLock.timeoutMs",
 			"prefs.appLock.enrolledBiometrics",

@@ -6,11 +6,11 @@ import { GuideFrontmatterSchema, parseMarkdownFile, PostFrontmatterSchema, type 
 import { docIcon, type IconName } from "./icons";
 import { buildNavSections, contentId, docHref, findNeighbours, findSection, flattenNav, type DocsMeta, type NavItem, type NavSection } from "./navigation";
 import { toPlainText, type SearchEntry } from "./search";
-import { githubEditUrl } from "./site";
+import { CONTENT_FOLDERS, githubEditUrl } from "./site";
 import { buildToc, topSections, type TocItem } from "./toc";
 
 /**
- * The docs' content model: every guide under the repo-root `docs/` and every post under `blog/`, parsed,
+ * The docs' content model: every guide under the repo-root `docs/` and every post under `docs/blog/`, parsed,
  * validated, rendered and arranged for the site. It takes the raw files and the Markdown renderer as
  * inputs (the server module wires Vite's file glob and `@workspace/docs-renderer`), so it is tested
  * without either. Every result is plain data, so it crosses the server-function boundary as is.
@@ -200,7 +200,7 @@ export function createContentStore(sources: ContentSources): ContentStore {
 	 * connection for longer than `fetch` waits (10 s), which failed the build on a busy machine.
 	 */
 	function renderOnce(folder: "docs" | "blog", entry: Entry<GuideFrontmatter> | Entry<PostFrontmatter>): ReturnType<MarkdownRenderer> {
-		const key = `${folder}/${entry.path}`;
+		const key = `${CONTENT_FOLDERS[folder]}/${entry.path}`;
 		const cached = rendered.get(key);
 		if (cached !== undefined) {
 			return cached;
@@ -280,7 +280,7 @@ export function createContentStore(sources: ContentSources): ContentStore {
 			toc: buildTimeline(headings, entry.body),
 			words: countWords(entry.body.replace(FENCE_PATTERN, " ")),
 			readingMinutes: readingMinutes(entry.body),
-			sourcePath: `blog/${entry.path}`,
+			sourcePath: `docs/blog/${entry.path}`,
 			editUrl: githubEditUrl("blog", entry.path),
 			previous: newer === undefined ? null : { title: newer.data.title, href: postHref(newer.id) },
 			next: older === undefined ? null : { title: older.data.title, href: postHref(older.id) },

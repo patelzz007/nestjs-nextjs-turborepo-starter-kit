@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { epochMs } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import { IDENTITY_REFEREE_ATTRIBUTION_FACTORY } from "../referee-attribution.adapter";
 

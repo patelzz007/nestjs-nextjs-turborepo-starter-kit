@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { MerchantRewardPreview } from "@/contexts/rewards/components/merchant-reward-preview";
 import { RewardEditorTextFieldSchema, useRewardEditorForm, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
-import { REWARD_FIXTURE_COVER_URL, REWARD_FIXTURE_IMAGE } from "@/test/rewards";
+import { REWARD_FIXTURE_COVER_URL, REWARD_FIXTURE_IMAGE } from "@/testing/rewards";
 
 const COMPLETE_DRAFT: RewardEditorInput = {
 	rewardType: "DISCOUNT",

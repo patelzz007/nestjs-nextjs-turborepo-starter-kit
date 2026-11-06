@@ -341,6 +341,52 @@ describe("Reward.revise (D03)", () => {
 });
 
 describe("Reward inventory", () => {
+	it("holds a unit: the count drops for everyone, and no claim is counted yet", () => {
+		const reward = Reward.rehydrate(rewardState("PUBLISHED"));
+		const before = reward.snapshot().inventory;
+
+		reward.holdUnit(NOW, CUSTOMER_ID);
+
+		expect(reward.snapshot().inventory).toMatchObject({
+			quantityRemaining: before.quantityRemaining - 1,
+			quantityReserved: before.quantityReserved + 1,
+			claimCount: before.claimCount,
+		});
+	});
+
+	it("turns a held unit into a claim without touching the stock again", () => {
+		const reward = Reward.rehydrate(rewardState("PUBLISHED"));
+		reward.holdUnit(NOW, CUSTOMER_ID);
+		const held = reward.snapshot().inventory;
+
+		reward.claimHeldUnit(NOW);
+
+		expect(reward.snapshot().inventory).toMatchObject({ quantityRemaining: held.quantityRemaining, quantityReserved: held.quantityReserved, claimCount: held.claimCount + 1 });
+	});
+
+	it("gives a held unit back on release", () => {
+		const reward = Reward.rehydrate(rewardState("PUBLISHED"));
+		const before = reward.snapshot().inventory;
+		reward.holdUnit(NOW, CUSTOMER_ID);
+
+		reward.release(NOW);
+
+		expect(reward.snapshot().inventory).toEqual(before);
+	});
+
+	it("lets the customer holding the last unit through the stock check, and nobody else", () => {
+		const reward = Reward.rehydrate(rewardState("PUBLISHED"));
+		for (let units = reward.snapshot().inventory.quantityRemaining; units > 0; units -= 1) {
+			reward.holdUnit(NOW, CUSTOMER_ID);
+		}
+
+		expect(() => {
+			reward.holdUnit(NOW, CUSTOMER_ID);
+		}).toThrow(RewardJustSoldOutError);
+		expect(() => reward.assertClaimable(NOW, CUSTOMER_ID)).toThrow(RewardSoldOutError);
+		expect(reward.assertClaimable(NOW, CUSTOMER_ID, true)).toMatchObject({ rewardId: REWARD_ID });
+	});
+
 	it("reports claimable facts for a published, unexpired, stocked consumer reward", () => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED", { rules: RewardRulesValue.fromApi({ maxUsePerUser: 1 }) }));
 		expect(reward.assertClaimable(NOW, CUSTOMER_ID)).toEqual({

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { referralAttributionMessage } from "../lib/referral-link";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface ReferralAttributionCaptureProps {
 	/** The token the page was opened with (`?ref=`), already checked against the contract; `null` for none. */
@@ -30,7 +31,7 @@ export function ReferralAttributionCapture({ attributionToken, onMessage }: Refe
 	const record = api.referrals.recordAttribution.useMutation({
 		onSettled: (_data, error): void => {
 			onMessage(referralAttributionMessage(error));
-			router.replace(pathname, { scroll: false });
+			router.replace(appRoute(pathname), { scroll: false });
 		},
 	});
 	const { mutate } = record;

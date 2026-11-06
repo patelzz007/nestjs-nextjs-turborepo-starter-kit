@@ -3,7 +3,7 @@ import { API_VERSION_PREFIX, type GithubReactionSubject } from "@workspace/share
 import { describe, expect, it, vi, type Mock } from "vitest";
 
 import { TypedConfigService } from "../../../../../config/typed-config.service";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import type { LinkedGithubCredential } from "../../../application/ports/github-credentials.port";
 import type { GithubMergeRequest } from "../../../application/ports/github-pull-requests.port";
 import { GITHUB_CLOCK } from "../../../application/ports/github.tokens";

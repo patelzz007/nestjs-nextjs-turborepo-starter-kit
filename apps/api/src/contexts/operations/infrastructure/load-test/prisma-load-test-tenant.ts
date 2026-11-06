@@ -181,6 +181,7 @@ export class PrismaLoadTestTenant implements LoadTestProvisioningPort, LoadTestP
 		await record("RewardRedemption", this.db.rewardRedemption.deleteMany({ where: { OR: [{ claimId: { in: claimIds } }, ...(tenantId === null ? [] : [{ tenantId }])] } }));
 		await record("RewardSale", this.db.rewardSale.deleteMany({ where: tenantId === null ? { userId: { in: userIds } } : { tenantId } }));
 		await record("RewardOtpChallenge", this.db.rewardOtpChallenge.deleteMany({ where: { userId: { in: userIds } } }));
+		await record("RewardClaimHold", this.db.rewardClaimHold.deleteMany({ where: { userId: { in: userIds } } }));
 		await record("RewardNotification", this.db.rewardNotification.deleteMany({ where: { userId: { in: userIds } } }));
 		await record("RewardClaim", this.db.rewardClaim.deleteMany({ where: { id: { in: claimIds } } }));
 		await record("RewardAuditLog", this.db.rewardAuditLog.deleteMany({ where: { actorUserId: { in: userIds } } }));

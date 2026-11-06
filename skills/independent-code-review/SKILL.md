@@ -1,7 +1,7 @@
 # Skill: Independent Two-Pass Code Review
 
 ## When to use
-Use after implementation and before declaring a non-trivial change complete. Read `16-code-review-checklist.md` and all applicable rules. Review the diff from a fixed base (the task's starting commit or agreed merge base), not just the last file edited.
+Use after implementation and before declaring a non-trivial change complete. Read `33-code-review-checklist.md` and all applicable rules. Review the diff from a fixed base (the task's starting commit or agreed merge base), not just the last file edited.
 
 ## Pass 1: Standards
 Review architecture, ownership, package dependencies, type safety, Zod contracts, security, authorization, tenancy, audit, persistence, concurrency, idempotency, errors, performance, observability, tests, docs, genericity, and extensibility.

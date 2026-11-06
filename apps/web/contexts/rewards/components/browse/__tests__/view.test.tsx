@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, type RenderResult } from "@tes
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { testEnvelope } from "@/test-support/envelope";
+import { testEnvelope } from "@/testing/envelope";
 import type { PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
 import {
@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardBrowseView } from "@/contexts/rewards/components/browse/view";
 import { WEB_UI_PREFERENCES_DEVTOOLS_NAME, WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { REWARDS_BROWSE_PAGE_SIZE } from "@/contexts/rewards/url-state/rewards-browse";
-import { buildRewardResponse } from "@/test-support/reward";
+import { buildRewardResponse } from "@/testing/reward";
 
 type RewardsListInput = Parameters<typeof apiRouter.rewards.list.queryKey>[0];
 

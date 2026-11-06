@@ -11,6 +11,14 @@ function classNameOf(testID: string): string {
 }
 
 describe("Avatar", () => {
+	it("takes the drawer's tones: the sign-in panel's ink, and a filled disc", async () => {
+		const view = await render(<Avatar name="Alex" imageUrl={null} tone="panel" />);
+		expect(screen.getByText("A")).toHaveProp("className", expect.stringContaining("text-auth-panel"));
+
+		await view.rerender(<Avatar name="Alex" imageUrl={null} tone="solid" />);
+		expect(screen.getByText("A")).toHaveProp("className", expect.stringContaining("text-primary-foreground"));
+	});
+
 	it("shows the initials without a picture, named for screen readers", async () => {
 		await render(<Avatar name="Alex Morgan" imageUrl={null} />);
 		expect(screen.getByLabelText("Alex Morgan's initials")).toHaveTextContent("AM");

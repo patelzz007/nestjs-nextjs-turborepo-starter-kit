@@ -3,7 +3,7 @@ import { GITHUB_COMMIT_FILES_MAX, GITHUB_PULL_REQUEST_FILE_PAGE_SIZE, GITHUB_PUL
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { commitDetailWire } from "./github-wire.builders";
 import {
 	GithubCommitNotFoundError,

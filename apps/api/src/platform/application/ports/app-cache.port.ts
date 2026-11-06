@@ -6,14 +6,14 @@
  * encrypted inside Redis.
  */
 
-import { BoundedTtlCache } from "@workspace/shared";
+import { BoundedTtlCache, type CacheScopeSchema, type CacheTierSchema } from "@workspace/shared";
 import type { z } from "zod";
 
 /** Who a cached value belongs to. */
-export type CacheScope = "tenant" | "user" | "platform";
+export type CacheScope = z.output<typeof CacheScopeSchema>;
 
 /** Where a cache keeps its values: this process, Redis, or this process in front of Redis. */
-export type CacheTier = "local" | "shared" | "two-tier";
+export type CacheTier = z.output<typeof CacheTierSchema>;
 
 export interface TenantCacheScope {
 	readonly scope: "tenant";

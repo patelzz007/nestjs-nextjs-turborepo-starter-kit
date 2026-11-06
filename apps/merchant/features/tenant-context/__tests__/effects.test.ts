@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 
 import { tenantContextActions } from "../actions";
 import type { LocationCookieWriter } from "../effects";

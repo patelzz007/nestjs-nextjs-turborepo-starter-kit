@@ -9,6 +9,7 @@ import { auditLogListHref } from "@/contexts/audit/url-state/audit-logs";
 
 import { DataChangeActorKindBadge, DataChangeOperationBadge } from "./data-change-badges";
 import { NOT_RECORDED, orDash, RecordField, RecordSection, type AuditRecordLayout } from "./record-layout";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** Row tint per column status — what changed stands out, the rest of the row stays quiet. */
 const STATUS_ROW_CLASS: Readonly<Record<DataChangeColumnStatus, string>> = {
@@ -120,7 +121,7 @@ export function DataChangeRecord({ record, layout }: { readonly record: DataChan
 						<span className="space-y-0.5">
 							<span className="block font-medium">{record.actor.fullName ?? "Unknown user"}</span>
 							{record.actor.email === null ? null : <span className="block text-muted-foreground">{record.actor.email}</span>}
-							<Link href={auditLogListHref({ actorUserId: record.actor.id })} className="block font-mono text-xs text-primary hover:underline">
+							<Link href={appRoute(auditLogListHref({ actorUserId: record.actor.id }))} className="block font-mono text-xs text-primary hover:underline">
 								{record.actor.id}
 							</Link>
 						</span>
@@ -130,7 +131,7 @@ export function DataChangeRecord({ record, layout }: { readonly record: DataChan
 					{record.tenant === null ? (
 						NOT_RECORDED
 					) : (
-						<Link href={auditLogListHref({ tenantId: record.tenant.id })} className="text-primary hover:underline">
+						<Link href={appRoute(auditLogListHref({ tenantId: record.tenant.id }))} className="text-primary hover:underline">
 							{record.tenant.name ?? record.tenant.id}
 						</Link>
 					)}
@@ -172,7 +173,7 @@ export function DataChangeRecord({ record, layout }: { readonly record: DataChan
 					{record.correlationId === null ? (
 						NOT_RECORDED
 					) : (
-						<Link href={auditLogListHref({ correlationId: record.correlationId })} className="text-primary hover:underline">
+						<Link href={appRoute(auditLogListHref({ correlationId: record.correlationId }))} className="text-primary hover:underline">
 							{record.correlationId}
 						</Link>
 					)}
@@ -181,7 +182,7 @@ export function DataChangeRecord({ record, layout }: { readonly record: DataChan
 					{record.rowId === null ? (
 						NOT_RECORDED
 					) : (
-						<Link href={auditLogListHref({ tableName: record.tableName, rowId: record.rowId })} className="text-primary hover:underline">
+						<Link href={appRoute(auditLogListHref({ tableName: record.tableName, rowId: record.rowId }))} className="text-primary hover:underline">
 							Every change to this row
 						</Link>
 					)}

@@ -19,6 +19,7 @@ import {
 	type EmailVerificationSessionCommands,
 	type EmailVerificationSyncResult,
 } from "./sync-after-verification";
+import { appRoute } from "../../../navigation/app-route";
 
 export interface VerifyEmailViewProps {
 	readonly token: string;
@@ -89,12 +90,12 @@ export function VerifyEmailView({ token, settingsHref, loginHref = APP_LINKS.aut
 				case "synced":
 					markEmailVerifiedToast();
 					setState({ status: "redirecting", message: `${verifiedCopy} Opening your account…` });
-					router.replace(redirectTarget);
+					router.replace(appRoute(redirectTarget));
 					router.refresh();
 					return;
 				case "no-session":
 					setState({ status: "redirecting", message: `${verifiedCopy} Sign in to continue…` });
-					router.replace(loginHref);
+					router.replace(appRoute(loginHref));
 					return;
 				case "unavailable":
 					setState({ status: "session-unavailable", message: `${verifiedCopy} ${SESSION_UNAVAILABLE_MESSAGE}` });
@@ -144,7 +145,7 @@ export function VerifyEmailView({ token, settingsHref, loginHref = APP_LINKS.aut
 			) : null}
 			{state.status === "error" ? <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{state.message}</div> : null}
 			{state.status === "error" ? (
-				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
+				<Link href={appRoute(loginHref)} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
 					Back to sign in
 				</Link>
 			) : null}

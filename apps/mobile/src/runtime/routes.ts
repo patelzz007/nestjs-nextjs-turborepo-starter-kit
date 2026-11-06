@@ -1,5 +1,7 @@
 // Every route of the app, by name — screens never hand-type a path (rules/00, "No magic").
 
+import type { Href } from "expo-router";
+
 export const ROUTES = {
 	/** The configuration problem screen (the app cannot reach its API as configured). */
 	configError: "/config-error",
@@ -56,7 +58,7 @@ export const ROUTES = {
 	notificationSettings: "/settings/notification-settings",
 	/** Read a PDF: one the person picks, or `?url=&name=` pushed by another screen (features/pdf-viewer, ADR 056). */
 	pdfViewer: "/settings/pdf-viewer",
-} satisfies Record<string, `/${string}`>;
+} satisfies Record<string, Href>;
 
 /** Any one of the app's routes. */
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];

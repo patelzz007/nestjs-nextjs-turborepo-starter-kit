@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { DEFAULT_SALE_CURRENCY, MerchantBusinessCategorySchema } from "@workspace/shared";
 import { z } from "zod";
 
-import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
+import type { AnalyticsSqlRunner } from "./analytics-sql";
 import type { InclusiveRange, SalesAggregate, SalesGroup, SalesMerchantSummary, SalesReadPort, SalesScope, SalesWeek } from "../../application/ports/sales-read.port";
 import { minorUnitsToNumber } from "../../../../platform/infrastructure/persistence/minor-units";
 import { weekStartMsSql } from "./analytics-sql-conditions";
@@ -40,14 +40,14 @@ function salesWhere(scope: SalesScope, range: InclusiveRange | null): Prisma.Rew
  * runs as `reporting.platform_analytics.read`. Merchant names are a separate allowlisted read.
  */
 export class PrismaSalesReadRepository implements SalesReadPort {
-	public constructor(private readonly tenantTx: TenantTransactionService) {}
+	public constructor(private readonly sql: AnalyticsSqlRunner) {}
 
 	/** Caller-scoped reads reuse the bound session inside a transaction. Platform-wide reads open the analytics operation. */
 	private query<TResult>(scope: SalesScope, reason: string, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
 		if (isCallerScoped(scope)) {
-			return this.tenantTx.withBoundSession(reason, work);
+			return this.sql.callerRead(reason, work);
 		}
-		return this.tenantTx.withSystemOperation({ operation: PLATFORM_ANALYTICS_READ_OPERATION, reason, actorUserId: null }, work);
+		return this.sql.systemRead({ operation: PLATFORM_ANALYTICS_READ_OPERATION, reason, actorUserId: null }, work);
 	}
 
 	public async firstPaidAt(scope: SalesScope): Promise<number | null> {
@@ -116,7 +116,7 @@ export class PrismaSalesReadRepository implements SalesReadPort {
 	}
 
 	public async countTenants(range: InclusiveRange): Promise<number> {
-		const rows = await this.tenantTx.withSystemOperation(
+		const rows = await this.sql.systemRead(
 			{ operation: PLATFORM_ANALYTICS_READ_OPERATION, reason: "Count merchants with a paid sale in the range", actorUserId: null },
 			(tx) => tx.rewardSale.groupBy({ by: ["tenantId"], where: salesWhere({}, range) }),
 		);
@@ -132,13 +132,11 @@ export class PrismaSalesReadRepository implements SalesReadPort {
 		if (tenantIds.length === 0) {
 			return new Map();
 		}
-		const rows = await this.tenantTx.withSystemOperation(
-			{ operation: SALES_MERCHANT_SUMMARY_OPERATION, reason: "Merchant names for a sales breakdown", actorUserId },
-			async (tx) =>
-				tx.tenant.findMany({
-					where: { id: { in: [...tenantIds] } },
-					select: { id: true, displayName: true, merchantProfile: { select: { category: true } } },
-				}),
+		const rows = await this.sql.systemRead({ operation: SALES_MERCHANT_SUMMARY_OPERATION, reason: "Merchant names for a sales breakdown", actorUserId }, async (tx) =>
+			tx.tenant.findMany({
+				where: { id: { in: [...tenantIds] } },
+				select: { id: true, displayName: true, merchantProfile: { select: { category: true } } },
+			}),
 		);
 		return new Map(
 			rows.map((row): [string, SalesMerchantSummary] => {

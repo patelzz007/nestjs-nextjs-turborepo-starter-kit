@@ -5,7 +5,7 @@ import { clearAllLocationCookies, clearLocationCookie, locationCookieName, write
 import { isSecureCookieOrigin, PREFERENCE_COOKIE_MAX_AGE_SECONDS, serializePreferenceCookie } from "@/contexts/tenancy/lib/tenant/preference-cookie";
 import { clearTenantSlugCookie, TENANT_SLUG_COOKIE_NAME, writeTenantSlugCookie } from "@/contexts/tenancy/lib/tenant/slug";
 import { clearMerchantPreferenceCookies } from "@/lib/session/use-merchant-logout";
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 
 const ORG_ONE = "acme-coffee";
 const ORG_TWO = "bean-there";

@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { digestStream } from "../../../utils/object-stream.util";
 import { LocalObjectStorageAdapter } from "../local-object-storage.adapter";
 import { InvalidLocalObjectPathError } from "../local-object-path.util";

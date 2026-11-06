@@ -9,7 +9,7 @@ import {
 import { PruneGithubWebhookDeliveriesHandler } from "../../../application/commands/prune-github-webhook-deliveries/prune-github-webhook-deliveries.handler";
 import { AT } from "../../../application/__tests__/fakes/github-contract.fixtures";
 import { FixedGithubClock, InMemoryWebhookStore } from "../../../application/__tests__/fakes/github-fakes";
-import { RECORDING_COMMAND_DISPATCHER, RecordingCommandDispatcher } from "../../../../../../test/support/recording-command-dispatcher";
+import { RECORDING_COMMAND_DISPATCHER, RecordingCommandDispatcher } from "../../../../../../e2e/support/recording-command-dispatcher";
 import { GITHUB_CLOCK, GITHUB_WEBHOOK_STORE } from "../../../application/ports/github.tokens";
 import { GithubWebhookDeliveryRetentionCron } from "../github-webhook-delivery-retention.cron";
 

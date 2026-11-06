@@ -3,7 +3,7 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import type { OperatorIdentityProvider } from "../../../../../platform/infrastructure/operator-identity";
-import { createTestPrisma } from "../../../../../../test/support/test-service-graph";
+import { createTestPrisma } from "../../../../../../e2e/support/test-service-graph";
 import type { PermissionAuditEntry, PermissionAuditWriter } from "../../../application/ports/permission-audit.port";
 import { REFERENCE_DATA_SYNC_OPERATION } from "../../../application/ports/authorization.tokens";
 import { ReferenceDataSyncService } from "../reference-data-sync.service";

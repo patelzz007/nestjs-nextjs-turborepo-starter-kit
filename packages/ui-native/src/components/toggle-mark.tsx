@@ -1,11 +1,12 @@
 // A checkbox's tick or a radio's dot, popping in when chosen and shrinking away when cleared
 // (TOGGLE_MARK_MS). `ToggleMarkScope` is the control's indicator box: the marks already shown when it
-// first draws stay still, and only a change animates. Both follow the OS Reduce Motion setting.
+// first draws stay still, and only a change animates. Under the OS Reduce Motion setting the mark simply
+// appears: an entrance that finishes the moment it starts can strand it at its starting size, invisible.
 
 import { cva } from "class-variance-authority";
 import * as React from "react";
 import { View, type ViewInstance } from "react-native";
-import Animated, { LayoutAnimationConfig, ReduceMotion, ZoomIn, ZoomOut } from "react-native-reanimated";
+import Animated, { LayoutAnimationConfig, ReduceMotion, useReducedMotion, ZoomIn, ZoomOut } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
 import { cn } from "../lib/cn";
@@ -32,8 +33,9 @@ export interface ToggleMarkProps {
 /** The mark itself: mount it while chosen, and it animates in and out. */
 export const ToggleMark = React.memo(
 	React.forwardRef<ViewInstance, ToggleMarkProps>(function ToggleMark({ children, className }, ref): React.JSX.Element {
+		const reduceMotion = useReducedMotion();
 		return (
-			<StyledAnimatedView ref={ref} entering={MARK_ENTERING} exiting={MARK_EXITING} className={cn(toggleMarkVariants(), className)}>
+			<StyledAnimatedView ref={ref} {...(reduceMotion ? {} : { entering: MARK_ENTERING })} exiting={MARK_EXITING} className={cn(toggleMarkVariants(), className)}>
 				{children}
 			</StyledAnimatedView>
 		);

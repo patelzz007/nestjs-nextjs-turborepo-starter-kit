@@ -33,6 +33,8 @@ export interface NotificationsInboxLabels {
 	/** A broadcast's full message, folded under its summary. */
 	readonly readMore: string;
 	readonly readLess: string;
+	/** A link to a notification's attached file, named after it. */
+	readonly openAttachment: (name: string) => string;
 	/** Reporting a broadcast to the platform (ADR 073). */
 	readonly report: string;
 	readonly reportTitle: string;
@@ -77,6 +79,7 @@ export const NOTIFICATIONS_INBOX_LABELS: NotificationsInboxLabels = {
 	polling: "Updating every minute",
 	readMore: "Read the full message",
 	readLess: "Show less",
+	openAttachment: (name: string): string => `Open ${name}`,
 	report: "Report",
 	reportTitle: "What's wrong with this message?",
 	reportReasons: { SPAM: "It's spam", OFFENSIVE: "It's offensive", SCAM: "It looks like a scam" },

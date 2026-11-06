@@ -64,8 +64,9 @@ export function fcmMessageOf(message: PushMessage): Message {
 /** What one push says, without its address: the kind's own channel, the time it happened, the badge and the tap data. */
 function fcmContentOf(message: PushMessage): Omit<Message, "token" | "topic" | "condition" | "fid"> {
 	return {
-		notification: { title: message.title, body: message.body },
-		data: { ...message.data, category: message.category },
+		notification: { title: message.title, body: message.body, ...(message.imageUrl === null ? {} : { imageUrl: message.imageUrl }) },
+		// The picture's address too: with the app open, the app posts the notification itself (ADR 070).
+		data: { ...message.data, category: message.category, ...(message.imageUrl === null ? {} : { imageUrl: message.imageUrl }) },
 		android: {
 			priority: "high",
 			...(message.collapseKey === null ? {} : { collapseKey: message.collapseKey }),

@@ -101,7 +101,7 @@ describe("createContentStore", () => {
 		await expect(store.post("missing")).resolves.toBeNull();
 	});
 
-	it("should order posts by blog/meta.json, then newest first, and link each to its neighbours", async () => {
+	it("should order posts by docs/blog/meta.json, then newest first, and link each to its neighbours", async () => {
 		expect(store.posts().map((summary) => summary.id)).toEqual(["epoch", "fresh", "fastify"]);
 		const page = await store.post("fresh");
 		expect(page?.previous).toEqual({ title: "Epoch", href: "/blog/epoch" });

@@ -37,9 +37,9 @@ describe("renderMobileStylesheet", () => {
 	});
 
 	it("resolves each value for its own theme", () => {
-		expect(light.get("background")).toBe("oklch(0.965 0 0)");
+		expect(light.get("background")).toBe("#e7f3fb");
 		expect(dark.get("background")).toBe("#1c1d20");
-		expect(light.get("invert")).toBe("oklch(0.27 0.042 257)");
+		expect(light.get("invert")).toBe("#1e293b");
 		expect(dark.get("invert")).toBe("#f0f1f4");
 	});
 
@@ -73,8 +73,8 @@ describe("the mobile app's own visual system (MOBILE_THEME_OVERRIDES, ADR 079)",
 	const shared = renderMobileStylesheet({ ...TOKEN_SOURCE, mobileThemeOverrides: {} });
 
 	it("gives light its own neutral surfaces and slate ink, dark its graphite greys, and leaves the web's untouched", () => {
-		expect(readDeclarations(mobile, "@variant light").get("card")).toBe("oklch(0.993 0 0)");
-		expect(readDeclarations(mobile, "@variant light").get("primary")).toBe("oklch(0.33 0.05 257)");
+		expect(readDeclarations(mobile, "@variant light").get("card")).toBe("#f2f9fd");
+		expect(readDeclarations(mobile, "@variant light").get("primary")).toBe("#1e293b");
 		expect(readDeclarations(mobile, "@variant dark").get("card")).toBe("#292b2f");
 		expect(readDeclarations(web, ":root").get("background")).toBe("var(--palette-neutral-50)");
 	});
@@ -98,7 +98,7 @@ describe("the mobile app's own visual system (MOBILE_THEME_OVERRIDES, ADR 079)",
 
 		expect([dark.get("tab-bar"), dark.get("tab-bar-border")]).toStrictEqual([dark.get("card"), dark.get("border")]);
 
-		expect([dark.get("tab-bar-active"), dark.get("tab-bar-active-foreground"), dark.get("tab-bar-icon")]).toStrictEqual(["#f0f1f4", "#1c1d20", "#a9adb6"]);
+		expect([dark.get("tab-bar-active"), dark.get("tab-bar-active-foreground"), dark.get("tab-bar-icon")]).toStrictEqual(["oklch(1 0 0)", "#1c1d20", "#a9adb6"]);
 
 		expect([nord.get("tab-bar"), nord.get("tab-bar-border")]).toStrictEqual([nord.get("card"), nord.get("border")]);
 
@@ -118,8 +118,15 @@ describe("the mobile app's own visual system (MOBILE_THEME_OVERRIDES, ADR 079)",
 		expect(readDeclarations(web, ".nord").get("primary")).toBe("var(--palette-vivid-9)");
 	});
 
+	it("gives checkbox and radio rings their own colour: a stronger grey than the fields in light, the fields' own in dark", () => {
+		const light = readDeclarations(mobile, "@variant light");
+		const dark = readDeclarations(mobile, "@variant dark");
+		expect([light.get("control-ring"), light.get("input")]).toStrictEqual(["#8c8c8c", "#c7c7c7"]);
+		expect(dark.get("control-ring")).toBe(dark.get("input"));
+	});
+
 	it("puts an original (full-colour) logo on a light chip in every theme, so near-black brand logos still read", () => {
-		expect(readDeclarations(mobile, "@variant light").get("logo-tile")).toBe("oklch(0.943 0 0)");
+		expect(readDeclarations(mobile, "@variant light").get("logo-tile")).toBe("#e5f2fb");
 		expect(readDeclarations(mobile, "@variant dark").get("logo-tile")).toBe("oklch(0.87 0 0)");
 		expect(readDeclarations(mobile, "@variant nord").get("logo-tile")).toBe("#e6e9f0");
 	});

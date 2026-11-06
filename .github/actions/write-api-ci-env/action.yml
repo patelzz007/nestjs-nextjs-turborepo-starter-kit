@@ -1,7 +1,7 @@
 # Writes the throwaway apps/api/.env every database-backed CI job uses (the API
 # e2e job, the single-tenant job and the browser e2e job), so they boot the API
 # with the SAME config. The settings live in ONE place,
-# packages/tooling/scripts/lib/api-ci-env.mjs, which `pnpm ci:local` also uses
+# packages/tooling/src/api-ci-env/api-ci-env.ts, which `pnpm ci:local` also uses
 # for its throwaway databases, so a local run sees exactly what CI sees.
 # Signing secrets and encryption keys are random per run and masked in logs.
 # apps/api/src/config/__tests__/ci-workflow-env.spec.ts runs the output
@@ -33,7 +33,7 @@ runs:
         TENANCY_MODE: ${{ inputs.tenancy-mode }}
         DEFAULT_TENANT_ID_INPUT: ${{ inputs.default-tenant-id }}
       run: >-
-        node packages/tooling/scripts/write-api-ci-env.mjs
+        node packages/tooling/src/api-ci-env/cli.ts
         --out apps/api/.env
         --database-url "$DATABASE_URL"
         --tenancy-mode "$TENANCY_MODE"

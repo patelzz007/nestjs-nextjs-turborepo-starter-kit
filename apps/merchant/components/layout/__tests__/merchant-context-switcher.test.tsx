@@ -15,10 +15,10 @@ import {
 	type SwitcherStore,
 } from "@/components/layout/merchant-context-switcher";
 import { clearLocationCookie, locationCookieName } from "@/contexts/tenancy/lib/tenant/location";
-import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/testing/tenant-context";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 import { SidebarProvider } from "@workspace/ui/components/sidebar";
 
 const { contextQuery, push } = vi.hoisted(() => ({

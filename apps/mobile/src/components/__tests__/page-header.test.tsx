@@ -1,9 +1,22 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 
+import type * as Reanimated from "react-native-reanimated";
 import { makeMutable } from "react-native-reanimated";
 
 import { PAGE_HEADER_ROW_HEIGHT, PageHeader, pageHeaderControlsBottom, type PageHeaderProps } from "../page-header";
+
+let mockReducedMotion = false;
+
+jest.mock("react-native-reanimated", () => ({
+	...jest.requireActual<typeof Reanimated>("react-native-reanimated"),
+	__esModule: true,
+	useReducedMotion: (): boolean => mockReducedMotion,
+}));
+
+afterEach(() => {
+	mockReducedMotion = false;
+});
 
 interface Handlers {
 	readonly onMenu: jest.Mock;
@@ -150,6 +163,14 @@ describe("PageHeader", () => {
 		expect(screen.queryByTestId("header-hairline")).toBeNull();
 	});
 
+	it("shrinks a long title to fit its one line instead of cutting it off", async () => {
+		await render(header(handlers(), { title: "Notification settings" }));
+
+		expect(screen.getByTestId("header-title")).toHaveProp("numberOfLines", 1);
+		expect(screen.getByTestId("header-title")).toHaveProp("adjustsFontSizeToFit", true);
+		expect(screen.getByTestId("header-title")).toHaveProp("minimumFontScale", 0.5);
+	});
+
 	it("centres the title, set as the page's heading, with the subtitle centred under it", async () => {
 		await render(header(handlers()));
 
@@ -177,6 +198,27 @@ describe("PageHeader", () => {
 		expect(screen.getByText("Your personal details")).toBeOnTheScreen();
 		expect(screen.queryByText("Home")).toBeNull();
 		expect(screen.getByText("Home", { includeHiddenElements: true })).toBeOnTheScreen();
+	});
+
+	it("brings a new page's header in with an entrance when motion is on", async () => {
+		const actions = handlers();
+		const view = await render(header(actions));
+
+		await view.rerender(header(actions, { title: "Profile", subtitle: "Your personal details", titleKey: "/profile", titleDrift: 16, leading: "back" }));
+
+		expect(screen.container.queryAll((element) => element.props.entering !== undefined).length).toBeGreaterThan(0);
+	});
+
+	it("shows a new page's header at once under Reduce Motion, with no entrance that could leave it invisible", async () => {
+		mockReducedMotion = true;
+		const actions = handlers();
+		const view = await render(header(actions));
+
+		await view.rerender(header(actions, { title: "Profile", subtitle: "Your personal details", titleKey: "/profile", titleDrift: 16, leading: "back" }));
+
+		expect(screen.container.queryAll((element) => element.props.entering !== undefined)).toHaveLength(0);
+		expect(screen.getByRole("header", { name: "Profile" })).toBeOnTheScreen();
+		expect(screen.queryByText("Home", { includeHiddenElements: true })).toBeNull();
 	});
 
 	it("updates the title and subtitle in place when the same page renames itself", async () => {

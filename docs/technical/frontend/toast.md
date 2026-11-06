@@ -22,7 +22,7 @@ coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=form
 > - Component: `packages/ui/src/components/toast.tsx` (~900 lines)
 > - Mounted in: `apps/admin/app/layout.tsx` (one `<Toaster />` per manager). The docs site (`apps/docs`) is a reading surface and has no toasts.
 > - Call sites: ~80 across `apps/admin` (settings, emails, showcases, geo)
-> - Showcase + tests: `apps/admin/components/showcase/toast-showcase.tsx`, `apps/admin/components/showcase/__tests__/toast.test.tsx`
+> - Showcase + tests: `apps/admin/components/component-gallery/showcase/toast-showcase.tsx`, `apps/admin/components/component-gallery/showcase/__tests__/toast.test.tsx`
 
 ## Getting started
 

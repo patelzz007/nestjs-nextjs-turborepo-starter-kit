@@ -154,6 +154,12 @@ export interface EmailUnsubscribeLinks {
 	readonly oneClickUrl: string;
 }
 
+/** A file to send inside the email: where the delivery step downloads it from, and its name. */
+export interface EmailAttachmentSource {
+	readonly filename: string;
+	readonly url: string;
+}
+
 export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 	/** Validated-at-construction props; re-validated by the sender before send. */
 	public readonly props: TProps;
@@ -200,6 +206,10 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 	 * footer links the web page (a person clicks it in a browser); the delivery puts the RFC 8058 one-click
 	 * endpoint in the `List-Unsubscribe` headers (the mail client POSTs to it).
 	 */
+	public attachmentSources(): readonly EmailAttachmentSource[] {
+		return [];
+	}
+
 	public unsubscribeLinks(): EmailUnsubscribeLinks | null {
 		return null;
 	}

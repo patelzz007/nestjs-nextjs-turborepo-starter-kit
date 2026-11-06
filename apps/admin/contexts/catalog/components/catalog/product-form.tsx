@@ -11,6 +11,7 @@ import * as React from "react";
 import { CategoryPicker } from "@/contexts/catalog/components/catalog/category-picker";
 import { SwitchField, TextField, useFormSubmitHandler } from "@/components/common/form-fields";
 import { ProductFormSchema, type ProductFormValues } from "@/contexts/catalog/lib/form-values";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface ProductFormProps {
 	readonly initialValues: ProductFormValues;
@@ -178,7 +179,7 @@ export function ProductForm({ initialValues, submitLabel, isPending, onSubmit, c
 				<Button type="submit" disabled={isPending}>
 					{isPending ? "Saving…" : submitLabel}
 				</Button>
-				<Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>
+				<Link href={appRoute(cancelHref)} className={buttonVariants({ variant: "outline" })}>
 					Cancel
 				</Link>
 			</div>

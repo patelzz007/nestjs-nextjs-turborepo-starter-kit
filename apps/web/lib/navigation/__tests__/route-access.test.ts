@@ -21,7 +21,7 @@ import {
 import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { accessiblePaletteItems, WEB_PALETTE_ITEMS } from "@/lib/palette/nav-items";
 import { isPathWithin, publicRewardDetailPath, rewardDetailPath, ROUTE_PREFIXES, ROUTES, walletClaimPath } from "@/lib/routes";
-import { listAppPageRoutes } from "@/test-support/app-routes";
+import { listAppPageRoutes } from "@/testing/app-routes";
 
 const SAMPLE_PARAM = "sample-id";
 

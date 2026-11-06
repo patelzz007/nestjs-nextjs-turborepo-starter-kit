@@ -1,7 +1,7 @@
 import { CityListQuerySchema } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { localAppCache } from "../../../../../../test/support/local-app-cache";
+import { localAppCache } from "../../../../../../e2e/support/local-app-cache";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { InMemoryGeographyRead } from "../../../application/__tests__/fakes/in-memory-geography-read";
 import { CachedGeographyRead } from "../cached-geography-read";

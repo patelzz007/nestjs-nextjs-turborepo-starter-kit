@@ -3,7 +3,7 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { MAX_SHOP_TREND_SERIES, spendCategoryLabel, toClaimStatusSegments, toCategoryItems, toShopItems, toShopTrend } from "@/contexts/reporting/lib/customer-analytics";
-import { BREW_BEAN_ID, buildCustomerDashboard, CUSTOMER_RANGE_FROM_MS, TEH_TARIK_ID } from "@/test-support/analytics-dashboard";
+import { BREW_BEAN_ID, buildCustomerDashboard, CUSTOMER_RANGE_FROM_MS, TEH_TARIK_ID } from "@/testing/analytics-dashboard";
 
 const FORMATTERS = analyticsFormatters("MYR", "en-MY");
 const DAY_MS = 86_400_000;

@@ -44,7 +44,7 @@ export function DeviceSessionRow({
 			<DetailList items={details} />
 			{isCurrent || onRevoke === undefined ? null : (
 				<View className="self-start">
-					<Button label={revokeLabel} accessibilityLabel={`${revokeLabel} ${label}`} variant="secondary" onPress={onRevoke} loading={isRevoking} />
+					<Button label={revokeLabel} accessibilityLabel={`${revokeLabel} ${label}`} variant="outline" onPress={onRevoke} loading={isRevoking} />
 				</View>
 			)}
 		</View>

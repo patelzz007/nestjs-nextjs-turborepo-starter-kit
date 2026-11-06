@@ -240,6 +240,7 @@ SELECT consumer, COUNT(*), MIN(processed_at) AS oldest FROM inbox_processed_even
 | `rewards.auto-publish` | Auto-publish reviewed rewards |
 | `claims.expire-pending` | Expire consumer claims |
 | `claims.expire-referrer` | Expire referrer credit claims |
+| `claims.expire-holds` | Give the units of unclaimed claim holds back, every minute |
 | `rewards.referral-credit-notify` | Deliver pending "referrer reward credited" emails (credit committed by the POS checkout; `reward_referrals.credit_notified_at IS NULL`) |
 | `outbox.publish` | Sweep outbox → Kafka |
 | `storage.cleanup` / `storage.delete` | Stale upload cleanup (hourly: abandoned `PENDING` uploads, overdue scans, and READY staging copies past their category's `stagingRetentionMs` — a GitHub comment picture never posted) / object deletion |
@@ -272,9 +273,9 @@ letters, digits, `:`, `_`, `-`, max 64; default `bull` = Bull Board's `BULL_PREF
 
 Two processes on one Redis share jobs **only** if they share the prefix. So:
 
-- **e2e runs are isolated per run.** `apps/api/test/global-setup-e2e.ts` (Vitest
+- **e2e runs are isolated per run.** `apps/api/e2e/global-setup-e2e.ts` (Vitest
   `globalSetup`, once per run) picks `e2e:<uuid>` (or the runner's `E2E_BULLMQ_PREFIX`;
-  `pnpm ci:local` passes `ci-local:<runId>`) and `provide`s it; `test/setup-env.ts` forces
+  `pnpm ci:local` passes `ci-local:<runId>`) and `provide`s it; `e2e/setup-env.ts` forces
   `BULLMQ_PREFIX` from it in every test file before the app config is parsed. A dev API
   running on `bull` can no longer steal an e2e run's jobs (or the reverse). The same global
   setup deletes the run's `<prefix>:*` keys when the run ends.

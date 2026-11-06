@@ -39,7 +39,7 @@ Stop the current task, do not guess, and report back with the task ID, what you 
 
 1. Read the files listed under **Read first**, fully.
 2. Make the changes under **Do**.
-3. Write the tests under **Tests**. Tests go in a `__tests__/` folder next to the code, and e2e tests go in `apps/api/test/`.
+3. Write the tests under **Tests**. Tests go in a `__tests__/` folder next to the code, and e2e tests go in `apps/api/e2e/`.
 4. Run the gate from the repository root **after your last edit**:
 
    ```bash
@@ -349,11 +349,11 @@ The machine-credential path is the same in both modes. **No other code branches 
 
 ## 8. Test matrix (D11)
 
-Every ID below is a real automated test against Postgres as `app_runtime`, in `apps/api/test/tenancy/`.
+Every ID below is a real automated test against Postgres as `app_runtime`, in `apps/api/e2e/tenancy/`.
 
 ### 8.1 Fixture (D26)
 
-`apps/api/test/support/two-tenant-fixture.ts` exports fixed uuid v7 constants and `seedTwoTenantFixture(prisma)`. It writes through `seed.test_fixture`, and every column is set explicitly.
+`apps/api/e2e/support/two-tenant-fixture.ts` exports fixed uuid v7 constants and `seedTwoTenantFixture(prisma)`. It writes through `seed.test_fixture`, and every column is set explicitly.
 
 - **Tenant A** (`ACTIVE`):
   - Locations: A-KL and A-Malacca
@@ -579,7 +579,7 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 **MT-25: Two-tenant fixture (D26)**
 
 - **Do:** build §8.1 exactly. Add the `seed.test_fixture` operation, and make the fixture idempotent (upsert by fixed id).
-- **Tests:** `test/support/__tests__/two-tenant-fixture.e2e-spec.ts` seeds twice and asserts every row and column.
+- **Tests:** `e2e/support/__tests__/two-tenant-fixture.e2e-spec.ts` seeds twice and asserts every row and column.
 
 **MT-26: P2 test suites**
 
@@ -779,18 +779,18 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 
 | Area                                | Main files                                                                                                                                                    | Tests                                                                                                                              |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Tenant source and request principal | `fixed-tenant.source.ts`, `route-tenant.source.ts`, `request-principal.ts`, `actor-context.factory.ts` (deleted `actor-tenancy.policy.ts`)                    | `tenant-source.spec.ts`, `rls.interceptor.spec.ts`, `tenancy-mode-boundary.spec.ts`, `test/tenancy/**`                             |
-| Route operations                    | `public-operation.decorator.ts`, `rls.interceptor.ts`, every public controller                                                                                | `platform-operation-coverage.spec.ts` (PLAT-005), `public-operation-coverage.spec.ts` (MT-43), `test/support/controller-routes.ts` |
-| System operations                   | `system-operation.registry.ts`, `prisma/rls/system-operation-scopes.ts`, generated `00-system-operation-scopes.sql`, `seed-demo-dataset.operation.ts`         | registry specs, `test/system-operations.e2e-spec.ts`                                                                               |
-| RLS SQL                             | `prisma/rls.sql` (FORCE everywhere, geo writes), `01-acl-location-access.sql` (membership confined to the bound tenant), `90-analytics-consumer.sql`          | `test/rls/runtime-role.e2e-spec.ts` (DB-001…008)                                                                                   |
+| Tenant source and request principal | `fixed-tenant.source.ts`, `route-tenant.source.ts`, `request-principal.ts`, `actor-context.factory.ts` (deleted `actor-tenancy.policy.ts`)                    | `tenant-source.spec.ts`, `rls.interceptor.spec.ts`, `tenancy-mode-boundary.spec.ts`, `e2e/tenancy/**`                             |
+| Route operations                    | `public-operation.decorator.ts`, `rls.interceptor.ts`, every public controller                                                                                | `platform-operation-coverage.spec.ts` (PLAT-005), `public-operation-coverage.spec.ts` (MT-43), `e2e/support/controller-routes.ts` |
+| System operations                   | `system-operation.registry.ts`, `prisma/rls/system-operation-scopes.ts`, generated `00-system-operation-scopes.sql`, `seed-demo-dataset.operation.ts`         | registry specs, `e2e/system-operations.e2e-spec.ts`                                                                               |
+| RLS SQL                             | `prisma/rls/10-policies.sql` (FORCE everywhere, geo writes), `01-acl-location-access.sql` (membership confined to the bound tenant), `90-analytics-consumer.sql`          | `e2e/rls/runtime-role.e2e-spec.ts` (DB-001…008)                                                                                   |
 | Runtime role proof                  | `runtime-role-proof.ts`, `database-safety.module.ts` — the `tenant-isolation` readiness check                                                                 | `runtime-role-proof.spec.ts`                                                                                                       |
 | Schema                              | `schema.prisma` — composite uniques and 16 composite FKs, `ImpersonationSession.supportAccessGrantIds`; baseline `20261021110415_init` (regenerated by the owner on 2026-10-21; `migrations-baseline.json` moved to it) plus `20261021114329_tenant_ban_and_customer_bans`                        | `composite-foreign-keys.e2e-spec.ts` (MT-006), `db:check-tenant-integrity`                                                         |
-| Authorization                       | `authorization-context.resolver.ts`, `impersonation-start.policy.ts` and the impersonation aggregate/repository                                               | PLAT-002/003/004 unit and `test/tenancy/multi/platform-staff.e2e-spec.ts`                                                          |
-| Merchant onboarding                 | `complete-merchant-onboarding.handler.ts`, `account-provisioning.port.ts/.service.ts` — atomic: no account and no email unless the whole onboarding commits   | `test/merchant-onboarding.e2e-spec.ts`                                                                                             |
-| Admin KYB review                    | `tenant.merchant.admin_read` now scopes `StoredFile`                                                                                                          | `test/admin-merchant-kyb.e2e-spec.ts`                                                                                              |
+| Authorization                       | `authorization-context.resolver.ts`, `impersonation-start.policy.ts` and the impersonation aggregate/repository                                               | PLAT-002/003/004 unit and `e2e/tenancy/multi/platform-staff.e2e-spec.ts`                                                          |
+| Merchant onboarding                 | `complete-merchant-onboarding.handler.ts`, `account-provisioning.port.ts/.service.ts` — atomic: no account and no email unless the whole onboarding commits   | `e2e/merchant-onboarding.e2e-spec.ts`                                                                                             |
+| Admin KYB review                    | `tenant.merchant.admin_read` now scopes `StoredFile`                                                                                                          | `e2e/admin-merchant-kyb.e2e-spec.ts`                                                                                              |
 | Integration API                     | `Integration{Rewards,Analytics,Redemptions}Controller` (`/integration/*`, API key only); `/tenants/:tenantSlug/*` serve members only                          | `merchant-location-scope.e2e-spec.ts` (MACH-002), `pos-terminals.e2e-spec.ts`, controller metadata specs                           |
 | Seeds                               | `client.ts` (seeds run as `app_runtime` under `seed.demo_dataset`), `tenants.ts`, `rewards.ts`, `http-audit.ts`, `account-security.ts`, `analytics-ingest.ts` | `db:check-seed-coverage`                                                                                                           |
-| CI                                  | `ci.yml` (multi e2e + new single-tenant job), `write-api-ci-env` action, `ci-local-plan.mjs`, `turbo.json`                                                    | `ci-workflow-env.spec.ts`, `ci-local-plan` test                                                                                    |
+| CI                                  | `ci.yml` (multi e2e + new single-tenant job), `write-api-ci-env` action, `src/ci-local/ci-local-plan.ts`, `turbo.json`                                                    | `ci-workflow-env.spec.ts`, `ci-local-plan` test                                                                                    |
 | Web                                 | merchant `use-tenant-slug.ts` (param fix), `legacy-tenant-redirects.ts` (`/orgs/*` → `/t/*`)                                                                  | their `__tests__`                                                                                                                  |
 | Docs                                | ADR 062 notes, `rls-coverage.md`, four operations runbooks, `rules/08`, `rules/10`, `GLOSSARY.md`, API reference (regenerated from 219 live samples)          | `@workspace/docs` tests                                                                                                            |
 
@@ -798,11 +798,11 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 
 | Request kind                     | Single                                  | Multi                      | Proven by                                              |
 | -------------------------------- | --------------------------------------- | -------------------------- | ------------------------------------------------------ |
-| Tenant route (user)              | fixed tenant; another slug is not found | `:tenantSlug` + membership | ST-001…005; `test/tenancy/multi/isolation.e2e-spec.ts` |
+| Tenant route (user)              | fixed tenant; another slug is not found | `:tenantSlug` + membership | ST-001…005; `e2e/tenancy/multi/isolation.e2e-spec.ts` |
 | Customer route                   | no tenant, user-owned context           | same                       | CU-003                                                 |
 | Machine route (POS)              | the key's tenant                        | same                       | MACH-002                                               |
 | Platform route (admin app)       | `@PlatformOperation`, no tenant         | same                       | PLAT-005; live check below                             |
-| Marketplace read                 | `marketplace.published_rewards.read`    | same                       | `test/tenancy/multi/isolation.e2e-spec.ts`             |
+| Marketplace read                 | `marketplace.published_rewards.read`    | same                       | `e2e/tenancy/multi/isolation.e2e-spec.ts`             |
 | Public pre-auth                  | its own `@PublicOperation`              | same                       | MT-43 coverage spec                                    |
 | Tenant route by a platform admin | only with an active grant, else 404     | same                       | PLAT-002, PLAT-003, PLAT-004                           |
 

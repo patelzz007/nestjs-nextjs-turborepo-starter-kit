@@ -12,7 +12,3 @@
 ALTER TABLE public."ReceivedWebhook" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."ReceivedWebhook" FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS received_webhook_bypass ON public."ReceivedWebhook";
-CREATE POLICY received_webhook_bypass ON public."ReceivedWebhook"
-  USING ((SELECT app_rls_bypass_on('ReceivedWebhook')))
-  WITH CHECK ((SELECT app_rls_bypass_on('ReceivedWebhook')));

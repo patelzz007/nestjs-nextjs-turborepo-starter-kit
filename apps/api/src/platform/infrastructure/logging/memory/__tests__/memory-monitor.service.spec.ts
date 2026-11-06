@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { BYTES_PER_MB, type HeapSample } from "../heap-growth-detector";
 import { MemoryMonitorService } from "../memory-monitor.service";
 import type { PostGcHeapProbe } from "../post-gc-heap-probe";

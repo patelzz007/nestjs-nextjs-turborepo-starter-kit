@@ -8,6 +8,7 @@ export const ClaimsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"CLAIM_NOT_ACTIVE",
 	"CLAIM_EXPIRED",
 	"CLAIM_LIMIT_REACHED",
+	"CLAIM_HOLD_LIMIT_REACHED",
 	"LEGAL_ACCEPTANCE_REQUIRED",
 	"OTP_REQUIRED",
 	"OTP_INVALID",
@@ -42,6 +43,15 @@ export class ClaimExpiredError extends DomainError {
 
 	public constructor(public readonly claimId: string) {
 		super("Claim expired");
+	}
+}
+
+/** The customer holds too many units right now, or keeps holding this reward without claiming it. */
+export class ClaimHoldLimitReachedError extends DomainError {
+	public readonly code = "CLAIM_HOLD_LIMIT_REACHED";
+
+	public constructor() {
+		super("Too many rewards on hold; finish a claim or try again later");
 	}
 }
 

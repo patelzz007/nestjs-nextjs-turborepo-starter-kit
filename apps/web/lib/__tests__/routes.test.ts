@@ -18,7 +18,7 @@ import {
 	verifyEmailPath,
 	walletClaimPath,
 } from "@/lib/routes";
-import { listAppPageRoutes, resolvesToAppPage } from "@/test-support/app-routes";
+import { listAppPageRoutes, resolvesToAppPage } from "@/testing/app-routes";
 
 const APP_PAGE_ROUTES = listAppPageRoutes();
 

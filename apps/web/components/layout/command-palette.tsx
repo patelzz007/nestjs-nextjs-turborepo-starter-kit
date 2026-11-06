@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 import { BRAND_NAME } from "@workspace/tokens";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface CommandPaletteProps {
 	readonly open?: boolean;
@@ -66,7 +67,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {
-			router.push(url);
+			router.push(appRoute(url));
 		},
 		[router],
 	);

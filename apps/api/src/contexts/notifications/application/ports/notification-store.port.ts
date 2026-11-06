@@ -1,5 +1,7 @@
 import type {
 	JsonObject,
+	NotificationAttachment,
+	NotificationAttachmentResponse,
 	NotificationCategory,
 	NotificationChannel,
 	NotificationDeliveryReason,
@@ -27,6 +29,8 @@ export interface StoredNotification {
 	/** Not delivered before this instant (a broadcast at the recipient's local time); null = at once. */
 	readonly notBefore: number | null;
 	readonly createdAt: number;
+	/** Its optional file: the stored snapshot the inbox row copies, and the addresses an email or a push uses. */
+	readonly attachment: { readonly stored: NotificationAttachment; readonly links: NotificationAttachmentResponse } | null;
 }
 
 /** What the fan-out needs to know about a user recipient. */
@@ -91,6 +95,7 @@ export interface NewInAppNotification {
 	readonly richBody: JsonObject | null;
 	readonly senderName: string | null;
 	readonly senderLogoUrl: string | null;
+	readonly attachment: NotificationAttachment | null;
 	readonly groupKey: string | null;
 	readonly broadcastId: string | null;
 }

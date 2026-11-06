@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TeamInvitePage from "@/app/team-invite/page";
 import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/tenancy/components/team-invite/team-invite-skeletons";
-import { TestQueryClientProvider } from "@/test/query-client";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { TestQueryClientProvider } from "@/testing/query-client";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 let token: string | null = null;
 

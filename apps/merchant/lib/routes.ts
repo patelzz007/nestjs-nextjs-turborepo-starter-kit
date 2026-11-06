@@ -6,7 +6,7 @@
  * - Plural, kebab-case nouns. CRUD: list `/x`, create `/x/new`, view `/x/[id]`, edit `/x/[id]/edit`.
  * - Business pages live under the tenant scope `/t/[tenantSlug]`.
  *   `TENANT_ROUTES` holds those paths **relative to the tenant scope** (they are the
- *   URLs used by `data/merchant-sidebar-menu.json` and the command palette);
+ *   URLs used by `lib/navigation/merchant-sidebar-menu.json` and the command palette);
  *   `tenantPath(slug, path)` / `tenantRoutes(slug)` turn them into browser hrefs.
  * - Paths another process builds into URLs (the API's emails and invite links)
  *   come from `APP_LINKS` in `@workspace/shared`, so the app and the emails

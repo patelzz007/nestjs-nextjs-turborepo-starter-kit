@@ -25,6 +25,7 @@ import { TenantAccessModule } from "../tenancy/public-api";
 import type { ClaimsScope } from "./application/claims-scope";
 import { ClaimRewardHandler } from "./application/commands/claim-reward/claim-reward.handler";
 import { ExpireOverdueClaimsHandler } from "./application/commands/expire-overdue-claims/expire-overdue-claims.handler";
+import { ExpireOverdueClaimHoldsHandler } from "./application/commands/expire-overdue-claim-holds/expire-overdue-claim-holds.handler";
 import { ExpireOverdueReferrerClaimsHandler } from "./application/commands/expire-overdue-referrer-claims/expire-overdue-referrer-claims.handler";
 import { IssueClaimQrCodesHandler } from "./application/commands/issue-claim-qr-codes/issue-claim-qr-codes.handler";
 import { MigrateLegacyRewardNoticesHandler } from "./application/commands/migrate-legacy-reward-notices/migrate-legacy-reward-notices.handler";
@@ -89,6 +90,7 @@ const claimsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [Cl
 		MigrateLegacyRewardNoticesHandler,
 		ExpireOverdueClaimsHandler,
 		ExpireOverdueReferrerClaimsHandler,
+		ExpireOverdueClaimHoldsHandler,
 		SweepReferrerCreditEmailsHandler,
 		RequestReferrerCreditEmailOnReferrerCredited,
 		SweepSignupSuccessNoticesHandler,

@@ -7,6 +7,7 @@ import type { Job } from "bullmq";
 import { systemActor } from "../../../../platform/application/actor-context";
 import { SystemCommandDispatcher } from "../../../../platform/application/system-command-dispatcher";
 import { ExpireOverdueClaimsCommand } from "../../application/commands/expire-overdue-claims/expire-overdue-claims.command";
+import { ExpireOverdueClaimHoldsCommand } from "../../application/commands/expire-overdue-claim-holds/expire-overdue-claim-holds.command";
 import { ExpireOverdueReferrerClaimsCommand } from "../../application/commands/expire-overdue-referrer-claims/expire-overdue-referrer-claims.command";
 import type { ClaimExpiryResult } from "../../application/services/claim-expiry.application-service";
 
@@ -37,5 +38,20 @@ export class ClaimsExpireReferrerProcessor extends WorkerHost {
 		RewardsMaintenanceJobSchema.parse(job.data);
 		const actor = systemActor("queue.claims.expire_referrer", "job", null, "Expire overdue referrer-credit reward claims", null);
 		return this.commands.dispatch(new ExpireOverdueReferrerClaimsCommand(actor), { kind: "job", name: QUEUE_NAMES.claimsExpireReferrer });
+	}
+}
+
+/** `claims.expire-holds` → ExpireOverdueClaimHolds: unclaimed holds give their units back. */
+@Processor(QUEUE_NAMES.claimsExpireHolds, MONITORED_WORKER_OPTIONS)
+@Injectable()
+export class ClaimsExpireHoldsProcessor extends WorkerHost {
+	public constructor(@Inject(SystemCommandDispatcher) private readonly commands: Pick<SystemCommandDispatcher, "dispatch">) {
+		super();
+	}
+
+	public async process(job: Pick<Job, "data">): Promise<ClaimExpiryResult> {
+		RewardsMaintenanceJobSchema.parse(job.data);
+		const actor = systemActor("queue.claims.expire_holds", "job", null, "Give the units of unclaimed claim holds back", null);
+		return this.commands.dispatch(new ExpireOverdueClaimHoldsCommand(actor), { kind: "job", name: QUEUE_NAMES.claimsExpireHolds });
 	}
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { localAppCache } from "../../../../../test/support/local-app-cache";
+import { localAppCache } from "../../../../../e2e/support/local-app-cache";
 import type { TenantRouteLookup, TenantRouteRecord } from "../../../application/tenancy/tenant-source.port";
 import { CachedTenantRouteLookup } from "../cached-tenant-route.lookup";
 

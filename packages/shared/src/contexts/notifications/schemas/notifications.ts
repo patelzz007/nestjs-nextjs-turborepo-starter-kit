@@ -79,6 +79,46 @@ export const NOTIFICATION_TITLE_MAX_LENGTH = 200;
 export const NOTIFICATION_LIST_DEFAULT_LIMIT = 20;
 export const NOTIFICATION_LIST_MAX_IDS = 100;
 
+// ── Attachments ──────────────────────────────────────────────────────────────────────────────────
+
+/** A notification carries pictures and PDFs. */
+export const NotificationAttachmentMimeTypeSchema = z.enum(["image/jpeg", "image/png", "image/webp", "image/avif", "application/pdf"]);
+export type NotificationAttachmentMimeType = z.output<typeof NotificationAttachmentMimeTypeSchema>;
+
+const NOTIFICATION_ATTACHMENT_DETAILS = {
+	/** The file's name, as a person sees it. */
+	name: z.string().min(1).max(255),
+	mimeType: NotificationAttachmentMimeTypeSchema,
+	sizeBytes: z.number().int().positive(),
+	/** A picture's size in pixels; null for a PDF. */
+	width: z.number().int().positive().nullable(),
+	height: z.number().int().positive().nullable(),
+};
+
+/**
+ * The optional file of a notification, as stored: a snapshot, so an inbox read never joins the file tables (they are
+ * the uploader's under RLS). The paths are stored public references, turned into addresses when read
+ * (`PublicUrlResolve`), so a changed API address never strands one. The file must be public: an email client and the
+ * push service load it without signing in, so private documents are not attachments.
+ */
+export const NotificationAttachmentSchema = z.strictObject({
+	...NOTIFICATION_ATTACHMENT_DETAILS,
+	/** The file itself: a 4K photo at full size. */
+	path: z.string().min(1).max(500),
+	/** A smaller copy for lists, emails and push (which refuses large pictures); null when there is none. */
+	previewPath: z.string().min(1).max(500).nullable(),
+});
+export type NotificationAttachment = z.output<typeof NotificationAttachmentSchema>;
+
+/** A stored attachment as a client opens it. */
+export const NotificationAttachmentResponseSchema = z.object({
+	...NOTIFICATION_ATTACHMENT_DETAILS,
+	url: z.string(),
+	/** The copy to show in a list; null when there is none. */
+	previewUrl: z.string().nullable(),
+});
+export type NotificationAttachmentResponse = z.output<typeof NotificationAttachmentResponseSchema>;
+
 // ── In-app inbox ─────────────────────────────────────────────────────────────────────────────────
 
 export const InAppNotificationResponseSchema = BaseResponseSchema.extend({
@@ -94,6 +134,8 @@ export const InAppNotificationResponseSchema = BaseResponseSchema.extend({
 	icon: z.string().nullable(),
 	senderName: z.string().nullable(),
 	senderLogoUrl: z.string().nullable(),
+	/** The optional file sent with it. */
+	attachment: NotificationAttachmentResponseSchema.nullable(),
 	groupCount: z.number().int().positive(),
 	broadcastId: z.uuid().nullable(),
 	readAt: EpochMsSchema.nullable(),

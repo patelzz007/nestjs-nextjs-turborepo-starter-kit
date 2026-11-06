@@ -36,7 +36,7 @@ export function PushPermissionPrimer({ registration }: PushPermissionPrimerProps
 	if (registration.permission === "denied") {
 		return (
 			<Card title={PUSH_PRIMER_COPY.title} description={PUSH_PRIMER_COPY.blocked}>
-				<Button label={PUSH_PRIMER_COPY.openSettings} variant="secondary" onPress={openSettings} />
+				<Button label={PUSH_PRIMER_COPY.openSettings} variant="outline" onPress={openSettings} />
 			</Card>
 		);
 	}

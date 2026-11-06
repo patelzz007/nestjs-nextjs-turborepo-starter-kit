@@ -151,5 +151,5 @@ left no record, and failed or guard-rejected attempts left none at all.
 - `apps/api/src/modules/audit-logs/` — the read side (viewer API); `packages/shared/src/schemas/domain/platform/http-audit-log.ts` — its contract
 - `apps/admin/app/(panel)/audit-logs/` — the admin viewer
 - `apps/api/src/common/errors/global-exception.filter.ts`
-- `apps/api/prisma/rls.sql` (`audit_logs_*` policies), `prisma/rls/withheld-privileges.ts`
+- `apps/api/prisma/rls/10-policies.sql` (`audit_logs_*` policies), `prisma/rls/withheld-privileges.ts`
 - ADR 012 (system operations), ADR 016 (error envelope), ADR 017 (request context)

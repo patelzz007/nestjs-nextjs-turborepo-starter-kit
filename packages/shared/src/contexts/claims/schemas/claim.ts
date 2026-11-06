@@ -33,6 +33,14 @@ export const RequestClaimOtpSchema = z
 
 export type RequestClaimOtpInput = z.output<typeof RequestClaimOtpSchema>;
 
+/** The code was sent and one unit is held for the caller until `holdExpiresAt`. */
+export const RequestClaimOtpResponseSchema = z.object({
+	ok: z.literal(true),
+	holdExpiresAt: EpochMsSchema,
+});
+
+export type RequestClaimOtpResponse = z.output<typeof RequestClaimOtpResponseSchema>;
+
 export const CreateRewardClaimSchema = z
 	.object({
 		rewardId: z.uuid(),

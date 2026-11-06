@@ -13,10 +13,15 @@ import { AccessTokenValueSchema, AppLanguageSchema, PosTerminalIdSchema, Refresh
 import * as SecureStore from "expo-secure-store";
 import { z } from "zod";
 
-/** The appearance the user chose: follow the OS, or force one theme (light, dark, or Nord — packages/tokens). */
-export const ThemePreferenceSchema = z.enum(["system", "light", "dark", "nord"]);
+/** The appearance the user chose: follow the OS, or force one theme (packages/tokens: the shared ones, then the phone's own). */
+export const ThemePreferenceSchema = z.enum(["system", "light", "dark", "nord", "current-dark", "harbour", "mocha"]);
 
 export type ThemePreference = z.output<typeof ThemePreferenceSchema>;
+
+/** The side drawer's look the user chose (Settings → Appearance). */
+export const DrawerStyleSchema = z.enum(["centred-ink", "ink-cards", "wash-sheet", "centred-wash", "wash-cards"]);
+
+export type DrawerStyle = z.output<typeof DrawerStyleSchema>;
 
 /** The app lock's timeouts (§11.2): Immediately, 1 minute, 5 minutes. */
 export const APP_LOCK_TIMEOUT_IMMEDIATELY_MS = 0;
@@ -69,6 +74,7 @@ export const SECURE_STORE_ENTRIES = {
 	accessToken: { key: "auth.accessToken", schema: AccessTokenValueSchema },
 	refreshToken: { key: "auth.refreshToken", schema: RefreshTokenValueSchema },
 	theme: { key: "prefs.theme", schema: ThemePreferenceSchema },
+	drawerStyle: { key: "prefs.drawer.style", schema: DrawerStyleSchema },
 	appLockEnabled: { key: "prefs.appLock.enabled", schema: z.boolean() },
 	appLockTimeoutMs: { key: "prefs.appLock.timeoutMs", schema: AppLockTimeoutMsSchema },
 	appLockBiometricFingerprint: { key: "prefs.appLock.enrolledBiometrics", schema: BiometricFingerprintSchema },

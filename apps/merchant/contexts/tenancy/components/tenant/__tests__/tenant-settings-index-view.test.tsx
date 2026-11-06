@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TenantSettingsIndexView } from "@/contexts/tenancy/components/tenant/tenant-settings-index-view";
 import { tenantRoutes } from "@/lib/routes";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { contextQueryState, TWO_STORE_CONTEXT } from "@/testing/tenant-context";
 
 // The card reads the tenant context through the API; it has its own test (leave-tenant-card.test.tsx).
 vi.mock("@/contexts/tenancy/components/lifecycle/leave-tenant-card", () => ({

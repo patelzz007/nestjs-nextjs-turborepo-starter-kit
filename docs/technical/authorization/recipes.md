@@ -209,7 +209,7 @@ Add a unit test for owner / non-owner / missing. Never read the owner from the r
 2. Migration: `pnpm --filter @workspace/api db:migrate:create`, then check the SQL.
 3. Add the table name to the right profile in `apps/api/prisma/rls/manifest-index.ts`
    (usually `tenant_tenant`).
-4. Enable + force RLS and add policies in `apps/api/prisma/rls.sql`, e.g.:
+4. Enable + force RLS and add policies in `apps/api/prisma/rls/10-policies.sql`, e.g.:
 
    ```sql
    DROP POLICY IF EXISTS invoices_member ON public.invoices;
@@ -363,8 +363,8 @@ pnpm --filter @workspace/api test          # API unit tests only
 pnpm ci:local --e2e-only                   # the database e2e suites, on throwaway databases
 ```
 
-The API e2e suites (`apps/api/test`: `authorization-*.e2e-spec.ts`, `access-hardening`,
-`rls-hardening`, `tenant-isolation`, `merchant-capabilities`, and `test/tenancy`, `test/rls`) boot
+The API e2e suites (`apps/api/e2e`: `authorization-*.e2e-spec.ts`, `access-hardening`,
+`rls-hardening`, `tenant-isolation`, `merchant-capabilities`, and `e2e/tenancy`, `e2e/rls`) boot
 the real app against PostgreSQL with RLS applied. `ci:local` creates and drops their throwaway
 databases; never point them at your dev database. If logins start returning `429`, the Redis
 throttler still remembers an earlier run: wait a couple of minutes.
@@ -386,7 +386,7 @@ vi.mock("../tenant-membership.service", () => ({
 }));
 ```
 
-- For HTTP contexts use `apps/api/test/support/http-execution-context.ts` (`createHttpContext`,
+- For HTTP contexts use `apps/api/e2e/support/http-execution-context.ts` (`createHttpContext`,
   `testRequest`, `accessToken`): a real Nest `ExecutionContext` whose handler carries the metadata.
 - Build **complete** Prisma fixtures (every field) instead of partial objects.
 
@@ -406,7 +406,7 @@ it("hides Assign role without ROLE.UPDATE", () => {
 });
 ```
 
-Merchant tests use the helpers in `apps/merchant/test/authorization.tsx`.
+Merchant tests use the helpers in `apps/merchant/testing/authorization.tsx`.
 
 ### What every new gated feature must test
 

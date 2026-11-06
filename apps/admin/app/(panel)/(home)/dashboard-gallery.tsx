@@ -8,7 +8,7 @@ import { Button } from "@workspace/ui/components/button";
 import { LazySection } from "@/components/common/lazy-section";
 import { PlatformSalesCards } from "@/components/dashboard/platform-sales-cards";
 import { SectionSkeleton } from "@/components/loading/section-skeleton";
-import { ACCORDION_FAQ_ITEMS, ACCORDION_REORDER_ITEMS, ACCORDION_STATUS_ITEMS, ACCORDION_VARIANT_ITEMS } from "@/components/showcase/accordion-demo-items";
+import { ACCORDION_FAQ_ITEMS, ACCORDION_REORDER_ITEMS, ACCORDION_STATUS_ITEMS, ACCORDION_VARIANT_ITEMS } from "@/components/component-gallery/showcase/accordion-demo-items";
 
 // ── Lazy demo sections ────────────────────────────────────────────────────
 // Every showcase below the fold (chart, table, accordion, …) is code-split so
@@ -27,31 +27,31 @@ const toastSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-
 
 // Every gallery section is viewport-gated by `<LazySection>` and only mounts
 // when scrolled near — the chunk then downloads on demand and the section fades in.
-const DataTableShowcase = dynamic(() => import("@/components/showcase/data-table-showcase").then((m) => m.DataTableShowcase), {
+const DataTableShowcase = dynamic(() => import("@/components/component-gallery/showcase/data-table-showcase").then((m) => m.DataTableShowcase), {
 	loading: tableSectionLoading,
 });
 
-const AccordionShowcase = dynamic(() => import("@/components/showcase/accordion-showcase").then((m) => m.AccordionShowcase), {
+const AccordionShowcase = dynamic(() => import("@/components/component-gallery/showcase/accordion-showcase").then((m) => m.AccordionShowcase), {
 	loading: accordionSectionLoading,
 });
 
-const BreadcrumbShowcase = dynamic(() => import("@/components/showcase/breadcrumb-showcase").then((m) => m.BreadcrumbShowcase), {
+const BreadcrumbShowcase = dynamic(() => import("@/components/component-gallery/showcase/breadcrumb-showcase").then((m) => m.BreadcrumbShowcase), {
 	loading: breadcrumbSectionLoading,
 });
 
-const ComboboxShowcase = dynamic(() => import("@/components/showcase/combobox-showcase").then((m) => m.ComboboxShowcase), {
+const ComboboxShowcase = dynamic(() => import("@/components/component-gallery/showcase/combobox-showcase").then((m) => m.ComboboxShowcase), {
 	loading: comboboxSectionLoading,
 });
 
-const SelectShowcase = dynamic(() => import("@/components/showcase/select-showcase").then((m) => m.SelectShowcase), {
+const SelectShowcase = dynamic(() => import("@/components/component-gallery/showcase/select-showcase").then((m) => m.SelectShowcase), {
 	loading: selectSectionLoading,
 });
 
-const AlertShowcase = dynamic(() => import("@/components/showcase/alert-showcase").then((m) => m.AlertShowcase), {
+const AlertShowcase = dynamic(() => import("@/components/component-gallery/showcase/alert-showcase").then((m) => m.AlertShowcase), {
 	loading: alertSectionLoading,
 });
 
-const ToastShowcase = dynamic(() => import("@/components/showcase/toast-showcase").then((m) => m.ToastShowcase), {
+const ToastShowcase = dynamic(() => import("@/components/component-gallery/showcase/toast-showcase").then((m) => m.ToastShowcase), {
 	loading: toastSectionLoading,
 });
 

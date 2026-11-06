@@ -21,6 +21,7 @@ import { NOTIFICATIONS_DROPDOWN_LABELS, type NotificationsDropdownLabels } from 
 import { NOTIFICATION_SURFACE_OF_CLIENT } from "./notification-surface";
 import { notificationsPollInterval, useNotificationsLive } from "./use-notifications-live";
 import { useOpenNotification } from "./use-open-notification";
+import { appRoute } from "../../navigation/app-route";
 
 /** How many of the newest notifications the dropdown previews. */
 export const NOTIFICATIONS_PREVIEW_LIMIT = 4;
@@ -109,7 +110,7 @@ export function NotificationsDropdown({ viewAllHref, region = PLATFORM_DISPLAY_R
 				</div>
 				{viewAllHref !== undefined ? (
 					<div className="border-t border-border p-2">
-						<Button variant="outline" size="sm" className="w-full" nativeButton={false} render={<Link href={viewAllHref} />}>
+						<Button variant="outline" size="sm" className="w-full" nativeButton={false} render={<Link href={appRoute(viewAllHref)} />}>
 							{labels.viewAll}
 						</Button>
 					</div>

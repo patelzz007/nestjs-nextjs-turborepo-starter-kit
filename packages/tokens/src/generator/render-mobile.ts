@@ -16,8 +16,17 @@
 // Web-chrome tokens (z-index layers, sidebar widths, switch geometry, easing,
 // the web font variables, shadows) are not part of it.
 
-import type { ColorTokenName, ThemeName, TokenSource } from "../schema";
-import { MobileComponentColorNameSchema, RadiusNameSchema, RadiusStepSchema, SharedColorNameSchema, TextSizeNameSchema, ThemeNameSchema, ThemeRoleSchema } from "../schema";
+import type { ColorTokenName, MobileThemeName, ThemeName, TokenSource } from "../schema";
+import {
+	MobileComponentColorNameSchema,
+	RadiusNameSchema,
+	RadiusStepSchema,
+	SharedColorNameSchema,
+	TextSizeNameSchema,
+	MobileThemeNameSchema,
+	ThemeNameSchema,
+	ThemeRoleSchema,
+} from "../schema";
 import { createColorLookups, resolveColorValue } from "../resolve";
 import { colorToken } from "../value";
 import { BASE_RADIUS, generatedNotice } from "./common";
@@ -27,7 +36,15 @@ import { formatColorLiteral, formatLength, formatVariableReference } from "./for
 import { assertThemeParity } from "./parity";
 
 /** The themes Uniwind defines variants for itself (it also matches them to the OS colour scheme). */
-const UNIWIND_BUILT_IN_THEMES: readonly ThemeName[] = ["light", "dark"];
+const UNIWIND_BUILT_IN_THEMES: readonly MobileThemeName[] = ["light", "dark"];
+
+/** The shared theme the phone's own themes build on: they inherit every role they do not set from it. */
+const MOBILE_ONLY_BASE_THEME: ThemeName = "dark";
+
+/** The shared theme behind `theme`: itself, or the base for a theme only the phone has. */
+function sharedThemeOf(theme: MobileThemeName): ThemeName {
+	return ThemeNameSchema.safeParse(theme).data ?? MOBILE_ONLY_BASE_THEME;
+}
 
 /**
  * `@custom-variant <theme> (…)` for every other theme, exactly as Uniwind writes one into its own
@@ -36,17 +53,20 @@ const UNIWIND_BUILT_IN_THEMES: readonly ThemeName[] = ["light", "dark"];
  * theme fails on the first build ("Cannot use `@variant` with unknown variant").
  */
 function customThemeVariants(): readonly string[] {
-	return ThemeNameSchema.options.filter((theme) => !UNIWIND_BUILT_IN_THEMES.includes(theme)).map((theme) => `@custom-variant ${theme} (&:where(.${theme}, .${theme} *))`);
+	return MobileThemeNameSchema.options
+		.filter((theme) => !UNIWIND_BUILT_IN_THEMES.includes(theme))
+		.map((theme) => `@custom-variant ${theme} (&:where(.${theme}, .${theme} *))`);
 }
 
 /** `source` with the mobile app's re-maps for `theme` applied to that theme (MOBILE_THEME_OVERRIDES). */
-function withMobileOverrides(source: TokenSource, theme: ThemeName): TokenSource {
-	return { ...source, themes: { ...source.themes, [theme]: { ...source.themes[theme], ...source.mobileThemeOverrides[theme] } } };
+function withMobileOverrides(source: TokenSource, theme: MobileThemeName): TokenSource {
+	const shared = sharedThemeOf(theme);
+	return { ...source, themes: { ...source.themes, [shared]: { ...source.themes[shared], ...source.mobileThemeOverrides[shared], ...source.mobileThemeOverrides[theme] } } };
 }
 
 /** Every variable one Uniwind theme variant declares, each with a literal value (the mobile app's re-maps and component colours applied). */
-function variantDeclarations(source: TokenSource, theme: ThemeName): readonly CssDeclaration[] {
-	const lookups = createColorLookups(withMobileOverrides(source, theme), theme);
+function variantDeclarations(source: TokenSource, theme: MobileThemeName): readonly CssDeclaration[] {
+	const lookups = createColorLookups(withMobileOverrides(source, theme), sharedThemeOf(theme));
 	const literal = (name: ColorTokenName): string => formatColorLiteral(resolveColorValue(colorToken(name), lookups));
 	return [
 		...ThemeRoleSchema.options.map((role) => declaration(role, literal(role))),
@@ -58,7 +78,7 @@ function variantDeclarations(source: TokenSource, theme: ThemeName): readonly Cs
 }
 
 export function renderMobileStylesheet(source: TokenSource): string {
-	const variants = ThemeNameSchema.options.map((theme) => ({ theme, declarations: variantDeclarations(source, theme) }));
+	const variants = MobileThemeNameSchema.options.map((theme) => ({ theme, declarations: variantDeclarations(source, theme) }));
 	assertThemeParity("mobile.css", new Map(variants.map(({ theme, declarations }) => [theme, declarations.map(({ name }) => name)])));
 
 	const baseRadius = source.radius[BASE_RADIUS];

@@ -1,8 +1,9 @@
 # The root README's mobile screenshots (docs/images/readme/mobile-*.webp). Not part of the smoke suite
 # (config.yaml runs only the top-level flows): run it with `pnpm --filter @workspace/mobile screenshots:device`,
-# which turns on the phone's status-bar demo mode, passes RESTORE_THEME and an output folder (--test-output-dir), and converts the
-# PNGs this flow writes. Each screen opens by its deep link, so the flow does not depend on the drawer's
-# layout. It changes only the theme, and puts the phone's own theme back at the end.
+# which turns on the phone's status-bar demo mode, silences its notifications, passes RESTORE_THEME and an output
+# folder (--test-output-dir), and converts the PNGs this flow writes. Each screen opens by its deep link, so the
+# flow does not depend on the drawer's layout. It changes the theme and puts the phone's own back at the end; it
+# signs out for the screens in front of the sign-in wall and signs back in (MAESTRO_EMAIL / MAESTRO_PASSWORD).
 appId: ${APP_ID}
 name: README screenshots
 ---
@@ -15,31 +16,142 @@ name: README screenshots
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/", NAME: "mobile-home" }
+- scroll
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-home-more
+- scrollUntilVisible:
+    element: "Discover"
+    direction: UP
+    timeout: 15000
 - tapOn:
     id: "app-header-menu"
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 8000
 - takeScreenshot: mobile-drawer
+- scrollUntilVisible:
+    element:
+      id: "app-drawer-build"
+    direction: DOWN
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-drawer-more
+# The menu keeps its scroll: back to the top, so the other looks' shots show the person.
+- scrollUntilVisible:
+    element:
+      id: "app-drawer-account"
+    direction: UP
+    timeout: 15000
 - back
 - tapOn:
     id: "app-header-search"
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 8000
 - takeScreenshot: mobile-command-palette
 - back
 - runFlow:
     file: subflows/capture.yaml
+    env: { LINK: "/search", NAME: "mobile-search" }
+- runFlow:
+    file: subflows/capture.yaml
     env: { LINK: "/analytics", NAME: "mobile-analytics" }
+- scroll
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-analytics-more
+- scrollUntilVisible:
+    element: "Total spent"
+    direction: UP
+    timeout: 15000
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/profile", NAME: "mobile-profile" }
+# The contribution calendar sits under the profile form.
+- scrollUntilVisible:
+    element: "GitHub contributions"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-github-contributions
+- scrollUntilVisible:
+    element: "Full name"
+    direction: UP
+    timeout: 15000
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/profile/github-account", NAME: "mobile-github-account" }
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/profile/pull-requests", NAME: "mobile-pull-requests" }
+# Only with a linked GitHub token and a pull request to open.
+- runFlow:
+    when:
+      visible:
+        id: "pull-request-.*-[0-9]+"
+    commands:
+      - tapOn:
+          id: "pull-request-.*-[0-9]+"
+      - waitForAnimationToEnd:
+          timeout: 8000
+      - takeScreenshot: mobile-pull-request
+      - tapOn:
+          text: ".*[Ff]iles changed.*"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 8000
+      - takeScreenshot: mobile-pull-request-files
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/settings/notifications", NAME: "mobile-notifications" }
+# A notice with a 4K photo: in the feed, opened, then the original on its own.
+- scrollUntilVisible:
+    element: "coffee-refill-01.webp"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-notification-photo
+- tapOn: "coffee-refill-01.webp"
+- extendedWaitUntil:
+    visible:
+      id: "notification-message-attachment"
+    timeout: 8000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-notification-opened
+- tapOn:
+    id: "notification-message-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "image-viewer-image"
+    timeout: 8000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-notification-full-photo
+- tapOn: "Close image"
+- back
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/notification-settings", NAME: "mobile-notification-settings" }
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/settings", NAME: "mobile-settings" }
+- scrollUntilVisible:
+    element: "Build type.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-about
+- scrollUntilVisible:
+    element: "Appearance"
+    direction: UP
+    timeout: 15000
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/settings/security", NAME: "mobile-security" }
@@ -48,10 +160,26 @@ name: README screenshots
     env: { LINK: "/settings/devices", NAME: "mobile-devices" }
 - runFlow:
     file: subflows/capture.yaml
-    env: { LINK: "/settings/till", NAME: "mobile-till" }
+    env: { LINK: "/settings/app-lock", NAME: "mobile-app-lock" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/language", NAME: "mobile-language" }
+- openLink:
+    link: "${SCHEME}:///settings/till"
+    autoVerify: false
+- extendedWaitUntil:
+    visible: "Scan pairing QR"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-till
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/settings/servers", NAME: "mobile-servers" }
+- tapOn: ".*\\. Open.*"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-server
 # The gallery loads its code on first open: wait for it to replace its skeleton.
 - openLink:
     link: "${SCHEME}:///settings/components"
@@ -63,9 +191,50 @@ name: README screenshots
 - waitForAnimationToEnd:
     timeout: 8000
 - takeScreenshot: mobile-components
+- tapOn: "^Selection$"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-components-selection
+- tapOn: "^Overlays$"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-components-overlays
+- tapOn: "^Feedback$"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-components-feedback
+- tapOn: "^Data$"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-components-data
+- tapOn: "^Dates$"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-components-dates
+- tapOn: "^Media$"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-components-media
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/settings/appearance", NAME: "mobile-appearance" }
+# The PDF viewer loads its code on first open too; the sample needs no file on the phone.
+- openLink:
+    link: "${SCHEME}:///settings/pdf-viewer"
+    autoVerify: false
+- extendedWaitUntil:
+    visible: "Open a sample PDF"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-pdf-open
+- tapOn: "Open a sample PDF"
+- extendedWaitUntil:
+    visible: "Close document"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-pdf
 
 - runFlow:
     file: subflows/set-theme.yaml
@@ -74,17 +243,44 @@ name: README screenshots
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/", NAME: "mobile-home-dark" }
-- tapOn:
-    id: "app-header-menu"
-- waitForAnimationToEnd
-- takeScreenshot: mobile-drawer-dark
-- back
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/profile", NAME: "mobile-profile-dark" }
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/analytics", NAME: "mobile-analytics-dark" }
 - runFlow:
     file: subflows/capture.yaml
+    env: { LINK: "/settings/notifications", NAME: "mobile-notifications-dark" }
+- runFlow:
+    file: subflows/capture.yaml
     env: { LINK: "/settings", NAME: "mobile-settings-dark" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/security", NAME: "mobile-security-dark" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/servers", NAME: "mobile-servers-dark" }
+- openLink:
+    link: "${SCHEME}:///settings/till"
+    autoVerify: false
+- extendedWaitUntil:
+    visible: "Scan pairing QR"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-till-dark
+# Only a tab's first screen has the menu button.
+- openLink:
+    link: "${SCHEME}:///"
+    autoVerify: false
+- extendedWaitUntil:
+    visible:
+      id: "app-header"
+    timeout: 20000
+- runFlow:
+    file: subflows/open-drawer.yaml
+    env: { NAME: "mobile-drawer-dark" }
 
 - runFlow:
     file: subflows/set-theme.yaml
@@ -93,6 +289,78 @@ name: README screenshots
 - runFlow:
     file: subflows/capture.yaml
     env: { LINK: "/", NAME: "mobile-home-nord" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/profile", NAME: "mobile-profile-nord" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/analytics", NAME: "mobile-analytics-nord" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/notifications", NAME: "mobile-notifications-nord" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings", NAME: "mobile-settings-nord" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/security", NAME: "mobile-security-nord" }
+- runFlow:
+    file: subflows/capture.yaml
+    env: { LINK: "/settings/servers", NAME: "mobile-servers-nord" }
+- openLink:
+    link: "${SCHEME}:///settings/till"
+    autoVerify: false
+- extendedWaitUntil:
+    visible: "Scan pairing QR"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-till-nord
+# Only a tab's first screen has the menu button.
+- openLink:
+    link: "${SCHEME}:///"
+    autoVerify: false
+- extendedWaitUntil:
+    visible:
+      id: "app-header"
+    timeout: 20000
+- runFlow:
+    file: subflows/open-drawer.yaml
+    env: { NAME: "mobile-drawer-nord" }
+
+- runFlow:
+    file: subflows/theme-set.yaml
+    env: { THEME: "Current Dark", PREFIX: "mobile-theme-current-dark" }
+- runFlow:
+    file: subflows/theme-set.yaml
+    env: { THEME: "Harbour", PREFIX: "mobile-theme-harbour" }
+- runFlow:
+    file: subflows/theme-set.yaml
+    env: { THEME: "Mocha", PREFIX: "mobile-theme-mocha" }
+
+- runFlow:
+    file: subflows/set-theme.yaml
+    env:
+      THEME: "Light"
+# The side menu's other looks, then back to the default.
+- runFlow:
+    file: subflows/drawer-style.yaml
+    env: { STYLE: "Dark with cards", NAME: "mobile-drawer-dark-cards" }
+- runFlow:
+    file: subflows/drawer-style.yaml
+    env: { STYLE: "Soft with sheet", NAME: "mobile-drawer-soft-sheet" }
+- runFlow:
+    file: subflows/drawer-style.yaml
+    env: { STYLE: "Centred soft", NAME: "mobile-drawer-centred-soft" }
+- runFlow:
+    file: subflows/drawer-style.yaml
+    env: { STYLE: "Soft with cards", NAME: "mobile-drawer-soft-cards" }
+- runFlow:
+    file: subflows/drawer-style.yaml
+    env: { STYLE: "Centred dark", NAME: "mobile-drawer-centred-dark" }
+
+- runFlow: subflows/signed-out.yaml
+- runFlow: ../subflows/signed-in.yaml
 
 # The phone's own theme, as it was before the run.
 - runFlow:

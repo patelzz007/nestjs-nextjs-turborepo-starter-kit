@@ -6,6 +6,7 @@ import { effectiveSchedule, formatDateRange, itemCountLabel } from "../lib/kanba
 import type { KanbanColumnHeading } from "./kanban-board-columns";
 import { KanbanPointsBadge, KanbanPriorityBadge, KanbanTeamBadge, KanbanTypeBadge } from "./kanban-task-badges";
 import { KanbanAssignee } from "./kanban-person";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface KanbanTaskListProps {
 	readonly columns: readonly KanbanColumnHeading[];
@@ -35,7 +36,7 @@ export function KanbanTaskList({ columns, tasksByColumn, taskHref }: KanbanTaskL
 										<div className="flex min-w-0 items-center gap-3">
 											<KanbanTypeBadge type={task.type} />
 											<KanbanPriorityBadge priority={task.priority} />
-											<Link href={taskHref(task.id)} className="truncate text-sm font-medium hover:underline">
+											<Link href={appRoute(taskHref(task.id))} className="truncate text-sm font-medium hover:underline">
 												{task.title}
 											</Link>
 										</div>

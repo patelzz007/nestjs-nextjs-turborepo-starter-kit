@@ -1,7 +1,7 @@
 import type { StorageObjectLocator } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { copyObjectResponse, EMPTY_SUCCESS_RESPONSE, RecordingS3Transport, type CannedS3Response } from "../../../../../../../test/support/s3-recording-transport";
+import { copyObjectResponse, EMPTY_SUCCESS_RESPONSE, RecordingS3Transport, type CannedS3Response } from "../../../../../../../e2e/support/s3-recording-transport";
 import { createS3Client } from "../s3-client.factory";
 import { encodeObjectKey, S3ObjectStorageAdapter } from "../s3-object-storage.adapter";
 

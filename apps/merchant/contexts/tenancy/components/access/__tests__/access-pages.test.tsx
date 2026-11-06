@@ -10,7 +10,7 @@ import { TeamMemberAccessPageView } from "@/contexts/tenancy/components/access/t
 import { TeamRoleDetailPageView } from "@/contexts/tenancy/components/access/team-role-detail-page-view";
 import { TeamRoleEditorPageView } from "@/contexts/tenancy/components/access/team-role-editor-page-view";
 import { TeamRolesList } from "@/contexts/tenancy/components/access/team-roles-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
 
 const mocks = vi.hoisted(() => ({
 	roles: vi.fn(),

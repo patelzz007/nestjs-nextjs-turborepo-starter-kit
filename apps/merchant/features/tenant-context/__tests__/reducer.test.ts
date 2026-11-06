@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 
 import { tenantContextActions } from "../actions";
 import { tenantContextReducer } from "../reducer";

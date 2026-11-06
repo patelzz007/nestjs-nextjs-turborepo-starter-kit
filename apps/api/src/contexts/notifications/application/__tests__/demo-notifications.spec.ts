@@ -1,4 +1,4 @@
-import { epochMs, type JsonObject } from "@workspace/shared";
+import { epochMs, type JsonObject, type NotificationAttachment } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { FixedClock } from "../../../../platform/application/__tests__/fixed-clock";
@@ -18,6 +18,7 @@ interface WrittenNotification {
 	readonly dedupeKey: string;
 	readonly tenantId: string | null;
 	readonly payload: JsonObject;
+	readonly attachment: NotificationAttachment | null;
 }
 
 /** notify() that keeps what it was asked, with a new id each time (and a repeat answered as a duplicate). */
@@ -36,6 +37,7 @@ class WritingNotify implements NotifyTransactionalPort {
 			dedupeKey: request.dedupeKey,
 			tenantId: request.tenantId,
 			payload: request.type.declaration.toJson(request.payload),
+			attachment: request.attachment ?? null,
 		});
 		return Promise.resolve({ duplicate: false, notificationId: id });
 	}
@@ -46,7 +48,14 @@ class FakeStore implements DemoNotificationsStore {
 	public readonly queries: DemoRecipientQuery[] = [];
 	public transactions = 0;
 
-	public constructor(private readonly lookup: DemoRecipientLookup) {}
+	public constructor(
+		private readonly lookup: DemoRecipientLookup,
+		private readonly attachments: readonly NotificationAttachment[] = [],
+	) {}
+
+	public findShowcaseAttachments(): Promise<readonly NotificationAttachment[]> {
+		return Promise.resolve(this.attachments);
+	}
 
 	public findRecipient(query: DemoRecipientQuery): Promise<DemoRecipientLookup> {
 		this.queries.push(query);
@@ -75,7 +84,30 @@ class RecordingQueues implements Pick<NotificationQueues, "fanOut"> {
 
 const FOUND: DemoRecipientLookup = { kind: "found", userId: USER_ID, email: EMAIL };
 
+const PHOTO: NotificationAttachment = {
+	name: "cake.webp",
+	mimeType: "image/webp",
+	sizeBytes: 1_048_576,
+	width: 3840,
+	height: 2160,
+	path: "/api/v1/files/cake/local-public",
+	previewPath: "/api/v1/files/cake-1280/local-public",
+};
+
 describe("DemoNotificationsSender", () => {
+	it("adds a showcase message for each seeded file, carrying that file, and hands them to the fan-out", async () => {
+		const store = new FakeStore(FOUND, [PHOTO]);
+		const queues = new RecordingQueues();
+
+		const outcome = await new DemoNotificationsSender(store, queues, new FixedClock(NOW)).send({ kind: "sole-superadmin" });
+
+		const showcase = store.written.filter((row) => row.typeKey === "notifications.showcase");
+		expect(showcase).toHaveLength(1);
+		expect(showcase.at(0)?.attachment).toStrictEqual(PHOTO);
+		expect(queues.handedOff).toHaveLength(store.written.length);
+		expect(outcome).toMatchObject({ kind: "sent" });
+	});
+
 	it("requests two sign-ins and a test notification for the person, on one transaction, and hands each to the fan-out", async () => {
 		const store = new FakeStore(FOUND);
 		const queues = new RecordingQueues();

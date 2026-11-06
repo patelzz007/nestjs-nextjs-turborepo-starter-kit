@@ -1,4 +1,4 @@
-import userSidebarMenuJson from "@/data/user-sidebar-menu.json";
+import userSidebarMenuJson from "./user-sidebar-menu.json";
 
 import { compileMenu } from "@workspace/client/lib/sidebar/sidebar-menu-compile";
 import { SidebarMenuDataSchema, type CompiledSidebarMenuData, type SidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";

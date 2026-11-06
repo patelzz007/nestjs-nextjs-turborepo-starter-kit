@@ -41,7 +41,7 @@ export const radioItemVariants = cva("min-h-12 flex-row items-center gap-3 py-2.
 export const radioIndicatorVariants = cva("items-center justify-center rounded-full border-2", {
 	variants: {
 		size: { md: "size-6", sm: "size-5" },
-		selected: { true: "border-primary", false: "border-input" },
+		selected: { true: "border-primary", false: "border-control-ring" },
 		state: { default: "", loading: "", disabled: "", error: "border-destructive" },
 	},
 	defaultVariants: { size: "md", selected: false, state: "default" },

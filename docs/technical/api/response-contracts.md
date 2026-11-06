@@ -97,7 +97,7 @@ monitors key on the HTTP status only, so they keep the standard envelope. Errors
 `ResponseInterceptor` parses every handler result with its contract, once:
 
 - **Unknown keys are stripped.** Whatever the service returned beyond the schema — a password hash,
-  a token, a supplier price — never reaches the wire. `test/response-contracts.e2e-spec.ts` proves
+  a token, a supplier price — never reaches the wire. `e2e/response-contracts.e2e-spec.ts` proves
   it on the real app.
 - **A mismatch is a server bug** → `500 INTERNAL_ERROR` with the generic message, and one `error`
   log line naming the route and the failing paths (`ResponseContractViolationError`, values are
@@ -181,7 +181,7 @@ sorted keys, two-space indent and a trailing newline — byte-for-byte reproduci
 pnpm tools openapi:export   # turbo run openapi:export --filter=@workspace/api — needs Postgres + Redis, like test:e2e
 ```
 
-`test/openapi-artifact.e2e-spec.ts` (in `pnpm --filter @workspace/api test:e2e`) fails while the
+`e2e/openapi-artifact.e2e-spec.ts` (in `pnpm --filter @workspace/api test:e2e`) fails while the
 committed file differs from what the API builds; `openapi:export` is that spec with `--update`.
 
 ## 7. Checklist

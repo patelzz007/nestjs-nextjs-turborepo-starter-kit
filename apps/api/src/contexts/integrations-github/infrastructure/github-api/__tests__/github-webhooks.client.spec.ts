@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { GithubWriteRejectedError } from "../../../application/errors/github.errors";
 import { GithubHttpTransport, type GithubCredential, type GithubFetch } from "../github-http.transport";
 import { GithubWebhooksClient } from "../github-webhooks.client";

@@ -8,7 +8,7 @@ import { PrismaService } from "../../../../prisma/prisma.service";
 import { currentRlsContext } from "../../../../prisma/rls-context";
 import { isAllowlistedSystemOperation, SYSTEM_OPERATIONS } from "../../../../prisma/system-operation.registry";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import {
 	OUTBOX_DEAD_LETTER_RETENTION_MS,
 	OUTBOX_PUBLISHED_RETENTION_MS,

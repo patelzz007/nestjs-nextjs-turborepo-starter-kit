@@ -1,8 +1,8 @@
 import type { ImpersonationSession, Prisma } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { accessToken } from "../../../../../../test/support/http-execution-context";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { accessToken } from "../../../../../../e2e/support/http-execution-context";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 import { ImpersonationTokenCheck } from "../impersonation-token.check";

@@ -1,7 +1,7 @@
 import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import {
 	ApiError,
 	NO_HTTP_RESPONSE_STATUS,

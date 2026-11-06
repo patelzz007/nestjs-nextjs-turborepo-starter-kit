@@ -634,11 +634,11 @@ async function ensureLanguage(highlighter: HighlighterCore, language: string): P
 
 type CodeBlockTokenStyle = Omit<CodeBlockToken, "content">;
 
-const FONT_STYLE_BY_DECLARATION: Record<string, CodeBlockFontStyle> = {
+const FONT_STYLE_BY_DECLARATION = {
 	"font-style:italic": "italic",
 	"font-weight:bold": "bold",
 	"text-decoration:underline": "underline",
-};
+} satisfies Record<string, CodeBlockFontStyle>;
 
 /** Splits shiki's inline `style` string into the fields a token carries. */
 function readTokenStyle(style: Properties[string]): CodeBlockTokenStyle {

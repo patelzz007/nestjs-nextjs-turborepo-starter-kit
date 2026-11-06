@@ -10,7 +10,8 @@ import { resolve } from "node:path";
  * 1. `00-app-helpers.sql`          — session primitives (`app_rls_bypass()`, `app_owns()`, …)
  * 2. `01-acl-location-access.sql`  — tenant/ACL helpers (call the primitives)
  *    `02-access-model.sql`         — ADR 067 allow paths: `app_has_permission`, `app_shared`
- * 3. `prisma/rls.sql`              — role, enable RLS, policies (call both helper layers)
+ * 3. `prisma/rls/10-policies.sql`  — role, enable RLS, one-off policies (call both helper layers)
+ *    `97-standard-policies.sql`    — generated from `table-policies.ts`, after every fragment (ADR 083)
  *    `90-analytics-consumer.sql`   — the analytics consumer's least-privilege role + policies
  * 4. `99-app-runtime-grants.sql`   — grants over everything created above (must run last)
  *
@@ -30,7 +31,7 @@ export const RLS_APPLY_ORDER: readonly string[] = [
 	"prisma/rls/00-system-operation-scopes.sql",
 	"prisma/rls/01-acl-location-access.sql",
 	"prisma/rls/02-access-model.sql",
-	"prisma/rls.sql",
+	"prisma/rls/10-policies.sql",
 	"prisma/rls/30-authorization-change-stamp.sql",
 	"prisma/rls/40-api-key-principal.sql",
 	"prisma/rls/50-platform-operations.sql",
@@ -43,6 +44,7 @@ export const RLS_APPLY_ORDER: readonly string[] = [
 	"prisma/rls/90-analytics-consumer.sql",
 	"prisma/rls/91-backup-reader.sql",
 	"prisma/rls/95-audit-trail-notify.sql",
+	"prisma/rls/97-standard-policies.sql",
 	"prisma/rls/99-app-runtime-grants.sql",
 ];
 
@@ -305,13 +307,9 @@ export function assertPlanMatchesDisk(order: readonly string[], diskFiles: reado
  * Throws before any SQL runs if either check fails.
  */
 export function buildRlsApplyPlan(apiDir: string): string[] {
-	const bundlePath = "prisma/rls.sql";
 	const fragmentsDir = resolve(apiDir, "prisma", "rls");
 
 	const diskFiles: string[] = [];
-	if (existsSync(resolve(apiDir, bundlePath))) {
-		diskFiles.push(bundlePath);
-	}
 	if (existsSync(fragmentsDir)) {
 		const fragments = readdirSync(fragmentsDir)
 			.filter((name: string): boolean => name.endsWith(".sql"))

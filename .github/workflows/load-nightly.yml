@@ -3,9 +3,9 @@ name: Load nightly
 # Enhancement 3.9: every night (and on demand), a short load test against a CI-sized deployment on the
 # runner (the API, PostgreSQL and Redis on one 4-vCPU machine, seeded with the development data), held to
 # p95 thresholds per endpoint group. It runs the way an operator does (ADR 068): the seeded Platform
-# Developer starts load-baselines.json's traffic mix through the API, the load runner (apps/load-runner)
+# Developer starts budgets/load.json's traffic mix through the API, the load runner (apps/load-runner)
 # takes it from the queue and drives it with k6, and `pnpm tools load:check` compares the run's steps with
-# load-baselines.json. Thresholds, groups and how to recalibrate them: apps/load-runner/README.md.
+# budgets/load.json. Thresholds, groups and how to recalibrate them: apps/load-runner/README.md.
 
 on:
   schedule:
@@ -32,7 +32,7 @@ env:
   # would then refuse the poller. Exempt traffic is still counted (ADR 071); only this throwaway
   # deployment, which nothing else can reach, sets it.
   RATE_LIMIT_EXEMPT_CIDRS: 127.0.0.1/32,::1/128
-  # Keep in step with deploy/docker/Dockerfile (the load runner's image). The checksum is the release's
+  # Keep in step with infra/docker/Dockerfile (the load runner's image). The checksum is the release's
   # own (k6-v<version>-checksums.txt), so a replaced download fails the job.
   K6_VERSION: "1.0.0"
   K6_LINUX_AMD64_SHA256: 5eb2236bc76a3c5cced12aaf0fd76c4b1ceac5ea040c70388a3d272b46595b59
@@ -107,22 +107,22 @@ jobs:
 
       - name: Start the API and the load runner (background, logs kept)
         run: |
-          mkdir -p .ci-logs
-          nohup pnpm --filter @workspace/api start > .ci-logs/api.log 2>&1 &
-          nohup pnpm --filter @workspace/load-runner start > .ci-logs/load-runner.log 2>&1 &
-          node packages/tooling/scripts/wait-for-http.mjs --timeout-ms 120000 http://localhost:8080/health/ready
+          mkdir -p .artifacts/ci
+          nohup pnpm --filter @workspace/api start > .artifacts/ci/api.log 2>&1 &
+          nohup pnpm --filter @workspace/load-runner start > .artifacts/ci/load-runner.log 2>&1 &
+          node packages/tooling/src/wait-for-http/cli.ts --timeout-ms 120000 http://localhost:8080/health/ready
 
       - name: Run the load test
-        run: pnpm tools load:run -- --api-url http://localhost:8080 --out .ci-logs/load-baseline.json
+        run: pnpm tools load:run -- --api-url http://localhost:8080 --out .artifacts/ci/load-baseline.json
 
-      - name: Check it against load-baselines.json
-        run: pnpm tools load:check -- --results .ci-logs/load-baseline.json --summary "$GITHUB_STEP_SUMMARY"
+      - name: Check it against budgets/load.json
+        run: pnpm tools load:check -- --results .artifacts/ci/load-baseline.json --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the results and the logs
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: load-nightly-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .ci-logs/
+          path: .artifacts/ci/
           if-no-files-found: warn
           retention-days: 30

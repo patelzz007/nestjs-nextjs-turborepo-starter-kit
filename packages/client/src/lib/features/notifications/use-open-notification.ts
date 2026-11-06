@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import { apiRouter } from "../../api/endpoints";
 import { useAuth } from "../../contexts/identity";
 import { notificationLinkTarget } from "./notification-link";
+import { appRoute } from "../../navigation/app-route";
 
 const INBOX_SCOPE = apiRouter.notifications.inbox.scopeKey(undefined);
 
@@ -28,7 +29,7 @@ export function useOpenNotification(surface: NotificationSurface): (notification
 			}
 			const target = notificationLinkTarget(notification.link, window.location.origin);
 			if (target?.kind === "internal") {
-				router.push(target.href);
+				router.push(appRoute(target.href));
 			} else if (target?.kind === "external") {
 				window.open(target.href, "_blank", "noopener,noreferrer");
 			}

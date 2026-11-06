@@ -9,8 +9,8 @@ import { RoleCapabilityMatrix, roleGives } from "@/contexts/tenancy/components/a
 import { activeSettingsSection, MerchantSettingsShell } from "@/contexts/tenancy/components/settings/merchant-settings-shell";
 import { describeTills, TenantIntegrationsView } from "@/contexts/tenancy/components/settings/tenant-integrations-view";
 import { InviteTeammateDialog } from "@/contexts/tenancy/components/tenant/invite-teammate-dialog";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { TEST_RESPONSE_META } from "@/test/envelope";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { TEST_RESPONSE_META } from "@/testing/envelope";
 
 const mocks = vi.hoisted(() => ({
 	pathname: "/t/acme-coffee/settings/team",

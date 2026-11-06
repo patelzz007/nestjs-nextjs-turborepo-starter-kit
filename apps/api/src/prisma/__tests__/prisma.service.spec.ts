@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import { DependencyUnavailableError } from "../../platform/application/errors/app-error";
-import { createTestTypedConfig } from "../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../e2e/support/test-api-env";
 
 import { PrismaService } from "../prisma.service";
 

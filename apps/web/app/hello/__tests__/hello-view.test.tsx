@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { PROFILE_LOADING_LABELS } from "@/components/loading/loading-labels";
-import { TEST_RESPONSE_META, testEnvelope } from "@/test-support/envelope";
+import { TEST_RESPONSE_META, testEnvelope } from "@/testing/envelope";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { LIST_SLOT_INDEX, epochMs, UserResponseSchema, type Envelope, type UserResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -151,7 +151,7 @@ function PullRequestPage({ filter, state, cursor, isLast, nowMs, onLoadMore }: P
 			))}
 			{isLast && nextCursor !== null ? (
 				<View className="pt-4">
-					<Button label="Load more" variant="secondary" onPress={loadMore} testID="pull-requests-load-more" />
+					<Button label="Load more" variant="outline" onPress={loadMore} testID="pull-requests-load-more" />
 				</View>
 			) : null}
 		</View>

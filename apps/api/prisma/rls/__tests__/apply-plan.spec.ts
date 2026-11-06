@@ -16,7 +16,7 @@ describe("RLS apply plan", () => {
 			"prisma/rls/00-system-operation-scopes.sql",
 			"prisma/rls/01-acl-location-access.sql",
 			"prisma/rls/02-access-model.sql",
-			"prisma/rls.sql",
+			"prisma/rls/10-policies.sql",
 			"prisma/rls/30-authorization-change-stamp.sql",
 			"prisma/rls/40-api-key-principal.sql",
 			"prisma/rls/50-platform-operations.sql",
@@ -29,6 +29,7 @@ describe("RLS apply plan", () => {
 			"prisma/rls/90-analytics-consumer.sql",
 			"prisma/rls/91-backup-reader.sql",
 			"prisma/rls/95-audit-trail-notify.sql",
+			"prisma/rls/97-standard-policies.sql",
 			"prisma/rls/99-app-runtime-grants.sql",
 		]);
 	});

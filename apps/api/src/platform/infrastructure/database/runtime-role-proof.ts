@@ -14,7 +14,7 @@ import type { ModuleHealthIndicator, ModuleHealthReport } from "../../presentati
 //   2. every table forces RLS, so even its owner (the migration login) is filtered by the policies.
 // This proof reads both from the catalog at boot — the API refuses to start when either is false —
 // and again on every readiness probe, so a later `ALTER ROLE … BYPASSRLS` or `NO FORCE` takes the
-// instance out of rotation. The same check runs in CI (DB-006, test/rls/runtime-role.e2e-spec.ts).
+// instance out of rotation. The same check runs in CI (DB-006, e2e/rls/runtime-role.e2e-spec.ts).
 
 /** One `pg_roles` row of a role the API switches to. */
 export interface RuntimeRoleFacts {

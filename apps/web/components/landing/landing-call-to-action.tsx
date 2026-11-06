@@ -2,6 +2,7 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface LandingCallToActionProps {
 	readonly heading: string;
@@ -23,7 +24,7 @@ export function LandingCallToAction({ heading, description, action }: LandingCal
 						{heading}
 					</h2>
 					<p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-pretty text-primary-foreground sm:text-base">{description}</p>
-					<Link href={action.href} className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "mt-8 min-w-48")}>
+					<Link href={appRoute(action.href)} className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "mt-8 min-w-48")}>
 						{action.label}
 					</Link>
 				</div>

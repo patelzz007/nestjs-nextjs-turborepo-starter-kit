@@ -6,7 +6,7 @@
 // With Reduce Motion on, the bones stay still. A loading group also holds back
 // for a beat before it fades in, so a fast load never flashes a skeleton.
 
-import { SKELETON_MOTION, type SkeletonSheen, type ThemeName } from "@workspace/tokens";
+import { SKELETON_MOTION, type MobileThemeName, type SkeletonSheen } from "@workspace/tokens";
 import * as React from "react";
 import { cancelAnimation, Easing, ReduceMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming, type SharedValue } from "react-native-reanimated";
 
@@ -46,7 +46,7 @@ export function sweepBandWidth(windowWidth: number): number {
 }
 
 /** The theme's highlight: a token role at an opacity (light lifts toward the card; dark and Nord toward the foreground). */
-export function sweepSheen(theme: ThemeName): SkeletonSheen {
+export function sweepSheen(theme: MobileThemeName): SkeletonSheen {
 	return SKELETON_MOTION.sheen[theme];
 }
 

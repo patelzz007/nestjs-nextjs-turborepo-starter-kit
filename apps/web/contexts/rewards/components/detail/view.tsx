@@ -28,6 +28,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { ROUTE_PREFIXES, ROUTES } from "@/lib/routes";
+import { showsClaimFlow } from "@/contexts/rewards/lib/claim-hold";
 
 export interface RewardDetailViewProps {
 	readonly rewardId: string;
@@ -89,6 +90,16 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 	const handleClaimFailed = React.useCallback((): void => {
 		void rewardQuery.refetch();
 	}, [rewardQuery]);
+
+	// Holding the last unit shows the reward as sold out to everyone, the holder included: they must keep their flow.
+	const [holdingUnit, setHoldingUnit] = React.useState<boolean>(false);
+	const handleHoldChanged = React.useCallback(
+		(holding: boolean): void => {
+			setHoldingUnit(holding);
+			void rewardQuery.refetch();
+		},
+		[rewardQuery],
+	);
 
 	if (rewardQuery.isLoading && initialReward === undefined) {
 		return <RewardDetailSkeleton />;
@@ -178,7 +189,7 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 						<div className="mt-4 space-y-4">
 							{message !== null ? <p className="rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-muted-foreground">{message}</p> : null}
 
-							{!canClaim ? (
+							{claimBlockReason !== null && !showsClaimFlow(canClaim, holdingUnit) ? (
 								<div className="space-y-3">
 									<p className="text-sm text-muted-foreground">{rewardClaimBlockMessage(claimBlockReason)}</p>
 									<Link href={ROUTES.dashboard.browse} className={cn(buttonVariants({ variant: "outline" }))}>
@@ -191,7 +202,7 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 									signInDescription="Sign in or create a free account to claim this reward."
 									returnTo={withReferralToken(pathname, referralToken)}
 									className="py-8">
-									<RewardClaimFlow rewardId={rewardId} onMessage={setMessage} onClaimFailed={handleClaimFailed} />
+									<RewardClaimFlow rewardId={rewardId} onMessage={setMessage} onClaimFailed={handleClaimFailed} onHoldChanged={handleHoldChanged} />
 								</AccessGate>
 							)}
 						</div>

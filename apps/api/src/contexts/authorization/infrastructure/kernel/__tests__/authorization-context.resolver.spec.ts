@@ -4,9 +4,9 @@ import type { FastifyRequest } from "fastify";
 import { ValidationError } from "../../../../../platform/application/errors/app-error";
 import type { TenantResolution, TenantSource } from "../../../../../platform/application/tenancy/tenant-source.port";
 import { setApiKeyAuthOnRequest } from "../../../../../platform/presentation/http/security/api-keys/api-key-request";
-import { SERVES_EVERY_TENANT } from "../../../../../../test/support/served-tenants";
-import { accessToken, createHttpContext, testRequest, type TestHttpRequest } from "../../../../../../test/support/http-execution-context";
-import { createTestPrisma } from "../../../../../../test/support/test-service-graph";
+import { SERVES_EVERY_TENANT } from "../../../../../../e2e/support/served-tenants";
+import { accessToken, createHttpContext, testRequest, type TestHttpRequest } from "../../../../../../e2e/support/http-execution-context";
+import { createTestPrisma } from "../../../../../../e2e/support/test-service-graph";
 import type { Prisma } from "@prisma/client";
 import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 

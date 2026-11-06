@@ -44,6 +44,14 @@ The caller's inbox on one surface, newest first (`filter[readAt][isNull]=true` =
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
 | `data[].archivedAt` | integer \| null | yes |  |
+| `data[].attachment` | object \| null | yes |  |
+| `data[].attachment.height` | integer \| null | yes |  |
+| `data[].attachment.mimeType` | "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" \| "application/pdf" | yes |  |
+| `data[].attachment.name` | string | yes | length 1–255 |
+| `data[].attachment.previewUrl` | string \| null | yes |  |
+| `data[].attachment.sizeBytes` | integer | yes |  |
+| `data[].attachment.url` | string | yes |  |
+| `data[].attachment.width` | integer \| null | yes |  |
 | `data[].body` | string | yes |  |
 | `data[].broadcastId` | string (uuid) \| null | yes |  |
 | `data[].category` | "SECURITY" \| "ACCOUNT" \| "TRANSACTIONAL" \| "PRODUCT" \| "MARKETING" \| "OPERATIONS" | yes |  |

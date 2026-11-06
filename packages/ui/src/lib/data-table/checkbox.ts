@@ -7,7 +7,7 @@ import { isArrayValue } from "@workspace/shared";
 import type { DataTableLabels } from "@workspace/ui/lib/data-table/labels";
 
 /** Supported export formats for the checkbox selection toolbar. */
-export type DataTableExportFormat = "csv" | "json" | "pdf" | "xlsx";
+export type DataTableExportFormat = z.output<typeof exportFormatSchema>;
 
 export const DATA_TABLE_EXPORT_FORMATS: readonly DataTableExportFormat[] = ["csv", "json", "pdf", "xlsx"];
 

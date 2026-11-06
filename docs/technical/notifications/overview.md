@@ -148,6 +148,20 @@ web-01"), the limit and the reading ("Limit 80%, now 93.5%."), when it started a
 (`alertTitleOf` / `alertDetailLinesOf` in `domain/catalog/types/operations.types.ts`). The extra addresses in the alert settings are not
 accounts, so they get the alert email only.
 
+## Attachments
+
+Any notification may carry one optional public file: `notify({ ..., attachment })`, built from a stored file with `notificationAttachmentOf`. Sensitive types refuse one.
+
+| Where | What shows |
+| --- | --- |
+| Inbox (web, merchant, admin, mobile) | A photo's copy, up to 1280 px wide, opening the original; a PDF as a file link |
+| Email | The file itself as a real attachment (up to 15 MB), the photo's copy in the body, and the file's name and link in the plain-text part |
+| Push on Android | A thumbnail while collapsed and the picture under the text once expanded, whether the app is open or not (`modules/picture-notification` when it is open) |
+| Push on iOS | Needs a Notification Service Extension, not built yet; the API already sends `mutable-content` and `imageUrl` |
+| SMS | Nothing |
+
+`pnpm db:seed` gives the superadmin and `user@example.com` three notices with a 4K photo and one with a PDF, and `notifications:demo` sends the same four through every channel. See [ADR 070](../../adr/070-multi-channel-notifications.md#implementation-notes-2026-11-06-attachments).
+
 ## Try it locally
 
 | What | How |

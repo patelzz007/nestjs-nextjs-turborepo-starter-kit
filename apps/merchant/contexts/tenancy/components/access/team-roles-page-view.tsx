@@ -11,6 +11,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface TeamRolesPageViewProps {
 	readonly tenantSlug: string;
@@ -47,7 +48,7 @@ export function TeamRolesList({ tenantSlug }: TeamRolesPageViewProps): React.JSX
 						<h3 className="text-base font-semibold text-foreground">Roles</h3>
 						<p className="text-sm text-muted-foreground">Edit a role and everyone holding it changes at once.</p>
 					</div>
-					<Link href={routes.new} className={buttonVariants({ size: "sm" })}>
+					<Link href={appRoute(routes.new)} className={buttonVariants({ size: "sm" })}>
 						New role
 					</Link>
 				</div>
@@ -69,7 +70,7 @@ export function TeamRolesList({ tenantSlug }: TeamRolesPageViewProps): React.JSX
 						{roles.map((role) => (
 							<li key={role.id}>
 								<Link
-									href={routes.detail(role.id)}
+									href={appRoute(routes.detail(role.id))}
 									className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
 									<span className="min-w-0 space-y-1">
 										<span className="flex flex-wrap items-center gap-2">

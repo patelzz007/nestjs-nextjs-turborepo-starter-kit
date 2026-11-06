@@ -59,9 +59,12 @@ export function isTabActive(tab: HeaderTab, pathname: string): boolean {
 	return tab.activePaths.some((active) => path === active || (active !== "/" && path.startsWith(`${active}/`)));
 }
 
-/** "Edit this page" URL for a file under a repo-root content folder (`docs` or `blog`). */
+/** The repository folder of each kind of content. */
+export const CONTENT_FOLDERS: Readonly<Record<"docs" | "blog", string>> = { docs: "docs", blog: "docs/blog" };
+
+/** "Edit this page" URL for a file in a content folder. */
 export function githubEditUrl(folder: "docs" | "blog", filePath: string): string {
-	return `${GITHUB_URL}/blob/${GITHUB_BRANCH}/${folder}/${filePath}`;
+	return `${GITHUB_URL}/blob/${GITHUB_BRANCH}/${CONTENT_FOLDERS[folder]}/${filePath}`;
 }
 
 /** `robots.txt`: every page may be indexed, and the sitemap (written by the Start build) lists them. */

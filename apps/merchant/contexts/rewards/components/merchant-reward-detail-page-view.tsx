@@ -27,6 +27,7 @@ import { Card } from "@workspace/ui/components/card";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The gallery fills a little over half the page on wide screens, the full width below. */
 const GALLERY_SIZES = "(min-width: 1024px) 55vw, 100vw";
@@ -197,7 +198,7 @@ function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps)
 								</Button>
 							) : null}
 							{canEdit ? (
-								<Link href={routes.rewards.edit(reward.id)} className={cn(buttonVariants({ variant: canSubmit ? "outline" : "default" }))}>
+								<Link href={appRoute(routes.rewards.edit(reward.id))} className={cn(buttonVariants({ variant: canSubmit ? "outline" : "default" }))}>
 									<Pencil className="size-4" aria-hidden="true" />
 									Edit reward
 								</Link>

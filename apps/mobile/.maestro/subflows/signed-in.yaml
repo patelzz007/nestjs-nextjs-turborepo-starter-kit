@@ -1,6 +1,7 @@
-# Opens the app and makes sure it is signed in. Signs in with MAESTRO_EMAIL / MAESTRO_PASSWORD only
-# when the sign-in screen shows (and enters the emailed code when the API asks this device for one);
-# an app that is already signed in is left as it is.
+# Opens the app and makes sure it is signed in. Skips onboarding when a fresh install shows it (the nightly's
+# emulator; a phone in use finished it long ago). Signs in with MAESTRO_EMAIL / MAESTRO_PASSWORD only when the
+# sign-in screen shows (and enters the emailed code when the API asks this device for one); an app that is
+# already signed in is left as it is.
 appId: ${APP_ID}
 ---
 # Not restarted: a development build loads its code from Metro, and a restart from here can lose
@@ -9,8 +10,18 @@ appId: ${APP_ID}
     stopApp: false
 - extendedWaitUntil:
     visible:
-      id: "app-header|sign-in-email"
+      id: "app-header|sign-in-email|onboarding"
     timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "onboarding"
+    commands:
+      - tapOn: "^Skip$"
+      - extendedWaitUntil:
+          visible:
+            id: "sign-in-email"
+          timeout: 20000
 - runFlow:
     when:
       visible:

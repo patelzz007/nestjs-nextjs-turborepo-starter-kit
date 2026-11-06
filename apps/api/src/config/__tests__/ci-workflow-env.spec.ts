@@ -1,5 +1,5 @@
 // Keeps every database-backed CI job honest: the env they boot the API with is written by ONE generator
-// (packages/tooling/scripts/write-api-ci-env.mjs, called by .github/actions/write-api-ci-env and by
+// (packages/tooling/src/api-ci-env/cli.ts, called by .github/actions/write-api-ci-env and by
 // `pnpm ci:local`). Its output must pass the same schema the API validates at boot, and must turn on
 // everything the seed needs, or the seed coverage check fails in CI only.
 
@@ -15,7 +15,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { parseApiConfig } from "../api-config";
 
 const REPO_ROOT: string = fileURLToPath(new URL("../../../../../", import.meta.url));
-const GENERATOR = join(REPO_ROOT, "packages/tooling/scripts/write-api-ci-env.mjs");
+const GENERATOR = join(REPO_ROOT, "packages/tooling/src/api-ci-env/cli.ts");
 const ACTION_PATH = join(REPO_ROOT, ".github/actions/write-api-ci-env/action.yml");
 const DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/app_ci";
 /** The tenant `pnpm db:seed` creates, which the browser job serves in single mode. */
@@ -38,7 +38,7 @@ function runGenerator(name: string, args: readonly string[]): GeneratorRun {
 	return { status: result.status, env: result.status === 0 ? parse(readFileSync(out, "utf8")) : {} };
 }
 
-describe("the CI API env (packages/tooling/scripts/write-api-ci-env.mjs)", () => {
+describe("the CI API env (packages/tooling/src/api-ci-env/cli.ts)", () => {
 	const multi = runGenerator("multi", ["--tenancy-mode", "multi"]);
 	const single = runGenerator("single", ["--tenancy-mode", "single", "--default-tenant-id", SEED_DEFAULT_TENANT_ID]);
 
@@ -65,7 +65,7 @@ describe("the CI API env (packages/tooling/scripts/write-api-ci-env.mjs)", () =>
 
 	it("is what the GitHub action writes: the action runs the generator instead of keeping its own copy", () => {
 		const action = readFileSync(ACTION_PATH, "utf8");
-		expect(action).toContain("node packages/tooling/scripts/write-api-ci-env.mjs");
+		expect(action).toContain("node packages/tooling/src/api-ci-env/cli.ts");
 		expect(action).toContain("--mask-secrets");
 		expect(action).not.toMatch(/<<EOF|cat > apps\/api\/\.env/u);
 	});

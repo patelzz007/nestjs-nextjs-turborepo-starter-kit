@@ -1,15 +1,21 @@
 import { WorkerHost } from "@nestjs/bullmq";
 import { Worker } from "bullmq";
-import { Redis } from "ioredis";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { BullMqWorkerDrainService, type ProviderSource } from "../bullmq-worker-drain.service";
 
-// A real Worker that never touches Redis: lazy connection, no autorun, and
-// `close` stubbed — the drain only has to CALL it.
-const connection = new Redis({ lazyConnect: true, maxRetriesPerRequest: null });
-const worker = new Worker("drain-probe", (): Promise<void> => Promise.resolve(), { connection, autorun: false });
-const close = vi.spyOn(worker, "close").mockResolvedValue();
+// BullMQ's real Worker opens its own Redis connection as soon as it is built, even with `lazyConnect`. The drain
+// only has to CALL `close`, so this Worker has nothing but `close`: no connection, nothing logging after the test ends.
+const close = vi.hoisted(() => vi.fn((): Promise<void> => Promise.resolve()));
+
+vi.mock("bullmq", async (importOriginal) => ({
+	...(await importOriginal<typeof import("bullmq")>()),
+	Worker: class {
+		public readonly close = close;
+	},
+}));
+
+const worker = new Worker("drain-probe");
 
 class ProbeProcessor extends WorkerHost {
 	public override get worker(): Worker {
@@ -31,10 +37,6 @@ function providers(...instances: (object | null | undefined)[]): ProviderSource 
 }
 
 describe("BullMqWorkerDrainService", () => {
-	afterAll(() => {
-		connection.disconnect();
-	});
-
 	it("closes the worker of every BullMQ processor and ignores everything else", async () => {
 		const drain = new BullMqWorkerDrainService(providers(new ProbeProcessor(), new UnrelatedService(), null, undefined));
 

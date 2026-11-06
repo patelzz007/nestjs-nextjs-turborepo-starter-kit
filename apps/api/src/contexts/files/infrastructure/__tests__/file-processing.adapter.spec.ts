@@ -16,7 +16,7 @@ import {
 	UPLOADER_ID,
 	imageRenditionsFor,
 	storedFile,
-} from "../../../../../test/support/file-lifecycle-fakes";
+} from "../../../../../e2e/support/file-lifecycle-fakes";
 import { FileBindingTargetMissingError } from "../../domain/errors/files.errors";
 import { FileVerdictReached } from "../../domain/events/file-verdict-reached.event";
 import { FileProcessingAdapter } from "../adapters/file-processing.adapter";

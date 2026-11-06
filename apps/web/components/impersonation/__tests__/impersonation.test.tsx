@@ -9,8 +9,8 @@ import { WebSessionTestProvider, type WebSessionState } from "@/contexts/identit
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { IMPERSONATE_USER_PANEL_LABELS } from "@workspace/client/lib/contexts/identity/impersonation/impersonate-user-panel-labels";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
-import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
-import { countSlots, expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { GUEST_SESSION_STATE, signedInSession } from "@/testing/session";
+import { countSlots, expectSingleLoadingStatus } from "@/testing/skeleton";
 
 interface AuthUserStub {
 	readonly id: string;

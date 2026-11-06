@@ -5,8 +5,8 @@ import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { describePaymentNextStep, MerchantPaymentDetailPageView } from "@/contexts/payments/components/merchant-payment-detail-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { paymentFixture } from "@/test/payments";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { paymentFixture } from "@/testing/payments";
 import { accessibilityViolations } from "@workspace/ui/testing/axe";
 
 const { paymentQuery, refundMutate } = vi.hoisted(() => ({ paymentQuery: vi.fn(), refundMutate: vi.fn() }));

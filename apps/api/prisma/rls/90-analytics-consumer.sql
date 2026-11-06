@@ -11,7 +11,7 @@
 --   inbox_dead_letters      SELECT, INSERT, DELETE   park + retention purge
 --
 -- No other table, no sequence, no UPDATE, no DDL. The tables' bypass policies
--- (prisma/rls.sql) apply to `app_runtime` only, so even a consumer session
+-- (prisma/rls/10-policies.sql) apply to `app_runtime` only, so even a consumer session
 -- that sets `app.rls_bypass` gains nothing: its rows are limited to the
 -- `analytics-warehouse` inbox consumer id (ANALYTICS_CONSUMER_ID in
 -- packages/messaging/src/inbox/message-handler.ts — keep the two in step).

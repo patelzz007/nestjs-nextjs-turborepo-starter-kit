@@ -11,6 +11,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { KeyRound, MonitorSmartphone } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const SECTION = { title: "Integrations", description: "Tills and other systems connected to your rewards." };
 
@@ -99,7 +100,7 @@ function IntegrationCard({ icon, title, summary, href, actionLabel }: Integratio
 					{summary === null ? <Skeleton className="mt-1 h-4 w-40" /> : <p className="text-sm text-muted-foreground">{summary}</p>}
 				</div>
 			</div>
-			<Link href={href} className={buttonVariants({ variant: "outline", size: "sm", className: "self-start" })}>
+			<Link href={appRoute(href)} className={buttonVariants({ variant: "outline", size: "sm", className: "self-start" })}>
 				{actionLabel}
 			</Link>
 		</section>

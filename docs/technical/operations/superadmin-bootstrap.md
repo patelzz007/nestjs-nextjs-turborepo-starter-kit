@@ -131,6 +131,6 @@ Unit tests cover argument parsing, the password sources and the CLI command's re
 (`apps/api/src/contexts/identity/presentation/cli/__tests__/`); the command itself is composed in
 `apps/api/src/contexts/identity/superadmin-bootstrap.composition.ts` and entered through
 `apps/api/src/contexts/identity/presentation/cli/superadmin-bootstrap.cli.ts`. The integration test
-`apps/api/test/superadmin-bootstrap.e2e-spec.ts` creates and drops its own migrated, RLS-applied,
+`apps/api/e2e/superadmin-bootstrap.e2e-spec.ts` creates and drops its own migrated, RLS-applied,
 unseeded scratch database, races several runs on separate connections, and checks the stored hash,
 role, audit rows and restricted first login.

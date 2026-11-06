@@ -26,7 +26,7 @@ export interface LoadEnvOrExitOptions {
 	/**
 	 * How to terminate the process, or `undefined` where the runtime cannot
 	 * exit (Next.js's Edge runtime, whose `process.exit` throws). Apps obtain
-	 * it from `lib/env/env.runtime.ts`.
+	 * it from `@workspace/client/lib/env/env-runtime`.
 	 */
 	readonly exit: ExitProcess | undefined;
 	/** Writes the value-free failure message (`console.error` in apps). */

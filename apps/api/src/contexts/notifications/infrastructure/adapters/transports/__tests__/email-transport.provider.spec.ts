@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { RequestContextService } from "../../../../../../platform/infrastructure/context/request-context";
 import { LogService } from "../../../../../../platform/infrastructure/logging/logs.service";
-import { createTestApiConfig } from "../../../../../../../test/support/test-api-env";
+import { createTestApiConfig } from "../../../../../../../e2e/support/test-api-env";
 import { createEmailTransport } from "../email-transport.provider";
 import { MailpitEmailTransport } from "../mailpit-email.transport";
 import { ResendEmailTransport } from "../resend-email.transport";

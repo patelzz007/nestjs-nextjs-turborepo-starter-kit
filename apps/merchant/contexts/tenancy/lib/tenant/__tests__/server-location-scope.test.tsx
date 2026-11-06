@@ -6,11 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TenantContextProvider, useActiveLocationFilter } from "@/features/tenant-context/facade";
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
 import { loadServerLocationScope, type ServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
-import { TEST_ORG_SLUG } from "@/test/authorization";
-import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
-import { STORE_A, STORE_B } from "@/test/terminals";
-import { testEnvelope } from "@/test/envelope";
-import { TestQueryClientProvider } from "@/test/query-client";
+import { TEST_ORG_SLUG } from "@/testing/authorization";
+import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/testing/tenant-context";
+import { STORE_A, STORE_B } from "@/testing/terminals";
+import { testEnvelope } from "@/testing/envelope";
+import { TestQueryClientProvider } from "@/testing/query-client";
 import type { Envelope, TenantContextResponse } from "@workspace/shared";
 
 const { readLocationCookie, loadContext, contextQuery } = vi.hoisted(() => ({

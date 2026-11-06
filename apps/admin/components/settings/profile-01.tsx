@@ -9,6 +9,7 @@ import * as React from "react";
 import { useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
 import { ROUTES } from "@/lib/routes";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The card's avatar: `h-14`, 56 px. */
 const PROFILE_AVATAR_PX = 56;
@@ -47,7 +48,7 @@ export function Profile01({ user, onLogout }: Profile01Props): React.JSX.Element
 		(event: React.MouseEvent<HTMLButtonElement>): void => {
 			const href = event.currentTarget.dataset.href;
 			if (href !== undefined) {
-				router.push(href);
+				router.push(appRoute(href));
 			}
 		},
 		[router],

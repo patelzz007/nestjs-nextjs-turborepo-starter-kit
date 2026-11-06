@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import type { BindableFile, FileBindingRequest, FileReferencePort } from "../../../../files/public-api";
 import type { LoadTestProvisionRequest } from "../../../application/ports/load-test-tenant.port";
@@ -150,6 +150,7 @@ class FakeLoadTestDatabase {
 			rewardRedemption: { deleteMany: deleted },
 			rewardSale: { deleteMany: deleted },
 			rewardOtpChallenge: { deleteMany: deleted },
+			rewardClaimHold: { deleteMany: deleted },
 			rewardNotification: { deleteMany: deleted },
 			rewardAuditLog: { deleteMany: deleted },
 			refreshToken: { deleteMany: deleted },

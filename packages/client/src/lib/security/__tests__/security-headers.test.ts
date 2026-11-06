@@ -38,6 +38,8 @@ describe("buildContentSecurityPolicy", () => {
 		expect(policy.get("script-src")).toContain("'unsafe-eval'");
 		expect(policy.get("connect-src")).toStrictEqual(["'self'", "http://localhost:8080", "https:", "wss:", "ws:", "http:"]);
 		expect(policy.get("img-src")).toContain("http://localhost:8080");
+		// Local files are addressed on the API's LAN address, for phones: without this every picture is blocked in the browser.
+		expect(policy.get("img-src")).toContain("http:");
 		expect(policy.has("upgrade-insecure-requests")).toBe(false);
 	});
 });
@@ -48,6 +50,7 @@ describe("buildContentSecurityPolicy and files served by the API", () => {
 		expect(production.get("img-src")).toContain("http://localhost:8080");
 		expect(production.get("connect-src")).toStrictEqual(["'self'", "http://localhost:8080", "https:", "wss:"]);
 		expect(production.get("connect-src")).not.toContain("http:");
+		expect(production.get("img-src")).not.toContain("http:");
 	});
 });
 

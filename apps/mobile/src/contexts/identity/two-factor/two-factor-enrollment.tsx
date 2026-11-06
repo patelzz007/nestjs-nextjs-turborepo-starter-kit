@@ -279,7 +279,7 @@ function VerifyStep({ setup, onEnabled }: VerifyStepProps): React.JSX.Element {
 					<Text selectable accessibilityLabel={`Setup key ${setup.secret.split("").join(" ")}`} className="font-mono text-base text-foreground">
 						{groupSetupKey(setup.secret)}
 					</Text>
-					<Button label={keyCopied ? "Setup key copied" : "Copy setup key"} variant="secondary" onPress={copySetupKey} />
+					<Button label={keyCopied ? "Setup key copied" : "Copy setup key"} variant="outline" onPress={copySetupKey} />
 				</View>
 				<View className="items-center gap-2">
 					<MutedText>Or scan this code with another device:</MutedText>

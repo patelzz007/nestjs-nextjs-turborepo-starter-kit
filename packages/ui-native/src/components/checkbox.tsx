@@ -62,11 +62,11 @@ export const checkboxBoxVariants = cva("items-center justify-center border-2", {
 	},
 	compoundVariants: [
 		{ checked: true, state: ["default", "loading", "disabled"], className: "border-primary bg-primary" },
-		{ checked: false, state: ["default", "loading", "disabled"], className: "border-input bg-card" },
+		{ checked: false, state: ["default", "loading", "disabled"], className: "border-control-ring bg-card" },
 		{ checked: true, state: "error", className: "bg-primary" },
 		{ checked: false, state: "error", className: "bg-card" },
 		{ checked: true, state: "locked", className: "border-primary/20 bg-primary/20" },
-		{ checked: false, state: "locked", className: "border-input bg-muted" },
+		{ checked: false, state: "locked", className: "border-control-ring bg-muted" },
 	],
 	defaultVariants: { size: "md", checked: false, state: "default" },
 });
@@ -95,7 +95,7 @@ function CheckboxGlyph({
 	readonly indeterminate: boolean;
 }): React.JSX.Element | null {
 	if (state === "locked") {
-		return <Icon icon={LockIcon} size="sm" weight="bold" colorClassName="accent-primary" testID="checkbox-lock" />;
+		return <Icon icon={LockIcon} size="control" weight="light" colorClassName="accent-primary" testID="checkbox-lock" />;
 	}
 	if (indeterminate) {
 		return (

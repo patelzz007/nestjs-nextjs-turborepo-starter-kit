@@ -117,7 +117,7 @@ export default composeConfigs(nextJsConfig, {
 | `packages/messaging` | `base` | NestJS naming + backend boundary for `src/nest/**` |
 | `apps/analytics-consumer` | `base` | backend boundary, env boundary, `console` allowed (`log`/`warn`/`error`) |
 | `packages/shared` | `base` | zod-schema `no-unsafe-*` relaxations ([§4](#4-per-repo-exceptions)) |
-| `apps/aws-infrastructure`, `packages/tokens`, `packages/tooling`, `packages/oxlint-config`, `packages/docs-renderer` | `base` | ignores (`cdk.out/`) |
+| `infra/aws`, `packages/tokens`, `packages/tooling`, `packages/oxlint-config`, `packages/docs-renderer` | `base` | ignores (`cdk.out/`) |
 | `apps/docs` | `react-internal` | ignores the Start build output and the generated route tree (`dist/`, `.output/`, `.tanstack/`, `src/routeTree.gen.ts`) |
 
 ### `base.js` (everyone gets this)
@@ -241,7 +241,7 @@ backend blocks re-state the universal patterns (`[...UNIVERSAL, ...FRONTEND]`). 
 
 | Workspace | Allowed files |
 | --- | --- |
-| Next apps | `lib/env/env.client.ts`, `lib/env/env.server.ts`, `lib/env/env.runtime.ts` (only checks `NEXT_RUNTIME`), `e2e/browser-env.e2e.ts` |
+| Next apps | `lib/env/env.client.ts`, `lib/env/env.server.ts`, `e2e/browser-env.e2e.ts`; in `packages/client`, `src/lib/env/env-runtime.ts` (only checks `NEXT_RUNTIME`) |
 | `apps/admin` | + `e2e/env.e2e.ts` (opt-in smoke-test switch) |
 | `packages/client` | `src/lib/api/config.ts` |
 | `apps/api` | `src/config/api-config.ts` |
@@ -404,7 +404,7 @@ tsconfig cover every linted file (as `apps/api/tsconfig.json` does); do not rela
 
 The same symptom appears when a workspace package resolves to a stale or missing `dist/`: every
 tsconfig must set `customConditions: ["development"]`
-(`packages/tooling/__tests__/tsconfig-conditions.test.mjs` checks it).
+(`packages/tooling/src/repo-guards/__tests__/tsconfig-conditions.test.ts` checks it).
 
 ### 8.2 A rule set in a shared config does not apply
 

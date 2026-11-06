@@ -4,31 +4,33 @@
 // goes, and signing out. Its entries come from mobile-drawer-items.json, filtered by the
 // session's capabilities (drawer-destinations.ts); a branch folds open in place, nested up to
 // six levels, and starts open when it holds the screen on show. Opened from the menu button in the corner of each
-// tab's first screen, or by a swipe from the left edge there. Under the account
-// header, the connection and session pills in full (the corner shows them
-// compact).
+// tab's first screen, or by a swipe from the left edge there. Its look is the person's
+// choice (Settings → Appearance): drawer-layouts.ts says which parts each look uses.
 
 import { usePathname } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import LogOutIcon from "lucide-react-native/icons/log-out";
 import * as React from "react";
 import { ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Drawer } from "../../components/drawer";
-import { DrawerAccountHeader, DrawerRow, DrawerSection, DrawerSubmenu } from "../../components/drawer-menu";
+import { DrawerDivider, DrawerProfile, DrawerRow, DrawerSection, DrawerSelectionContext, DrawerSubmenu, DrawerWash } from "../../components/drawer-menu";
 import { useApi } from "../../lib/api-context";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { useAppDrawerCommands, useAppDrawerOpen } from "../app-drawer/facade";
 import { useBuildInfo } from "../build-info/use-build-info";
 import { accountRowValue, useGithubPullRequestAccess } from "../../contexts/integrations-github";
-import { NetworkStatusPill, SessionStatusPill } from "../app-status/status-pills";
+import { StatusCards, StatusLine } from "../app-status/status-pills";
 import { SignOutDialog, useSignOutConfirmation } from "../../contexts/identity";
 import { APP_LANGUAGE_NAMES } from "../language/app-languages";
 import { useAppLanguage, useLabels } from "../language/use-app-language";
-import { useAppLockEnabled, useThemePreference } from "../preferences/facade";
+import { useAppLockEnabled, useDrawerStyle, useThemePreference } from "../preferences/facade";
 import { PREFERENCES_LABELS } from "../preferences/labels";
 import { useOpenDestination } from "./use-open-destination";
 import { NAVIGATION_LABELS, type NavigationLabels } from "./navigation-labels";
 import { drawerHeadingOf, holdsScreen, isTabRoot, type DrawerBranch, type DrawerGroup, type DrawerNode, type DrawerScreen } from "./drawer-destinations";
+import { DRAWER_LAYOUTS, statusBridgesSheet } from "./drawer-layouts";
 import { useDrawerGroups } from "./use-drawer-groups";
 
 export interface AppDrawerProps {
@@ -122,39 +124,76 @@ function AppDrawerPanel(): React.JSX.Element {
 		[appLockEnabled, githubAccountValue, labels, language, theme, themes],
 	);
 	const groups = useDrawerGroups();
+	const layout = DRAWER_LAYOUTS[useDrawerStyle()];
+	const onInk = layout.surface === "ink";
+	const bridgesSheet = statusBridgesSheet(layout);
+	const insets = useSafeAreaInsets();
+	const statusBarSpace = React.useMemo((): { readonly height: number } => ({ height: insets.top }), [insets.top]);
+	const menuSpace = React.useMemo((): { readonly paddingBottom: number } => ({ paddingBottom: insets.bottom }), [insets.bottom]);
+	const statusCards = <StatusCards connectionTitle={labels.drawer.connection} sessionTitle={labels.drawer.session} testID="app-drawer-status" />;
+	let panelClass = "bg-card light:bg-background";
+	if (onInk) {
+		panelClass = "bg-auth-panel";
+	} else if (layout.sheet) {
+		panelClass = "bg-background";
+	}
 
 	return (
-		<View className="flex-1">
-			<ScrollView contentContainerClassName="gap-5 pb-6">
+		<View className={`flex-1 ${panelClass}`}>
+			{onInk ? <StatusBar style="light" /> : null}
+			<View className={onInk ? "bg-auth-panel" : "bg-muted"} style={statusBarSpace} />
+			<ScrollView contentContainerClassName="grow">
+				{onInk ? <InkOutlines /> : <DrawerWash />}
 				{user === undefined ? null : (
-					<View className="px-4 pt-4 pb-1">
-						<DrawerAccountHeader
+					<View className={bridgesSheet ? "pb-6" : ""}>
+						<DrawerProfile
 							name={user.fullName}
 							email={user.email}
 							imageUrl={profile.data?.data.avatar?.url ?? null}
-							action={{ label: labels.drawer.editProfile, onPress: openProfile }}
+							actionLabel={labels.drawer.editProfile}
+							onPress={openProfile}
+							layout={layout.profile}
+							action={layout.action}
+							onInk={onInk}
+							{...(layout.status === "line" ? { detail: <StatusLine onInk={onInk} testID="app-drawer-status" /> } : {})}
 							testID="app-drawer-account"
 						/>
 					</View>
 				)}
-				<View className="flex-row flex-wrap gap-2 px-4" testID="app-drawer-status">
-					<NetworkStatusPill testID="app-drawer-network" />
-					<SessionStatusPill testID="app-drawer-session" />
-				</View>
-				{groups.map((group: DrawerGroup): React.JSX.Element => (
-					<DrawerSection key={group.key} {...(group.heading === null ? {} : { heading: { title: labels.sections[group.heading.section], tone: group.heading.tone } })}>
-						<DrawerNodeRows nodes={group.nodes} pathname={pathname} labels={labels} valueOf={valueOf} isOpen={isOpen} onToggle={toggle} onOpen={open} />
+				{layout.status === "cards" && !bridgesSheet ? <View className="pb-3">{statusCards}</View> : null}
+				<View className={layout.sheet ? "light:bg-background grow rounded-t-3xl bg-card pt-3" : "grow"} style={menuSpace} testID="app-drawer-menu">
+					{bridgesSheet ? <View className="-mt-10 mb-1">{statusCards}</View> : null}
+					<DrawerSelectionContext.Provider value={layout.selected}>
+						{groups.map((group: DrawerGroup, index: number): React.JSX.Element => (
+							<React.Fragment key={group.key}>
+								{index === 0 ? null : <DrawerDivider />}
+								<DrawerSection {...(group.heading === null ? {} : { title: labels.sections[group.heading.section] })}>
+									<DrawerNodeRows nodes={group.nodes} pathname={pathname} labels={labels} valueOf={valueOf} isOpen={isOpen} onToggle={toggle} onOpen={open} />
+								</DrawerSection>
+							</React.Fragment>
+						))}
+					</DrawerSelectionContext.Provider>
+					<DrawerDivider />
+					<DrawerSection>
+						<DrawerRow icon={LogOutIcon} label={labels.drawer.signOut} tone="destructive" onPress={signOut.ask} testID="app-drawer-sign-out" />
 					</DrawerSection>
-				))}
-				<DrawerSection>
-					<DrawerRow icon={LogOutIcon} label={labels.drawer.signOut} tone="destructive" onPress={signOut.ask} testID="app-drawer-sign-out" />
-				</DrawerSection>
-				<View className="gap-0.5 px-6 pt-2" testID="app-drawer-build">
-					<Text className="font-sans text-xs text-muted-foreground">{buildInfo.summary}</Text>
-					{buildInfo.moment === null ? null : <Text className="font-sans text-xs text-muted-foreground">{buildInfo.moment.line}</Text>}
+					<View className="gap-0.5 px-6 pt-4 pb-6" testID="app-drawer-build">
+						<Text className="font-sans text-xs text-muted-foreground">{buildInfo.summary}</Text>
+						{buildInfo.moment === null ? null : <Text className="font-sans text-xs text-muted-foreground">{buildInfo.moment.line}</Text>}
+					</View>
 				</View>
 			</ScrollView>
 			<SignOutDialog confirmation={signOut} />
+		</View>
+	);
+}
+
+/** The sign-in panel's quiet outlines, on the ink looks. Decorative. */
+function InkOutlines(): React.JSX.Element {
+	return (
+		<View pointerEvents="none" className="absolute inset-x-0 top-0" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+			<View className="absolute top-2 -right-8 size-28 rotate-45 rounded-3xl border border-auth-panel-foreground/10" />
+			<View className="absolute top-24 right-16 size-8 rotate-12 rounded-lg border border-auth-panel-foreground/10" />
 		</View>
 	);
 }

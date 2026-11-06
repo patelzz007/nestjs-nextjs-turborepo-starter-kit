@@ -280,7 +280,7 @@ function PdfStatus({ state, onRetry, onOpenExternally, labels, testID }: PdfStat
 			return (
 				<View className="p-4">
 					<EmptyState icon={FileWarningIcon} title={labels.failureTitle} message={labels.failures[state.failure]} {...partTestId(testID, "failed")}>
-						{onRetry === undefined ? null : <Button label={labels.retry} variant="secondary" onPress={onRetry} />}
+						{onRetry === undefined ? null : <Button label={labels.retry} variant="outline" onPress={onRetry} />}
 						{onOpenExternally === undefined || state.failure === "not_a_pdf" || state.failure === "empty" ? null : (
 							<Button label={labels.openExternally} variant="ghost" icon={ShareIcon} onPress={onOpenExternally} />
 						)}

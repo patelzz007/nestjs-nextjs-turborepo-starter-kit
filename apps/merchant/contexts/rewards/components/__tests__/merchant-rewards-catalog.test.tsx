@@ -13,8 +13,8 @@ import { defaultRewardStatusGroupId, groupStatusCounts, REWARD_STATUS_GROUPS, st
 import { REWARDS_URL_STATE, rewardsTabPatch } from "@/contexts/rewards/url-state/rewards";
 import { TENANT_ROUTES, resolveTenantHref } from "@/lib/routes";
 import { MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME, MERCHANT_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
-import { REWARD_FIXTURE_COVER_URL, rewardFixture } from "@/test/rewards";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { REWARD_FIXTURE_COVER_URL, rewardFixture } from "@/testing/rewards";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 const ORG_SLUG = "jonker-street-kitchen";
 const REWARDS_PATH = resolveTenantHref(ORG_SLUG, TENANT_ROUTES.rewards.list);

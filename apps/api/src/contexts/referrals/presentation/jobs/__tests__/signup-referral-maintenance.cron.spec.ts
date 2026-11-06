@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { FixedClock } from "../../../../../platform/application/__tests__/fixed-clock";
 import { CLOCK } from "../../../../../platform/application/clock.port";
-import { RECORDING_COMMAND_DISPATCHER, RecordingCommandDispatcher } from "../../../../../../test/support/recording-command-dispatcher";
+import { RECORDING_COMMAND_DISPATCHER, RecordingCommandDispatcher } from "../../../../../../e2e/support/recording-command-dispatcher";
 import { MaintainSignupReferralCodesCommand } from "../../../application/commands/maintain-signup-referral-codes/maintain-signup-referral-codes.command";
 import { MaintainSignupReferralCodesHandler } from "../../../application/commands/maintain-signup-referral-codes/maintain-signup-referral-codes.handler";
 import { SignupReferralJobItemsFailedError } from "../../../application/errors/signup-referral.errors";

@@ -89,7 +89,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
 	/**
 	 * The pool Prisma's driver adapter checks out — read by the N+1 e2e suite
-	 * (`test/n-plus-one.e2e-spec.ts`), which counts the SQL statements a handler
+	 * (`e2e/n-plus-one.e2e-spec.ts`), which counts the SQL statements a handler
 	 * issues on exactly this pool.
 	 *
 	 * Why a public accessor and not test-support wiring: `PrismaPg` needs the pool

@@ -53,7 +53,7 @@ export default function TillScreen(): React.JSX.Element {
 					<TillCounter terminal={state.terminal} />
 					<Card title={TILL_COPY.terminalTitle}>
 						<DetailList items={terminalDetails(state.terminal)} />
-						<Button label={TILL_COPY.unpair} variant="secondary" onPress={askUnpair} />
+						<Button label={TILL_COPY.unpair} variant="outline" onPress={askUnpair} />
 					</Card>
 				</>
 			) : null}

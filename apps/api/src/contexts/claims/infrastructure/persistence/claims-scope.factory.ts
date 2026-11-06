@@ -9,6 +9,7 @@ import { createRewardsTransactionalPorts } from "../../../rewards/public-api";
 import { createTenantsTransactionalPorts } from "../../../tenancy/public-api";
 import type { ClaimsScope } from "../../application/claims-scope";
 import { IdentityClaimantAdapter, ReferralsAttributionAdapter } from "../adapters/claimant.adapter";
+import { PrismaClaimHoldRepository } from "./prisma-claim-hold.repository";
 import { PrismaClaimView } from "./prisma-claim.view";
 import { PrismaOtpChallengeRepository } from "./prisma-otp-challenge.repository";
 import { PrismaRewardClaimRepository } from "./prisma-reward-claim.repository";
@@ -31,6 +32,7 @@ export class ClaimsScopeFactory implements ScopeFactory<ClaimsScope, Prisma.Tran
 		return {
 			claims: new PrismaRewardClaimRepository(db),
 			otpChallenges: new PrismaOtpChallengeRepository(db),
+			holds: new PrismaClaimHoldRepository(db),
 			notify: notifications.notifications,
 			legacyNotices: new PrismaLegacyRewardNoticeStore(db),
 			legacyInbox: notifications.legacyInbox,

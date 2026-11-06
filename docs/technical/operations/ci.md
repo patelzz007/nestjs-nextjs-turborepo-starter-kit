@@ -24,13 +24,13 @@ commit is what authorizes a merge, not "it passed on my machine". The workflow l
 
 ### Documentation-only pull requests
 
-The **Changes** job (`packages/tooling/scripts/ci-changes.mjs`) lists the files a pull request changes
+The **Changes** job (`packages/tooling/src/ci-changes/cli.ts`) lists the files a pull request changes
 against its merge base. When **every** one is documentation, the jobs that can only prove something about
 code are **skipped** (GitHub counts a skipped job as passing):
 
 | Documentation | Still code |
 | --- | --- |
-| anything under `docs/` or `blog/` (the folders the docs site renders), and any `*.md` file | `docs/generated/` (the OpenAPI document the API's e2e suite checks against the code, and the docs build's API samples), and everything else, the docs site's own code included |
+| anything under `docs/` or `docs/blog/` (the folders the docs site renders), and any `*.md` file | `docs/generated/` (the OpenAPI document the API's e2e suite checks against the code, and the docs build's API samples), and everything else, the docs site's own code included |
 
 | Runs for a documentation-only PR | Skipped |
 | --- | --- |
@@ -59,12 +59,12 @@ them individually.
 | Job | What it proves | Reproduce locally |
 | --- | --- | --- |
 | **Lint** | `turbo run lint` — in every workspace, `oxfmt --check` (formatting) then `oxlint` (rules, type-aware), zero errors | `pnpm lint` |
-| **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**`, `scripts/**` and tool configs (`tsconfig.json`) — Vitest itself never type-checks | `pnpm typecheck` |
+| **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `e2e/**`, `prisma/**`, `scripts/**` and tool configs (`tsconfig.json`) — Vitest itself never type-checks | `pnpm typecheck` |
 | **Unit tests (*shard*)** | Six runners at once, one **shard** each: `api`; `mobile` (mobile, ui-native); `web-apps` (admin, merchant, web); `ui` (ui, tokens, client); `docs` (docs, docs-renderer); `packages` (the rest). Each runs `turbo run test --concurrency=1` with its shard's `--filter`s; `ci-test-shards.test.mjs` fails when a workspace with a `test` script is in no shard, or in two. On one runner the suites took 16–19 min in a row (the API's alone is most of it); split, the longest shard sets the time. Locally `pnpm test` still runs them all in one step. Within a shard: `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own. Inside a suite, Vitest runs its files in parallel, one worker per core (the web, admin and merchant suites ran one file at a time until 2026-10-27: admin took 190 s instead of 46 s). A test must never depend on how fast the machine is: a component behind `next/dynamic` is preloaded in `beforeAll` (its first load is an on-demand Vite transform), never left to an async query's 1 s default wait | `pnpm test` |
-| **Build** | `turbo run build` — API bundle, all Next.js apps, docs site (which also link-checks), and the mobile app's bundle check (`expo export --platform ios --platform android` into `apps/mobile/dist`: proves Metro resolves every workspace package without Xcode or Android Studio) | `pnpm build` |
+| **Build** | `turbo run build --concurrency=3` (three tasks at a time, to stay inside the runner's 16 GB) — API bundle, all Next.js apps, docs site (which also link-checks), and the mobile app's bundle check (`expo export --platform ios --platform android` into `apps/mobile/dist`: proves Metro resolves every workspace package without Xcode or Android Studio) | `pnpm build` |
 | **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm tools db:check-rls-manifest` |
 | **Dependency consistency** | Shared dependencies (React, Zod, TypeScript, Next) use one version everywhere (syncpack); `apps/mobile` has its own groups for what Expo SDK 57 pins (React 19.2, React Native, Metro, Jest 29) | `pnpm tools deps:check` |
-| **Migration history** | Committed Prisma migrations at or after the [baseline](#migration-baseline) are immutable: relative to the merge base, none is edited, deleted, renamed or extended, and every new one is strictly newer than the latest committed one with a unique timestamp prefix. Migrations older than the baseline are ignored | `node packages/tooling/scripts/check-migration-history.mjs --base origin/main --working-tree` |
+| **Migration history** | Committed Prisma migrations at or after the [baseline](#migration-baseline) are immutable: relative to the merge base, none is edited, deleted, renamed or extended, and every new one is strictly newer than the latest committed one with a unique timestamp prefix. Migrations older than the baseline are ignored | `node packages/tooling/src/migration-history/cli.ts --base origin/main --working-tree` |
 | **Dependency audit** | `pnpm audit --audit-level=high` finds no high/critical advisory. Fix by upgrading, or with a scoped `overrides` entry in `pnpm-workspace.yaml` that names the advisory and the condition for removing it. An advisory with **no patched release** that is unreachable from untrusted input may be accepted under `auditConfig.ignoreGhsas` (reason + `# review-by:` date) — see [Dependency review](#dependency-review-weekly) | `pnpm audit --audit-level=high` |
 | **Secret scan (.env.example)** | No real-looking secrets in tracked `.env.example` files | `pnpm tools secrets:scan` |
 | **Docs link check** | Every internal link and anchor in `docs/` resolves | `pnpm tools docs:check-links` |
@@ -81,9 +81,9 @@ CI re-runs them independently because local environments drift.
 
 ### Run the whole pipeline locally
 
-`pnpm ci:local` runs the same commands in the same order (lint, typecheck, test, build, RLS manifest, dependency consistency, migration history, audit, secret scan, docs links) and then the database jobs against **throwaway databases** (`<name>_ci_local`, `<name>_ci_local_shadow`) that it creates next to the one in `apps/api/.env`, migrates and seeds from scratch, and drops afterwards. A fresh database is what CI has, so state left behind by earlier local runs can no longer make a suite pass locally and fail in CI. **The same goes for configuration:** every API step reads the env CI itself writes, generated by one generator (`packages/tooling/scripts/lib/api-ci-env.mjs`, which `.github/actions/write-api-ci-env` also runs), one file per CI job's tenancy, under `.ci-logs/`. The API is pointed at it with `DOTENV_PATH`, which `dotenv run`, `dotenv/config` and every env loader in `apps/api` honour. Only infrastructure locations come from your machine (the database server, and Redis for the `e2e` job, as ci.yml sets `REDIS_URL` at job level). So a key or setting that only your `apps/api/.env` has can't make a step pass locally and fail in CI. That's exactly how the seed coverage check once passed locally and failed in CI: the developer's file had `NOTIFICATIONS_ENCRYPTION_KEYS`, CI's didn't, and without it the seed writes no push devices. The analytics consumer keeps its own `apps/analytics-consumer/.env`. Flags: `--skip-e2e`, `--e2e-only`, `--errors-only` (only failing tasks print their logs), `--only <ids>` (just these non-database steps, e.g. `--only lint,typecheck,test` — what the pre-push hook runs; an unknown id is an error), `--no-cache` (bypass the Turborepo cache), `--base <ref>` (default `origin/main`). A run with `--skip-e2e` / `--e2e-only` reports the skipped part as FAIL: it is not a full CI run. The summary lists every step with its duration, then the total, so the slow part of a run is visible at a glance. The analytics-consumer suite additionally needs `pnpm docker:up` (Kafka) and `apps/analytics-consumer/.env`.
+`pnpm ci:local` runs the same commands in the same order (lint, typecheck, test, build, RLS manifest, dependency consistency, migration history, audit, secret scan, docs links) and then the database jobs against **throwaway databases** (`<name>_ci_local`, `<name>_ci_local_shadow`) that it creates next to the one in `apps/api/.env`, migrates and seeds from scratch, and drops afterwards. A fresh database is what CI has, so state left behind by earlier local runs can no longer make a suite pass locally and fail in CI. **The same goes for configuration:** every API step reads the env CI itself writes, generated by one generator (`packages/tooling/src/api-ci-env/api-ci-env.ts`, which `.github/actions/write-api-ci-env` also runs), one file per CI job's tenancy, under `.artifacts/ci/`. The API is pointed at it with `DOTENV_PATH`, which `dotenv run`, `dotenv/config` and every env loader in `apps/api` honour. Only infrastructure locations come from your machine (the database server, and Redis for the `e2e` job, as ci.yml sets `REDIS_URL` at job level). So a key or setting that only your `apps/api/.env` has can't make a step pass locally and fail in CI. That's exactly how the seed coverage check once passed locally and failed in CI: the developer's file had `NOTIFICATIONS_ENCRYPTION_KEYS`, CI's didn't, and without it the seed writes no push devices. The analytics consumer keeps its own `apps/analytics-consumer/.env`. Flags: `--skip-e2e`, `--e2e-only`, `--errors-only` (only failing tasks print their logs), `--only <ids>` (just these non-database steps, e.g. `--only lint,typecheck,test` — what the pre-push hook runs; an unknown id is an error), `--no-cache` (bypass the Turborepo cache), `--base <ref>` (default `origin/main`). A run with `--skip-e2e` / `--e2e-only` reports the skipped part as FAIL: it is not a full CI run. The summary lists every step with its duration, then the total, so the slow part of a run is visible at a glance. The analytics-consumer suite additionally needs `pnpm docker:up` (Kafka) and `apps/analytics-consumer/.env`.
 
-The plan lives in `packages/tooling/scripts/lib/ci-local-plan.mjs`. Two tests keep it honest:
+The plan lives in `packages/tooling/src/ci-local/ci-local-plan.ts`. Two tests keep it honest:
 
 | Test | Fails when |
 |---|---|
@@ -116,7 +116,7 @@ the local Docker stack in [Local infrastructure](./local-infrastructure.md)):
    gap with a written reason. Adding a table or column without seeding it fails here — see
    [Seed coverage](../database.md#seed-coverage--every-table-every-column).
 5. `pnpm test:e2e` — boots the real Nest app against that database. **Test files run in parallel**,
-   each worker on its own copy of the database: the e2e global setup (`test/global-setup-e2e.ts`)
+   each worker on its own copy of the database: the e2e global setup (`e2e/global-setup-e2e.ts`)
    copies it once per worker (`CREATE DATABASE … TEMPLATE … STRATEGY FILE_COPY`, about 0.25 s for the
    seeded development scenario) and drops the copies when the run ends, and every worker gets its own
    BullMQ prefix and Redis namespace inside the run's (`<prefix>:w<n>`), so no file sees another
@@ -126,7 +126,7 @@ the local Docker stack in [Local infrastructure](./local-infrastructure.md)):
    time) to about 115 s with four workers, peaking at 42 Postgres connections (the default limit is 100).
    Postgres copies a database only while nothing else is connected to it, so the setup waits up to
    15 s for the source to become idle and then fails naming what is still connected (usually a
-   running dev API). Seeded customers such as `alice.johnson@example.com` are deliberately unverified (they demo the verify-email flow): a suite that signs in as one must establish the verified state itself (`markSeedUserEmailVerified` in `test/e2e-helpers.ts`) and never depend on suite order. The sign-in restriction is never disabled.
+   running dev API). Seeded customers such as `alice.johnson@example.com` are deliberately unverified (they demo the verify-email flow): a suite that signs in as one must establish the verified state itself (`markSeedUserEmailVerified` in `e2e/e2e-helpers.ts`) and never depend on suite order. The sign-in restriction is never disabled.
 6. `pnpm db:seed -- --scenario enterprise --seed 1` — proves the large scenario still runs.
 
 To reproduce locally against the Docker Postgres (never against a shared database; the suite only
@@ -145,7 +145,7 @@ pnpm test:e2e
 Every Vitest package's `test` script runs with `--coverage` (V8), and its config sets **floors** for lines,
 statements, functions and branches, measured on 2026-11-03 and set just below. `pnpm test` (and so the
 *Unit tests* job and `ci:local`) fails when a package drops below its floor. Raise a floor when you add
-tests; never lower one without review. `packages/tooling/__tests__/coverage-floors.test.mjs` fails when a
+tests; never lower one without review. `packages/tooling/src/repo-guards/__tests__/coverage-floors.test.ts` fails when a
 Vitest package has no floors. A single-file `pnpm exec vitest run <file>` doesn't measure, so it stays fast.
 The phone app and `ui-native` (Jest) set theirs in `jest.config.js` (`coverageThreshold`).
 
@@ -171,7 +171,7 @@ the commit to the Droplet: [Deploying to DigitalOcean](./digitalocean-deployment
 { "baseline": "<timestamp>_init", "reason": "why earlier history was dropped", "since": "<YYYY-MM-DD>" }
 ```
 
-The guard (`packages/tooling/scripts/check-migration-history.mjs`, rules in `scripts/lib/migration-history.mjs`) validates the file with zod and enforces:
+The guard (`packages/tooling/src/migration-history/cli.ts`, rules in `packages/tooling/src/migration-history/migration-history.ts`) validates the file with zod and enforces:
 
 | Rule | Result |
 | --- | --- |
@@ -226,7 +226,7 @@ placeholder steps that always pass — a green check must always mean something 
 
 | Stage | Status / blocker |
 | --- | --- |
-| OpenAPI breaking-change diff | Planned. Today the e2e job only proves the committed `docs/generated/openapi.json` matches the code (`test/openapi-artifact.e2e-spec.ts`), and the docs unit tests prove the generated [API reference](../api-reference/README.md) matches that file. |
+| OpenAPI breaking-change diff | Planned. Today the e2e job only proves the committed `docs/generated/openapi.json` matches the code (`e2e/openapi-artifact.e2e-spec.ts`), and the docs unit tests prove the generated [API reference](../api-reference/README.md) matches that file. |
 | Architecture fitness: package cycles | Planned. Import boundaries are already enforced by lint (`workspace/restricted-imports`, [Oxlint §3.1](../tooling/oxlint.md#31-import-boundaries)). |
 | Migration safety (destructive-change detection, expand/contract linting) | Planned. Today CI only proves migrations apply to an empty database. |
 | Full-history secret scanning (e.g. gitleaks) | Planned — today only `.env.example` files are scanned. |
@@ -242,9 +242,9 @@ database or browser suites — those need Postgres, Redis and built apps and tak
 | Hook | Runs | Typical time |
 | --- | --- | --- |
 | `pre-commit` | `lint-staged --quiet` (`packages/tooling/lint-staged.config.mjs`; silent when everything passes, a failing check prints its errors): the staged files only, grouped by the workspace that owns them, each group through **that workspace's** oxfmt (writes; the result is re-staged) and then oxlint — the same tools and config as its `pnpm run lint`. A staged file that workspace's config ignores (e.g. `apps/admin/vitest.config.ts`) is skipped, not failed (`--no-error-on-unmatched-pattern` on both tools). Unstaged edits in the same files are kept out of the check and left as they were. | seconds |
-| `pre-push` | `packages/tooling/scripts/pre-push.mjs` → `pnpm ci:local --only lint,typecheck,test --errors-only` (Turborepo `--output-logs=errors-only`: only a failing task prints its log; then the PASS/FAIL summary): the exact lint, typecheck and unit-test steps of `ci:local` (taken from its plan, so they cannot drift) — every frontend and backend suite. A failure blocks the push to any branch. Lint and typecheck skip every workspace whose inputs are unchanged since their last green run (Turborepo's cache); the unit tests always run in full (`test` is uncached in turbo.json). A push that only deletes remote branches is not checked. | about 5 min (the unit tests); lint and typecheck seconds when cached |
+| `pre-push` | `packages/tooling/src/pre-push/cli.ts` → `pnpm ci:local --only lint,typecheck,test --errors-only` (Turborepo `--output-logs=errors-only`: only a failing task prints its log; then the PASS/FAIL summary): the exact lint, typecheck and unit-test steps of `ci:local` (taken from its plan, so they cannot drift) — every frontend and backend suite. A failure blocks the push to any branch. Lint and typecheck skip every workspace whose inputs are unchanged since their last green run (Turborepo's cache); the unit tests always run in full (`test` is uncached in turbo.json). A push that only deletes remote branches is not checked. | about 5 min (the unit tests); lint and typecheck seconds when cached |
 
-Every pre-commit command starts `node packages/tooling/scripts/run-in-workspace.mjs`, never `pnpm`:
+Every pre-commit command starts `node packages/tooling/src/run-in-workspace/cli.ts`, never `pnpm`:
 lint-staged starts commands without a shell, a shebang-less `pnpm` shim (nvm installs one) cannot
 be started that way (`ENOEXEC`), and lint-staged 17 then reports the task as failed **but exits 0** —
 the commit would go through unchecked. The runner always starts and turns any failure to start the
@@ -270,7 +270,7 @@ pushes (`rules/13-ci-cd-and-quality-gates.md`, "Required status checks").
 | **Due dependency exceptions** | An accepted advisory (`auditConfig.ignoreGhsas`) past its `# review-by:` date, or a supply-chain cooldown exception (`minimumReleaseAgeExclude`) whose "Delete this entry on or after" date has arrived — with the action to take for each | `pnpm --filter @workspace/tooling deps:review` (add `-- --today YYYY-MM-DD` to preview a date) |
 | **Dependency audit** | New high/critical advisories, even in weeks with no pushes | `pnpm audit --audit-level=high` |
 
-Push CI only checks that every exception is **well-formed** (a written reason and a valid date — `packages/tooling/__tests__/dependency-exceptions.test.mjs`), so a calendar day passing never turns a push red. When the weekly run fails, follow the printed action (upgrade and delete an accepted advisory once a fix exists, or move its review-by date after re-checking it is still unreachable; delete a cooldown exception once its version is mature), then re-run the workflow.
+Push CI only checks that every exception is **well-formed** (a written reason and a valid date — `packages/tooling/src/dependency-exceptions/__tests__/dependency-exceptions.test.ts`), so a calendar day passing never turns a push red. When the weekly run fails, follow the printed action (upgrade and delete an accepted advisory once a fix exists, or move its review-by date after re-checking it is still unreachable; delete a cooldown exception once its version is mature), then re-run the workflow.
 
 ## Load test (nightly)
 
@@ -278,13 +278,13 @@ Push CI only checks that every exception is **well-formed** (a written reason an
 a short load test against a CI-sized deployment on one runner (the production-built API, PostgreSQL,
 Redis and the load runner with k6, seeded with the `development` data), held to a **p95 threshold per
 endpoint group** (auth, marketplace, claims, merchant) and an error-rate ceiling, both in
-`load-baselines.json` at the repository root (enhancement 3.9). It is not part of push CI: a load test
+`budgets/load.json` at the repository root (enhancement 3.9). It is not part of push CI: a load test
 takes minutes and a shared runner's timings vary, so it reports nightly instead of blocking a merge.
 
 | Step | Command |
 |---|---|
-| Start the run through the API (as the seeded Platform Developer) and save its results | `pnpm tools load:run -- --api-url http://localhost:8080 --out .ci-logs/load-baseline.json` |
-| Compare with `load-baselines.json` (the table goes to the job summary) | `pnpm tools load:check -- --results .ci-logs/load-baseline.json --summary "$GITHUB_STEP_SUMMARY"` |
+| Start the run through the API (as the seeded Platform Developer) and save its results | `pnpm tools load:run -- --api-url http://localhost:8080 --out .artifacts/ci/load-baseline.json` |
+| Compare with `budgets/load.json` (the table goes to the job summary) | `pnpm tools load:check -- --results .artifacts/ci/load-baseline.json --summary "$GITHUB_STEP_SUMMARY"` |
 | Recalibrate from a nightly artifact (measured p95 × 2) | `pnpm tools load:check -- --results <file> --write-baseline --source "load-nightly run <id>"` |
 
 The groups, what fails the job and how to recalibrate are in `apps/load-runner/README.md`. The committed

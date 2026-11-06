@@ -50,8 +50,8 @@ Files that can read `project.json` at run time do so. Files that can't hold a co
 | `apps/api/.env.example` | `APP_NAME`, `OBSERVE_SERVICE_ID` | Copy |
 | `apps/mobile/app.config.ts` | The default of `MOBILE_APP_NAME` | Copy |
 | `packages/tokens/src/project-identity.ts` | `PROJECT_SLUG`, `PROJECT_DISPLAY_NAME` (generated; `BRAND_NAME` re-exports the display name) | Generated |
-| `packages/tooling/scripts/lib/api-ci-env.mjs` | CI's `APP_NAME` (`<displayName> CI`) and `REDIS_NAMESPACE` (`<slug>-ci`) | Reads at run time |
-| `deploy/pm2/ecosystem.config.cjs` | The pm2 process names (`<slug>-api`, …) | Reads at run time |
+| `packages/tooling/src/api-ci-env/api-ci-env.ts` | CI's `APP_NAME` (`<displayName> CI`) and `REDIS_NAMESPACE` (`<slug>-ci`) | Reads at run time |
+| `infra/pm2/ecosystem.config.cjs` | The pm2 process names (`<slug>-api`, …) | Reads at run time |
 
 Your own `apps/api/.env` is never touched: set `APP_NAME` there yourself (it names the API in
 emails, authenticator apps and the Redis namespace).
@@ -72,7 +72,7 @@ The old volumes stay until you remove them (`docker volume ls`, then `docker vol
 ## Adding a place that needs the name
 
 1. If the file can read JSON at run time, read `project.json` there (validated with
-   `parseProjectIdentity` from `packages/tooling/scripts/lib/project-identity.mjs`).
+   `parseProjectIdentity` from `packages/tooling/src/project-identity/project-identity.ts`).
 2. Otherwise add a renderer to `IDENTITY_TARGETS` in that module. A renderer that can't find its
    anchor line throws, so a moved line fails the check instead of being skipped.
-3. Add a case to `packages/tooling/__tests__/project-identity.test.mjs`.
+3. Add a case to `packages/tooling/src/project-identity/__tests__/project-identity.test.ts`.

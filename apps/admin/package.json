@@ -9,12 +9,12 @@
 		"start": "next start",
 		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
-		"typecheck": "tsrs --noEmit",
+		"typecheck": "next typegen && tsrs --noEmit",
 		"test": "vitest run --coverage",
 		"test:browser": "playwright test --project=browser",
 		"test:visual": "playwright test --project=visual",
-		"test:visual:docker": "node ../../packages/tooling/scripts/playwright-in-docker.mjs ADMIN_E2E_ --forward 3001 --forward 8080 --forward 8025 --project=visual",
-		"test:visual:update": "node ../../packages/tooling/scripts/playwright-in-docker.mjs ADMIN_E2E_ --forward 3001 --forward 8080 --forward 8025 --project=visual --update-snapshots",
+		"test:visual:docker": "node ../../packages/tooling/src/playwright-in-docker/cli.ts ADMIN_E2E_ --forward 3001 --forward 8080 --forward 8025 --project=visual",
+		"test:visual:update": "node ../../packages/tooling/src/playwright-in-docker/cli.ts ADMIN_E2E_ --forward 3001 --forward 8080 --forward 8025 --project=visual --update-snapshots",
 		"gallery:examples": "node scripts/gallery-examples-registry.ts && oxfmt components/component-gallery/examples/examples-registry.tsx components/component-gallery/examples/examples-manifest.ts"
 	},
 	"dependencies": {

@@ -7,6 +7,7 @@ import { Gift } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { landingSectionPath, LANDING_SECTION_IDS, ROUTES } from "@/lib/routes";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const NAV_LINKS: readonly { readonly label: string; readonly href: string }[] = [
 	{ label: "Offers", href: landingSectionPath(LANDING_SECTION_IDS.rewards) },
@@ -50,7 +51,7 @@ export function LandingHeader(): React.JSX.Element {
 					{NAV_LINKS.map((link) => (
 						<Link
 							key={link.href}
-							href={link.href}
+							href={appRoute(link.href)}
 							className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
 							{link.label}
 						</Link>

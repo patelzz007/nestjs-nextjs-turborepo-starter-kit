@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createInvalidationResponse, RecordingS3Transport } from "../../../../../../../test/support/s3-recording-transport";
+import { createInvalidationResponse, RecordingS3Transport } from "../../../../../../../e2e/support/s3-recording-transport";
 import { CloudFrontCacheInvalidator, createCloudFrontClient } from "../cloudfront-cache-invalidator";
 
 const DISTRIBUTION_ID = "E2QWRUHAPOMQZL";

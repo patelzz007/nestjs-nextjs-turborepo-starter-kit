@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Repo-root `blog/meta.json`: the curated post order (newest first when absent). */
+/** Repo-root `docs/blog/meta.json`: the curated post order (newest first when absent). */
 export const BlogMetaSchema = z
 	.object({
 		title: z.string().optional(),

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { TenantBootstrap } from "@/contexts/tenancy/components/tenant/tenant-bootstrap";
 import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/tenant/slug";
-import { TEST_ORG_SLUG } from "@/test/authorization";
+import { TEST_ORG_SLUG } from "@/testing/authorization";
 
 function slugCookieValue(): string | undefined {
 	const prefix = `${TENANT_SLUG_COOKIE_NAME}=`;

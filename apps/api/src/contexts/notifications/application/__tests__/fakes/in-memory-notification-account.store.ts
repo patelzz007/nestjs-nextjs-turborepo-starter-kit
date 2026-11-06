@@ -70,6 +70,7 @@ export class InMemoryNotificationAccountStore implements NotificationAccountStor
 				category: "ACCOUNT",
 				surface: row.surface,
 				title: "Test",
+				attachment: null,
 				body: "Body",
 				richBody: null,
 				link: null,

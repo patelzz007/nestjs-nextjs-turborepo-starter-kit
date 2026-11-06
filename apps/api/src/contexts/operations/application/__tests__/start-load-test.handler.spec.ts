@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { epochMs, type LoadTestJob, type StartLoadTestInput } from "@workspace/shared";
 
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { SystemOperationName } from "../../../../platform/application/system-operation-names";
 import type { UnitOfWork } from "../../../../platform/application/unit-of-work.port";

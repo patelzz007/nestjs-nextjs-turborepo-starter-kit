@@ -294,7 +294,7 @@ body) because GitHub owns those lists.
 4. Controller: `@ZodListQuery(XListQuerySchema)`; service returns `toPaginatedServiceResult`.
 5. Client router: `response: listEnvelope(ItemSchema)`, `queryKey: (input) => listQueryKey([...], input)`.
 6. Tests: translator spec (`apps/api/src/contexts/*/infrastructure/**/__tests__/*list-query.spec.ts`), and for anything
-   non-trivial a real-Postgres case in `apps/api/test/list-query.e2e-spec.ts`.
+   non-trivial a real-Postgres case in `apps/api/e2e/list-query.e2e-spec.ts`.
 7. Add the row to the table in §5 and check that the columns you sort/filter on are indexed
    (rules/19-performance-and-scalability.md).
 8. A table for it: declare its URL state (`defineUrlState` + `listUrlParams`, §7) and a

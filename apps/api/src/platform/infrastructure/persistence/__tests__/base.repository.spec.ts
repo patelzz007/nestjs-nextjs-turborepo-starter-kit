@@ -6,7 +6,7 @@ import { PrismaBaseRepository } from "../prisma-base.repository.js";
 import { rootRepositoryDb, runInRepositoryTransaction, type RepositoryDb, PrismaModelDelegate, RepositoryPorts } from "../types.js";
 import type { CascadeSoftDeletePorts } from "../cascade-soft-delete.js";
 import { ConcurrentModificationError, RepositoryMisconfiguredError, ResourceNotFoundError } from "../persistence.errors.js";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 
 const mocks = vi.hoisted(() => {
 	/** The client a `$transaction` callback receives — the delegate selector tells it from the root client by identity. */

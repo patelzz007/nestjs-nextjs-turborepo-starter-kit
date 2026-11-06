@@ -2,6 +2,7 @@ import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard
 import { tenantRoutes } from "@/lib/routes";
 import { redirect } from "next/navigation";
 import type * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export const dynamic = "force-dynamic";
 
@@ -16,5 +17,5 @@ export default async function TeamRolesPage({ params }: TeamRolesPageProps): Pro
 	if (denied !== null) {
 		return denied;
 	}
-	redirect(`${tenantRoutes(tenantSlug).settings.team}?tab=roles`);
+	redirect(appRoute(`${tenantRoutes(tenantSlug).settings.team}?tab=roles`));
 }

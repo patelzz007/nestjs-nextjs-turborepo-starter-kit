@@ -19,7 +19,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
 ### 0.1 Done in session 2
 
 - **Gate triage (step 1), partly:**
-  - `pnpm run typecheck` is green across the repo (fixed identity name clashes, branded `EpochMs` in tests, GitHub test imports, `routeOptions` / `sid` in `test/support/http-execution-context.ts`, seed `actor`, etc.).
+  - `pnpm run typecheck` is green across the repo (fixed identity name clashes, branded `EpochMs` in tests, GitHub test imports, `routeOptions` / `sid` in `e2e/support/http-execution-context.ts`, seed `actor`, etc.).
   - Frontend lint (admin, web, merchant, client, ui, mobile, eslint-config) is green.
   - The frontend context rule is now real per-context blocks (`frontendContextBoundaryConfigs` / `mobileContextBoundaryConfigs` in `packages/eslint-config/import-boundaries.js`, plan §12.2). Routes, feature stores and lib may import any context file. A context may import another context only through its index, and relative `../../<ctx>/x` imports are caught too. Fixtures are in `__tests__/import-boundaries.frontend.test.js`.
   - `CLIENT_ONLY_WIDGETS` is passed by each workspace's `eslint.config.js`. Command-palette wrappers were created in all 3 apps (`components/layout/*command-palette.client-only.tsx`). The admin showcase dropped `ssr: false`.
@@ -43,7 +43,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
 
 ### 0.2 Key findings / decisions (apply them going forward)
 
-- **The app does NOT boot** (e2e `test/app.e2e-spec.ts` against `ddd_b1`). Two causes:
+- **The app does NOT boot** (e2e `e2e/app.e2e-spec.ts` against `ddd_b1`). Two causes:
   1. The JS barrel cycle between organizations and legacy identity: `OrganizationsModule` imports `identity/auth/auth.module`, which reaches back.
   2. Nothing provides `ACCESS_TOKEN_VERIFIER`, `ACCESS_TOKEN_STATE`, `IMPERSONATION_TOKEN_CHECK` or `AUTH_FLOW_RECORDER` (from `platform/application/ports/access-token.port.ts`), which `AuthGuard` and `RefreshTokenGuard` inject. The new `IdentityModule` must provide them.
 - **Decision (record in ADR 058 + `contexts/README.md`):**
@@ -88,7 +88,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
   - `OrganizationsModule` is no longer exported from `organizations/public-api.ts`.
 - **Verified:**
   - API typecheck, API lint and API unit tests are green (3157).
-  - Full e2e: 426/439 at first, then these were fixed: Swagger bodies, the rate-limit test (it sent no `content-type`), impersonation fixtures (D36 refuses a second live session; the setup helper `test/support/impersonation.ts` now ends leftovers).
+  - Full e2e: 426/439 at first, then these were fixed: Swagger bodies, the rate-limit test (it sent no `content-type`), impersonation fixtures (D36 refuses a second live session; the setup helper `e2e/support/impersonation.ts` now ends leftovers).
   - The CRITICAL throttler item is proven: `rate-limit-wiring.e2e-spec.ts` passes, with login 429 at limit + 1.
   - **Still failing:** `app.e2e` and `openapi-document` because the `claims.get` / `claims.qr` handlers are missing (step 4), and `openapi-artifact` (regenerate at the end).
 - **Next:** see §0.4.
@@ -100,13 +100,13 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
   - `identity/infrastructure/security/__tests__/`: crypto, token, access-token state, secret encryption, and `auth-guards.spec.ts` (AuthGuard / RefreshTokenGuard with the real `TokenService` and port fakes, no module mocks). It lives in identity because it needs identity's `TokenService`.
   - Session-device and session-revoker value objects; `platform/.../security/__tests__/` client type, admin access, session-device context; `cookies/__tests__/cookie.config.spec.ts`.
   - The session-location spec moved into `__tests__/`; `track-auth-flow.decorator.spec.ts` moved into `decorators/__tests__/`, with a new metadata-copy test.
-- **New specs:** `infrastructure/adapters/__tests__/impersonation-token.check.spec.ts`; e2e `test/identity-transactional-ports.e2e-spec.ts` (`revokeAllSessions` and `createAccount` against the real schema, inside a system-operation RLS transaction).
+- **New specs:** `infrastructure/adapters/__tests__/impersonation-token.check.spec.ts`; e2e `e2e/identity-transactional-ports.e2e-spec.ts` (`revokeAllSessions` and `createAccount` against the real schema, inside a system-operation RLS transaction).
 - **`StopImpersonation` `sid` fix (done):**
   - The controller reads the administrator's own refresh token with `readPresentedRefreshToken` (missing: `401 REFRESH_TOKEN_MISSING`).
   - The handler verifies it, requires `sub` = impersonator, and in the transaction requires `scope.sessions.findById(jti)` to be one of the impersonator's live sessions (`DeviceSession.isLiveFor`, otherwise `RefreshTokenRevokedError`). It then mints the restored token with `sid = jti`.
   - `IdentityTokensPort.generateAccessToken(user, sessionId)` now always sets `sid`.
   - Each app starts and stops impersonation under its own client type, so the browser already sends the right refresh cookie; the frontends needed no change.
-  - e2e `impersonation-session.e2e-spec.ts` has 6 cases, including restored-token usability, missing refresh token and a revoked session. The fixture is `openAdminDeviceSession()` in `test/support/impersonation.ts`.
+  - e2e `impersonation-session.e2e-spec.ts` has 6 cases, including restored-token usability, missing refresh token and a revoked session. The fixture is `openAdminDeviceSession()` in `e2e/support/impersonation.ts`.
   - Docs: `docs/technical/security/authentication.md`, plus the route's OpenAPI description. Regenerate `docs/technical/api-reference` with `pnpm tools docs:api`.
 - `docs/technical/operations/superadmin-bootstrap.md` paths updated.
 - Fixed a slipped value import of `AccessTokenPayload` in `authorization/presentation/http/policy-control-plane.controller.ts` (TS1272).
@@ -125,8 +125,8 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
 - **Transitional adapter removed:** `organization-directory.transitional-adapter.ts` is deleted. Organizations' transactional ports gained `existence` (`OrganizationExistencePort`: `exists`, `isActiveOwner`), and the authorization scope factory uses `createOrganizationsTransactionalPorts(db).existence` / `.audit`.
   - **Incident:** creating that port first overwrote organizations' untracked `application/ports/organization-directory.port.ts` (a `cat >` collision). It was rebuilt exactly from its implementer `OrganizationDirectoryAdapter` and its 14 call sites (`ResolvedOrganizationMember`, `resolveOrganizationId`, `resolveMember`, `assertAccessibleLocation`). Typecheck and the organizations suites are green, but the original doc comments were reworded. Review that file.
 - **T08 temporary interface removed:** platform's `DefaultRoleAssignmentPort` / `ProvisioningRoleAssignment` / `DEFAULT_ROLE_ASSIGNMENT` and identity's `authorization-role-assignment.adapter.ts` are deleted. `IdentityScope.roles` is authorization's public `DefaultRoleAssignmentPort` (`assignDefaultRole`, `assignPlatformRole`). The adapter had a latent bug: a non-system provisioning actor got the *default* role whatever `roleName` said.
-- **Security fix:** `PrismaRbacGraphReader.holdersOfPermission` now includes holders of roles *below* a conferring role (children inherit their ancestors' permissions). Before, removing or restoring a permission did not revoke sessions or drop the cached authorization of users holding a child role. Legacy had the same gap. e2e `test/rbac-graph-reader.e2e-spec.ts`.
-- **Tests:** authorization domain specs (50) and application specs (60). `application/__tests__/fakes/authorization.fakes.ts` has an in-memory RBAC store whose graph reads follow the Prisma reader's semantics, plus a rolling-back unit of work and the policy / support / catalog stores. Specs cover every command (RBAC, support access, policy plane four-eyes / staleness, catalog sync, purge), the after-commit handlers, and the queries with logic (decide, explain never lending SuperAdmin to another user, preview / validate). New e2e `test/support-access.e2e-spec.ts`.
+- **Security fix:** `PrismaRbacGraphReader.holdersOfPermission` now includes holders of roles *below* a conferring role (children inherit their ancestors' permissions). Before, removing or restoring a permission did not revoke sessions or drop the cached authorization of users holding a child role. Legacy had the same gap. e2e `e2e/rbac-graph-reader.e2e-spec.ts`.
+- **Tests:** authorization domain specs (50) and application specs (60). `application/__tests__/fakes/authorization.fakes.ts` has an in-memory RBAC store whose graph reads follow the Prisma reader's semantics, plus a rolling-back unit of work and the policy / support / catalog stores. Specs cover every command (RBAC, support access, policy plane four-eyes / staleness, catalog sync, purge), the after-commit handlers, and the queries with logic (decide, explain never lending SuperAdmin to another user, preview / validate). New e2e `e2e/support-access.e2e-spec.ts`.
 - **Next:** see §0.6.
 
 ### 0.6 Step 4, claims part (session 3)
@@ -140,7 +140,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
     - `ClaimsRegistrations`: the in-transaction notice handlers and the mapper.
   - Presentation: `ConsumerClaimsController` serves `POST /claims/otp`, `POST /claims`, `GET /claims`, `GET /claims/:claimId` (new, `claims.get`) and `POST /claims/:claimId/qr` (now a POST, `claims.qr`). `RewardNotificationsController` serves the inbox. Every legacy decorator was kept.
   - `public-api.ts`: `createClaimsTransactionalPorts` (`ClaimRedemptionPort`, for pos in step 5).
-- **Restored regression:** owners got no "reward approved / rejected / auto-published" inbox notice after the migration (legacy `RewardsAdminService` wrote it; the new review handlers didn't). Claims' `RecordOwnerNoticesOnRewardReview` is now registered. e2e `test/reward-review-notices.e2e-spec.ts`.
+- **Restored regression:** owners got no "reward approved / rejected / auto-published" inbox notice after the migration (legacy `RewardsAdminService` wrote it; the new review handlers didn't). Claims' `RecordOwnerNoticesOnRewardReview` is now registered. e2e `e2e/reward-review-notices.e2e-spec.ts`.
 - **Cross-context ports added:**
   - identity `ConsumerClaimantPort` (`findClaimant(userId, { lock })`, `markPhoneVerified`). It replaced the unused `ConsumerPhoneVerificationPort`, under `createIdentityTransactionalPorts(...).consumerClaimants`.
   - referrals `RewardReferralAttributionPort` (`createReferralsTransactionalPorts(db).rewardReferralAttribution`).
@@ -234,7 +234,7 @@ A review compared pos and the referral credit with the deleted legacy code and p
   - A member's malformed `:orgSlug` reaches the route's 400 pipe again instead of a 404 from the interceptor.
   - `attachReferee` is a compare-and-set that never takes over another referee's referral.
 - **Tests added:**
-  - Controller metadata specs for every pos controller and `SignupReferralController` (`test/support/route-metadata.ts`).
+  - Controller metadata specs for every pos controller and `SignupReferralController` (`e2e/support/route-metadata.ts`).
   - Repository and adapter specs: sale, terminal, API key, store closure, till terminals, capabilities, read repositories, organizations' POS settings, reward `lockForCheckout` with the referral-credit CAS and non-negative guards, and the referral repository.
   - Handler specs: list keys, list redemptions, terminal summary, dashboard, referees, and the signup cron.
   - Handler cases: rollback after a partial write, CAS loss, auth denied with nothing saved, cross-tenant ids, a lost race with another hash, the hidden winner, corrupt data, and lockout through validate.
@@ -305,7 +305,7 @@ A review compared pos and the referral credit with the deleted legacy code and p
 
 The PL agent was stopped before it reported, so **the status of each item below is unknown; verify each one.**
 
-- **CRITICAL:** the global `ThrottlerGuard` probably resolves the notifications webhook `ThrottlerModule`'s options. Fix it by registering one `ThrottlerModule` with named throttlers (`strict`, `default`, `webhook`, `preAuth`), and prove it with `test/rate-limit-wiring.e2e-spec.ts`: login gets 429 at limit + 1.
+- **CRITICAL:** the global `ThrottlerGuard` probably resolves the notifications webhook `ThrottlerModule`'s options. Fix it by registering one `ThrottlerModule` with named throttlers (`strict`, `default`, `webhook`, `preAuth`), and prove it with `e2e/rate-limit-wiring.e2e-spec.ts`: login gets 429 at limit + 1.
 - **Tracker:** choose it per throttler. `strict` and `preAuth` key on IP; the others key on the principal.
 - **Redis throttler storage:** add a DI test.
 - **ADR 061 exists.** Verify the implementation behind decision #71: advisory-lock wait, no polling, takeover when the original fails, a 5 s cap, and a stale `docs/generated/openapi.json` text regenerated by its script.
@@ -396,8 +396,8 @@ The PL agent was stopped before it reported, so **the status of each item below 
     - Route the roughly 40 platform → context-internal imports through `public-api.ts`.
 12. **Revert forbidden or odd changes:**
     - Remove `"scripts/**/*.mjs"` from `apps/api/eslint.config.js` `ignores` (`eslint-rules/**` was already there) and delete Composer's throwaway codemods in `apps/api/scripts/*.mjs`.
-    - Make `test/support/__tests__/sql-statement-counter.spec.ts` an e2e spec without `context.skip`.
-    - Restore the no-body case in `test/support/fastify-request.ts` and its http-audit assertions.
+    - Make `e2e/support/__tests__/sql-statement-counter.spec.ts` an e2e spec without `context.skip`.
+    - Restore the no-body case in `e2e/support/fastify-request.ts` and its http-audit assertions.
     - Re-cover the deleted `BaseService` 404 write-path cases in catalog, and assert `deletedInTransaction`.
     - Derive the rate-limit numbers in `packages/docs-renderer/src/api-reference/endpoint-access.ts` from the policy source.
     - Regenerate `apps/mobile/uniwind-types.d.ts` (it was hand-edited).
@@ -408,7 +408,7 @@ The PL agent was stopped before it reported, so **the status of each item below 
     - Load the report fonts on each export, with no cache.
     - Build Swagger on each request.
     - Load Cedar WASM on first use, behind one in-flight promise.
-15. **Bundle budgets** (T45): after step 13, `pnpm turbo run build --filter=@workspace/web --filter=@workspace/admin --filter=@workspace/merchant --filter=@workspace/mobile && pnpm tools bundle:check --write-baseline`, commit `bundle-budgets.json`, and add a `pnpm tools bundle:check` CI step.
+15. **Bundle budgets** (T45): after step 13, `pnpm turbo run build --filter=@workspace/web --filter=@workspace/admin --filter=@workspace/merchant --filter=@workspace/mobile && pnpm tools bundle:check --write-baseline`, commit `budgets/bundle.json`, and add a `pnpm tools bundle:check` CI step.
 16. **T46:** re-run `pnpm tools dev:timing` (3× cold, 3× warm) and compare with §1.4. Record the targets and results in `rules/19`.
 17. **Docs:**
     - Real front matter on `ddd-cqrs-spec.md`, `ddd-cqrs-migration-plan.md` and `ddd-cqrs-migration-gaps.md` (all three currently carry ADR 001's).

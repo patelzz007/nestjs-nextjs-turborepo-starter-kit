@@ -140,7 +140,7 @@ function FilesPage({ pullRequest, page, isLast, threadsByPath, nowMs, onShowEdit
 	}
 	return (
 		<FileList files={pageFiles} threadsByPath={threadsByPath} nowMs={nowMs} onShowEdits={onShowEdits}>
-			{isLast && nextPage !== null ? <Button label="Load more files" variant="secondary" onPress={loadNext} testID="pull-request-files-more" /> : null}
+			{isLast && nextPage !== null ? <Button label="Load more files" variant="outline" onPress={loadNext} testID="pull-request-files-more" /> : null}
 		</FileList>
 	);
 }

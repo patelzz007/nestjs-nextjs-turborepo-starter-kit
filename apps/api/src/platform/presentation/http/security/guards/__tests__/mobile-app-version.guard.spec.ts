@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { AppVersionUnsupportedError } from "../../../../../application/errors/app-error";
 import { HTTP_STATUS_UPGRADE_REQUIRED } from "../../../../../application/errors/http-status";
 import { MobileAppVersionGuard } from "../mobile-app-version.guard";

@@ -1,4 +1,4 @@
-import type { EpochMs, SaleCurrency } from "@workspace/shared";
+import type { EpochMs, RewardRedemptionMethodSchema, SaleCurrency } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import {
@@ -11,9 +11,10 @@ import {
 } from "../errors/pos.errors";
 import { SaleCheckedOut, type PosEvent } from "../events/pos.events";
 import { redemptionInvalidReason, type RedeemableClaim } from "../policies/redemption-eligibility.policy";
+import type { z } from "zod";
 
 /** How a code reached the till: a scanned QR, or a backup code typed in. */
-export type RedemptionMethod = "SCAN" | "MANUAL";
+export type RedemptionMethod = z.output<typeof RewardRedemptionMethodSchema>;
 
 /** One presented code, resolved to its claim. */
 export interface PresentedClaim {

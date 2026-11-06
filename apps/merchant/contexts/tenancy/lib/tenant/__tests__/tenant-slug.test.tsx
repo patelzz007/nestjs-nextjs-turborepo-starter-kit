@@ -7,8 +7,8 @@ import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { useTenantSlug } from "@/contexts/tenancy/lib/tenant/use-tenant-slug";
 import { useSwitchTenant } from "@/contexts/tenancy/lib/tenant/use-switch-tenant";
 import { TENANT_ROUTES, tenantRoutes, ROUTES } from "@/lib/routes";
-import { TEST_ORG_SLUG } from "@/test/authorization";
-import { STORE_A } from "@/test/terminals";
+import { TEST_ORG_SLUG } from "@/testing/authorization";
+import { STORE_A } from "@/testing/terminals";
 
 type RouteParams = Record<string, string | string[] | undefined>;
 

@@ -8,6 +8,7 @@ import { BreadcrumbTrail as SharedBreadcrumbTrail } from "@workspace/ui/componen
 import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
 
 import { useWebBreadcrumb } from "@/components/breadcrumb-provider";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /**
  * The web app's breadcrumb trail. Reads the trail (and its status) from the
@@ -19,7 +20,7 @@ export function BreadcrumbTrail(): React.JSX.Element | null {
 	const { status } = useWebBreadcrumb();
 
 	const renderLink = React.useCallback((item: BreadcrumbItem): React.ReactElement => {
-		return <Link href={item.href ?? "#"} />;
+		return <Link href={appRoute(item.href ?? "#")} />;
 	}, []);
 
 	return (

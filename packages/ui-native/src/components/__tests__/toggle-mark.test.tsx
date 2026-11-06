@@ -1,10 +1,23 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import { Text } from "react-native";
+import type * as Reanimated from "react-native-reanimated";
 
 import { TOGGLE_MARK_MS } from "../../lib/motion";
 import { Checkbox } from "../checkbox";
 import { ToggleMark, ToggleMarkScope } from "../toggle-mark";
+
+let mockReducedMotion = false;
+
+jest.mock("react-native-reanimated", () => ({
+	...jest.requireActual<typeof Reanimated>("react-native-reanimated"),
+	__esModule: true,
+	useReducedMotion: (): boolean => mockReducedMotion,
+}));
+
+afterEach(() => {
+	mockReducedMotion = false;
+});
 
 describe("ToggleMark", () => {
 	it("draws what it marks, inside the scope that keeps a first draw still", async () => {
@@ -15,6 +28,26 @@ describe("ToggleMark", () => {
 				</ToggleMark>
 			</ToggleMarkScope>,
 		);
+		expect(screen.getByText("tick")).toBeOnTheScreen();
+	});
+
+	it("pops in with an entrance when motion is on", async () => {
+		await render(
+			<ToggleMark>
+				<Text>tick</Text>
+			</ToggleMark>,
+		);
+		expect(screen.container.queryAll((element) => element.props.entering !== undefined).length).toBeGreaterThan(0);
+	});
+
+	it("appears at once under Reduce Motion, with no entrance that could leave it invisible", async () => {
+		mockReducedMotion = true;
+		await render(
+			<ToggleMark>
+				<Text>tick</Text>
+			</ToggleMark>,
+		);
+		expect(screen.container.queryAll((element) => element.props.entering !== undefined)).toHaveLength(0);
 		expect(screen.getByText("tick")).toBeOnTheScreen();
 	});
 

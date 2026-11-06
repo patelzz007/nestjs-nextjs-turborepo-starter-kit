@@ -8,7 +8,7 @@ import { useCanAccessWebPath, WebRouteAccessGuard } from "@/contexts/identity/co
 import { WebSessionTestProvider, type WebSessionState } from "@/contexts/identity/components/web-authorization-provider";
 import type { WebRouteAccessRule } from "@/lib/navigation/route-access";
 import { ROUTES } from "@/lib/routes";
-import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
+import { GUEST_SESSION_STATE, signedInSession } from "@/testing/session";
 
 const { pathnameMock } = vi.hoisted(() => ({
 	pathnameMock: vi.fn<() => string>(),

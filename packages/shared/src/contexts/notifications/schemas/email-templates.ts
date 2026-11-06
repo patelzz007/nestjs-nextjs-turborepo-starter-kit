@@ -183,6 +183,10 @@ export const NotificationEmailPropsSchema = BaseEmailPropsSchema.extend({
 	paragraphs: z.array(z.string().min(1).max(4_000)).min(1).max(20),
 	actionLabel: z.string().min(1).max(60).optional(),
 	actionUrl: z.url().optional(),
+	/** The notification's file: its name, its address, and a smaller copy to show in the email (a picture only). */
+	attachmentName: z.string().min(1).max(255).optional(),
+	attachmentUrl: z.url().optional(),
+	attachmentPreviewUrl: z.url().optional(),
 	/** The web unsubscribe page (the footer link); absent for mandatory (security) emails. */
 	unsubscribeUrl: z.url().optional(),
 	/** The RFC 8058 one-click endpoint (the `List-Unsubscribe` header); set together with `unsubscribeUrl`. */

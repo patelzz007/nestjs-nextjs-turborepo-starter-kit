@@ -1054,7 +1054,7 @@ Copy into each feature's module README or PR description:
 - [ ] 4. Playwright admin catalog test
 - [ ] 5. Remove merchant reward e2e or placeholder-only smoke
 - [ ] 6. Verify turbo pipeline cache keys after package removals
-- [ ] 7. Confirm `ci-local-plan.mjs` still matches `ci.yml`
+- [ ] 7. Confirm `src/ci-local/ci-local-plan.ts` still matches `ci.yml`
 - [ ] 8. Migration history check if baseline changes
 - [ ] 9. RLS manifest job green on PR
 - [ ] 10. Full `pnpm ci:local` before template tag

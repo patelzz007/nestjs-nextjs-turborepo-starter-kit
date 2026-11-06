@@ -1,7 +1,7 @@
 import type { TenantJobContext } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { TenantJobContextService, TenantJobSigningNotConfiguredError } from "../tenant-job-context.service";
 
 /** TEST-ONLY job signing secret (≥ 32 characters, never a real value). */

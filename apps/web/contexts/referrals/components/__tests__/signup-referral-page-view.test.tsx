@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { REFEREES_LOADING_LABELS, REFERRAL_CODE_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { SignupReferralPageView } from "@/contexts/referrals/components/signup-referral-page-view";
-import { countSlots, expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { countSlots, expectSingleLoadingStatus } from "@/testing/skeleton";
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 const EXPIRES_AT = 1_800_000_000_000;

@@ -29,6 +29,7 @@ import { KanbanBlockedBadge, KanbanLevelChip, KanbanTypeIcon } from "./kanban-ta
 import { KanbanTaskComments } from "./kanban-task-comments";
 import { KanbanTaskProperties, KanbanWatchButton } from "./kanban-task-overview";
 import { KanbanActivitySection, KanbanChecklistSection, KanbanChildrenSection, KanbanLinksSection } from "./kanban-task-sections";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const DELETE_ERROR_MESSAGES: MutationErrorMessages = {
 	KANBAN_ITEM_HAS_CHILDREN: "Delete or move its children first.",
@@ -67,7 +68,7 @@ function HierarchyTrail({ task }: { readonly task: KanbanTaskDetail }): React.JS
 		<nav aria-label="Hierarchy" className="min-w-0">
 			<ol className="flex min-w-0 items-center gap-1 overflow-hidden text-sm whitespace-nowrap text-muted-foreground">
 				<li className="shrink-0">
-					<Link href={kanbanBoardHref(task.column.board)} className="rounded-sm px-1 py-0.5 transition-colors hover:bg-muted hover:text-foreground">
+					<Link href={appRoute(kanbanBoardHref(task.column.board))} className="rounded-sm px-1 py-0.5 transition-colors hover:bg-muted hover:text-foreground">
 						{KANBAN_BOARD_DISPLAY[task.column.board].label} board
 					</Link>
 				</li>
@@ -215,7 +216,7 @@ export function KanbanTaskDetailView({ taskId, initialTask }: KanbanTaskDetailVi
 		onSuccess: async () => {
 			await invalidateKanban(queryClient, [task?.parentId ?? null]);
 			toastMessage.success({ title: "Item deleted" });
-			router.push(task === undefined ? ROUTES.kanban.board : kanbanBoardHref(task.column.board));
+			router.push(appRoute(task === undefined ? ROUTES.kanban.board : kanbanBoardHref(task.column.board)));
 		},
 		onError: (error) => {
 			toastMutationError("Could not delete the item", error, DELETE_ERROR_MESSAGES);

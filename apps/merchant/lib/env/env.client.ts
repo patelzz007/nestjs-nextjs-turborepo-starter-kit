@@ -11,16 +11,15 @@
 //
 // Import this module anywhere (server or client). Everything in it is public.
 
-import { parseEnvOrThrow } from "@workspace/shared";
-import type { z } from "zod";
+import { parseAppEnv } from "@workspace/client/lib/env/parse-app-env";
 
 import { MERCHANT_ENV_SCOPE, MerchantClientEnvSchema, type MerchantClientEnv } from "./env.schema";
 
-export const clientEnv: Readonly<MerchantClientEnv> = parseEnvOrThrow(
+export const clientEnv: Readonly<MerchantClientEnv> = parseAppEnv(
 	MerchantClientEnvSchema,
 	{
 		NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
 		NEXT_PUBLIC_MERCHANT_URL: process.env.NEXT_PUBLIC_MERCHANT_URL,
-	} satisfies Record<keyof z.input<typeof MerchantClientEnvSchema>, string | undefined>,
+	},
 	MERCHANT_ENV_SCOPE.client,
 );

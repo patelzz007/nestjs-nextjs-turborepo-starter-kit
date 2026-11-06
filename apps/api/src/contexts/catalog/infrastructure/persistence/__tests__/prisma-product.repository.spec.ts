@@ -5,7 +5,7 @@ import { UpdateProductSchema } from "@workspace/shared";
 import { ConcurrentModificationError } from "../../../../../platform/infrastructure/persistence/persistence.errors";
 import { rootRepositoryDb } from "../../../../../platform/infrastructure/persistence/types";
 import { PrismaService } from "../../../../../prisma/prisma.service";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { PrismaProductRepository } from "../prisma-product.repository";
 
 const PRODUCT_ID = "0b6f8f5e-6d3b-4a59-9d55-4c3b1f2a7e10";

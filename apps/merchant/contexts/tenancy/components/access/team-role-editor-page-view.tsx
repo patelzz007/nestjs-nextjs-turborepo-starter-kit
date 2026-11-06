@@ -19,6 +19,7 @@ import { toastMessage } from "@workspace/ui/components/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface TeamRoleEditorPageViewProps {
 	readonly tenantSlug: string;
@@ -65,7 +66,7 @@ function ExistingRoleEditor({ tenantSlug, roleId }: { readonly tenantSlug: strin
 			<div className="space-y-6">
 				<SettingsSectionHeader title="Edit role" description="The Owner role always holds every permission." />
 				<MerchantAccessDenied title="The Owner role can't be changed" description="It always holds every permission, so the business can never lock itself out." />
-				<Link href={backHref} className={buttonVariants({ variant: "outline" })}>
+				<Link href={appRoute(backHref)} className={buttonVariants({ variant: "outline" })}>
 					Back to the role
 				</Link>
 			</div>
@@ -93,7 +94,7 @@ function RoleEditorForm({ tenantSlug, existing: role }: RoleEditorFormProps): Re
 		async (saved: TenantRoleResponse): Promise<void> => {
 			toastMessage.success({ title: role === null ? "Role created" : "Role saved" });
 			await queryClient.invalidateQueries({ queryKey: apiRouter.tenantAccess.roles.scopeKey({ tenantSlug }) });
-			router.push(routes.detail(saved.id));
+			router.push(appRoute(routes.detail(saved.id)));
 		},
 		[queryClient, role, router, routes, tenantSlug],
 	);
@@ -154,7 +155,7 @@ function RoleEditorForm({ tenantSlug, existing: role }: RoleEditorFormProps): Re
 					<Button type="submit" disabled={isSaving}>
 						{isSaving ? "Saving…" : role === null ? "Create role" : "Save role"}
 					</Button>
-					<Link href={role === null ? routes.list : routes.detail(role.id)} className={buttonVariants({ variant: "ghost" })}>
+					<Link href={appRoute(role === null ? routes.list : routes.detail(role.id))} className={buttonVariants({ variant: "ghost" })}>
 						Cancel
 					</Link>
 				</div>

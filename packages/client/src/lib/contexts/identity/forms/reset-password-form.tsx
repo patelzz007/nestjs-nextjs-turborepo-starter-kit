@@ -14,6 +14,7 @@ import { useAuth } from "../index";
 import { passwordStrength } from "../password";
 import { catchCaught } from "../../../caught";
 import { ResetPasswordFormSkeleton } from "./reset-password-form-skeleton";
+import { appRoute } from "../../../navigation/app-route";
 
 export interface ResetPasswordFormProps {
 	readonly token: string;
@@ -87,7 +88,7 @@ export function ResetPasswordForm({ token, loginHref = APP_LINKS.auth.login, for
 
 			void catchCaught(
 				mutation.mutateAsync(parsed.data).then((): void => {
-					router.push(loginHref);
+					router.push(appRoute(loginHref));
 				}),
 				(err): void => {
 					setError(resolveAuthErrorMessage(err));
@@ -107,7 +108,7 @@ export function ResetPasswordForm({ token, loginHref = APP_LINKS.auth.login, for
 		return (
 			<div className="space-y-4 text-center">
 				<p className="text-sm text-destructive">This password reset link is invalid or has expired.</p>
-				<Link href={forgotPasswordHref} className="text-sm font-medium text-primary hover:underline">
+				<Link href={appRoute(forgotPasswordHref)} className="text-sm font-medium text-primary hover:underline">
 					Request a new reset link
 				</Link>
 			</div>
@@ -126,7 +127,7 @@ export function ResetPasswordForm({ token, loginHref = APP_LINKS.auth.login, for
 				<PasswordInput id="confirm-password" autoComplete="new-password" value={confirmPassword} onChange={handleConfirmPasswordChange} required className="h-11" />
 			</div>
 			<p className="text-center text-sm text-muted-foreground">
-				<Link href={loginHref} className="font-medium text-primary hover:underline">
+				<Link href={appRoute(loginHref)} className="font-medium text-primary hover:underline">
 					Back to sign in
 				</Link>
 			</p>

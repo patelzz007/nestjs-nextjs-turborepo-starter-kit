@@ -1,11 +1,12 @@
 import { EmailRenderContextSchema } from "@workspace/shared";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig, type TestEnv } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig, type TestEnv } from "../../../../../../e2e/support/test-api-env";
 import { RequestContextService } from "../../../../../platform/infrastructure/context/request-context";
 import { LogService } from "../../../../../platform/infrastructure/logging/logs.service";
 import { EmailDeliveryFailure } from "../../../application/ports/email-delivery.port";
 import { AdminAlertEmailTemplate } from "../../../domain/templates/admin-alert-email.template";
+import { NotificationEmailTemplate } from "../../../domain/templates/notification-email.template";
 import { EmailDeliveryAdapter } from "../email-delivery.adapter";
 import { EmailTransport, EmailTransportError, type EmailDeliveryReceipt, type OutboundEmail } from "../transports/email-transport";
 
@@ -36,6 +37,52 @@ function adapter(transport: ScriptedTransport, env: TestEnv = {}): EmailDelivery
 }
 
 const template = (): AdminAlertEmailTemplate => new AdminAlertEmailTemplate({ to: "ops@example.com", title: "Alert", message: "Body" });
+
+const withFile = (): NotificationEmailTemplate =>
+	new NotificationEmailTemplate({
+		to: "jamie@example.com",
+		subject: "Your statement",
+		eyebrow: "Statement",
+		heading: "Your statement",
+		paragraphs: ["It is attached."],
+		attachmentName: "statement.pdf",
+		attachmentUrl: "https://cdn.example.com/statement.pdf",
+	});
+
+describe("EmailDeliveryAdapter attachments", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("sends the file itself inside the email, not only a link to it", async () => {
+		vi.stubGlobal("fetch", (): Promise<Response> => Promise.resolve(new Response("%PDF-demo", { headers: { "content-type": "application/pdf" } })));
+		const transport = new ScriptedTransport([]);
+
+		await adapter(transport).deliver(EMAIL_LOG_ID, withFile());
+
+		expect(transport.sent.at(0)?.attachments).toEqual([
+			{ filename: "statement.pdf", contentType: "application/pdf", contentBase64: Buffer.from("%PDF-demo").toString("base64") },
+		]);
+	});
+
+	it("still sends the email, with its link, when the file cannot be fetched", async () => {
+		vi.stubGlobal("fetch", (): Promise<Response> => Promise.resolve(new Response("gone", { status: 404 })));
+		const transport = new ScriptedTransport([]);
+
+		await adapter(transport).deliver(EMAIL_LOG_ID, withFile());
+
+		expect(transport.sent.at(0)?.attachments).toEqual([]);
+		expect(transport.sent.at(0)?.html).toContain("https://cdn.example.com/statement.pdf");
+	});
+
+	it("attaches nothing to an email with no file", async () => {
+		const transport = new ScriptedTransport([]);
+
+		await adapter(transport).deliver(EMAIL_LOG_ID, template());
+
+		expect(transport.sent.at(0)?.attachments).toEqual([]);
+	});
+});
 
 describe("EmailDeliveryAdapter", () => {
 	it("makes the provider call idempotent by the email log id, with the rendered template", async () => {

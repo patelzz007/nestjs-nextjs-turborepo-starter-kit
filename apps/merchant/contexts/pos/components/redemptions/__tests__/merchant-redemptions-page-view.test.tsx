@@ -7,14 +7,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MerchantRedemptionsPageView } from "@/contexts/pos/components/redemptions/merchant-redemptions-page-view";
 import { MERCHANT_REDEMPTIONS_PAGE_SIZE } from "@/contexts/pos/lib/redemptions/redemptions-page";
 import type { DayWindow } from "@/contexts/pos/lib/redemptions/today-window";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
-import { STORE_A, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/testing/tenant-context";
+import { STORE_A, TERMINAL_FIXTURE_NOW } from "@/testing/terminals";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { testEnvelope } from "@/test/envelope";
+import { testEnvelope } from "@/testing/envelope";
 import { ApiPaginatedMetaSchema, MerchantRedemptionListItemSchema, type ApiPaginatedMeta, type Envelope, type MerchantRedemptionListItem } from "@workspace/shared";
 import { MERCHANT_REDEMPTIONS_LOADING_LABELS, REDEMPTION_SKELETON_ROWS, REDEMPTION_STAT_CARDS } from "@/components/loading/merchant-page-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 type RedemptionsInput = Parameters<typeof apiRouter.tenants.redemptions.queryKey>[0];
 

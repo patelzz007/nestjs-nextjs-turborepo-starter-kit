@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** Shown when a save fails without a message the merchant can act on. */
 const SAVE_FAILED = "Check your connection and try again.";
@@ -47,7 +48,7 @@ function useAfterBroadcastSave(tenantSlug: string): (response: { readonly data: 
 			void queryClient.invalidateQueries({ queryKey: defs.broadcasts.scopeKey({ tenantSlug }) });
 			void queryClient.invalidateQueries({ queryKey: defs.broadcastAllowance.scopeKey({ tenantSlug }) });
 			queryClient.setQueryData(defs.broadcast.queryKey({ tenantSlug, broadcastId: response.data.id }), response);
-			router.push(tenantRoutes(tenantSlug).broadcasts.detail(response.data.id), { scroll: false });
+			router.push(appRoute(tenantRoutes(tenantSlug).broadcasts.detail(response.data.id)), { scroll: false });
 		},
 		[queryClient, router, tenantSlug],
 	);
@@ -147,7 +148,7 @@ function MerchantNewBroadcastContent({ tenantSlug }: MerchantNewBroadcastPageVie
 				savingIntent={savingIntent}
 				onSave={save}
 				cancel={
-					<Link href={listHref} className={cn(buttonVariants({ variant: "ghost" }))}>
+					<Link href={appRoute(listHref)} className={cn(buttonVariants({ variant: "ghost" }))}>
 						Cancel
 					</Link>
 				}
@@ -262,7 +263,7 @@ function MerchantEditBroadcastForm({ tenantSlug, broadcast, timeZone, allowance 
 				savingIntent={savingIntent}
 				onSave={save}
 				cancel={
-					<Link href={detailHref} className={cn(buttonVariants({ variant: "ghost" }))}>
+					<Link href={appRoute(detailHref)} className={cn(buttonVariants({ variant: "ghost" }))}>
 						Cancel
 					</Link>
 				}
@@ -286,7 +287,7 @@ export function BroadcastUnavailable({ tenantSlug, message, broadcastId }: Broad
 			<p role="alert" className="max-w-prose text-sm text-muted-foreground">
 				{message}
 			</p>
-			<Link href={broadcastId === undefined ? routes.list : routes.detail(broadcastId)} className={cn(buttonVariants({ variant: "outline" }))}>
+			<Link href={appRoute(broadcastId === undefined ? routes.list : routes.detail(broadcastId))} className={cn(buttonVariants({ variant: "outline" }))}>
 				{broadcastId === undefined ? "All broadcasts" : "View broadcast"}
 			</Link>
 		</Card>

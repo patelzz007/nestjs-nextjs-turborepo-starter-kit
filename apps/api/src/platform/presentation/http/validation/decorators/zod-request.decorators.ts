@@ -23,7 +23,7 @@
 //   public detail(@ZodParam("id", UuidParamSchema) id: string) { … }
 //
 // Every `@Body` / `@Query` / `@Param` in a controller must use one of these —
-// `test/openapi-document.e2e-spec.ts` fails for any route input that is not
+// `e2e/openapi-document.e2e-spec.ts` fails for any route input that is not
 // both validated and documented.
 
 import { Body, Param, Query } from "@nestjs/common";

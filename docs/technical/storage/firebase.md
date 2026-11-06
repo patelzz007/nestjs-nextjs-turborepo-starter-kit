@@ -27,7 +27,9 @@ credentials or the client SDK. Read the [storage overview](./overview.md) first.
 ## Steps
 
 1. **Create the project and bucket.** Firebase console → add project → **Storage** → get started.
-   Note the bucket name (`<project-id>.appspot.com` or `<project-id>.firebasestorage.app`).
+   Storage needs the pay-as-you-go **Blaze** plan, and the console asks you to upgrade first (Blaze
+   keeps a free usage level; see [Firebase's billing FAQ](https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024)).
+   Note the bucket name: `<project-id>.firebasestorage.app`, or `<project-id>.appspot.com` on an older project.
 2. **Create a service account** (GCP console → IAM → Service accounts) and grant it, on that bucket,
    **Storage Object Admin** (`roles/storage.objectAdmin`) — create, read, update metadata, delete
    objects. To sign URLs without a JSON key (on Cloud Run/GKE), also grant it
@@ -59,7 +61,7 @@ credentials or the client SDK. Read the [storage overview](./overview.md) first.
    # apps/api/.env
    STORAGE_PROVIDER=firebase
    FIREBASE_PROJECT_ID=<project-id>
-   FIREBASE_STORAGE_BUCKET=<project-id>.appspot.com     # also the private container
+   FIREBASE_STORAGE_BUCKET=<project-id>.firebasestorage.app   # also the private container
    GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/key.json
    MALWARE_SCANNER=none
    ```

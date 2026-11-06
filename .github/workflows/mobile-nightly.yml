@@ -2,7 +2,7 @@ name: Mobile nightly
 
 # Enhancements 3.7 and 6.6: every night (and on demand), a release build of the mobile app on an Android
 # emulator, against a freshly seeded API on the runner: the Maestro flows (apps/mobile/.maestro) drive it the
-# way a person would, and its cold start is measured (packages/tooling/scripts/mobile-cold-start.mjs).
+# way a person would, and its cold start is measured (packages/tooling/src/starter/mobile-cold-start/cli.ts).
 # The emulator reaches the runner's API at 10.0.2.2 (Android's address for its host), over plain http on that
 # private address only (EXPO_PUBLIC_ALLOW_LAN_HTTP_API, apps/mobile/src/lib/env.ts).
 
@@ -93,9 +93,9 @@ jobs:
 
       - name: Start the API (background, log kept)
         run: |
-          mkdir -p .ci-logs
-          nohup pnpm --filter @workspace/api start > .ci-logs/api.log 2>&1 &
-          node packages/tooling/scripts/wait-for-http.mjs --timeout-ms 120000 http://localhost:8080/health/ready
+          mkdir -p .artifacts/ci
+          nohup pnpm --filter @workspace/api start > .artifacts/ci/api.log 2>&1 &
+          node packages/tooling/src/wait-for-http/cli.ts --timeout-ms 120000 http://localhost:8080/health/ready
 
       - name: Set up Java (the Android build)
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -131,8 +131,8 @@ jobs:
           working-directory: apps/mobile
           script: |
             adb install -r android/app/build/outputs/apk/release/app-release.apk
-            pnpm e2e:device --format junit --output ../../.ci-logs/maestro-report.xml
-            pnpm cold-start | tee ../../.ci-logs/cold-start.txt
+            pnpm e2e:device --format junit --output ../../.artifacts/ci/maestro-report.xml
+            pnpm cold-start | tee ../../.artifacts/ci/cold-start.txt
 
       - name: Upload the Maestro report, cold start and API log
         if: always()
@@ -140,7 +140,7 @@ jobs:
         with:
           name: mobile-nightly-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            .ci-logs/
+            .artifacts/ci/
             ~/.maestro/tests/
           if-no-files-found: warn
           retention-days: 14

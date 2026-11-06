@@ -161,7 +161,7 @@ services:
   # your local API. `pnpm load-runner` starts it (k6 is inside the image: nothing to install).
   load-runner:
     profiles: ["load"]
-    build: { context: ., dockerfile: deploy/docker/Dockerfile, target: load-runner }
+    build: { context: ., dockerfile: infra/docker/Dockerfile, target: load-runner }
     container_name: starter-kit-load-runner
     restart: unless-stopped
     environment:
@@ -205,7 +205,7 @@ services:
       REDIS_PASSWORD: ""
       REDIS_USE_TLS: "false"
       BULL_PREFIX: bull
-      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,rewards.referral-credit-notify,storage.cdn-invalidate,transaction-log.write,operations.backup,operations.load-test,notifications.fan-out,notifications.push,notifications.sms,notifications.maintenance,broadcasts.send
+      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,claims.expire-holds,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,rewards.referral-credit-notify,storage.cdn-invalidate,transaction-log.write,operations.backup,operations.load-test,notifications.fan-out,notifications.push,notifications.sms,notifications.maintenance,broadcasts.send
     networks:
       - infra
 

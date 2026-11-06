@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AccessTokenPayload } from "@workspace/shared";
 
-import { accessToken, createHttpContext, testRequest, type TestHttpRequest } from "../../../../../../test/support/http-execution-context";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { accessToken, createHttpContext, testRequest, type TestHttpRequest } from "../../../../../../e2e/support/http-execution-context";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { DependencyUnavailableError, ValidationError } from "../../../../../platform/application/errors/app-error";
 import type { AccessTokenStatePort, ImpersonationTokenCheckPort } from "../../../../../platform/application/ports/access-token.port";
 import { RequestContextService, type RequestPrincipal } from "../../../../../platform/infrastructure/context/request-context";

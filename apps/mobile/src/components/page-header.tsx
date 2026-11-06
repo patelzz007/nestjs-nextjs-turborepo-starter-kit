@@ -21,7 +21,9 @@
 // header. Presentational and controlled: the caller gives the title, subtitle, which control leads
 // and what each control does. A new `titleKey` brings the new title in from `titleDrift` points away
 // while the old one leaves the other way (the page transition's timing), and the leading control
-// cross-fades when it changes. All of it follows the OS "Reduce Motion" setting.
+// cross-fades when it changes. Under the OS "Reduce Motion" setting none of it runs and the new page's
+// header simply appears: an entrance that finishes the moment it starts can strand the view at its
+// starting opacity, which left the title, subtitle and back button invisible.
 
 import ArrowLeftIcon from "lucide-react-native/icons/arrow-left";
 import BellIcon from "lucide-react-native/icons/bell";
@@ -29,7 +31,17 @@ import SearchIcon from "lucide-react-native/icons/search";
 import MenuIcon from "lucide-react-native/icons/menu";
 import * as React from "react";
 import { Pressable, Text, View, type LayoutChangeEvent } from "react-native";
-import Animated, { Easing, FadeIn, FadeOut, ReduceMotion, useAnimatedStyle, withTiming, type LayoutAnimation, type SharedValue } from "react-native-reanimated";
+import Animated, {
+	Easing,
+	FadeIn,
+	FadeOut,
+	ReduceMotion,
+	useAnimatedStyle,
+	useReducedMotion,
+	withTiming,
+	type LayoutAnimation,
+	type SharedValue,
+} from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
 import { CountBadge } from "@workspace/ui-native/components/count-badge";
@@ -203,7 +215,9 @@ export function PageHeader({
 		opacity: VISIBLE - SUBTITLE_FADE(progress.get()),
 		transform: [{ translateY: progress.get() * collapseDistance.get() }],
 	}));
-	const animates = slots.drift !== AT_REST;
+	const reduceMotion = useReducedMotion();
+	const animates = slots.drift !== AT_REST && !reduceMotion;
+	const controlEntering = reduceMotion ? {} : { entering: CONTROL_IN };
 
 	return (
 		<View pointerEvents="box-none" onLayout={reportHeight} className="absolute inset-x-0 top-0" style={topInsetStyle} testID={testID}>
@@ -219,11 +233,11 @@ export function PageHeader({
 				<View pointerEvents="box-none" className="h-14 flex-row items-center gap-2" testID={testID === undefined ? undefined : `${testID}-controls`}>
 					<View className="size-11">
 						{leading === "menu" ? (
-							<StyledAnimatedView key="menu" entering={CONTROL_IN} exiting={CONTROL_OUT} className="absolute inset-0">
+							<StyledAnimatedView key="menu" {...controlEntering} exiting={CONTROL_OUT} className="absolute inset-0">
 								<HeaderIconButton icon={MenuIcon} accessibilityLabel="Open menu" onPress={onMenu} testID={testID === undefined ? undefined : `${testID}-menu`} />
 							</StyledAnimatedView>
 						) : (
-							<StyledAnimatedView key="back" entering={CONTROL_IN} exiting={CONTROL_OUT} className="absolute inset-0">
+							<StyledAnimatedView key="back" {...controlEntering} exiting={CONTROL_OUT} className="absolute inset-0">
 								<HeaderIconButton icon={ArrowLeftIcon} accessibilityLabel="Back" onPress={onBack} testID={testID === undefined ? undefined : `${testID}-back`} />
 							</StyledAnimatedView>
 						)}
@@ -231,7 +245,7 @@ export function PageHeader({
 					{/* As wide as the second right-hand button, so the title is centred on the screen. */}
 					<View className="size-11" />
 					<View pointerEvents="none" className="h-11 flex-1 justify-center overflow-hidden">
-						{slots.leaving === null ? null : (
+						{slots.leaving === null || reduceMotion ? null : (
 							<StyledAnimatedView
 								key={`leaving:${slots.leaving.key}:${slots.current.key}`}
 								entering={titleLeaving(slots.drift)}
@@ -281,6 +295,9 @@ export function PageHeader({
 	);
 }
 
+/** The longest title's floor: a title shrinks to fit its line, down to half the 24 pt size, instead of being cut off. */
+const TITLE_MINIMUM_FONT_SCALE = 0.5;
+
 interface TitleProps {
 	readonly title: string;
 	readonly testID?: string | undefined;
@@ -291,6 +308,8 @@ function Title({ title, testID }: TitleProps): React.JSX.Element {
 		<Text
 			accessibilityRole="header"
 			numberOfLines={1}
+			adjustsFontSizeToFit
+			minimumFontScale={TITLE_MINIMUM_FONT_SCALE}
 			className="font-sans-bold text-center text-2xl tracking-tight text-foreground"
 			testID={testID === undefined ? undefined : `${testID}-title`}>
 			{title}

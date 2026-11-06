@@ -43,10 +43,10 @@ export function BackupCodes({
 			</View>
 			<View className="flex-row gap-2">
 				<View className="flex-1">
-					<Button label="Copy all" variant="secondary" onPress={onCopy} />
+					<Button label="Copy all" variant="outline" onPress={onCopy} />
 				</View>
 				<View className="flex-1">
-					<Button label="Share" variant="secondary" onPress={onShare} />
+					<Button label="Share" variant="outline" onPress={onShare} />
 				</View>
 			</View>
 			<Checkbox label="I saved my backup codes" checked={confirmed} onChange={onConfirmedChange} />

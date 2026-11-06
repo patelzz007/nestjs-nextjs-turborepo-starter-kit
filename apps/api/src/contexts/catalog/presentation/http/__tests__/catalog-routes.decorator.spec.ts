@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { PLATFORM_OPERATION_KEY } from "../../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { ProductController } from "../product.controller";
 import { SampleCategoryController } from "../sample-category.controller";
-import { handlerOf } from "../../../../../../test/support/route-metadata";
+import { handlerOf } from "../../../../../../e2e/support/route-metadata";
 
 describe("catalog routes", () => {
 	const reflector = new Reflector();

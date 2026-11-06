@@ -14,7 +14,10 @@ export const buttonVariants = cva("flex-row items-center justify-center gap-2 ac
 	variants: {
 		variant: {
 			primary: "bg-primary",
-			secondary: "bg-secondary",
+			// Every solid button is the same (owner, 2026-11-06): white in the dark themes, slate in light.
+			secondary: "bg-primary",
+			// The lesser action beside a solid one, or a quiet utility: Cancel, Load more, Retry.
+			outline: "border border-input bg-transparent",
 			destructive: "bg-destructive",
 			ghost: "bg-transparent",
 		},
@@ -38,7 +41,8 @@ export const buttonLabelVariants = cva("shrink font-button", {
 	variants: {
 		variant: {
 			primary: "text-primary-foreground",
-			secondary: "text-foreground",
+			secondary: "text-primary-foreground",
+			outline: "text-foreground",
 			destructive: "text-status-foreground",
 			ghost: "text-link",
 		},
@@ -50,7 +54,8 @@ export const buttonLabelVariants = cva("shrink font-button", {
 /** The spinner's and icon's colour per variant (Uniwind `accent-*` → the native `color` prop). */
 const CONTENT_COLOR: Readonly<Record<ButtonVariant, string>> = {
 	primary: "accent-primary-foreground",
-	secondary: "accent-foreground",
+	secondary: "accent-primary-foreground",
+	outline: "accent-foreground",
 	destructive: "accent-status-foreground",
 	ghost: "accent-primary",
 };

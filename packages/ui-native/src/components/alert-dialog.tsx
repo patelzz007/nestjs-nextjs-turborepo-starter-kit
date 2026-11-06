@@ -17,7 +17,7 @@ import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle, typ
 
 export const alertDialogVariants = cva("", {
 	variants: {
-		/** `destructive`: confirming cannot be undone — the confirm button and the card's edge carry the destructive tone. */
+		/** `destructive`: confirming cannot be undone — the confirm button carries the destructive tone. */
 		variant: { default: "", destructive: "" },
 		size: { sm: "", md: "", lg: "" },
 		state: { default: "", loading: "", disabled: "", error: "" },
@@ -103,7 +103,7 @@ export const AlertDialog = React.memo(
 				{error === null ? null : <Alert tone="error" message={error} />}
 				<DialogFooter>
 					<Button label={confirmLabel} variant={resolvedVariant === "destructive" ? "destructive" : "primary"} loading={pending} onPress={onConfirm} />
-					<Button label={cancelLabel} variant="secondary" disabled={pending} onPress={onCancel} />
+					<Button label={cancelLabel} variant="outline" disabled={pending} onPress={onCancel} />
 				</DialogFooter>
 			</Dialog>
 		);

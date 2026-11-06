@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientTestProviders } from "../../../../../testing/client-test-providers";
 import { flushUrlUpdates } from "../../../../../testing/flush-url-updates";
 
-import { envelopeFixture, META_FIXTURE } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, META_FIXTURE } from "../../../../../testing/auth-fixtures";
 import { apiRouter } from "../../../../api/endpoints";
 import { ApiError } from "../../../../api/use-api";
 import { SIGNED_IN_DEVICES_LABELS, type SignedInDevicesLabels } from "../signed-in-devices-labels";

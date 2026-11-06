@@ -3,7 +3,7 @@ import { fastify, type FastifyInstance } from "fastify";
 import fastifyCookie from "@fastify/cookie";
 import { ApiErrorResponseSchema, apiDocsPath, type AccessTokenPayload } from "@workspace/shared";
 
-import { accessToken } from "../../../../../test/support/http-execution-context";
+import { accessToken } from "../../../../../e2e/support/http-execution-context";
 import { ApiDocsAccessGate, isApiDocsPath, isApiDocsRequest, type ApiDocsViewerVerifier } from "../api-docs-access.gate";
 
 /** A verifier whose token store knows two tokens: a SuperAdmin's and a regular admin's. */
@@ -76,7 +76,7 @@ describe("ApiDocsAccessGate (production)", () => {
 		await app.close();
 	});
 
-	// SECURITY-AUDIT-2026-10-25 finding 1: the router percent-decodes the path, so the gate must too.
+	// docs/history/SECURITY-AUDIT-2026-10-25 finding 1: the router percent-decodes the path, so the gate must too.
 	it("gates percent-encoded, double-dash-encoded and fragment-bearing spellings of the docs routes", async () => {
 		const app = await appWithGate();
 		const docs = apiDocsPath();

@@ -26,7 +26,7 @@ belongs in detail is [`rules/01-repository-architecture.md`](../../rules/01-repo
 | `apps/merchant` | `@workspace/merchant` | Merchant portal (`/tenants/[orgSlug]/…`) | 3003 |
 | `apps/docs` | `@workspace/docs` | This documentation site (TanStack Start, every page pre-rendered) | 3002 |
 | `apps/analytics-consumer` | `@workspace/analytics-consumer` | Kafka consumer → inbox (dedupe) → `AnalyticsEvent` | — |
-| `apps/aws-infrastructure` | `@workspace/aws-infrastructure` | CDK stack: S3 buckets, CloudFront, API upload user ([AWS S3](./storage/aws-s3.md)) | — |
+| `infra/aws` | `@workspace/aws-infrastructure` | CDK stack: S3 buckets, CloudFront, API upload user ([AWS S3](./storage/aws-s3.md)) | — |
 | `packages/shared` | `@workspace/shared` | Zod schemas, `apiContract`, `apiRoutes`, permissions — **the contract** | — |
 | `packages/client` | `@workspace/client` | Typed API client (TanStack Query), auth/session, `can()`, shared auth forms | — |
 | `packages/ui` | `@workspace/ui` | Presentational, data-agnostic components (shadcn/ReUI based) | — |

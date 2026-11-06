@@ -22,7 +22,7 @@ git remote add origin git@github.com:<you>/my-product.git
 git push -u origin main
 ```
 
-Releases of the starter are tags (`v0.6.0`, …) described in the [changelog](../../blog/changelog.md).
+Releases of the starter are tags (`v0.6.0`, …) described in the [changelog](../blog/changelog.md).
 
 ## 2. Make it yours
 
@@ -33,7 +33,7 @@ Releases of the starter are tags (`v0.6.0`, …) described in the [changelog](..
 | Phone app identity | `MOBILE_APP_NAME`, `MOBILE_APP_SLUG`, `MOBILE_BUNDLE_ID`, `MOBILE_SCHEME` | `apps/mobile/.env` per build |
 | Secrets | every app's `.env` | `pnpm tools secrets:generate apps/api/.env` (never reuse the starter's development values) |
 | Demo content | `apps/api/prisma/seed/` | Keep it for development; production is never seeded. To start clean, `pnpm db:seed -- --scenario minimal` gives the reference data and one super admin only |
-| Docs site | `apps/docs`, `docs/`, `blog/` | Replace the starter's posts with yours; keep `blog/changelog.md` for *your* releases |
+| Docs site | `apps/docs`, `docs/`, `docs/blog/` | Replace the starter's posts with yours; keep `docs/blog/changelog.md` for *your* releases |
 
 Then remove what your product doesn't need, **one bounded context at a time** (its folder under
 `apps/api/src/contexts/`, its module import, its pages, its schema models in a generated migration),
@@ -74,7 +74,7 @@ Then, in order:
    | `apps/api/prisma/schema.prisma` and `migrations/` | Keep both sides' models; generate a new migration with `pnpm db:migrate:create`, never hand-edit SQL |
    | `apps/api/prisma/migrations-baseline.json` | Take the starter's if it squashed its history, then follow the note |
    | `project.json`, `package.json` `name` | Keep **yours**, then `pnpm project:sync` |
-   | `blog/changelog.md` | Keep yours; read the starter's in its release notes |
+   | `docs/blog/changelog.md` | Keep yours; read the starter's in its release notes |
    | `docs/generated/openapi.json`, generated SQL | Regenerate (`pnpm tools openapi:export`, `db:generate-system-operation-scopes`) |
 
 3. `pnpm install`, then the completion gate: `pnpm run format`, `lint`, `typecheck`, `test`, `test e2e`,

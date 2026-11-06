@@ -13,6 +13,7 @@ import { USER_MFA_HISTORY_LOADING_LABELS } from "@/components/loading/loading-la
 import { MfaRecoveryRequestSkeleton } from "@/components/loading/user-skeletons";
 import { MfaRecoveryReviewPanel } from "@/contexts/identity/components/security/mfa-recovery-review-panel";
 import { MFA_RECOVERY_PENDING_QUEUE_HREF } from "@/contexts/identity/url-state/mfa-recovery";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The panel reviews the user's most recent request only (the API lists newest first). */
 const LATEST_REQUEST_PAGE = { page: 1, limit: 1 };
@@ -85,7 +86,7 @@ function UserMfaRecoveryHistory({ userId }: { readonly userId: string }): React.
 					{state.total > 1 ? (
 						<p className="text-xs text-muted-foreground">
 							Showing the most recent of {state.total} requests. Pending ones are also in the{" "}
-							<Link href={MFA_RECOVERY_PENDING_QUEUE_HREF} className="text-primary underline-offset-4 hover:underline">
+							<Link href={appRoute(MFA_RECOVERY_PENDING_QUEUE_HREF)} className="text-primary underline-offset-4 hover:underline">
 								MFA recovery queue
 							</Link>
 							.

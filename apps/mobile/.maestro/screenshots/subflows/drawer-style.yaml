@@ -1,0 +1,29 @@
+# Chooses the side menu's look STYLE (as the Appearance screen names it), waits for its toast to go, and saves
+# the open drawer as NAME.png.
+appId: ${APP_ID}
+---
+- openLink:
+    link: "${SCHEME}://settings/appearance"
+    autoVerify: false
+- scrollUntilVisible:
+    element: "^${STYLE}$"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+# A tap on a list still settling lands on whatever slid under it.
+- waitForAnimationToEnd:
+    timeout: 8000
+- tapOn: "^${STYLE}$"
+- extendedWaitUntil:
+    notVisible: "Side menu set to .*"
+    timeout: 10000
+- openLink:
+    link: "${SCHEME}:///"
+    autoVerify: false
+- extendedWaitUntil:
+    visible:
+      id: "app-header"
+    timeout: 20000
+- runFlow:
+    file: open-drawer.yaml
+    env: { NAME: "${NAME}" }

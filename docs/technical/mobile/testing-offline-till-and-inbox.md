@@ -129,7 +129,7 @@ Turning the connection off and on:
 3. The same with airplane mode on while you send, then off.
 
    **Today (2026-11-05):** only the newest of the three arrives; the inbox has all three. A push sent straight to
-   FCM behaves the same, so it isn't our API; the cause isn't proven yet (PROGRESS-2026-11-02.md §81.15).
+   FCM behaves the same, so it isn't our API; the cause isn't proven yet (docs/history/PROGRESS-2026-11-02.md §81.15).
 
 ## When it doesn't behave
 

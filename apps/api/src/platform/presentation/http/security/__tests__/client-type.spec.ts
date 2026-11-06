@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { testRequest } from "../../../../../../test/support/http-execution-context";
+import { testRequest } from "../../../../../../e2e/support/http-execution-context";
 import { DEFAULT_CLIENT_TYPE, resolveRequestClientType } from "../client-type";
 
 describe("resolveRequestClientType", () => {

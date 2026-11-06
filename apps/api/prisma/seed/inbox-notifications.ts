@@ -6,6 +6,7 @@
 // catalog type renders — never copy typed here.
 
 import type { NotificationSurface } from "@prisma/client";
+import type { NotificationAttachment } from "@workspace/shared";
 
 import { DEFAULT_NOTIFICATION_LOCALE, type NotificationRenderContext, type TypedNotificationType } from "../../src/contexts/notifications/domain/catalog/notification-type";
 import { prisma } from "./client";
@@ -29,6 +30,8 @@ export interface SeedInboxNotification<TPayload> {
 	readonly tenantId: string | null;
 	readonly createdAt: bigint;
 	readonly readAt: bigint | null;
+	/** A public file sent with it. */
+	readonly attachment?: NotificationAttachment;
 }
 
 /** Writes one delivered in-app notice; a repeat of the same dedupe key writes nothing. */
@@ -59,6 +62,7 @@ export async function seedInboxNotification<TPayload>(notice: SeedInboxNotificat
 			payload,
 			locale: DEFAULT_NOTIFICATION_LOCALE,
 			fannedOutAt: notice.createdAt,
+			...(notice.attachment === undefined ? {} : { attachment: notice.attachment }),
 		},
 	});
 	await prisma.inAppNotification.create({
@@ -76,6 +80,7 @@ export async function seedInboxNotification<TPayload>(notice: SeedInboxNotificat
 			link: rendering.link,
 			icon: rendering.icon,
 			readAt: notice.readAt,
+			...(notice.attachment === undefined ? {} : { attachment: notice.attachment }),
 		},
 	});
 }

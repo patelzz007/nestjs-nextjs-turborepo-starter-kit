@@ -126,7 +126,7 @@ every foundation the kit offers:
 - **User guide:** `docs/user-guide/` (10 chapters: platform setup, merchant onboarding, stores
   and team, rewards, claims, POS checkout, referrals, analytics, platform administration,
   account and security).
-- **Technical docs:** `docs/technical/`, ADRs in `docs/adr/`, the blog in `blog/`.
+- **Technical docs:** `docs/technical/`, ADRs in `docs/adr/`, the blog in `docs/blog/`.
 - **Seed scenarios:** `development` and `enterprise`, with demo merchants, stores, rewards and
   customers in `apps/api/prisma/seed/`.
 - **Absent, and not to be fabricated:** real customers, testimonials, usage numbers, pricing

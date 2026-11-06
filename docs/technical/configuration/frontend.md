@@ -35,8 +35,8 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 
 **Only the env modules read `process.env`**. They parse it once through a zod
 schema, and everything else imports the typed result. The env modules are
-`lib/env/env.client.ts`, `lib/env/env.server.ts` and `lib/env/env.runtime.ts`
-(which only checks Next's own `NEXT_RUNTIME`; see [§5](#5-how-validation-fails)). Oxlint enforces this
+`lib/env/env.client.ts`, `lib/env/env.server.ts` and the shared
+`@workspace/client/lib/env/env-runtime` (which only checks Next's own `NEXT_RUNTIME`; see [§5](#5-how-validation-fails)). Oxlint enforces this
 (`no-restricted-properties`, see [Oxlint → 3.2](../tooling/oxlint.md#32-env-boundary-processenv)).
 
 ---
@@ -54,7 +54,6 @@ apps/<app>/lib/env/
 ├── env.schema.ts   ← the app's contract: <App>ClientEnvSchema + <App>ServerEnvSchema (pure, testable)
 ├── env.client.ts   ← exports `clientEnv`  — NEXT_PUBLIC_* only, safe to import anywhere
 ├── env.server.ts   ← exports `serverEnv`  — `import "server-only"`, never in a browser bundle
-├── env.runtime.ts  ← exports `resolveProcessExit()` — `process.exit` on Node.js, `undefined` on Edge
 └── env.test.ts
 
 apps/<app>/instrumentation.ts               ← `register()` loads both modules through `loadEnvOrExit`
@@ -179,7 +178,7 @@ API fails fast instead, and the Next apps now match it:
 
 ```ts title="apps/web/instrumentation.ts"
 export async function register(): Promise<void> {
-	const { resolveProcessExit } = await import("./lib/env/env.runtime");
+	const { resolveProcessExit } = await import("@workspace/client/lib/env/env-runtime");
 	await loadEnvOrExit({ loadEnv: loadEnvModules, exit: resolveProcessExit(), reportError: reportEnvError });
 }
 ```
@@ -192,7 +191,7 @@ The app injects `exit`, so the helper stays unit-testable and safe in the
 browser-importable shared package.
 
 **Edge runtime.** `register()` also runs in the Edge runtime, and the Edge
-sandbox's `process.exit` throws. `env.runtime.ts` returns `process.exit` only
+sandbox's `process.exit` throws. `env-runtime.ts` in `packages/client` returns `process.exit` only
 when `process.env.NEXT_RUNTIME === "nodejs"` and `undefined` otherwise. With
 no `exit`, `loadEnvOrExit` rethrows, which is the previous behaviour. The
 comparison is deliberately a string literal: Next inlines `NEXT_RUNTIME` into

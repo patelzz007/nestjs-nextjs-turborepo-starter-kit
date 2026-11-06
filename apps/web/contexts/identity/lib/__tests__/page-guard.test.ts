@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { guardWebPage } from "@/contexts/identity/lib/page-guard";
 import { loginPath, ROUTES, walletClaimPath } from "@/lib/routes";
-import { RedirectSignal } from "@/test-support/navigation";
+import { RedirectSignal } from "@/testing/navigation";
 
 interface CookieStore {
 	readonly get: (name: string) => { readonly value: string } | undefined;
@@ -12,7 +12,7 @@ const { cookiesMock } = vi.hoisted(() => ({ cookiesMock: vi.fn<() => Promise<Coo
 
 vi.mock("next/headers", () => ({ cookies: (): Promise<CookieStore> => cookiesMock() }));
 vi.mock("next/navigation", async (importOriginal) => {
-	const { withNavigationSignals } = await import("@/test-support/navigation");
+	const { withNavigationSignals } = await import("@/testing/navigation");
 	return withNavigationSignals(await importOriginal<typeof import("next/navigation")>());
 });
 

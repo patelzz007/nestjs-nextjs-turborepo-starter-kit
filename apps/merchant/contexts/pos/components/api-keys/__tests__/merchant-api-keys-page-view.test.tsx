@@ -5,10 +5,18 @@ import * as React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_KEY_STATS_LOADING_LABELS, MerchantApiKeysPageView } from "@/contexts/pos/components/api-keys/merchant-api-keys-page-view";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import {
+	contextQueryState,
+	tenantContextFixture,
+	STORE_A_LOCATION,
+	STORE_B_LOCATION,
+	twoStoreSeed,
+	TWO_STORE_CONTEXT,
+	type ContextQueryState,
+} from "@/testing/tenant-context";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import {
@@ -23,7 +31,7 @@ import {
 } from "@workspace/shared";
 import { API_KEY_LIST_LOADING_LABELS } from "@/contexts/pos/components/api-keys/api-key-list";
 import { MERCHANT_API_KEYS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
-import { busyRegionAnnouncements } from "@/test/skeleton";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 type ApiKeysListInput = Parameters<typeof apiRouter.tenants.apiKeys.list.queryKey>[0];
 

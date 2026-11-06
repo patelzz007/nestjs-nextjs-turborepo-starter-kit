@@ -40,6 +40,7 @@ import { KanbanPageSection } from "./kanban-page-section";
 import { KanbanAssignee } from "./kanban-person";
 import { KanbanPersonTimeline, KanbanPersonTimelineItem } from "./kanban-person-timeline";
 import { KanbanLevelChip, KanbanPointsPill, KanbanStatusBadge } from "./kanban-task-badges";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** How far each checklist level is indented. */
 const INDENT_CLASS: readonly string[] = ["", "pl-9", "pl-16"];
@@ -128,7 +129,7 @@ export function KanbanChecklistSection({
 			note={`${String(tally.done)} of ${String(tally.total)} ${isSubtask ? "done" : "met"}`}
 			actions={
 				canEdit ? (
-					<Link href={editHref} className="rounded-sm px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+					<Link href={appRoute(editHref)} className="rounded-sm px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
 						Edit list
 					</Link>
 				) : undefined
@@ -224,7 +225,7 @@ export function KanbanChildrenSection({ task, canCreate }: { readonly task: Kanb
 			note={`${String(task.rollup.children.done)} of ${String(task.rollup.children.total)} done`}
 			actions={
 				<Link
-					href={kanbanBoardHref(childBoard, task.title)}
+					href={appRoute(kanbanBoardHref(childBoard, task.title))}
 					className="rounded-sm px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
 					Open the {childBoard === "PLANNING" ? "planning" : "execution"} board
 				</Link>

@@ -20,6 +20,7 @@ import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/comp
 import { BodyText, MutedText, Subheading } from "@workspace/ui-native/components/text";
 import { ToggleGroup, type ToggleGroupOption } from "@workspace/ui-native/components/toggle-group";
 import * as Clipboard from "expo-clipboard";
+import { useRouter } from "expo-router";
 import BellIcon from "lucide-react-native/icons/bell";
 import CheckIcon from "lucide-react-native/icons/check";
 import CheckCheckIcon from "lucide-react-native/icons/check-check";
@@ -31,12 +32,15 @@ import SettingsIcon from "lucide-react-native/icons/settings";
 import * as React from "react";
 import { Linking, View } from "react-native";
 
+import { ImageViewer } from "../../components/image-viewer";
+import { pdfViewerHref } from "../../features/pdf-viewer/pdf-source";
 import { useToast } from "../../features/toast/facade";
 import { formatDateTime } from "../../lib/time-format";
 import { useNow } from "../../lib/use-now";
 import { externalLinkOf, feedSectionsOf, isUnread, noticeKindOf, noticeSenderOf, type FeedSection, type InboxFilter } from "./feed-model";
 import { NOTIFICATIONS_COPY } from "./labels";
 import type { NotificationsFeedState } from "./inbox-state";
+import { isPhotoAttachment, NotificationAttachmentView } from "./notification-attachment";
 
 /** The times ("25m") are read against a clock that ticks once a minute. */
 const CLOCK_TICK_MS = 60_000;
@@ -162,7 +166,7 @@ export function NotificationsFeed({
 					))}
 				</View>
 			))}
-			{state.kind === "ready" && state.hasMore ? <Button label={NOTIFICATIONS_COPY.seeEarlier} variant="secondary" onPress={onLoadMore} loading={loadingMore} /> : null}
+			{state.kind === "ready" && state.hasMore ? <Button label={NOTIFICATIONS_COPY.seeEarlier} variant="outline" onPress={onLoadMore} loading={loadingMore} /> : null}
 			<OpenedNotice notification={opened} onClose={closeOpened} />
 		</View>
 	);
@@ -236,6 +240,11 @@ function FeedRow({ notification, now, busy, onOpen, onRead, onRemove, onReport, 
 			unreadLabel={NOTIFICATIONS_COPY.unread}
 			accessibilityHint={NOTIFICATIONS_COPY.openHint}
 			testID={`notification-${notification.id}`}
+			media={
+				notification.attachment === null ? undefined : (
+					<NotificationAttachmentView attachment={notification.attachment} onPress={handleOpen} testID={`notification-${notification.id}-attachment`} />
+				)
+			}
 			trailing={
 				<DropdownMenu<NoticeAction>
 					label={NOTIFICATIONS_COPY.more(notification.title)}
@@ -261,6 +270,23 @@ interface OpenedNoticeProps {
 /** The full message of the notice tapped: who sent it and when, its rich body or text, and its link. */
 function OpenedNotice({ notification, onClose }: OpenedNoticeProps): React.JSX.Element {
 	const toast = useToast();
+	const router = useRouter();
+	const [viewing, setViewing] = React.useState<string | null>(null);
+	const attachment = notification?.attachment ?? null;
+	const openAttachment = React.useCallback((): void => {
+		if (attachment === null) {
+			return;
+		}
+		if (isPhotoAttachment(attachment)) {
+			setViewing(attachment.url);
+			return;
+		}
+		onClose();
+		router.push(pdfViewerHref(attachment.url, attachment.name));
+	}, [attachment, onClose, router]);
+	const closeViewer = React.useCallback((): void => {
+		setViewing(null);
+	}, []);
 	const link = notification === null ? null : externalLinkOf(notification);
 	const openLink = React.useCallback((href: string): void => {
 		void Linking.openURL(href);
@@ -291,7 +317,14 @@ function OpenedNotice({ notification, onClose }: OpenedNoticeProps): React.JSX.E
 					) : (
 						<RichTextView document={notification.richBody} onOpenLink={openLink} onCopyCode={copyCode} />
 					)}
-					{link === null ? null : <Button label={NOTIFICATIONS_COPY.openLink} icon={ExternalLinkIcon} variant="secondary" onPress={followLink} />}
+					{attachment === null ? null : <NotificationAttachmentView attachment={attachment} onPress={openAttachment} testID="notification-message-attachment" />}
+					{link === null ? null : <Button label={NOTIFICATIONS_COPY.openLink} icon={ExternalLinkIcon} variant="outline" onPress={followLink} />}
+					<ImageViewer
+						source={viewing === null ? null : { uri: viewing }}
+						description={NOTIFICATIONS_COPY.attachmentDescription(attachment?.name ?? notification.title)}
+						browserUrl={viewing}
+						onClose={closeViewer}
+					/>
 				</View>
 			)}
 		</BottomSheet>

@@ -61,6 +61,7 @@ import { Receipt } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 function renderRangeControlsSkeleton(): React.JSX.Element {
 	return <AnalyticsRangePickerSkeleton />;
@@ -169,7 +170,7 @@ function NoSalesYet({ apiKeysHref }: { readonly apiKeysHref: string | undefined 
 			</EmptyHeader>
 			{apiKeysHref === undefined ? null : (
 				<EmptyContent>
-					<Link href={apiKeysHref} className={buttonVariants({ variant: "outline" })}>
+					<Link href={appRoute(apiKeysHref)} className={buttonVariants({ variant: "outline" })}>
 						Set up API keys
 					</Link>
 				</EmptyContent>

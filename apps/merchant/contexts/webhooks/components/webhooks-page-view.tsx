@@ -28,6 +28,7 @@ import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { ChevronRight, Plus, Webhook } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const CREATE_FAILED_MESSAGE = "The endpoint could not be added. Check the address and try again.";
 
@@ -73,7 +74,9 @@ function EndpointRow({ endpoint, href }: EndpointRowProps): React.JSX.Element {
 	const status = endpointStatusPresentation(endpoint);
 	return (
 		<li>
-			<Link href={href} className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-foreground/5 focus-visible:bg-foreground/5 focus-visible:outline-none">
+			<Link
+				href={appRoute(href)}
+				className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-foreground/5 focus-visible:bg-foreground/5 focus-visible:outline-none">
 				<div className="min-w-0 flex-1 space-y-1">
 					<div className="flex flex-wrap items-center gap-2">
 						<StatusBadge tone={status.tone}>{status.label}</StatusBadge>

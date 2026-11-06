@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../e2e/support/test-api-env";
 import { PublicUrlResolver, resolveStoredPublicUrl } from "../public-url.resolver";
 
 const FILE_PATH = "/api/v1/files/4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b/local-public";

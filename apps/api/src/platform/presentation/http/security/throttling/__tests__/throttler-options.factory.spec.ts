@@ -6,9 +6,9 @@ import { SkipThrottle, ThrottlerModule } from "@nestjs/throttler";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createAuditTrailDouble } from "../../../../../../../test/support/audit-trail-double";
-import { RecordingRateLimiter } from "../../../../../../../test/support/recording-rate-limiter";
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { createAuditTrailDouble } from "../../../../../../../e2e/support/audit-trail-double";
+import { RecordingRateLimiter } from "../../../../../../../e2e/support/recording-rate-limiter";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { RequestContextService } from "../../../../../infrastructure/context/request-context";
 import { LogService } from "../../../../../infrastructure/logging/logs.service";
 import { RateLimitExemptions } from "../../../../../infrastructure/rate-limiting/rate-limit-exemptions";

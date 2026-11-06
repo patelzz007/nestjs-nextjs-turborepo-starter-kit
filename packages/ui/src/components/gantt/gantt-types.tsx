@@ -10,6 +10,7 @@
  * zod schema at the read site.
  */
 import type { RuntimeValue } from "@workspace/shared";
+import { z } from "zod";
 
 /** The payload constraint: any value a JS expression can hold. */
 export type GanttData = RuntimeValue;
@@ -80,7 +81,10 @@ export interface GanttDateRange {
 	readonly end: Date;
 }
 
-export type GanttWeekday = "MO" | "TU" | "WE" | "TH" | "FR" | "SA" | "SU";
+export const GanttWeekdaySchema = z.enum(["MO", "TU", "WE", "TH", "FR", "SA", "SU"]);
+export const GanttFrequencySchema = z.enum(["daily", "weekly", "monthly", "yearly"]);
+
+export type GanttWeekday = z.output<typeof GanttWeekdaySchema>;
 
 /** A BYDAY entry with an ordinal ("2nd Monday"); parsed and serialized, rejected by the built-in expander. */
 export interface GanttOrdinalWeekday {
@@ -88,7 +92,7 @@ export interface GanttOrdinalWeekday {
 	readonly ordinal: number;
 }
 
-export type GanttRecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
+export type GanttRecurrenceFrequency = z.output<typeof GanttFrequencySchema>;
 
 export interface GanttRecurrenceRule {
 	readonly freq: GanttRecurrenceFrequency;

@@ -9,9 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MyClaimsPageViewProps } from "@/contexts/claims/components/my-claims-page-view";
 import { loginPath, ROUTES } from "@/lib/routes";
 import { WALLET_CLAIMS_PAGE_SIZE, WALLET_CLAIMS_URL_STATE } from "@/contexts/claims/url-state/wallet-claims";
-import { buildRewardClaimResponse, claimsPageEnvelope } from "@/test-support/claim";
-import { RedirectSignal } from "@/test-support/navigation";
-import { failedQuery, httpFailure } from "@/test-support/server-query";
+import { buildRewardClaimResponse, claimsPageEnvelope } from "@/testing/claim";
+import { RedirectSignal } from "@/testing/navigation";
+import { failedQuery, httpFailure } from "@/testing/server-query";
 
 import DashboardWalletPage from "../page";
 
@@ -29,11 +29,11 @@ vi.mock("@/contexts/identity/lib/page-guard", () => ({ guardWebPage }));
 vi.mock("@/contexts/claims/components/my-claims-page-view", () => ({ MyClaimsPageView: walletView }));
 vi.mock("@/contexts/identity/components/access-gate", () => ({ AccessGate: ({ children }: { readonly children: React.ReactNode }): React.JSX.Element => <>{children}</> }));
 vi.mock("@workspace/client/lib/api/server-api", async (importOriginal) => {
-	const { withTestFailureClassifier } = await import("@/test-support/server-query");
+	const { withTestFailureClassifier } = await import("@/testing/server-query");
 	return withTestFailureClassifier(await importOriginal<typeof ServerApi>());
 });
 vi.mock("next/navigation", async (importOriginal) => {
-	const { withNavigationSignals } = await import("@/test-support/navigation");
+	const { withNavigationSignals } = await import("@/testing/navigation");
 	return withNavigationSignals(await importOriginal<typeof import("next/navigation")>());
 });
 

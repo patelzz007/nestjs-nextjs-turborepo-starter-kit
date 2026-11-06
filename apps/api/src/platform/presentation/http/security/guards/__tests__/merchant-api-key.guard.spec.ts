@@ -1,7 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it } from "vitest";
 
-import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
+import { createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
 import type { ApiKeyVerificationPort, MerchantApiKeyAuthContext } from "../../../../../application/ports/api-key-verification.port";
 import type { TillRefusal, TillResolution, TillResolverPort } from "../../../../../application/ports/till-resolution.port";
 import { RequestContextService } from "../../../../../infrastructure/context/request-context";

@@ -1,7 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import type { RateLimitSubject } from "../../../application/ports/rate-limiter.port";
 import { maskSubject, RateLimitRefusalLog } from "../rate-limit-refusal-log";
 

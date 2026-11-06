@@ -2,7 +2,6 @@ import { Prisma } from "@prisma/client";
 import { RewardClaimStatusSchema, type RewardClaimStatus } from "@workspace/shared";
 import { z } from "zod";
 
-import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type {
 	ActivityWeek,
 	ComparedPeriods,
@@ -16,6 +15,7 @@ import type {
 } from "../../application/ports/reward-activity-read.port";
 import type { InclusiveRange } from "../../application/ports/sales-read.port";
 import type { AnalyticsLocationScope, AnalyticsScope } from "../../domain/value-objects/analytics-scope.value-object";
+import type { AnalyticsSqlRunner } from "./analytics-sql";
 import { allOf, claimConditions, claimSource, redemptionConditions, weekStartMsSql, withinInclusive } from "./analytics-sql-conditions";
 
 const MerchantTotalsRowSchema = z.object({
@@ -58,10 +58,10 @@ function tenantRewardWhere(tenantId: string, scope: AnalyticsLocationScope): Pri
  * read-only fact reads (§6.2) inside a transaction that keeps the caller's already-bound RLS session.
  */
 export class PrismaRewardActivityReadRepository implements RewardActivityReadPort {
-	public constructor(private readonly transactions: TenantTransactionService) {}
+	public constructor(private readonly sql: AnalyticsSqlRunner) {}
 
 	private run<TResult>(reason: string, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
-		return this.transactions.withBoundSession(reason, work);
+		return this.sql.callerRead(reason, work);
 	}
 
 	public async countRewards(filter: RewardCountFilter): Promise<number> {

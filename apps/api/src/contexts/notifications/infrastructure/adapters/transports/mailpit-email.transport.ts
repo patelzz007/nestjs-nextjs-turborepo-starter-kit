@@ -72,6 +72,7 @@ export class MailpitEmailTransport extends EmailTransport implements OnApplicati
 			HTML: email.html,
 			Tags: [email.templateKey],
 			Headers: { ...email.headers, [MAILPIT_EMAIL_LOG_ID_HEADER]: email.emailLogId },
+			Attachments: email.attachments.map((file) => ({ Filename: file.filename, ContentType: file.contentType, Content: file.contentBase64 })),
 		});
 		let response: Response;
 		try {

@@ -1,7 +1,7 @@
 import { epochMs, type Envelope, type FileDetailResponse, type FileStatus } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture } from "../../../../../testing/auth-fixtures";
 import { FileProcessingError, type DirectUploadResult, type FileStatusReader } from "../../../../storage/direct-upload";
 import { awaitUploadedDocumentReady } from "../multipart";
 

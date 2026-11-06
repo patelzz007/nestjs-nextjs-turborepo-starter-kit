@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { getFileCategoryPolicy, ImageRulesSchema, type StorageObjectLocator } from "@workspace/shared";
 
-import { InMemoryObjectStorage, imageRenditionsFor } from "../../../../../../test/support/file-lifecycle-fakes";
+import { InMemoryObjectStorage, imageRenditionsFor } from "../../../../../../e2e/support/file-lifecycle-fakes";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { SharpImageProcessor } from "../../../../../platform/infrastructure/storage/adapters/images/sharp-image-processor";
 import type { ServerFileIngest, ServerFileIngestRequest } from "../../../../files/public-api";

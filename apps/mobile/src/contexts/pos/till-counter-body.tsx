@@ -265,14 +265,7 @@ function CodeEntry({ till, credentials, onChecked, onExchange }: CodeEntryProps)
 						disabled={!hasGoogleScanner}
 						testID="till-scan-google"
 					/>
-					<Button
-						label={TILL_COPY.scanWithCamera}
-						icon={CameraIcon}
-						variant="secondary"
-						onPress={openCameraScanner}
-						disabled={validation.isPending}
-						testID="till-scan-camera"
-					/>
+					<Button label={TILL_COPY.scanWithCamera} icon={CameraIcon} variant="outline" onPress={openCameraScanner} disabled={validation.isPending} testID="till-scan-camera" />
 					<Text className="font-sans text-xs text-muted-foreground">{hasGoogleScanner ? TILL_COPY.scanChoiceHint : TILL_COPY.googleScannerUnavailable}</Text>
 				</View>
 				<QrScanFromGalleryButton onScan={handleScan} testID="till-scan-gallery" />
@@ -412,7 +405,7 @@ function Checkout({ till, credentials, code, preview, onRedeemed, onExchange, on
 						<Button label={TILL_COPY.redeem} onPress={redeem} loading={checkout.isPending} />
 					</>
 				) : null}
-				<Button label={TILL_COPY.scanAnother} variant="secondary" onPress={onCancel} disabled={checkout.isPending} />
+				<Button label={TILL_COPY.scanAnother} variant="outline" onPress={onCancel} disabled={checkout.isPending} />
 			</View>
 		</Card>
 	);
@@ -477,7 +470,7 @@ function QueuedCheckoutRow({ entry, onDismiss }: QueuedCheckoutRowProps): React.
 				title={entry.rewardTitle}
 				message={entry.refusal === null ? TILL_COPY.queueWaiting(formatBillAmount(billTotalMinor, currency)) : TILL_COPY.queueRefused(entry.refusal)}
 			/>
-			{entry.refusal === null ? null : <Button label={TILL_COPY.queueDismiss(entry.rewardTitle)} variant="secondary" onPress={dismiss} />}
+			{entry.refusal === null ? null : <Button label={TILL_COPY.queueDismiss(entry.rewardTitle)} variant="outline" onPress={dismiss} />}
 		</View>
 	);
 }

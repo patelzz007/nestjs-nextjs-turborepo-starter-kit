@@ -2,6 +2,7 @@ import { Gift } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { landingSectionPath, LANDING_SECTION_IDS, loginPath, ROUTES } from "@/lib/routes";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 interface FooterLink {
 	readonly label: string;
@@ -47,7 +48,7 @@ export function LandingFooter(): React.JSX.Element {
 							{column.links.map((link: FooterLink): React.JSX.Element => (
 								<li key={link.href}>
 									<Link
-										href={link.href}
+										href={appRoute(link.href)}
 										className="rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
 										{link.label}
 									</Link>

@@ -1,7 +1,7 @@
 import { ForbiddenException, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { inMemoryWebhookReceiver, ManualClock } from "../../../../../test/support/in-memory-received-webhooks";
+import { inMemoryWebhookReceiver, ManualClock } from "../../../../../e2e/support/in-memory-received-webhooks";
 
 import { githubWebhookSignature } from "../../domain/policies/github-webhook-signature.policy";
 import { DisableLiveUpdatesCommand } from "../commands/disable-live-updates/disable-live-updates.command";

@@ -9,6 +9,7 @@ import { auditLogListHref } from "@/contexts/audit/url-state/audit-logs";
 
 import { AuditActorCell, AuditAuthMethodBadge, AuditDeviceBadge, AuditIpScopeBadge, AuditMethodBadge, AuditOutcomeBadge, describeClientSoftware } from "./audit-log-badges";
 import { NOT_RECORDED, orDash, RecordField, RecordPayload, RecordSection, type AuditRecordLayout } from "./record-layout";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The three payload panels' grid, per layout. */
 export const AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT: Readonly<Record<AuditRecordLayout, string>> = {
@@ -26,7 +27,7 @@ function UserField({ label, user }: { readonly label: string; readonly user: Aud
 				<span className="space-y-0.5">
 					<span className="block font-medium">{user.fullName ?? "Unknown user"}</span>
 					{user.email === null ? null : <span className="block text-muted-foreground">{user.email}</span>}
-					<Link href={auditLogListHref({ actorUserId: user.id })} className="block font-mono text-xs text-primary hover:underline">
+					<Link href={appRoute(auditLogListHref({ actorUserId: user.id }))} className="block font-mono text-xs text-primary hover:underline">
 						{user.id}
 					</Link>
 				</span>
@@ -211,7 +212,7 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 					{record.tenant === null ? (
 						NOT_RECORDED
 					) : (
-						<Link href={auditLogListHref({ tenantId: record.tenant.id })} className="text-primary hover:underline">
+						<Link href={appRoute(auditLogListHref({ tenantId: record.tenant.id }))} className="text-primary hover:underline">
 							{record.tenant.name ?? record.tenant.id}
 						</Link>
 					)}
@@ -287,7 +288,7 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 
 			<RecordSection title="Tracing" description="How to find this request in logs, traces and the domain audit tables." layout={layout}>
 				<RecordField label="Correlation id" mono>
-					<Link href={auditLogListHref({ correlationId: record.correlationId })} className="text-primary hover:underline">
+					<Link href={appRoute(auditLogListHref({ correlationId: record.correlationId }))} className="text-primary hover:underline">
 						{record.correlationId}
 					</Link>
 				</RecordField>

@@ -6,7 +6,7 @@ import { filterMerchantNavItems, MERCHANT_NAV_ITEMS, resolvePinnedMerchantNavIte
 import { buildMerchantPaletteItems } from "@/lib/palette/nav-items";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { TENANT_ROUTES } from "@/lib/routes";
-import { membershipFixture } from "@/test/authorization";
+import { membershipFixture } from "@/testing/authorization";
 
 function predicateFor(capabilities: readonly CapabilitySlug[]): (permission: CapabilitySlug) => boolean {
 	const granted = createGrantedCapabilities(capabilities);

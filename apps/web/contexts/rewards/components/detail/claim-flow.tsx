@@ -3,6 +3,7 @@
 import { CLAIM_OPTIONS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ClaimFlowBones } from "@/components/loading/reward-detail-skeleton";
 import { formatClaimApiError } from "@/contexts/claims";
+import { ClaimHoldCountdown } from "@/contexts/rewards/components/detail/claim-hold-countdown";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -24,6 +25,8 @@ export interface RewardClaimFlowProps {
 	readonly onMessage: (message: string) => void;
 	/** Claim was rejected — the parent refetches the reward (stock/expiry may have changed). */
 	readonly onClaimFailed: () => void;
+	/** A hold started or ended: the parent refetches so the count moves straight away, and keeps this flow open for the holder. */
+	readonly onHoldChanged: (holding: boolean) => void;
 }
 
 /**
@@ -32,7 +35,7 @@ export interface RewardClaimFlowProps {
  * reward), so the parent gates this on authentication only; guests never
  * mount it, so they never trigger its authenticated queries.
  */
-export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed }: RewardClaimFlowProps): React.JSX.Element {
+export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed, onHoldChanged }: RewardClaimFlowProps): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 
@@ -42,6 +45,7 @@ export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed }: RewardCl
 	const [phoneDraft, setPhoneDraft] = React.useState<string | null>(null);
 	const [otp, setOtp] = React.useState<string>("");
 	const [otpSent, setOtpSent] = React.useState<boolean>(false);
+	const [holdExpiresAt, setHoldExpiresAt] = React.useState<number | null>(null);
 	const [legalAcceptedLocally, setLegalAcceptedLocally] = React.useState<boolean>(false);
 	const [forceLegalStep, setForceLegalStep] = React.useState<boolean>(false);
 
@@ -87,14 +91,25 @@ export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed }: RewardCl
 	});
 
 	const otpMutation = api.claims.otp.useMutation({
-		onSuccess: (): void => {
+		onSuccess: (response): void => {
 			setOtpSent(true);
+			setHoldExpiresAt(response.data.holdExpiresAt);
+			onHoldChanged(true);
 			onMessage("OTP sent — check your email (dev: API logs). Enter the 6-digit code below.");
 		},
 		onError: (error: Error): void => {
 			onMessage(formatClaimApiError(error));
+			onClaimFailed();
 		},
 	});
+
+	const handleHoldExpired = React.useCallback((): void => {
+		setHoldExpiresAt(null);
+		setOtpSent(false);
+		setOtp("");
+		onHoldChanged(false);
+		onMessage("Your hold ended and the reward went back on offer. Request a new code to try again.");
+	}, [onHoldChanged, onMessage]);
 
 	const claimMutation = api.claims.create.useMutation({
 		onSuccess: (response): void => {
@@ -184,6 +199,7 @@ export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed }: RewardCl
 					</Button>
 				) : (
 					<div className="space-y-2">
+						{holdExpiresAt === null ? null : <ClaimHoldCountdown holdExpiresAt={holdExpiresAt} onExpired={handleHoldExpired} />}
 						<Label htmlFor="claim-otp">6-digit OTP</Label>
 						<Input id="claim-otp" inputMode="numeric" maxLength={6} value={otp} onChange={handleOtpChange} />
 						<Button disabled={claimMutation.isPending} onClick={handleClaim}>

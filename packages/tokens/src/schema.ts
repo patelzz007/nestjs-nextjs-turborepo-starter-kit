@@ -145,6 +145,17 @@ export type PaletteReference = z.infer<typeof PaletteReferenceSchema>;
 export const ThemeNameSchema = z.enum(["light", "dark", "nord"]);
 export type ThemeName = z.infer<typeof ThemeNameSchema>;
 
+/**
+ * The dark themes only the phone has (the palettes page, ADR 079). They exist in mobile.css alone: the web's
+ * theme menus read THEME_NAMES, so they never list them. Each builds on the shared dark theme.
+ */
+export const MobileOnlyThemeNameSchema = z.enum(["current-dark", "harbour", "mocha"]);
+export type MobileOnlyThemeName = z.infer<typeof MobileOnlyThemeNameSchema>;
+
+/** Every theme the phone offers: the shared ones, then its own. */
+export const MobileThemeNameSchema = z.enum([...ThemeNameSchema.options, ...MobileOnlyThemeNameSchema.options]);
+export type MobileThemeName = z.infer<typeof MobileThemeNameSchema>;
+
 /** Every colour role that changes with the theme. Both themes are typed from this ONE list. */
 export const ThemeRoleSchema = z.enum([
 	"background",
@@ -501,7 +512,7 @@ export type AppThemeOverrides = z.infer<typeof AppThemeOverridesSchema>;
  * mobile app is a separate design language and may re-map ANY themed role — surfaces, borders and text
  * included — per theme. Applied to mobile.css only; the web apps never see these values.
  */
-export const MobileThemeOverridesSchema = z.partialRecord(ThemeNameSchema, z.partialRecord(ThemeRoleSchema, ColorValueSchema));
+export const MobileThemeOverridesSchema = z.partialRecord(MobileThemeNameSchema, z.partialRecord(ThemeRoleSchema, ColorValueSchema));
 export type MobileThemeOverrides = z.infer<typeof MobileThemeOverridesSchema>;
 
 /**
@@ -517,11 +528,19 @@ export type AdminThemeOverrides = z.infer<typeof AdminThemeOverridesSchema>;
  * can never move them (ADR 079): the floating tab bar's pill, edge, selected capsule, the capsule's icon
  * and label and the unselected icons; and the chip an original (full-colour) brand logo sits on.
  */
-export const MobileComponentColorNameSchema = z.enum(["tab-bar", "tab-bar-border", "tab-bar-active", "tab-bar-active-foreground", "tab-bar-icon", "logo-tile"]);
+export const MobileComponentColorNameSchema = z.enum([
+	"tab-bar",
+	"tab-bar-border",
+	"tab-bar-active",
+	"tab-bar-active-foreground",
+	"tab-bar-icon",
+	"control-ring",
+	"logo-tile",
+]);
 export type MobileComponentColorName = z.infer<typeof MobileComponentColorNameSchema>;
 
 /** Every component colour, in every theme (no partial theme: each theme must say what its tab bar is). */
-export const MobileComponentColorsSchema = z.record(ThemeNameSchema, z.record(MobileComponentColorNameSchema, ColorValueSchema));
+export const MobileComponentColorsSchema = z.record(MobileThemeNameSchema, z.record(MobileComponentColorNameSchema, ColorValueSchema));
 export type MobileComponentColors = z.infer<typeof MobileComponentColorsSchema>;
 
 export const TokenSourceSchema = z.strictObject({

@@ -66,9 +66,9 @@ export default function SettingsScreen(): React.JSX.Element {
 		router.push(ROUTES.pdfViewer);
 	}, [router]);
 
-	/** Development and test builds only (`canReplayOnboarding`): onboarding's "seen" flag lives in the Keychain, which outlives reinstalls (ADR 041). */
+	/** Development and test builds only (`canReplayOnboarding`): the preferences live in the Keychain, which outlives reinstalls (ADR 041), so this is the way back to a fresh start. */
 	const replayOnboarding = React.useCallback((): void => {
-		preferences.onboardingReset();
+		preferences.reset();
 		void signOutNow();
 	}, [preferences, signOutNow]);
 
@@ -111,7 +111,7 @@ export default function SettingsScreen(): React.JSX.Element {
 			</ListGroup>
 			<View className="gap-3">
 				{canReplayOnboarding(env) ? (
-					<Button label={labels.replayOnboarding} variant="secondary" onPress={replayOnboarding} accessibilityHint={labels.replayOnboardingHint} />
+					<Button label={labels.replayOnboarding} variant="outline" onPress={replayOnboarding} accessibilityHint={labels.replayOnboardingHint} />
 				) : null}
 				<Button label={labels.signOut} onPress={signOut.ask} />
 			</View>

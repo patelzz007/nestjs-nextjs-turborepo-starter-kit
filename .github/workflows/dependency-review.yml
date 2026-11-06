@@ -44,7 +44,7 @@ jobs:
           package-manager-cache: false
       - name: Report accepted advisories and cooldown exceptions that are due
         # Dependency-free Node script: no install needed.
-        run: node packages/tooling/scripts/check-dependency-exceptions.mjs
+        run: node packages/tooling/src/dependency-exceptions/cli.ts
 
   audit:
     name: Dependency audit (high + critical advisories)

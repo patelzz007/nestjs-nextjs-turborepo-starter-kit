@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import { QUEUE_JOB_OPTIONS } from "@workspace/shared";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { firstLoggedFailure } from "../../../../../test/support/logged-failure";
+import { firstLoggedFailure } from "../../../../../e2e/support/logged-failure";
 import { MaintenanceSchedulerRegistry } from "../../jobs/maintenance-scheduler.registry";
 import { fakeMaintenanceQueue, type FakeMaintenanceQueue } from "../../jobs/__tests__/fake-maintenance-queue";
 
@@ -10,7 +10,7 @@ import { PrismaService } from "../../../../prisma/prisma.service";
 import { currentRlsContext } from "../../../../prisma/rls-context";
 import { isAllowlistedSystemOperation, SYSTEM_OPERATIONS } from "../../../../prisma/system-operation.registry";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { IdempotencyRecordRepository } from "../idempotency-record.repository";
 import { IDEMPOTENCY_RETENTION_JOB_NAME, IDEMPOTENCY_RETENTION_QUEUE, IdempotencyRetentionProcessor, IdempotencyRetentionScheduler } from "../idempotency-retention.processor";
 import { IdempotencyRetentionIntervalScheduler } from "../idempotency-retention-interval.scheduler";

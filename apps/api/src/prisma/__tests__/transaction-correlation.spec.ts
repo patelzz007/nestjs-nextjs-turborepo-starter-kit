@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../e2e/support/test-api-env";
 import { PrismaService } from "../prisma.service";
 import { MissingTransactionCorrelationIdError, readTransactionCorrelationId } from "../transaction-correlation";
 

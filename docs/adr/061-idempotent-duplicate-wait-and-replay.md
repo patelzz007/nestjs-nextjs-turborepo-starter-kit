@@ -31,7 +31,7 @@ The DDD migration replaced that with a wait: the duplicate polled the record eve
 
 ## Consequences
 
-- A duplicate costs one lock statement while it waits and one record read after it wakes, however long the original runs (proved by `apps/api/test/idempotency-duplicate-wait.e2e-spec.ts`: N waiters are visible as `advisory` lock waits in `pg_stat_activity` and issue no reads).
+- A duplicate costs one lock statement while it waits and one record read after it wakes, however long the original runs (proved by `apps/api/e2e/idempotency-duplicate-wait.e2e-spec.ts`: N waiters are visible as `advisory` lock waits in `pg_stat_activity` and issue no reads).
 - A failed original no longer turns its waiting duplicates into 409s: the first waiter executes, the others replay its result.
 - Each in-flight idempotent request pins one lock-pool connection for the length of its handler. A request that cannot get a lock connection within 5 s fails (503) rather than waiting forever. Size `IDEMPOTENCY_LOCK_POOL_MAX` for the expected number of concurrent idempotent requests per instance.
 - Advisory locks are database-wide, so the guarantee holds across API instances. A PgBouncer in transaction-pooling mode would break session-level advisory locks; the lock pool must connect directly or through session pooling.

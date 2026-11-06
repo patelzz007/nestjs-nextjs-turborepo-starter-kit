@@ -1,7 +1,7 @@
 import { DAY_MS, epochMs } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { captureFastifyRequest } from "../../../../../test/support/fastify-request";
+import { captureFastifyRequest } from "../../../../../e2e/support/fastify-request";
 import { AuthenticationError } from "../../../../platform/application/errors/app-error";
 import { ExportPlatformReportHandler } from "../queries/export-platform-report/export-platform-report.handler";
 import { ExportPlatformReportQuery } from "../queries/export-platform-report/export-platform-report.query";

@@ -8,6 +8,7 @@ import { effectiveSchedule, formatDateRange, pointsLabel } from "../lib/kanban-d
 import type { KanbanColumnHeading } from "./kanban-board-columns";
 import { KanbanPriorityBadge, KanbanTeamBadge, KanbanTypeBadge } from "./kanban-task-badges";
 import { KanbanAssignee } from "./kanban-person";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** A story's estimate, or an epic's / feature's done points of its total; a task carries none. */
 function pointsText(task: KanbanTask): string {
@@ -55,7 +56,7 @@ export function KanbanTaskTable({ columns, tasksByColumn, taskHref }: KanbanTask
 							rows.map(({ task, column }) => (
 								<TableRow key={task.id}>
 									<TableCell className="max-w-72">
-										<Link href={taskHref(task.id)} className="block truncate font-medium hover:underline">
+										<Link href={appRoute(taskHref(task.id))} className="block truncate font-medium hover:underline">
 											{task.title}
 										</Link>
 									</TableCell>

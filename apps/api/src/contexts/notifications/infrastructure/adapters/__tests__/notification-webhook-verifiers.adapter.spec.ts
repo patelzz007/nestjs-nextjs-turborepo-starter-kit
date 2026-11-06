@@ -1,8 +1,8 @@
 import { epochMs } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { signResendWebhook, TEST_RESEND_WEBHOOK_SECRET } from "../../../../../../test/support/resend-webhook-signature";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { signResendWebhook, TEST_RESEND_WEBHOOK_SECRET } from "../../../../../../e2e/support/resend-webhook-signature";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import type { Clock } from "../../../../../platform/application/clock.port";
 import { inboundWebhookRequest, TWILIO_SIGNATURE_HEADER, twilioSignature, type InboundWebhookRequest } from "../../../../webhooks/inbound/public-api";
 import { ConfiguredNotificationWebhookVerifiers } from "../notification-webhook-verifiers.adapter";

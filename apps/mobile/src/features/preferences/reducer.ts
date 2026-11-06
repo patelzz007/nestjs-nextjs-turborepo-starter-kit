@@ -1,7 +1,7 @@
 import { assertNever } from "@workspace/shared";
 
 import type { PreferencesAction } from "./actions";
-import type { PreferencesState } from "./state";
+import { DEFAULT_PREFERENCES, type PreferencesState } from "./state";
 
 /** Pure preference transitions — persistence and theme application are effects (store.ts). */
 export function preferencesReducer(state: PreferencesState, action: PreferencesAction): PreferencesState {
@@ -10,6 +10,8 @@ export function preferencesReducer(state: PreferencesState, action: PreferencesA
 			return action.preferences;
 		case "[ Preferences ] Theme Changed":
 			return { ...state, theme: action.theme };
+		case "[ Preferences ] Drawer Style Changed":
+			return { ...state, drawerStyle: action.drawerStyle };
 		case "[ Preferences ] App Lock Turned On":
 			return { ...state, appLock: { ...state.appLock, enabled: true } };
 		case "[ Preferences ] App Lock Turned Off":
@@ -20,8 +22,8 @@ export function preferencesReducer(state: PreferencesState, action: PreferencesA
 			return { ...state, language: action.language };
 		case "[ Preferences ] Onboarding Completed":
 			return { ...state, onboardingCompleted: true };
-		case "[ Preferences ] Onboarding Reset":
-			return { ...state, onboardingCompleted: false };
+		case "[ Preferences ] Reset":
+			return DEFAULT_PREFERENCES;
 		default:
 			return assertNever(action, "preferences action");
 	}

@@ -8,7 +8,7 @@ import {
 	parseCreateApiKeyForm,
 	type ApiKeyStoreChoices,
 } from "@/contexts/pos/lib/api-keys/create-api-key-form";
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 
 const ALL_LOCATIONS_MEMBER: ApiKeyStoreChoices = { stores: [STORE_A, STORE_B], allowTenantWide: true };
 const STORE_LIMITED_MEMBER: ApiKeyStoreChoices = { stores: [STORE_B], allowTenantWide: false };

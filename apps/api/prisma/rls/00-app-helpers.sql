@@ -4,8 +4,8 @@
 -- The primitives every other RLS file depends on:
 --   - `01-acl-location-access.sql` builds SECURITY DEFINER functions on top of
 --     them (its SQL bodies call app_rls_bypass() / app_current_user_id()).
---   - `prisma/rls.sql` policies call app_owns() / app_rls_bypass().
--- They used to live in `rls.sql` §2, which runs AFTER `01` — on a fresh
+--   - `prisma/rls/10-policies.sql` policies call app_owns() / app_rls_bypass().
+-- They used to live in `10-policies.sql` §2, which runs AFTER `01` — on a fresh
 -- database (no app_* functions yet) `01` failed with:
 --   ERROR: function app_rls_bypass() does not exist
 -- so `pnpm tools db:apply-security` aborted before any grants were applied.

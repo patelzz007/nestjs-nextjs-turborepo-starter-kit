@@ -90,7 +90,7 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 		// The React Compiler memoizes every component and hook of the app and the UI kit (not node_modules):
 		// a parent's re-render no longer re-renders children whose props did not change. The code already
 		// follows its rules (the `react-hooks-js` lint rules run in CI).
-		experiments: { ...config.experiments, reactCompiler: true },
+		experiments: { ...config.experiments, reactCompiler: true, typedRoutes: true },
 		ios: {
 			bundleIdentifier: identity.MOBILE_BUNDLE_ID,
 			supportsTablet: true,

@@ -6,7 +6,7 @@ import { PrismaService } from "../../../../prisma/prisma.service";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { IdempotencyRecordRepository } from "../idempotency-record.repository";
 import { IDEMPOTENCY_RETENTION_OPERATION, IDEMPOTENCY_SYSTEM_OPERATION } from "../idempotency.constants";
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { RequestContextService } from "../../context/request-context";
 import { LIVE_ROW_FIELDS } from "../../persistence/__tests__/base-row-fields";
 

@@ -47,7 +47,7 @@ datasource db {
 //
 // Prisma 7 PSL cannot emit CREATE ROLE, GRANT, ENABLE/FORCE RLS, or POLICY.
 // **Do not append RLS to migrations/*/migration.sql** — squashed migrations
-// would drop it. Canonical SQL: `prisma/rls.sql` + `prisma/rls/*.sql`, applied
+// would drop it. Canonical SQL: `prisma/rls/10-policies.sql` + `prisma/rls/*.sql`, applied
 // automatically by `pnpm db:migrate` / `db:reset` / `db:deploy` (`db:apply-security`).
 //
 // Schema-owned pieces (columns, indexes, maps) always land in this file first.
@@ -253,6 +253,7 @@ model User {
   signupReferralsAsReferrer        SignupReferral[]            @relation("SignupReferrerUser")
   signupReferralsAsReferee         SignupReferral?             @relation("SignupRefereeUser")
   rewardOtpChallenges              RewardOtpChallenge[]
+  rewardClaimHolds                 RewardClaimHold[]
   rewardLegalAcceptances           RewardLegalAcceptance[]
   rewardNotifications              RewardNotification[]
   rewardAuditLogs                  RewardAuditLog[]
@@ -1976,6 +1977,8 @@ enum FileCategory {
   BROADCAST_IMAGE
   /// The same for a platform notice, uploaded by a staff member.
   PLATFORM_BROADCAST_IMAGE
+  /// A PDF sent as a notification's attachment — public, because an email client opens it without signing in.
+  NOTIFICATION_DOCUMENT
 }
 
 enum FileVisibility {
@@ -2184,6 +2187,7 @@ model Reward {
   consumerRewards      Reward[]               @relation("ConsumerReferrerReward")
   parentConsumerReward Reward?                @relation("ReferrerCloneParent", fields: [tenantId, parentConsumerRewardId], references: [tenantId, id], onDelete: Restrict)
   referrerClones       Reward[]               @relation("ReferrerCloneParent")
+  claimHolds           RewardClaimHold[]
   claims               RewardClaim[]
   referrals            RewardReferral[]
   locationScopes       RewardLocationScope[]
@@ -2397,6 +2401,42 @@ model RewardClaim {
   @@index([userId, claimedAt])
   /// Analytics: platform-wide claims in a range.
   @@index([claimedAt])
+}
+
+/// How a hold on one unit ended: ACTIVE while it holds the unit, CONVERTED when the claim took it, EXPIRED when the unit went back.
+enum RewardClaimHoldStatus {
+  ACTIVE
+  CONVERTED
+  EXPIRED
+}
+
+/// One unit of a reward held for a customer between asking for a claim code and claiming, like a seat held at a cinema.
+/// RLS: app_owns(userId).
+/// @extends BaseModel
+model RewardClaimHold {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId    String
+  rewardId  String
+  status    RewardClaimHoldStatus @default(ACTIVE)
+  expiresAt BigInt
+  settledAt BigInt?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([rewardId, userId])
+  @@index([status, expiresAt])
 }
 
 /// RLS: app_owns(userId).
@@ -3471,7 +3511,7 @@ enum EmailDeliveryOutcome {
 // Geographical data (Country / State / City)
 // Source: dr5hn/countries-states-cities-database
 // Reference data: world-readable; written only by SuperAdmins through the
-// `geo.reference_data.write` system operation (prisma/rls.sql). Soft-deleted,
+// `geo.reference_data.write` system operation (prisma/rls/10-policies.sql). Soft-deleted,
 // never hard-deleted (a delete cascades the soft delete to the children).
 // Times are epoch milliseconds like every other table: `createdAt` / `updatedAt`
 // default to the insert time, and every write stamps `updatedAt` from the clock.
@@ -4948,6 +4988,8 @@ model Notification {
   fannedOutAt     BigInt?
   /// Not delivered before this instant: a broadcast sent at each recipient's own local time (ADR 073).
   notBefore       BigInt?
+  /// The optional file sent with it (NotificationAttachmentSchema): a snapshot, shown in the inbox, the email and the push.
+  attachment      Json?
 
   deliveries NotificationDelivery[]
 
@@ -5035,6 +5077,8 @@ model InAppNotification {
   /// The tenant name a broadcast is sent as; null for the platform.
   senderName     String?              @db.VarChar(200)
   senderLogoUrl  String?              @db.VarChar(500)
+  /// The notification's optional file, copied here so an inbox read needs no other table.
+  attachment     Json?
   groupKey       String?              @db.VarChar(160)
   /// How many notifications are folded into this row (1 when not grouped).
   groupCount     Int                  @default(1)

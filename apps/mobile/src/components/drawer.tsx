@@ -33,7 +33,6 @@ import {
 	type ViewInstance,
 } from "react-native";
 import Animated, { useAnimatedProps, useAnimatedStyle, useSharedValue, withSpring, type SharedValue } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 import { scheduleOnRN } from "react-native-worklets";
 
@@ -83,7 +82,6 @@ export interface DrawerProps {
 
 export function Drawer({ open, onOpen, onClose, panel, accessibilityLabel, closeLabel, swipeEnabled = true, children, testID }: DrawerProps): React.JSX.Element {
 	const { width: screenWidth } = useWindowDimensions();
-	const insets = useSafeAreaInsets();
 	const panelWidth = Math.min(screenWidth * PANEL_SCREEN_SHARE, PANEL_MAX_WIDTH);
 	const progress = useSharedValue(open ? OPEN : CLOSED);
 	const blurTarget = React.useRef<ViewInstance>(null);
@@ -190,12 +188,10 @@ export function Drawer({ open, onOpen, onClose, panel, accessibilityLabel, close
 	const scrimStyle = useAnimatedStyle(() => ({ opacity: progress.get() * SCRIM_MAX_OPACITY }));
 	const panelStyle = useAnimatedStyle(() => ({ transform: [{ translateX: (progress.get() - OPEN) * (panelWidth + SHADOW_CLEARANCE) }] }));
 	const panelFrame = React.useMemo(
-		(): { readonly width: number; readonly paddingTop: number; readonly paddingBottom: number } => ({
+		(): { readonly width: number } => ({
 			width: panelWidth,
-			paddingTop: insets.top,
-			paddingBottom: insets.bottom,
 		}),
-		[insets.bottom, insets.top, panelWidth],
+		[panelWidth],
 	);
 
 	return (

@@ -6,6 +6,7 @@ import { toastMessage } from "@workspace/ui/components/toast";
 import { useIsDesktop } from "@workspace/ui/hooks/use-mobile";
 import Link from "next/link";
 import { useCallback, type JSX, type ReactElement } from "react";
+import { appRoute } from "../../navigation/app-route";
 
 /** Crumbs shown before the trail collapses the middle ones. */
 const DESKTOP_MAX_CRUMBS = 4;
@@ -43,7 +44,7 @@ export function ShellBreadcrumb({ status, items, labels = SHELL_BREADCRUMB_LABEL
 	const isDesktop = useIsDesktop();
 	const crumbs = items ?? (status.kind === "ready" ? status.items : []);
 
-	const renderLink = useCallback((item: BreadcrumbItem): ReactElement => <Link href={item.href ?? "#"} />, []);
+	const renderLink = useCallback((item: BreadcrumbItem): ReactElement => <Link href={appRoute(item.href ?? "#")} />, []);
 
 	const handleCopy = useCallback(
 		(ok: boolean): void => {

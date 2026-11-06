@@ -4,8 +4,8 @@ import { RewardResponseSchema } from "@workspace/shared";
 
 import { IMAGE_FILE_ID, LOGO_URL, SECOND_IMAGE_FILE_ID, buildRewardRow, imageRow, renditionUrl } from "./reward-row.fixture";
 import { mapRewardImages, mapRewardToResponse, rewardLogoUrl, RewardImageUnavailableError, type RewardTenantDisplay } from "../reward-response.mapper";
-import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../test/support/public-urls";
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../e2e/support/public-urls";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 
 const LOGO_THUMBNAIL_URL = "https://cdn.example.com/stores/kopi-co/logo/thumbnail/logo.webp";
 const LOGO_MEDIUM_URL = "https://cdn.example.com/stores/kopi-co/logo/medium/logo.webp";

@@ -72,11 +72,10 @@ describe("env boundary (apps/web effective lint config)", () => {
 		expect(boundaryViolations("export const probe = process.env.NEXT_PUBLIC_API_URL;\n", "components/probe.tsx")).toContain("no-restricted-properties");
 	});
 
-	it("allows process.env inside lib/env/env.client.ts, lib/env/env.server.ts and lib/env/env.runtime.ts", () => {
+	it("allows process.env inside lib/env/env.client.ts and lib/env/env.server.ts", () => {
 		const code = "export const probe = process.env.NEXT_PUBLIC_API_URL;\n";
 		expect(boundaryViolations(code, "lib/env/env.client.ts")).toEqual([]);
 		expect(boundaryViolations(code, "lib/env/env.server.ts")).toEqual([]);
-		expect(boundaryViolations(code, "lib/env/env.runtime.ts")).toEqual([]);
 	});
 
 	it("rejects process.env in instrumentation.ts and the pure schema module", () => {

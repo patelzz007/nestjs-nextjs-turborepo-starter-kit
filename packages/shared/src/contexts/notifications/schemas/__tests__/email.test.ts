@@ -58,6 +58,7 @@ describe("Mailpit schemas (local development inbox)", () => {
 		HTML: "<p>482913</p>",
 		Tags: ["login-verification"],
 		Headers: { "X-Email-Log-Id": "7c9e6679-7425-40de-944b-e07fc1f90ae7" },
+		Attachments: [{ Filename: "statement.pdf", ContentType: "application/pdf", Content: "JVBERg==" }],
 	};
 
 	it("accepts a complete send request", () => {

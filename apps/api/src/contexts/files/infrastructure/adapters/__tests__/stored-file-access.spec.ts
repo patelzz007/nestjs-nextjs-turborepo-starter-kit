@@ -3,8 +3,8 @@ import type { Readable } from "node:stream";
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
-import { InMemoryObjectStorage, imageRenditionsFor, storedFile } from "../../../../../../test/support/file-lifecycle-fakes";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
+import { InMemoryObjectStorage, imageRenditionsFor, storedFile } from "../../../../../../e2e/support/file-lifecycle-fakes";
 import { FixedClock } from "../../../../../platform/application/__tests__/fixed-clock";
 import { InMemoryUnitOfWork } from "../../../../../platform/application/__tests__/fakes/in-memory-unit-of-work";
 import { RequestContextService } from "../../../../../platform/infrastructure/context/request-context";

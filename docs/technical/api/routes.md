@@ -346,7 +346,7 @@ public list(@ZodListQuery(ProductListQuerySchema) query: ProductListQuery): Prom
   reply (binary downloads) — currently `EmailLogController.stream` and
   `FilesController.localDownload`. Adding another is a reviewed decision; the e2e test pins the list.
 
-`apps/api/test/openapi-document.e2e-spec.ts` builds the real document and fails when any
+`apps/api/e2e/openapi-document.e2e-spec.ts` builds the real document and fails when any
 `@Body` / `@Query` / `@Param` is not validated by `ZodValidationPipe` with its schema attached, when
 an operation that takes a body has no `requestBody`, when a validated query/path key or a
 `{templated}` path segment is undocumented, or when a `$ref` dangles — and, for responses, when a
@@ -367,7 +367,7 @@ or a response contract:
 pnpm tools openapi:export          # = turbo run openapi:export --filter=@workspace/api (needs Postgres + Redis, like test:e2e)
 ```
 
-`apps/api/test/openapi-artifact.e2e-spec.ts` (part of `pnpm --filter @workspace/api test:e2e`)
+`apps/api/e2e/openapi-artifact.e2e-spec.ts` (part of `pnpm --filter @workspace/api test:e2e`)
 fails while the committed file is stale; `openapi:export` is that spec run with `--update`.
 
 ---

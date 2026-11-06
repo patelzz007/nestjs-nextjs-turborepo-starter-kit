@@ -3,7 +3,7 @@ import { lastValueFrom, of } from "rxjs";
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it } from "vitest";
 
-import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
+import { createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
 import type { MerchantTenantResolverPort } from "../../../../../application/ports/merchant-tenant-resolver.port";
 import { getMerchantActorFromRequest, setApiKeyAuthOnRequest } from "../../api-keys/api-key-request";
 import { MerchantActorInterceptor } from "../merchant-actor.interceptor";

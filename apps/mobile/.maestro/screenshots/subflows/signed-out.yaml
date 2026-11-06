@@ -1,0 +1,72 @@
+# The screens in front of the sign-in wall. Asks to sign out (the dialog), then signs out through "replay
+# onboarding", photographs the slides and the auth forms, and leaves the app on the sign-in screen:
+# readme.yaml signs back in afterwards (subflows/signed-in.yaml). Finishing the slides marks them seen again.
+appId: ${APP_ID}
+---
+- openLink:
+    link: "${SCHEME}:///settings"
+    autoVerify: false
+- extendedWaitUntil:
+    visible:
+      id: "app-header"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "^Sign out$"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "^Sign out$"
+- extendedWaitUntil:
+    visible: "Sign out\\?"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-sign-out
+- tapOn: "^Cancel$"
+- extendedWaitUntil:
+    notVisible: "Sign out\\?"
+    timeout: 10000
+- tapOn: "Sign out and replay onboarding"
+- extendedWaitUntil:
+    visible: "^Next$"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-onboarding
+- tapOn: "^Next$"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-onboarding-2
+- tapOn: "^Next$"
+- extendedWaitUntil:
+    visible: "^Get started$"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-onboarding-3
+- tapOn: "^Get started$"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-email"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-sign-in
+- openLink:
+    link: "${SCHEME}:///auth/sign-up"
+    autoVerify: false
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-sign-up
+- openLink:
+    link: "${SCHEME}:///auth/forgot-password"
+    autoVerify: false
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: mobile-forgot-password
+- openLink:
+    link: "${SCHEME}:///auth/sign-in"
+    autoVerify: false
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-email"
+    timeout: 20000

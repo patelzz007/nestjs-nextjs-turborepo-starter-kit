@@ -1,7 +1,7 @@
 import { API_VERSION_PREFIX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { GithubPictureAddresses } from "../github-picture-addresses";
 
 const CONFIG = createTestTypedConfig({});

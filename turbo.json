@@ -130,7 +130,7 @@
 			"dependsOn": ["^lint"],
 			"env": ["REWARD_CODE_HASH_KEYS"]
 		},
-		// Also checks that project.json is applied to every copy (scripts/project-identity.mjs --check), so
+		// Also checks that project.json is applied to every copy (packages/tooling/src/project-identity/cli.ts --check), so
 		// those root files are inputs: a cached pass must never hide a renamed project.
 		"@workspace/tooling#lint": {
 			"dependsOn": ["^lint"],

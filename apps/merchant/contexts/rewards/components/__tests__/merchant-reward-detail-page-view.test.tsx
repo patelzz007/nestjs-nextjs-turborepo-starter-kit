@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantRewardDetailPageView } from "@/contexts/rewards/components/merchant-reward-detail-page-view";
 import { MERCHANT_REWARD_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { busyRegionAnnouncements } from "@/test/skeleton";
-import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
-import { rewardFixture } from "@/test/rewards";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
+import { busyRegionAnnouncements } from "@/testing/skeleton";
+import { contextQueryState, TWO_STORE_CONTEXT } from "@/testing/tenant-context";
+import { rewardFixture } from "@/testing/rewards";
 import { tenantRoutes } from "@/lib/routes";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { epochMs, type RewardResponse } from "@workspace/shared";

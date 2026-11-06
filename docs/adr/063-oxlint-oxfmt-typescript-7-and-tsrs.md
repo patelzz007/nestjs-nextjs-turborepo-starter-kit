@@ -69,7 +69,7 @@ Alternatives considered:
      not use; `peerDependencyRules` records that.
    The global `typescript: 6.0.3` override is gone.
 8. **tsrs builds and watches** `packages/shared`, `packages/api-client`, `packages/messaging` and
-   `apps/aws-infrastructure` (`tsc-alias` still rewrites extensions). Verified before the switch:
+   `infra/aws` (`tsc-alias` still rewrites extensions). Verified before the switch:
    the same files emitted, identical JavaScript, `.d.ts` differing only in union-member order;
    `--watch --preserveWatchOutput` re-emits on change; an up-to-date incremental build emits nothing.
    The one remaining `tsc` call, `tsc --showConfig` in `tsconfig-conditions.test.mjs`, resolves

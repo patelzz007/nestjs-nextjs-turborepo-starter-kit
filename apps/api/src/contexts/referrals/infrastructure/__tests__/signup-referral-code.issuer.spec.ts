@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { SIGNUP_REFERRAL_CODE_TTL_MS } from "@workspace/shared";
 import { describe, expect, it, vi, type Mock } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { issueSignupReferralCode, SIGNUP_REFERRAL_CODE_MAX_ATTEMPTS } from "../persistence/signup-referral-code.issuer";
 import { SignupReferralCodeAllocationError } from "../../application/errors/signup-referral.errors";

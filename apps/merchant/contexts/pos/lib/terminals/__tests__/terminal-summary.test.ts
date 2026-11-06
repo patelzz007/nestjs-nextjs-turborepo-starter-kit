@@ -12,7 +12,7 @@ import {
 	summarizeTerminalPage,
 	summarizeTerminals,
 } from "@/contexts/pos/lib/terminals/terminal-summary";
-import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
+import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/testing/terminals";
 
 const ONE_MINUTE_MS = 60_000;
 

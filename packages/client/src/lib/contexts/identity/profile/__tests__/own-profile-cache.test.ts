@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { epochMs, type OwnProfile } from "@workspace/shared";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture, userFixture } from "../../../../../testing/auth-fixtures";
 import { ApiError } from "../../../../api/api-request";
 import { apiRouter } from "../../../../api/endpoints";
 import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError } from "../own-profile-cache";

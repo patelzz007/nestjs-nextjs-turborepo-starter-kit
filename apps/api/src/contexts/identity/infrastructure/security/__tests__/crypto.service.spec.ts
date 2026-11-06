@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { CryptoService } from "../crypto.service";
 
 const crypto = new CryptoService(createTestTypedConfig({ BCRYPT_SALT_ROUNDS: "10" }));

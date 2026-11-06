@@ -25,6 +25,8 @@ export { BULK_MUTATION_MAX_ITEMS, BulkDeleteIdsSchema, BulkDeleteResultSchema } 
 export type { BulkDeleteIdsInput, BulkDeleteResult } from "./api/bulk-mutation";
 export { BaseResponseSchema, EpochMsSchema, epochMs, nowEpochMs, DataValueSchema } from "./api/common";
 export type { BaseResponse, EpochMs, DataPrimitive, DataValue } from "./api/common";
+export { idSchema, LocationIdSchema, UserIdSchema } from "./api/id";
+export type { Id, LocationId, UserId } from "./api/id";
 export { CanonicalEmailSchema, canonicalEmailSchema, EMAIL_ADDRESS_MAX_LENGTH } from "./api/email-address";
 export type { CanonicalEmail } from "./api/email-address";
 export { ApiVersionManifestSchema } from "./api/version";

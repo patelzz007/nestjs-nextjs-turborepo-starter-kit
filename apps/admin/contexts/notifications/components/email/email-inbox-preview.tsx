@@ -9,6 +9,7 @@ import { Mail, Monitor, RotateCw, Smartphone } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { z } from "zod";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** The width the email is shown at — a desktop mail client, or a phone. */
 export const EmailPreviewDeviceSchema = z.enum(["desktop", "mobile"]);
@@ -69,7 +70,7 @@ export function EmailInboxPreview({ preview, recipient, status, device, onDevice
 				</p>
 				<div className="ms-auto flex items-center gap-3">
 					{templatesHref !== undefined ? (
-						<Link href={templatesHref} className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+						<Link href={appRoute(templatesHref)} className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
 							Open template
 						</Link>
 					) : null}

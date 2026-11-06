@@ -1,3 +1,6 @@
+import type { z } from "zod";
+import type { RateLimitSubjectKindSchema } from "@workspace/shared";
+
 /*
  * The one rate limiter every limit in the API goes through (ADR 071): the HTTP throttlers, the email
  * recipient cap, the analytics export cap and the notification channel caps. Each decision is atomic
@@ -5,7 +8,7 @@
  */
 
 /** Who or what a policy counts. A `destination` id is always a SHA-256 of the normalized address, never the address. */
-export type RateLimitSubjectKind = "ip" | "principal" | "tenant" | "apiKey" | "destination";
+export type RateLimitSubjectKind = z.output<typeof RateLimitSubjectKindSchema>;
 
 export interface RateLimitSubject {
 	readonly kind: RateLimitSubjectKind;

@@ -161,11 +161,11 @@ export const LIVE_ONLY = { where: { isDeleted: false } } satisfies { where: { is
 
 export const REGION_INCLUDES: Readonly<Record<string, Prisma.RegionInclude>> = { subregions: { subregions: LIVE_ONLY }, countries: { countries: LIVE_ONLY } };
 export const SUBREGION_INCLUDES: Readonly<Record<string, Prisma.SubregionInclude>> = { region: { region: true }, countries: { countries: LIVE_ONLY } };
-export const COUNTRY_INCLUDES: Readonly<Record<string, Prisma.CountryInclude>> = {
+export const COUNTRY_INCLUDES = {
 	region: { regionRelation: true },
 	subregion: { subregionRelation: true },
 	states: { states: LIVE_ONLY },
 	cities: { cities: LIVE_ONLY },
-};
+} satisfies Readonly<Record<string, Prisma.CountryInclude>>;
 export const STATE_INCLUDES: Readonly<Record<string, Prisma.StateInclude>> = { country: { country: true }, cities: { cities: LIVE_ONLY } };
 export const CITY_INCLUDES: Readonly<Record<string, Prisma.CityInclude>> = { state: { state: true }, country: { country: true } };

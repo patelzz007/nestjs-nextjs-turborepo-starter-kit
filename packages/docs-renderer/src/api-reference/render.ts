@@ -50,7 +50,7 @@ const TEXT_BODY_SCHEMA = z.string();
 /** Separates a policy name from its explanation in an access description. */
 const POLICY_DESCRIPTION_SEPARATOR = " — ";
 
-/** Same anchor rules as GitHub and the docs link checker (`scripts/check-links.mjs`). */
+/** Same anchor rules as GitHub and the docs link checker (`scripts/check-links.ts`). */
 export function headingAnchor(text: string): string {
 	return text
 		.toLowerCase()

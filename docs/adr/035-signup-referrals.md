@@ -521,7 +521,7 @@ The first implementation of this ADR was reviewed for bugs, race conditions and 
 **Problem.** `POST /redemptions/checkout` runs as the merchant API-key principal (`rls.interceptor.ts` → `apiKeyRlsContext`). `signup_referrals` had only the owner policy, so inside the checkout transaction the referral was invisible: `findFirst` returned null and the stamp silently did nothing. No referral could ever become Redeemed, and no notification could ever be owed. The unit test mocked the service, so it could not catch this. The post-commit `deliverPendingSuccessNotifications(20)` ran under the same principal and read nothing either.
 
 ```sql
--- prisma/rls.sql: the only policy on the table
+-- prisma/rls/10-policies.sql: the only policy on the table
 CREATE POLICY signup_referrals_referrer ON public.signup_referrals
   USING (app_owns(referrer_user_id) OR app_rls_bypass())
   WITH CHECK (app_rls_bypass());
@@ -538,7 +538,7 @@ CREATE POLICY signup_referrals_api_key_update ON public.signup_referrals
   WITH CHECK (app_api_key_signup_referee_access(referee_user_id));
 ```
 
-Covered by `test/api-key-rls-principal.e2e-spec.ts` (the key reads and stamps the redeemed customer's referral, and sees nothing of a user who never redeemed there).
+Covered by `e2e/api-key-rls-principal.e2e-spec.ts` (the key reads and stamps the redeemed customer's referral, and sees nothing of a user who never redeemed there).
 
 #### R2. Existing accounts never received a code
 

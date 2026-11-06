@@ -9,7 +9,7 @@ import { createHash, generateKeyPairSync, sign, type KeyObject } from "node:cryp
 import { ANDROID_LOGIN_CREDENTIALS_RELATION, type PasskeyAuthenticationResponse, type PasskeyRegistrationResponse } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createTestApiConfig } from "../../../../../../test/support/test-api-env";
+import { createTestApiConfig } from "../../../../../../e2e/support/test-api-env";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
 import type { PasskeysConfig } from "../../../../../config/api-config.schema";
 import { SimpleWebAuthnAdapter } from "../simple-web-authn.adapter";

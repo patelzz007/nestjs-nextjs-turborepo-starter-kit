@@ -96,7 +96,7 @@ function LockScreen(): React.JSX.Element {
 			<BodyText>{labels.lock.body}</BodyText>
 			{failureMessage === null ? null : <Alert tone="error" message={failureMessage} />}
 			<Button label={labels.lock.tryAgain} onPress={tryAgain} loading={checking} />
-			<Button label={labels.lock.signOut} variant="secondary" onPress={signOut} disabled={checking} />
+			<Button label={labels.lock.signOut} variant="outline" onPress={signOut} disabled={checking} />
 		</Screen>
 	);
 }

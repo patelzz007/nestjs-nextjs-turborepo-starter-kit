@@ -15,6 +15,7 @@ import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import { ROUTES } from "@/lib/routes";
 
 import { ReceivedWebhookOutcomeBadge, ReceivedWebhookVerificationBadge } from "./received-webhook-badges";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface ReceivedWebhookDetailViewProps {
 	readonly id: string;
@@ -131,7 +132,7 @@ export function ReceivedWebhookRecord({ record }: { readonly record: ReceivedWeb
 					{record.correlationId === null ? (
 						NOT_RECORDED
 					) : (
-						<Link href={auditLogListHref({ correlationId: record.correlationId })} className="text-primary hover:underline">
+						<Link href={appRoute(auditLogListHref({ correlationId: record.correlationId }))} className="text-primary hover:underline">
 							{record.correlationId}
 						</Link>
 					)}

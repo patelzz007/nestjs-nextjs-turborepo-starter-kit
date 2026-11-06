@@ -3,10 +3,10 @@
 import type { AppLanguage } from "@workspace/shared";
 import * as React from "react";
 
-import type { AppLockTimeoutMs, ThemePreference } from "../../lib/secure-store";
+import type { AppLockTimeoutMs, DrawerStyle, ThemePreference } from "../../lib/secure-store";
 import { createFeatureStoreContext } from "../../lib/state/feature-store-context";
 import { preferencesActions, type PreferencesAction } from "./actions";
-import { selectAppLockEnabled, selectAppLockTimeoutMs, selectLanguage, selectOnboardingCompleted, selectTheme } from "./selectors";
+import { selectAppLockEnabled, selectAppLockTimeoutMs, selectDrawerStyle, selectLanguage, selectOnboardingCompleted, selectTheme } from "./selectors";
 import type { PreferencesState } from "./state";
 
 const preferencesContext = createFeatureStoreContext<PreferencesState, PreferencesAction>("Preferences");
@@ -15,6 +15,11 @@ export const PreferencesStoreProvider = preferencesContext.provider;
 
 export function useThemePreference(): ThemePreference {
 	return preferencesContext.useFeatureSelector(selectTheme);
+}
+
+/** The side drawer's look (Settings → Appearance). */
+export function useDrawerStyle(): DrawerStyle {
+	return preferencesContext.useFeatureSelector(selectDrawerStyle);
 }
 
 export function useAppLockEnabled(): boolean {
@@ -42,12 +47,13 @@ export function usePreferencesSnapshot(): () => PreferencesState {
 
 export interface PreferencesCommands {
 	readonly themeChanged: (theme: ThemePreference) => void;
+	readonly drawerStyleChanged: (drawerStyle: DrawerStyle) => void;
 	readonly languageChanged: (language: AppLanguage) => void;
 	readonly appLockTurnedOn: () => void;
 	readonly appLockTurnedOff: () => void;
 	readonly appLockTimeoutChanged: (timeoutMs: AppLockTimeoutMs) => void;
 	readonly onboardingCompleted: () => void;
-	readonly onboardingReset: () => void;
+	readonly reset: () => void;
 }
 
 export function usePreferencesCommands(): PreferencesCommands {
@@ -56,6 +62,9 @@ export function usePreferencesCommands(): PreferencesCommands {
 		(): PreferencesCommands => ({
 			themeChanged: (theme: ThemePreference): void => {
 				dispatch(preferencesActions.themeChanged(theme));
+			},
+			drawerStyleChanged: (drawerStyle: DrawerStyle): void => {
+				dispatch(preferencesActions.drawerStyleChanged(drawerStyle));
 			},
 			languageChanged: (language: AppLanguage): void => {
 				dispatch(preferencesActions.languageChanged(language));
@@ -72,8 +81,8 @@ export function usePreferencesCommands(): PreferencesCommands {
 			onboardingCompleted: (): void => {
 				dispatch(preferencesActions.onboardingCompleted());
 			},
-			onboardingReset: (): void => {
-				dispatch(preferencesActions.onboardingReset());
+			reset: (): void => {
+				dispatch(preferencesActions.reset());
 			},
 		}),
 		[dispatch],

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { mapTenantLogo } from "../tenant-logo";
-import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../test/support/public-urls";
+import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../e2e/support/public-urls";
 
 const FILE_ID = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b";
 

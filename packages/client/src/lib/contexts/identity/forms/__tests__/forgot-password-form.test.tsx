@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { APP_LINKS, type Envelope, type ForgotPasswordInput, type MessageResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture } from "../../../../../testing/auth-fixtures";
 import { ApiError } from "../../../../api/use-api";
 import { ForgotPasswordForm } from "../forgot-password-form";
 

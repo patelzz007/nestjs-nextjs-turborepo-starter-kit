@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WebSessionTestProvider, type WebSessionState } from "@/contexts/identity/components/web-authorization-provider";
 import { LandingAuthActions } from "@/components/landing/landing-auth-actions";
-import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
+import { GUEST_SESSION_STATE, signedInSession } from "@/testing/session";
 
 /** The profile the auth facade returns in each test (`null` until a session is verified). */
 let currentUser: AuthUser | null;

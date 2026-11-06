@@ -8,7 +8,7 @@ import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { createTestTypedConfig } from "../../../../../e2e/support/test-api-env";
 import { AuditLogRepository } from "../../audit/audit-log.repository";
 import { AuditTrailService } from "../../audit/audit-trail.service";
 import { DisabledTransactionLog } from "../../transaction-log/transaction-log.port";

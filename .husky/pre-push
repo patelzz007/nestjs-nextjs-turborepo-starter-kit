@@ -1,1 +1,1 @@
-node packages/tooling/scripts/pre-push.mjs
+node packages/tooling/src/pre-push/cli.ts

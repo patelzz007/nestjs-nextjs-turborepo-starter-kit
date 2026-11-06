@@ -1,7 +1,7 @@
 // config/api-config/api-config.grouping.ts — The flat environment grouped into `ApiConfig`.
 // Part of the API environment contract; `../api-config.schema.ts` is its public entry.
 
-import { NodeEnvSchema, type GithubRepositoryParams, type NodeEnv } from "@workspace/shared";
+import { type GithubRepositoryParams, type NodeEnv, NodeEnvSchema, TenantIdSchema } from "@workspace/shared";
 import { toKafkaSecurityOptions } from "@workspace/messaging/kafka";
 
 import { resolveApiPublicUrl } from "../api-public-url";
@@ -41,7 +41,7 @@ export function resolveTenancy(env: ApiEnv): TenancyConfig {
 	if (env.DEFAULT_TENANT_ID === undefined) {
 		throw new Error("DEFAULT_TENANT_ID is required in single-tenant mode (checkApiEnvRules enforces this)");
 	}
-	return { mode: "single", defaultTenantId: env.DEFAULT_TENANT_ID };
+	return { mode: "single", defaultTenantId: TenantIdSchema.parse(env.DEFAULT_TENANT_ID) };
 }
 
 /** Groups the validated flat environment into the typed `ApiConfig`. */

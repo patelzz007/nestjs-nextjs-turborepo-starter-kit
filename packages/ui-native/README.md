@@ -17,7 +17,7 @@ state, and passes everything down.
 
 ## The contract every component meets
 
-`packages/tooling/__tests__/ui-native-kit-contract.test.mjs` checks the mechanical parts of this list for
+`packages/tooling/src/starter/ui-native-kit-contract/__tests__/ui-native-kit-contract.test.ts` checks the mechanical parts of this list for
 every file in `src/components/`. It lives in the tooling package because it reads source files with Node,
 which the kit's own React Native lint rules forbid.
 
@@ -135,7 +135,7 @@ On iOS only one `Modal` can be presented at a time. A `DropdownMenu` item that o
 
 The kit runs on Hermes, which lacks `Intl.RelativeTimeFormat`, `ListFormat`, `PluralRules`,
 `DisplayNames`, `Segmenter` and `Locale`. Jest (Node) has them, so a unit test passes where a
-device would crash. `packages/tooling/__tests__/hermes-intl.test.mjs` blocks them (rules/04).
+device would crash. `packages/tooling/src/starter/hermes-intl/__tests__/hermes-intl.test.ts` blocks them (rules/04).
 
 ## Tests and tooling
 

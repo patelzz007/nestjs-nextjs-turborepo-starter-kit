@@ -1,8 +1,8 @@
 import { epochMs, type SetTenantRateLimitOverrideInput, type TenantRateLimitOverride } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { localAppCache } from "../../../../../test/support/local-app-cache";
-import { RecordingRateLimiter } from "../../../../../test/support/recording-rate-limiter";
+import { localAppCache } from "../../../../../e2e/support/local-app-cache";
+import { RecordingRateLimiter } from "../../../../../e2e/support/recording-rate-limiter";
 import type { Clock } from "../../../../platform/application/clock.port";
 import { NotFoundError } from "../../../../platform/application/errors/app-error";
 import { defineCache, PLATFORM_SCOPE } from "../../../../platform/application/ports/app-cache.port";

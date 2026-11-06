@@ -8,11 +8,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MerchantRewardLocationFields } from "@/contexts/rewards/components/merchant-reward-location-fields";
 import { useRewardEditorForm, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 import { TenantContextProvider } from "@/features/tenant-context/facade";
-import { TEST_ORG_SLUG } from "@/test/authorization";
-import { testEnvelope } from "@/test/envelope";
-import { TestQueryClientProvider } from "@/test/query-client";
-import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { TEST_ORG_SLUG } from "@/testing/authorization";
+import { testEnvelope } from "@/testing/envelope";
+import { TestQueryClientProvider } from "@/testing/query-client";
+import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/testing/tenant-context";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 
 const { contextQuery } = vi.hoisted(() => ({
 	contextQuery: vi.fn<() => ContextQueryState>(),

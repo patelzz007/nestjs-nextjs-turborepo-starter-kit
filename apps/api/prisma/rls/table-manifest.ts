@@ -3,7 +3,8 @@
  *
  * When you add a tenant-owned table in Prisma:
  * 1. Add it to the correct profile in `manifest-index.ts`.
- * 2. Enable RLS + policies in `prisma/rls.sql` and/or `prisma/rls/NN-*.sql`.
+ * 2. Enable RLS in `prisma/rls/10-policies.sql`, name the table in `table-policies.ts` (then run
+ *    `db:generate-rls-policies`), and hand-write only its one-off policies in `prisma/rls/NN-*.sql`.
  * 3. Run `pnpm db:migrate` and `pnpm tools db:check-rls-manifest`.
  */
 

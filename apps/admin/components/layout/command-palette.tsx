@@ -12,6 +12,7 @@ import { CircleUserRound, LayoutDashboard, Settings, SunMoon } from "lucide-reac
 import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export interface CommandPaletteProps {
 	readonly open?: boolean;
@@ -76,7 +77,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 
 	const quickActions = React.useMemo((): readonly AppCommandPaletteQuickAction[] => {
 		const navigateTo = (href: string): void => {
-			router.push(href);
+			router.push(appRoute(href));
 			closePalette();
 		};
 		const actions: readonly RoutedQuickAction[] = [
@@ -143,7 +144,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {
-			router.push(url);
+			router.push(appRoute(url));
 		},
 		[router],
 	);

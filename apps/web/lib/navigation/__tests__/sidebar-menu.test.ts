@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { USER_SIDEBAR_MENU, type CompiledSidebarMenuItem } from "@/lib/navigation/sidebar-menu";
 import { isPathWithin, rewardDetailPath, ROUTES, walletClaimPath } from "@/lib/routes";
-import { listAppPageRoutes, resolvesToAppPage } from "@/test-support/app-routes";
+import { listAppPageRoutes, resolvesToAppPage } from "@/testing/app-routes";
 
 interface MenuEntry {
 	readonly item: CompiledSidebarMenuItem;
@@ -50,7 +50,7 @@ function activeItemIds(pathname: string): readonly string[] {
 		.map(([id]) => id);
 }
 
-describe("consumer sidebar menu (data/user-sidebar-menu.json)", () => {
+describe("consumer sidebar menu (lib/navigation/user-sidebar-menu.json)", () => {
 	it("is not empty", () => {
 		expect(ENABLED_ITEMS.length).toBeGreaterThan(0);
 	});

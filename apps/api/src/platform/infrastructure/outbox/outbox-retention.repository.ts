@@ -8,7 +8,7 @@ export type SettledOutboxStatus = "PUBLISHED" | "FAILED";
 
 /**
  * Deletes settled `OutboxEvent` rows. `OutboxEvent` is append-only for
- * app sessions and bypass-only for everything else (rls.sql), so every batch
+ * app sessions and bypass-only for everything else (10-policies.sql), so every batch
  * runs in its own short `outbox.retention` system-operation transaction.
  */
 @Injectable()

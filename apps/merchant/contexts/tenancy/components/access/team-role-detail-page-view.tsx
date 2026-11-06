@@ -23,6 +23,7 @@ import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const RESET_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Reset role", loading: "Resetting…" };
 const DELETE_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Delete role", loading: "Deleting…" };
@@ -104,7 +105,7 @@ function TeamRoleDetailContent({ tenantSlug, role, otherRoles }: TeamRoleDetailC
 			setDialog(null);
 			toastMessage.success({ title: "Role deleted" });
 			await refreshRoles();
-			router.push(routes.list);
+			router.push(appRoute(routes.list));
 		},
 		onError: (error): void => {
 			if (isRoleInUseError(error)) {
@@ -144,7 +145,7 @@ function TeamRoleDetailContent({ tenantSlug, role, otherRoles }: TeamRoleDetailC
 				action={
 					isOwnerRole ? undefined : (
 						<>
-							<Link href={routes.edit(role.id)} className={buttonVariants()}>
+							<Link href={appRoute(routes.edit(role.id))} className={buttonVariants()}>
 								Edit role
 							</Link>
 							{role.templateKey === null ? null : (
@@ -169,7 +170,7 @@ function TeamRoleDetailContent({ tenantSlug, role, otherRoles }: TeamRoleDetailC
 				<PermissionSummary permissions={role.permissions} />
 			</Card>
 
-			<Link href={routes.list} className="text-sm text-muted-foreground hover:text-foreground">
+			<Link href={appRoute(routes.list)} className="text-sm text-muted-foreground hover:text-foreground">
 				All roles
 			</Link>
 

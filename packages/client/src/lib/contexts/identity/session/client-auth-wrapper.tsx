@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, type JSX, type ReactNode } from "react"
 import { AuthProvider } from "../index";
 import { ProfileLanguageSync } from "../profile/profile-language-sync";
 import type { ServerRenderedSession } from "./server-rendered-session";
+import { appRoute } from "../../../navigation/app-route";
 
 export interface ClientAuthWrapperProps {
 	readonly children: ReactNode;
@@ -76,7 +77,7 @@ export function ClientAuthWrapper({
 				return;
 			}
 			exitTargetRef.current = target;
-			router.replace(url);
+			router.replace(appRoute(url));
 		},
 		[pathname, router],
 	);

@@ -20,6 +20,7 @@ import { columnIsInProgress, effectiveSchedule, formatDueDate, KANBAN_TYPE_DISPL
 import { KanbanCardChildren } from "./kanban-card-children";
 import { KanbanAssignee } from "./kanban-person";
 import { KanbanLabelChips, KanbanLevelChip, KanbanPointsPill, KanbanPriorityIcon, type KanbanStatusColumn } from "./kanban-task-badges";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 /** Labels a card shows before folding the rest into "+n". */
 const CARD_LABEL_LIMIT = 2;
@@ -116,7 +117,7 @@ function CardMenu({ task, href, actions }: { readonly task: KanbanTask; readonly
 				<MoreHorizontal />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-52">
-				<DropdownMenuItem render={<Link href={href} />}>
+				<DropdownMenuItem render={<Link href={appRoute(href)} />}>
 					<ExternalLink />
 					Open
 				</DropdownMenuItem>
@@ -209,7 +210,7 @@ export const KanbanTaskCard = React.forwardRef<HTMLElement, KanbanTaskCardProps>
 
 			<h3 className="text-sm leading-snug">
 				<Link
-					href={href}
+					href={appRoute(href)}
 					className={cn("line-clamp-3 rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring", isDone && "text-muted-foreground")}
 					draggable={false}>
 					{task.title}

@@ -84,9 +84,15 @@ describe("AlertDialog", () => {
 		expect(classNameOf("alert")).not.toContain("border-destructive");
 	});
 
+	it("gives its cancel button a border, so the confirm button leads", async () => {
+		await render(dialog({}));
+
+		expect(screen.getByRole("button", { name: "Keep" })).toHaveProp("className", expect.stringContaining("border-input"));
+	});
+
 	it("has a destructive variant, through `variant` or the `destructive` shorthand", async () => {
 		const view = await render(dialog({ destructive: true }));
-		expect(classNameOf("alert")).toContain("border-destructive");
+		expect(classNameOf("alert")).not.toContain("border-destructive");
 		expect(screen.getByRole("button", { name: "Revoke" })).toHaveProp("className", expect.stringContaining("bg-destructive"));
 
 		await view.rerender(dialog({ variant: "destructive" }));

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TenantStoresPageView } from "@/contexts/tenancy/components/tenant/tenant-stores-page-view";
 import { tenantRoutes } from "@/lib/routes";
-import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/testing/authorization";
 
 const { membershipsQuery } = vi.hoisted(() => ({ membershipsQuery: vi.fn() }));
 

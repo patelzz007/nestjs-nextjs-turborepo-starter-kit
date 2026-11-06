@@ -312,6 +312,23 @@ Risk accepted: an operations-alert delivery still queued when this ships carries
 without the new fields and fails validation; it is a one-off at upgrade, and the alert itself stays in
 the operations console.
 
+## Implementation notes (2026-11-06): attachments
+
+Any notification may carry one optional file: `notify({ ..., attachment })`, in the inbox, the email and the push.
+
+| Decision | Why |
+|---|---|
+| A snapshot on `Notification.attachment` and `InAppNotification.attachment` (`NotificationAttachmentSchema`), not a join to `StoredFile` | An inbox read runs as the reader, and `StoredFile` belongs to its uploader under RLS |
+| Paths are stored and turned into addresses when read (`PublicUrlResolve`) | A saved address would strand the file when the API's address changes, the same reason file URLs resolve late everywhere |
+| The file must be public | An email client and the push service load it without signing in, so a private document is never an attachment |
+| A list, an email and a push show a copy at most 1280 px wide; the original opens on request | FCM refuses pictures over 1 MB, and nobody should download 4K to read a list |
+| A sensitive type refuses an attachment | Its content is never kept or shown on a lock screen |
+| A PDF is `NOTIFICATION_DOCUMENT`, a public category; pictures may be any public file with renditions | A mixed category would need the image rules to skip PDFs, in the upload path |
+
+An email carries the file as a real attachment and shows a photo in its body: the delivery step downloads the bytes (job props hold only strings), up to 15 MB. A file it cannot fetch is left out and logged, and the email still goes with its link. On Android a push's picture sits under its text once expanded, and a collapsed row shows it as a thumbnail, which the OS decides. With the app in the background FCM builds that; with the app open expo-notifications would keep it as a small icon, so a local module, `modules/picture-notification` (`NotificationCompat.BigPictureStyle`, which Android ships), posts that notification instead. Expo Go and iOS run without the module and go on as before. iOS shows a push picture only through a Notification Service Extension, which the app does not have yet; the API already sends `mutable-content` and `imageUrl`. A broadcast keeps its picture in its rich body, and a digest lists titles only. Nothing yet lets a person upload one in the composer: `notify()` is the producer's API. The attachment is a snapshot, so deleting the file leaves a dead link rather than blocking the delete.
+
+`notifications.showcase` is the demo type: its words are in the payload, so `pnpm --filter @workspace/api notifications:demo` and the seed can send photos and a PDF.
+
 ## Considered options
 
 | Option | Why not |

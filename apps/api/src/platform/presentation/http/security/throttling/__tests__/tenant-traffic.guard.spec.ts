@@ -1,9 +1,9 @@
 import type { RateLimitAllowance, SetTenantRateLimitOverrideInput, TenantRateLimitOverride, TenantRateLimitPolicyName } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
-import { RecordingRateLimiter } from "../../../../../../../test/support/recording-rate-limiter";
-import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { createHttpContext, testRequest } from "../../../../../../../e2e/support/http-execution-context";
+import { RecordingRateLimiter } from "../../../../../../../e2e/support/recording-rate-limiter";
+import { createTestTypedConfig } from "../../../../../../../e2e/support/test-api-env";
 import { RateLimitError } from "../../../../../application/errors/app-error";
 import type { TenantRateLimitOverridesPort } from "../../../../../application/ports/tenant-rate-limit-overrides.port";
 import { RequestContextService } from "../../../../../infrastructure/context/request-context";

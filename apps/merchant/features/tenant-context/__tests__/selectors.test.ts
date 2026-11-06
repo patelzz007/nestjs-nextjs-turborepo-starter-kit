@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { MemberLocationAccess } from "@/contexts/tenancy/lib/tenant/location-access";
-import { locationFixture, STORE_A_LOCATION, STORE_B_LOCATION } from "@/test/tenant-context";
-import { STORE_A, STORE_B } from "@/test/terminals";
+import { locationFixture, STORE_A_LOCATION, STORE_B_LOCATION } from "@/testing/tenant-context";
+import { STORE_A, STORE_B } from "@/testing/terminals";
 import type { LocationResponse } from "@workspace/shared";
 
 import { resolveActiveLocation, resolveEffectiveLocationId, toLocationQueryInput } from "../selectors";

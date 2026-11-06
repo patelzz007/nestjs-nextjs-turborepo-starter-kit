@@ -22,6 +22,11 @@
 // that is leaving), and a nested stack's guards re-ran their route clean-up on every render
 // of a redirected route, a loop React stopped as "Maximum update depth exceeded"
 // (seen on a phone whose session had ended while the app was closed).
+//
+// The root stack and the auth folder's stacks name no screens either. Expo Router builds a redirect's destination with
+// its route files in its own sort order, and a navigator with listed screens takes the listed order: the two differ,
+// so every such navigator sent itself a ROUTE_NAMES_CHANGED as it mounted, unhandled if the navigator had been replaced
+// by then. With no list both orders are the router's. Per-screen options come from `rootScreenOptionsOf`.
 
 import { Redirect, Stack } from "expo-router";
 import * as React from "react";
@@ -37,11 +42,23 @@ export interface RootStackProps {
 	readonly route: GatedRootRoute;
 }
 
-/** A root-level stack: no header, screens fade in and out (the auth folder's stack uses it too). */
-export const ROOT_SCREEN_OPTIONS = { headerShown: false, animation: ROOT_TRANSITION } satisfies React.ComponentProps<typeof Stack>["screenOptions"];
+/** What a root-level stack sets on a screen. */
+export interface RootScreenOptions {
+	readonly headerShown: boolean;
+	readonly animation: typeof ROOT_TRANSITION;
+	readonly gestureEnabled?: boolean;
+}
 
-/** A root screen the person may not swipe away from: there is nothing behind it to go back to. */
-export const PINNED = { gestureEnabled: false } satisfies React.ComponentProps<typeof Stack.Screen>["options"];
+/** A root-level stack: no header, screens fade in and out (the auth folder's stack uses it too). */
+const ROOT_SCREEN_OPTIONS: RootScreenOptions = { headerShown: false, animation: ROOT_TRANSITION };
+
+/** The root screens the person may not swipe away from: there is nothing behind them to go back to. */
+const PINNED_SCREENS: readonly string[] = ["update-required", "lock", "onboarding"];
+
+/** A root-level stack's options for one screen, so the stack need not list its screens (see the header). */
+export function rootScreenOptionsOf({ route }: { readonly route: { readonly name: string } }): RootScreenOptions {
+	return PINNED_SCREENS.includes(route.name) ? { ...ROOT_SCREEN_OPTIONS, gestureEnabled: false } : ROOT_SCREEN_OPTIONS;
+}
 
 /**
  * The screen each root route opens on, where a root screen of another route redirects.
@@ -64,13 +81,7 @@ const RootRouteContext = React.createContext<GatedRootRoute | null>(null);
 export function RootStack({ route }: RootStackProps): React.JSX.Element {
 	return (
 		<RootRouteContext value={route}>
-			<Stack screenOptions={ROOT_SCREEN_OPTIONS}>
-				<Stack.Screen name="config-error" />
-				<Stack.Screen name="update-required" options={PINNED} />
-				<Stack.Screen name="lock" options={PINNED} />
-				<Stack.Screen name="auth" />
-				<Stack.Screen name="(app)" />
-			</Stack>
+			<Stack screenOptions={rootScreenOptionsOf} />
 		</RootRouteContext>
 	);
 }

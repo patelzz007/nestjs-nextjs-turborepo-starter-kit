@@ -26,6 +26,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { AlertCircle, Gift, Plus, Sparkles, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 const REWARDS_LOAD_FAILED_MESSAGE = "The rewards catalog failed to load. Try again.";
 
@@ -140,7 +141,7 @@ function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps
 				description="Create drafts, submit for review, and monitor live inventory across your store."
 				actions={
 					canManageRewards ? (
-						<Link href={createRewardPath} className={cn(buttonVariants(), "gap-2")}>
+						<Link href={appRoute(createRewardPath)} className={cn(buttonVariants(), "gap-2")}>
 							<Plus className="size-4" aria-hidden="true" />
 							New reward
 						</Link>
@@ -189,7 +190,7 @@ function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps
 					</EmptyHeader>
 					{canManageRewards ? (
 						<EmptyContent>
-							<Link href={createRewardPath} className={cn(buttonVariants(), "gap-2")}>
+							<Link href={appRoute(createRewardPath)} className={cn(buttonVariants(), "gap-2")}>
 								<Plus className="size-4" aria-hidden="true" />
 								Create first reward
 							</Link>

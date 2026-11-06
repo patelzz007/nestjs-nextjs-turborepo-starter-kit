@@ -4,7 +4,7 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import { APP_LINKS, type Envelope, type MessageResponse, type ResetPasswordInput, type ValidateResetTokenInput, type ValidateResetTokenResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../../../test/auth-fixtures";
+import { envelopeFixture } from "../../../../../testing/auth-fixtures";
 import { ApiError } from "../../../../api/use-api";
 import { ResetPasswordForm } from "../reset-password-form";
 import { RESET_PASSWORD_FORM_LOADING_LABELS } from "../reset-password-form-skeleton";

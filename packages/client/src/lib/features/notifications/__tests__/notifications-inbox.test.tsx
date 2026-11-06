@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider, useMutation, type UseMutationResult } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
+	PLATFORM_DISPLAY_REGION,
 	epochMs,
 	type ApiPaginatedMeta,
 	type ArchiveNotificationsInput,
@@ -16,11 +17,11 @@ import {
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, META_FIXTURE } from "../../../../test/auth-fixtures";
+import { envelopeFixture, META_FIXTURE } from "../../../../testing/auth-fixtures";
 import { ClientTestProviders } from "../../../../testing/client-test-providers";
 import type { LiveState } from "../../live-updates/reconnecting-event-stream";
 import { NOTIFICATIONS_INBOX_LABELS } from "../notifications-inbox-labels";
-import { kindOptionsOf, NotificationsInbox } from "../notifications-inbox";
+import { kindOptionsOf, NotificationRow, NotificationsInbox } from "../notifications-inbox";
 
 interface ListQueryState {
 	readonly data: Envelope<InAppNotificationResponse[]> | undefined;
@@ -91,6 +92,7 @@ function notice(id: string, title: string, overrides: Partial<InAppNotificationR
 		icon: null,
 		senderName: null,
 		senderLogoUrl: null,
+		attachment: null,
 		groupCount: 1,
 		broadcastId: null,
 		readAt: null,
@@ -189,6 +191,61 @@ describe("NotificationsInbox broadcasts", () => {
 		render(<NotificationsInbox />, { wrapper: Providers });
 
 		expect(screen.queryByRole("button", { name: NOTIFICATIONS_INBOX_LABELS.report })).toBeNull();
+	});
+});
+
+const PHOTO = {
+	name: "cake.webp",
+	mimeType: "image/webp",
+	sizeBytes: 1_048_576,
+	width: 3840,
+	height: 2160,
+	url: "https://cdn.example.com/cake.webp",
+	previewUrl: "https://cdn.example.com/cake-1280.webp",
+} satisfies InAppNotificationResponse["attachment"];
+
+const STATEMENT = {
+	name: "statement.pdf",
+	mimeType: "application/pdf",
+	sizeBytes: 24_012,
+	width: null,
+	height: null,
+	url: "https://cdn.example.com/statement.pdf",
+	previewUrl: null,
+} satisfies InAppNotificationResponse["attachment"];
+
+describe("NotificationRow attachments", () => {
+	function renderRow(attachment: InAppNotificationResponse["attachment"]): void {
+		render(
+			<NotificationRow
+				notification={notice(UNREAD_ID, "Fresh", { attachment })}
+				region={PLATFORM_DISPLAY_REGION}
+				labels={NOTIFICATIONS_INBOX_LABELS}
+				onOpen={vi.fn()}
+				onMarkRead={vi.fn()}
+				onArchive={vi.fn()}
+				busy={false}
+			/>,
+		);
+	}
+
+	it("shows a photo's smaller copy, opening the full file", () => {
+		renderRow(PHOTO);
+		const link = screen.getByRole("link", { name: "Open cake.webp" });
+		expect(link.getAttribute("href")).toBe(PHOTO.url);
+		expect(link.querySelector("img")?.getAttribute("src")).toBe(PHOTO.previewUrl);
+	});
+
+	it("links a PDF by its name, with no picture", () => {
+		renderRow(STATEMENT);
+		const link = screen.getByRole("link", { name: "Open statement.pdf" });
+		expect(link.getAttribute("href")).toBe(STATEMENT.url);
+		expect(link.querySelector("img")).toBeNull();
+	});
+
+	it("shows nothing extra without one", () => {
+		renderRow(null);
+		expect(screen.queryByRole("link", { name: /^Open / })).toBeNull();
 	});
 });
 

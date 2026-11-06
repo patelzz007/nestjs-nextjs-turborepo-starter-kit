@@ -359,7 +359,7 @@ function LoadMoreEntry({ onPress }: { readonly onPress: () => void }): React.JSX
 			<View className="self-start">
 				<Button
 					label="Load more"
-					variant="secondary"
+					variant="outline"
 					size="sm"
 					onPress={onPress}
 					accessibilityHint="Shows older entries of the conversation"

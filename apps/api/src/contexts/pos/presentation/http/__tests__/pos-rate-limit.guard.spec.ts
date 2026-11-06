@@ -2,8 +2,8 @@ import type { ExecutionContext } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it, vi } from "vitest";
 
-import { createHttpContext, testRequest } from "../../../../../../test/support/http-execution-context";
-import { RecordingRateLimiter } from "../../../../../../test/support/recording-rate-limiter";
+import { createHttpContext, testRequest } from "../../../../../../e2e/support/http-execution-context";
+import { RecordingRateLimiter } from "../../../../../../e2e/support/recording-rate-limiter";
 import { setTillPointOnRequest, TillPointMissingError } from "../../../../../platform/presentation/http/security/api-keys/api-key-request";
 import { POS_RATE_LIMIT_PER_KEY, POS_RATE_LIMIT_POLICY, POS_RATE_LIMIT_TTL_MS, PosRateLimitedError, PosRateLimitGuard } from "../guards/pos-rate-limit.guard";
 

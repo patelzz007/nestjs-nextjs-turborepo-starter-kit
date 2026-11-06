@@ -16,6 +16,7 @@ import { SWITCHER_MEMBERSHIPS_QUERY } from "@/contexts/tenancy/lib/tenant/member
 import { isCanonicalTenantSlug, isTenantRouteKey } from "@/contexts/tenancy/lib/tenant/resolve-slug";
 import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/tenant/slug";
 import { ROUTES } from "@/lib/routes";
+import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 export type MerchantServerCaller = ServerCaller;
 
@@ -123,7 +124,7 @@ export const loadMerchantServerContext = cache(async (): Promise<MerchantServerC
 
 	const outcome = settleServerQuery(membershipsResult, { label: "tenants.membershipsBootstrap", expected: ["unauthenticated"] });
 	if (outcome.kind === "unauthenticated") {
-		redirect(ROUTES.auth.login);
+		redirect(appRoute(ROUTES.auth.login));
 	}
 
 	return {

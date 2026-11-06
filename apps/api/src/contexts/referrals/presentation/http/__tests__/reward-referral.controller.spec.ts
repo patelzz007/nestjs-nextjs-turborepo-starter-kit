@@ -5,7 +5,7 @@ import type { ActorContext } from "../../../../../platform/application/actor-con
 import { PLATFORM_OPERATION_KEY } from "../../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { CreateRewardReferralLinkCommand } from "../../../application/commands/create-reward-referral-link/create-reward-referral-link.command";
 import { RecordRewardReferralAttributionCommand } from "../../../application/commands/record-reward-referral-attribution/record-reward-referral-attribution.command";
-import { handlerOf } from "../../../../../../test/support/route-metadata";
+import { handlerOf } from "../../../../../../e2e/support/route-metadata";
 import { RewardReferralController, type RewardReferralCommandDispatch } from "../reward-referral.controller";
 
 const REQUEST = { requestId: "req-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null };

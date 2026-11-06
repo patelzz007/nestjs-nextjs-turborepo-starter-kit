@@ -73,7 +73,7 @@ import { XIcon } from "lucide-react";
 import * as React from "react";
 import { z } from "zod";
 
-type ProductStatus = "active" | "archived";
+type ProductStatus = z.output<typeof productStatusSchema>;
 
 interface IProduct {
 	readonly id: string;

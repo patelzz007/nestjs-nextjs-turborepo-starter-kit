@@ -247,11 +247,11 @@ migration and are a follow-up.
 
 ## Tests
 
-- `apps/api/test/analytics-bucketing.e2e-spec.ts` — buckets against Postgres: DST days (23 h /
+- `apps/api/e2e/analytics-bucketing.e2e-spec.ts` — buckets against Postgres: DST days (23 h /
   25 h), Monday weeks across DST, months incl. a leap February, partial edges, exclusive `to`.
-- `apps/api/test/analytics-dashboard.e2e-spec.ts` — facts placed in the merchant's local day vs
+- `apps/api/e2e/analytics-dashboard.e2e-spec.ts` — facts placed in the merchant's local day vs
   UTC, totals = series, store scope, new vs returning, validation, 401/403.
-- `apps/api/test/analytics-export.e2e-spec.ts` — every format end to end, headers, formula
+- `apps/api/e2e/analytics-export.e2e-spec.ts` — every format end to end, headers, formula
   neutralised, store scope in the file, the audit row, 401/403/404, the rate limit.
 - Unit: renderers (CSV escaping + injection, XLSX parsed back with cell types and frozen panes,
   PDF text extracted through its ToUnicode maps; all five languages in every format), the font

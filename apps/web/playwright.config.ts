@@ -9,6 +9,7 @@ import { webBrowserE2eEnv } from "./e2e/browser-env.e2e";
  */
 export default defineConfig({
 	testDir: "./e2e",
+	outputDir: "../../.artifacts/playwright/web",
 	testMatch: "**/*.browser.ts",
 	forbidOnly: true,
 	fullyParallel: false,
