@@ -8,19 +8,26 @@
  * The database and browser suites are not run here (they need Postgres, Redis
  * and built apps); run `pnpm ci:local` for those. CI runs everything.
  */
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { NON_INTERACTIVE_ENV, selectSteps, staticSteps } from "../ci-local/ci-local-plan.ts";
 import { settings } from "../shared/settings.ts";
+import { describePush, parsePushRefs } from "../terminal-progress/change-summary.ts";
 import { runChecks, terminalStream } from "../terminal-progress/run-checks.ts";
 import { PRE_PUSH_LABELS, PRE_PUSH_STEP_IDS, pushesNothingNew } from "./pre-push.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../../..");
 const STDIN_FD = 0;
+/** git names the remote as the hook's first argument; run by hand there is none. */
+const REMOTE_ARGUMENT = 2;
+const DEFAULT_REMOTE = "origin";
 
 // git always pipes the refs in; run by hand from a terminal, check everything.
-const onlyDeletions = !process.stdin.isTTY && pushesNothingNew(readFileSync(STDIN_FD, "utf8"));
+const refsText = process.stdin.isTTY ? undefined : readFileSync(STDIN_FD, "utf8");
+const onlyDeletions = refsText !== undefined && pushesNothingNew(refsText);
+const git = (args: readonly string[]): string => spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf8" }).stdout;
 
 if (onlyDeletions) {
 	process.stdout.write("pre-push: only deleting remote refs — nothing to check.\n");
@@ -28,7 +35,8 @@ if (onlyDeletions) {
 	const steps = selectSteps(staticSteps({ base: "origin/main", noCache: false }), PRE_PUSH_STEP_IDS);
 	const passed = await runChecks({
 		title: "Checking your push",
-		subtitle: "The same lint, typecheck and unit tests as CI. This can take several minutes.",
+		changes: describePush(parsePushRefs(refsText ?? ""), process.argv.at(REMOTE_ARGUMENT) ?? DEFAULT_REMOTE, git),
+		action: "push",
 		checks: steps.map((step) => ({
 			id: step.id,
 			label: PRE_PUSH_LABELS[step.id] ?? step.job,
@@ -40,6 +48,7 @@ if (onlyDeletions) {
 		cwd: REPO_ROOT,
 		stream: terminalStream(),
 		logFile: path.join(REPO_ROOT, settings.artifacts.ci, "pre-push.log"),
+		historyFile: path.join(REPO_ROOT, settings.artifacts.ci, "pre-push.history.json"),
 		nextStep: "Pushing to GitHub…",
 	});
 	process.exitCode = passed ? 0 : 1;

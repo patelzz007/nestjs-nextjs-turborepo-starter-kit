@@ -1184,12 +1184,23 @@ pnpm run lint    # zero errors
 pnpm run test    # every test passes
 ```
 
-Git hooks run on your machine, and show their progress in the terminal so a commit or push never looks frozen:
+Git hooks run on your machine, and open a live dashboard in the terminal so a commit or push never looks frozen:
 
 | You run | What happens first | How long |
 | --- | --- | --- |
 | `git commit` | Formats and lints the staged files | Seconds |
-| `git push` | Runs lint, typecheck and every unit test, the same as CI, and shows each test file as it finishes | Several minutes |
+| `git push` | Runs lint, typecheck and every unit test, the same as CI | Several minutes |
+
+The dashboard shows what you are sending, each check, an overall bar and the time left (from your last good run). You can look around while it works:
+
+| Key | What it does |
+| --- | --- |
+| `1` to `6`, or `←` `→` | Live, Packages, Slowest, Problems, Log, Changes |
+| `↑` `↓`, `PgUp` `PgDn`, `g` `G` | Scroll, or pick a package |
+| `Enter` on a package | Open that package's own log (`Esc` goes back) |
+| `q` twice, or `Ctrl+C` | Cancel: the checks stop, and nothing is committed or pushed |
+
+Looking around can't change the result: only the checks' exit codes decide it. When the dashboard closes, a summary stays in your scrollback. In a GUI git client or CI you get plain lines instead.
 
 If a check fails, the commit or push stops and the failing log is printed. Fix it and run the command again.
 

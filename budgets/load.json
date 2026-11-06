@@ -14,7 +14,7 @@
 		}
 	},
 	"total": {
-		"p95Ms": 2030,
+		"p95Ms": 8670,
 		"maxErrorPercent": 1
 	},
 	"groups": {
@@ -24,7 +24,7 @@
 				"login",
 				"session"
 			],
-			"p95Ms": 6390,
+			"p95Ms": 4070,
 			"maxErrorPercent": 1,
 			"minRequests": 80
 		},
@@ -35,7 +35,7 @@
 				"marketplace-page-2",
 				"reward"
 			],
-			"p95Ms": 1850,
+			"p95Ms": 3420,
 			"maxErrorPercent": 1,
 			"minRequests": 400
 		},
@@ -45,7 +45,7 @@
 				"claim",
 				"my-claims"
 			],
-			"p95Ms": 2860,
+			"p95Ms": 2750,
 			"maxErrorPercent": 1,
 			"minRequests": 100
 		},
@@ -58,15 +58,15 @@
 				"tenant-rewards",
 				"tenant-reward"
 			],
-			"p95Ms": 4330,
+			"p95Ms": 12080,
 			"maxErrorPercent": 1,
 			"minRequests": 150
 		}
 	},
 	"calibration": {
-		"measuredOn": "2026-11-03",
-		"source": "PROVISIONAL: one run on a developer laptop (Apple Silicon) that was also running the full dev stack, not on the CI runner; recalibrate from the first nightly artifact",
+		"measuredOn": "2026-11-06",
+		"source": "load-nightly run 42267261000",
 		"factor": 2,
-		"provisional": true
+		"provisional": false
 	}
 }

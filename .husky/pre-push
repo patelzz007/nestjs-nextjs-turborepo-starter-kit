@@ -1,1 +1,1 @@
-node packages/tooling/src/pre-push/cli.ts
+node packages/tooling/src/pre-push/cli.ts "$@"

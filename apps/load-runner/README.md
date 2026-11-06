@@ -80,11 +80,9 @@ much more than 2×.
 3. Review the diff and commit it. Recalibrate after a deliberate change in cost (a new feature on a
    hot path, a dependency major), never to make a regression pass.
 
-> **Temporary (provisional) thresholds.** The committed values are `calibration.provisional: true`:
-> they come from one run on a developer laptop that was also running the full dev stack (see `calibration`),
-> not from the CI runner. Owner: whoever lands the first green nightly. Expiry: that first green
-> nightly — recalibrate from its artifact (step 2, without `--provisional`), which sets `provisional`
-> to `false`.
+> **How far the runner varies.** GitHub's machines differ a lot. On one commit, two runs differed by 1.36× in total
+> p95, and the seed step, which has nothing to do with the API, took 143 s, 206 s and 267 s on three runs. Calibrate
+> from a middle-speed run (compare that step), not the fastest: run 42267261000 (206 s) is the current source.
 
 To run the gate yourself against a throwaway database (never your dev database: the run provisions
 the Load Test tenant), start an API with `LOAD_TESTING_ENABLED=true` and Redis, start this runner on

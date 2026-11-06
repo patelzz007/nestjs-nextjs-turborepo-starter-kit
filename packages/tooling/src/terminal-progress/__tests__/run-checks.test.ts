@@ -1,11 +1,37 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { ProgressStream } from "../live-region.ts";
-import { failureLog, runChecks, terminalStream, type LiveCheck } from "../run-checks.ts";
+import type { ChangeSummary } from "../change-summary.ts";
+import type { KeyboardOpener, KeyName } from "../keyboard.ts";
+import { failureLog, runChecks, terminalStream, toLogLine, type LiveCheck } from "../run-checks.ts";
+import type { ProgressStream } from "../screen.ts";
+
+const CHANGES: ChangeSummary = { headline: "main → origin/main · 1 commit", commits: [], files: [] };
+const NO_KEYBOARD: KeyboardOpener = () => undefined;
+/** Long enough to outlast the test; every test using it stops it first. */
+const LONG_SCRIPT = "setTimeout(() => {}, 60000)";
+
+function writeHistory(folder: string, history: { readonly totalMs: number; readonly checks: Record<string, number> }): void {
+	mkdirSync(path.join(folder, "logs"), { recursive: true });
+	writeFileSync(path.join(folder, "logs/hook.history.json"), JSON.stringify(history));
+}
+
+/** A keyboard the test presses, once the check has printed something. */
+function pressing(keys: readonly KeyName[]): KeyboardOpener {
+	return (onKey) => {
+		const timer = setTimeout(() => {
+			keys.forEach(onKey);
+		}, 300);
+		return {
+			close: (): void => {
+				clearTimeout(timer);
+			},
+		};
+	};
+}
 
 function nodeCheck(id: string, script: string): LiveCheck {
 	return { id, label: id, command: process.execPath, args: ["-e", script] };
@@ -36,14 +62,17 @@ describe("runChecks", () => {
 		rmSync(folder, { recursive: true, force: true });
 	});
 
-	function run(checks: readonly LiveCheck[], stream: ProgressStream, nextStep?: string): Promise<boolean> {
+	function run(checks: readonly LiveCheck[], stream: ProgressStream, nextStep?: string, openKeys: KeyboardOpener = NO_KEYBOARD): Promise<boolean> {
 		return runChecks({
 			title: "Title",
-			subtitle: "Subtitle",
+			changes: CHANGES,
+			action: "push",
 			checks,
 			cwd: folder,
 			stream,
 			logFile: path.join(folder, "logs/hook.log"),
+			historyFile: path.join(folder, "logs/hook.history.json"),
+			openKeys,
 			...(nextStep === undefined ? {} : { nextStep }),
 		});
 	}
@@ -68,6 +97,14 @@ describe("runChecks", () => {
 		expect(stream.text()).not.toContain("All clear");
 	});
 
+	it("fails a check that exits non-zero without printing a word", async () => {
+		const stream = recording(false);
+
+		await expect(run([nodeCheck("silent", "process.exit(1)")], stream)).resolves.toBe(false);
+		expect(stream.text()).toContain("Stopped: silent failed");
+		expect(stream.text()).not.toContain("All clear");
+	});
+
 	it("fails when the command cannot start", async () => {
 		await expect(run([{ id: "missing", label: "missing", command: "/no/such/command", args: [] }], recording(false))).resolves.toBe(false);
 	});
@@ -78,12 +115,36 @@ describe("runChecks", () => {
 		expect(readFileSync(path.join(folder, "logs/hook.log"), "utf8")).toContain("kept too");
 	});
 
-	it("redraws in a terminal and gives the cursor back", async () => {
+	it("takes over the screen in a terminal, gives it back, and leaves a summary in the scrollback", async () => {
 		const stream = recording(true);
 
 		await run([nodeCheck("one", "")], stream);
-		expect(stream.text()).toContain("\u001B[?25l");
-		expect(stream.text()).toContain("\u001B[?25h");
+		const text = stream.text();
+		expect(text).toContain("\u001B[?1049h");
+		expect(text).toContain("\u001B[?25h");
+		expect(text.slice(text.indexOf("\u001B[?1049l"))).toContain("main → origin/main");
+		expect(text.slice(text.indexOf("\u001B[?1049l"))).toContain("All clear");
+	});
+
+	it("compares a run with the last one only when it finished", async () => {
+		writeHistory(folder, { totalMs: 60_000, checks: { one: 60_000 } });
+		const failed = recording(true);
+		const passed = recording(true);
+
+		await run([nodeCheck("one", "process.exit(1)")], failed);
+		await run([nodeCheck("one", "")], passed);
+		expect(failed.text()).not.toContain("than last time");
+		expect(passed.text()).toContain("faster than last time");
+	});
+
+	it("remembers a good run's timings, and not a failed one's", async () => {
+		const history = path.join(folder, "logs/hook.history.json");
+
+		await run([nodeCheck("one", "process.exit(1)")], recording(false));
+		expect(existsSync(history)).toBe(false);
+
+		await run([nodeCheck("one", "")], recording(false));
+		expect(readFileSync(history, "utf8")).toContain('"one"');
 	});
 
 	it("colours a terminal that supports it, and leaves one that doesn't plain", async () => {
@@ -96,18 +157,54 @@ describe("runChecks", () => {
 		expect(plain.text()).not.toContain("\u001B[32m");
 	});
 
-	it("gives the cursor back when Ctrl+C stops the run", async () => {
-		const exit = vi.spyOn(process, "exit").mockImplementation(() => {
-			throw new Error("exited");
-		});
+	it("cancels on q pressed twice: the checks stop, the rest never run, and the hook fails", async () => {
 		const stream = recording(true);
-		const running = run([nodeCheck("one", "setTimeout(() => {}, 300)")], stream);
+		const started = Date.now();
+		const passed = run([nodeCheck("long", LONG_SCRIPT), nodeCheck("after", "console.log('ran')")], stream, undefined, pressing(["quit", "quit"]));
 
-		expect(() => process.emit("SIGINT")).toThrow("exited");
-		await running;
-		expect(exit).toHaveBeenCalledWith(1);
-		expect(stream.text()).toContain("\u001B[?25h");
-		exit.mockRestore();
+		await expect(passed).resolves.toBe(false);
+		expect(Date.now() - started).toBeLessThan(5000);
+		expect(stream.text()).toContain("Cancelled after");
+		expect(stream.text()).toContain("The push did not happen.");
+		expect(stream.text()).toContain("\u001B[?1049l");
+		expect(readFileSync(path.join(folder, "logs/hook.log"), "utf8")).not.toContain("ran");
+	});
+
+	it("doesn't cancel on one q and another key", async () => {
+		const stream = recording(true);
+
+		await expect(run([nodeCheck("short", "setTimeout(() => {}, 700)")], stream, undefined, pressing(["quit", "down"]))).resolves.toBe(true);
+		expect(stream.text()).toContain("Press q again");
+		expect(stream.text()).not.toContain("Cancelled");
+	});
+
+	it("cancels on Ctrl+C at once", async () => {
+		const stream = recording(true);
+
+		await expect(run([nodeCheck("long", LONG_SCRIPT)], stream, undefined, pressing(["interrupt"]))).resolves.toBe(false);
+		expect(stream.text()).toContain("Cancelled after");
+	});
+
+	it("cancels on a signal, and a second one doesn't wait for a check that ignores the first", async () => {
+		const stream = recording(false);
+		const stubborn = nodeCheck("stubborn", "process.on('SIGINT', () => {}); console.log('up'); setTimeout(() => {}, 60000)");
+		const running = run([stubborn], stream);
+
+		await new Promise((resolve) => {
+			setTimeout(resolve, 500);
+		});
+		process.emit("SIGINT");
+		process.emit("SIGINT");
+		await expect(running).resolves.toBe(false);
+		expect(stream.text()).toContain("Cancelled after");
+	});
+
+	it("keeps looking around separate from the result: every view and key leaves a pass a pass", async () => {
+		const stream = recording(true);
+		const keys: readonly KeyName[] = ["view2", "down", "enter", "escape", "view3", "view4", "view5", "up", "view6", "next", "previous", "pageUp", "pageDown", "home", "end"];
+		const printing = nodeCheck("one", "console.log('@workspace/a:test: hello'); setTimeout(() => {}, 700)");
+
+		await expect(run([{ ...printing, task: "test" }], stream, undefined, pressing(keys))).resolves.toBe(true);
 	});
 
 	it("prints no control codes where nobody can see them redraw", async () => {
@@ -121,6 +218,13 @@ describe("runChecks", () => {
 describe("terminalStream", () => {
 	it("is a stream the display can write to", () => {
 		expect(terminalStream()).toHaveProperty("write");
+	});
+});
+
+describe("toLogLine", () => {
+	it("splits off the package, and removes what could move the cursor", () => {
+		expect(toLogLine("@workspace/api:test: \u001B[32mok\u001B[39m\tdone")).toStrictEqual({ workspace: "@workspace/api", text: "ok  done" });
+		expect(toLogLine("\u001B[1mplain\u001B[22m line")).toStrictEqual({ workspace: undefined, text: "plain line" });
 	});
 });
 
