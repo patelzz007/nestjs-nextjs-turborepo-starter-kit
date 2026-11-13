@@ -41,7 +41,7 @@ jobs:
         run: git show "origin/${BASE_REF}:docs/generated/openapi.json" > "${RUNNER_TEMP}/openapi-base.json"
 
       - name: Compare (fails on breaking changes unless waived)
-        uses: oasdiff/oasdiff-action/breaking@9ce3a29eb0e6478dd0140932a678c7fb59d08f22 # v0.1.20
+        uses: oasdiff/oasdiff-action/breaking@8a211b41745fcecdfa4a86531ffbf08934fb14f6 # v0.1.23
         with:
           base: ${{ runner.temp }}/openapi-base.json
           revision: docs/generated/openapi.json
