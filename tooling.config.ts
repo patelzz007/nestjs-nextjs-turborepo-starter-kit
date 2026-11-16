@@ -47,6 +47,14 @@ export const toolingConfig = {
 			description: "Write the mobile app's route types (run after adding or removing a screen).",
 			command: "node packages/tooling/src/starter/mobile-route-types/cli.ts",
 		},
+		{
+			name: "mobile:showcase",
+			group: "Mobile",
+			description: "Write the mobile showcase's generated modules (run after changing an example, its content or a kit component's API).",
+			// The app's own script (it hands its catalog to the generator); the app's package has no `"type"`, which Node
+			// says on every run.
+			command: "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON apps/mobile/scripts/showcase.ts",
+		},
 		// Database
 		{
 			name: "db:deploy",

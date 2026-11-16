@@ -41,6 +41,7 @@ const nativeSelectVariants = cva(
 type NativeSelectSize = NonNullable<VariantProps<typeof nativeSelectVariants>["size"]>;
 
 interface NativeSelectProps extends Omit<React.ComponentProps<"select">, "size"> {
+	/** Height of the field: `sm`, `default` or `lg`. */
 	readonly size?: NativeSelectSize | undefined;
 	/** Busy (options loading): dims the control and blocks interaction. */
 	readonly loading?: boolean | undefined;
@@ -48,6 +49,7 @@ interface NativeSelectProps extends Omit<React.ComponentProps<"select">, "size">
 	readonly selectClassName?: string | undefined;
 }
 
+/** A native `select` styled like the kit's fields, with a chevron. The open list is the operating system's own. */
 const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(function NativeSelect(
 	{ className, selectClassName, size = "default", loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,

@@ -1,9 +1,11 @@
 // Typography: the type roles every screen uses. Presentational, themeable
 // (token utilities only), and they scale with the system font size. Each role
-// sets its typeface (src/lib/fonts.ts, ADR 079): Geist Bold for titles,
-// Geist SemiBold (`font-heading`) for section titles, Geist for everything
-// else, Geist Mono for codes. Weights are families
-// (`font-sans-medium`), never weight utilities (`font-medium`).
+// is one row of the mobile type scale (packages/tokens mobile-typography.ts:
+// `text-h2` sets 24 pt on a 32 pt line) with its typeface (src/lib/fonts.ts,
+// ADR 079): Geist Bold for titles, Geist SemiBold (`font-heading`) for section
+// titles, Geist Medium for labels, Geist for everything else, Geist Mono for
+// codes. Weights are families (`font-sans-medium`), never weight utilities
+// (`font-medium`).
 //
 // Every role is one variant of `textVariants`, forwards its ref to the native
 // `Text` and takes a `className` that is merged last (so a caller can add
@@ -23,19 +25,19 @@ export const textVariants = cva("", {
 	variants: {
 		variant: {
 			/** A screen or section title. */
-			heading: "font-sans-bold text-2xl tracking-tight text-foreground",
+			heading: "font-sans-bold text-h2 tracking-tight text-foreground",
 			/** A section title inside a screen. */
-			subheading: "font-heading text-lg text-foreground",
+			subheading: "text-h3 font-heading text-foreground",
 			/** Running text. */
-			body: "font-sans text-base leading-6 text-foreground",
+			body: "text-body-lg font-sans text-foreground",
 			/** Secondary text: hints, captions, metadata. */
-			muted: "font-sans text-sm leading-5 text-muted-foreground",
+			muted: "text-body font-sans text-muted-foreground",
 			/** A form field's label. */
-			label: "font-sans-medium text-sm text-foreground",
+			label: "font-sans-medium text-label text-foreground",
 			/** A field or form error. */
-			error: "font-sans text-sm text-destructive-foreground",
+			error: "text-body font-sans text-destructive-foreground",
 			/** A code, key or identifier. */
-			code: "font-mono text-base text-foreground",
+			code: "text-body-lg font-mono text-foreground",
 		},
 	},
 	defaultVariants: { variant: "body" },

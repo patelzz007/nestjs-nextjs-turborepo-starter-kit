@@ -67,7 +67,7 @@ export const PasswordInput = React.memo(
 					hitSlop={TOGGLE_HIT_SLOP[size]}
 					testID={testID === undefined ? undefined : `${testID}-visibility`}
 					className={passwordToggleVariants({ size })}>
-					<Icon icon={isVisible ? EyeOffIcon : EyeIcon} size="md" colorClassName="accent-muted-foreground" />
+					<Icon icon={isVisible ? EyeOffIcon : EyeIcon} size="md" colorClassName="accent-icon" />
 				</Pressable>
 			),
 			[hideLabel, isVisible, showLabel, size, testID, toggleVisible],

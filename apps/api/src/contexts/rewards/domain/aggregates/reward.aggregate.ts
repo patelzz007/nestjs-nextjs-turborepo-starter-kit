@@ -35,8 +35,10 @@ import type { RewardRulesValue } from "../value-objects/reward-rules.value-objec
 import {
 	AUTO_PUBLISH_WINDOW_MS,
 	EDITABLE_REWARD_STATUSES,
+	REWARD_LIFECYCLE,
 	RewardLifecycleStatusSchema,
 	type RewardKindValue,
+	type RewardLifecycleEvent,
 	type RewardLifecycleStatus,
 } from "../value-objects/reward-status.value-object";
 import type {
@@ -52,13 +54,6 @@ import type {
 	RewardState,
 } from "./reward.state";
 import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
-
-/** The one-step moves of the reward lifecycle; anything else is refused. */
-const ALLOWED_TRANSITIONS: readonly (readonly [RewardLifecycleStatus, RewardLifecycleStatus])[] = [
-	["DRAFT", "PENDING_REVIEW"],
-	["PENDING_REVIEW", "PUBLISHED"],
-	["PENDING_REVIEW", "DRAFT"],
-];
 
 /** The merchant caller of an edit: the stores it may manage (null = every store) and who it is, for audit columns. */
 export interface RewardManager {
@@ -423,12 +418,12 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	/** Draft → pending review, for the reward and its referrer child together (D04). */
 	public submitForReview(manager: RewardManager, now: EpochMs): void {
 		this.assertManageableBy(manager.locationIds);
-		if (this.review.status !== "DRAFT") {
+		if (!REWARD_LIFECYCLE.can("submitForReview", this.review.status)) {
 			throw new RewardNotDraftError(this.id);
 		}
 		this.transition(
+			"submitForReview",
 			{
-				status: "PENDING_REVIEW",
 				submittedForReviewAt: now,
 				autoPublishAt: epochMs(now + AUTO_PUBLISH_WINDOW_MS),
 				reviewedAt: this.review.reviewedAt,
@@ -443,13 +438,10 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 
 	/** Pending review → published by a reviewer (D01). */
 	public approve(reviewerUserId: string, now: EpochMs): void {
-		if (this.review.status !== "PENDING_REVIEW") {
+		if (!REWARD_LIFECYCLE.can("approve", this.review.status)) {
 			throw new RewardNotPendingReviewError(this.id);
 		}
-		this.transition(
-			{ status: "PUBLISHED", submittedForReviewAt: this.review.submittedForReviewAt, autoPublishAt: null, reviewedAt: now, reviewedByUserId: reviewerUserId },
-			now,
-		);
+		this.transition("approve", { submittedForReviewAt: this.review.submittedForReviewAt, autoPublishAt: null, reviewedAt: now, reviewedByUserId: reviewerUserId }, now);
 		this.rejectionReason = null;
 		this.record(new RewardApproved(now, this.facts(), reviewerUserId));
 	}
@@ -459,30 +451,31 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	 * is refused with its own error, so a merchant is never shown an empty note.
 	 */
 	public reject(reviewerUserId: string, reason: string, now: EpochMs): void {
-		if (this.review.status !== "PENDING_REVIEW") {
+		if (!REWARD_LIFECYCLE.can("reject", this.review.status)) {
 			throw new RewardNotPendingReviewError(this.id);
 		}
 		if (reason.trim().length === 0) {
 			throw new RewardRejectionReasonBlankError();
 		}
-		this.transition({ status: "DRAFT", submittedForReviewAt: null, autoPublishAt: null, reviewedAt: now, reviewedByUserId: reviewerUserId }, now);
+		this.transition("reject", { submittedForReviewAt: null, autoPublishAt: null, reviewedAt: now, reviewedByUserId: reviewerUserId }, now);
 		this.rejectionReason = reason;
 		this.record(new RewardRejected(now, this.facts(), reviewerUserId, reason));
 	}
 
 	/** Whether the review window has elapsed: pending review with `autoPublishAt <= now`. */
 	public isDueForAutoPublish(now: EpochMs): boolean {
-		return this.review.status === "PENDING_REVIEW" && this.review.autoPublishAt !== null && this.review.autoPublishAt <= now;
+		return REWARD_LIFECYCLE.can("autoPublish", this.review.status) && this.review.autoPublishAt !== null && this.review.autoPublishAt <= now;
 	}
 
 	/** Pending review → published once the review window has elapsed (D10). */
 	public autoPublish(now: EpochMs): void {
 		if (!this.isDueForAutoPublish(now)) {
-			throw new RewardTransitionNotAllowedError(this.id, this.review.status, "PUBLISHED");
+			throw new RewardTransitionNotAllowedError(this.id, this.review.status, REWARD_LIFECYCLE.targetOf("autoPublish"));
 		}
 		this.autoPublishGuard = now;
 		this.transition(
-			{ status: "PUBLISHED", submittedForReviewAt: this.review.submittedForReviewAt, autoPublishAt: null, reviewedAt: now, reviewedByUserId: this.review.reviewedByUserId },
+			"autoPublish",
+			{ submittedForReviewAt: this.review.submittedForReviewAt, autoPublishAt: null, reviewedAt: now, reviewedByUserId: this.review.reviewedByUserId },
 			now,
 		);
 		this.record(new RewardAutoPublished(now, this.facts()));
@@ -614,11 +607,14 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		}
 	}
 
-	private transition(next: RewardReviewState, now: EpochMs): void {
+	/** Makes one move of {@link REWARD_LIFECYCLE}: the status is the move's target, the rest of the review record is the caller's. */
+	private transition(event: RewardLifecycleEvent, review: Omit<RewardReviewState, "status">, now: EpochMs): void {
 		const from = this.review.status;
-		if (!ALLOWED_TRANSITIONS.some(([allowedFrom, allowedTo]) => allowedFrom === from && allowedTo === next.status)) {
-			throw new RewardTransitionNotAllowedError(this.id, from, next.status);
+		const to = REWARD_LIFECYCLE.targetOf(event);
+		if (!REWARD_LIFECYCLE.can(event, from)) {
+			throw new RewardTransitionNotAllowedError(this.id, from, to);
 		}
+		const next: RewardReviewState = { ...review, status: to };
 		this.review = next;
 		this.definitionChanged = true;
 		this.referrer?.followLifecycle(next, now);

@@ -21,7 +21,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { toastMessage } from "@workspace/ui/components/toast";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -83,7 +83,7 @@ interface TeamRoleDetailContentProps {
 
 function TeamRoleDetailContent({ tenantSlug, role, otherRoles }: TeamRoleDetailContentProps): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const routes = tenantRoutes(tenantSlug).settings.teamRoles;
 	const isOwnerRole = role.templateKey === "OWNER";

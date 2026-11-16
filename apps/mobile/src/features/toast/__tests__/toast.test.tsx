@@ -44,7 +44,7 @@ function Harness(): React.JSX.Element {
 			<Pressable accessibilityRole="button" accessibilityLabel="Fail" onPress={fail}>
 				<Text>Fail</Text>
 			</Pressable>
-			<ToastHost top={100} />
+			<ToastHost top={100} bottom={40} />
 		</>
 	);
 }
@@ -125,5 +125,104 @@ describe("ToastHost", () => {
 		await advance(TOAST_DURATION_MS.error - 1);
 		expect(screen.queryByText("Profile saved.")).toBeNull();
 		expect(within(screen.getByTestId("app-toast")).getByText("Something went wrong.")).toBeOnTheScreen();
+	});
+});
+
+describe("toastReducer updates", () => {
+	it("rewrites the toast on show in place, and leaves a gone one gone", () => {
+		const shown = toastReducer(INITIAL_TOAST_STATE, toastActions.shown("loading", "Deploying…", { durationMs: null }));
+		const updated = toastReducer(shown, toastActions.updated(1, "success", "Deployed.", { title: "acme-web" }));
+		expect(updated.current).toEqual({ id: 1, tone: "success", message: "Deployed.", options: { title: "acme-web", position: undefined } });
+		expect(toastReducer(shown, toastActions.updated(9, "error", "Late."))).toBe(shown);
+	});
+
+	it("keeps a toast where it sits when the update names no position", () => {
+		const shown = toastReducer(INITIAL_TOAST_STATE, toastActions.shown("info", "Archived.", { position: "bottom" }));
+		expect(toastReducer(shown, toastActions.updated(1, "success", "Restored.")).current?.options?.position).toBe("bottom");
+	});
+});
+
+/** Commands with options: a persistent bottom toast with a title and an action, an update and a promise. */
+function RichHarness({ work }: { readonly work: Promise<string> }): React.JSX.Element {
+	const toast = useToast();
+	const [last, setLast] = React.useState<number | null>(null);
+	const keep = React.useCallback((): void => {
+		setLast(toast.info("Archived 3 files.", { title: "Archive", position: "bottom", durationMs: null, actions: <Text>Undo</Text> }));
+	}, [toast]);
+	const rewrite = React.useCallback((): void => {
+		if (last !== null) {
+			toast.update(last, "success", "Restored.");
+		}
+	}, [last, toast]);
+	const run = React.useCallback((): void => {
+		toast.promise(work, { loading: "Deploying…", success: (name: string): string => `Deployed ${name}.`, error: "The deploy failed." }).catch((): void => {
+			// The failure is shown by the toast.
+		});
+	}, [toast, work]);
+	return (
+		<>
+			<Pressable accessibilityRole="button" accessibilityLabel="Keep" onPress={keep}>
+				<Text>Keep</Text>
+			</Pressable>
+			<Pressable accessibilityRole="button" accessibilityLabel="Rewrite" onPress={rewrite}>
+				<Text>Rewrite</Text>
+			</Pressable>
+			<Pressable accessibilityRole="button" accessibilityLabel="Run" onPress={run}>
+				<Text>Run</Text>
+			</Pressable>
+			<ToastHost top={100} bottom={40} />
+		</>
+	);
+}
+
+describe("ToastHost options", () => {
+	beforeEach(() => {
+		jest.useFakeTimers();
+	});
+
+	afterEach(() => {
+		jest.useRealTimers();
+		jest.restoreAllMocks();
+	});
+
+	it("keeps a persistent bottom toast with its title and actions, and rewrites it in place", async () => {
+		const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockImplementation((): void => undefined);
+		await render(
+			<ToastStoreProvider store={createToastStore()}>
+				<RichHarness work={Promise.resolve("acme")} />
+			</ToastStoreProvider>,
+		);
+		await fireEvent.press(screen.getByRole("button", { name: "Keep" }));
+		expect(screen.getByText("Archive")).toBeOnTheScreen();
+		expect(screen.getByText("Undo")).toBeOnTheScreen();
+		expect(announce).toHaveBeenCalledWith("Archive. Archived 3 files.");
+		await advance(TOAST_DURATION_MS.error * 2);
+		expect(screen.getByText("Archived 3 files.")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Rewrite" }));
+		expect(screen.getByText("Restored.")).toBeOnTheScreen();
+		expect(screen.queryByText("Archived 3 files.")).toBeNull();
+	});
+
+	it("shows a loading toast that turns into the work's outcome", async () => {
+		await render(
+			<ToastStoreProvider store={createToastStore()}>
+				<RichHarness work={Promise.resolve("acme")} />
+			</ToastStoreProvider>,
+		);
+		await fireEvent.press(screen.getByRole("button", { name: "Run" }));
+		await act(async (): Promise<void> => {
+			await Promise.resolve();
+		});
+		expect(screen.getByText("Deployed acme.")).toBeOnTheScreen();
+		await render(
+			<ToastStoreProvider store={createToastStore()}>
+				<RichHarness work={Promise.reject(new Error("boom"))} />
+			</ToastStoreProvider>,
+		);
+		await fireEvent.press(screen.getByRole("button", { name: "Run" }));
+		await act(async (): Promise<void> => {
+			await Promise.resolve();
+		});
+		expect(screen.getByText("The deploy failed.")).toBeOnTheScreen();
 	});
 });

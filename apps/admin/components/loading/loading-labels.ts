@@ -22,6 +22,7 @@ export const EMAIL_TEMPLATES_LOADING_LABELS: SkeletonRegionLabelsOverride = { lo
 export const EMAIL_LOG_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading email log…" };
 export const RECEIVED_WEBHOOKS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading received webhooks…" };
 export const RECEIVED_WEBHOOK_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading received webhook…" };
+export const DOCS_SYNC_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading docs sync…" };
 export const GEOGRAPHY_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading geographic data…" };
 export const MERCHANTS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading merchants…" };
 export const MERCHANT_INVITES_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading merchant invites…" };
@@ -37,8 +38,9 @@ export const SUPPORT_ACCESS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loa
 export const PROFILE_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading profile…" };
 export const SECURITY_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading security settings…" };
 export const GITHUB_TOKEN_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading your GitHub token…" };
-export const COMPONENT_GALLERY_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading components…" };
-export const COMPONENT_PAGE_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading component…" };
+export const SHOWCASE_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading the component showcase…" };
+export const SHOWCASE_COMPONENT_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading the component…" };
+export const SHOWCASE_DOCS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading the docs…" };
 
 // ── In-component (section-level) announcements ──────────────────────────────
 

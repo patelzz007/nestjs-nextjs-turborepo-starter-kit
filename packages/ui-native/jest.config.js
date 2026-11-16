@@ -7,9 +7,10 @@ const { transformIgnorePatterns: EXPO_TRANSFORM_IGNORE_PATTERNS } = require("jes
 /**
  * Packages published as ES modules only (as in apps/mobile/jest.config.js). Metro bundles them as they are;
  * Jest runs CommonJS, so Babel compiles them like React Native's own packages: FormatJS, which formats the
- * translation catalogues' ICU messages (`formatMessage` in @workspace/shared).
+ * translation catalogues' ICU messages (`formatMessage` in @workspace/shared), and TanStack Table, the `DataTable`
+ * engine (with its core and store).
  */
-const ES_MODULE_ONLY_PACKAGES = ["intl-messageformat", "@formatjs"];
+const ES_MODULE_ONLY_PACKAGES = ["intl-messageformat", "@formatjs", "@tanstack/react-table", "@tanstack/table-core", "@tanstack/react-store", "@tanstack/store", "pele"];
 
 /** jest-expo's first pattern: skip node_modules except an allow-list, `(?!(a|b|…))`. */
 const ALLOW_LIST_START = "/node_modules/(?!(";

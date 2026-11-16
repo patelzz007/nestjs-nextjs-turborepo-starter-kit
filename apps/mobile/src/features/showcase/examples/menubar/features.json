@@ -1,0 +1,37 @@
+[
+	{
+		"id": "c-menubar-1",
+		"label": "Basic",
+		"description": "Basic menubar. Best for File and Edit menus of plain rows with key caps, groups and a disabled New incognito window.",
+		"file": "menubar-1",
+		"export": "Menubar1Example"
+	},
+	{
+		"id": "c-menubar-2",
+		"label": "Submenus",
+		"description": "Menubar with submenus. Best for a submenu in each menu, Share with 3 channels under File and Find with 3 search commands under Edit.",
+		"file": "menubar-2",
+		"export": "Menubar2Example"
+	},
+	{
+		"id": "c-menubar-3",
+		"label": "Checkbox & Radio",
+		"description": "Menubar with checkbox and radio items. Best for a View menu of 2 browser toggles beside a Theme menu whose Light, Dark or System pick is held in state.",
+		"file": "menubar-3",
+		"export": "Menubar3Example"
+	},
+	{
+		"id": "c-menubar-4",
+		"label": "Icons",
+		"description": "Menubar with icons. Best for a leading icon on every row, with Profile and a destructive Sign out grouped under Account.",
+		"file": "menubar-4",
+		"export": "Menubar4Example"
+	},
+	{
+		"id": "c-menubar-5",
+		"label": "Formatting & Media",
+		"description": "Menubar for formatting and media. Best for bold and Italic rows, Strikethrough and Code toggles and an Insert list with a Media flyout and Link.",
+		"file": "menubar-5",
+		"export": "Menubar5Example"
+	}
+]

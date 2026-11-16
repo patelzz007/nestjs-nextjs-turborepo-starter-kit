@@ -39,7 +39,7 @@ export const filterChipVariants = cva("flex-row items-center gap-1 self-start ro
 
 export const filterChipLabelVariants = cva("font-sans-medium text-foreground", {
 	variants: {
-		size: { md: "text-sm", sm: "text-xs" },
+		size: { md: "text-body", sm: "text-caption" },
 	},
 	defaultVariants: { size: "md" },
 });
@@ -140,11 +140,7 @@ export const FilterChip: FilterChipComponent = React.memo(
 					testID={testID}
 					className={cn(filterChipVariants({ variant, size, state }), className)}>
 					<Text className={filterChipLabelVariants({ size })}>{selected?.label ?? ""}</Text>
-					{loading ? (
-						<ActivityIndicator size="small" colorClassName="accent-muted-foreground" />
-					) : (
-						<Icon icon={ChevronDownIcon} size="sm" colorClassName="accent-muted-foreground" />
-					)}
+					{loading ? <ActivityIndicator size="small" colorClassName="accent-muted-foreground" /> : <Icon icon={ChevronDownIcon} size="sm" colorClassName="accent-icon" />}
 				</Pressable>
 				<BottomSheet visible={open} title={title} onClose={closeSheet}>
 					<View>

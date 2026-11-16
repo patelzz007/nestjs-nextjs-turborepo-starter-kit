@@ -29,6 +29,7 @@ const DEV: RawMobileEnv = {
 	androidStoreUrl: undefined,
 	showDemoAccount: undefined,
 	allowLanHttpApi: undefined,
+	showcase: undefined,
 };
 const RELEASE: RawMobileEnv = { ...DEV, isDevelopment: false, hostUri: undefined };
 
@@ -52,7 +53,14 @@ describe("resolveMobileEnv", () => {
 	it("uses the dev machine's host and the API's default port in development (never localhost)", () => {
 		expect(resolveMobileEnv(DEV)).toEqual({
 			ok: true,
-			env: { isDevelopment: true, apiBaseUrl: `http://192.168.1.5:${String(DEFAULT_DEV_API_PORT)}`, iosStoreUrl: null, androidStoreUrl: null, showDemoAccounts: false },
+			env: {
+				isDevelopment: true,
+				apiBaseUrl: `http://192.168.1.5:${String(DEFAULT_DEV_API_PORT)}`,
+				iosStoreUrl: null,
+				androidStoreUrl: null,
+				showDemoAccounts: false,
+				showcase: true,
+			},
 		});
 	});
 
@@ -166,6 +174,28 @@ describe("resolveMobileEnv", () => {
 				},
 			});
 		}
+	});
+});
+
+describe("the component showcase (EXPO_PUBLIC_SHOWCASE)", () => {
+	it("is always in a development build, whatever the flag says", () => {
+		for (const showcase of [undefined, "false", "true"]) {
+			expect(resolveMobileEnv({ ...DEV, showcase })).toMatchObject({ ok: true, env: { showcase: true } });
+		}
+	});
+
+	it("is left out of a release build unless it was built with EXPO_PUBLIC_SHOWCASE=true", () => {
+		for (const showcase of [undefined, "", "false"]) {
+			expect(resolveMobileEnv({ ...RELEASE, apiUrl: "https://api.example.com", showcase })).toMatchObject({ ok: true, env: { showcase: false } });
+		}
+		expect(resolveMobileEnv({ ...RELEASE, apiUrl: "https://api.example.com", showcase: "true" })).toMatchObject({ ok: true, env: { showcase: true } });
+	});
+
+	it("rejects any other EXPO_PUBLIC_SHOWCASE, naming the variable, what it accepts and an example", () => {
+		expect(resolveMobileEnv({ ...DEV, showcase: "yes" })).toEqual({
+			ok: false,
+			issue: { variable: "EXPO_PUBLIC_SHOWCASE", message: "must be true or false, or left unset", example: MOBILE_ENV_EXAMPLES.EXPO_PUBLIC_SHOWCASE },
+		});
 	});
 });
 

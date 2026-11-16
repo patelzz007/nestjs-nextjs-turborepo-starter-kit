@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Show the state, not an action",
+		"do": {
+			"text": "Label the toggle with what it turns on (\"Bold\"), so its pressed state reads as that thing being on.",
+			"file": "toggle-do-1",
+			"export": "ToggleDo1Example"
+		},
+		"dont": {
+			"text": "Don't label it with a verb (\"Make bold\"): pressed, it reads as an instruction that was already followed.",
+			"file": "toggle-dont-1",
+			"export": "ToggleDont1Example"
+		}
+	},
+	{
+		"title": "Use a switch for settings",
+		"do": {
+			"text": "Use a toggle for an option on the content in front of people.",
+			"file": "toggle-do-2",
+			"export": "ToggleDo2Example"
+		},
+		"dont": {
+			"text": "Don't put a toggle in a settings list: a [Switch](/showcase/switch) says on and off more plainly there.",
+			"file": "toggle-dont-2",
+			"export": "ToggleDont2Example"
+		}
+	}
+]

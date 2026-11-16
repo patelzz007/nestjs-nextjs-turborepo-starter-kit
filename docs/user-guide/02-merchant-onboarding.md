@@ -3,8 +3,11 @@ title: "2. Merchant invite, onboarding and verification (KYB)"
 description: "A platform admin invites a merchant; the owner completes onboarding and uploads business documents; the admin reviews them. Includes document scan statuses."
 order: 3
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1792532799000
+coverImage: "/images/covers/user-guide/02-merchant-onboarding.webp"
 tags: ["user-guide", "merchant", "onboarding", "kyb"]
 ---
 

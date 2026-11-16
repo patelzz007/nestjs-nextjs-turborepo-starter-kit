@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say something useful",
+		"do": {
+			"text": "Explain what an icon-only control does, in a short sentence.",
+			"file": "tooltip-do-1",
+			"export": "TooltipDo1Example"
+		},
+		"dont": {
+			"text": "Don't repeat the button's name (\"Info\"): it tells nobody anything.",
+			"file": "tooltip-dont-1",
+			"export": "TooltipDont1Example"
+		}
+	},
+	{
+		"title": "Explain what is unavailable",
+		"do": {
+			"text": "Say why a control is disabled, in a tooltip around it.",
+			"file": "tooltip-do-2",
+			"export": "TooltipDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave a disabled button with no reason given.",
+			"file": "tooltip-dont-2",
+			"export": "TooltipDont2Example"
+		}
+	}
+]

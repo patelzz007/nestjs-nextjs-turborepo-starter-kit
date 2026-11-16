@@ -10,7 +10,7 @@ import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPalet
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
 import { CircleUserRound, LayoutDashboard, Settings, SunMoon } from "lucide-react";
 import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -37,7 +37,7 @@ function renderMenuIcon(iconName: string | undefined, className: string): React.
 }
 
 export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }: CommandPaletteProps): React.JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { toggleTheme } = useThemeToggle();
 	const searchableItems = useAuthorizedSearchableItems();
 	const canAccessRoute = useCanAccessRoute();

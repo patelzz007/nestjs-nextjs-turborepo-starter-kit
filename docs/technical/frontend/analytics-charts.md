@@ -3,8 +3,11 @@ title: "Analytics dashboards and chart primitives"
 description: "How the customer, merchant and admin analytics pages are built: the packages/ui chart primitives (KPI card, time-series chart, ranked bars, share bar, range picker), the packages/client range URL state, presentation helpers and export menu, the colour rules, accessibility and how to test them."
 order: 22
 author: "Platform Team"
+category: "Frontend"
+date: 1791158400000
 lastUpdated: 1791158400000
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
+editedAt: 1794485004159
+coverImage: "/images/covers/technical/frontend/analytics-charts.webp"
 tags: ["frontend", "analytics", "charts", "recharts", "accessibility", "exports"]
 ---
 
@@ -16,7 +19,7 @@ Three pages read the [analytics API](../api/analytics.md): **My Activity** in th
 three are built from one set of primitives, so a chart looks and behaves the same everywhere.
 
 ```mermaid
-flowchart LR
+flowchart TD
     P[Server page<br/>parse URL → resolve range at nowMs<br/>prefetch the dashboard] --> V[Smart view<br/>useAnalyticsRange · useQuery · export]
     V --> C[packages/client/lib/analytics<br/>range URL state · presentation helpers<br/>AnalyticsRangeControls · AnalyticsKpiGrid · AnalyticsExportMenu]
     C --> U[packages/ui/components/analytics<br/>KpiStatCard · TimeSeriesChart · RankedBarList<br/>ShareBar · AnalyticsRangePicker · AnalyticsPanel]

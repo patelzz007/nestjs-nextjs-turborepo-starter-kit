@@ -68,6 +68,7 @@ function fieldStep(channel: ColorFieldChannel): number {
 export type ColorPickerChannelInputProps = Omit<React.ComponentProps<typeof InputGroupInput>, "value" | "defaultValue" | "ref"> & {
 	/** A channel, or `"hex"` for the six hex digits. */
 	readonly channel: ColorFieldChannel;
+	/** As on `ColorPickerSlider`. */
 	readonly colorSpace?: ColorPickerColorSpace | undefined;
 };
 
@@ -214,6 +215,7 @@ export type ColorPickerFieldsProps = Omit<React.ComponentProps<typeof InputGroup
 	readonly format?: ColorPickerFormat | undefined;
 	/** Defaults to the picker's `format`. */
 	readonly defaultFormat?: ColorPickerFormat | undefined;
+	/** Fires when the menu changes it. */
 	readonly onFormatChange?: ((format: ColorPickerFormat) => void) | undefined;
 	/** The formats in the menu. One format hides the menu. */
 	readonly formats?: readonly ColorPickerFormat[] | undefined;

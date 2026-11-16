@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Order by use, danger last",
+		"do": {
+			"text": "Put frequent actions first and destructive ones last, in their own group (`variant=\"destructive\"`).",
+			"file": "dropdown-menu-do-1",
+			"export": "DropdownMenuDo1Example"
+		},
+		"dont": {
+			"text": "Don't mix Delete account in among everyday actions.",
+			"file": "dropdown-menu-dont-1",
+			"export": "DropdownMenuDont1Example"
+		}
+	},
+	{
+		"title": "Name icon-only triggers",
+		"do": {
+			"text": "Give an icon-only trigger an `aria-label` screen readers read (\"Record actions\").",
+			"file": "dropdown-menu-do-2",
+			"export": "DropdownMenuDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave an icon-only trigger without a name.",
+			"file": "dropdown-menu-dont-2",
+			"export": "DropdownMenuDont2Example"
+		}
+	}
+]

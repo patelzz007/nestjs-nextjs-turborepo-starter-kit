@@ -17,7 +17,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { toastMessage } from "@workspace/ui/components/toast";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -83,7 +83,7 @@ interface RoleEditorFormProps {
 
 function RoleEditorForm({ tenantSlug, existing: role }: RoleEditorFormProps): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const routes = tenantRoutes(tenantSlug).settings.teamRoles;
 	const [name, setName] = React.useState<string>(role?.name ?? "");

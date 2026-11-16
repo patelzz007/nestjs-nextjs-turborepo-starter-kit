@@ -38,7 +38,7 @@ describe("AccessExpiry", () => {
 
 		rerender(<AccessExpiry expiresAt={Date.UTC(2030, 0, 1)} timeZone="UTC" />);
 		expect(screen.getByText(/Ends/)).toBeTruthy();
-		expect(document.querySelector("time")?.getAttribute("datetime")).toBe("2030-01-01T00:00:00.000Z");
+		expect(document.querySelector("time")?.getAttribute("datetime")).toBe("2030-01-01T00:00:00Z");
 	});
 });
 

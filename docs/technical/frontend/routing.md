@@ -4,8 +4,11 @@ tags: ["routing", "navigation", "sidebar", "nextjs"]
 description: "URL conventions shared by the web, admin and merchant apps, where each app's routes live, how cross-app links (emails, invites) stay in sync, and how the sidebar's active item follows the URL."
 order: 17
 author: "Platform Team"
+category: "Frontend"
+date: 1790899200000
 lastUpdated: 1791763200000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/frontend/routing.webp"
 ---
 
 # Frontend routing (web, admin, merchant)
@@ -37,6 +40,13 @@ consistent across the three Next.js apps.
   to a page that doesn't exist stops compiling. `typecheck` runs `next typegen` first. A path known only at runtime (menu
   data, `returnTo`, one built from `APP_LINKS`) goes through `appRoute()` from `@workspace/client/lib/navigation/app-route`:
   the compiler can't see those, so the route-coverage tests hold them to real pages. Never cast a path to `Route`.
+- **Navigation in code goes through `useProgressRouter`** (`@workspace/client/lib/navigation/use-progress-router`),
+  never `useRouter` from `next/navigation` (lint rejects it everywhere but the wrapper). It is the App Router's own router
+  with `push` and `replace` starting the top progress bar first. Each app's root layout mounts `AppNavigationProgress`
+  (`@workspace/client/lib/navigation/navigation-progress`): the kit's `NavigationProgressProvider`
+  (`packages/ui/src/components/navigation-progress.tsx`) starts the bar on any same-origin link click and on back/forward,
+  and the App Router side completes it when the new path or query commits. The bar waits 120 ms before it shows, so a
+  prefetched page never flashes it; it is decorative (`aria-hidden`), and the page's `loading.tsx` is what a screen reader hears.
 - **The sidebar** stays data (`*-sidebar-menu.json`) with the same URLs; guard tests in each app
   fail when an enabled menu URL has no page, two enabled items share a URL, or a child is not
   under its parent.

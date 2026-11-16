@@ -3,8 +3,11 @@ title: "ADR 066: nuqs as the URL-state engine, and no other tab's rows under a t
 tags: ["adr", "frontend", "url-state", "nextjs", "tanstack-query"]
 description: "useUrlState keeps its API and zod codecs but runs on nuqs, so a tab or filter changes in the same render as the click. A list never shows one view's rows under another view while that view loads, and a tab's first page is fetched when the pointer or keyboard focus reaches it."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793059200000
 lastUpdated: 1793059200000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793280217000
+coverImage: "/images/covers/adr/066-nuqs-url-state-engine.webp"
 order: 66
 ---
 

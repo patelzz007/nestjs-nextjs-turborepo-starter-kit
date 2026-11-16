@@ -34,10 +34,12 @@ import * as React from "react";
 /** CVA variants for the list — density (size) and wrap/scroll behaviour. */
 const breadcrumbListVariants = cva("flex items-center gap-1.5 text-muted-foreground sm:gap-2.5", {
 	variants: {
+		/** Text size: `default` or `sm`. */
 		size: {
 			default: "text-sm",
 			sm: "gap-1 text-xs sm:gap-1.5",
 		},
+		/** Keeps the trail on one line and scrolls it sideways instead of wrapping. */
 		scrollable: {
 			false: "flex-wrap break-words",
 			true: "[scrollbar-width:none] flex-nowrap overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden",
@@ -60,6 +62,7 @@ export interface BreadcrumbProps extends React.ComponentProps<"nav"> {
 	readonly ariaLabel?: string | undefined;
 }
 
+/** The path from the top of the app to the current page: a `nav` named "breadcrumb". */
 const Breadcrumb = React.forwardRef<HTMLElement, BreadcrumbProps>(function Breadcrumb({ className, ariaLabel, ...props }, ref): React.JSX.Element {
 	const labels = useUiKitLabels("breadcrumb");
 	return <nav ref={ref} aria-label={ariaLabel ?? labels.ariaLabel} data-slot="breadcrumb" className={cn(className)} {...props} />;
@@ -70,18 +73,21 @@ export interface BreadcrumbListProps extends React.ComponentProps<"ol">, Breadcr
 	readonly children?: React.ReactNode;
 }
 
+/** The ordered list of levels. */
 const BreadcrumbList = React.memo(
 	React.forwardRef<HTMLOListElement, BreadcrumbListProps>(function BreadcrumbList({ className, size = "default", scrollable = false, ...props }, ref): React.JSX.Element {
 		return <ol ref={ref} data-slot="breadcrumb-list" className={cn(breadcrumbListVariants({ size, scrollable }), className)} {...props} />;
 	}),
 );
 
+/** One level of the trail. */
 const BreadcrumbItem = React.memo(
 	React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(function BreadcrumbItem({ className, ...props }, ref): React.JSX.Element {
 		return <li ref={ref} data-slot="breadcrumb-item" className={cn("inline-flex items-center gap-1.5", className)} {...props} />;
 	}),
 );
 
+/** A link back to a level. Pass your router's link through `render`. */
 const BreadcrumbLink = React.memo(
 	React.forwardRef<HTMLAnchorElement, useRender.ComponentProps<"a">>(function BreadcrumbLink({ className, render, ...props }, ref): React.JSX.Element {
 		return useRender({
@@ -101,6 +107,7 @@ const BreadcrumbLink = React.memo(
 	}),
 );
 
+/** The current page: text, not a link, with `aria-current="page"`. */
 const BreadcrumbPage = React.memo(
 	React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function BreadcrumbPage({ className, ...props }, ref): React.JSX.Element {
 		// Native `aria-current="page"` on a plain span — the current page is
@@ -110,6 +117,7 @@ const BreadcrumbPage = React.memo(
 	}),
 );
 
+/** The divider between levels, hidden from assistive technology; a chevron unless given children. */
 const BreadcrumbSeparator = React.memo(
 	React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(function BreadcrumbSeparator({ children, className, ...props }, ref): React.JSX.Element {
 		return (
@@ -125,6 +133,7 @@ export interface BreadcrumbEllipsisProps extends React.ComponentProps<"span"> {
 	readonly label?: string | undefined;
 }
 
+/** Stands in for collapsed levels in the middle of a long trail, often as a dropdown trigger. */
 const BreadcrumbEllipsis = React.memo(
 	React.forwardRef<HTMLSpanElement, BreadcrumbEllipsisProps>(function BreadcrumbEllipsis({ className, label, ...props }, ref): React.JSX.Element {
 		const labels = useUiKitLabels("breadcrumb");

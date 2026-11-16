@@ -3,8 +3,11 @@ title: "Getting started"
 description: "From git clone to every app running, step by step: tools, PostgreSQL (native or Docker), every environment file including the mobile app's, the phone's API address, the database, the dev servers and a first sign-in."
 order: 2
 author: "Platform Team"
+category: "Engineering"
+date: 1791072000000
 lastUpdated: 1793923200000
-coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/getting-started.webp"
 tags: ["getting-started", "setup", "local-development"]
 ---
 

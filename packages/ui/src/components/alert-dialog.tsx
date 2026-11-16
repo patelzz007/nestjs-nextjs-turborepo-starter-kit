@@ -145,6 +145,7 @@ export interface AlertDialogProps extends AlertDialogPrimitive.Root.Props {
 	readonly onDismiss?: () => void;
 }
 
+/** A modal that demands an answer, on Base UI's alert dialog: a backdrop click does not close it, focus is trapped, Escape cancels. */
 function AlertDialog({ onDismiss, onOpenChange, ...props }: AlertDialogProps): React.JSX.Element {
 	// Bridge base-ui's open-change (fires with `open=false` on close) to the
 	// smart component's dismiss analytics hook (feature 16).
@@ -163,14 +164,17 @@ function AlertDialog({ onDismiss, onOpenChange, ...props }: AlertDialogProps): R
 
 // ── Trigger / Portal / Overlay ──────────────────────────────────────────────
 
+/** The button that opens the dialog. Pass your `Button` through `render`. */
 const AlertDialogTrigger = React.forwardRef<HTMLButtonElement, AlertDialogPrimitive.Trigger.Props>(function AlertDialogTrigger({ ...props }, ref): React.JSX.Element {
 	return <AlertDialogPrimitive.Trigger ref={ref} data-slot="alert-dialog-trigger" {...props} />;
 });
 
+/** Moves the dialog to the end of `body`. Used by `AlertDialogContent`. */
 function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props): React.JSX.Element {
 	return <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />;
 }
 
+/** The backdrop behind the dialog. Used by `AlertDialogContent`. */
 const AlertDialogOverlay = React.forwardRef<HTMLDivElement, AlertDialogPrimitive.Backdrop.Props>(function AlertDialogOverlay({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<AlertDialogPrimitive.Backdrop
@@ -206,11 +210,13 @@ export interface AlertDialogContentProps extends AlertDialogPrimitive.Popup.Prop
 	readonly requireConfirmation?: string;
 	/** Controlled keyword input when `requireConfirmation` is set. */
 	readonly confirmationValue?: string;
+	/** Fires as the typed confirmation changes, when `requireConfirmation` is set. */
 	readonly onConfirmationValueChange?: (value: string) => void;
 	/** Disable the confirm button until a reason is typed (feature 9). */
 	readonly requireReason?: boolean;
 	/** Controlled reason textarea when `requireReason` is set. */
 	readonly reasonValue?: string;
+	/** Fires as the reason changes, when `requireReason` is set. */
 	readonly onReasonValueChange?: (value: string) => void;
 	/** Disable the confirm button with a countdown before it can be pressed (feature 4). */
 	readonly delaySeconds?: number;
@@ -250,6 +256,7 @@ const AlertDialogActionContext = React.createContext<AlertDialogActionContextVal
 	onConfirm: undefined,
 });
 
+/** The dialog's window, with `severity` styling and the options real confirmations need: typed confirmation, a required reason, a countdown, a third action, an undo hint and a remembered choice. */
 const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentProps>(function AlertDialogContent(
 	{
 		className,
@@ -436,6 +443,7 @@ export interface AlertDialogHeaderProps extends React.ComponentProps<"div"> {
 	readonly align?: AlertDialogAlign;
 }
 
+/** Groups the media, the title and the description. */
 const AlertDialogHeader = React.forwardRef<HTMLDivElement, AlertDialogHeaderProps>(function AlertDialogHeader(
 	{ className, align = "center", ...props },
 	ref,
@@ -459,6 +467,7 @@ export interface AlertDialogMediaProps extends React.ComponentProps<"div"> {
 	readonly severity?: AlertDialogSeverity;
 }
 
+/** An icon (or other media) tinted by `severity`, above or beside the title. */
 const AlertDialogMedia = React.forwardRef<HTMLDivElement, AlertDialogMediaProps>(function AlertDialogMedia(
 	{ className, severity = "info", ...props },
 	ref,
@@ -466,6 +475,7 @@ const AlertDialogMedia = React.forwardRef<HTMLDivElement, AlertDialogMediaProps>
 	return <div ref={ref} data-slot="alert-dialog-media" className={cn(alertDialogMediaVariants({ severity }), className)} {...props} />;
 });
 
+/** Names the dialog: the question being asked. */
 const AlertDialogTitle = React.forwardRef<HTMLHeadingElement, AlertDialogPrimitive.Title.Props>(function AlertDialogTitle({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<AlertDialogPrimitive.Title
@@ -477,6 +487,7 @@ const AlertDialogTitle = React.forwardRef<HTMLHeadingElement, AlertDialogPrimiti
 	);
 });
 
+/** Explains the consequence of the action; read with the title. */
 const AlertDialogDescription = React.forwardRef<HTMLParagraphElement, AlertDialogPrimitive.Description.Props>(function AlertDialogDescription(
 	{ className, ...props },
 	ref,
@@ -494,9 +505,13 @@ const AlertDialogDescription = React.forwardRef<HTMLParagraphElement, AlertDialo
 // ── Footer ──────────────────────────────────────────────────────────────────
 
 export interface AlertDialogFooterProps extends React.ComponentProps<"div"> {
+	/** Which button comes first on wide screens: `confirm-first` or `cancel-first`. */
 	readonly actionOrder?: AlertDialogActionOrder | undefined;
+	/** Which button comes first when the buttons stack on narrow screens. */
 	readonly stackOrder?: AlertDialogActionOrder | undefined;
+	/** A key that confirms while the dialog is open, shown on the action. */
 	readonly confirmShortcut?: string | undefined;
+	/** Shows a spinner on the action and disables it while the confirmed work runs. */
 	readonly confirmLoading?: boolean | undefined;
 	/** Overrides the `alertDialog.loading` copy from `UiKitLabelsProvider`. */
 	readonly loadingLabel?: string | undefined;
@@ -504,13 +519,19 @@ export interface AlertDialogFooterProps extends React.ComponentProps<"div"> {
 	readonly confirmLabel?: string | undefined;
 	/** Overrides the `alertDialog.cancel` copy from `UiKitLabelsProvider`. */
 	readonly cancelLabel?: string | undefined;
+	/** The text shown on the action while a countdown keeps it disabled. */
 	readonly countdownLabel?: string | undefined;
+	/** A third button between Cancel and the action, such as "Save and close". */
 	readonly thirdAction?: ReactNode | undefined;
+	/** Runs when the action is pressed. */
 	readonly onConfirm?: (() => void) | undefined;
+	/** Runs when Cancel is pressed. */
 	readonly onCancel?: (() => void) | undefined;
+	/** Colours the action: `info`, `success`, `warning` or `destructive`. */
 	readonly severity?: AlertDialogSeverity | undefined;
 }
 
+/** The row of buttons. Renders Cancel and the action from props, or your own children; `actionOrder` sets which comes first. */
 const AlertDialogFooter = React.forwardRef<HTMLDivElement, AlertDialogFooterProps>(function AlertDialogFooter(
 	{
 		className,
@@ -565,17 +586,23 @@ const AlertDialogFooter = React.forwardRef<HTMLDivElement, AlertDialogFooterProp
 // ── Action (improvement 3: loading state; feature 2) ────────────────────────
 
 export interface AlertDialogActionProps extends React.ComponentProps<typeof Button> {
+	/** Shows a spinner on the action and disables it while the confirmed work runs. */
 	readonly confirmLoading?: boolean | undefined;
 	/** Overrides the `alertDialog.loading` copy from `UiKitLabelsProvider`. */
 	readonly loadingLabel?: string | undefined;
 	/** Overrides the `alertDialog.confirm` copy from `UiKitLabelsProvider`. */
 	readonly confirmLabel?: string | undefined;
+	/** A key that confirms while the dialog is open, shown on the action. */
 	readonly confirmShortcut?: string | undefined;
+	/** The text shown on the action while a countdown keeps it disabled. */
 	readonly countdownLabel?: string | undefined;
+	/** Runs when the action is pressed. */
 	readonly onConfirm?: (() => void) | undefined;
+	/** Colours the action: `info`, `success`, `warning` or `destructive`. */
 	readonly severity?: AlertDialogSeverity | undefined;
 }
 
+/** The confirming button. Runs `onConfirm`; with `confirmLoading` it shows a spinner and stays disabled until you close the dialog. */
 const AlertDialogAction = React.forwardRef<HTMLButtonElement, AlertDialogActionProps>(function AlertDialogAction(
 	{ className, confirmLoading = false, loadingLabel, confirmLabel, confirmShortcut, countdownLabel, onConfirm, severity = "info", disabled, onClick, children, ...props },
 	ref,
@@ -638,9 +665,11 @@ const AlertDialogAction = React.forwardRef<HTMLButtonElement, AlertDialogActionP
 // (intersections in heritage clauses). Type aliases still allow intersections.
 export type AlertDialogCancelProps = AlertDialogPrimitive.Close.Props &
 	React.ComponentProps<typeof Button> & {
+		/** Runs when Cancel is pressed, before the dialog closes. */
 		readonly onCancel?: (() => void) | undefined;
 	};
 
+/** The cancelling button. Runs `onCancel` and closes the dialog. */
 const AlertDialogCancel = React.forwardRef<HTMLButtonElement, AlertDialogCancelProps>(function AlertDialogCancel(
 	{ className, variant = "outline", size = "default", onCancel, onClick, children, ...props },
 	ref,

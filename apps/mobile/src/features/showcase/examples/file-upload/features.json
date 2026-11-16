@@ -1,0 +1,72 @@
+[
+	{
+		"id": "c-file-upload-1",
+		"label": "Basic",
+		"description": "Basic file upload. Best for a button beside a small square avatar slot that fills with the picked image, with its name and a Remove link below.",
+		"file": "file-upload-1",
+		"export": "FileUpload1Example"
+	},
+	{
+		"id": "c-file-upload-2",
+		"label": "Avatar",
+		"description": "Avatar upload. Best for a round dashed avatar that is itself the tap and drop target, with a corner X, a size hint and an error alert below.",
+		"file": "file-upload-2",
+		"export": "FileUpload2Example"
+	},
+	{
+		"id": "c-file-upload-3",
+		"label": "Drag & Drop",
+		"description": "Basic drag and drop file upload. Best for a single row dashed strip holding an Add files button, 48px thumbnails in line and a count against the limit.",
+		"file": "file-upload-3",
+		"export": "FileUpload3Example"
+	},
+	{
+		"id": "c-file-upload-4",
+		"label": "Gallery",
+		"description": "Gallery file upload. Best for a square image grid under a large drop zone, where a zoom button opens the full picture in a Dialog, with a total size and Clear all.",
+		"file": "file-upload-4",
+		"export": "FileUpload4Example"
+	},
+	{
+		"id": "c-file-upload-5",
+		"label": "Progress List",
+		"description": "Progress file upload. Best for a stacked list of cards, each with a thin bar while sending and an inline retry alert, under completed, failed and uploading counts.",
+		"file": "file-upload-5",
+		"export": "FileUpload5Example"
+	},
+	{
+		"id": "c-file-upload-6",
+		"label": "Table",
+		"description": "Table file upload. Best for rows in a Table with type and size columns, a ring around each icon while sending, and per row download, delete or retry.",
+		"file": "file-upload-6",
+		"export": "FileUpload6Example"
+	},
+	{
+		"id": "c-file-upload-7",
+		"label": "Product Images",
+		"description": "Image upload. Best for product shots in a 4 column grid above a dashed Card drop area, with a progress card per new image that counts up its percent.",
+		"file": "file-upload-7",
+		"export": "FileUpload7Example"
+	},
+	{
+		"id": "c-file-upload-8",
+		"label": "Sortable Images",
+		"description": "Image upload with sorting. Best for a 5 column grid reordered by a grip handle while pressed, where new images join the same order as the sample shots.",
+		"file": "file-upload-8",
+		"export": "FileUpload8Example"
+	},
+	{
+		"id": "c-file-upload-9",
+		"label": "Preview Cards",
+		"description": "Card file upload. Best for square preview cards in a grid of up to 6 columns, a ring over each while sending and a tooltip retry on failure.",
+		"file": "file-upload-9",
+		"export": "FileUpload9Example"
+	},
+	{
+		"id": "c-file-upload-10",
+		"label": "Cover Image",
+		"description": "Cover image upload. Best for a wide 21:9 banner with Change Cover and Remove while pressed, a percent ring while sending and an image guidelines box below.",
+		"file": "file-upload-10",
+		"export": "FileUpload10Example"
+	}
+]

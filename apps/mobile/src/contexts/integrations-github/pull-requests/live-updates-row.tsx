@@ -31,7 +31,7 @@ export function LiveUpdatesRow({ liveUpdates }: LiveUpdatesRowProps): React.JSX.
 			accessibilityLabel={
 				on ? `Live updates on. ${reconnecting ? LIVE_UPDATES_RECONNECTING_DETAIL : LIVE_UPDATES_ON_DETAIL}` : `Live updates are off. ${LIVE_UPDATES_OFF_DETAIL}`
 			}
-			className="flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+			className="rounded-card flex-row items-center gap-3 border border-border bg-card px-4 py-3"
 			testID="pull-request-live-updates">
 			{on ? (
 				<PulseDot className={`size-2.5 rounded-full ${reconnecting ? "bg-warning" : "bg-success"}`} />
@@ -39,8 +39,8 @@ export function LiveUpdatesRow({ liveUpdates }: LiveUpdatesRowProps): React.JSX.
 				<View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="size-2.5 rounded-full bg-muted-foreground opacity-40" />
 			)}
 			<View className="flex-1 gap-0.5" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-				<Text className="font-sans-semibold text-sm text-foreground">{on ? "Live" : "Live updates are off"}</Text>
-				<Text className="font-sans text-sm text-muted-foreground">
+				<Text className="font-sans-semibold text-body text-foreground">{on ? "Live" : "Live updates are off"}</Text>
+				<Text className="text-body font-sans text-muted-foreground">
 					{on ? (reconnecting ? LIVE_UPDATES_RECONNECTING_DETAIL : LIVE_UPDATES_ON_DETAIL) : LIVE_UPDATES_OFF_DETAIL}
 				</Text>
 			</View>

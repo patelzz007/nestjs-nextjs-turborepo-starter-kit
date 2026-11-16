@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-separator-1",
+		"label": "Horizontal",
+		"description": "Horizontal separator for content sections. Best for a heading with a muted subtitle, set off from a muted paragraph of body copy by one full width rule.",
+		"file": "separator-1",
+		"export": "Separator1Example"
+	},
+	{
+		"id": "c-separator-2",
+		"label": "Vertical",
+		"description": "Vertical separator for inline elements. Best for a single line of 3 one word labels, Blog, Docs and Source, split by 2 rules as tall as the row.",
+		"file": "separator-2",
+		"export": "Separator2Example"
+	},
+	{
+		"id": "c-separator-3",
+		"label": "Grouped Menu Items",
+		"description": "Vertical separator groups related menu items. Best for side by side entries, each a medium weight title over a muted caption, split by short rules centered in the row.",
+		"file": "separator-3",
+		"export": "Separator3Example"
+	},
+	{
+		"id": "c-separator-4",
+		"label": "List Rows",
+		"description": "Horizontal separator between items in a list. Best for a stack of 3 label and value rows with a rule between every row, labels on the left and muted values on the right.",
+		"file": "separator-4",
+		"export": "Separator4Example"
+	},
+	{
+		"id": "c-separator-5",
+		"label": "Centered Label",
+		"description": "Separator with centered text label. Best for a rule broken by a small muted caption, or continue with, at its middle.",
+		"file": "separator-5",
+		"export": "Separator5Example"
+	},
+	{
+		"id": "c-separator-6",
+		"label": "Order Summary",
+		"description": "Order summary with separators. Best for a price breakdown of subtotal, discount and tax, ruled off from its heading above and from a medium weight total below.",
+		"file": "separator-6",
+		"export": "Separator6Example"
+	}
+]

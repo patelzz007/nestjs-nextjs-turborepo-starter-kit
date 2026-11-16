@@ -53,6 +53,7 @@ import { ClaimsModule } from "./contexts/claims/claims.module";
 import { WebhooksOutboundModule } from "./contexts/webhooks/outbound/public-api";
 import { CatalogModule } from "./contexts/catalog/public-api";
 import { KanbanModule } from "./contexts/kanban/public-api";
+import { DocsPublishingModule } from "./contexts/docs-publishing/public-api";
 import { OperationsModule } from "./contexts/operations/public-api";
 import { ReportingModule } from "./contexts/reporting/public-api";
 
@@ -127,6 +128,7 @@ if (observeConfig !== null) {
 		KanbanModule,
 		ReportingModule,
 		OperationsModule,
+		DocsPublishingModule,
 		// Conditionally include ObserveModule
 		...observeImports,
 	],

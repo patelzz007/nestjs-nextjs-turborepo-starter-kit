@@ -28,7 +28,7 @@ export interface HighlightGridProps {
 export function HighlightGrid({ items, testID }: HighlightGridProps): React.JSX.Element {
 	return (
 		// One surface split by hairlines (as the KPIs): the inner row runs a point past the clipped frame, hiding the outer lines.
-		<View className="overflow-hidden rounded-2xl border border-border bg-card">
+		<View className="rounded-card overflow-hidden border border-border bg-card">
 			<View className="-mr-px -mb-px flex-row flex-wrap" testID={testID}>
 				{items.map((item: HighlightItem): React.JSX.Element => (
 					<View
@@ -40,12 +40,12 @@ export function HighlightGrid({ items, testID }: HighlightGridProps): React.JSX.
 							<Icon icon={item.icon} size="md" colorClassName="accent-foreground" />
 						</View>
 						<View className="gap-0.5">
-							<Text className="font-sans-medium text-xs text-muted-foreground">{item.label}</Text>
-							<Text className="font-sans-semibold text-base text-foreground" numberOfLines={1}>
+							<Text className="font-sans-medium text-caption text-muted-foreground">{item.label}</Text>
+							<Text className="font-sans-semibold text-body-lg text-foreground" numberOfLines={1}>
 								{item.value}
 							</Text>
 							{item.detail === undefined ? null : (
-								<Text className="font-sans text-xs text-muted-foreground" numberOfLines={1}>
+								<Text className="text-caption font-sans text-muted-foreground" numberOfLines={1}>
 									{item.detail}
 								</Text>
 							)}

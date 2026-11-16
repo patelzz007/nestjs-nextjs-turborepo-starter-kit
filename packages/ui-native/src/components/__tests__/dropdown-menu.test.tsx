@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import PencilIcon from "lucide-react-native/icons/pencil";
 import TrashIcon from "lucide-react-native/icons/trash";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 import { z } from "zod";
 
+import { SHEET_MOTION } from "../../lib/motion";
 import { DropdownMenu, type DropdownMenuItemData, type DropdownMenuProps } from "../dropdown-menu";
 
 type Action = "rename" | "archive" | "delete";
@@ -21,6 +22,22 @@ function menu(overrides: Partial<DropdownMenuProps<Action>> = {}): React.JSX.Ele
 
 function classNameOf(testID: string): string {
 	return z.string().parse(screen.getByTestId(testID).props.className);
+}
+
+/** The menu's sheet leaves with an animation (lib/use-overlay-presence): the clock is the test's, so leaving is checked exactly. */
+beforeEach((): void => {
+	jest.useFakeTimers();
+});
+
+afterEach((): void => {
+	jest.useRealTimers();
+});
+
+/** Lets the sheet finish leaving: it stays up for its exit, then unmounts. */
+async function finishLeaving(): Promise<void> {
+	await act((): void => {
+		jest.advanceTimersByTime(SHEET_MOTION.exit.duration);
+	});
 }
 
 describe("DropdownMenu", () => {
@@ -45,6 +62,7 @@ describe("DropdownMenu", () => {
 		await fireEvent.press(screen.getByRole("menuitem", { name: "Delete" }));
 
 		expect(onSelect).toHaveBeenCalledWith("delete");
+		await finishLeaving();
 		expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
 	});
 
@@ -120,5 +138,65 @@ describe("DropdownMenu", () => {
 		expect(className).toContain("px-6");
 		expect(className).not.toContain("px-4");
 		expect(className).toContain("self-start");
+	});
+
+	it("toggles a checkbox in place, keeping the menu open, and checks a radio, closing it", async () => {
+		const onSelect = jest.fn();
+		await render(
+			<DropdownMenu
+				label="View"
+				items={[
+					{ value: "status", label: "Status bar", kind: "checkbox", checked: true },
+					{ value: "top", label: "Top", kind: "radio", checked: false, group: "Position" },
+				]}
+				onSelect={onSelect}
+			/>,
+		);
+		await fireEvent.press(screen.getByRole("button", { name: "View" }));
+		const status = screen.getByRole("checkbox", { name: "Status bar" });
+		expect(status).toBeChecked();
+		await fireEvent.press(status);
+		expect(onSelect).toHaveBeenLastCalledWith("status");
+		expect(screen.getByRole("header", { name: "Position" })).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("radio", { name: "Top" }));
+		expect(onSelect).toHaveBeenLastCalledWith("top");
+		await finishLeaving();
+		expect(screen.queryByRole("radio", { name: "Top" })).toBeNull();
+	});
+
+	it("opens a submenu in place, with a way back, and reports its item", async () => {
+		const onSelect = jest.fn();
+		await render(<DropdownMenu label="Team" items={[{ value: "invite", label: "Invite users", items: [{ value: "email", label: "Email" }] }]} onSelect={onSelect} open />);
+		await fireEvent.press(screen.getByRole("menuitem", { name: "Invite users" }));
+		expect(onSelect).not.toHaveBeenCalled();
+		expect(screen.getByRole("header", { name: "Invite users" })).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Back to Team" }));
+		expect(screen.getByRole("menuitem", { name: "Invite users" })).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("menuitem", { name: "Invite users" }));
+		await fireEvent.press(screen.getByRole("menuitem", { name: "Email" }));
+		expect(onSelect).toHaveBeenCalledWith("email");
+	});
+
+	it("shows a row's description, shortcut and trailing text, and the sheet's header and footer", async () => {
+		await render(
+			<DropdownMenu
+				label="Account"
+				items={[{ value: "profile", label: "Profile", description: "avery@example.com", shortcut: ["⌘", "P"], trailing: "2m" }]}
+				header={<Text>Avery</Text>}
+				footer={<Text>Mark all as read</Text>}
+				onSelect={jest.fn()}
+				open
+			/>,
+		);
+		expect(screen.getByRole("menuitem", { name: "Profile, avery@example.com" })).toBeOnTheScreen();
+		expect(screen.getByText("2m")).toBeOnTheScreen();
+		expect(screen.getByText("Avery")).toBeOnTheScreen();
+		expect(screen.getByText("Mark all as read")).toBeOnTheScreen();
+	});
+
+	it("has primary and secondary triggers, and can leave out the chevron", async () => {
+		await render(menu({ variant: "primary", hideChevron: true }));
+		expect(classNameOf("menu")).toContain("bg-primary");
+		expect(screen.getByText("Project actions")).toHaveProp("className", expect.stringContaining("text-primary-foreground"));
 	});
 });

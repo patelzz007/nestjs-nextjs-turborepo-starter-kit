@@ -1,0 +1,191 @@
+[
+	{
+		"id": "c-code-block-1",
+		"label": "Basic",
+		"description": "Basic code block. Best for a static TypeScript snippet with line numbers, the resolved language label and a header copy button.",
+		"file": "code-block-1",
+		"export": "CodeBlock1Example"
+	},
+	{
+		"id": "c-code-block-2",
+		"label": "Pinned Copy",
+		"description": "Pinned copy button. Best for a headerless snippet whose copy button floats over the code's corner.",
+		"file": "code-block-2",
+		"export": "CodeBlock2Example"
+	},
+	{
+		"id": "c-code-block-3",
+		"label": "Streaming Agent",
+		"description": "Streaming agent response. Best for a route handler typed out 3 characters per tick under a Generating badge, then Done, with a Replay.",
+		"file": "code-block-3",
+		"export": "CodeBlock3Example"
+	},
+	{
+		"id": "c-code-block-4",
+		"label": "AI Chat",
+		"description": "AI chat with code. Best for a 2 turn transcript with avatars, where the reply mixes text and a code block.",
+		"file": "code-block-4",
+		"export": "CodeBlock4Example"
+	},
+	{
+		"id": "c-code-block-5",
+		"label": "Diff Summary",
+		"description": "Diff with change summary. Best for removed and added lines of a single file marked by number, with the change summed up in header badges.",
+		"file": "code-block-5",
+		"export": "CodeBlock5Example"
+	},
+	{
+		"id": "c-code-block-6",
+		"label": "Transformer Diff",
+		"description": "Diff from line marks. Best for lines 2 and 3 marked removed and line 5 added by the caller (the web uses a Shiki transformer).",
+		"file": "code-block-6",
+		"export": "CodeBlock6Example"
+	},
+	{
+		"id": "c-code-block-7",
+		"label": "Highlights",
+		"description": "Highlighted lines and words. Best for a connection config with lines 2 to 4 tinted and two words marked wherever they appear.",
+		"file": "code-block-7",
+		"export": "CodeBlock7Example"
+	},
+	{
+		"id": "c-code-block-8",
+		"label": "Focus Walkthrough",
+		"description": "Focus walkthrough. Best for a 3 step tour of a checkout function, chosen with segments in the header, the step's lines in focus and the rest dimmed.",
+		"file": "code-block-8",
+		"export": "CodeBlock8Example"
+	},
+	{
+		"id": "c-code-block-9",
+		"label": "Terminal Output",
+		"description": "Terminal output. Best for build output as plain text under a Terminal header, with nothing to colour.",
+		"file": "code-block-9",
+		"export": "CodeBlock9Example"
+	},
+	{
+		"id": "c-code-block-10",
+		"label": "Long File",
+		"description": "Long file with expand. Best for a generated file excerpt numbered from 120 and held to 8 lines until opened.",
+		"file": "code-block-10",
+		"export": "CodeBlock10Example"
+	},
+	{
+		"id": "c-code-block-11",
+		"label": "Diagnostics & Actions",
+		"description": "Diagnostics. Best for a function with an error line and a warning line, each with a note under it, tallied in header badges, with copy.",
+		"file": "code-block-11",
+		"export": "CodeBlock11Example"
+	},
+	{
+		"id": "c-code-block-12",
+		"label": "Line Selection",
+		"description": "Line selection. Best for tapping line numbers to pick lines, a badge counting them, and asking about the pick.",
+		"file": "code-block-12",
+		"export": "CodeBlock12Example"
+	},
+	{
+		"id": "c-code-block-13",
+		"label": "Search In File",
+		"description": "Search in file. Best for a header search field that marks each match as you type, a badge counting them, and a match-case switch.",
+		"file": "code-block-13",
+		"export": "CodeBlock13Example"
+	},
+	{
+		"id": "c-code-block-14",
+		"label": "File Tabs",
+		"description": "File tabs in a dense frame. Best for snippets in TSX, Python, SQL and Bash behind segments in a dense Frame.",
+		"file": "code-block-14",
+		"export": "CodeBlock14Example"
+	},
+	{
+		"id": "c-code-block-15",
+		"label": "Pre-Highlighted Lines",
+		"description": "Pre-coloured lines. Best for hand-built tokens that colour 4 Python keywords, passed as lines.",
+		"file": "code-block-15",
+		"export": "CodeBlock15Example"
+	},
+	{
+		"id": "c-code-block-16",
+		"label": "Before & After",
+		"description": "Before and after. Best for a loop refactored into a reduce, as 2 blocks with Before and After headers.",
+		"file": "code-block-16",
+		"export": "CodeBlock16Example"
+	},
+	{
+		"id": "c-code-block-17",
+		"label": "Soft Wrap",
+		"description": "Soft wrap. Best for a single-line policy that starts wrapped, with a switch and a badge saying which way it is.",
+		"file": "code-block-17",
+		"export": "CodeBlock17Example"
+	},
+	{
+		"id": "c-code-block-18",
+		"label": "Unified Patch",
+		"description": "Unified patch review. Best for a 2 file patch, one block per file, each with its added and removed counts.",
+		"file": "code-block-18",
+		"export": "CodeBlock18Example"
+	},
+	{
+		"id": "c-code-block-19",
+		"label": "Design Token Theme",
+		"description": "Palette in tone colours. Best for palette tokens drawn in the theme's tone colours (the phone's code colours follow the app theme).",
+		"file": "code-block-19",
+		"export": "CodeBlock19Example"
+	},
+	{
+		"id": "c-code-block-20",
+		"label": "Always Dark",
+		"description": "Hero block. Best for a snippet behind 3 window dots with a highlighted line and a marked word (the phone follows the app's theme, with no forced-dark scope).",
+		"file": "code-block-20",
+		"export": "CodeBlock20Example"
+	},
+	{
+		"id": "c-code-block-21",
+		"label": "Dark Terminal",
+		"description": "Test log. Best for a log built token by token: passes in green, a failure in red, timings dimmed.",
+		"file": "code-block-21",
+		"export": "CodeBlock21Example"
+	},
+	{
+		"id": "c-code-block-22",
+		"label": "Accept & Reject",
+		"description": "Accept and reject. Best for an agent fix in a Card, with Reject and Accept in the block's footer.",
+		"file": "code-block-22",
+		"export": "CodeBlock22Example"
+	},
+	{
+		"id": "c-code-block-23",
+		"label": "Code Folding",
+		"description": "Nested code folding. Best for a sync function with 5 regions that fold from their first line's number, the inner branch folded at first.",
+		"file": "code-block-23",
+		"export": "CodeBlock23Example"
+	},
+	{
+		"id": "c-code-block-24",
+		"label": "Fix With AI",
+		"description": "Fix with AI. Best for a reduce missing its initial value flagged on line 3, with a gutter button that asks for a fix and applies it.",
+		"file": "code-block-24",
+		"export": "CodeBlock24Example"
+	},
+	{
+		"id": "c-code-block-25",
+		"label": "Reference Lines",
+		"description": "Reference lines in chat. Best for a gutter + that adds a line to the message as a chip.",
+		"file": "code-block-25",
+		"export": "CodeBlock25Example"
+	},
+	{
+		"id": "c-code-block-26",
+		"label": "External Scroll",
+		"description": "Scrolled by its card. Best for a Card with 3 changed files that size to their content, scrolled together inside a fixed height.",
+		"file": "code-block-26",
+		"export": "CodeBlock26Example"
+	},
+	{
+		"id": "c-code-block-27",
+		"label": "ANSI Terminal",
+		"description": "ANSI terminal output. Best for test output with raw colour escapes turned into coloured tokens by ansiToCodeLines.",
+		"file": "code-block-27",
+		"export": "CodeBlock27Example"
+	}
+]

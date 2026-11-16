@@ -21,6 +21,7 @@ import * as React from "react";
 type ScrollspyTarget = HTMLElement | Document | null | undefined;
 
 interface ScrollspyProps extends React.ComponentProps<"div"> {
+	/** The links: anchors marked with `data-scrollspy-anchor` set to their section's id. */
 	readonly children: React.ReactNode;
 	/** The scroll container to spy on; defaults to the document. A `ScrollArea` is followed into its viewport. */
 	readonly targetRef?: React.RefObject<ScrollspyTarget> | undefined;
@@ -75,6 +76,7 @@ function anchorOffset(anchor: Element, dataAttribute: string, fallback: number):
 	return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+/** Marks the link of the section in view (`data-active`) and scrolls to a section when its link is clicked. Follows `targetRef`, or the document without one. */
 const Scrollspy = React.forwardRef<HTMLDivElement, ScrollspyProps>(function Scrollspy(
 	{ children, targetRef, onUpdate, offset = 0, smooth = true, dataAttribute = "scrollspy", history = true, throttleTime = 0, ...props },
 	ref,

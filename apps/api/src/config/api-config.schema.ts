@@ -48,6 +48,7 @@ export {
 	type TenancyConfig,
 	type TransactionLogConfig,
 	type WebhooksConfig,
+	type DocsPublishingConfig,
 	type InboundWebhooksConfig,
 } from "./api-config/api-config.types";
 export {

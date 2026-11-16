@@ -13,11 +13,13 @@ import * as React from "react";
 import { Text, type TextInstance, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
+import { FieldSurfaceProvider } from "../lib/field-surface";
 
-export const cardVariants = cva("rounded-2xl border border-border bg-card", {
+export const cardVariants = cva("rounded-card border border-border bg-card", {
 	variants: {
 		/** `md`: a screen's section. `sm`: a compact card in a list or a grid. */
-		size: { md: "gap-4 p-5", sm: "gap-3 p-4" },
+		/** `md`: the spec's 16 pt card padding. `sm`: a dense card inside a list or a grid. */
+		size: { md: "gap-4 p-4", sm: "gap-3 p-3" },
 	},
 	defaultVariants: { size: "md" },
 });
@@ -46,7 +48,8 @@ export const Card = React.memo(
 						{description === undefined ? null : <CardDescription>{description}</CardDescription>}
 					</CardHeader>
 				)}
-				{children}
+				{/* Fields inside a card take the card's fill. */}
+				<FieldSurfaceProvider surface="card">{children}</FieldSurfaceProvider>
 			</View>
 		);
 	}),
@@ -87,7 +90,7 @@ export const CardHeader = React.memo(
 export const CardTitle = React.memo(
 	React.forwardRef<TextInstance, CardTitleProps>(function CardTitle({ children, className, testID }, ref): React.JSX.Element {
 		return (
-			<Text ref={ref} accessibilityRole="header" className={cn("font-heading text-lg text-foreground", className)} testID={testID}>
+			<Text ref={ref} accessibilityRole="header" className={cn("text-h4 font-heading text-foreground", className)} testID={testID}>
 				{children}
 			</Text>
 		);
@@ -98,7 +101,7 @@ export const CardTitle = React.memo(
 export const CardDescription = React.memo(
 	React.forwardRef<TextInstance, CardDescriptionProps>(function CardDescription({ children, className, testID }, ref): React.JSX.Element {
 		return (
-			<Text ref={ref} className={cn("font-sans text-sm leading-5 text-muted-foreground", className)} testID={testID}>
+			<Text ref={ref} className={cn("text-body font-sans text-muted-foreground", className)} testID={testID}>
 				{children}
 			</Text>
 		);

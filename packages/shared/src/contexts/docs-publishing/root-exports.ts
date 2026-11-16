@@ -1,0 +1,42 @@
+// What the root `@workspace/shared` barrel exposes of the `docs-publishing` context (ADR 084).
+
+export { DOCS_SYNC_REPORT_PATH, NOTION_WEBHOOK_PATH } from "./docs-publishing.routes";
+export {
+	DOCS_SYNC_HELD_BACK_MAX_ITEMS,
+	DOCS_SYNC_ISSUES_PER_PAGE_MAX_ITEMS,
+	DOCS_SYNC_TEXT_MAX_LENGTH,
+	DocsSourceKindSchema,
+	DocsSyncHeldBackPageSchema,
+	DocsSyncIssueSchema,
+	DocsSyncOverviewSchema,
+	DocsSyncRunAckSchema,
+	DocsSyncRunDetailSchema,
+	DocsSyncRunIdParamSchema,
+	DocsSyncRunListQuerySchema,
+	DocsSyncRunReportSchema,
+	DocsSyncRunStatusSchema,
+	DocsSyncRunSummarySchema,
+	DocsSyncStartedSchema,
+	DocsSyncTriggerSchema,
+	DocsWebhookHandshakeSchema,
+	StartDocsSyncSchema,
+	docsSyncRunListQuery,
+} from "./schemas/docs-sync";
+export type {
+	DocsSourceKind,
+	DocsSyncHeldBackPage,
+	DocsSyncIssue,
+	DocsSyncOverview,
+	DocsSyncRunAck,
+	DocsSyncRunDetail,
+	DocsSyncRunIdParam,
+	DocsSyncRunListQuery,
+	DocsSyncRunListSortField,
+	DocsSyncRunReport,
+	DocsSyncRunStatus,
+	DocsSyncRunSummary,
+	DocsSyncStarted,
+	DocsSyncTrigger,
+	DocsWebhookHandshake,
+	StartDocsSync,
+} from "./schemas/docs-sync";

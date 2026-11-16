@@ -1,5 +1,5 @@
 import type { Prisma, SupportAccessGrant, SupportAccessGrantStatus } from "@prisma/client";
-import type { EpochMs } from "@workspace/shared";
+import { SUPPORT_ACCESS_GRANT_LIFECYCLE, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
 import { SupportAccessGrantAggregate, type SupportAccessGrantState } from "../../domain/aggregates/support-access-grant.aggregate";
@@ -21,8 +21,8 @@ function stateOf(row: SupportAccessGrant): SupportAccessGrantState {
 	};
 }
 
-/** Statuses the expiry job ends (the non-terminal ones). */
-const EXPIRABLE_STATUSES: readonly SupportAccessGrantStatus[] = ["PENDING_APPROVAL", "PENDING_TENANT_APPROVAL", "ACTIVE"];
+/** Statuses the expiry job ends: every status the lifecycle's `expire` move starts from. */
+const EXPIRABLE_STATUSES: readonly SupportAccessGrantStatus[] = SUPPORT_ACCESS_GRANT_LIFECYCLE.sourcesOf("expire");
 
 const LockedIdRowSchema = z.object({ id: z.string() });
 

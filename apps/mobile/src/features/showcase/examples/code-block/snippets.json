@@ -1,0 +1,122 @@
+[
+	{
+		"id": "session",
+		"language": "typescript",
+		"code": "import { auth } from \"@/lib/auth\";\n\nexport async function signIn(email: string, password: string) {\n  // Exchange the credentials for a session.\n  const session = await auth.signIn({ email, password });\n  if (!session.ok) {\n    throw new Error(\"Wrong email or password\");\n  }\n  return session.token;\n}"
+	},
+	{
+		"id": "route",
+		"language": "typescript",
+		"code": "export async function GET(request: Request) {\n  const url = new URL(request.url);\n  const page = Number(url.searchParams.get(\"page\") ?? \"1\");\n  const orders = await db.order.findMany({\n    skip: (page - 1) * 20,\n    take: 20,\n    orderBy: { createdAt: \"desc\" },\n  });\n  return Response.json({ orders, page });\n}"
+	},
+	{
+		"id": "fetch-user",
+		"language": "typescript",
+		"code": "async function fetchUser(id: string) {\n  const response = await fetch(`/api/users/${id}`);\n  if (!response.ok) throw new Error(`User ${id} not found`);\n  return response.json();\n}"
+	},
+	{
+		"id": "diff-total",
+		"language": "typescript",
+		"code": "function total(items: Item[]) {\n  let sum = 0;\n  for (const item of items) sum += item.price;\n  return sum;\n  return items.reduce((sum, item) => sum + item.price, 0);\n}"
+	},
+	{
+		"id": "config",
+		"language": "typescript",
+		"code": "export const database = {\n  host: process.env.DB_HOST ?? \"localhost\",\n  port: Number(process.env.DB_PORT ?? 5432),\n  user: process.env.DB_USER,\n  ssl: true,\n};"
+	},
+	{
+		"id": "checkout",
+		"language": "typescript",
+		"code": "export async function checkout(cart: Cart, user: User) {\n  // 1. Price the cart.\n  const subtotal = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);\n  const tax = Math.round(subtotal * TAX_RATE);\n  // 2. Charge the card.\n  const charge = await payments.charge({ amount: subtotal + tax, customer: user.id });\n  if (charge.status !== \"succeeded\") {\n    return { ok: false, reason: charge.status };\n  }\n  // 3. Record the order.\n  const order = await db.order.create({ data: { userId: user.id, total: subtotal + tax } });\n  await email.send(user.email, \"receipt\", { order });\n  return { ok: true, order };\n}"
+	},
+	{
+		"id": "generated",
+		"language": "typescript",
+		"code": "export const NAMES = {\n  \"accordion\": \"ACCORDION\",\n  \"alert\": \"ALERT\",\n  \"avatar\": \"AVATAR\",\n  \"badge\": \"BADGE\",\n  \"button\": \"BUTTON\",\n  \"calendar\": \"CALENDAR\",\n  \"card\": \"CARD\",\n  \"carousel\": \"CAROUSEL\",\n  \"chart\": \"CHART\",\n  \"checkbox\": \"CHECKBOX\",\n  \"collapsible\": \"COLLAPSIBLE\",\n  \"combobox\": \"COMBOBOX\",\n  \"command\": \"COMMAND\",\n  \"dialog\": \"DIALOG\",\n  \"drawer\": \"DRAWER\",\n  \"dropdown\": \"DROPDOWN\",\n  \"form\": \"FORM\",\n  \"hover-card\": \"HOVER-CARD\",\n  \"input\": \"INPUT\",\n  \"label\": \"LABEL\",\n};"
+	},
+	{
+		"id": "validate",
+		"language": "typescript",
+		"code": "export function validateOrder(order: Order) {\n  const total = order.items.reduce((sum, item) => sum + item.price);\n  if (order.coupon) {\n    applyCoupon(order, order.coupon);\n  }\n  return total > 0;\n}"
+	},
+	{
+		"id": "tabs-tsx",
+		"language": "tsx",
+		"code": "export function Greeting({ name }: { name: string }) {\n  return <Text className=\"text-body\">Hello, {name}!</Text>;\n}"
+	},
+	{
+		"id": "tabs-python",
+		"language": "python",
+		"code": "def greet(name: str) -> str:\n    \"\"\"Say hello.\"\"\"\n    return f\"Hello, {name}!\""
+	},
+	{
+		"id": "tabs-sql",
+		"language": "sql",
+		"code": "SELECT name, COUNT(*) AS orders\nFROM customers\nJOIN orders ON orders.customer_id = customers.id\nGROUP BY name\nORDER BY orders DESC;"
+	},
+	{
+		"id": "tabs-bash",
+		"language": "bash",
+		"code": "pnpm install\npnpm run build && pnpm run test"
+	},
+	{
+		"id": "before",
+		"language": "typescript",
+		"code": "let total = 0;\nfor (const item of items) {\n  total += item.price * item.quantity;\n}"
+	},
+	{
+		"id": "after",
+		"language": "typescript",
+		"code": "const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);"
+	},
+	{
+		"id": "patch-a",
+		"language": "typescript",
+		"code": "export function formatPrice(cents: number) {\n  return `$${(cents / 100).toFixed(2)}`;\n  return new Intl.NumberFormat(\"en-US\", { style: \"currency\", currency: \"USD\" }).format(cents / 100);\n}"
+	},
+	{
+		"id": "patch-b",
+		"language": "typescript",
+		"code": "import { formatPrice } from \"./format\";\nconst label = formatPrice(item.cents);\nconst label = `${formatPrice(item.cents)} each`;"
+	},
+	{
+		"id": "hero",
+		"language": "typescript",
+		"code": "const app = createApp({\n  theme: \"system\",\n  locale: \"en-GB\",\n});\n\napp.listen(3000);"
+	},
+	{
+		"id": "fix",
+		"language": "typescript",
+		"code": "export function average(values: number[]) {\n  if (values.length === 0) return 0;\n  return values.reduce((sum, value) => sum + value, 0) / values.length;\n}"
+	},
+	{
+		"id": "sync",
+		"language": "typescript",
+		"code": "export async function sync(local: Item[], remote: Item[]) {\n  for (const item of local) {\n    if (item.deleted) {\n      await remote.delete(item.id);\n    } else if (item.changed) {\n      if (item.conflict) {\n        await resolve(item);\n      } else {\n        await remote.put(item);\n      }\n    }\n  }\n  return { synced: local.length };\n}"
+	},
+	{
+		"id": "reduce",
+		"language": "typescript",
+		"code": "export function totalOf(lines: Line[]) {\n  const subtotal = lines.map((line) => line.price * line.quantity);\n  return subtotal.reduce((sum, value) => sum + value);\n}"
+	},
+	{
+		"id": "reduce-fixed",
+		"language": "typescript",
+		"code": "export function totalOf(lines: Line[]) {\n  const subtotal = lines.map((line) => line.price * line.quantity);\n  return subtotal.reduce((sum, value) => sum + value, 0);\n}"
+	},
+	{
+		"id": "files-a",
+		"language": "typescript",
+		"code": "export const MAX_RETRIES = 3;\nexport const TIMEOUT_MS = 5000;"
+	},
+	{
+		"id": "files-b",
+		"language": "typescript",
+		"code": "export function retry<T>(task: () => Promise<T>) {\n  return withRetries(task, MAX_RETRIES);\n}"
+	},
+	{
+		"id": "files-c",
+		"language": "typescript",
+		"code": "it(\"retries three times\", async () => {\n  await expect(retry(failing)).rejects.toThrow();\n  expect(failing).toHaveBeenCalledTimes(3);\n});"
+	}
+]

@@ -5,6 +5,7 @@
 import { ADMIN_THEME_OVERRIDES } from "./admin-theme";
 import { LAYOUT } from "./layout";
 import { MOBILE_COMPONENT_COLORS, MOBILE_THEME_OVERRIDES } from "./mobile-theme";
+import { MOBILE_RADII, MOBILE_TYPE_SCALE } from "./mobile-typography";
 import { MOTION } from "./motion";
 import { PALETTE } from "./palette";
 import { RADIUS } from "./radius";
@@ -24,5 +25,7 @@ export const TOKEN_SOURCE: TokenSource = {
 	tailwindTheme: TAILWIND_THEME,
 	mobileThemeOverrides: MOBILE_THEME_OVERRIDES,
 	mobileComponentColors: MOBILE_COMPONENT_COLORS,
+	mobileTypeScale: MOBILE_TYPE_SCALE,
+	mobileRadii: MOBILE_RADII,
 	adminThemeOverrides: ADMIN_THEME_OVERRIDES,
 };

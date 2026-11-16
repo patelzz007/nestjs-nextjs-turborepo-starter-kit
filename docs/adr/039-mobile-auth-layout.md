@@ -3,8 +3,11 @@ title: "ADR 039: The Mobile Auth Layout"
 tags: ["adr", "mobile", "ui", "auth"]
 description: "Every signed-out mobile screen renders only its form inside one AuthShell — the web sign-in's dark brand panel above a rounded sheet — and every password field can show or hide what was typed."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/039-mobile-auth-layout.webp"
 order: 39
 ---
 

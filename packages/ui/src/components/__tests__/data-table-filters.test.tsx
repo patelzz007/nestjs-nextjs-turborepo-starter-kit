@@ -180,8 +180,9 @@ describe("DataTable toolbar layout", () => {
 		expect(toolbar.dataset.layout).toBe("fill");
 		expect(toolbar.querySelector("[data-slot=data-table-filters]")?.className).toContain("sm:contents");
 		expect(toolbar.className).toContain("sm:grid");
-		// One column for the search and one per filter, all equal.
-		expect(toolbar.style.gridTemplateColumns).toBe("repeat(2, minmax(0, 1fr))");
+		// One column for the search and one per filter, all equal. Read back as the browser serializes it
+		// (a unitless 0 length becomes `0px`).
+		expect(toolbar.style.gridTemplateColumns).toBe("repeat(2, minmax(0px, 1fr))");
 		const filter = within(toolbar).getByRole("combobox");
 		expect(filter.className).toContain("sm:min-w-0");
 		expect(filter.className).not.toContain("sm:min-w-44");
@@ -213,5 +214,49 @@ describe("DataTable filter option icons", () => {
 		const options = openSourceFilter(FILTERS);
 		expect(options.map((option) => option.textContent)).toEqual(["All (2)", "Request (2)"]);
 		expect(document.querySelector("[data-slot=filter-option-icon]")).toBeNull();
+	});
+});
+
+describe("DataTable client-side filtering", () => {
+	/** Rows whose outcomes share text ("FAILED" contains no other, "SUCCESS" is inside "PARTIAL_SUCCESS"). */
+	const OUTCOME_ROWS: readonly Row[] = [
+		{ id: "o-1", name: "Ann", kind: "REQUEST", outcome: "SUCCESS" },
+		{ id: "o-2", name: "Ben", kind: "REQUEST", outcome: "PARTIAL_SUCCESS" },
+		{ id: "o-3", name: "Cat", kind: "REQUEST", outcome: "FAILED" },
+	];
+	const OUTCOME_FILTER: Filter[] = [
+		{
+			key: "outcome",
+			label: "Outcome",
+			options: [
+				{ value: "SUCCESS", label: "Success" },
+				{ value: "PARTIAL_SUCCESS", label: "Partial success" },
+				{ value: "FAILED", label: "Failed" },
+			],
+		},
+	];
+
+	function chooseOutcome(label: RegExp): void {
+		fireEvent.click(screen.getByRole("combobox", { name: /^Outcome:/u }));
+		const option = screen.getAllByRole("option", { hidden: true }).find((candidate) => label.test(candidate.textContent));
+		if (option === undefined) {
+			throw new Error(`no option matches ${String(label)}`);
+		}
+		// Enter picks the highlighted option (jsdom has no pointer sequence for a click to select).
+		fireEvent.keyDown(option, { key: "Enter" });
+	}
+
+	it("keeps only the rows whose value is exactly the chosen option, not every row containing it", () => {
+		render(<DataTable data={[...OUTCOME_ROWS]} columns={CLIENT_COLUMNS} filters={OUTCOME_FILTER} />, { wrapper: UiKitTestProviders });
+
+		chooseOutcome(/^Success/u);
+
+		const body = screen.getAllByRole("rowgroup").at(-1);
+		if (body === undefined) {
+			throw new Error("the table has a body");
+		}
+		expect(within(body).getByText("Ann")).toBeTruthy();
+		expect(within(body).queryByText("Ben")).toBeNull();
+		expect(within(body).queryByText("Cat")).toBeNull();
 	});
 });

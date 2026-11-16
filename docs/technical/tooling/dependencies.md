@@ -4,8 +4,11 @@ tags: ["dependencies", "syncpack", "tooling"]
 description: "How syncpack keeps shared dependencies on the exact same version across every workspace."
 order: 7
 author: "Platform Team"
+category: "Tooling"
+date: 1788220800000
 lastUpdated: 1792886400000
-coverImage: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/tooling/dependencies.webp"
 ---
 
 # Dependency Hygiene (syncpack)

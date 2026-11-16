@@ -3,8 +3,11 @@ title: "ADR 062: Tenancy Modes Without Bypasses"
 tags: ["adr", "tenancy", "rls", "security"]
 description: "One codebase runs single- or multi-tenant; the tenant comes only from the route slug or a machine credential, and no staff, superadmin or system operation can bypass row-level security wholesale."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792368000000
 lastUpdated: 1792627200000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1792532799000
+coverImage: "/images/covers/adr/062-tenancy-modes-and-isolation.webp"
 order: 62
 ---
 

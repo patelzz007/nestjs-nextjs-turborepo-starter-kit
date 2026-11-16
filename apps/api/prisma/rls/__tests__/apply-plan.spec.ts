@@ -21,6 +21,7 @@ describe("RLS apply plan", () => {
 			"prisma/rls/40-api-key-principal.sql",
 			"prisma/rls/50-platform-operations.sql",
 			"prisma/rls/57-inbound-webhooks.sql",
+			"prisma/rls/58-docs-publishing.sql",
 			"prisma/rls/60-notifications.sql",
 			"prisma/rls/66-outbound-webhooks.sql",
 			"prisma/rls/70-audit-retention.sql",

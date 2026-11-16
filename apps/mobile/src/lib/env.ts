@@ -31,12 +31,38 @@
 
 import { HttpUrlEnvSchema } from "@workspace/shared";
 
+import type { ShowcaseScreens } from "../features/showcase/showcase-screens";
 import type { DemoAccount } from "./demo-account-list";
 import Constants from "expo-constants";
 import { z } from "zod";
 
 /** The API's own development port (apps/api `PORT`, default 8080). */
 export const DEFAULT_DEV_API_PORT = 8080;
+
+/**
+ * Whether this bundle carries the showcase, decided when it is called: the same test as `loadBundledShowcase`'s,
+ * so a screen can send a store build away without loading anything.
+ */
+export function isShowcaseBundled(): boolean {
+	return __DEV__ || process.env.EXPO_PUBLIC_SHOWCASE === "true";
+}
+
+/**
+ * The component showcase's screens (features/showcase), when this bundle carries them: always in development,
+ * and in a release build only when it was built with `EXPO_PUBLIC_SHOWCASE=true` (an internal build for the
+ * team, the web admin's `ADMIN_SHOWCASE`) — never a store build. Every example of every kit component is a lot
+ * of code nobody outside the team needs.
+ *
+ * The test must stay exactly this shape, and the import inside it: Metro folds it at build time (see
+ * `loadBundledDemoAccounts`), so without the flag the branch, the import and every example are removed before
+ * the bundle is assembled. `null`: this build has no showcase.
+ */
+export async function loadBundledShowcase(): Promise<ShowcaseScreens | null> {
+	if (__DEV__ || process.env.EXPO_PUBLIC_SHOWCASE === "true") {
+		return (await import("../features/showcase/showcase-screens")).SHOWCASE_SCREENS;
+	}
+	return null;
+}
 
 /** Highest TCP port. */
 const MAX_PORT = 65_535;
@@ -49,6 +75,7 @@ export const MobileEnvVariableSchema = z.enum([
 	"EXPO_PUBLIC_ANDROID_STORE_URL",
 	"EXPO_PUBLIC_SHOW_DEMO_ACCOUNT",
 	"EXPO_PUBLIC_ALLOW_LAN_HTTP_API",
+	"EXPO_PUBLIC_SHOWCASE",
 ]);
 
 export type MobileEnvVariable = z.output<typeof MobileEnvVariableSchema>;
@@ -61,6 +88,7 @@ export const MOBILE_ENV_EXAMPLES: Readonly<Record<MobileEnvVariable, string>> = 
 	EXPO_PUBLIC_ANDROID_STORE_URL: "https://play.google.com/store/apps/details?id=com.example.starter",
 	EXPO_PUBLIC_SHOW_DEMO_ACCOUNT: "true",
 	EXPO_PUBLIC_ALLOW_LAN_HTTP_API: "true",
+	EXPO_PUBLIC_SHOWCASE: "true",
 };
 
 /** An absolute `https://` URL — every address outside development. Trailing slashes stripped. */
@@ -133,6 +161,8 @@ export interface RawMobileEnv {
 	readonly showDemoAccount: string | undefined;
 	/** `EXPO_PUBLIC_ALLOW_LAN_HTTP_API`, as written. */
 	readonly allowLanHttpApi: string | undefined;
+	/** `EXPO_PUBLIC_SHOWCASE`, as written. */
+	readonly showcase: string | undefined;
 }
 
 /** The validated configuration. */
@@ -145,6 +175,8 @@ export interface MobileEnv {
 	readonly androidStoreUrl: string | null;
 	/** The sign-in screen offers the demo logins outside development too. */
 	readonly showDemoAccounts: boolean;
+	/** The component showcase (`/showcase`) is in this build: always in development, and in a release built with `EXPO_PUBLIC_SHOWCASE=true`. */
+	readonly showcase: boolean;
 }
 
 /** Why the configuration is unusable: which variable, and why — never its value. */
@@ -271,6 +303,10 @@ export function resolveMobileEnv(raw: RawMobileEnv): MobileEnvResult {
 	if (showDemoAccounts === null) {
 		return failure("EXPO_PUBLIC_SHOW_DEMO_ACCOUNT", `must be ${BooleanFlagSchema.options.join(" or ")}, or left unset`);
 	}
+	const showcase = parseBooleanFlag(raw.showcase);
+	if (showcase === null) {
+		return failure("EXPO_PUBLIC_SHOWCASE", `must be ${BooleanFlagSchema.options.join(" or ")}, or left unset`);
+	}
 	return {
 		ok: true,
 		env: {
@@ -279,6 +315,7 @@ export function resolveMobileEnv(raw: RawMobileEnv): MobileEnvResult {
 			iosStoreUrl: iosStoreUrl.url,
 			androidStoreUrl: androidStoreUrl.url,
 			showDemoAccounts,
+			showcase: raw.isDevelopment || showcase,
 		},
 	};
 }
@@ -297,6 +334,7 @@ export function readRawMobileEnv(): RawMobileEnv {
 		androidStoreUrl: process.env.EXPO_PUBLIC_ANDROID_STORE_URL,
 		showDemoAccount: process.env.EXPO_PUBLIC_SHOW_DEMO_ACCOUNT,
 		allowLanHttpApi: process.env.EXPO_PUBLIC_ALLOW_LAN_HTTP_API,
+		showcase: process.env.EXPO_PUBLIC_SHOWCASE,
 	};
 }
 

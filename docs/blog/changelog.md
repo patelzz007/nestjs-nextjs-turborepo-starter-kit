@@ -3,6 +3,8 @@ title: "Changelog"
 description: "Every release of the starter kit: what was added, changed, fixed and removed, and what to do when you upgrade a product built on it."
 author: "Platform Team"
 date: 1793664000000
+lastUpdated: 1793664000000
+editedAt: 1793976836000
 category: "Changelog"
 ---
 

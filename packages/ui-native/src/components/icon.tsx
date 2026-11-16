@@ -29,7 +29,8 @@ export const iconVariants = cva("shrink-0 items-center justify-center", {
 			xs: "size-3",
 			/** Glyphs that fill a checkbox: the box's own 2 pt border takes the rest. */
 			control: "size-3.5",
-			sm: "size-4",
+			/** The spec's small icon: a button's glyph, a row's trailing chevron. */
+			sm: "size-4.5",
 			md: "size-5",
 			lg: "size-6",
 			xl: "size-8",
@@ -45,7 +46,7 @@ export type IconSize = NonNullable<VariantProps<typeof iconVariants>["size"]>;
 export const ICON_SIZES: Readonly<Record<IconSize, number>> = {
 	xs: 12,
 	control: 14,
-	sm: 16,
+	sm: 18,
 	md: 20,
 	lg: 24,
 	xl: 32,
@@ -68,11 +69,24 @@ interface GlyphProps {
 	readonly strokeWidth: number;
 	/** Filled in by Uniwind from `colorClassName`; unresolved, the glyph keeps its default. */
 	readonly color?: string | undefined;
+	/** Fill the glyph's shape in its colour (a picked star, a liked heart). */
+	readonly filled: boolean;
 	readonly testID?: string | undefined;
 }
 
-function Glyph({ icon: IconGlyph, size, strokeWidth, color, testID }: GlyphProps): React.JSX.Element {
-	return <IconGlyph size={size} strokeWidth={strokeWidth} {...(color === undefined ? {} : { color })} {...(testID === undefined ? {} : { testID })} />;
+/** react-native-svg's name for the glyph's own colour (its `color` prop), which the stroke already uses. */
+const CURRENT_COLOR = "currentColor";
+
+function Glyph({ icon: IconGlyph, size, strokeWidth, color, filled, testID }: GlyphProps): React.JSX.Element {
+	return (
+		<IconGlyph
+			size={size}
+			strokeWidth={strokeWidth}
+			{...(color === undefined ? {} : { color })}
+			{...(filled ? { fill: CURRENT_COLOR } : {})}
+			{...(testID === undefined ? {} : { testID })}
+		/>
+	);
 }
 
 /** Maps `colorClassName` (an `accent-*` token utility) onto the glyph's `color`. */
@@ -84,6 +98,8 @@ export interface IconProps {
 	readonly weight?: IconWeight | undefined;
 	/** An `accent-*` token utility: `accent-primary`, `accent-muted-foreground`, … */
 	readonly colorClassName: string;
+	/** Fill the glyph's shape in its colour, not only its outline (a picked star, a liked heart). */
+	readonly filled?: boolean | undefined;
 	/** Extra classes for the glyph's box, merged last (layout: `mt-0.5`, `absolute`). */
 	readonly className?: string | undefined;
 	/** Set on the glyph itself (its drawn size and stroke are what tests check). */
@@ -96,10 +112,13 @@ export interface IconProps {
  * has an `accessibilityLabel`.
  */
 export const Icon = React.memo(
-	React.forwardRef<ViewInstance, IconProps>(function Icon({ icon, size = "lg", weight = "regular", colorClassName, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, IconProps>(function Icon(
+		{ icon, size = "lg", weight = "regular", colorClassName, filled = false, className, testID },
+		ref,
+	): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(iconVariants({ size }), className)}>
-				<ThemedGlyph icon={icon} size={ICON_SIZES[size]} strokeWidth={ICON_STROKE_WIDTHS[weight]} colorClassName={colorClassName} testID={testID} />
+				<ThemedGlyph icon={icon} size={ICON_SIZES[size]} strokeWidth={ICON_STROKE_WIDTHS[weight]} colorClassName={colorClassName} filled={filled} testID={testID} />
 			</View>
 		);
 	}),

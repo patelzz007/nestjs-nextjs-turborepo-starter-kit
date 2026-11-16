@@ -12,7 +12,7 @@ const TABLE_EXPONENT: number = vi.hoisted((): number => 3);
 
 vi.mock("@workspace/shared", async (importOriginal: () => Promise<typeof import("@workspace/shared")>): Promise<typeof import("@workspace/shared")> => {
 	const actual = await importOriginal();
-	return { ...actual, SALE_CURRENCY_MINOR_UNIT_EXPONENTS: { MYR: TABLE_EXPONENT } };
+	return { ...actual, SALE_CURRENCY_MINOR_UNIT_EXPONENTS: { ...actual.SALE_CURRENCY_MINOR_UNIT_EXPONENTS, MYR: TABLE_EXPONENT } };
 });
 
 describe("money helpers take the minor-unit exponent from the shared table, not from ICU", () => {

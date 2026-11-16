@@ -3,8 +3,11 @@ title: "ADR 018: Strict TypeScript Flags Everywhere and the `as const` Ban"
 tags: ["adr", "typescript", "eslint", "code-quality"]
 description: "Every workspace compiles with exactOptionalPropertyTypes, noUncheckedIndexedAccess, noImplicitOverride and noFallthroughCasesInSwitch, and ESLint bans `as const` and z.any/unknown/never."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1790812800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/018-strict-typescript-and-as-const-ban.webp"
 order: 18
 ---
 

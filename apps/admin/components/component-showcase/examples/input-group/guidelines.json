@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep addons short",
+		"do": {
+			"text": "Use a short prefix or unit that helps people type the value.",
+			"file": "input-group-do-1",
+			"export": "InputGroupDo1Example"
+		},
+		"dont": {
+			"text": "Don't put a sentence in an addon: it squeezes the room left to type.",
+			"file": "input-group-dont-1",
+			"export": "InputGroupDont1Example"
+		}
+	},
+	{
+		"title": "Name the buttons inside",
+		"do": {
+			"text": "Give an icon button inside the field its own `aria-label`.",
+			"file": "input-group-do-2",
+			"export": "InputGroupDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave the button unnamed: \"Button\" says nothing about what it clears.",
+			"file": "input-group-dont-2",
+			"export": "InputGroupDont2Example"
+		}
+	}
+]

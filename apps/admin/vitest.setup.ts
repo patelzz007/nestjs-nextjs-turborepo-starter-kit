@@ -9,7 +9,9 @@
 // of warnings. Setting it once here silences that noise app-wide.
 // ============================================
 
+import { cleanup } from "@testing-library/react";
 import { installDesktopMatchMedia } from "@workspace/ui/testing/desktop-match-media";
+import { afterEach } from "vitest";
 
 // React 19 reads this global to decide whether `act()` may run. jsdom tests
 // in this repo use @testing-library/react, which requires it. Declared on
@@ -24,5 +26,10 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 // jsdom has no `matchMedia` that knows the desktop breakpoint: install the kit's shared stub (desktop
 // matches, everything else does not). Tests that need other behavior override `window.matchMedia`.
 installDesktopMatchMedia();
+
+// Vitest globals are off, so Testing Library cannot register its own cleanup: unmount after every test.
+afterEach((): void => {
+	cleanup();
+});
 
 export {};

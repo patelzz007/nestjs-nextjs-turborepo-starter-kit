@@ -30,18 +30,22 @@ type ContextMenuItemVariant = NonNullable<VariantProps<typeof contextMenuItemVar
 // Root/Portal/SubmenuRoot render no DOM element of their own (base-ui
 // providers), so like the Select Root they intentionally stay plain functions
 // — the ref lives on the parts that render DOM (Trigger/Content/Item/…).
+/** A menu opened at the pointer by a right click or a long press, on Base UI's context menu. */
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props): React.JSX.Element {
 	return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
 }
 
+/** Moves the menu to the end of `body`. Used by `ContextMenuContent`. */
 function ContextMenuPortal({ ...props }: ContextMenuPrimitive.Portal.Props): React.JSX.Element {
 	return <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />;
 }
 
+/** The area that opens the menu when right-clicked or long-pressed. */
 const ContextMenuTrigger = React.forwardRef<HTMLDivElement, ContextMenuPrimitive.Trigger.Props>(function ContextMenuTrigger({ className, ...props }, ref): React.JSX.Element {
 	return <ContextMenuPrimitive.Trigger ref={ref} data-slot="context-menu-trigger" className={cn("select-none", className)} {...props} />;
 });
 
+/** The menu's popup, positioned at the pointer. */
 const ContextMenuContent = React.forwardRef<
 	HTMLDivElement,
 	ContextMenuPrimitive.Popup.Props & Pick<ContextMenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">
@@ -63,13 +67,16 @@ const ContextMenuContent = React.forwardRef<
 	);
 });
 
+/** Groups related items; a `ContextMenuLabel` must sit inside one. */
 const ContextMenuGroup = React.forwardRef<HTMLDivElement, ContextMenuPrimitive.Group.Props>(function ContextMenuGroup({ ...props }, ref): React.JSX.Element {
 	return <ContextMenuPrimitive.Group ref={ref} data-slot="context-menu-group" {...props} />;
 });
 
+/** A heading for a group. Must sit inside a `ContextMenuGroup` or `ContextMenuRadioGroup`. */
 const ContextMenuLabel = React.forwardRef<
 	HTMLDivElement,
 	ContextMenuPrimitive.GroupLabel.Props & {
+		/** Indents the label to line up with items that have an icon. */
 		inset?: boolean;
 	}
 >(function ContextMenuLabel({ className, inset, ...props }, ref): React.JSX.Element {
@@ -84,10 +91,13 @@ const ContextMenuLabel = React.forwardRef<
 	);
 });
 
+/** An action. Run it from `onClick`; `variant="destructive"` marks it as dangerous. */
 const ContextMenuItem = React.forwardRef<
 	HTMLElement,
 	ContextMenuPrimitive.Item.Props & {
+		/** Indents the item to line up with items that have an icon. */
 		inset?: boolean;
+		/** `destructive` colours the item red. */
 		variant?: ContextMenuItemVariant;
 	}
 >(function ContextMenuItem({ className, inset, variant = "default", ...props }, ref): React.JSX.Element {
@@ -104,13 +114,16 @@ const ContextMenuItem = React.forwardRef<
 });
 
 // SubmenuRoot renders no DOM of its own — plain function, ref on the parts.
+/** A nested menu. */
 function ContextMenuSub({ ...props }: ContextMenuPrimitive.SubmenuRoot.Props): React.JSX.Element {
 	return <ContextMenuPrimitive.SubmenuRoot data-slot="context-menu-sub" {...props} />;
 }
 
+/** The item that opens a submenu. */
 const ContextMenuSubTrigger = React.forwardRef<
 	HTMLElement,
 	ContextMenuPrimitive.SubmenuTrigger.Props & {
+		/** Indents the item to line up with items that have an icon. */
 		inset?: boolean;
 	}
 >(function ContextMenuSubTrigger({ className, inset, children, ...props }, ref): React.JSX.Element {
@@ -132,6 +145,7 @@ const ContextMenuSubTrigger = React.forwardRef<
 	);
 });
 
+/** The submenu's popup, opened to the side. */
 const ContextMenuSubContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof ContextMenuContent>>(function ContextMenuSubContent(
 	{ className, side = "inline-end", ...props },
 	ref,
@@ -139,9 +153,11 @@ const ContextMenuSubContent = React.forwardRef<HTMLDivElement, React.ComponentPr
 	return <ContextMenuContent ref={ref} data-slot="context-menu-sub-content" className={cn("shadow-lg", className)} side={side} {...props} />;
 });
 
+/** An on/off item with a tick. */
 const ContextMenuCheckboxItem = React.forwardRef<
 	HTMLElement,
 	ContextMenuPrimitive.CheckboxItem.Props & {
+		/** Indents the item to line up with items that have an icon. */
 		inset?: boolean;
 	}
 >(function ContextMenuCheckboxItem({ className, children, checked, inset, ...props }, ref): React.JSX.Element {
@@ -167,13 +183,16 @@ const ContextMenuCheckboxItem = React.forwardRef<
 	);
 });
 
+/** A set of `ContextMenuRadioItem`s holding one value. */
 const ContextMenuRadioGroup = React.forwardRef<HTMLDivElement, ContextMenuPrimitive.RadioGroup.Props>(function ContextMenuRadioGroup({ ...props }, ref): React.JSX.Element {
 	return <ContextMenuPrimitive.RadioGroup ref={ref} data-slot="context-menu-radio-group" {...props} />;
 });
 
+/** One choice of a `ContextMenuRadioGroup`. */
 const ContextMenuRadioItem = React.forwardRef<
 	HTMLElement,
 	ContextMenuPrimitive.RadioItem.Props & {
+		/** Indents the item to line up with items that have an icon. */
 		inset?: boolean;
 	}
 >(function ContextMenuRadioItem({ className, children, inset, ...props }, ref): React.JSX.Element {
@@ -198,6 +217,7 @@ const ContextMenuRadioItem = React.forwardRef<
 	);
 });
 
+/** A divider between groups of items. */
 const ContextMenuSeparator = React.forwardRef<HTMLDivElement, ContextMenuPrimitive.Separator.Props>(function ContextMenuSeparator(
 	{ className, ...props },
 	ref,
@@ -205,6 +225,7 @@ const ContextMenuSeparator = React.forwardRef<HTMLDivElement, ContextMenuPrimiti
 	return <ContextMenuPrimitive.Separator ref={ref} data-slot="context-menu-separator" className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />;
 });
 
+/** A key hint at the end of an item. */
 const ContextMenuShortcut = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function ContextMenuShortcut({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<span

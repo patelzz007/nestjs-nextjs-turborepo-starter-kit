@@ -1,10 +1,13 @@
 ---
 title: "API reference — Saved views on admin lists"
 description: "Named filters staff keep on an admin list, stored as the list's URL query: your own, and the ones other staff shared."
-order: 19
+order: 20
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/saved-views.webp"
 tags: ["api", "reference", "generated"]
 ---
 

@@ -1,0 +1,58 @@
+[
+	{
+		"id": "c-hover-card-1",
+		"label": "Basic",
+		"description": "Basic hover card. Best for the minimal anatomy: an outline button whose long press opens a card with a heading over one muted line.",
+		"file": "hover-card-1",
+		"export": "HoverCard1Example"
+	},
+	{
+		"id": "c-hover-card-2",
+		"label": "Positions",
+		"description": "Hover cards on different sides. Best for a grid of triggers, one per side, each opening its card on the side its label names.",
+		"file": "hover-card-2",
+		"export": "HoverCard2Example"
+	},
+	{
+		"id": "c-hover-card-3",
+		"label": "Profile",
+		"description": "Hover card with a profile. Best for a person's avatar and handle as the trigger, a long press opening a larger avatar with role and join date.",
+		"file": "hover-card-3",
+		"export": "HoverCard3Example"
+	},
+	{
+		"id": "c-hover-card-4",
+		"label": "Icon",
+		"description": "Hover card with an icon. Best for a feature callout on an outline button, an amber bolt beside a short title and a muted blurb.",
+		"file": "hover-card-4",
+		"export": "HoverCard4Example"
+	},
+	{
+		"id": "c-hover-card-5",
+		"label": "Image & Text",
+		"description": "Hover card with an image. Best for an edge to edge 16:9 picture across the top of a wide card, captioned by a title and one line.",
+		"file": "hover-card-5",
+		"export": "HoverCard5Example"
+	},
+	{
+		"id": "c-hover-card-6",
+		"label": "In Dialog",
+		"description": "Hover card inside a dialog. Best for a trigger in the body of an open dialog, below its title and description, for previews inside a dialog.",
+		"file": "hover-card-6",
+		"export": "HoverCard6Example"
+	},
+	{
+		"id": "c-hover-card-7",
+		"label": "Live Timestamp",
+		"description": "Timestamp hover card. Best for a dashed underline relative time inside a sentence, a long press opening the exact time in 3 zones.",
+		"file": "hover-card-7",
+		"export": "HoverCard7Example"
+	},
+	{
+		"id": "c-hover-card-8",
+		"label": "Release Notes",
+		"description": "Hover card with release notes. Best for a dashed What's new link opening release entries stepped through with arrow buttons and a dot per entry.",
+		"file": "hover-card-8",
+		"export": "HoverCard8Example"
+	}
+]

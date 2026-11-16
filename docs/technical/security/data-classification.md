@@ -3,8 +3,11 @@ title: "Data Classification Inventory"
 tags: ["security", "tenancy", "data-classification"]
 description: "Classification of every Prisma model and non-DB data surface by tenant ownership."
 author: "Backend Team"
+category: "Security"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/security/data-classification.webp"
 order: 2
 ---
 

@@ -17,6 +17,7 @@ import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider"
 import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
+import { z } from "zod";
 
 import { eventsOverlap, findResource, getGanttDateRange, getRangeKey, toZoned } from "./gantt-lib";
 import {
@@ -261,7 +262,9 @@ export type GanttScrollbars = "custom" | "native";
 export type GanttInitialCenter = "now" | "anchor" | Date;
 export type GanttNavButtonVariant = "ghost" | "outline" | "secondary" | "default";
 export type GanttNavButtonSize = "sm" | "default";
-export type GanttBarLabel = "inside" | "outside" | "auto";
+/** Where a bar draws its label: on the bar, beside it, or wherever it fits. */
+export const GanttBarLabelSchema = z.enum(["inside", "outside", "auto"]);
+export type GanttBarLabel = z.output<typeof GanttBarLabelSchema>;
 
 /**
  * View-layer configuration: display props and render overrides. These live on
@@ -316,16 +319,19 @@ export interface GanttViewConfig<TData extends GanttData = GanttData> {
 	readonly rowCheckboxes: boolean;
 	/** Controlled selected row ids; pairs with onSelectedRowsChange. */
 	readonly selectedRows?: readonly string[] | undefined;
+	/** Selected rows changed. */
 	readonly onSelectedRowsChange?: ((ids: readonly string[]) => void) | undefined;
 	/** Controlled collapsed group ids; pairs with onCollapsedGroupsChange. */
 	readonly collapsedGroups?: readonly string[] | undefined;
 	/** Initial collapsed group ids (uncontrolled). */
 	readonly defaultCollapsedGroups?: readonly string[] | undefined;
+	/** Collapsed groups changed. */
 	readonly onCollapsedGroupsChange?: ((ids: readonly string[]) => void) | undefined;
 	/** Controlled zoom multiplier; pairs with onZoomChange. */
 	readonly zoom?: number | undefined;
 	/** Initial zoom multiplier (uncontrolled). Default 1. */
 	readonly defaultZoom?: number | undefined;
+	/** Zoom changed. */
 	readonly onZoomChange?: ((zoom: number) => void) | undefined;
 	/** Allow drag-create and slot clicks on rows that have children. Default off. */
 	readonly parentScheduling: boolean;
@@ -341,7 +347,9 @@ export interface GanttViewConfig<TData extends GanttData = GanttData> {
 	readonly rowAlign: GanttRowAlign;
 	/** Row windowing for large trees. */
 	readonly rowVirtualization?: GanttRowVirtualization | undefined;
+	/** Class overrides for nav, toolbar, view, event, baseline, and dependencies. */
 	readonly classNames?: GanttClassNames | undefined;
+	/** Replaces the default bar content; the interactive wrapper stays gantt-owned. */
 	readonly renderEvent?: GanttHandler<[props: GanttRenderEventProps<TData>], React.ReactNode> | undefined;
 	/** Right-click menu for a bar: return ContextMenu items. */
 	readonly renderEventMenu?: GanttHandler<[props: GanttRenderEventProps<TData>], React.ReactNode> | undefined;
@@ -516,6 +524,7 @@ export interface GanttScaleControls {
 	readonly setScale: (scale: GanttScale) => void;
 }
 
+/** The scale and its setter, inside a `Gantt`. */
 export function useGanttScale(): GanttScaleControls {
 	const instance = useGantt();
 	const scale = useGanttSelector((state: GanttState): GanttScale => state.scale);
@@ -560,6 +569,7 @@ export interface GanttNavigation {
 	readonly isToday: boolean;
 }
 
+/** Moving the view (today, previous, next, a date), inside a `Gantt`. */
 export function useGanttNavigation(): GanttNavigation {
 	const instance = useGantt();
 	const { settings } = instance;
@@ -598,6 +608,7 @@ export interface GanttSelectionControls {
 	readonly clearSelection: GanttApi["clearSelection"];
 }
 
+/** The selected bars and their setter, inside a `Gantt`. */
 export function useGanttSelection(): GanttSelectionControls {
 	const instance = useGantt();
 	const selection = useGanttSelector((state: GanttState): GanttSelection => state.selection);
@@ -609,6 +620,7 @@ export interface GanttInteractionControls {
 	readonly setInteractions: GanttApi["setInteractions"];
 }
 
+/** The enabled interactions (drag, resize, select slot) and their setter, inside a `Gantt`. */
 export function useGanttInteractions(): GanttInteractionControls {
 	const instance = useGantt();
 	const interactions = useGanttSelector((state: GanttState): GanttInteractions => state.interactions);
@@ -685,11 +697,13 @@ export function useGanttNodeSchedules(nodeId: string): GanttNodeSchedules {
 
 const ganttVariants = cva("flex min-h-0 min-w-0 flex-col text-foreground", {
 	variants: {
+		/** `default` (no frame) or `outline` (a bordered card). */
 		variant: {
 			default: "",
 			outline: "overflow-hidden rounded-lg border bg-card shadow-sm",
 		},
 		// the root OWNS the type scale: every gantt label inherits it, so one size rescales the whole component
+		/** The type scale every label inherits: `default` or `lg`. */
 		size: {
 			default: "text-xs",
 			lg: "text-sm",
@@ -710,6 +724,7 @@ export interface GanttProps
 	readonly calendar?: GanttInstance | undefined;
 	/** Imperative escape hatch usable from outside the tree. */
 	readonly apiRef?: React.Ref<GanttApi> | undefined;
+	/** The gantt composition (`GanttNav`, `GanttToolbar`, `GanttView`). */
 	readonly children?: React.ReactNode;
 }
 

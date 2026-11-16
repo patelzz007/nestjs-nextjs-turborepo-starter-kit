@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-image-resizer-1",
+		"label": "Overview",
+		"description": "An image with corner handles that keep its aspect ratio, reporting its width and height. Best for sizing a picture inside rich text or an email layout.",
+		"file": "image-resizer-1",
+		"export": "ImageResizer1Example"
+	}
+]

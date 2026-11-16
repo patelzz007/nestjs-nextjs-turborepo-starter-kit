@@ -4,13 +4,17 @@ import * as React from "react";
 
 const messageGroupVariants = cva("flex min-w-0 flex-col gap-2", {
 	variants: {
+		/** The group's look; one treatment today. */
 		variant: { default: "" },
+		/** Gaps between the turns: `default` or `sm`. */
 		size: { default: "", sm: "gap-1.5 text-xs" },
+		/** The visual state; leave it unset. */
 		state: { default: "", loading: "opacity-60", disabled: "opacity-50", error: "" },
 	},
 	defaultVariants: { variant: "default", size: "default", state: "default" },
 });
 
+/** Joins consecutive turns from one sender, with tighter spacing. */
 const MessageGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & VariantProps<typeof messageGroupVariants>>(function MessageGroup(
 	{ className, variant, size, state, ...props },
 	ref,
@@ -18,10 +22,14 @@ const MessageGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"
 	return <div ref={ref} data-slot="message-group" className={cn(messageGroupVariants({ variant, size, state }), className)} {...props} />;
 });
 
-const Message = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & { align?: "start" | "end" }>(function Message(
-	{ className, align = "start", ...props },
-	ref,
-): React.JSX.Element {
+/** One turn of a conversation: an avatar, a header, the content and a footer, on the start or the end side. */
+const Message = React.forwardRef<
+	HTMLDivElement,
+	React.ComponentProps<"div"> & {
+		/** `start` (the other side) or `end` (the sender's side). */
+		align?: "start" | "end";
+	}
+>(function Message({ className, align = "start", ...props }, ref): React.JSX.Element {
 	return (
 		<div
 			ref={ref}
@@ -33,6 +41,7 @@ const Message = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & {
 	);
 });
 
+/** The sender's avatar. */
 const MessageAvatar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function MessageAvatar({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -47,6 +56,7 @@ const MessageAvatar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div
 	);
 });
 
+/** The turn's body: bubbles, attachments, code blocks. */
 const MessageContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function MessageContent({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -58,6 +68,7 @@ const MessageContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"di
 	);
 });
 
+/** Above the content: the sender's name and the time. */
 const MessageHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function MessageHeader({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -69,6 +80,7 @@ const MessageHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div
 	);
 });
 
+/** Under the content: a status, the time, actions. */
 const MessageFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function MessageFooter({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div

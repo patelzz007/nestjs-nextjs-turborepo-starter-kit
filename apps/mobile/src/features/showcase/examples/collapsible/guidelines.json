@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say what opens",
+		"do": {
+			"text": "Label the trigger with what it reveals.",
+			"file": "collapsible-do-1",
+			"export": "CollapsibleDo1Example"
+		},
+		"dont": {
+			"text": "Don't label it \"More\": nobody knows what is behind it.",
+			"file": "collapsible-dont-1",
+			"export": "CollapsibleDont1Example"
+		}
+	},
+	{
+		"title": "Keep key facts visible",
+		"do": {
+			"text": "Keep the essentials (status, when) in the trigger, and the detail inside.",
+			"file": "collapsible-do-2",
+			"export": "CollapsibleDo2Example"
+		},
+		"dont": {
+			"text": "Don't hide the status itself behind a closed trigger.",
+			"file": "collapsible-dont-2",
+			"export": "CollapsibleDont2Example"
+		}
+	}
+]

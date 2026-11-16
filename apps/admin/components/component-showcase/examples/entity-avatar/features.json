@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-entity-avatar-1",
+		"label": "Overview",
+		"description": "Generated avatars for organisations from their names, square or round. Best for companies, stores and teams that have no logo.",
+		"file": "entity-avatar-1",
+		"export": "EntityAvatar1Example"
+	}
+]

@@ -40,9 +40,9 @@ export function ShareLegend({ segments }: ShareLegendProps): React.JSX.Element {
 					accessible
 					accessibilityLabel={`${segment.label}: ${segment.valueLabel}, ${segment.shareLabel}`}>
 					<View className={`size-2.5 rounded-full ${CHART_COLOR_CLASSES[segment.color].fill}`} />
-					<Text className="flex-1 font-sans text-sm text-foreground">{segment.label}</Text>
-					<Text className="font-sans-semibold text-sm text-foreground">{segment.valueLabel}</Text>
-					<Text className="w-14 text-right font-sans text-sm text-muted-foreground">{segment.shareLabel}</Text>
+					<Text className="text-body flex-1 font-sans text-foreground">{segment.label}</Text>
+					<Text className="font-sans-semibold text-body text-foreground">{segment.valueLabel}</Text>
+					<Text className="text-body w-14 text-right font-sans text-muted-foreground">{segment.shareLabel}</Text>
 				</View>
 			))}
 		</View>

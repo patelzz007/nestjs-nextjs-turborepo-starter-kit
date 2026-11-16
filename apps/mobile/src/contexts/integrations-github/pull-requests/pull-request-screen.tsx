@@ -156,16 +156,16 @@ function PullRequestView({ detail, nowMs }: PullRequestViewProps): React.JSX.Ele
 	return (
 		<>
 			<View className="gap-2.5">
-				<Text selectable className="font-sans text-sm text-muted-foreground">
+				<Text selectable className="text-body font-sans text-muted-foreground">
 					{pullRequestReference(detail)}
 				</Text>
-				<Text selectable accessibilityRole="header" className="font-sans-bold text-2xl leading-8 tracking-tight text-foreground">
+				<Text selectable accessibilityRole="header" className="font-sans-bold text-h2 tracking-tight text-foreground">
 					{detail.title}
 				</Text>
 				<View className="flex-row items-center gap-2">
 					<View className="flex-1 flex-row flex-wrap items-center gap-2">
 						<PullRequestStatePill state={displayStateOf(detail)} testID="pull-request-state" />
-						{decision === null ? null : <Text className="font-sans-medium text-sm text-muted-foreground">{decision}</Text>}
+						{decision === null ? null : <Text className="font-sans-medium text-body text-muted-foreground">{decision}</Text>}
 					</View>
 					<Button
 						label="View on GitHub"
@@ -179,7 +179,7 @@ function PullRequestView({ detail, nowMs }: PullRequestViewProps): React.JSX.Ele
 				{openFailed ? <Alert tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
 				<View className="flex-row items-center gap-2">
 					<Avatar name={loginOf(detail.author)} imageUrl={detail.author?.avatarUrl ?? null} size="sm" />
-					<Text className="flex-1 font-sans text-sm text-muted-foreground">{mergeSummary(detail)}</Text>
+					<Text className="text-body flex-1 font-sans text-muted-foreground">{mergeSummary(detail)}</Text>
 				</View>
 			</View>
 
@@ -255,11 +255,11 @@ function PullRequestView({ detail, nowMs }: PullRequestViewProps): React.JSX.Ele
 function RequestedReviewers({ reviewers }: { readonly reviewers: readonly GithubActor[] }): React.JSX.Element {
 	return (
 		<View accessible accessibilityLabel={`Review requested from ${reviewers.map(loginOf).join(", ")}`} className="flex-row flex-wrap items-center gap-2">
-			<Text className="font-sans text-sm text-muted-foreground">Review requested from</Text>
+			<Text className="text-body font-sans text-muted-foreground">Review requested from</Text>
 			{reviewers.map((reviewer: GithubActor): React.JSX.Element => (
 				<View key={reviewer.login} className="flex-row items-center gap-1.5">
 					<Avatar name={reviewer.login} imageUrl={reviewer.avatarUrl} size="sm" />
-					<Text className="font-sans-medium text-sm text-foreground">{reviewer.login}</Text>
+					<Text className="font-sans-medium text-body text-foreground">{reviewer.login}</Text>
 				</View>
 			))}
 		</View>

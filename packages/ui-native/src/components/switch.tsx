@@ -9,6 +9,11 @@
 // - off: a hollow outlined track, a small solid thumb;
 // - disabled: a dashed grey track and a faded thumb (still showing on or off);
 // - locked (always on, by policy): a tinted track and a thumb with a lock.
+//
+// The row can carry more: `leading` (a channel's icon) before the label,
+// `trailing` (a New badge, a help tooltip) after it, the switch before the
+// label (`controlPosition="start"`), a categorical colour while on (`tone`),
+// and a destructive label for a setting that wipes data (`destructive`).
 
 import { cva, type VariantProps } from "class-variance-authority";
 import CheckIcon from "lucide-react-native/icons/check";
@@ -36,7 +41,7 @@ export const switchVariants = cva("min-h-11 flex-row items-center gap-3 active:o
 		variant: {
 			default: "",
 			/** A bordered tile that stands on its own. */
-			card: "rounded-2xl border border-border bg-card px-4 py-2",
+			card: "rounded-card border border-border bg-card px-4 py-2",
 		},
 		size: { md: "", sm: "gap-2.5" },
 		state: {
@@ -56,6 +61,8 @@ export const switchTrackVariants = cva("justify-center rounded-full border-2 p-0
 		size: { md: "h-8 w-13", sm: "h-6 w-10" },
 		checked: { true: "", false: "" },
 		state: { default: "", loading: "", disabled: "border-dashed border-muted-foreground/50 bg-muted", error: "border-destructive", locked: "" },
+		/** The track's colour while on: the action colour, or a categorical tone. */
+		tone: { primary: "", blue: "", green: "", yellow: "" },
 	},
 	compoundVariants: [
 		{ checked: true, state: ["default", "loading"], className: "border-primary bg-primary" },
@@ -64,9 +71,14 @@ export const switchTrackVariants = cva("justify-center rounded-full border-2 p-0
 		{ checked: false, state: "error", className: "bg-background" },
 		{ checked: true, state: "locked", className: "border-primary/30 bg-primary/30" },
 		{ checked: false, state: "locked", className: "border-muted-foreground/30 bg-muted" },
+		{ checked: true, state: ["default", "loading"], tone: "blue", className: "border-tone-blue bg-tone-blue" },
+		{ checked: true, state: ["default", "loading"], tone: "green", className: "border-tone-green bg-tone-green" },
+		{ checked: true, state: ["default", "loading"], tone: "yellow", className: "border-tone-yellow bg-tone-yellow" },
 	],
-	defaultVariants: { size: "md", checked: false, state: "default" },
+	defaultVariants: { size: "md", checked: false, state: "default", tone: "primary" },
 });
+
+export type SwitchTone = NonNullable<VariantProps<typeof switchTrackVariants>["tone"]>;
 
 /** The thumb: full and light while on, small and dark while off, faded while disabled, a lock while locked. */
 export const switchThumbVariants = cva("items-center justify-center rounded-full", {
@@ -92,7 +104,7 @@ export const switchThumbSlotVariants = cva("items-center justify-center", {
 
 export const switchLabelVariants = cva("font-sans", {
 	variants: {
-		size: { md: "text-base", sm: "text-sm" },
+		size: { md: "text-body-lg", sm: "text-body" },
 		state: { default: "text-foreground", loading: "text-foreground", disabled: "text-muted-foreground", error: "text-foreground", locked: "text-foreground" },
 	},
 	defaultVariants: { size: "md", state: "default" },
@@ -148,6 +160,16 @@ export interface SwitchProps {
 	readonly invalid?: boolean;
 	readonly accessibilityHint?: string;
 	/** Extra classes for the row, merged last. */
+	/** The track's colour while on: `primary` (default), or a categorical tone. */
+	readonly tone?: SwitchTone | undefined;
+	/** `start`: the switch before the label. Default `end`. */
+	readonly controlPosition?: "start" | "end" | undefined;
+	/** Before the label: a channel's or a feature's icon; decorative. */
+	readonly leading?: React.ReactNode;
+	/** After the label: a badge, a help tooltip. */
+	readonly trailing?: React.ReactNode;
+	/** The label in the destructive colour: a setting that removes data. */
+	readonly destructive?: boolean | undefined;
 	readonly className?: string;
 	readonly testID?: string;
 }
@@ -169,6 +191,11 @@ export const Switch = React.memo(
 			loading = false,
 			invalid = false,
 			accessibilityHint,
+			tone = "primary",
+			controlPosition = "end",
+			leading,
+			trailing,
+			destructive = false,
 			className,
 			testID,
 		},
@@ -201,6 +228,15 @@ export const Switch = React.memo(
 			onChange(!checked);
 		}, [checked, onChange]);
 
+		const track = (
+			<View className={switchTrackVariants({ size, checked, state, tone })}>
+				<StyledAnimatedView style={slotStyle} className={switchThumbSlotVariants({ size })}>
+					<StyledAnimatedView style={thumbStyle} className={switchThumbVariants({ size, checked, state })}>
+						<ThumbGlyph state={state} checked={checked} size={size} />
+					</StyledAnimatedView>
+				</StyledAnimatedView>
+			</View>
+		);
 		return (
 			<Pressable
 				ref={ref}
@@ -214,19 +250,18 @@ export const Switch = React.memo(
 				onBlur={onBlur}
 				testID={testID}
 				className={cn(switchVariants({ variant, size, state }), hideLabel ? "self-start" : "", className)}>
+				{controlPosition === "start" ? track : null}
+				{hideLabel ? null : leading}
 				{hideLabel ? null : (
 					<View className="flex-1 gap-0.5">
-						<Text className={switchLabelVariants({ size, state })}>{label}</Text>
-						{description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{description}</Text>}
+						<View className="flex-row flex-wrap items-center gap-2">
+							<Text className={cn(switchLabelVariants({ size, state }), destructive ? "text-destructive-foreground" : undefined)}>{label}</Text>
+							{trailing}
+						</View>
+						{description === undefined ? null : <Text className="text-body font-sans text-muted-foreground">{description}</Text>}
 					</View>
 				)}
-				<View className={switchTrackVariants({ size, checked, state })}>
-					<StyledAnimatedView style={slotStyle} className={switchThumbSlotVariants({ size })}>
-						<StyledAnimatedView style={thumbStyle} className={switchThumbVariants({ size, checked, state })}>
-							<ThumbGlyph state={state} checked={checked} size={size} />
-						</StyledAnimatedView>
-					</StyledAnimatedView>
-				</View>
+				{controlPosition === "end" ? track : null}
 			</Pressable>
 		);
 	}),

@@ -1,0 +1,198 @@
+[
+	{
+		"id": "c-combobox-1",
+		"label": "Basic",
+		"description": "A basic combobox with a list of options. Best for the minimal single pick wiring: a string array filtered by typing, with a no results message.",
+		"file": "combobox-1",
+		"export": "Combobox1Example"
+	},
+	{
+		"id": "c-combobox-2",
+		"label": "Disabled",
+		"description": "A disabled combobox. Best for a locked single field whose input and chevron are both disabled, so neither typing nor clicking opens it.",
+		"file": "combobox-2",
+		"export": "Combobox2Example"
+	},
+	{
+		"id": "c-combobox-3",
+		"label": "Invalid",
+		"description": "A combobox in an invalid state. Best for a labelled field marked invalid through aria-invalid, with a required message printed under it.",
+		"file": "combobox-3",
+		"export": "Combobox3Example"
+	},
+	{
+		"id": "c-combobox-4",
+		"label": "Clear Button",
+		"description": "A combobox with a clear button. Best for a field preset to Next.js whose X empties it, with the X standing in for the chevron while a value is set.",
+		"file": "combobox-4",
+		"export": "Combobox4Example"
+	},
+	{
+		"id": "c-combobox-5",
+		"label": "Auto-Highlight",
+		"description": "A combobox with auto-highlight enabled. Best for the first match highlighted as the user types, so Enter picks it without an arrow key press.",
+		"file": "combobox-5",
+		"export": "Combobox5Example"
+	},
+	{
+		"id": "c-combobox-6",
+		"label": "Grouped Options",
+		"description": "A combobox with grouped options. Best for timezones listed under Americas, Europe and Asia Pacific headings, with the typed search narrowing every region.",
+		"file": "combobox-6",
+		"export": "Combobox6Example"
+	},
+	{
+		"id": "c-combobox-7",
+		"label": "Group Separators",
+		"description": "A combobox with grouped options and separators. Best for the regional timezone list with a thin rule placed inside each group, under that group's last row.",
+		"file": "combobox-7",
+		"export": "Combobox7Example"
+	},
+	{
+		"id": "c-combobox-8",
+		"label": "Large List",
+		"description": "A combobox with a large list of options. Best for a long generated list of 100 entries that scrolls inside the popup and narrows as the user types.",
+		"file": "combobox-8",
+		"export": "Combobox8Example"
+	},
+	{
+		"id": "c-combobox-9",
+		"label": "Icon Addon",
+		"description": "A combobox with an icon addon. Best for a leading globe glyph inside the field, passed to the input as an InputGroupAddon child.",
+		"file": "combobox-9",
+		"export": "Combobox9Example"
+	},
+	{
+		"id": "c-combobox-10",
+		"label": "Country Picker",
+		"description": "A combobox rendered inside a popup. Best for a country picker whose outline button shows the chosen flag and name, with the search box moved inside the popup.",
+		"file": "combobox-10",
+		"export": "Combobox10Example"
+	},
+	{
+		"id": "c-combobox-11",
+		"label": "In Form",
+		"description": "A combobox used within a form. Best for a labelled required field inside a form element, read back through FormData when Submit is pressed.",
+		"file": "combobox-11",
+		"export": "Combobox11Example"
+	},
+	{
+		"id": "c-combobox-12",
+		"label": "Multi-Select",
+		"description": "A multi-select combobox. Best for chips for each chosen framework with an X on each, typed into from an input that sits after the last chip.",
+		"file": "combobox-12",
+		"export": "Combobox12Example"
+	},
+	{
+		"id": "c-combobox-13",
+		"label": "Disabled Multi-Select",
+		"description": "A disabled multi-select combobox. Best for a locked multi value field holding 2 preset chips, disabled at the root rather than on the input.",
+		"file": "combobox-13",
+		"export": "Combobox13Example"
+	},
+	{
+		"id": "c-combobox-14",
+		"label": "Invalid Multi-Select",
+		"description": "A multi-select combobox in an invalid state. Best for the multi value chip field in its error state, with aria-invalid on the chip input and a message below.",
+		"file": "combobox-14",
+		"export": "Combobox14Example"
+	},
+	{
+		"id": "c-combobox-15",
+		"label": "Non-Removable Chips",
+		"description": "A multi-select with chips that cannot be removed. Best for preset chips drawn without an X button, for picks the chip itself should not offer to dismiss.",
+		"file": "combobox-15",
+		"export": "Combobox15Example"
+	},
+	{
+		"id": "c-combobox-16",
+		"label": "Custom Items",
+		"description": "A combobox with custom item rendering. Best for a member picker whose button shows the chosen avatar, with rows listing each person's photo, name and job title.",
+		"file": "combobox-16",
+		"export": "Combobox16Example"
+	},
+	{
+		"id": "c-combobox-17",
+		"label": "In Dialog",
+		"description": "A combobox used within a dialog. Best for a framework pick placed in a modal with a hidden label and Cancel and Confirm buttons in its footer.",
+		"file": "combobox-17",
+		"export": "Combobox17Example"
+	},
+	{
+		"id": "c-combobox-18",
+		"label": "Custom Trigger Icon",
+		"description": "A combobox with a custom trigger icon. Best for a chevrons up and down glyph shown only while the field is empty, giving way to the X once a value is picked.",
+		"file": "combobox-18",
+		"export": "Combobox18Example"
+	},
+	{
+		"id": "c-combobox-19",
+		"label": "User Tags",
+		"description": "A multi-select combobox with user tags. Best for team members as rounded pill chips with a small avatar, picked from rows that show each person's position.",
+		"file": "combobox-19",
+		"export": "Combobox19Example"
+	},
+	{
+		"id": "c-combobox-20",
+		"label": "Invisible Tags",
+		"description": "Invisible combobox with member tags. Best for member pills sitting loose on the page with no field border, ring or background around them.",
+		"file": "combobox-20",
+		"export": "Combobox20Example"
+	},
+	{
+		"id": "c-combobox-21",
+		"label": "Status Change",
+		"description": "A status change combobox. Best for workflow states from Backlog to Cancelled, each with its own tinted circle glyph on the button and in the list.",
+		"file": "combobox-21",
+		"export": "Combobox21Example"
+	},
+	{
+		"id": "c-combobox-22",
+		"label": "Priority Change",
+		"description": "A priority change combobox. Best for priority levels drawn as 3 step signal bars, with Urgent shown as a yellow warning sign.",
+		"file": "combobox-22",
+		"export": "Combobox22Example"
+	},
+	{
+		"id": "c-combobox-23",
+		"label": "Lead Selection",
+		"description": "A lead selection combobox. Best for a single lead picked from a Team members group of avatar rows, marked You for the signed in user, or No lead.",
+		"file": "combobox-23",
+		"export": "Combobox23Example"
+	},
+	{
+		"id": "c-combobox-24",
+		"label": "Member Selection",
+		"description": "A multi-member selection combobox. Best for several people summarised on the button as up to 4 stacked avatars and a member count.",
+		"file": "combobox-24",
+		"export": "Combobox24Example"
+	},
+	{
+		"id": "c-combobox-25",
+		"label": "Date Selection",
+		"description": "A date selection combobox with an optional custom picker dialog. Best for date presets such as Tomorrow and End of month beside their dates, plus a Custom row opening a 2 month calendar dialog.",
+		"file": "combobox-25",
+		"export": "Combobox25Example"
+	},
+	{
+		"id": "c-combobox-26",
+		"label": "Label Selection",
+		"description": "A multi-label selection combobox with a no-label mode. Best for issue labels marked by colored dots, the button showing one label's name or up to 3 dots plus a count of the rest.",
+		"file": "combobox-26",
+		"export": "Combobox26Example"
+	},
+	{
+		"id": "c-combobox-27",
+		"label": "Team Selection",
+		"description": "A team selection combobox. Best for one owning team per record, each marked by its own tinted glyph, with a No team row to unset it.",
+		"file": "combobox-27",
+		"export": "Combobox27Example"
+	},
+	{
+		"id": "c-combobox-28",
+		"label": "Assignee Selection",
+		"description": "An assignee selection combobox. Best for a single assignee chosen from avatar rows, with No assignee on top and an Invite row in its own New user group.",
+		"file": "combobox-28",
+		"export": "Combobox28Example"
+	}
+]

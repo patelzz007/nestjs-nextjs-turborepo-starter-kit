@@ -56,15 +56,19 @@ const DIRECTION_ICONS: Readonly<Record<KpiChangeDirection, LucideIcon>> = {
 };
 
 export interface KpiStatCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "children"> {
+	/** The metric's name. */
 	readonly label: string;
 	/** The formatted headline value; `undefined` while loading. */
 	readonly value: string | undefined;
+	/** The change against the previous period: a direction, a sentiment and a label, or `noPrevious`. */
 	readonly change?: KpiChange | undefined;
 	/** What the change is measured against, e.g. "vs previous 30 days". */
 	readonly comparisonLabel?: string | undefined;
+	/** A Lucide icon for the metric, drawn in a tinted tile. */
 	readonly icon?: LucideIcon | undefined;
 	/** The icon tile's colour — by what the KPI is about. Default neutral. */
 	readonly iconTone?: IconTileTone | undefined;
+	/** Shows a skeleton in place of the value and the change. */
 	readonly isLoading?: boolean;
 	/** Per-usage overrides of the `kpiDirection` copy from `UiKitLabelsProvider`. */
 	readonly directionLabels?: UiKitLabelsOverride<"kpiDirection"> | undefined;

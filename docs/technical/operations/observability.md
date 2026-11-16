@@ -3,8 +3,11 @@ title: "Observability: logs, health and audit"
 description: "Correlation ids, the log level, structured logging, health probes (live, ready, deep), memory leak detection, NestJS Observe and the HTTP audit log."
 order: 52
 author: "Platform Team"
+category: "Operations"
+date: 1791072000000
 lastUpdated: 1792972800000
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
+editedAt: 1793030952000
+coverImage: "/images/covers/technical/operations/observability.webp"
 tags: ["operations", "logging", "health", "observability"]
 ---
 

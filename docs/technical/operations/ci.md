@@ -3,8 +3,11 @@ title: "CI Pipeline (GitHub Actions)"
 tags: ["operations", "ci", "quality-gates", "github-actions"]
 description: "What every CI job checks, how to reproduce each one locally, how caching works, and which stages are still planned."
 author: "Platform Team"
+category: "Operations"
+date: 1790899200000
 lastUpdated: 1793059200000
-coverImage: "https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=1200&h=630&fit=crop"
+editedAt: 1793991476000
+coverImage: "/images/covers/technical/operations/ci.webp"
 order: 2
 ---
 

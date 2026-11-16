@@ -104,7 +104,10 @@ import {
 	DEFAULT_THROTTLE_TTL_MS,
 	DEFAULT_USER_SESSION_CACHE_TTL_MS,
 	DEFAULT_WEBHOOK_RATE_LIMIT_PER_MINUTE,
+	DEFAULT_DOCS_SYNC_RUN_RETENTION_DAYS,
 	DEFAULT_INBOUND_WEBHOOK_RETENTION_DAYS,
+	DOCS_SYNC_REPORT_TOKEN_MIN_LENGTH,
+	MIN_DOCS_SYNC_RUN_RETENTION_DAYS,
 	MIN_INBOUND_WEBHOOK_RETENTION_DAYS,
 	GITHUB_WEBHOOK_SECRET_MIN_LENGTH,
 	MAX_BCRYPT_SALT_ROUNDS,
@@ -219,6 +222,20 @@ export const ApiEnvInputSchema = z.object({
 		.string()
 		.min(GITHUB_WEBHOOK_SECRET_MIN_LENGTH, { error: `must be at least ${String(GITHUB_WEBHOOK_SECRET_MIN_LENGTH)} characters (openssl rand -hex 32)` })
 		.optional(),
+
+	// Docs publishing (docs/adr/084-docs-sync-sources.md)
+	// The verification token Notion signs its webhooks with; set it after copying it from the Operations console.
+	NOTION_WEBHOOK_SECRET: NonEmptyEnvStringSchema.optional(),
+	// A GitHub credential with the Actions permission only, and the workflow it starts. All three, or none.
+	DOCS_SYNC_GITHUB_TOKEN: NonEmptyEnvStringSchema.optional(),
+	DOCS_SYNC_GITHUB_REPOSITORY: NonEmptyEnvStringSchema.optional(),
+	DOCS_SYNC_GITHUB_REF: NonEmptyEnvStringSchema.optional(),
+	// The bearer token the sync reports its runs with.
+	DOCS_SYNC_REPORT_TOKEN: z
+		.string()
+		.min(DOCS_SYNC_REPORT_TOKEN_MIN_LENGTH, { error: `must be at least ${String(DOCS_SYNC_REPORT_TOKEN_MIN_LENGTH)} characters (openssl rand -hex 32)` })
+		.optional(),
+	DOCS_SYNC_RUN_RETENTION_DAYS: integerEnvSchema({ min: MIN_DOCS_SYNC_RUN_RETENTION_DAYS, defaultValue: DEFAULT_DOCS_SYNC_RUN_RETENTION_DAYS }),
 
 	// Operations console (docs/adr/068-platform-operations-console.md)
 	// Each cloud's read-only API token: the console shows that provider's view of its servers.

@@ -280,7 +280,7 @@ function ChannelNode({ category, cell, onChange, registration }: ChannelNodeProp
 				)}
 			</View>
 			{/* Under the label (box 20 + gap 10 = 30pt), so the row the guide points at stays one line. */}
-			<Text className="-mt-1.5 pb-2 pl-7.5 font-sans text-sm text-muted-foreground">{note}</Text>
+			<Text className="text-body -mt-1.5 pb-2 pl-7.5 font-sans text-muted-foreground">{note}</Text>
 		</View>
 	);
 }
@@ -336,7 +336,7 @@ function OffersCard({ preferences, saves }: { readonly preferences: Notification
 			<View className="gap-3">
 				<Switch label={NOTIFICATION_SETTINGS_COPY.platformConsent} checked={preferences.platformMarketingConsent} onChange={handlePlatform} />
 				{preferences.tenants.length === 0 ? (
-					<Text className="font-sans text-sm text-muted-foreground">{NOTIFICATION_SETTINGS_COPY.noTenants}</Text>
+					<Text className="text-body font-sans text-muted-foreground">{NOTIFICATION_SETTINGS_COPY.noTenants}</Text>
 				) : (
 					preferences.tenants.map((tenant): React.JSX.Element => (
 						<React.Fragment key={tenant.tenantId}>
@@ -384,8 +384,8 @@ function TenantOffers({ tenant, saves }: { readonly tenant: NotificationTenantSe
 	if (tenant.left) {
 		return (
 			<View className="gap-0.5">
-				<Text className="font-sans text-base text-muted-foreground">{tenant.tenantName}</Text>
-				<Text className="font-sans text-sm text-muted-foreground">{NOTIFICATION_SETTINGS_COPY.leftTenant}</Text>
+				<Text className="text-body-lg font-sans text-muted-foreground">{tenant.tenantName}</Text>
+				<Text className="text-body font-sans text-muted-foreground">{NOTIFICATION_SETTINGS_COPY.leftTenant}</Text>
 			</View>
 		);
 	}

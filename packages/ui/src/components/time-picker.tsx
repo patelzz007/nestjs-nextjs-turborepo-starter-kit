@@ -331,17 +331,27 @@ function ignoreFieldChange(): void {
 export interface TimePickerProps extends Pick<React.AriaAttributes, "aria-label" | "aria-labelledby" | "aria-describedby"> {
 	/** Controlled value, `HH:mm` or `HH:mm:ss` in 24-hour time. `null` is empty. */
 	readonly value?: string | null | undefined;
+	/** Initial value when uncontrolled, and what a form reset restores. */
 	readonly defaultValue?: string | null | undefined;
 	/** Fires with the new value in the same format, or `null` when cleared. */
 	readonly onValueChange?: ((value: string | null) => void) | undefined;
+	/** Controlled popover state. */
 	readonly open?: boolean | undefined;
+	/** Initial popover state when uncontrolled. */
 	readonly defaultOpen?: boolean | undefined;
+	/** Fires when the popover opens or closes. */
 	readonly onOpenChange?: ((open: boolean) => void) | undefined;
+	/** `12` shows hours 12, 01 to 11 and adds the AM/PM column. */
 	readonly hourCycle?: TimePickerHourCycle | undefined;
+	/** The finest column, and the precision of the value. */
 	readonly granularity?: TimePickerGranularity | undefined;
+	/** Where AM/PM goes, in the text and in the columns. */
 	readonly periodPosition?: TimePickerPeriodPosition | undefined;
+	/** Hours offered, counted from 0 on the 24-hour scale. */
 	readonly hourStep?: number | undefined;
+	/** Minutes offered, counted from 0. */
 	readonly minuteStep?: number | undefined;
+	/** Seconds offered, counted from 0. */
 	readonly secondStep?: number | undefined;
 	/** Earliest selectable time, inclusive. After `max`, the window runs overnight. */
 	readonly min?: string | undefined;
@@ -353,14 +363,19 @@ export interface TimePickerProps extends Pick<React.AriaAttributes, "aria-label"
 	readonly requireConfirm?: boolean | undefined;
 	/** Fades the top and bottom of a column while more rows are scrolled out of view there. */
 	readonly fade?: boolean | undefined;
+	/** Disables every part and stops the popover opening. A disabled picker submits nothing. */
 	readonly disabled?: boolean | undefined;
 	/** Shows a busy trigger and blocks picking, e.g. while the allowed times load. */
 	readonly loading?: boolean | undefined;
+	/** The popover opens and the columns take focus, but no pick, key, Now or Clear changes the value. */
 	readonly readOnly?: boolean | undefined;
+	/** Sets `aria-invalid` on the trigger or the input, and `data-invalid` on the trigger. */
 	readonly invalid?: boolean | undefined;
 	/** Submits the value with a native form under this name. */
 	readonly name?: string | undefined;
+	/** Associates the field with a form elsewhere in the page. */
 	readonly form?: string | undefined;
+	/** Fails native form validation while empty. */
 	readonly required?: boolean | undefined;
 	/** The hidden form field, for form libraries that focus a field on error. */
 	readonly inputRef?: React.Ref<HTMLInputElement> | undefined;
@@ -370,11 +385,13 @@ export interface TimePickerProps extends Pick<React.AriaAttributes, "aria-label"
 	readonly i18n?: TimePickerI18nOverrides | undefined;
 	/** Without children the picker renders a trigger and a popover; these reach the trigger. */
 	readonly placeholder?: string | undefined;
+	/** Classes for the default trigger. */
 	readonly className?: string | undefined;
 	/** Fired when the default trigger loses focus. */
 	readonly onBlur?: React.FocusEventHandler<HTMLButtonElement> | undefined;
 	/** Fired when the default trigger gains focus. */
 	readonly onFocus?: React.FocusEventHandler<HTMLButtonElement> | undefined;
+	/** The picker's parts: a trigger or an input, and the content with its columns and footer. */
 	readonly children?: React.ReactNode;
 }
 
@@ -645,6 +662,7 @@ const TimePicker = React.forwardRef<HTMLElement, TimePickerProps>(function TimeP
 /* -------------------------------------------------------------------------- */
 
 export type TimePickerValueProps = Omit<React.ComponentPropsWithoutRef<"span">, "children"> & {
+	/** Shown while there is no value. */
 	readonly placeholder?: React.ReactNode;
 };
 
@@ -665,7 +683,9 @@ const TimePickerValue = React.forwardRef<HTMLSpanElement, TimePickerValueProps>(
 });
 
 export type TimePickerTriggerProps = Omit<React.ComponentPropsWithoutRef<typeof Button>, "className"> & {
+	/** Shown while there is no value. */
 	readonly placeholder?: React.ReactNode;
+	/** Classes for the trigger button. */
 	readonly className?: string | undefined;
 };
 
@@ -1118,6 +1138,7 @@ interface TypeaheadBuffer {
 }
 
 export type TimePickerColumnProps = Omit<React.ComponentPropsWithoutRef<"div">, "children"> & {
+	/** Renders nothing for a unit the granularity or the hour cycle leaves out. */
 	readonly type: TimePickerColumnType;
 	/** Header text. Defaults to the label for the type. */
 	readonly label?: React.ReactNode;

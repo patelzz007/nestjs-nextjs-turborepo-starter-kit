@@ -244,7 +244,7 @@ The platform team runs everything from here: users, merchants, the catalogue, re
 </tr>
 <tr>
 <td width="50%"><img src="./docs/images/readme/admin-account-security.webp" alt="Account security: password and two-factor" /><br /><sub>Account security: password and two-factor</sub></td>
-<td width="50%"><img src="./docs/images/readme/admin-components.webp" alt="The component gallery for the UI kit" /><br /><sub>The component gallery for the UI kit</sub></td>
+<td width="50%"><img src="./docs/images/readme/admin-components.webp" alt="The component showcase for the UI kit" /><br /><sub>The component showcase for the UI kit</sub></td>
 </tr>
 <tr>
 <td width="50%"><img src="./docs/images/readme/admin-components-dark.webp" alt="The gallery in dark mode" /><br /><sub>The gallery in dark mode</sub></td>

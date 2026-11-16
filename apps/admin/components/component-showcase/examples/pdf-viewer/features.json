@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-pdf-viewer-1",
+		"label": "Overview",
+		"description": "A PDF with page navigation, zoom, fullscreen and a file picker to open another one. Best for previewing documents such as invoices or contracts in place.",
+		"file": "pdf-viewer-1",
+		"export": "PdfViewer1Example"
+	}
+]

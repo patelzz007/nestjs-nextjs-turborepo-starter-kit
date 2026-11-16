@@ -3,8 +3,11 @@ title: "ADR 038: The Mobile App Drawer"
 tags: ["adr", "mobile", "ui", "navigation"]
 description: "The Expo app's (app) group gets a left drawer — a custom Reanimated panel over a scrim, opened from a quiet corner button or an edge swipe — holding the account, the tabs and the screens under Settings."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/038-mobile-app-drawer.webp"
 order: 38
 ---
 

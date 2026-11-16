@@ -10,6 +10,7 @@
 // | Fake gateway    | `id:status` (JSON)                                       | yes                         |
 // | Twilio status   | `status:MessageSid:MessageStatus` (form fields)          | yes                         |
 // | Twilio inbound  | `inbound:MessageSid` (form fields)                       | yes                         |
+// | Notion          | the event's `id` (JSON)                                  | yes                         |
 //
 // GitHub's id is the one header it does not sign, so a captured delivery replayed under a new id is
 // processed again — harmless, because GitHub's handler is idempotent on its own effect (ADR 052).
@@ -87,6 +88,17 @@ export const FAKE_PAYMENT_CALLBACK_PROFILE: InboundWebhookProfile = {
 	envelopeOf: (request: InboundWebhookRequest): InboundWebhookEnvelope => {
 		const callback = FakeCallbackEnvelopeSchema.safeParse(jsonBody(request.rawBody));
 		return callback.success ? { deliveryId: deliveryIdOf([callback.data.id, callback.data.status]), eventType: eventTypeOf(callback.data.status) } : NO_ENVELOPE;
+	},
+};
+
+const NotionEventEnvelopeSchema = z.object({ id: z.string(), type: z.string() });
+
+/** Notion's event id is in the signed body, and a retry repeats it (ADR 084). */
+export const NOTION_WEBHOOK_PROFILE: InboundWebhookProfile = {
+	provider: "NOTION",
+	envelopeOf: (request: InboundWebhookRequest): InboundWebhookEnvelope => {
+		const event = NotionEventEnvelopeSchema.safeParse(jsonBody(request.rawBody));
+		return event.success ? { deliveryId: deliveryIdOf([event.data.id]), eventType: eventTypeOf(event.data.type) } : NO_ENVELOPE;
 	},
 };
 

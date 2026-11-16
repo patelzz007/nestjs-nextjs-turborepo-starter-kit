@@ -7,16 +7,19 @@ export const sidebarMenuButtonVariants = cva(
 	`peer/menu-button group/menu-button ${sidebarMenuItemBase} p-2 group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground`,
 	{
 		variants: {
+			/** `default`, or `outline` for a bordered item. */
 			variant: {
 				default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
 				outline:
 					"bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]",
 			},
+			/** Height of the item: `sm`, `default` or `lg`. */
 			size: {
 				default: "h-8 text-sm",
 				sm: "h-7 text-xs",
 				lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
 			},
+			/** The visual state; leave it unset. */
 			state: {
 				default: "",
 				active:

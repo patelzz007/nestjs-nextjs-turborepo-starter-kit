@@ -4,6 +4,8 @@ import { Text, type ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { Tooltip, type TooltipProps } from "../tooltip";
+import SearchIcon from "lucide-react-native/icons/search";
+import { IconButton } from "../icon-button";
 
 const CONTENT = "Verified by GitHub";
 
@@ -105,5 +107,20 @@ describe("Tooltip", () => {
 		expect(className).toContain("items-start");
 		expect(className).not.toContain("items-center");
 		expect(className).toContain("self-start");
+	});
+
+	it("hands its long press and hint to a control it explains, and shows a shortcut in the bubble", async () => {
+		await render(
+			<Tooltip content="Search" shortcut={["⌘", "K"]} accessibilityLabel="Search" asChild testID="tip">
+				<IconButton icon={SearchIcon} label="Search" onPress={jest.fn()} />
+			</Tooltip>,
+		);
+		const button = screen.getByRole("button", { name: "Search" });
+		expect(button).toHaveProp("accessibilityHint", "Search");
+		await fireEvent(button, "longPress");
+		expect(screen.getByTestId("tip-bubble", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.getByText("K", { includeHiddenElements: true })).toBeOnTheScreen();
+		await fireEvent(button, "pressOut");
+		expect(screen.queryByTestId("tip-bubble", { includeHiddenElements: true })).toBeNull();
 	});
 });

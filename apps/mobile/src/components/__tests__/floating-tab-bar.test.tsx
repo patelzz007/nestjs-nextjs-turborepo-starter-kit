@@ -49,6 +49,15 @@ describe("FloatingTabBar", () => {
 		expect(screen.getByRole("tab", { name: "Search" })).not.toBeSelected();
 	});
 
+	it("is the spec's 64 pt bar, its label the navigation role (12 pt Geist Medium)", async () => {
+		await render(<FloatingTabBar items={tabs("home", handlers())} bottomInset={0} testID="bar" />);
+
+		expect(String(screen.getByTestId("bar-tablist").props.className).split(" ")).toContain("h-16");
+		expect(String(screen.getByTestId("tab-home-label-measure", { includeHiddenElements: true }).props.className).split(" ")).toEqual(
+			expect.arrayContaining(["font-sans-medium", "text-nav"]),
+		);
+	});
+
 	it("names every tab for screen readers, even those that show only their icon", async () => {
 		await render(<FloatingTabBar items={tabs("home", handlers())} bottomInset={0} />);
 

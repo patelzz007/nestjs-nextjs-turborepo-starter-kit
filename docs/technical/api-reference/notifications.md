@@ -1,10 +1,13 @@
 ---
 title: "API reference — Notifications: inbox, preferences, push devices and broadcasts"
 description: "One inbox per app (live over SSE), the preference matrix with quiet hours and digest, marketing consent, push device registration, one-click unsubscribe, Twilio callbacks, the delivery log and catalog for staff, and a tenant's own delivery log and broadcasts."
-order: 13
+order: 14
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/notifications.webp"
 tags: ["api", "reference", "generated"]
 ---
 

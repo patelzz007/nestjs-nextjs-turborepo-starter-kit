@@ -2,7 +2,7 @@ import { FileText, LayoutDashboard } from "lucide-react";
 
 import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
 import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
-import { normalizePath } from "@workspace/ui/lib/sidebar/navigation/breadcrumb-tree";
+import { normalizePath } from "@workspace/shared";
 import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";

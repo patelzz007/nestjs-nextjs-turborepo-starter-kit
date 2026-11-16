@@ -96,7 +96,7 @@ describe("AnalyticsRangeControls", () => {
 
 		expect(menuTrigger(PICKER_LABELS.range).textContent).toBe("Last 30 days");
 		expect(menuTrigger(PICKER_LABELS.interval).textContent).toBe("Day");
-		expect(screen.getByRole("status").textContent.replace(/\s/g, " ")).toBe("6 Sept – 5 Oct 2026 · UTC");
+		expect(screen.getByRole("status").textContent.replace(/\s/g, " ")).toBe("6 Sep – 5 Oct 2026 · UTC");
 	});
 
 	it("puts a picked preset in the URL", async (): Promise<void> => {
@@ -117,7 +117,7 @@ describe("AnalyticsRangeControls", () => {
 		await choose(PICKER_LABELS.range, "Custom range");
 		// Choosing custom only opens a draft. The URL changes on Apply.
 		expect(currentQuery()).toBe("");
-		expect(screen.getByRole("button", { name: new RegExp(`^${PICKER_LABELS.customDays} `) }).textContent.replace(/\s/g, " ")).toBe("6 Sept – 5 Oct 2026");
+		expect(screen.getByRole("button", { name: new RegExp(`^${PICKER_LABELS.customDays} `) }).textContent.replace(/\s/g, " ")).toBe("6 Sep – 5 Oct 2026");
 
 		fireEvent.click(screen.getByRole("button", { name: PICKER_LABELS.apply }));
 		await flushUrlUpdates();

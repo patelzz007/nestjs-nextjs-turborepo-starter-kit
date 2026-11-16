@@ -5,7 +5,9 @@
 //   and the notifications button on the right (its unread count on its corner) and, between them, the
 //   page's title: large, bold and CENTRED on the screen (a spacer as wide as the second right-hand
 //   button balances the row, ADR 079). The row never moves.
-// - the subtitle line — centred under the title.
+// - the subtitle line — centred under the title. Below a tab's first screen the shell gives a breadcrumb
+//   trail instead (where the page sits in the app; its levels are links), in the same one-line slot, so
+//   the header is as tall on every page.
 //
 // As the page scrolls (`progress` 0 → 1, src/lib/page-header-scroll.tsx) the header shrinks in place:
 // its background pulls up from the bottom edge, so the content's curved top stays attached to it, and
@@ -52,9 +54,9 @@ const StyledAnimatedView = withUniwind(Animated.View);
 
 /**
  * The header's height below the status bar before it has been measured: the pinned row (`h-14`) and
- * the subtitle line (`text-sm`, `pb-4`). The shell replaces it with the measured height on the first layout.
+ * the subtitle line (`h-6`, `pb-4`): 56 + 24 + 16. The shell replaces it with the measured height on the first layout.
  */
-export const PAGE_HEADER_ESTIMATED_HEIGHT = 92;
+export const PAGE_HEADER_ESTIMATED_HEIGHT = 96;
 
 /**
  * The pinned row's height below the status bar (`h-14`: keep the two in step). The row never moves,
@@ -106,6 +108,8 @@ export interface PageHeaderProps {
 	readonly onHeightChange?: (height: number) => void;
 	/** Reports the subtitle line's height: how far the page scrolls while the header collapses. */
 	readonly onCollapseDistanceChange?: (distance: number) => void;
+	/** In the subtitle's place: where the page sits in the app (a small, one-line Breadcrumb). It collapses as the subtitle does. */
+	readonly breadcrumb?: React.ReactNode;
 	readonly testID?: string;
 }
 
@@ -182,6 +186,7 @@ export function PageHeader({
 	collapseDistance,
 	onHeightChange,
 	onCollapseDistanceChange,
+	breadcrumb,
 	testID,
 }: PageHeaderProps): React.JSX.Element {
 	const [slots, setSlots] = React.useState<TitleSlots>({ current: { key: titleKey, title, subtitle }, leaving: null, drift: titleDrift });
@@ -276,19 +281,30 @@ export function PageHeader({
 					/>
 				</View>
 			</View>
-			{/* Kept clear of the buttons on both sides, centred under the title. */}
+			{/* One line under the title, as tall whichever it holds: the subtitle, kept clear of the buttons on
+			    both sides, or the trail, which takes the full width. It tucks away as the header collapses. */}
 			<StyledAnimatedView
-				pointerEvents="none"
+				pointerEvents="box-none"
 				onLayout={reportCollapseDistance}
-				className="overflow-hidden px-24 pb-4"
+				className="overflow-hidden pb-4"
 				style={subtitleClipStyle}
 				testID={testID === undefined ? undefined : `${testID}-subtitle-clip`}>
-				<StyledAnimatedView style={subtitleStyle} testID={testID === undefined ? undefined : `${testID}-subtitle-text`}>
-					<StyledAnimatedView key={slots.current.key} {...(animates ? { entering: CONTROL_IN } : {})}>
-						<Text numberOfLines={1} className="text-center font-sans text-sm text-muted-foreground" testID={testID === undefined ? undefined : `${testID}-subtitle`}>
-							{slots.current.subtitle}
-						</Text>
-					</StyledAnimatedView>
+				<StyledAnimatedView
+					pointerEvents="box-none"
+					style={subtitleStyle}
+					className="h-6 justify-center"
+					testID={testID === undefined ? undefined : `${testID}-subtitle-text`}>
+					{breadcrumb === undefined ? (
+						<StyledAnimatedView pointerEvents="none" key={slots.current.key} {...(animates ? { entering: CONTROL_IN } : {})} className="px-24">
+							<Text numberOfLines={1} className="text-body text-center font-sans text-muted-foreground" testID={testID === undefined ? undefined : `${testID}-subtitle`}>
+								{slots.current.subtitle}
+							</Text>
+						</StyledAnimatedView>
+					) : (
+						<StyledAnimatedView key={`trail:${slots.current.key}`} {...(animates ? { entering: CONTROL_IN } : {})} className="items-center px-5">
+							{breadcrumb}
+						</StyledAnimatedView>
+					)}
 				</StyledAnimatedView>
 			</StyledAnimatedView>
 		</View>
@@ -310,7 +326,7 @@ function Title({ title, testID }: TitleProps): React.JSX.Element {
 			numberOfLines={1}
 			adjustsFontSizeToFit
 			minimumFontScale={TITLE_MINIMUM_FONT_SCALE}
-			className="font-sans-bold text-center text-2xl tracking-tight text-foreground"
+			className="font-sans-bold text-h2 text-center tracking-tight text-foreground"
 			testID={testID === undefined ? undefined : `${testID}-title`}>
 			{title}
 		</Text>

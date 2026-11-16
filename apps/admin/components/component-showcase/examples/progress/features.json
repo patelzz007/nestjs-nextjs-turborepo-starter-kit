@@ -1,0 +1,58 @@
+[
+	{
+		"id": "c-progress-1",
+		"label": "Basic",
+		"description": "Basic progress.. Best for a name on the left and its percent on the right, over a bar left at the active style's default height.",
+		"file": "progress-1",
+		"export": "Progress1Example"
+	},
+	{
+		"id": "c-progress-2",
+		"label": "Small",
+		"description": "Small progress.. Best for a slim bar pinned to a 4px track, whatever height the active style gives it by default.",
+		"file": "progress-2",
+		"export": "Progress2Example"
+	},
+	{
+		"id": "c-progress-3",
+		"label": "Large",
+		"description": "Large progress.. Best for a heavy bar pinned to a 12px track, with its name and percent on the row above.",
+		"file": "progress-3",
+		"export": "Progress3Example"
+	},
+	{
+		"id": "c-progress-4",
+		"label": "Status Messages",
+		"description": "Progress bar with status messages.. Best for a bar that fills by itself and loops, with a status line under it that rewords as each cutoff is passed.",
+		"file": "progress-4",
+		"export": "Progress4Example"
+	},
+	{
+		"id": "c-progress-5",
+		"label": "File Uploads",
+		"description": "File upload list with progress & status.. Best for rows of 4 files, each with a file icon, a cut off name, a 4px bar and the time left or Complete at the end.",
+		"file": "progress-5",
+		"export": "Progress5Example"
+	},
+	{
+		"id": "c-progress-6",
+		"label": "With Slider",
+		"description": "Progress bar with slider.. Best for a bar and a 0 to 100 slider under it with a step of 1, both bound to one value state.",
+		"file": "progress-6",
+		"export": "Progress6Example"
+	},
+	{
+		"id": "c-progress-7",
+		"label": "Multi-Step",
+		"description": "Multi-step progress indicator. Best for a setup checklist whose bar fills by the share of finished steps, with a done count and a check or empty circle per step.",
+		"file": "progress-7",
+		"export": "Progress7Example"
+	},
+	{
+		"id": "c-progress-8",
+		"label": "Custom Colors",
+		"description": "Progress bar with custom colors.. Best for stacked bars in 5 fixed palette fills from green to violet that all slide from 45 to 75 together on load.",
+		"file": "progress-8",
+		"export": "Progress8Example"
+	}
+]

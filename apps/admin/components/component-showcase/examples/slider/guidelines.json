@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Show the value",
+		"do": {
+			"text": "Show the number the slider is on.",
+			"file": "slider-do-1",
+			"export": "SliderDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave people guessing what the thumb's position means.",
+			"file": "slider-dont-1",
+			"export": "SliderDont1Example"
+		}
+	},
+	{
+		"title": "Use a step that fits",
+		"do": {
+			"text": "Set `step` to a unit that matters (5 GB).",
+			"file": "slider-do-2",
+			"export": "SliderDo2Example"
+		},
+		"dont": {
+			"text": "Don't ask for exact values with a slider: landing on 47 by hand is hard. Use a [Number field](/components/number-field).",
+			"file": "slider-dont-2",
+			"export": "SliderDont2Example"
+		}
+	}
+]

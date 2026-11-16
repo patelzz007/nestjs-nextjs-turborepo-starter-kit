@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Pick the tone by meaning",
+		"do": {
+			"text": "Tint a tile by what the item is about: green for money in.",
+			"file": "icon-tile-do-1",
+			"export": "IconTileDo1Example"
+		},
+		"dont": {
+			"text": "Don't pick a tone for looks: red reads as blocked or failed.",
+			"file": "icon-tile-dont-1",
+			"export": "IconTileDont1Example"
+		}
+	},
+	{
+		"title": "Name a tile that does something",
+		"do": {
+			"text": "Render a tile that opens something as a link (`render`), with its own name (`aria-label=\"Open settings\"`).",
+			"file": "icon-tile-do-2",
+			"export": "IconTileDo2Example"
+		},
+		"dont": {
+			"text": "Don't name it after its glyph (“Icon”): say what it opens.",
+			"file": "icon-tile-dont-2",
+			"export": "IconTileDont2Example"
+		}
+	}
+]

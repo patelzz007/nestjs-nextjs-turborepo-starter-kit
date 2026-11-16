@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-date-picker-1",
+		"label": "Overview",
+		"description": "A field that opens a calendar in a bottom sheet to pick one date. Best for a single date in a form, such as a due date.",
+		"file": "date-picker-1",
+		"export": "DatePicker1Example"
+	}
+]

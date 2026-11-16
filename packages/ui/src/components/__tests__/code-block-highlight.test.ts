@@ -45,7 +45,8 @@ describe("module contract", () => {
 	it("registers lazy grammar and theme loaders by name", (): void => {
 		expect(Object.keys(codeBlockLanguages)).toEqual(expect.arrayContaining(["typescript", "tsx", "bash", "python", "json", "diff"]));
 		expect(Object.keys(codeBlockThemes)).toEqual(["github-light", "github-dark", "one-dark-pro", "css-variables"]);
-		expect(DEFAULT_CODE_BLOCK_THEMES).toEqual({ light: "github-light", dark: "github-dark" });
+		// One Dark Pro on both sides: the app's code blocks look the same in light, dark and Nord.
+		expect(DEFAULT_CODE_BLOCK_THEMES).toEqual({ light: "one-dark-pro", dark: "one-dark-pro" });
 	});
 });
 
@@ -166,6 +167,7 @@ describe("highlightCode (real shiki)", () => {
 			const code = 'const answer = 42;\nlet name = "x";\nanswer;';
 			const lines = await highlightCode(code, {
 				language: "ts",
+				themes: { light: "github-light", dark: "github-dark" },
 				startLine: 10,
 				highlightedLines: [1],
 				focusedLines: "1",
@@ -232,7 +234,7 @@ describe("highlightCode (real shiki)", () => {
 			const warn = vi.spyOn(console, "warn").mockImplementation((): void => undefined);
 			const lines = await highlightCode("const a = 1;", { language: "ts", themes: { light: "nope-light", dark: "nope-dark" } });
 			expect(lineAt(lines, 0).tokens.some((token) => token.color !== undefined)).toBe(true);
-			expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown theme "nope-dark" - falling back to "github-dark"'));
+			expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown theme "nope-dark" - falling back to "one-dark-pro"'));
 		},
 		SHIKI_TIMEOUT_MS,
 	);

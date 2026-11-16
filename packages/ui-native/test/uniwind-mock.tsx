@@ -5,6 +5,7 @@
 // theme calls or colours override these by spreading this module into their own
 // `jest.mock("uniwind", …)` factory.
 
+import { isArrayValue } from "@workspace/shared";
 import * as React from "react";
 
 /** Neutral colour returned for every CSS variable. */
@@ -19,8 +20,11 @@ export function useUniwind(): { readonly theme: "light" | "dark" | "nord"; reado
 	return { theme: "light", hasAdaptiveThemes: true };
 }
 
-export function useCSSVariable(): string {
-	return NEUTRAL_COLOR;
+/** One variable reads as the neutral colour; a list of them (Uniwind's array form) as one neutral colour each. */
+export function useCSSVariable(name: string): string;
+export function useCSSVariable(names: readonly string[]): string[];
+export function useCSSVariable(nameOrNames: string | readonly string[]): string | string[] {
+	return isArrayValue(nameOrNames) ? nameOrNames.map((): string => NEUTRAL_COLOR) : NEUTRAL_COLOR;
 }
 
 /** Passes the wrapped component through: without the stylesheet, `className` has nothing to map to. */

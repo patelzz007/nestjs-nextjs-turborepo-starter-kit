@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep the row's name in view",
+		"do": {
+			"text": "Put the column that names a row first and pin it (`columnPinning`), so it stays put while the rest scrolls sideways.",
+			"file": "data-grid-do-1",
+			"export": "DataGridDo1Example"
+		},
+		"dont": {
+			"text": "Don't let the name scroll away: on a narrow screen people lose track of whose row they are reading.",
+			"file": "data-grid-dont-1",
+			"export": "DataGridDont1Example"
+		}
+	},
+	{
+		"title": "Align and format numbers",
+		"do": {
+			"text": "Format amounts with their currency and align numbers to the end, so digits line up for comparing.",
+			"file": "data-grid-do-2",
+			"export": "DataGridDo2Example"
+		},
+		"dont": {
+			"text": "Don't show raw numbers aligned to the start: ragged digits make the larger value hard to spot.",
+			"file": "data-grid-dont-2",
+			"export": "DataGridDont2Example"
+		}
+	}
+]

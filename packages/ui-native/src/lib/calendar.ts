@@ -1,11 +1,11 @@
 // Calendar arithmetic for a month view (DateField, MultiDateField,
 // DateRangePicker): the month a date is in, the months around it, the months
 // and years that can be jumped to, the weeks of a month laid out Monday first,
-// a set of picked days, and the next pick of a start / end range. Dates are calendar days
+// a set of picked days, ISO week numbers, and the next pick of a start / end range. Dates are calendar days
 // (`YYYY-MM-DD`, LocalDate), never instants: no time zone moves them. Pure,
 // so every case is tested without rendering.
 
-import { addLocalDays, localDateInTimeZone, startOfLocalDateInTimeZone, UTC_TIME_ZONE, type LocalDate } from "@workspace/shared";
+import { addLocalDays, DAY_MS, localDateInTimeZone, startOfLocalDateInTimeZone, UTC_TIME_ZONE, type LocalDate } from "@workspace/shared";
 
 /** A calendar month: `month` is 1 (January) to 12. */
 export interface CalendarMonth {
@@ -76,13 +76,17 @@ export function calendarYearsBetween(first: CalendarMonth, last: CalendarMonth):
 	return [...Array<number>(count).keys()].map((offset: number): number => first.year + offset);
 }
 
+/** The day a week starts on: 1 Monday (the default, ISO 8601), 0 Sunday. */
+export type WeekStart = 0 | 1;
+
 /**
- * The month as weeks, Monday first: every week seven slots, the days of the
- * month in place and `null` before the 1st and after the last day.
+ * The month as weeks, starting on `weekStartsOn` (Monday by default): every
+ * week seven slots, the days of the month in place and `null` before the 1st
+ * and after the last day.
  */
-export function monthWeeks(month: CalendarMonth): readonly (readonly (LocalDate | null)[])[] {
+export function monthWeeks(month: CalendarMonth, weekStartsOn: WeekStart = 1): readonly (readonly (LocalDate | null)[])[] {
 	const first = firstDayOf(month);
-	const leading = (new Date(utcMsOf(month, 1)).getUTCDay() + MONDAY_OFFSET) % DAYS_PER_WEEK;
+	const leading = (new Date(utcMsOf(month, 1)).getUTCDay() - weekStartsOn + DAYS_PER_WEEK) % DAYS_PER_WEEK;
 	const length = new Date(utcMsOf(addCalendarMonths(month, 1), 0)).getUTCDate();
 	const slots: (LocalDate | null)[] = [...Array<null>(leading).fill(null), ...[...Array<number>(length).keys()].map((index: number): LocalDate => addLocalDays(first, index))];
 	const trailing = (DAYS_PER_WEEK - (slots.length % DAYS_PER_WEEK)) % DAYS_PER_WEEK;
@@ -90,6 +94,28 @@ export function monthWeeks(month: CalendarMonth): readonly (readonly (LocalDate 
 	return [...Array<number>(padded.length / DAYS_PER_WEEK).keys()].map((week: number): readonly (LocalDate | null)[] =>
 		padded.slice(week * DAYS_PER_WEEK, (week + 1) * DAYS_PER_WEEK),
 	);
+}
+
+/** ISO weeks are numbered by the year their Thursday falls in: Thursday is 3 days after Monday. */
+const THURSDAY_FROM_MONDAY = 3;
+
+/** The ISO 8601 week number of `day` (weeks start on Monday; week 1 holds the year's first Thursday). */
+export function isoWeekOf(day: LocalDate): number {
+	const dayMs = calendarDayMsOf(day);
+	const fromMonday = (new Date(dayMs).getUTCDay() + MONDAY_OFFSET) % DAYS_PER_WEEK;
+	const thursdayMs = dayMs + (THURSDAY_FROM_MONDAY - fromMonday) * DAY_MS;
+	const yearStartMs = Date.UTC(new Date(thursdayMs).getUTCFullYear(), 0, 1);
+	return Math.floor((thursdayMs - yearStartMs) / DAY_MS / DAYS_PER_WEEK) + 1;
+}
+
+/** Whether a range from `from` to `to` (both included) holds a day `isUnavailable` rules out. */
+export function rangeCrossesUnavailable(from: LocalDate, to: LocalDate, isUnavailable: (day: LocalDate) => boolean): boolean {
+	for (let day = from; day <= to; day = addLocalDays(day, 1)) {
+		if (isUnavailable(day)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 /**

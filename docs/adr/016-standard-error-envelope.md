@@ -3,8 +3,11 @@ title: "ADR 016: Standard Error Envelope and Global Exception Filter"
 tags: ["adr", "api", "errors", "nestjs", "contracts"]
 description: "Architecture decision record for answering every failed request with one zod-defined error envelope produced by a single global exception filter."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1790812800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1200&h=630&fit=crop"
+editedAt: 1791121913000
+coverImage: "/images/covers/adr/016-standard-error-envelope.webp"
 order: 16
 ---
 

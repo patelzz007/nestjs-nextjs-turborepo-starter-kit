@@ -3,8 +3,11 @@ title: "DDD + CQRS architecture specification"
 description: "The rule set for bounded contexts, commands, queries, events and layering across the API, web and mobile apps."
 tags: ["architecture", "ddd", "cqrs", "spec"]
 author: "Platform Team"
+category: "Architecture"
+date: 1792368000000
 lastUpdated: 1792368000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792438386000
+coverImage: "/images/covers/architecture/ddd-cqrs-spec.webp"
 order: 1
 ---
 

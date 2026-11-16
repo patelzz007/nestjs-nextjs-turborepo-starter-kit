@@ -121,11 +121,11 @@ export function OnboardingCarousel({ brandName, slides, labels, onFinish, testID
 					<View className="size-8 items-center justify-center rounded-lg bg-primary">
 						<BrandMark size={BRAND_ROW_MARK_SIZE} colorClassName="accent-primary-foreground" />
 					</View>
-					<Text className="font-sans-bold text-lg tracking-tight text-foreground">{brandName}</Text>
+					<Text className="font-sans-bold text-h3 tracking-tight text-foreground">{brandName}</Text>
 				</View>
 				{isLastPage ? null : (
 					<Pressable accessibilityRole="button" accessibilityLabel={labels.skip} onPress={onFinish} hitSlop={8} className="min-h-11 justify-center px-1 active:opacity-60">
-						<Text className="font-sans-semibold text-base text-muted-foreground">{labels.skip}</Text>
+						<Text className="font-sans-semibold text-body-lg text-muted-foreground">{labels.skip}</Text>
 					</Pressable>
 				)}
 			</View>
@@ -199,19 +199,19 @@ function OnboardingPage({ slide, index, width, scrollX }: OnboardingPageProps): 
 							)}
 						</View>
 					</View>
-					<View className="absolute top-6 right-4 size-12 rotate-6 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
+					<View className="rounded-card absolute top-6 right-4 size-12 rotate-6 items-center justify-center border border-border bg-card shadow-sm">
 						<Icon icon={firstAccent} size="md" colorClassName="accent-primary" />
 					</View>
-					<View className="absolute bottom-8 left-2 size-11 -rotate-6 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
-						<Icon icon={secondAccent} size="md" colorClassName="accent-muted-foreground" />
+					<View className="rounded-card absolute bottom-8 left-2 size-11 -rotate-6 items-center justify-center border border-border bg-card shadow-sm">
+						<Icon icon={secondAccent} size="md" colorClassName="accent-icon" />
 					</View>
 				</View>
 			</StyledAnimatedView>
 			<StyledAnimatedView className="gap-3" style={textStyle}>
-				<Text accessibilityRole="header" className="font-sans-bold text-3xl tracking-tight text-foreground">
+				<Text accessibilityRole="header" className="font-sans-bold text-h1 tracking-tight text-foreground">
 					{slide.title}
 				</Text>
-				<Text className="font-sans text-lg leading-7 text-muted-foreground">{slide.description}</Text>
+				<Text className="text-body-lg font-sans text-muted-foreground">{slide.description}</Text>
 			</StyledAnimatedView>
 		</View>
 	);

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Match the keyboard to the code",
+		"do": {
+			"text": "Keep the numeric keypad for a digit code (`inputMode=\"numeric\"`, the default), with `autoComplete=\"one-time-code\"` so phones offer the code they received.",
+			"file": "input-otp-do-1",
+			"export": "InputOtpDo1Example"
+		},
+		"dont": {
+			"text": "Don't ask for digits on a text keyboard: people have to switch keyboards to type them.",
+			"file": "input-otp-dont-1",
+			"export": "InputOtpDont1Example"
+		}
+	},
+	{
+		"title": "Say where the code went",
+		"do": {
+			"text": "Tell people where the code was sent.",
+			"file": "input-otp-do-2",
+			"export": "InputOtpDo2Example"
+		},
+		"dont": {
+			"text": "Don't ask for a code with no context.",
+			"file": "input-otp-dont-2",
+			"export": "InputOtpDont2Example"
+		}
+	}
+]

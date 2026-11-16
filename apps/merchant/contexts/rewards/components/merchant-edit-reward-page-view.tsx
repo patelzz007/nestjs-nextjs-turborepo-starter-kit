@@ -33,7 +33,7 @@ import { toastMessage } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Card } from "@workspace/ui/components/card";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -131,7 +131,7 @@ interface MerchantRewardEditFormFieldsProps extends MerchantRewardEditFormProps 
 function MerchantRewardEditForm({ tenantSlug, reward, audienceCustomers }: MerchantRewardEditFormFieldsProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { accessibleLocations } = useMerchantLocation();
 	const routes = tenantRoutes(tenantSlug);
 	const detailHref = routes.rewards.detail(reward.id);

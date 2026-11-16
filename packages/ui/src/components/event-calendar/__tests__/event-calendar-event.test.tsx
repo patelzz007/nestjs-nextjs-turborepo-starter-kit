@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { LIST_SLOT_INDEX } from "@workspace/shared";
+import { LIST_SLOT_INDEX, utcEpochMs } from "@workspace/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -100,7 +100,7 @@ describe("EventCalendarEvent", () => {
 		const chip = screen.getByRole("button", { name: /^Standup/ });
 		fireEvent.click(chip);
 		expect(onEventClick.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]?.event.data?.owner).toBe("ana");
-		expect(onSelectionChange).toHaveBeenLastCalledWith({ eventKeys: ["standup::2026-03-16T09:00:00.000Z"], slot: null });
+		expect(onSelectionChange).toHaveBeenLastCalledWith({ eventKeys: [`standup::${String(utcEpochMs(2026, 3, 16, 9))}`], slot: null });
 		expect(screen.getByRole("button", { name: /^Standup/ }).getAttribute("aria-pressed")).toBe("true");
 		fireEvent.doubleClick(chip);
 		expect(onEventDoubleClick.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]?.eventId).toBe("standup");

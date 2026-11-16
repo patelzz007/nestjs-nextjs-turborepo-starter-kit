@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Use it for recent activity",
+		"do": {
+			"text": "Say “5 minutes ago” for a feed or a last-updated stamp.",
+			"file": "relative-time-do-1",
+			"export": "RelativeTimeDo1Example"
+		},
+		"dont": {
+			"text": "Don't round away a date the reader needs (a signing date, a due date): show the date.",
+			"file": "relative-time-dont-1",
+			"export": "RelativeTimeDont1Example"
+		}
+	},
+	{
+		"title": "Keep the spoken date",
+		"do": {
+			"text": "Let it name itself: screen readers hear the exact date and time too.",
+			"file": "relative-time-do-2",
+			"export": "RelativeTimeDo2Example"
+		},
+		"dont": {
+			"text": "Don't replace its name with a vague word like “Recently”.",
+			"file": "relative-time-dont-2",
+			"export": "RelativeTimeDont2Example"
+		}
+	}
+]

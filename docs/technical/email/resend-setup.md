@@ -3,8 +3,11 @@ title: "Set up email with Resend"
 description: "Step by step: Resend account and API key, domain verification, EMAIL_MODE, the delivery webhook (POST /notifications/email-webhook) with RESEND_WEBHOOK_SECRET, exposing it locally, verification and troubleshooting."
 order: 45
 author: "Platform Team"
+category: "Email"
+date: 1791072000000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/technical/email/resend-setup.webp"
 tags: ["email", "resend", "webhooks", "setup"]
 ---
 

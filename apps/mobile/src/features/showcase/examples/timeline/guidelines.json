@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say what happened",
+		"do": {
+			"text": "Give each event a title, a time and a clear node (done, failed, current).",
+			"file": "timeline-do-1",
+			"export": "TimelineDo1Example"
+		},
+		"dont": {
+			"text": "Don't list bare events with no times and the same grey dot.",
+			"file": "timeline-dont-1",
+			"export": "TimelineDont1Example"
+		}
+	},
+	{
+		"title": "Fit the phone",
+		"do": {
+			"text": "Run long timelines down the screen; keep a horizontal one to 3 or 4 phases.",
+			"file": "timeline-do-2",
+			"export": "TimelineDo2Example"
+		},
+		"dont": {
+			"text": "Don't squeeze 8 phases into a row: their text cannot fit.",
+			"file": "timeline-dont-2",
+			"export": "TimelineDont2Example"
+		}
+	}
+]

@@ -60,10 +60,10 @@ export function ProgressRing({ label, value, max, valueLabel, caption, accessibi
 				</SvgLayer>
 			) : null}
 			<View className="absolute inset-0 items-center justify-center px-5" importantForAccessibility="no-hide-descendants">
-				<Text className="font-sans-semibold text-2xl text-foreground" numberOfLines={1} adjustsFontSizeToFit>
+				<Text className="font-sans-semibold text-h2 text-foreground" numberOfLines={1} adjustsFontSizeToFit>
 					{valueLabel}
 				</Text>
-				<Text className="font-sans text-xs text-muted-foreground">{caption}</Text>
+				<Text className="text-caption font-sans text-muted-foreground">{caption}</Text>
 			</View>
 		</View>
 	);

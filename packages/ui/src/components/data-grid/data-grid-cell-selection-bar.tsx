@@ -11,6 +11,7 @@ import * as React from "react";
 
 export const dataGridSelectionBarVariants = cva("flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5", {
 	variants: {
+		/** `floating` (centred, sticky to the bottom of the viewport) or `inline` (in the flow, full width). */
 		variant: {
 			// The floating toolbar: centred and sticky to the viewport bottom (above pinned cells, like the sticky header).
 			floating: "sticky inset-x-0 bottom-4 z-40 mx-auto w-fit max-w-[calc(100%-2rem)] shadow-lg",

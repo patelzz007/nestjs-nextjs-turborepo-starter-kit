@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { Table, describeTableRow, type TableColumn, type TableRow } from "../table";
 
@@ -68,5 +68,43 @@ describe("Table", () => {
 		const className = String(screen.getByTestId("table").props.className);
 		expect(className).toContain("gap-2");
 		expect(className).not.toContain("gap-0.5");
+	});
+
+	it("draws a cell's content in place of its text, still reading the row as its text", async () => {
+		await render(
+			<Table
+				caption="Team"
+				columns={[
+					{ key: "name", label: "Name" },
+					{ key: "role", label: "Role", width: "md" },
+				]}
+				rows={[{ key: "ava", cells: { name: "Ava", role: "Admin" }, content: { role: <Text>badge</Text> } }]}
+			/>,
+		);
+		expect(screen.getByText("badge")).toBeOnTheScreen();
+		expect(screen.getByLabelText("Ava: Role Admin")).toBeOnTheScreen();
+	});
+
+	it("reads an interactive row cell by cell, so its controls stay reachable", async () => {
+		await render(
+			<Table
+				caption="Cart"
+				columns={[
+					{ key: "item", label: "Item" },
+					{ key: "qty", label: "Qty", width: "xs" },
+				]}
+				rows={[{ key: "tea", cells: { item: "Tea", qty: "2" }, interactive: true, content: { qty: <Text accessibilityRole="button">stepper</Text> } }]}
+			/>,
+		);
+		expect(screen.getByRole("button", { name: "stepper" })).toBeOnTheScreen();
+		expect(screen.queryByLabelText("Tea: Qty 2")).toBeNull();
+	});
+
+	it("scrolls a wide table sideways and shows its caption under the rows", async () => {
+		await render(
+			<Table caption="Invoices" columns={[{ key: "id", label: "Invoice" }]} rows={[{ key: "1", cells: { id: "INV001" } }]} scrollable showCaption testID="table" />,
+		);
+		expect(screen.getByTestId("table-scroll")).toBeOnTheScreen();
+		expect(screen.getByText("Invoices", { includeHiddenElements: true })).toBeTruthy();
 	});
 });

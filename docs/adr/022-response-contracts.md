@@ -3,8 +3,11 @@ title: "ADR 022: Response Contracts for Every Endpoint"
 tags: ["adr", "api", "contracts", "openapi", "zod"]
 description: "Every endpoint declares its response with one shared zod schema that documents it in Swagger, is enforced (stripped and validated) by the API, type-checks the handler, and is parsed by the typed client; the OpenAPI document is exported as a committed artifact."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1790812800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/022-response-contracts.webp"
 order: 22
 ---
 

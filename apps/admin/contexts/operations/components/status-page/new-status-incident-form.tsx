@@ -9,7 +9,7 @@ import { CreateStatusIncidentSchema, STATUS_COMPONENT_KEYS, StatusComponentKeySc
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { z } from "zod";
 
@@ -32,7 +32,7 @@ const EMPTY: NewStatusIncidentFormValues = { title: "", impact: "MINOR", compone
 export function NewStatusIncidentForm(): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const mutation = api.operations.createStatusIncident.useMutation({
 		onSuccess: async (response): Promise<void> => {
 			toastMessage.success({ title: "Incident opened", description: "It's on the public status page now." });

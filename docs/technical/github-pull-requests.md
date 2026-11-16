@@ -3,8 +3,11 @@ title: "GitHub pull requests"
 description: "Admins link their own fine-grained GitHub token and work on the pull requests of every repository it can see — private ones included — from the mobile app: the list, the conversation, commits, files with diffs, line comments and edit histories."
 order: 12
 author: "Platform Team"
+category: "Engineering"
+date: 1792022400000
 lastUpdated: 1792540800000
-coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=1200&h=630&fit=crop"
+editedAt: 1794485004159
+coverImage: "/images/covers/technical/github-pull-requests.webp"
 tags: ["github", "integration", "api", "mobile", "security"]
 ---
 
@@ -19,7 +22,7 @@ contributions on the Profile are a separate integration with the server's own to
 ([GitHub contributions](./github-contributions.md)).
 
 ```mermaid
-flowchart LR
+flowchart TD
     M[Mobile app] -->|PUT /github/account| A[GithubAccountController]
     M -->|GET /github/pull-requests/...| P[GithubPullRequestsController]
     A --> C[GithubCredentialsService<br/>check, encrypt, store]

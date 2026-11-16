@@ -221,8 +221,33 @@ function loadGithubDarkTheme(): Promise<ThemeInput> {
 	return import("shiki/themes/github-dark.mjs");
 }
 
-function loadOneDarkProTheme(): Promise<ThemeInput> {
-	return import("shiki/themes/one-dark-pro.mjs");
+/** One Dark Pro's editor background — the surface every block on the theme is drawn on. */
+export const ONE_DARK_PRO_BACKGROUND = "#282c34";
+
+/**
+ * One Dark Pro's token colours that read below WCAG AA (4.5:1) on its own background,
+ * each lifted towards white just far enough to pass — same hue, a barely visible step.
+ * The signature red (#e06c75, 4.38:1) becomes #e1717a; the comment greys change most.
+ */
+export const ONE_DARK_PRO_AA_FOREGROUNDS: Readonly<Record<string, string>> = {
+	"#e06c75": "#e1717a",
+	"#5c6370": "#8f949d",
+	"#f44747": "#f66262",
+	"#7f848e": "#90949d",
+	"#be5046": "#cf7d75",
+};
+
+/** A token colour with its AA replacement applied (case-insensitive); other colours pass through. */
+export function oneDarkProAccessibleForeground(color: string): string {
+	return ONE_DARK_PRO_AA_FOREGROUNDS[color.toLowerCase()] ?? color;
+}
+
+async function loadOneDarkProTheme(): Promise<ThemeInput> {
+	const { default: theme } = await import("shiki/themes/one-dark-pro.mjs");
+	const tokenColors = theme.tokenColors?.map((rule) =>
+		rule.settings.foreground === undefined ? rule : { ...rule, settings: { ...rule.settings, foreground: oneDarkProAccessibleForeground(rule.settings.foreground) } },
+	);
+	return tokenColors === undefined ? theme : { ...theme, tokenColors };
 }
 
 /* Theme names are the shiki names, so the loaders are named functions: the
@@ -234,9 +259,17 @@ export const codeBlockThemes: Record<string, () => Promise<ThemeInput>> = {
 	"css-variables": loadCssVariablesTheme,
 };
 
+/** Themes drawn on a dark background: a block using one on its light side renders its surface dark in every app theme. */
+export const DARK_CODE_BLOCK_THEMES: ReadonlySet<string> = new Set<string>(["one-dark-pro", "github-dark"]);
+
+/** Whether `themes` paints dark text-on-dark colours even in the app's light theme (One Dark Pro, the default, does). */
+export function isDarkCodeSurface(themes: CodeBlockThemes): boolean {
+	return DARK_CODE_BLOCK_THEMES.has(themes.light);
+}
+
 export const DEFAULT_CODE_BLOCK_THEMES: CodeBlockThemes = {
-	light: "github-light",
-	dark: "github-dark",
+	light: "one-dark-pro",
+	dark: "one-dark-pro",
 };
 
 /**

@@ -13,6 +13,10 @@
 @source "../../../../components/**/*.{ts,tsx}";
 @source "../../../../packages/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
+/* The generated showcase modules hold every example's source as an escaped string, to display it. Scanning them
+   only yields mangled copies of the examples' classes (a quoted `data:` URL in one breaks the docs app's Vite build);
+   the examples themselves are scanned where they live. */
+@source not "../../../../apps/admin/components/component-showcase/generated/**";
 
 @import "./base.css";
 @import "./components.css";

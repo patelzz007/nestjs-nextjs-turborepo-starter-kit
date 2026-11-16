@@ -26,13 +26,13 @@
 		"@types/pg": "8.23.1",
 		"@workspace/oxlint-config": "workspace:^",
 		"@workspace/typescript-config": "workspace:*",
-		"dotenv": "^18.0.9",
-		"oxfmt": "0.75.0",
-		"oxlint": "1.90.0",
-		"oxlint-tsgolint": "7.0.2005",
-		"tsrs": "0.20.1-ts7.1.0-beta",
+		"dotenv": "^18.0.10",
+		"oxfmt": "0.78.0",
+		"oxlint": "1.93.0",
+		"oxlint-tsgolint": "7.0.2006",
+		"tsrs": "0.24.0-ts7.1.0-beta",
 		"tsx": "^4.23.15",
 		"typescript": "7.0.2",
-		"vitest": "^5.0.5"
+		"vitest": "^5.1.0"
 	}
 }

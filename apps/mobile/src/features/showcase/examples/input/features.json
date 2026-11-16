@@ -1,0 +1,219 @@
+[
+	{
+		"id": "c-input-1",
+		"label": "Basic",
+		"description": "Basic input. Best for a bare text box with placeholder text and no label, the smallest markup to start from.",
+		"file": "input-1",
+		"export": "Input1Example"
+	},
+	{
+		"id": "c-input-2",
+		"label": "With Label",
+		"description": "Input with label. Best for an email field with a visible label above it, tied to the box through htmlFor and id.",
+		"file": "input-2",
+		"export": "Input2Example"
+	},
+	{
+		"id": "c-input-3",
+		"label": "With Description",
+		"description": "Input with description. Best for a username field with one line of help text printed under the box.",
+		"file": "input-3",
+		"export": "Input3Example"
+	},
+	{
+		"id": "c-input-4",
+		"label": "Disabled",
+		"description": "Disabled input. Best for a labeled email field locked by the disabled attribute, dimmed and skipped by the keyboard.",
+		"file": "input-4",
+		"export": "Input4Example"
+	},
+	{
+		"id": "c-input-5",
+		"label": "Error Message",
+		"description": "Input with error message. Best for an email field shown in its red invalid state with a single error line below.",
+		"file": "input-5",
+		"export": "Input5Example"
+	},
+	{
+		"id": "c-input-6",
+		"label": "Character Counter",
+		"description": "Input with character counter. Best for a 50 character project description with a live typed count across from the label.",
+		"file": "input-6",
+		"export": "Input6Example"
+	},
+	{
+		"id": "c-input-7",
+		"label": "Password",
+		"description": "Input with password type. Best for a plain masked password box with no reveal button and no strength feedback.",
+		"file": "input-7",
+		"export": "Input7Example"
+	},
+	{
+		"id": "c-input-8",
+		"label": "Phone",
+		"description": "Input with phone type. Best for a tel field that brings up the phone keypad, with no country menu or number formatting.",
+		"file": "input-8",
+		"export": "Input8Example"
+	},
+	{
+		"id": "c-input-9",
+		"label": "URL",
+		"description": "Input with URL type. Best for a website address field typed as url, with a full https address as its placeholder.",
+		"file": "input-9",
+		"export": "Input9Example"
+	},
+	{
+		"id": "c-input-10",
+		"label": "Number",
+		"description": "Input with number type. Best for a numeric field typed as number, with the platform's own spin arrows for stepping.",
+		"file": "input-10",
+		"export": "Input10Example"
+	},
+	{
+		"id": "c-input-11",
+		"label": "Date",
+		"description": "Input with date type. Best for a day picked from the platform's built in calendar popup, with no date library.",
+		"file": "input-11",
+		"export": "Input11Example"
+	},
+	{
+		"id": "c-input-12",
+		"label": "File",
+		"description": "Input with file type. Best for a native file chooser with the platform's pick button flattened into the field, taking one file.",
+		"file": "input-12",
+		"export": "Input12Example"
+	},
+	{
+		"id": "c-input-13",
+		"label": "Required Indicator",
+		"description": "Input with required indicator. Best for a company name field whose label ends in a red asterisk to mark it mandatory.",
+		"file": "input-13",
+		"export": "Input13Example"
+	},
+	{
+		"id": "c-input-14",
+		"label": "Time",
+		"description": "Input with time type. Best for a native hour and minute field rendered by the browser, with no picker library and no state.",
+		"file": "input-14",
+		"export": "Input14Example"
+	},
+	{
+		"id": "c-input-15",
+		"label": "Contact Form",
+		"description": "Complex input form with multiple fields. Best for a short contact form with phone and country side by side, an address line and Cancel and Submit.",
+		"file": "input-15",
+		"export": "Input15Example"
+	},
+	{
+		"id": "c-input-16",
+		"label": "Label Tooltip",
+		"description": "Input label with tooltip. Best for a username label with a help icon that opens a tooltip, repeating the hint as text under the box.",
+		"file": "input-16",
+		"export": "Input16Example"
+	},
+	{
+		"id": "c-input-17",
+		"label": "Label Badge",
+		"description": "Input label with badge. Best for an API key field with a New badge in the success tint beside its label.",
+		"file": "input-17",
+		"export": "Input17Example"
+	},
+	{
+		"id": "c-input-18",
+		"label": "Optional Badge",
+		"description": "Input label with optional badge. Best for a middle name field with a small outlined Optional badge at the far end of the label row.",
+		"file": "input-18",
+		"export": "Input18Example"
+	},
+	{
+		"id": "c-input-19",
+		"label": "Link & Toggle",
+		"description": "Input label with link and visibility toggle. Best for a sign in password with a Forgot password link opposite the label and an eye button to reveal it.",
+		"file": "input-19",
+		"export": "Input19Example"
+	},
+	{
+		"id": "c-input-20",
+		"label": "Horizontal",
+		"description": "Input with horizontal orientation. Best for a name field with its label placed to the left on the same row rather than above.",
+		"file": "input-20",
+		"export": "Input20Example"
+	},
+	{
+		"id": "c-input-21",
+		"label": "Multiple Errors",
+		"description": "Input with multiple error messages. Best for a security code field listing 3 failed rules under it, each led by an alert icon.",
+		"file": "input-21",
+		"export": "Input21Example"
+	},
+	{
+		"id": "c-input-22",
+		"label": "Strength Hint",
+		"description": "Basic password strength with dynamic hint and icons. Best for a password with one hint line that turns from grey to red, amber or green as 3 rules pass.",
+		"file": "input-22",
+		"export": "Input22Example"
+	},
+	{
+		"id": "c-input-23",
+		"label": "Strength Meter",
+		"description": "Advanced password strength indicator with progress. Best for a 5 rule checklist with ticks, a 5 segment color bar, a met count and an eye toggle.",
+		"file": "input-23",
+		"export": "Input23Example"
+	},
+	{
+		"id": "c-input-24",
+		"label": "Pulsed Background",
+		"description": "Input with pulsed background animation. Best for a field behind a pulsing primary tint that stops when focused and resumes on blur.",
+		"file": "input-24",
+		"export": "Input24Example"
+	},
+	{
+		"id": "c-input-25",
+		"label": "Custom Focus Ring",
+		"description": "Input with custom focus ring. Best for a field whose focus border and ring turn emerald green in place of the theme ring color.",
+		"file": "input-25",
+		"export": "Input25Example"
+	},
+	{
+		"id": "c-input-26",
+		"label": "Subtle Background",
+		"description": "Input with subtle background. Best for a field filled with the muted surface color, kept the same while pressed and focus.",
+		"file": "input-26",
+		"export": "Input26Example"
+	},
+	{
+		"id": "c-input-27",
+		"label": "Bottom Border",
+		"description": "Input with bottom border only. Best for an underline style field with a 2px bottom rule that turns primary on focus, with no ring.",
+		"file": "input-27",
+		"export": "Input27Example"
+	},
+	{
+		"id": "c-input-28",
+		"label": "Color",
+		"description": "Color input. Best for a browser color swatch that opens the native picker, starting from a blue hex value.",
+		"file": "input-28",
+		"export": "Input28Example"
+	},
+	{
+		"id": "c-input-29",
+		"label": "Range",
+		"description": "Range input with value indicator. Best for a native 0 to 100 range with its current number printed at the end of the label row.",
+		"file": "input-29",
+		"export": "Input29Example"
+	},
+	{
+		"id": "c-input-30",
+		"label": "Pill Shape",
+		"description": "Pill-shaped input. Best for a search box with fully rounded ends and wider side padding.",
+		"file": "input-30",
+		"export": "Input30Example"
+	},
+	{
+		"id": "c-input-31",
+		"label": "Borderless",
+		"description": "Minimal input without borders or background. Best for a chromeless field with no border, fill, padding or focus ring, only text and caret.",
+		"file": "input-31",
+		"export": "Input31Example"
+	}
+]

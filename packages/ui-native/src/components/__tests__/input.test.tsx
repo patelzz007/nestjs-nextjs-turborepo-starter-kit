@@ -2,10 +2,18 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { TextInputInstance } from "react-native";
 
+import { cn } from "../../lib/cn";
+import { FieldSurfaceProvider } from "../../lib/field-surface";
+import { Card } from "../card";
 import { Input, inputVariants } from "../input";
 
 function digitsOnly(value: string): string {
 	return value.replace(/\D/gu, "");
+}
+
+/** A cva class list as the component applies it (through `cn`, so the last fill wins). */
+function cnOf(classes: string): string {
+	return cn(classes);
 }
 
 /** The input's visible box: the `View` around the `TextInput`. */
@@ -64,6 +72,29 @@ describe("Input", () => {
 		expect(boxClassName("Name")).not.toContain("border-destructive");
 	});
 
+	it("fills its outlined box with the page colour on the page, and the borderless variant with nothing", async () => {
+		await render(<Input accessibilityLabel="Name" value="" onChange={jest.fn()} />);
+		expect(boxClassName("Name").split(" ")).toContain("bg-background");
+		expect(cnOf(inputVariants({ variant: "ghost", surface: "card" })).split(" ")).toEqual(expect.arrayContaining(["bg-transparent"]));
+		expect(cnOf(inputVariants({ variant: "ghost", surface: "card" })).split(" ")).not.toContain("bg-card");
+	});
+
+	it("takes the card's fill inside a card, and the popover's on a popover surface", async () => {
+		await render(
+			<>
+				<Card>
+					<Input accessibilityLabel="In a card" value="" onChange={jest.fn()} />
+				</Card>
+				<FieldSurfaceProvider surface="popover">
+					<Input accessibilityLabel="In a sheet" value="" onChange={jest.fn()} />
+				</FieldSurfaceProvider>
+			</>,
+		);
+		expect(boxClassName("In a card").split(" ")).toContain("bg-card");
+		expect(boxClassName("In a card").split(" ")).not.toContain("bg-background");
+		expect(boxClassName("In a sheet").split(" ")).toContain("bg-popover");
+	});
+
 	it("has sizes and a borderless variant", () => {
 		expect(inputVariants({ size: "sm" })).toContain("min-h-10");
 		expect(inputVariants({ size: "md" })).toContain("min-h-12");
@@ -87,5 +118,12 @@ describe("Input", () => {
 		expect(boxClassName("Name")).toContain("flex-1");
 		expect(boxClassName("Name")).toContain("px-6");
 		expect(boxClassName("Name")).not.toContain("px-3.5");
+	});
+
+	it("can be read only, and a disabled input stays locked whatever the caller passes", async () => {
+		const view = await render(<Input value="acme.com/s/1" onChange={jest.fn()} editable={false} accessibilityLabel="Link" testID="input" />);
+		expect(screen.getByTestId("input")).toHaveProp("editable", false);
+		await view.rerender(<Input value="x" onChange={jest.fn()} editable disabled accessibilityLabel="Link" testID="input" />);
+		expect(screen.getByTestId("input")).toHaveProp("editable", false);
 	});
 });

@@ -17,7 +17,7 @@
 @source "../../packages/ui-native/src";
 
 /*
- * The typefaces (ADR 037, ADR 079): Geist, Geist Mono, and Bricolage Grotesque for button labels
+ * The typefaces (ADR 037, ADR 079): Geist, Geist Mono, JetBrains Mono for blocks of code (`font-code`), and Bricolage Grotesque for button labels
  * only (`font-button`, nowhere else), one family per weight, because
  * React Native picks a font by family name, not by weight. Each value is ONE
  * family name, unquoted, exactly as src/lib/fonts.ts (APP_FONTS) registers it;
@@ -32,4 +32,5 @@
 	--font-heading: Geist_600SemiBold;
 	--font-button: BricolageGrotesque_600SemiBold;
 	--font-mono: GeistMono_400Regular;
+	--font-code: JetBrainsMono_400Regular;
 }

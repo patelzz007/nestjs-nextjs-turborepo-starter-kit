@@ -1,4 +1,4 @@
-import { KybStatusSchema, type EpochMs, type JsonObject, type KybDocumentScanStatus, type KybStatus } from "@workspace/shared";
+import { KYB_REVIEW, kybAdminDecisionFor, KybStatusSchema, type EpochMs, type JsonObject, type KybDocumentScanStatus, type KybStatus } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import {
@@ -14,23 +14,8 @@ import { MerchantVerificationStatusChanged, type TenantsDomainEvent } from "../e
 import { evidenceAllClean, evidenceNeedsAction, kybDocumentScanStatusOf, kybEvidenceRejectionOf, type KybEvidenceFile } from "../policies/kyb-evidence.policy";
 import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
-/**
- * Admin decisions allowed from each review status (D05, migration plan §7.5).
- * A rejected review never reopens through an admin decision: the merchant
- * resubmits. Nothing is decided back to PENDING; that is the merchant's submit.
- */
-const ADMIN_DECISIONS: Readonly<Record<KybStatus, readonly KybStatus[]>> = {
-	PENDING: ["APPROVED", "REJECTED", "ACTION_REQUIRED"],
-	ACTION_REQUIRED: ["APPROVED", "REJECTED"],
-	APPROVED: ["REJECTED", "ACTION_REQUIRED"],
-	REJECTED: [],
-};
-
 /** Decisions that must say why (the contract enforces it; the aggregate re-checks it). */
 const DECISIONS_REQUIRING_REASON: readonly KybStatus[] = ["REJECTED", "ACTION_REQUIRED"];
-
-/** Review outcomes the scan verdicts can no longer change. */
-const DECIDED_STATUSES: readonly KybStatus[] = ["APPROVED", "REJECTED"];
 
 /** Statuses in which the signed-out onboarding link may no longer replace the evidence. */
 const ONBOARDING_CLOSED_STATUSES: readonly KybStatus[] = ["APPROVED", "REJECTED"];
@@ -51,9 +36,9 @@ export interface MerchantVerificationState {
 }
 
 /**
- * The KYB review of one merchant tenant (stored on its merchant
- * profile). Owns the review status machine: merchant submission, scan-verdict
- * reconciliation and the admin decision table.
+ * The KYB review of one merchant tenant (stored on its merchant profile). Enforces {@link KYB_REVIEW}
+ * (`@workspace/shared`, the table the admin decision form reads too): merchant submission,
+ * scan-verdict reconciliation and admin decisions.
  */
 export class MerchantVerification extends AggregateRoot<TenantsDomainEvent> {
 	private status: KybStatus;
@@ -107,12 +92,12 @@ export class MerchantVerification extends AggregateRoot<TenantsDomainEvent> {
 	 * retired. `evidence` are the files found for `fileIds` (missing ids are absent).
 	 */
 	public submit(application: KybApplication, fileIds: readonly string[], evidence: readonly KybEvidenceFile[], now: EpochMs): void {
-		if (this.status === "APPROVED") {
+		if (!KYB_REVIEW.can("submit", this.status)) {
 			throw new KybAlreadyApprovedError();
 		}
 		const accepted = this.acceptEvidence(fileIds, evidence);
 		this.submittedApplication = application;
-		this.transition("PENDING", now);
+		this.transition(KYB_REVIEW.targetOf("submit"), now);
 		this.replaceEvidence(accepted, now);
 	}
 
@@ -131,7 +116,7 @@ export class MerchantVerification extends AggregateRoot<TenantsDomainEvent> {
 	/** The onboarding application: details stored, review (re)opened as PENDING. */
 	public applyOnboardingApplication(application: KybApplication, now: EpochMs): void {
 		this.submittedApplication = application;
-		this.transition("PENDING", now);
+		this.transition(KYB_REVIEW.targetOf("applyOnboarding"), now);
 	}
 
 	/**
@@ -140,22 +125,23 @@ export class MerchantVerification extends AggregateRoot<TenantsDomainEvent> {
 	 * evidence needs merchant action; all clean again returns ACTION_REQUIRED to PENDING.
 	 */
 	public reconcile(evidence: readonly KybEvidenceFile[], now: EpochMs): void {
-		if (DECIDED_STATUSES.includes(this.status) || evidence.length === 0) {
+		// A decided review (APPROVED/REJECTED) is the one a scan may not flag.
+		if (!KYB_REVIEW.can("flagEvidence", this.status) || evidence.length === 0) {
 			return;
 		}
 		const statuses: readonly KybDocumentScanStatus[] = evidence.map((file) => kybDocumentScanStatusOf(file));
 		if (evidenceNeedsAction(statuses)) {
-			this.transition("ACTION_REQUIRED", now);
+			this.transition(KYB_REVIEW.targetOf("flagEvidence"), now);
 			return;
 		}
-		if (evidenceAllClean(statuses) && this.status === "ACTION_REQUIRED") {
-			this.transition("PENDING", now);
+		if (evidenceAllClean(statuses) && KYB_REVIEW.can("clearEvidence", this.status)) {
+			this.transition(KYB_REVIEW.targetOf("clearEvidence"), now);
 		}
 	}
 
-	/** Admin decision, checked against {@link ADMIN_DECISIONS}. REJECTED and ACTION_REQUIRED need a reason. */
+	/** Admin decision, checked against the admin moves of {@link KYB_REVIEW}. REJECTED and ACTION_REQUIRED need a reason. */
 	public decide(to: KybStatus, reason: string | null, kybFields: JsonObject | null, now: EpochMs): void {
-		if (!ADMIN_DECISIONS[this.status].includes(to)) {
+		if (kybAdminDecisionFor(this.status, to) === null) {
 			throw new KybTransitionNotAllowedError(this.tenantId, this.status, to);
 		}
 		if (DECISIONS_REQUIRING_REASON.includes(to) && (reason === null || reason.trim().length === 0)) {

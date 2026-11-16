@@ -205,8 +205,11 @@ export function canFilterNodeMove(query: FilterQuery, position: Pick<FilterRowPo
 /* -------------------------------------------------------------------------- */
 
 export interface FilterAdvancedRowProps {
+	/** The rule to draw. */
 	readonly rule: FilterRule;
+	/** `{ index, parentId, combinator, depth }`, passed DOWN rather than read from the state context. */
 	readonly position: FilterRowPosition;
+	/** Classes for the builder row. */
 	readonly className?: string | undefined;
 }
 
@@ -612,10 +615,13 @@ function focusCell(row: HTMLElement | undefined, column: string | undefined): bo
 /* -------------------------------------------------------------------------- */
 
 export interface FiltersAdvancedPanelProps {
+	/** Which box the panel sits in, which is the only thing deciding whether it pads itself. See [the panel has no surface](#filters-panel-surface). */
 	readonly mode?: FilterAdvancedMode | undefined;
 	/** Replaces the empty state; `null` from the callback draws none. */
 	readonly renderEmpty?: ((context: FilterEmptyStateContext) => React.ReactNode) | undefined;
+	/** Whether rows can be reordered. See `FiltersProps.reorderable`. */
 	readonly reorderable?: boolean | undefined;
+	/** Applied to the panel. */
 	readonly className?: string | undefined;
 }
 
@@ -841,11 +847,15 @@ export const FiltersAdvancedPanel = React.forwardRef<HTMLDivElement, FiltersAdva
 /* -------------------------------------------------------------------------- */
 
 export interface FiltersAdvancedProps {
+	/** Hang the panel off a trigger, or render it in place. */
 	readonly mode?: FilterAdvancedMode | undefined;
 	/** Replaces the default "Advanced filter" button (popover mode). */
 	readonly trigger?: React.ReactElement | undefined;
+	/** Whether rows can be reordered. See `FiltersProps.reorderable`. */
 	readonly reorderable?: boolean | undefined;
+	/** Popover alignment. */
 	readonly align?: "start" | "center" | "end" | undefined;
+	/** Applied to the popover content, or to the panel when inline. */
 	readonly className?: string | undefined;
 }
 

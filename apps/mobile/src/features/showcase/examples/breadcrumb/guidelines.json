@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Fold long trails",
+		"do": {
+			"text": "Fold the middle levels of a long trail, keeping the first and the last ones.",
+			"file": "breadcrumb-do-1",
+			"export": "BreadcrumbDo1Example"
+		},
+		"dont": {
+			"text": "Don't string 7 levels across a phone's width.",
+			"file": "breadcrumb-dont-1",
+			"export": "BreadcrumbDont1Example"
+		}
+	},
+	{
+		"title": "Make levels go somewhere",
+		"do": {
+			"text": "Make every level but the current page a link.",
+			"file": "breadcrumb-do-2",
+			"export": "BreadcrumbDo2Example"
+		},
+		"dont": {
+			"text": "Don't show levels that look like links but go nowhere.",
+			"file": "breadcrumb-dont-2",
+			"export": "BreadcrumbDont2Example"
+		}
+	}
+]

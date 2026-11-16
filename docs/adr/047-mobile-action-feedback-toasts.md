@@ -3,8 +3,11 @@ title: "ADR 047: Mobile Action Feedback Through Toasts"
 tags: ["adr", "mobile", "feedback", "design"]
 description: "Every action in the signed-in mobile app confirms its outcome with one toast under the page header — success, failure, and why — instead of per-screen banners that were lost to re-mounts or scrolled out of sight."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791676800000
 lastUpdated: 1791763200000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1791742027000
+coverImage: "/images/covers/adr/047-mobile-action-feedback-toasts.webp"
 order: 47
 ---
 

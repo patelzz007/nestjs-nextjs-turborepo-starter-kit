@@ -159,6 +159,7 @@ export function useInternalConfig(part: string): CodeBlockConfigValue {
 /** The block's configuration plus its current source, for composed chrome. */
 export type CodeBlockConfig = CodeBlockConfigValue & { code: string };
 
+/** The surrounding block's settings (language, wrap, `expanded`…), inside a `CodeBlock`. */
 export function useCodeBlockConfig(part = "useCodeBlockConfig"): CodeBlockConfig {
 	const context = React.useContext(CodeBlockConfigContext);
 	const document = React.useContext(CodeBlockDocumentContext);

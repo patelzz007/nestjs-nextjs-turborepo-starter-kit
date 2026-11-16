@@ -1,177 +1,165 @@
 // ============================================
-// lib/format/date-time.ts - timestamp and relative-time formatting
+// lib/ui/format/date-time.ts - timestamp and relative-time formatting
 // ============================================
-// Timestamps cross the API as epoch milliseconds (UTC instants). These helpers
-// are the one sanctioned way to render one in every app — never call
-// `toLocaleString()` / `toLocaleDateString()` / `date-fns` `format()` on a
-// `Date` at a call site.
+// Time is epoch milliseconds everywhere — in data, state, URLs, logs and on the
+// wire (a UTC instant, a plain number that sorts and compares). The only place
+// an instant becomes text is here, at the moment it is shown to a person, and
+// it is written with date-fns. Never call `toLocaleString()`, `Intl.DateTimeFormat`
+// or date-fns `format()` on a time at a call site.
 //
-// Every formatter takes the locale AND the IANA time zone explicitly. A bare
-// `toLocaleString()` or date-fns `format()` uses the runtime's own locale and
-// zone, which differ between the Node server (often UTC, en-US) and the
-// viewer's browser — the server HTML and the first client render then
-// disagree and React reports a hydration mismatch. With both pinned the output
-// is identical on every runtime. Apps pass `PLATFORM_DISPLAY_REGION` from
-// @workspace/shared, or `ANALYTICS_BUCKET_DISPLAY_REGION` for analytics series
-// points (UTC week buckets).
+// Every formatter takes the locale AND the IANA time zone explicitly (`DisplayRegion`).
+// The instant is placed on that zone's wall clock with `TZDate` (@date-fns/tz), so
+// the Node server and the viewer's browser — whatever their own zones — write the
+// same text, and React never reports a hydration mismatch. Apps pass
+// `PLATFORM_DISPLAY_REGION`, or `ANALYTICS_BUCKET_DISPLAY_REGION` for analytics
+// series points (UTC week buckets).
 //
 // Relative times ("5 minutes ago") depend on the current time, which the
 // server and the browser never agree on — render them with the `RelativeTime`
 // component, which shows the absolute time until after hydration.
 
+import { TZDate } from "@date-fns/tz";
+import { formatDistanceStrict, formatISO, format as formatDate, isSameDay, isSameMonth, isSameYear, type Locale } from "date-fns";
+import { de, enGB, enUS, ms } from "date-fns/locale";
+
 import type { AnalyticsInterval, DisplayRegion } from "@workspace/shared";
-import { normalizeIntlSpacing } from "./intl-text";
 
-/** How an instant is written. */
-export type DateTimeDisplayStyle = "date" | "dateTime" | "dayMonth";
+/**
+ * How an instant is written: `date` "15 Nov 2026", `dateTime` "15 Nov 2026, 14:05",
+ * `fullDate` "Sunday, 15 November 2026", `dayMonth` "15 Nov", `time` "14:05",
+ * `preciseTime` "14:05:09.042" (24-hour, to the millisecond — log viewers).
+ */
+export type DateTimeDisplayStyle = "date" | "dateTime" | "fullDate" | "dayMonth" | "time" | "preciseTime";
 
-const DATE_TIME_STYLE_OPTIONS: Readonly<Record<DateTimeDisplayStyle, Intl.DateTimeFormatOptions>> = {
-	/** "15 Nov 2026" */
-	date: { year: "numeric", month: "short", day: "numeric" },
-	/** "15 Nov 2026, 2:05 pm" */
-	dateTime: { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" },
-	/** "15 Nov" — chart axes and compact rows. */
-	dayMonth: { month: "short", day: "numeric" },
+/** A display locale's date-fns locale and the one pattern date-fns has no localized token for. */
+interface DateLocale {
+	readonly locale: Locale;
+	/** Day and month without the year — "15 Nov" / "Nov 15". */
+	readonly dayMonth: string;
+	/** Writes a same-month range as "1–30 Sep 2026" (day first) rather than "Sep 1 – Sep 30, 2026". */
+	readonly dayFirst: boolean;
+}
+
+const BRITISH_ENGLISH: DateLocale = { locale: enGB, dayMonth: "d MMM", dayFirst: true };
+const AMERICAN_ENGLISH: DateLocale = { locale: enUS, dayMonth: "MMM d", dayFirst: false };
+
+/**
+ * The display locales the kit writes dates in, by BCP 47 tag. date-fns has no `en-MY`:
+ * Malaysian English writes dates the British way. Add a region's tag here to support it;
+ * an unknown tag falls back to its language, then to American English.
+ */
+const DATE_LOCALES: Readonly<Record<string, DateLocale>> = {
+	en: AMERICAN_ENGLISH,
+	"en-US": AMERICAN_ENGLISH,
+	"en-GB": BRITISH_ENGLISH,
+	"en-MY": BRITISH_ENGLISH,
+	de: { locale: de, dayMonth: "d. MMM", dayFirst: true },
+	"de-DE": { locale: de, dayMonth: "d. MMM", dayFirst: true },
+	ms: { locale: ms, dayMonth: "d MMM", dayFirst: true },
+	"ms-MY": { locale: ms, dayMonth: "d MMM", dayFirst: true },
 };
 
-/** Separates the parts of a formatter cache key; never occurs in a locale tag, an IANA zone or a style name. */
-const CACHE_KEY_SEPARATOR = "|";
+function dateLocale(tag: string): DateLocale {
+	const [language = tag] = tag.split("-");
+	return DATE_LOCALES[tag] ?? DATE_LOCALES[language] ?? AMERICAN_ENGLISH;
+}
 
-const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
-const relativeTimeFormatters = new Map<string, Intl.RelativeTimeFormat>();
+/** `epochMs` on the wall clock of `timeZone`. */
+function inZone(epochMs: number, timeZone: string): TZDate {
+	return new TZDate(epochMs, timeZone);
+}
 
-function dateTimeFormatter(style: DateTimeDisplayStyle, region: DisplayRegion): Intl.DateTimeFormat {
-	const key = [style, region.locale, region.timeZone].join(CACHE_KEY_SEPARATOR);
-	const cached = dateTimeFormatters.get(key);
-	if (cached !== undefined) {
-		return cached;
+/** date-fns patterns: `PP` is the locale's medium date ("15 Nov 2026"), `p` its short time. */
+function stylePattern(style: DateTimeDisplayStyle, locale: DateLocale): string {
+	switch (style) {
+		case "date":
+			return "PP";
+		case "dateTime":
+			return "PP, p";
+		case "fullDate":
+			return "PPPP";
+		case "dayMonth":
+			return locale.dayMonth;
+		case "time":
+			return "p";
+		case "preciseTime":
+			return "HH:mm:ss.SSS";
 	}
-	const formatter = new Intl.DateTimeFormat(region.locale, { ...DATE_TIME_STYLE_OPTIONS[style], timeZone: region.timeZone });
-	dateTimeFormatters.set(key, formatter);
-	return formatter;
 }
 
 /** `epochMs` written in `style`, on the wall clock of `region.timeZone` and in `region.locale`. */
 export function formatEpochMs(epochMs: number, style: DateTimeDisplayStyle, region: DisplayRegion): string {
-	return normalizeIntlSpacing(dateTimeFormatter(style, region).format(epochMs));
+	const locale = dateLocale(region.locale);
+	return formatDate(inZone(epochMs, region.timeZone), stylePattern(style, locale), { locale: locale.locale });
 }
 
 /** ISO 8601 (UTC) form of an instant — the machine-readable `dateTime` of a `<time>` element. */
 export function toIsoTimestamp(epochMs: number): string {
-	return new Date(epochMs).toISOString();
+	return formatISO(inZone(epochMs, "UTC")).replace(/\+00:00$/u, "Z");
 }
 
 // ── Ranges and analytics buckets ───────────────────────────────────────────
 // A range or bucket is half-open `[start, end)`: the last instant it covers is
-// `end - 1`, so "1 Sep → 1 Oct" is written "1 – 30 Sep 2026".
+// `end - 1`, so "1 Sep → 1 Oct" is written "1–30 Sep 2026".
 
 /** The last instant of a half-open range is one millisecond before its exclusive end. */
 const EXCLUSIVE_END_OFFSET_MS = 1;
 
-const RANGE_DATE_OPTIONS: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
-
-/** How an analytics bucket is written: compact for an axis tick, complete for a tooltip or a table row. */
-export type BucketLabelStyle = "axis" | "full";
-
-const BUCKET_LABEL_OPTIONS: Readonly<Record<BucketLabelStyle, Readonly<Record<AnalyticsInterval, Intl.DateTimeFormatOptions>>>> = {
-	axis: {
-		/** "5 Oct" */
-		day: { month: "short", day: "numeric" },
-		/** "5 Oct" — the week's Monday. */
-		week: { month: "short", day: "numeric" },
-		/** "Oct 26" */
-		month: { month: "short", year: "2-digit" },
-	},
-	full: {
-		/** "Mon, 5 Oct 2026" */
-		day: { weekday: "short", year: "numeric", month: "short", day: "numeric" },
-		/** "5 – 11 Oct 2026" (a range) */
-		week: RANGE_DATE_OPTIONS,
-		/** "October 2026" */
-		month: { month: "long", year: "numeric" },
-	},
-};
-
-function formatterFor(options: Intl.DateTimeFormatOptions, cacheKey: string, region: DisplayRegion): Intl.DateTimeFormat {
-	const key = [cacheKey, region.locale, region.timeZone].join(CACHE_KEY_SEPARATOR);
-	const cached = dateTimeFormatters.get(key);
-	if (cached !== undefined) {
-		return cached;
+/** The days from `first` to `last` (both included), written as compactly as they allow. */
+function formatDayRange(first: TZDate, last: TZDate, locale: DateLocale): string {
+	const options = { locale: locale.locale };
+	if (isSameDay(first, last)) {
+		return formatDate(last, "PP", options);
 	}
-	const formatter = new Intl.DateTimeFormat(region.locale, { ...options, timeZone: region.timeZone });
-	dateTimeFormatters.set(key, formatter);
-	return formatter;
+	if (locale.dayFirst && isSameMonth(first, last)) {
+		return `${formatDate(first, "d", options)}–${formatDate(last, "PP", options)}`;
+	}
+	const start = isSameYear(first, last) ? formatDate(first, locale.dayMonth, options) : formatDate(first, "PP", options);
+	return `${start} – ${formatDate(last, "PP", options)}`;
 }
 
 /**
  * A half-open range `[fromMs, toMs)` as dates in `region` — "6 Sep – 5 Oct 2026",
- * "1 – 30 Sep 2026", or one date when it covers a single day.
+ * "1–30 Sep 2026", or one date when it covers a single day.
  */
 export function formatEpochMsRange(fromMs: number, toMs: number, region: DisplayRegion): string {
 	const lastMs = Math.max(fromMs, toMs - EXCLUSIVE_END_OFFSET_MS);
-	return normalizeIntlSpacing(formatterFor(RANGE_DATE_OPTIONS, "range", region).formatRange(fromMs, lastMs));
+	return formatDayRange(inZone(fromMs, region.timeZone), inZone(lastMs, region.timeZone), dateLocale(region.locale));
 }
+
+/** How an analytics bucket is written: compact for an axis tick, complete for a tooltip or a table row. */
+export type BucketLabelStyle = "axis" | "full";
 
 /**
  * One analytics bucket `[startMs, endMs)` cut at `interval` in `region.timeZone`:
- * `axis` → "5 Oct" / "Oct 26"; `full` → "Mon, 5 Oct 2026" / "5 – 11 Oct 2026" / "October 2026".
+ * `axis` → "5 Oct" / "Oct 26"; `full` → "Mon, 5 Oct 2026" / "5–11 Oct 2026" / "October 2026".
  * A clipped (partial) week is written with its own clipped dates.
  */
 export function formatBucket(startMs: number, endMs: number, interval: AnalyticsInterval, style: BucketLabelStyle, region: DisplayRegion): string {
-	const formatter = formatterFor(BUCKET_LABEL_OPTIONS[style][interval], `bucket-${style}-${interval}`, region);
-	if (style === "full" && interval === "week") {
-		return normalizeIntlSpacing(formatter.formatRange(startMs, Math.max(startMs, endMs - EXCLUSIVE_END_OFFSET_MS)));
+	const locale = dateLocale(region.locale);
+	const start = inZone(startMs, region.timeZone);
+	const options = { locale: locale.locale };
+	if (style === "axis") {
+		return formatDate(start, interval === "month" ? "MMM yy" : locale.dayMonth, options);
 	}
-	return normalizeIntlSpacing(formatter.format(startMs));
+	switch (interval) {
+		case "day":
+			return formatDate(start, "EEE, PP", options);
+		case "week":
+			return formatDayRange(start, inZone(Math.max(startMs, endMs - EXCLUSIVE_END_OFFSET_MS), region.timeZone), locale);
+		case "month":
+			return formatDate(start, "MMMM yyyy", options);
+	}
 }
 
 // ── Relative time ──────────────────────────────────────────────────────────
 
-const MS_PER_SECOND = 1_000;
-const SECONDS_PER_MINUTE = 60;
-const SECONDS_PER_HOUR = 3_600;
-const SECONDS_PER_DAY = 86_400;
-const SECONDS_PER_WEEK = 604_800;
-/** Average Gregorian month (365.2425 / 12 days), so "N months ago" stays accurate across the year. */
-const SECONDS_PER_MONTH = 2_629_746;
-/** Average Gregorian year (365.2425 days). */
-const SECONDS_PER_YEAR = 31_556_952;
-
-/** Largest-first: the first unit whose size fits the elapsed time is the one spoken. */
-const RELATIVE_TIME_UNITS: readonly (readonly [unit: Intl.RelativeTimeFormatUnit, seconds: number])[] = [
-	["year", SECONDS_PER_YEAR],
-	["month", SECONDS_PER_MONTH],
-	["week", SECONDS_PER_WEEK],
-	["day", SECONDS_PER_DAY],
-	["hour", SECONDS_PER_HOUR],
-	["minute", SECONDS_PER_MINUTE],
-];
-
-function relativeTimeFormatter(locale: string): Intl.RelativeTimeFormat {
-	const cached = relativeTimeFormatters.get(locale);
-	if (cached !== undefined) {
-		return cached;
-	}
-	// `numeric: "auto"` says "yesterday" / "now" where the locale has a word for it.
-	const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-	relativeTimeFormatters.set(locale, formatter);
-	return formatter;
-}
-
 /**
- * `epochMs` relative to `nowMs` in `locale` — "5 minutes ago", "in 2 days",
- * "now". Pure: the caller supplies the current time, so the result is
+ * `epochMs` relative to `nowMs` in `locale` — "5 minutes ago", "in 2 hours",
+ * "1 year ago". Pure: the caller supplies the current time, so the result is
  * testable and never computed during a server render (see `RelativeTime`).
  * Truncates toward zero, so 119 seconds ago reads "1 minute ago", never "2".
  */
 export function formatRelativeTime(epochMs: number, nowMs: number, locale: string): string {
-	const elapsedSeconds = (epochMs - nowMs) / MS_PER_SECOND;
-	const magnitude = Math.abs(elapsedSeconds);
-	const formatter = relativeTimeFormatter(locale);
-	for (const [unit, unitSeconds] of RELATIVE_TIME_UNITS) {
-		if (magnitude >= unitSeconds) {
-			return normalizeIntlSpacing(formatter.format(Math.trunc(elapsedSeconds / unitSeconds), unit));
-		}
-	}
-	return normalizeIntlSpacing(formatter.format(Math.trunc(elapsedSeconds), "second"));
+	return formatDistanceStrict(epochMs, nowMs, { addSuffix: true, roundingMethod: "trunc", locale: dateLocale(locale).locale });
 }

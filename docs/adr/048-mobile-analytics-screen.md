@@ -3,8 +3,11 @@ title: "ADR 048: Mobile Analytics Screen (UI Only, Sample Data in the API's Shap
 tags: ["adr", "mobile", "analytics", "charts", "design"]
 description: "The mobile app gets an Analytics tab — the customer's own activity, the web's My Activity page on a phone, plus mobile extras — drawn with generic, token-coloured chart components and fed, for now, by deterministic sample data typed by the API's own dashboard contract."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791676800000
 lastUpdated: 1791763200000
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
+editedAt: 1792438386000
+coverImage: "/images/covers/adr/048-mobile-analytics-screen.webp"
 order: 48
 ---
 

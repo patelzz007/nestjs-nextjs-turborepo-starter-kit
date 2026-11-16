@@ -129,6 +129,7 @@ const dndRowHandleVariants = cva("size-7 opacity-70 hover:bg-transparent hover:o
 });
 
 export interface DataGridTableDndRowHandleProps {
+	/** Classes for the drag grip. */
 	readonly className?: string;
 	/**
 	 * Renders the grip inert instead of withdrawing it (e.g. while the view is
@@ -417,12 +418,17 @@ export interface DataGridTableDndRowsProps {
 	readonly renderRowDecoration?: DataGridTableDndRowDecoration;
 	/** Draws a bar on the seam the carried row would land on. Defaults to `true`. */
 	readonly dropIndicator?: boolean;
+	/** Forwarded from the drag context, after the internal drag state updates. */
 	readonly onDragStart?: (event: DragStartEvent) => void;
+	/** Forwarded from the drag context. */
 	readonly onDragMove?: (event: DragMoveEvent) => void;
+	/** Forwarded from the drag context. */
 	readonly onDragOver?: (event: DragOverEvent) => void;
+	/** Forwarded from the drag context, after the internal drag state resets. */
 	readonly onDragCancel?: (event: DragCancelEvent) => void;
 	/** Forwarded to dnd-kit's `DndContext`: screen-reader instructions and live-region announcements. */
 	readonly accessibility?: DndContextProps["accessibility"];
+	/** Classes for the table. */
 	readonly className?: string;
 }
 

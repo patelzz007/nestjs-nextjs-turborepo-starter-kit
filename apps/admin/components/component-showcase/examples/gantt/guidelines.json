@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Pick the scale for the work",
+		"do": {
+			"text": "Open on the scale the work is measured in (`defaultScale`: a sprint in weeks), so every bar can be read and clicked.",
+			"file": "gantt-do-1",
+			"export": "GanttDo1Example"
+		},
+		"dont": {
+			"text": "Don't squeeze short work into a year: the bars become slivers no pointer can select.",
+			"file": "gantt-dont-1",
+			"export": "GanttDont1Example"
+		}
+	},
+	{
+		"title": "Group rows",
+		"do": {
+			"text": "Put rows under a few headings: groups roll their work up and fold away.",
+			"file": "gantt-do-2",
+			"export": "GanttDo2Example"
+		},
+		"dont": {
+			"text": "Don't list every task flat: the reader loses which row belongs to what.",
+			"file": "gantt-dont-2",
+			"export": "GanttDont2Example"
+		}
+	}
+]

@@ -22,7 +22,8 @@ import Animated from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
 import { cn } from "../lib/cn";
-import { isInactiveState, resolveControlState } from "../lib/control-state";
+import { FieldSurfaceProvider } from "../lib/field-surface";
+import { resolveControlState } from "../lib/control-state";
 import { useSheetMotion } from "../lib/use-sheet-motion";
 import { Icon } from "./icon";
 import { KeyboardAvoidingView } from "./keyboard-avoiding-view";
@@ -101,17 +102,18 @@ export const BottomSheet = React.memo(
 								onPress={onClose}
 								hitSlop={CLOSE_HIT_SLOP}
 								className="size-11 items-center justify-center rounded-full active:opacity-60">
-								<Icon icon={XIcon} size="md" colorClassName="accent-muted-foreground" />
+								<Icon icon={XIcon} size="md" colorClassName="accent-icon" />
 							</Pressable>
 						</View>
 						{/* Shrinks to the room the sheet has left above the keyboard, then scrolls. */}
 						{scrollsItself ? (
 							<View className="shrink gap-3 px-4 pb-8" testID={bodyTestID}>
-								{children}
+								<FieldSurfaceProvider surface="popover">{children}</FieldSurfaceProvider>
 							</View>
 						) : (
 							<ScrollView keyboardShouldPersistTaps="handled" className="shrink grow-0" contentContainerClassName="px-4 pb-8" testID={bodyTestID}>
-								{children}
+								{/* Fields in a sheet take its popover fill. */}
+								<FieldSurfaceProvider surface="popover">{children}</FieldSurfaceProvider>
 							</ScrollView>
 						)}
 					</StyledAnimatedView>
@@ -126,11 +128,13 @@ export const sheetOptionRowVariants = cva("min-h-12 flex-row items-center gap-3 
 		variant: { default: "" },
 		size: { md: "" },
 		state: { default: "", loading: "opacity-60", disabled: "opacity-60", error: "" },
+		/** The row a search's Return key would pick. */
+		highlighted: { true: "bg-surface-selected -mx-2 rounded-lg px-2", false: "" },
 	},
-	defaultVariants: { variant: "default", size: "md", state: "default" },
+	defaultVariants: { variant: "default", size: "md", state: "default", highlighted: false },
 });
 
-export const sheetOptionRowLabelVariants = cva("text-base text-foreground", {
+export const sheetOptionRowLabelVariants = cva("text-body-lg text-foreground", {
 	variants: {
 		selected: { true: "font-sans-semibold", false: "font-sans" },
 	},
@@ -156,25 +160,60 @@ export interface SheetOptionRowProps<TValue extends string> {
 	/** A second line under the label. */
 	readonly description?: string | undefined;
 	readonly selected: boolean;
-	readonly disabled?: boolean;
+	readonly disabled?: boolean | undefined;
 	/** The row was chosen; called with its own `value`. */
 	readonly onSelect: OptionSelectHandler<TValue>;
+	/** Before the label: an avatar, a flag, a status dot, a glyph. Decorative: the label names the row. */
+	readonly leading?: React.ReactNode | undefined;
+	/** After the label: a badge, a count, a UTC offset. Decorative. */
+	readonly trailing?: React.ReactNode | undefined;
+	/** Where the tick of a chosen row sits. Default `end`. */
+	readonly indicatorPosition?: SheetOptionIndicatorPosition | undefined;
+	/** One of many choices (a checkbox row) rather than the one choice (a radio row). */
+	readonly multiple?: boolean | undefined;
+	/** The row a search's Return key would pick: tinted. */
+	readonly highlighted?: boolean | undefined;
+	/** Extra classes for the label (a font previewed in its own face), merged last. */
+	readonly labelClassName?: string | undefined;
 	/** Extra classes for the row, merged last. */
 	readonly className?: string | undefined;
 	readonly testID?: string | undefined;
 }
 
+export type SheetOptionIndicatorPosition = "start" | "end";
+
 /** `SheetOptionRow`'s call signature: generic over the value, which `forwardRef` / `memo` alone would erase. */
 export type SheetOptionRowComponent = <TValue extends string>(props: SheetOptionRowProps<TValue> & React.RefAttributes<ViewInstance>) => React.ReactNode;
+
+/** A chosen row's tick; at the start of the row it keeps its room while hidden, so labels stay lined up. */
+function SheetOptionTick({ shown }: { readonly shown: boolean }): React.JSX.Element {
+	return <View className="size-5 items-center justify-center">{shown ? <Icon icon={CheckIcon} size="md" colorClassName="accent-primary" /> : null}</View>;
+}
 
 /** One choice in a sheet: a radio row, its label bold and ticked while chosen. */
 export const SheetOptionRow: SheetOptionRowComponent = React.memo(
 	React.forwardRef<ViewInstance, SheetOptionRowProps<string>>(function SheetOptionRow(
-		{ value, label, description, selected, disabled = false, onSelect, className, testID },
+		{
+			value,
+			label,
+			description,
+			selected,
+			disabled = false,
+			onSelect,
+			leading,
+			trailing,
+			indicatorPosition = "end",
+			multiple = false,
+			highlighted = false,
+			labelClassName,
+			className,
+			testID,
+		},
 		ref,
 	): React.JSX.Element {
 		const state = resolveControlState({ disabled });
-		const isInactive = isInactiveState(state);
+		// Compared, not called, so the compiler can memoise the accessibility state.
+		const isInactive = state === "disabled";
 		const accessibilityState = React.useMemo(() => ({ checked: selected, disabled: isInactive }), [isInactive, selected]);
 		const select = React.useCallback((): void => {
 			onSelect(value);
@@ -182,19 +221,22 @@ export const SheetOptionRow: SheetOptionRowComponent = React.memo(
 		return (
 			<Pressable
 				ref={ref}
-				accessibilityRole="radio"
+				accessibilityRole={multiple ? "checkbox" : "radio"}
 				accessibilityLabel={label}
 				accessibilityHint={description}
 				accessibilityState={accessibilityState}
 				disabled={isInactive}
 				onPress={select}
 				testID={testID}
-				className={cn(sheetOptionRowVariants({ state }), className)}>
+				className={cn(sheetOptionRowVariants({ state, highlighted }), className)}>
+				{indicatorPosition === "start" ? <SheetOptionTick shown={selected} /> : null}
+				{leading === undefined ? null : <View importantForAccessibility="no-hide-descendants">{leading}</View>}
 				<View className="flex-1 gap-0.5">
-					<Text className={sheetOptionRowLabelVariants({ selected })}>{label}</Text>
-					{description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{description}</Text>}
+					<Text className={cn(sheetOptionRowLabelVariants({ selected }), labelClassName)}>{label}</Text>
+					{description === undefined ? null : <Text className="text-body font-sans text-muted-foreground">{description}</Text>}
 				</View>
-				{selected ? <Icon icon={CheckIcon} size="md" colorClassName="accent-primary" /> : null}
+				{trailing === undefined ? null : <View importantForAccessibility="no-hide-descendants">{trailing}</View>}
+				{indicatorPosition === "end" && selected ? <SheetOptionTick shown /> : null}
 			</Pressable>
 		);
 	}),

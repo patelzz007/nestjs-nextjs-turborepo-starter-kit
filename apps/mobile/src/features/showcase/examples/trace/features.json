@@ -1,0 +1,156 @@
+[
+	{
+		"id": "c-trace-5",
+		"label": "Change Approval",
+		"description": "Terraform change approval. Best for a human approval gate where planned resource rows switch from pending to running to applied in place after Apply.",
+		"file": "trace-5",
+		"export": "Trace5Example"
+	},
+	{
+		"id": "c-trace-6",
+		"label": "Cited Sources",
+		"description": "Answer with citations. Best for citation pills inside the answer wired to a controlled sources row, marking the cited link once its panel opens.",
+		"file": "trace-6",
+		"export": "Trace6Example"
+	},
+	{
+		"id": "c-trace-7",
+		"label": "Support Copilot",
+		"description": "Support copilot draft. Best for a drafted support reply in its own row after 3 order and policy lookups, with Insert and Regenerate below.",
+		"file": "trace-7",
+		"export": "Trace7Example"
+	},
+	{
+		"id": "c-trace-10",
+		"label": "Request Spans",
+		"description": "Distributed trace spans. Best for spans nested under their parent, each opening to its OpenTelemetry attributes, with the slowest span marked by its share.",
+		"file": "trace-10",
+		"export": "Trace10Example"
+	},
+	{
+		"id": "c-trace-13",
+		"label": "Data Pipeline",
+		"description": "Data pipeline run. Best for built models folded into one row, a failing data test open on its duplicate keys, and a skipped downstream model.",
+		"file": "trace-13",
+		"export": "Trace13Example"
+	},
+	{
+		"id": "c-trace-15",
+		"label": "CSV Import",
+		"description": "CSV import. Best for a spreadsheet upload whose last step counts up live while rejected rows sit in a Table with a share action.",
+		"file": "trace-15",
+		"export": "Trace15Example"
+	},
+	{
+		"id": "c-trace-16",
+		"label": "Security Audit",
+		"description": "Dependency audit. Best for a list of 3 advisories with severity badges, each opening to its dependency chain and the one action that fixes it.",
+		"file": "trace-16",
+		"export": "Trace16Example"
+	},
+	{
+		"id": "c-trace-18",
+		"label": "Eval Results",
+		"description": "Model eval results. Best for scored cases with a failures only switch, each failure opening to a compact expected, got and judge list.",
+		"file": "trace-18",
+		"export": "Trace18Example"
+	},
+	{
+		"id": "c-trace-19",
+		"label": "Access Decision",
+		"description": "Access decision. Best for a permission decision as the parent row of its rules, recomputed from 2 Selects, with rules after the decider not reached.",
+		"file": "trace-19",
+		"export": "Trace19Example"
+	},
+	{
+		"id": "c-trace-20",
+		"label": "Identity Review",
+		"description": "Identity verification. Best for an applicant review with automated document and screening checks, one rejection and a request for a new document.",
+		"file": "trace-20",
+		"export": "Trace20Example"
+	},
+	{
+		"id": "c-trace-21",
+		"label": "Domain Setup",
+		"description": "Domain DNS setup. Best for a setup checklist with copyable DNS records, a lookup per record, then a pending go live step.",
+		"file": "trace-21",
+		"export": "Trace21Example"
+	},
+	{
+		"id": "c-trace-22",
+		"label": "Transcode",
+		"description": "Media transcode. Best for a media pipeline with 3 renditions encoding in parallel under one row, followed by thumbnail and publish steps.",
+		"file": "trace-22",
+		"export": "Trace22Example"
+	},
+	{
+		"id": "c-trace-1",
+		"label": "Agent Steps",
+		"description": "Agent steps. Best for a plain search line, a diff and test output that expand, a lint failure and a running fix, in one bare column.",
+		"file": "trace-1",
+		"export": "Trace1Example"
+	},
+	{
+		"id": "c-trace-2",
+		"label": "Streaming Run",
+		"description": "Streaming agent run. Best for a run that streams its reasoning and resolves tool steps on a timer, with a Stop button and live rows that open themselves.",
+		"file": "trace-2",
+		"export": "Trace2Example"
+	},
+	{
+		"id": "c-trace-3",
+		"label": "Chat Turn",
+		"description": "Chat turn with sources. Best for a chat transcript turn whose 2 SQL queries fold into one summary row above the answer, with cited dashboards below.",
+		"file": "trace-3",
+		"export": "Trace3Example"
+	},
+	{
+		"id": "c-trace-4",
+		"label": "Subagents",
+		"description": "Parallel subagents. Best for a parent row over 3 subagents whose status is computed from its children, plus a retry for the failed one.",
+		"file": "trace-4",
+		"export": "Trace4Example"
+	},
+	{
+		"id": "c-trace-8",
+		"label": "Install Summary",
+		"description": "CLI install summary. Best for a finished install summary with registry items, packages, created files as links, one kept file and a CSS diff.",
+		"file": "trace-8",
+		"export": "Trace8Example"
+	},
+	{
+		"id": "c-trace-9",
+		"label": "CI Pipeline",
+		"description": "CI pipeline run. Best for a workflow run of 4 jobs where the failed test job opens to its log and a re-run replays test, build and deploy.",
+		"file": "trace-9",
+		"export": "Trace9Example"
+	},
+	{
+		"id": "c-trace-11",
+		"label": "Error Breadcrumbs",
+		"description": "Error breadcrumbs. Best for an exception's timestamped user and network events, a response body in a Dialog and folded framework stack lines.",
+		"file": "trace-11",
+		"export": "Trace11Example"
+	},
+	{
+		"id": "c-trace-12",
+		"label": "Query Plan",
+		"description": "SQL query plan. Best for a recursive tree of plan nodes, each opening to its numbers and children, with the slowest node flagged by its share.",
+		"file": "trace-12",
+		"export": "Trace12Example"
+	},
+	{
+		"id": "c-trace-14",
+		"label": "Webhook Retries",
+		"description": "Webhook delivery attempts. Best for a delivery log of failed and successful attempts, each opening to its response or payload, plus a Resend action.",
+		"file": "trace-14",
+		"export": "Trace14Example"
+	},
+	{
+		"id": "c-trace-17",
+		"label": "Review Findings",
+		"description": "AI review findings. Best for flagged lines that each open in a bottom Sheet with a suggested diff, then read as applied or dismissed in place.",
+		"file": "trace-17",
+		"export": "Trace17Example"
+	}
+]

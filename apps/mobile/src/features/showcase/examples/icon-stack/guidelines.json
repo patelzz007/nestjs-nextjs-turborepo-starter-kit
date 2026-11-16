@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Pair it with words",
+		"do": {
+			"text": "Put it above a title and a message that say what is going on.",
+			"file": "icon-stack-do-1",
+			"export": "IconStackDo1Example"
+		},
+		"dont": {
+			"text": "Don't use the stack on its own: it is decorative, so screen readers hear nothing.",
+			"file": "icon-stack-dont-1",
+			"export": "IconStackDont1Example"
+		}
+	},
+	{
+		"title": "Print a glyph, not text",
+		"do": {
+			"text": "Print one small glyph (or a badge) on the front layer.",
+			"file": "icon-stack-do-2",
+			"export": "IconStackDo2Example"
+		},
+		"dont": {
+			"text": "Don't print a sentence on it: skewed with the face, it cannot be read.",
+			"file": "icon-stack-dont-2",
+			"export": "IconStackDont2Example"
+		}
+	}
+]

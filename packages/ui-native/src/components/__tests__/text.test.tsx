@@ -34,7 +34,7 @@ describe("Text roles", () => {
 			</>,
 		);
 
-		expect(screen.getByText("Body")).toHaveProp("className", expect.stringContaining("font-sans text-base leading-6 text-foreground"));
+		expect(String(screen.getByText("Body").props.className).split(" ")).toEqual(expect.arrayContaining(["font-sans", "text-body-lg", "text-foreground"]));
 		expect(screen.getByText("Muted")).toHaveProp("className", expect.stringContaining("text-muted-foreground"));
 		expect(screen.getByText("Email")).toHaveProp("className", expect.stringContaining("font-sans-medium"));
 		expect(screen.getByText("Required")).toHaveProp("className", expect.stringContaining("text-destructive-foreground"));
@@ -48,13 +48,13 @@ describe("Text roles", () => {
 	});
 
 	it("merges the caller's className last, so its tokens win", async () => {
-		await render(<MutedText className="text-xs text-foreground">Caption</MutedText>);
+		await render(<MutedText className="text-caption text-foreground">Caption</MutedText>);
 
 		const className = String(screen.getByText("Caption").props.className);
-		expect(className).toContain("text-xs");
+		expect(className).toContain("text-caption");
 		expect(className).toContain("text-foreground");
 		expect(className).not.toContain("text-muted-foreground");
-		expect(className).not.toContain("text-sm");
+		expect(className).not.toContain("text-body");
 	});
 
 	it("passes Text props through and forwards its ref", async () => {

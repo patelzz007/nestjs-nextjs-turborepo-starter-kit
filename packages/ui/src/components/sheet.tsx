@@ -13,14 +13,17 @@ const SHEET_CORNER_CLOSE_BUTTON = <Button variant="ghost" className="absolute in
 // Root/Portal render no DOM element of their own (base-ui providers), so they
 // intentionally stay plain functions — the ref lives on the parts that render DOM.
 
+/** A panel that slides in from an edge of the screen: a modal dialog on Base UI's dialog. Controlled with `open` / `onOpenChange`. */
 function Sheet({ ...props }: SheetPrimitive.Root.Props): React.JSX.Element {
 	return <SheetPrimitive.Root data-slot="sheet" {...props} />;
 }
 
+/** The button that opens the sheet. Pass your `Button` through `render`. */
 const SheetTrigger = React.forwardRef<HTMLButtonElement, SheetPrimitive.Trigger.Props>(function SheetTrigger({ ...props }, ref): React.JSX.Element {
 	return <SheetPrimitive.Trigger ref={ref} data-slot="sheet-trigger" {...props} />;
 });
 
+/** A button that closes the sheet. Pass your `Button` through `render`. */
 const SheetClose = React.forwardRef<HTMLButtonElement, SheetPrimitive.Close.Props>(function SheetClose({ ...props }, ref): React.JSX.Element {
 	return <SheetPrimitive.Close ref={ref} data-slot="sheet-close" {...props} />;
 });
@@ -43,10 +46,13 @@ const SheetOverlay = React.forwardRef<HTMLDivElement, SheetPrimitive.Backdrop.Pr
 	);
 });
 
+/** The panel: a portal, the backdrop and the sliding popup, with a built-in close button. */
 const SheetContent = React.forwardRef<
 	HTMLDivElement,
 	SheetPrimitive.Popup.Props & {
+		/** The edge the sheet slides in from: `top`, `right`, `bottom` or `left`. */
 		side?: "top" | "right" | "bottom" | "left";
+		/** Draws the corner close button; `false` when the footer closes the sheet. */
 		showCloseButton?: boolean;
 		/** Accessible name of the corner close button — overrides the provider's `sheet.close` for this usage. */
 		closeLabel?: string;
@@ -77,18 +83,22 @@ const SheetContent = React.forwardRef<
 	);
 });
 
+/** Groups the title and the description at the top. */
 const SheetHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function SheetHeader({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="sheet-header" className={cn("flex flex-col gap-1.5 p-4", className)} {...props} />;
 });
 
+/** The row of actions at the bottom. */
 const SheetFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function SheetFooter({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="sheet-footer" className={cn("mt-auto flex flex-col gap-2 p-4", className)} {...props} />;
 });
 
+/** Names the sheet (`aria-labelledby`). */
 const SheetTitle = React.forwardRef<HTMLHeadingElement, SheetPrimitive.Title.Props>(function SheetTitle({ className, ...props }, ref): React.JSX.Element {
 	return <SheetPrimitive.Title ref={ref} data-slot="sheet-title" className={cn("font-heading font-medium text-foreground", className)} {...props} />;
 });
 
+/** Describes the sheet to assistive technology. */
 const SheetDescription = React.forwardRef<HTMLParagraphElement, SheetPrimitive.Description.Props>(function SheetDescription({ className, ...props }, ref): React.JSX.Element {
 	return <SheetPrimitive.Description ref={ref} data-slot="sheet-description" className={cn("text-sm text-muted-foreground", className)} {...props} />;
 });

@@ -33,7 +33,7 @@ const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, inset
 const HEADER_HEIGHT = 123;
 /** Where the header's pinned row ends on this frame: a scrolling screen starts there. */
 const PINNED_ROW_BOTTOM = pageHeaderControlsBottom(METRICS.insets.top);
-/** The rest of the header, its subtitle line: padding inside the scroll view, so the content starts below the header. */
+/** The rest of the header, its subtitle line: a spacer inside the scroll view, so the content starts below the header. */
 const SUBTITLE_LINE = HEADER_HEIGHT - PINNED_ROW_BOTTOM;
 
 /**
@@ -117,8 +117,36 @@ describe("Screen", () => {
 
 		expect(screen.queryByRole("header")).toBeNull();
 		expect(screen.getByText("Your account at a glance")).toBeOnTheScreen();
-		expect(screen.getByTestId("screen-content")).toHaveProp("contentContainerStyle", { paddingTop: SUBTITLE_LINE });
+		expect(screen.getByTestId("screen-header-spacer")).toHaveStyle({ height: SUBTITLE_LINE });
 		expect(screen.getByTestId("screen-content")).toHaveProp("scrollIndicatorInsets", { top: SUBTITLE_LINE, bottom: 0 });
+	});
+
+	it("pins a sticky header only once the page header has collapsed: after the spacer under it, never over it", async () => {
+		await renderScreen(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<PageHeaderClearanceProvider value={HEADER_HEIGHT}>
+					<Screen stickyHeader={<BodyText>Search</BodyText>} testID="screen">
+						<BodyText>Content</BodyText>
+					</Screen>
+				</PageHeaderClearanceProvider>
+			</SafeAreaProvider>,
+		);
+
+		expect(screen.getByTestId("screen-content")).toHaveProp("stickyHeaderIndices", [1]);
+		expect(screen.getByTestId("screen-sticky-header")).toBeOnTheScreen();
+	});
+
+	it("pins a sticky header as its first child where no page header is laid over it", async () => {
+		await renderScreen(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<Screen stickyHeader={<BodyText>Search</BodyText>} testID="screen">
+					<BodyText>Content</BodyText>
+				</Screen>
+			</SafeAreaProvider>,
+		);
+
+		expect(screen.getByTestId("screen-content")).toHaveProp("stickyHeaderIndices", [0]);
+		expect(screen.queryByTestId("screen-header-spacer")).toBeNull();
 	});
 
 	it("under the app shell's header, starts its scroll view below the header's pinned row, so the scrollbar runs along the content", async () => {

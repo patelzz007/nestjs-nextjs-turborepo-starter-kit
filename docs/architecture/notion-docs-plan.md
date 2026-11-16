@@ -3,15 +3,21 @@ title: "Notion docs plan"
 description: "The agreed plan for writing every doc in Notion, syncing it into the repo through reviewed pull requests, and serving it from a new TanStack Start docs site on the platform's Droplet."
 tags: ["architecture", "docs", "notion", "tanstack", "digitalocean", "plan"]
 author: "Platform Team"
+category: "Architecture"
+date: 1788220800000
 lastUpdated: 1793618966320
-coverImage: "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1794413628187
+coverImage: "/images/covers/architecture/notion-docs-plan.webp"
 ---
 
 # Notion docs plan
 
-**Status:** approved plan; **phase 1 built 2026-11-05** (the TanStack Start site, not yet committed); phase 2 (Notion) not started. Agreed 2026-11-02; revision 2 merges an external review. When it
-ships it is recorded as ADR 075 (the next free number). After the import in phase 2, this page moves to
-Notion like every other doc.
+**Status:** approved plan; **phase 1 built 2026-11-05; the code of phases 2–4 built 2026-11-07**, not yet connected to a
+live workspace, GitHub App or Droplet (`docs/technical/operations/docs-publishing.md` is the setup, and phase 5's pilot
+waits on it). Agreed 2026-11-02; revision 2 merges an external review. Recorded as **ADR 084**, which also records where
+the build differs from this plan: the code extends to Obsidian and Inkdrop, so names are source-neutral (`docs/sync/`,
+`docs-sync/*`, not `docs/generated-notion/`, `notion-sync/*`), and a release is 681 MB, so 5 are kept, not 20. After the
+import in phase 2, this page moves to Notion like every other doc.
 
 ## 1. The decision in brief
 
@@ -78,12 +84,16 @@ option:
 | Property | Docs | Blog | Rule |
 |---|---|---|---|
 | Title | Required | Required | |
-| Slug | Required, unique | Required, unique | The URL; error if missing or duplicated |
+| Slug | Required, unique | Required, unique | The URL; error if missing or duplicated. In Docs Published, only the row's own part of it: the folders above it give the rest (ADR 084) |
+| Kind, Parent | Required in Docs Published | — | The folder tree: a row is a page or a folder, and sits in a folder (ADR 084, 2026-11-12) |
 | Section, Order | Required | — | Generate the sidebar (`docs/meta.json` becomes generated) |
 | Description | Required | Required | Search snippets and sharing text |
 | Author | Optional | Required | |
-| Tags / Category | Optional | Category required | |
-| Last updated / Date | From Notion's edit time | Explicit publish date | |
+| Tags | Optional | — | |
+| Category | Required | Required | Changed 2026-11-12: required on guides too (ADR 084) |
+| Date | Required | Required | When the page was first published |
+| Last updated | Required | Required | When it last changed in a way a reader should know about; set by the writer. Changed 2026-11-12: was Notion's edit time |
+| Edited | From Notion's edit time | From Notion's edit time | Written to the page as `editedAt`; shown on the site |
 | Status | Required | Required | |
 | Page icon | Optional | Optional | Shown in the sidebar and page header |
 | Page cover | **Optional** | **Required** | See "Covers and sharing images" in §6 |

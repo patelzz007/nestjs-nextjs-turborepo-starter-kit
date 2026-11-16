@@ -10,7 +10,10 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import ChevronDownIcon from "lucide-react-native/icons/chevron-down";
+import ChevronRightIcon from "lucide-react-native/icons/chevron-right";
 import ChevronUpIcon from "lucide-react-native/icons/chevron-up";
+import MinusIcon from "lucide-react-native/icons/minus";
+import PlusIcon from "lucide-react-native/icons/plus";
 import * as React from "react";
 import { Pressable, Text, View, type ViewInstance } from "react-native";
 import Animated, { FadeIn, FadeOut, ReduceMotion } from "react-native-reanimated";
@@ -30,8 +33,8 @@ const CONTENT_EXITING = FadeOut.duration(CONTROL_SWAP_MS).reduceMotion(ReduceMot
 
 export const collapsibleVariants = cva("", {
 	variants: {
-		/** `card`: the section sits in a bordered card; `plain`: it adds no surface of its own. */
-		variant: { plain: "", card: "rounded-lg border border-border bg-card" },
+		/** `card`: the section sits in a bordered card; `plain`: it adds no surface of its own; `inset`: no surface, padded like a card (inside a framed list). */
+		variant: { plain: "", card: "rounded-lg border border-border bg-card", inset: "" },
 		size: { md: "", sm: "" },
 		state: { default: "", loading: "", disabled: "opacity-60", error: "border-destructive" },
 	},
@@ -40,7 +43,7 @@ export const collapsibleVariants = cva("", {
 
 export const collapsibleTriggerVariants = cva("flex-row items-center gap-3 active:opacity-70", {
 	variants: {
-		variant: { plain: "", card: "px-4" },
+		variant: { plain: "", card: "px-4", inset: "px-4" },
 		size: { md: "min-h-11 py-3", sm: "min-h-11 py-2" },
 		state: { default: "", loading: "", disabled: "", error: "" },
 	},
@@ -49,14 +52,14 @@ export const collapsibleTriggerVariants = cva("flex-row items-center gap-3 activ
 
 export const collapsibleTriggerLabelVariants = cva("font-sans-medium flex-1 text-foreground", {
 	variants: {
-		size: { md: "text-base", sm: "text-sm" },
+		size: { md: "text-body-lg", sm: "text-body" },
 	},
 	defaultVariants: { size: "md" },
 });
 
 export const collapsibleContentVariants = cva("", {
 	variants: {
-		variant: { plain: "pb-3", card: "px-4 pb-4" },
+		variant: { plain: "pb-3", card: "px-4 pb-4", inset: "px-4 pb-4" },
 	},
 	defaultVariants: { variant: "plain" },
 });
@@ -125,11 +128,24 @@ export const Collapsible = React.memo(
 	}),
 );
 
+/** How the trigger shows it opens: a chevron at the end, a plus that turns into a minus, a chevron at the start that turns to point down, or nothing. */
+export type CollapsibleIndicator = "chevron" | "plus" | "chevron-start" | "none";
+
 export interface CollapsibleTriggerProps {
 	/** The trigger's text and accessible name ("Show details"). */
 	readonly label: string;
+	/** A second line under the label. */
+	readonly description?: string | undefined;
 	/** A glyph before the label; decorative. */
 	readonly icon?: LucideIcon | undefined;
+	/** Before the label, in place of `icon`: an icon tile, an avatar. Decorative. */
+	readonly leading?: React.ReactNode | undefined;
+	/** After the label: a badge, a count. Decorative. */
+	readonly trailing?: React.ReactNode | undefined;
+	/** How it shows it opens. Default `chevron`. */
+	readonly indicator?: CollapsibleIndicator | undefined;
+	/** Extra classes while open (a tinted row), merged last. */
+	readonly openClassName?: string | undefined;
 	/** What opening reveals, for screen readers. */
 	readonly accessibilityHint?: string | undefined;
 	/** Extra classes for the trigger, merged last. */
@@ -138,7 +154,10 @@ export interface CollapsibleTriggerProps {
 }
 
 export const CollapsibleTrigger = React.memo(
-	React.forwardRef<ViewInstance, CollapsibleTriggerProps>(function CollapsibleTrigger({ label, icon, accessibilityHint, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, CollapsibleTriggerProps>(function CollapsibleTrigger(
+		{ label, description, icon, leading, trailing, indicator = "chevron", openClassName, accessibilityHint, className, testID },
+		ref,
+	): React.JSX.Element {
 		const { open, toggle, disabled, variant, size } = useCollapsibleContext("CollapsibleTrigger");
 		const accessibilityState = React.useMemo(() => ({ expanded: open, disabled }), [disabled, open]);
 		return (
@@ -151,14 +170,30 @@ export const CollapsibleTrigger = React.memo(
 				disabled={disabled}
 				onPress={toggle}
 				testID={testID}
-				className={cn(collapsibleTriggerVariants({ variant, size }), className)}>
-				{icon === undefined ? null : <Icon icon={icon} size="md" colorClassName="accent-muted-foreground" />}
-				<Text className={collapsibleTriggerLabelVariants({ size })}>{label}</Text>
-				<Icon icon={open ? ChevronUpIcon : ChevronDownIcon} size="md" colorClassName="accent-muted-foreground" />
+				className={cn(collapsibleTriggerVariants({ variant, size }), className, open ? openClassName : undefined)}>
+				{indicator === "chevron-start" ? <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} size="sm" colorClassName="accent-icon" /> : null}
+				{leading ?? (icon === undefined ? null : <Icon icon={icon} size="md" colorClassName="accent-icon" />)}
+				<View className="flex-1 gap-0.5">
+					<Text className={collapsibleTriggerLabelVariants({ size })}>{label}</Text>
+					{description === undefined ? null : <Text className="text-body font-sans text-muted-foreground">{description}</Text>}
+				</View>
+				{trailing ?? null}
+				<CollapsibleIndicatorGlyph indicator={indicator} open={open} />
 			</Pressable>
 		);
 	}),
 );
+
+/** The trigger's end glyph for its indicator. */
+function CollapsibleIndicatorGlyph({ indicator, open }: { readonly indicator: CollapsibleIndicator; readonly open: boolean }): React.JSX.Element | null {
+	if (indicator === "chevron") {
+		return <Icon icon={open ? ChevronUpIcon : ChevronDownIcon} size="md" colorClassName="accent-icon" />;
+	}
+	if (indicator === "plus") {
+		return <Icon icon={open ? MinusIcon : PlusIcon} size="md" colorClassName="accent-icon" />;
+	}
+	return null;
+}
 
 export interface CollapsibleContentProps {
 	readonly children: React.ReactNode;

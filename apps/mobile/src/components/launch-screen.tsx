@@ -131,8 +131,8 @@ export function LaunchScreen({ title, tagline, testID }: LaunchScreenProps): Rea
 			{/* Below the centre: the mark lifts above it, the words rise into it. */}
 			<View className="absolute inset-x-8 top-1/2 mt-6 items-center">
 				<StyledAnimatedView className="items-center gap-2" style={wordsStyle}>
-					<Text className="font-sans-bold text-3xl tracking-tight text-splash-foreground">{title}</Text>
-					<Text className="text-center font-sans text-base text-splash-foreground/70">{tagline}</Text>
+					<Text className="font-sans-bold text-h1 tracking-tight text-splash-foreground">{title}</Text>
+					<Text className="text-body-lg text-center font-sans text-splash-foreground/70">{tagline}</Text>
 				</StyledAnimatedView>
 			</View>
 		</StyledAnimatedView>

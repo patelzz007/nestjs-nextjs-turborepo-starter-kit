@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-cover-image-1",
+		"label": "Overview",
+		"description": "A cover photo, and the same frame with no image falling back to a placeholder. Best for card and screen headers whose image may be missing.",
+		"file": "cover-image-1",
+		"export": "CoverImage1Example"
+	}
+]

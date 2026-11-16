@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep a brand's colour steady",
+		"do": {
+			"text": "Let the tint come from the name, so a shop keeps its colour everywhere.",
+			"file": "entity-avatar-do-1",
+			"export": "EntityAvatarDo1Example"
+		},
+		"dont": {
+			"text": "Don't pick tints at random: the same shop changes colour between pages.",
+			"file": "entity-avatar-dont-1",
+			"export": "EntityAvatarDont1Example"
+		}
+	},
+	{
+		"title": "Square marks for organisations",
+		"do": {
+			"text": "Use the rounded square for shops, tenants and teams, and circles for people.",
+			"file": "entity-avatar-do-2",
+			"export": "EntityAvatarDo2Example"
+		},
+		"dont": {
+			"text": "Don't put a company in a circle: it reads as a person.",
+			"file": "entity-avatar-dont-2",
+			"export": "EntityAvatarDont2Example"
+		}
+	}
+]

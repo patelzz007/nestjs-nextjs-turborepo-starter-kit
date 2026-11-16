@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-marker-1",
+		"label": "Basic Variants",
+		"description": "Default, separator, and border markers. Best for the 3 variant shapes stacked with no icons: a plain line, a labeled divider and a line ruled underneath.",
+		"file": "marker-1",
+		"export": "Marker1Example"
+	},
+	{
+		"id": "c-marker-2",
+		"label": "Tool Call Log",
+		"description": "Tool call log with icon markers. Best for a bare column of 6 tool calls, each led by an icon for its action, with no card, status or grouping.",
+		"file": "marker-2",
+		"export": "Marker2Example"
+	},
+	{
+		"id": "c-marker-3",
+		"label": "Run Status",
+		"description": "Run status markers with a live step. Best for a titled run card mixing done, failed and in progress rows, with a failed badge and a spinner on the live step.",
+		"file": "marker-3",
+		"export": "Marker3Example"
+	},
+	{
+		"id": "c-marker-4",
+		"label": "Phase Separators",
+		"description": "Agent run log grouped by phase separators. Best for plan, Edit and Verify dividers splitting 8 icon steps in a run card that shows the run name and duration.",
+		"file": "marker-4",
+		"export": "Marker4Example"
+	},
+	{
+		"id": "c-marker-5",
+		"label": "Changed Files",
+		"description": "Changed files summary with border markers. Best for a diff of 5 files in ruled rows: truncated monospace paths, an added, modified or removed badge and a line delta.",
+		"file": "marker-5",
+		"export": "Marker5Example"
+	},
+	{
+		"id": "c-marker-6",
+		"label": "Links & Action",
+		"description": "Markers as links and as an action button. Best for a pair of link rows over a button row that flips between revert and undo, announcing the change.",
+		"file": "marker-6",
+		"export": "Marker6Example"
+	}
+]

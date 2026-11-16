@@ -837,6 +837,7 @@ enum PermissionResource {
   STATUS_INCIDENT
   FEATURE_FLAG
   WEBHOOK
+  DOCS_SYNC
 }
 
 enum PermissionScope {
@@ -3805,6 +3806,74 @@ enum ReceivedWebhookProvider {
   /// The fake payment gateway (development and tests only, ADR 020).
   FAKE_PAYMENTS
   TWILIO
+  /// Page changes in the docs workspace (ADR 084).
+  NOTION
+}
+
+/// The writing tool a docs sync read from (ADR 084). Add a tool here and in `DocsSourceKindSchema`.
+enum DocsSourceKind {
+  NOTION
+}
+
+/// What started a docs sync.
+enum DocsSyncTrigger {
+  WEBHOOK
+  SCHEDULE
+  NIGHTLY
+  MANUAL
+}
+
+/// What a docs sync came to.
+enum DocsSyncRunStatus {
+  SUCCEEDED
+  /// The good pages published; at least one was held back and kept its last good version.
+  PARTIAL
+  /// A workspace-level problem; nothing was written.
+  BLOCKED
+  /// The run itself broke.
+  FAILED
+}
+
+/// One docs sync, as the sync reported it (ADR 084). The Operations console's Docs sync page reads it.
+/// Infrastructure log, not a business entity: never soft-deleted; rows past the retention are pruned.
+/// RLS: bypass-only (`app_rls_bypass_on('DocsSyncRun')`, operations `docs_publishing.record` / `.read`).
+/// @extends BaseModel
+model DocsSyncRun {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The sync's own id: a repeated report for it replaces this row, so a retry is harmless.
+  runId            String            @unique @db.VarChar(64)
+  source           DocsSourceKind
+  trigger          DocsSyncTrigger
+  status           DocsSyncRunStatus
+  /// The converter that produced the pages, so a change in output can be traced to it.
+  converterVersion Int
+  pagesProcessed   Int
+  pagesUnchanged   Int
+  pagesRemoved     Int
+  pagesHeldBack    Int
+  warnings         Int
+  /// The pages held back and why, in words a writer can act on (`DocsSyncHeldBackPageSchema`), capped per report.
+  heldBack         Json
+  /// Why the run was blocked or failed, one line; null when it finished.
+  errorSummary     String?           @db.VarChar(500)
+  pullRequestUrl   String?           @db.VarChar(2048)
+  commitSha        String?           @db.VarChar(64)
+  /// When the sync started and finished (epoch ms).
+  startedAt        BigInt
+  finishedAt       BigInt
+
+  @@index([startedAt(sort: Desc), id(sort: Desc)])
+  @@index([status, startedAt(sort: Desc)])
 }
 
 /// What the signature check said. Mirrors `ReceivedWebhookVerificationSchema` in @workspace/shared.

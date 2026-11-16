@@ -3,8 +3,11 @@ title: "ADR 008: Canonical Organization Tenant Boundary"
 tags: ["adr", "tenancy", "organization", "security"]
 description: "Architecture decision record for Organization as the canonical multi-tenant boundary with global identity and per-organization membership."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1791121913000
+coverImage: "/images/covers/adr/008-canonical-organization-tenant.webp"
 order: 8
 ---
 

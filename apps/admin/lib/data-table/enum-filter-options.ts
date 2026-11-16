@@ -166,6 +166,7 @@ export const RECEIVED_WEBHOOK_PROVIDER_LABELS: Readonly<Record<ReceivedWebhookPr
 	CHIP: "CHIP",
 	FAKE_PAYMENTS: "Fake payment gateway",
 	TWILIO: "Twilio",
+	NOTION: "Notion",
 };
 
 /** What a received webhook came to (ADR 081). */

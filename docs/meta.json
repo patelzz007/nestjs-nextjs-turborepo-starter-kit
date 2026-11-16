@@ -38,6 +38,7 @@
 		"technical/api-reference/geography",
 		"technical/api-reference/github",
 		"technical/api-reference/github-pull-requests",
+		"technical/api-reference/docs-publishing",
 		"technical/api-reference/catalog-samples",
 		"technical/api-reference/system",
 		"technical/api/routes",
@@ -98,6 +99,7 @@
 		"--- Operations ---",
 		"technical/operations/ci",
 		"technical/operations/digitalocean-deployment",
+		"technical/operations/docs-publishing",
 		"technical/operations/slos-and-capacity",
 		"technical/operations/local-infrastructure",
 		"technical/operations/observability",
@@ -138,6 +140,7 @@
 		"adr/059-selective-cqrs-and-event-mechanisms",
 		"adr/060-durable-email-through-outbox",
 		"architecture/context-map",
+		"architecture/state-machines",
 		"adr/rabbitmq-placeholder"
 	]
 }

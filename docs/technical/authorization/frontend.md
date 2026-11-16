@@ -4,8 +4,11 @@ tags: ["authorization", "frontend", "react", "nextjs", "can", "sidebar", "admin"
 description: "How the admin, merchant and web apps decide what to show: the shared can() API, the <Can> component, providers, route guards, sidebar filtering, UX rules, and per-app helpers."
 order: 23
 author: "Platform Team"
+category: "Authorization"
+date: 1790726400000
 lastUpdated: 1790899200000
-coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/authorization/frontend.webp"
 ---
 
 # Frontend Authorization

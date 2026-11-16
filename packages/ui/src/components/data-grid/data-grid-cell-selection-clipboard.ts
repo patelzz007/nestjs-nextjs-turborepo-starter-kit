@@ -1,116 +1,30 @@
 // The cell selection's clipboard (enhancement 8.1: split from data-grid-cell-selection.tsx): TSV and HTML serialisation, parsing, tiling and cell values as text.
 
-import { LIST_SLOT_INDEX, isBigIntPrimitive, isBooleanPrimitive, isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
+import { toIsoTimestamp } from "@workspace/ui/lib/format/date-time";
+import { isBigIntPrimitive, isBooleanPrimitive, isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
+import {
+	DATA_GRID_CLIPBOARD_LINE_BREAK,
+	DATA_GRID_CLIPBOARD_QUOTE_NEEDED,
+	escapeDataGridClipboardHtml,
+	parseDataGridClipboardText,
+	renderDataGridClipboardHtml,
+	serializeDataGridClipboardField,
+	serializeDataGridClipboardText,
+	tileDataGridClipboardBlock,
+} from "@workspace/ui-kit-logic";
 import { type DataGridColumn, type DataGridColumnCellEdit, type DataGridCoreTable } from "@workspace/ui/components/data-grid/data-grid";
 import type { CellData, RowData } from "@tanstack/react-table";
 
-export const CLIPBOARD_QUOTE_NEEDED = /[\t\n\r"]/;
-export const CLIPBOARD_LINE_BREAK = /\r\n|\r|\n/g;
-
-export function serializeDataGridClipboardField(field: string): string {
-	// Excel and Sheets quote a field containing a delimiter and double inner
-	// quotes; everything else ships bare.
-	return CLIPBOARD_QUOTE_NEEDED.test(field) ? `"${field.replaceAll('"', '""')}"` : field;
-}
-
-/** Row-major grid → TSV, CRLF rows, Excel-style quoting. */
-export function serializeDataGridClipboardText(grid: readonly (readonly string[])[]): string {
-	return grid.map((line) => line.map(serializeDataGridClipboardField).join("\t")).join("\r\n");
-}
-
-/**
- * TSV → a row-major grid. A stateful scan, not a split: a quoted field may
- * contain tabs, quotes and both newline flavours, which is exactly what Excel
- * emits for a multi-line cell.
- */
-export function parseDataGridClipboardText(text: string): string[][] {
-	const rows: string[][] = [];
-	let row: string[] = [];
-	let field = "";
-	let quoted = false;
-	let index = 0;
-
-	while (index < text.length) {
-		const char = text.charAt(index);
-		if (quoted) {
-			if (char === '"') {
-				if (text.charAt(index + 1) === '"') {
-					field += '"';
-					index += 2;
-					continue;
-				}
-				quoted = false;
-				index += 1;
-				continue;
-			}
-			field += char;
-			index += 1;
-			continue;
-		}
-		if (char === '"' && field === "") {
-			quoted = true;
-			index += 1;
-			continue;
-		}
-		if (char === "\t") {
-			row.push(field);
-			field = "";
-			index += 1;
-			continue;
-		}
-		if (char === "\r" || char === "\n") {
-			if (char === "\r" && text.charAt(index + 1) === "\n") {
-				index += 1;
-			}
-			row.push(field);
-			rows.push(row);
-			row = [];
-			field = "";
-			index += 1;
-			continue;
-		}
-		field += char;
-		index += 1;
-	}
-	row.push(field);
-	rows.push(row);
-
-	// Excel terminates the payload with one newline; that final empty line is
-	// an artifact of the format, not a data row.
-	const last = rows.at(-1);
-	if (rows.length > 1 && last?.length === 1 && last.at(LIST_SLOT_INDEX.first) === "") {
-		rows.pop();
-	}
-
-	return rows;
-}
-
-/** Repeats a block cyclically to fill `rowCount` × `columnCount`. */
-export function tileDataGridClipboardBlock(block: readonly (readonly string[])[], rowCount: number, columnCount: number): string[][] {
-	const tiled: string[][] = [];
-	for (let rowOffset = 0; rowOffset < rowCount; rowOffset++) {
-		const source = block.at(rowOffset % Math.max(block.length, 1)) ?? [];
-		const line: string[] = [];
-		for (let columnOffset = 0; columnOffset < columnCount; columnOffset++) {
-			line.push(source.at(columnOffset % Math.max(source.length, 1)) ?? "");
-		}
-		tiled.push(line);
-	}
-	return tiled;
-}
-
-export function escapeDataGridClipboardHtml(value: string): string {
-	return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-
-/**
- * A minimal text/html flavour alongside the TSV keeps type fidelity when the
- * paste target is Excel or Sheets. Newlines inside a field become `<br>`.
- */
-export function renderDataGridClipboardHtml(grid: readonly (readonly string[])[]): string {
-	const body = grid.map((line) => `<tr>${line.map((field) => `<td>${escapeDataGridClipboardHtml(field).replace(CLIPBOARD_LINE_BREAK, "<br>")}</td>`).join("")}</tr>`).join("");
-	return `<table><tbody>${body}</tbody></table>`;
-}
+export {
+	DATA_GRID_CLIPBOARD_QUOTE_NEEDED as CLIPBOARD_QUOTE_NEEDED,
+	DATA_GRID_CLIPBOARD_LINE_BREAK as CLIPBOARD_LINE_BREAK,
+	serializeDataGridClipboardField,
+	serializeDataGridClipboardText,
+	parseDataGridClipboardText,
+	tileDataGridClipboardBlock,
+	escapeDataGridClipboardHtml,
+	renderDataGridClipboardHtml,
+};
 
 // ── Selection geometry ─────────────────────────────────────────────────────
 
@@ -165,7 +79,8 @@ export function stringifyDataGridCellValue(value: CellData): string {
 		return String(value);
 	}
 	if (value instanceof Date) {
-		return value.toISOString();
+		// Clipboard text: the instant as ISO 8601 (UTC), which spreadsheets read as a date.
+		return toIsoTimestamp(value.getTime());
 	}
 	return toDataGridJson(value) ?? "";
 }

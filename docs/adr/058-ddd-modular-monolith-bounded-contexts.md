@@ -3,8 +3,11 @@ title: "ADR 058: DDD Modular Monolith and Bounded Contexts"
 tags: ["adr", "ddd", "architecture", "contexts"]
 description: "The API is one deployable modular monolith. Business code lives in bounded contexts. Zod stays the shared contract, including inside the domain."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792281600000
 lastUpdated: 1792281600000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792438386000
+coverImage: "/images/covers/adr/058-ddd-modular-monolith-bounded-contexts.webp"
 order: 58
 ---
 

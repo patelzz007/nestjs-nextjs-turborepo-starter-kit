@@ -3,8 +3,11 @@ title: "ADR 040: One Brand Mark, from the Token Source"
 tags: ["adr", "ui", "brand", "tokens", "mobile"]
 description: "Every app shows one geometric brand mark — a faceted isometric cube in one colour — defined once in packages/tokens and drawn from that data on the web, the docs, the favicons and the phone."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/adr/040-brand-mark.webp"
 order: 40
 ---
 

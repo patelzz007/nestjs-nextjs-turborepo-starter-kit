@@ -11,6 +11,7 @@ function MessageScrollerProvider(props: React.ComponentProps<typeof MessageScrol
 	return <MessageScrollerPrimitive.Provider {...props} />;
 }
 
+/** A chat transcript's scrolling container: opens on the newest turn, follows streaming replies until the reader scrolls up, and keeps the reader's place when history loads. Fills its parent. */
 const MessageScroller = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof MessageScrollerPrimitive.Root>>(function MessageScroller(
 	{ className, ...props },
 	ref,
@@ -25,6 +26,7 @@ const MessageScroller = React.forwardRef<HTMLDivElement, React.ComponentProps<ty
 	);
 });
 
+/** The scrolling region. */
 const MessageScrollerViewport = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof MessageScrollerPrimitive.Viewport>>(function MessageScrollerViewport(
 	{ className, ...props },
 	ref,
@@ -42,6 +44,7 @@ const MessageScrollerViewport = React.forwardRef<HTMLDivElement, React.Component
 	);
 });
 
+/** The list of turns inside the viewport. */
 const MessageScrollerContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof MessageScrollerPrimitive.Content>>(function MessageScrollerContent(
 	{ className, ...props },
 	ref,
@@ -49,6 +52,7 @@ const MessageScrollerContent = React.forwardRef<HTMLDivElement, React.ComponentP
 	return <MessageScrollerPrimitive.Content ref={ref} data-slot="message-scroller-content" className={cn("flex h-max min-h-full flex-col gap-8", className)} {...props} />;
 });
 
+/** One turn. */
 const MessageScrollerItem = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof MessageScrollerPrimitive.Item>>(function MessageScrollerItem(
 	{ className, scrollAnchor = false, ...props },
 	ref,
@@ -71,6 +75,7 @@ type MessageScrollerButtonProps = React.ComponentPropsWithoutRef<typeof MessageS
 		readonly label: string;
 	};
 
+/** "Jump to latest", shown while the reader is away from the bottom. Keep it a sibling of the viewport. */
 const MessageScrollerButton = React.forwardRef<HTMLButtonElement, MessageScrollerButtonProps>(function MessageScrollerButton(
 	{ direction = "end", className, children, render, variant = "secondary", size = "icon-sm", label, ...props },
 	ref,

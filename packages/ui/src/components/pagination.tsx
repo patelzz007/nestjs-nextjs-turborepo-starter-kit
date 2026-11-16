@@ -9,13 +9,16 @@ import * as React from "react";
 
 const paginationVariants = cva("mx-auto flex w-full justify-center", {
 	variants: {
+		/** The pager's look; one treatment today. */
 		variant: {
 			default: "",
 		},
+		/** Text size: `default` or `sm`. */
 		size: {
 			default: "",
 			sm: "text-sm",
 		},
+		/** `loading` or `disabled` dims the pager and stops clicks while a page loads. */
 		state: {
 			default: "",
 			loading: "pointer-events-none opacity-60",
@@ -46,19 +49,23 @@ const Pagination = React.forwardRef<HTMLElement, PaginationProps>(function Pagin
 	);
 });
 
+/** The list of page items. */
 const PaginationContent = React.forwardRef<HTMLUListElement, React.ComponentProps<"ul">>(function PaginationContent({ className, ...props }, ref): React.JSX.Element {
 	return <ul ref={ref} data-slot="pagination-content" className={cn("flex items-center gap-1", className)} {...props} />;
 });
 
+/** Holds one link, the previous or next control, or the ellipsis. */
 const PaginationItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(function PaginationItem({ ...props }, ref): React.JSX.Element {
 	return <li ref={ref} data-slot="pagination-item" {...props} />;
 });
 
 type PaginationLinkProps = {
+	/** Marks the current page: styled, with `aria-current="page"`. */
 	isActive?: boolean;
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
 	React.ComponentProps<"a">;
 
+/** A real link to a page, styled as a button. `isActive` marks the current page. */
 const PaginationLink = React.forwardRef<HTMLAnchorElement, PaginationLinkProps>(function PaginationLink(
 	{ className, isActive, size = "icon", children, ...props },
 	ref,
@@ -86,10 +93,13 @@ interface PaginationNavLabels {
 }
 
 type PaginationPreviousProps = React.ComponentProps<typeof PaginationLink> & {
+	/** The visible label, in place of the localised "Previous". */
 	readonly text: string;
+	/** Overrides the `pagination` strings for this control. */
 	readonly labels: Pick<PaginationNavLabels, "previousAria">;
 };
 
+/** A link to the previous page, labelled from the `pagination` messages. */
 const PaginationPrevious = React.forwardRef<HTMLAnchorElement, PaginationPreviousProps>(function PaginationPrevious(
 	{ className, text, labels, ...props },
 	ref,
@@ -103,10 +113,13 @@ const PaginationPrevious = React.forwardRef<HTMLAnchorElement, PaginationPreviou
 });
 
 type PaginationNextProps = React.ComponentProps<typeof PaginationLink> & {
+	/** The visible label, in place of the localised "Next". */
 	readonly text: string;
+	/** Overrides the `pagination` strings for this control. */
 	readonly labels: Pick<PaginationNavLabels, "nextAria">;
 };
 
+/** A link to the next page, labelled from the `pagination` messages. */
 const PaginationNext = React.forwardRef<HTMLAnchorElement, PaginationNextProps>(function PaginationNext({ className, text, labels, ...props }, ref): React.JSX.Element {
 	return (
 		<PaginationLink ref={ref} aria-label={labels.nextAria} size="default" className={cn("pe-2!", className)} {...props}>
@@ -117,9 +130,11 @@ const PaginationNext = React.forwardRef<HTMLAnchorElement, PaginationNextProps>(
 });
 
 type PaginationEllipsisProps = React.ComponentProps<"span"> & {
+	/** The ellipsis's text alternative, for localisation. */
 	readonly morePagesLabel: string;
 };
 
+/** Marks skipped pages, hidden from assistive technology with a text alternative. */
 const PaginationEllipsis = React.forwardRef<HTMLSpanElement, PaginationEllipsisProps>(function PaginationEllipsis(
 	{ className, morePagesLabel, ...props },
 	ref,

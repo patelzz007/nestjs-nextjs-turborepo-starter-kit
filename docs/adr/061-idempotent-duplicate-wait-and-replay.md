@@ -3,8 +3,11 @@ title: "ADR 061: Idempotent Duplicates Wait on a Key Lock, Then Replay"
 tags: ["adr", "idempotency", "postgres", "concurrency"]
 description: "A concurrent identical Idempotency-Key request blocks on a Postgres advisory lock for up to 5 seconds, then replays the original's stored response or executes if the original failed. No polling."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792281600000
 lastUpdated: 1792281600000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/061-idempotent-duplicate-wait-and-replay.webp"
 order: 61
 ---
 

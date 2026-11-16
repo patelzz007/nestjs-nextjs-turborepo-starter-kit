@@ -8,6 +8,12 @@
 // - unchecked: an outlined box;
 // - locked (kept as it is by a policy): a tinted box with a lock, never faded.
 // A tick or dash pops in when it is pressed (toggle-mark.tsx); the one shown at first stays still.
+//
+// The row can carry more: `leading` (an icon, an avatar, a logo) before the
+// label, `trailing` (a badge, a help tooltip) after it, the box at the row's
+// end (`controlPosition="end"`, a settings list), a round box (`shape`, a
+// to-do), a categorical colour while checked (`tone`), and a label struck
+// through once checked (`strikeWhenChecked`, a done task).
 
 import { cva, type VariantProps } from "class-variance-authority";
 import CheckIcon from "lucide-react-native/icons/check";
@@ -51,6 +57,10 @@ export const checkboxBoxVariants = cva("items-center justify-center border-2", {
 			md: "size-6 rounded-md",
 			sm: "size-5 rounded-sm",
 		},
+		/** `round`: a circle (a to-do item). */
+		shape: { square: "", round: "rounded-full" },
+		/** The checked fill: the action colour, or a categorical tone. */
+		tone: { primary: "", blue: "", green: "", yellow: "" },
 		checked: { true: "", false: "" },
 		state: {
 			default: "",
@@ -67,16 +77,25 @@ export const checkboxBoxVariants = cva("items-center justify-center border-2", {
 		{ checked: false, state: "error", className: "bg-card" },
 		{ checked: true, state: "locked", className: "border-primary/20 bg-primary/20" },
 		{ checked: false, state: "locked", className: "border-control-ring bg-muted" },
+		{ checked: true, state: ["default", "loading", "disabled"], tone: "blue", className: "border-tone-blue bg-tone-blue" },
+		{ checked: true, state: ["default", "loading", "disabled"], tone: "green", className: "border-tone-green bg-tone-green" },
+		{ checked: true, state: ["default", "loading", "disabled"], tone: "yellow", className: "border-tone-yellow bg-tone-yellow" },
 	],
-	defaultVariants: { size: "md", checked: false, state: "default" },
+	defaultVariants: { size: "md", shape: "square", tone: "primary", checked: false, state: "default" },
 });
 
-export const checkboxLabelVariants = cva("font-sans text-foreground", {
+export const checkboxLabelVariants = cva("font-sans", {
 	variants: {
-		size: { md: "text-base", sm: "text-sm" },
+		size: { md: "text-body-lg", sm: "text-body" },
+		/** A done item: struck through and receding. */
+		struck: { true: "text-muted-foreground line-through", false: "text-foreground" },
 	},
-	defaultVariants: { size: "md" },
+	defaultVariants: { size: "md", struck: false },
 });
+
+type CheckboxBoxVariantProps = VariantProps<typeof checkboxBoxVariants>;
+export type CheckboxShape = NonNullable<CheckboxBoxVariantProps["shape"]>;
+export type CheckboxTone = NonNullable<CheckboxBoxVariantProps["tone"]>;
 
 type CheckboxVariantProps = VariantProps<typeof checkboxVariants>;
 export type CheckboxVariant = NonNullable<CheckboxVariantProps["variant"]>;
@@ -115,7 +134,7 @@ export interface CheckboxProps {
 	/** Visible label and the checkbox's accessible name. */
 	readonly label: string;
 	/** A second line under the label. */
-	readonly description?: string;
+	readonly description?: string | undefined;
 	readonly checked: boolean;
 	/** Some of a group is checked: a dash, read as "mixed". Pressing it reports `true`. */
 	readonly indeterminate?: boolean;
@@ -124,7 +143,7 @@ export interface CheckboxProps {
 	readonly onBlur?: (event: NativeSyntheticEvent<TargetedEvent>) => void;
 	readonly variant?: CheckboxVariant;
 	readonly size?: CheckboxSize;
-	readonly disabled?: boolean;
+	readonly disabled?: boolean | undefined;
 	/** The change is being saved: blocks presses and announces busy. */
 	readonly loading?: boolean;
 	/** Kept as it is by a policy ("Always on"): a tinted box with a lock, and it takes no presses. */
@@ -132,9 +151,23 @@ export interface CheckboxProps {
 	/** The caller's validation outcome (a required consent left unchecked). */
 	readonly invalid?: boolean;
 	readonly accessibilityHint?: string;
+	/** A circle in place of the square box (a to-do item). */
+	readonly shape?: CheckboxShape | undefined;
+	/** The checked fill: `primary` (default), or a categorical tone. */
+	readonly tone?: CheckboxTone | undefined;
+	/** `end`: the box at the row's end (a settings list), the label first. */
+	readonly controlPosition?: "start" | "end" | undefined;
+	/** Before the label: an icon, an avatar, a logo; decorative. */
+	readonly leading?: React.ReactNode;
+	/** After the label: a badge, a help tooltip. */
+	readonly trailing?: React.ReactNode;
+	/** Strikes the label through once checked (a done task). */
+	readonly strikeWhenChecked?: boolean | undefined;
+	/** Draws only the box (a table's row selection): the label is still what screen readers hear. */
+	readonly labelHidden?: boolean | undefined;
 	/** Extra classes for the row, merged last. */
 	readonly className?: string;
-	readonly testID?: string;
+	readonly testID?: string | undefined;
 }
 
 export const Checkbox = React.memo(
@@ -154,6 +187,13 @@ export const Checkbox = React.memo(
 			locked = false,
 			invalid = false,
 			accessibilityHint,
+			shape = "square",
+			tone = "primary",
+			controlPosition = "start",
+			leading,
+			trailing,
+			strikeWhenChecked = false,
+			labelHidden = false,
 			className,
 			testID,
 		},
@@ -170,6 +210,11 @@ export const Checkbox = React.memo(
 		const handlePress = React.useCallback((): void => {
 			onChange(indeterminate || !checked);
 		}, [checked, indeterminate, onChange]);
+		const box = (
+			<ToggleMarkScope className={checkboxBoxVariants({ size, shape, tone, checked: checked || indeterminate, state })}>
+				<CheckboxGlyph state={state} checked={checked} indeterminate={indeterminate} />
+			</ToggleMarkScope>
+		);
 		return (
 			<Pressable
 				ref={ref}
@@ -182,14 +227,21 @@ export const Checkbox = React.memo(
 				onFocus={onFocus}
 				onBlur={onBlur}
 				testID={testID}
-				className={cn(checkboxVariants({ variant, size, state }), className)}>
-				<ToggleMarkScope className={checkboxBoxVariants({ size, checked: checked || indeterminate, state })}>
-					<CheckboxGlyph state={state} checked={checked} indeterminate={indeterminate} />
-				</ToggleMarkScope>
-				<View className="flex-1 gap-0.5">
-					<Text className={checkboxLabelVariants({ size })}>{label}</Text>
-					{description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{description}</Text>}
-				</View>
+				className={cn(checkboxVariants({ variant, size, state }), labelHidden ? "min-w-11 justify-center" : "", className)}>
+				{controlPosition === "start" || labelHidden ? box : null}
+				{labelHidden ? null : (
+					<>
+						{leading}
+						<View className="flex-1 gap-0.5">
+							<View className="flex-row flex-wrap items-center gap-2">
+								<Text className={checkboxLabelVariants({ size, struck: strikeWhenChecked && checked })}>{label}</Text>
+								{trailing}
+							</View>
+							{description === undefined ? null : <Text className="text-body font-sans text-muted-foreground">{description}</Text>}
+						</View>
+						{controlPosition === "end" ? box : null}
+					</>
+				)}
 			</Pressable>
 		);
 	}),

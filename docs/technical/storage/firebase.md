@@ -3,8 +3,11 @@ title: "Set up Firebase Storage"
 description: "Step by step: Firebase project and bucket, service account and Application Default Credentials, bucket CORS, apps/api/.env variables, verification and troubleshooting."
 order: 42
 author: "Platform Team"
+category: "Storage"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/storage/firebase.webp"
 tags: ["storage", "firebase", "gcs", "setup"]
 ---
 

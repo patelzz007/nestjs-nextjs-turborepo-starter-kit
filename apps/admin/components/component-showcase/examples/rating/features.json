@@ -1,0 +1,65 @@
+[
+	{
+		"id": "c-rating-1",
+		"label": "Basic",
+		"description": "Basic rating.. Best for the minimal read only display: a whole score of 4 at the default size with no number shown.",
+		"file": "rating-1",
+		"export": "Rating1Example"
+	},
+	{
+		"id": "c-rating-2",
+		"label": "Decimal Value",
+		"description": "Rating with decimal value.. Best for a half star score of 3.5, drawn as 3 full stars and a fourth filled halfway, with no number.",
+		"file": "rating-2",
+		"export": "Rating2Example"
+	},
+	{
+		"id": "c-rating-3",
+		"label": "Show Value",
+		"description": "Rating with show value.. Best for a 4.5 score with its value printed after the stars to 1 decimal place in muted text.",
+		"file": "rating-3",
+		"export": "Rating3Example"
+	},
+	{
+		"id": "c-rating-4",
+		"label": "Editable",
+		"description": "Rating with editable.. Best for a click to score input that starts empty, prints the hovered or picked number and confirms each pick with a toast.",
+		"file": "rating-4",
+		"export": "Rating4Example"
+	},
+	{
+		"id": "c-rating-5",
+		"label": "Sizes",
+		"description": "Rating with size.. Best for the sm, default and lg sizes stacked at the same score of 4 to compare star size and spacing.",
+		"file": "rating-5",
+		"export": "Rating5Example"
+	},
+	{
+		"id": "c-rating-6",
+		"label": "Review Summary",
+		"description": "Rating with review summary. Best for a ratings overview: a large average over small stars and a review total, then a yellow count bar per star level.",
+		"file": "rating-6",
+		"export": "Rating6Example"
+	},
+	{
+		"id": "c-rating-7",
+		"label": "Half-Star Input",
+		"description": "Interactive half-star rating. Best for a star input preset to 3.5 with a line under it echoing the chosen score out of 5.",
+		"file": "rating-7",
+		"export": "Rating7Example"
+	},
+	{
+		"id": "c-rating-8",
+		"label": "Emoji Reactions",
+		"description": "Emoji reaction rating. Best for a 5 face scale from Terrible to Amazing on plain buttons, naming the chosen mood under the row.",
+		"file": "rating-8",
+		"export": "Rating8Example"
+	},
+	{
+		"id": "c-rating-9",
+		"label": "Review Text",
+		"description": "Rating with review text input. Best for a review card: a star input, a reply line that shifts with the score, a comment box and a Submit locked until a pick.",
+		"file": "rating-9",
+		"export": "Rating9Example"
+	}
+]

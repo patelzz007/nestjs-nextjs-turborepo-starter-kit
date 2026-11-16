@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Suggest, don't restrict",
+		"do": {
+			"text": "Use it where a new value is fine, and suggestions only help.",
+			"file": "autocomplete-do-1",
+			"export": "AutocompleteDo1Example"
+		},
+		"dont": {
+			"text": "Don't use it where only listed values are valid: people will type one that is not. Use a [Combobox](/components/combobox).",
+			"file": "autocomplete-dont-1",
+			"export": "AutocompleteDont1Example"
+		}
+	},
+	{
+		"title": "Show what is happening",
+		"do": {
+			"text": "Say when a lookup is searching or found nothing (`AutocompleteEmpty`, `AutocompleteStatus`).",
+			"file": "autocomplete-do-2",
+			"export": "AutocompleteDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave the list empty and silent while results load or when nothing matches.",
+			"file": "autocomplete-dont-2",
+			"export": "AutocompleteDont2Example"
+		}
+	}
+]

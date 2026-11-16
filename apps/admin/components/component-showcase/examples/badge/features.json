@@ -1,0 +1,177 @@
+[
+	{
+		"id": "c-badge-1",
+		"label": "Default",
+		"description": "Default badge. Best for the plain call with no variant prop, filled with the theme primary and its foreground text.",
+		"file": "badge-1",
+		"export": "Badge1Example"
+	},
+	{
+		"id": "c-badge-2",
+		"label": "Secondary",
+		"description": "Secondary badge. Best for a lower emphasis fill from the secondary token, for metadata that sits beside a primary label.",
+		"file": "badge-2",
+		"export": "Badge2Example"
+	},
+	{
+		"id": "c-badge-3",
+		"label": "Destructive",
+		"description": "Destructive badge. Best for the loudest error state, a solid destructive fill with white text for failed or blocked records.",
+		"file": "badge-3",
+		"export": "Badge3Example"
+	},
+	{
+		"id": "c-badge-4",
+		"label": "Success",
+		"description": "Success badge. Best for a solid success fill with white text for paid, passing or live records at full emphasis.",
+		"file": "badge-4",
+		"export": "Badge4Example"
+	},
+	{
+		"id": "c-badge-5",
+		"label": "Info",
+		"description": "Info badge. Best for a solid info fill with white text for neutral notices such as Beta, Syncing or Preview.",
+		"file": "badge-5",
+		"export": "Badge5Example"
+	},
+	{
+		"id": "c-badge-6",
+		"label": "Warning",
+		"description": "Warning badge. Best for a solid warning fill with white text for pending, expiring or degraded states.",
+		"file": "badge-6",
+		"export": "Badge6Example"
+	},
+	{
+		"id": "c-badge-7",
+		"label": "Outline",
+		"description": "Outline badge. Best for a neutral border around inherited text color, transparent in light mode and lightly filled in dark.",
+		"file": "badge-7",
+		"export": "Badge7Example"
+	},
+	{
+		"id": "c-badge-8",
+		"label": "Primary Outline",
+		"description": "Primary outline badge. Best for a neutral border with only the label text in the primary color and no tinted fill.",
+		"file": "badge-8",
+		"export": "Badge8Example"
+	},
+	{
+		"id": "c-badge-9",
+		"label": "Destructive Outline",
+		"description": "Destructive outline badge. Best for an error flagged by destructive foreground text alone, inside a neutral border with no tint.",
+		"file": "badge-9",
+		"export": "Badge9Example"
+	},
+	{
+		"id": "c-badge-10",
+		"label": "Info Outline",
+		"description": "Info outline badge. Best for info foreground text in a neutral outline, for notices that need no colored fill in dense tables.",
+		"file": "badge-10",
+		"export": "Badge10Example"
+	},
+	{
+		"id": "c-badge-11",
+		"label": "Success Outline",
+		"description": "Success outline badge. Best for a low emphasis done or paid status, success foreground text set inside the neutral border.",
+		"file": "badge-11",
+		"export": "Badge11Example"
+	},
+	{
+		"id": "c-badge-12",
+		"label": "Warning Outline",
+		"description": "Warning outline badge. Best for the quietest pending or expiring flag, warning foreground text with a neutral border and no tint.",
+		"file": "badge-12",
+		"export": "Badge12Example"
+	},
+	{
+		"id": "c-badge-13",
+		"label": "Primary Light",
+		"description": "Primary light badge. Best for a faint primary tint with primary text and border, softer than the solid primary fill.",
+		"file": "badge-13",
+		"export": "Badge13Example"
+	},
+	{
+		"id": "c-badge-14",
+		"label": "Destructive Light",
+		"description": "Destructive light badge. Best for a pale destructive tint behind destructive text, for errors that sit in dense rows.",
+		"file": "badge-14",
+		"export": "Badge14Example"
+	},
+	{
+		"id": "c-badge-15",
+		"label": "Success Light",
+		"description": "Success light badge. Best for success text on a faint success tint, a soft chip for active, paid or approved.",
+		"file": "badge-15",
+		"export": "Badge15Example"
+	},
+	{
+		"id": "c-badge-16",
+		"label": "Info Light",
+		"description": "Info light badge. Best for an info tint with info text and a matching faint border, for feature or release markers.",
+		"file": "badge-16",
+		"export": "Badge16Example"
+	},
+	{
+		"id": "c-badge-17",
+		"label": "Warning Light",
+		"description": "Warning light badge. Best for a faint warning tint behind warning text, which keeps pending or trial states readable at small sizes.",
+		"file": "badge-17",
+		"export": "Badge17Example"
+	},
+	{
+		"id": "c-badge-18",
+		"label": "Sizes",
+		"description": "Badge size variations. Best for the sm, default and lg sizes in one row, 18, 20 and 22px tall, to match a label to nearby text.",
+		"file": "badge-18",
+		"export": "Badge18Example"
+	},
+	{
+		"id": "c-badge-19",
+		"label": "Full Radius",
+		"description": "Badge with full radius (radius=\"full\"). Best for pill counts and New tags at 3 sizes, then the pill on outline, secondary and success light.",
+		"file": "badge-19",
+		"export": "Badge19Example"
+	},
+	{
+		"id": "c-badge-20",
+		"label": "With Icon",
+		"description": "Badge with an icon. Best for an outline label led by a check glyph that the primitive sizes to 12px with no class of its own.",
+		"file": "badge-20",
+		"export": "Badge20Example"
+	},
+	{
+		"id": "c-badge-21",
+		"label": "Dismiss Button",
+		"description": "Badge with a dismiss button. Best for an outline tag ending in an X inside a ghost icon button shrunk to 12px, for removable filters.",
+		"file": "badge-21",
+		"export": "Badge21Example"
+	},
+	{
+		"id": "c-badge-22",
+		"label": "Status Dot",
+		"description": "Badge with a status dot. Best for a 5px round dot in the current text color ahead of the label, on an info light chip for live states.",
+		"file": "badge-22",
+		"export": "Badge22Example"
+	},
+	{
+		"id": "c-badge-23",
+		"label": "As Link",
+		"description": "Badge rendered as a link. Best for an outline label rendered as an anchor, so the whole chip navigates and takes keyboard focus.",
+		"file": "badge-23",
+		"export": "Badge23Example"
+	},
+	{
+		"id": "c-badge-24",
+		"label": "With Avatar",
+		"description": "Badge with avatar. Best for a person chip with a 14px avatar photo, a first name and a trailing remove X in one outline label.",
+		"file": "badge-24",
+		"export": "Badge24Example"
+	},
+	{
+		"id": "c-badge-25",
+		"label": "With Flag",
+		"description": "Badge with flag image. Best for a country chip with an 18px flag image ahead of the name, for locale, region or shipping tags.",
+		"file": "badge-25",
+		"export": "Badge25Example"
+	}
+]

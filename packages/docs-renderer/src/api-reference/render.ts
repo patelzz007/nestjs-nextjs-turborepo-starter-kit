@@ -19,7 +19,13 @@ export interface ApiReferenceInputs {
 	readonly samples: ApiSamplesFile;
 }
 
-const COVER_IMAGE = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop";
+/** Where each generated page's own cover is (`docs/images/covers/` mirrors the docs' paths): every page has its own. */
+const COVER_FOLDER = "/images/covers/technical/api-reference";
+const INDEX_PAGE = "README";
+
+function coverImageOf(pageFile: string): string {
+	return `${COVER_FOLDER}/${pageFile}.webp`;
+}
 const GENERATED_NOTICE =
 	"<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->";
 const HTTP_STATUS_TEXT: Readonly<Record<string, string>> = {
@@ -72,15 +78,23 @@ function code(text: string): string {
 	return `\`${text.replace(/`/g, "'")}\``;
 }
 
-function frontmatter(title: string, description: string, lastUpdated: number, order: number): string {
+/** When the API reference was first published (its first commit, 2026-10-04, UTC midnight): every page's `date`. */
+export const API_REFERENCE_FIRST_PUBLISHED = 1791072000000;
+const API_REFERENCE_CATEGORY = "API reference";
+
+/** A generated page is published with the reference, and updated and edited whenever the samples are captured. */
+function frontmatter(title: string, description: string, capturedAt: number, order: number, pageFile: string): string {
 	return [
 		"---",
 		`title: ${JSON.stringify(title)}`,
 		`description: ${JSON.stringify(description)}`,
 		`order: ${String(order)}`,
 		'author: "Generated from the OpenAPI export"',
-		`lastUpdated: ${String(lastUpdated)}`,
-		`coverImage: ${JSON.stringify(COVER_IMAGE)}`,
+		`category: ${JSON.stringify(API_REFERENCE_CATEGORY)}`,
+		`date: ${String(API_REFERENCE_FIRST_PUBLISHED)}`,
+		`lastUpdated: ${String(capturedAt)}`,
+		`editedAt: ${String(capturedAt)}`,
+		`coverImage: ${JSON.stringify(coverImageOf(pageFile))}`,
 		'tags: ["api", "reference", "generated"]',
 		"---",
 		"",
@@ -331,7 +345,7 @@ function endpointsByPage(inputs: ApiReferenceInputs): ReadonlyMap<ReferencePage,
 }
 
 function renderPage(page: ReferencePage, endpoints: readonly Endpoint[], inputs: ApiReferenceInputs, order: number): string {
-	const parts = [frontmatter(`API reference — ${page.title}`, page.description, inputs.samples.capturedAt, order), `# API reference — ${page.title}`, ""];
+	const parts = [frontmatter(`API reference — ${page.title}`, page.description, inputs.samples.capturedAt, order, page.slug), `# API reference — ${page.title}`, ""];
 	parts.push(
 		page.description,
 		"",
@@ -359,6 +373,7 @@ function renderIndex(byPage: ReadonlyMap<ReferencePage, readonly Endpoint[]>, in
 			`Every endpoint of the API (${String(total)} operations), generated from the OpenAPI export with real seed-data samples.`,
 			inputs.samples.capturedAt,
 			1,
+			INDEX_PAGE,
 		),
 		"# API reference",
 		"",

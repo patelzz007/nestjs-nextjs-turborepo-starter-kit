@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchSearchIndex } from "@/hooks/use-search-index";
 
@@ -10,6 +10,11 @@ import { SearchPage } from "../search-page";
 import { SiteHeader } from "../site-header";
 import { jsonFetch, SEARCH_ENTRIES, SECTIONS } from "./fixtures";
 import { renderWithRouter } from "./render-with-router";
+
+beforeAll((): void => {
+	// The search dialog's command list scrolls the highlighted result into view; jsdom has no layout.
+	Element.prototype.scrollIntoView = (): void => undefined;
+});
 
 beforeEach(() => {
 	vi.stubGlobal("fetch", jsonFetch(SEARCH_ENTRIES));

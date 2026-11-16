@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { RadioGroup, type RadioOption } from "../radio-group";
 
@@ -111,5 +111,26 @@ describe("RadioGroup", () => {
 		await fireEvent(screen.getByRole("radio", { name: "Light" }), "blur");
 		expect(onFocus).toHaveBeenCalledTimes(1);
 		expect(onBlur).toHaveBeenCalledTimes(1);
+	});
+
+	it("draws extras around each option, lays them out in a grid, and colours the chosen ring", async () => {
+		await render(
+			<RadioGroup
+				label="Plan"
+				options={[
+					{ value: "plus", label: "Plus", leading: <Text>P</Text>, trailing: <Text>Popular</Text> },
+					{ value: "pro", label: "Pro" },
+				]}
+				value="plus"
+				onChange={jest.fn()}
+				orientation="grid"
+				tone="blue"
+				controlPosition="end"
+				testID="group"
+			/>,
+		);
+		expect(screen.getByText("Popular")).toBeOnTheScreen();
+		expect(String(screen.getByTestId("group").props.className)).toContain("flex-wrap");
+		expect(screen.getByRole("radio", { name: "Plus" })).toBeChecked();
 	});
 });

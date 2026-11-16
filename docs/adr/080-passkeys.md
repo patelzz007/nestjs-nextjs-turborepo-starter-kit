@@ -3,8 +3,11 @@ title: "ADR 080: Passkeys"
 tags: ["adr", "security", "auth", "webauthn", "passkeys", "mobile"]
 description: "Passkeys (WebAuthn) sign in to every app: as the second step of a password sign-in, or alone, passwordless. @simplewebauthn behind a port, discoverable credentials with user verification, single-use hashed challenges, a counter that only moves forward, the password again to add one, an email for every change, and the native apps linked through the web app's /.well-known/ files."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793836800000
 lastUpdated: 1793836800000
-coverImage: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/080-passkeys.webp"
 order: 80
 ---
 

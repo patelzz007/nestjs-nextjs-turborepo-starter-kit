@@ -26,8 +26,9 @@ export const toggleVariants = cva("flex-row items-center justify-center gap-1.5 
 			md: "min-h-11 min-w-11 rounded-lg px-3",
 			lg: "min-h-12 min-w-12 rounded-lg px-3.5",
 		},
+		/** On: the spec's selected fill (`surface-selected`). */
 		pressed: {
-			true: "bg-secondary",
+			true: "bg-surface-selected",
 			false: "bg-transparent",
 		},
 		state: {
@@ -48,7 +49,7 @@ export const toggleVariants = cva("flex-row items-center justify-center gap-1.5 
 export const toggleLabelVariants = cva("font-sans-medium", {
 	variants: {
 		variant: { default: "", outline: "", pill: "" },
-		size: { sm: "text-sm", md: "text-sm", lg: "text-base" },
+		size: { sm: "text-body", md: "text-body", lg: "text-body-lg" },
 		pressed: { true: "text-secondary-foreground", false: "text-foreground" },
 	},
 	compoundVariants: [{ variant: "pill", pressed: true, className: "text-primary-foreground" }],
@@ -77,24 +78,34 @@ export interface ToggleProps {
 	/** What the toggle shows, and its accessible name. */
 	readonly label: string;
 	/** A glyph before the label; decorative. */
-	readonly icon?: LucideIcon;
+	readonly icon?: LucideIcon | undefined;
+	/** The glyph while pressed, in place of `icon` (a filled heart, a muted speaker). */
+	readonly pressedIcon?: LucideIcon | undefined;
+	/** The label while pressed, in place of `label` ("Bookmarked"); also its accessible name then. */
+	readonly pressedLabel?: string | undefined;
+	/** Something small after the label (a count, a badge); say it in `accessibilityHint` when it matters. */
+	readonly trailing?: React.ReactNode;
 	/** Show only the glyph (the label still names it for screen readers). Needs `icon`. */
-	readonly hideLabel?: boolean;
+	readonly hideLabel?: boolean | undefined;
 	readonly pressed: boolean;
 	readonly onChange: (pressed: boolean) => void;
-	readonly onFocus?: (event: NativeSyntheticEvent<TargetedEvent>) => void;
-	readonly onBlur?: (event: NativeSyntheticEvent<TargetedEvent>) => void;
-	readonly variant?: ToggleVariant;
-	readonly size?: ToggleSize;
-	readonly disabled?: boolean;
+	readonly onFocus?: ((event: NativeSyntheticEvent<TargetedEvent>) => void) | undefined;
+	readonly onBlur?: ((event: NativeSyntheticEvent<TargetedEvent>) => void) | undefined;
+	readonly variant?: ToggleVariant | undefined;
+	readonly size?: ToggleSize | undefined;
+	readonly disabled?: boolean | undefined;
 	/** The change is being saved: shows a spinner and blocks presses. */
-	readonly loading?: boolean;
+	readonly loading?: boolean | undefined;
 	/** The caller's validation outcome. */
-	readonly invalid?: boolean;
-	readonly accessibilityHint?: string;
+	readonly invalid?: boolean | undefined;
+	/** A long press (a tooltip explaining the control hands it its own). */
+	readonly onLongPress?: (() => void) | undefined;
+	/** The finger lifted (a tooltip hides its bubble). */
+	readonly onPressOut?: (() => void) | undefined;
+	readonly accessibilityHint?: string | undefined;
 	/** Extra classes for the toggle, merged last. */
-	readonly className?: string;
-	readonly testID?: string;
+	readonly className?: string | undefined;
+	readonly testID?: string | undefined;
 }
 
 export const Toggle = React.memo(
@@ -102,11 +113,16 @@ export const Toggle = React.memo(
 		{
 			label,
 			icon,
+			pressedIcon,
+			pressedLabel,
+			trailing,
 			hideLabel = false,
 			pressed,
 			onChange,
 			onFocus,
 			onBlur,
+			onLongPress,
+			onPressOut,
 			variant = "default",
 			size = "md",
 			disabled = false,
@@ -127,27 +143,32 @@ export const Toggle = React.memo(
 		}, [onChange, pressed]);
 		const contentColor = toggleContentColorOf(pressed, variant);
 		const showsLabel = !hideLabel || icon === undefined;
+		const glyph = pressed ? (pressedIcon ?? icon) : icon;
+		const shownLabel = pressed ? (pressedLabel ?? label) : label;
 		return (
 			<Pressable
 				ref={ref}
 				accessibilityRole="togglebutton"
-				accessibilityLabel={label}
+				accessibilityLabel={shownLabel}
 				accessibilityHint={accessibilityHint}
 				accessibilityState={accessibilityState}
 				disabled={isInactive}
 				onPress={handlePress}
 				onFocus={onFocus}
 				onBlur={onBlur}
+				onLongPress={onLongPress}
+				onPressOut={onPressOut}
 				hitSlop={size === "sm" ? TOGGLE_SMALL_HIT_SLOP : undefined}
 				testID={testID}
 				className={cn(toggleVariants({ variant, size, pressed, state }), className)}>
 				{loading ? <ActivityIndicator size="small" colorClassName={contentColor} /> : null}
-				{icon === undefined || loading ? null : <Icon icon={icon} size={TOGGLE_ICON_SIZE[size]} colorClassName={contentColor} />}
+				{glyph === undefined || loading ? null : <Icon icon={glyph} size={TOGGLE_ICON_SIZE[size]} colorClassName={contentColor} />}
 				{showsLabel ? (
 					<Text numberOfLines={1} className={cn(toggleLabelVariants({ variant, size, pressed }))}>
-						{label}
+						{shownLabel}
 					</Text>
 				) : null}
+				{trailing}
 			</Pressable>
 		);
 	}),

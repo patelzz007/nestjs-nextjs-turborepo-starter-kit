@@ -5,6 +5,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
+/** Switches between panels from a list of tabs, on Base UI's tabs. Controlled with `value` / `onValueChange`; `orientation` lays it out vertically. */
 const Tabs = React.forwardRef<HTMLDivElement, TabsPrimitive.Root.Props>(function Tabs({ className, orientation = "horizontal", ...props }, ref): React.JSX.Element {
 	return (
 		<TabsPrimitive.Root ref={ref} data-slot="tabs" data-orientation={orientation} className={cn("group/tabs flex gap-2 data-horizontal:flex-col", className)} {...props} />
@@ -15,6 +16,7 @@ const tabsListVariants = cva(
 	"group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-0.75 text-muted-foreground group-data-horizontal/tabs:h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
 	{
 		variants: {
+			/** `default`, a segmented pill, or `line`, an underline. */
 			variant: {
 				default: "bg-muted",
 				line: "gap-1 bg-transparent",
@@ -26,6 +28,7 @@ const tabsListVariants = cva(
 	},
 );
 
+/** The row (or column) of tabs, with an indicator following the active one. */
 const TabsList = React.forwardRef<HTMLDivElement, TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>>(function TabsList(
 	{ className, variant = "default", ...props },
 	ref,
@@ -33,6 +36,7 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsPrimitive.List.Props & Var
 	return <TabsPrimitive.List ref={ref} data-slot="tabs-list" data-variant={variant} className={cn(tabsListVariants({ variant }), className)} {...props} />;
 });
 
+/** One tab, identified by its `value`. */
 const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsPrimitive.Tab.Props>(function TabsTrigger({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<TabsPrimitive.Tab
@@ -50,6 +54,7 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsPrimitive.Tab.Props>
 	);
 });
 
+/** The panel for one tab's `value`. Only the active panel renders. */
 const TabsContent = React.forwardRef<HTMLDivElement, TabsPrimitive.Panel.Props>(function TabsContent({ className, ...props }, ref): React.JSX.Element {
 	return <TabsPrimitive.Panel ref={ref} data-slot="tabs-content" className={cn("flex-1 text-sm outline-none", className)} {...props} />;
 });

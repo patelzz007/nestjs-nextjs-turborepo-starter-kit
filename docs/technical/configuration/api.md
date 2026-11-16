@@ -4,8 +4,11 @@ tags: ["configuration", "environment", "nestjs", "zod", "security"]
 description: "How apps/api reads its environment: one zod schema parsed once before Nest bootstraps, value-free fail-fast errors, no insecure secret defaults, and TypedConfigService as the only way code reads configuration."
 order: 7
 author: "Platform Team"
+category: "Configuration"
+date: 1790899200000
 lastUpdated: 1792972800000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/configuration/api.webp"
 ---
 
 # API Configuration & Environment Variables

@@ -3,8 +3,11 @@ title: "Runbook: Deploying to DigitalOcean"
 tags: ["operations", "deployment", "digitalocean", "runbook", "pm2", "nginx"]
 description: "From an empty DigitalOcean account to a live platform with automatic deploys: every step, in order, with the files the repository provides for each."
 author: "Platform Team"
+category: "Operations"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1794485004159
+coverImage: "/images/covers/technical/operations/digitalocean-deployment.webp"
 order: 2
 ---
 
@@ -17,7 +20,7 @@ passes on `main`. The design is [ADR 075](../../adr/075-platform-deploys.md).
 ## The shape, in one picture
 
 ```mermaid
-flowchart LR
+flowchart TD
     GH[GitHub Actions<br/>CI passes on main] -- "ssh: deploy &lt;sha&gt;" --> GATE[deploy gate<br/>forced command]
     subgraph Droplet
       GATE --> REL[releases/&lt;sha&gt;<br/>install · build · migrate]

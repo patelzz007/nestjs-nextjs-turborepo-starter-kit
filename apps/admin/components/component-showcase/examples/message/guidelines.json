@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name the sender in group chats",
+		"do": {
+			"text": "Show the sender's name (`MessageHeader`) on the first message of their run.",
+			"file": "message-do-1",
+			"export": "MessageDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave a group thread nameless: replies lose their author.",
+			"file": "message-dont-1",
+			"export": "MessageDont1Example"
+		}
+	},
+	{
+		"title": "Keep metadata quiet",
+		"do": {
+			"text": "Set times and receipts small and muted under the message (`MessageFooter`).",
+			"file": "message-do-2",
+			"export": "MessageDo2Example"
+		},
+		"dont": {
+			"text": "Don't give metadata the message's weight: it competes with what was said.",
+			"file": "message-dont-2",
+			"export": "MessageDont2Example"
+		}
+	}
+]

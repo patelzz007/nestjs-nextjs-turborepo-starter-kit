@@ -5,7 +5,7 @@ import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useImpersonation } from "@workspace/client/lib/contexts/identity/session/use-impersonation";
 import { UserDetailButton } from "@/contexts/identity/components/users/user-detail-button";
 import { useCanStartImpersonation } from "@/lib/session/super-admin";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import { UserRoundSearch } from "lucide-react";
 import * as React from "react";
 
@@ -20,7 +20,7 @@ export interface ImpersonateUserButtonProps {
  */
 export function ImpersonateUserButton({ targetUser }: ImpersonateUserButtonProps): React.JSX.Element | null {
 	const { user: currentUser } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const canStartImpersonation = useCanStartImpersonation();
 	const handleIdentityChanged = React.useCallback((): void => {
 		router.refresh();

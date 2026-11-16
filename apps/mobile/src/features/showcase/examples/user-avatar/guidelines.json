@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name the person beside the picture",
+		"do": {
+			"text": "Show the person's name next to their avatar.",
+			"file": "user-avatar-do-1",
+			"export": "UserAvatarDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave an avatar alone: initials alone rarely say who it is.",
+			"file": "user-avatar-dont-1",
+			"export": "UserAvatarDont1Example"
+		}
+	},
+	{
+		"title": "Serve the right size",
+		"do": {
+			"text": "Pass the photo's renditions, so a small avatar downloads a small file.",
+			"file": "user-avatar-do-2",
+			"export": "UserAvatarDo2Example"
+		},
+		"dont": {
+			"text": "Don't send the full-size photo to a 32-point avatar.",
+			"file": "user-avatar-dont-2",
+			"export": "UserAvatarDont2Example"
+		}
+	}
+]

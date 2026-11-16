@@ -3,8 +3,11 @@ title: "Broadcasts: how they work"
 description: "Tenants and platform staff messaging people: tenant customers and consent, audiences, the rich-text body and its three renderings, links, scheduling, the weekly limit, approval, reports and strikes, permissions, and where the code lives."
 order: 49
 author: "Platform Team"
+category: "Notifications"
+date: 1793491200000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/notifications/broadcasts.webp"
 tags: ["notifications", "broadcasts", "rich-text", "tenant-customers"]
 ---
 

@@ -3,8 +3,11 @@ title: "Passkeys on a phone in development"
 description: "Why a passkey made on localhost can't sign in to the phone app, and the full setup to make phone passkeys work in development on your own domain through a Cloudflare tunnel: hostnames, the asset-links file on the domain itself, the API's settings, the app's API address. Written for bishenpatel.com; nothing here is applied yet."
 order: 5
 author: "Platform Team"
+category: "Mobile"
+date: 1793836800000
 lastUpdated: 1793865600000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/mobile/passkeys-on-a-phone.webp"
 tags: ["mobile", "passkeys", "webauthn", "android", "cloudflare", "development"]
 ---
 

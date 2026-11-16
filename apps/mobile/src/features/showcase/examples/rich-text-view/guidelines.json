@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Structure with headings and lists",
+		"do": {
+			"text": "Use a heading and a list for structure, so the body can be skimmed.",
+			"file": "rich-text-view-do-1",
+			"export": "RichTextViewDo1Example"
+		},
+		"dont": {
+			"text": "Don't fake structure with bold lines and dashes: screen readers lose it.",
+			"file": "rich-text-view-dont-1",
+			"export": "RichTextViewDont1Example"
+		}
+	},
+	{
+		"title": "Write links that say where they go",
+		"do": {
+			"text": "Link words that describe the destination (\"the full menu\").",
+			"file": "rich-text-view-do-2",
+			"export": "RichTextViewDo2Example"
+		},
+		"dont": {
+			"text": "Don't link \"here\" or \"click\": out of context it means nothing.",
+			"file": "rich-text-view-dont-2",
+			"export": "RichTextViewDont2Example"
+		}
+	}
+]

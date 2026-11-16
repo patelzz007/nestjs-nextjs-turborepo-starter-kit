@@ -21,10 +21,26 @@ describe("formatEpochMs", () => {
 	it("writes the instant on the wall clock of the region's time zone", () => {
 		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "date", KUALA_LUMPUR)).toBe("15 Nov 2026");
 		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "dayMonth", KUALA_LUMPUR)).toBe("15 Nov");
-		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "dateTime", KUALA_LUMPUR)).toBe("15 Nov 2026, 12:30 am");
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "dateTime", KUALA_LUMPUR)).toBe("15 Nov 2026, 00:30");
 
 		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "date", LOS_ANGELES_US)).toBe("Nov 14, 2026");
 		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "dateTime", LOS_ANGELES_US)).toBe("Nov 14, 2026, 8:30 AM");
+	});
+
+	it("writes the platform region (American English, UTC)", () => {
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "dateTime", { locale: "en-US", timeZone: "UTC" })).toBe("Nov 14, 2026, 4:30 PM");
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "dayMonth", { locale: "en-US", timeZone: "UTC" })).toBe("Nov 14");
+	});
+
+	it("falls back to the language, then American English, for a locale without its own entry", () => {
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "date", { locale: "de-AT", timeZone: "UTC" })).toBe("14. Nov. 2026");
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "date", { locale: "xx-XX", timeZone: "UTC" })).toBe("Nov 14, 2026");
+	});
+
+	it("writes the full date, the time and the precise time", () => {
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "fullDate", KUALA_LUMPUR)).toBe("Sunday, 15 November 2026");
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "time", LOS_ANGELES_US)).toBe("8:30 AM");
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE + 9_042, "preciseTime", KUALA_LUMPUR)).toBe("00:30:09.042");
 	});
 
 	it("labels a UTC-aligned bucket with its UTC calendar day", () => {
@@ -36,13 +52,13 @@ describe("formatEpochMs", () => {
 		vi.stubEnv("TZ", runtimeTimeZone);
 
 		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "date", KUALA_LUMPUR)).toBe("15 Nov 2026");
-		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "dateTime", KUALA_LUMPUR)).toBe("15 Nov 2026, 12:30 am");
+		expect(formatEpochMs(ACROSS_THE_DATE_LINE, "dateTime", KUALA_LUMPUR)).toBe("15 Nov 2026, 00:30");
 	});
 });
 
 describe("toIsoTimestamp", () => {
 	it("is the UTC ISO 8601 form", () => {
-		expect(toIsoTimestamp(ACROSS_THE_DATE_LINE)).toBe("2026-11-14T16:30:00.000Z");
+		expect(toIsoTimestamp(ACROSS_THE_DATE_LINE)).toBe("2026-11-14T16:30:00Z");
 	});
 });
 
@@ -58,13 +74,13 @@ describe("formatRelativeTime", () => {
 		expect(formatRelativeTime(NOW - 119 * SECOND_MS, NOW, "en-MY")).toBe("1 minute ago");
 		expect(formatRelativeTime(NOW - 3 * HOUR_MS, NOW, "en-MY")).toBe("3 hours ago");
 		expect(formatRelativeTime(NOW - 2 * DAY_MS, NOW, "en-MY")).toBe("2 days ago");
-		expect(formatRelativeTime(NOW - 14 * DAY_MS, NOW, "en-MY")).toBe("2 weeks ago");
-		expect(formatRelativeTime(NOW - 400 * DAY_MS, NOW, "en-MY")).toBe("last year");
+		expect(formatRelativeTime(NOW - 14 * DAY_MS, NOW, "en-MY")).toBe("14 days ago");
+		expect(formatRelativeTime(NOW - 400 * DAY_MS, NOW, "en-MY")).toBe("1 year ago");
 	});
 
-	it("uses the locale's words for adjacent units and the present", () => {
-		expect(formatRelativeTime(NOW - DAY_MS, NOW, "en-MY")).toBe("yesterday");
-		expect(formatRelativeTime(NOW, NOW, "en-MY")).toBe("now");
+	it("writes adjacent units and the present in whole units", () => {
+		expect(formatRelativeTime(NOW - DAY_MS, NOW, "en-MY")).toBe("1 day ago");
+		expect(formatRelativeTime(NOW, NOW, "en-MY")).toBe("0 seconds ago");
 		expect(formatRelativeTime(NOW - 30 * SECOND_MS, NOW, "en-MY")).toBe("30 seconds ago");
 	});
 
@@ -77,20 +93,20 @@ describe("formatRelativeTime", () => {
 	});
 });
 
-/** ICU separates range parts with thin / narrow no-break spaces; compare them as plain spaces. */
+/** Compares range text with any space-like separator as a plain space. */
 function spaced(value: string): string {
 	return value.replace(/\s/g, " ");
 }
 
 describe("formatEpochMsRange", () => {
 	it("writes a half-open range with its last included day", () => {
-		expect(spaced(formatEpochMsRange(Date.UTC(2026, 8, 1), Date.UTC(2026, 9, 1), UTC_MALAYSIAN_ENGLISH))).toBe("1–30 Sept 2026");
-		expect(spaced(formatEpochMsRange(Date.UTC(2026, 8, 6), Date.UTC(2026, 9, 6), UTC_MALAYSIAN_ENGLISH))).toBe("6 Sept – 5 Oct 2026");
+		expect(spaced(formatEpochMsRange(Date.UTC(2026, 8, 1), Date.UTC(2026, 9, 1), UTC_MALAYSIAN_ENGLISH))).toBe("1–30 Sep 2026");
+		expect(spaced(formatEpochMsRange(Date.UTC(2026, 8, 6), Date.UTC(2026, 9, 6), UTC_MALAYSIAN_ENGLISH))).toBe("6 Sep – 5 Oct 2026");
 	});
 
 	it("writes the days of the region's time zone", () => {
 		// 1 Sep 00:00 → 1 Oct 00:00 in Kuala Lumpur is 31 Aug 16:00 → 30 Sep 16:00 UTC.
-		expect(spaced(formatEpochMsRange(Date.UTC(2026, 7, 31, 16), Date.UTC(2026, 8, 30, 16), KUALA_LUMPUR))).toBe("1–30 Sept 2026");
+		expect(spaced(formatEpochMsRange(Date.UTC(2026, 7, 31, 16), Date.UTC(2026, 8, 30, 16), KUALA_LUMPUR))).toBe("1–30 Sep 2026");
 	});
 
 	it("writes a single day once", () => {
@@ -119,7 +135,7 @@ describe("formatBucket", () => {
 	});
 
 	it("writes a week crossing a month end and a clipped (partial) week", () => {
-		expect(spaced(formatBucket(Date.UTC(2026, 8, 28), MONDAY, "week", "full", UTC_MALAYSIAN_ENGLISH))).toBe("28 Sept – 4 Oct 2026");
+		expect(spaced(formatBucket(Date.UTC(2026, 8, 28), MONDAY, "week", "full", UTC_MALAYSIAN_ENGLISH))).toBe("28 Sep – 4 Oct 2026");
 		expect(spaced(formatBucket(Date.UTC(2026, 9, 8), NEXT_MONDAY, "week", "full", UTC_MALAYSIAN_ENGLISH))).toBe("8–11 Oct 2026");
 	});
 

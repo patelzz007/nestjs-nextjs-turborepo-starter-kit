@@ -36,19 +36,19 @@ export const PullRequestRow = React.memo(function PullRequestRow({ pullRequest, 
 				<PullRequestStateGlyph state={state} />
 			</View>
 			<View className="flex-1 gap-1.5">
-				<Text numberOfLines={1} className="font-sans text-xs text-muted-foreground">
+				<Text numberOfLines={1} className="text-caption font-sans text-muted-foreground">
 					{pullRequestReference(pullRequest)}
 				</Text>
-				<Text numberOfLines={2} className="font-sans-semibold text-base leading-6 text-foreground">
+				<Text numberOfLines={2} className="font-sans-semibold text-body-lg text-foreground">
 					{pullRequest.title}
 				</Text>
 				<View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
-					<Text className="font-sans text-xs text-muted-foreground">{listRowMeta(pullRequest, nowMs)}</Text>
-					{decision === null ? null : <Text className="font-sans text-xs text-muted-foreground">{decision}</Text>}
+					<Text className="text-caption font-sans text-muted-foreground">{listRowMeta(pullRequest, nowMs)}</Text>
+					{decision === null ? null : <Text className="text-caption font-sans text-muted-foreground">{decision}</Text>}
 					{pullRequest.commentCount === 0 ? null : (
 						<View accessible accessibilityLabel={`${formatCount(pullRequest.commentCount)} comments`} className="flex-row items-center gap-1">
-							<Icon icon={MessageSquareIcon} size="sm" colorClassName="accent-muted-foreground" />
-							<Text className="font-sans text-xs text-muted-foreground">{formatCount(pullRequest.commentCount)}</Text>
+							<Icon icon={MessageSquareIcon} size="sm" colorClassName="accent-icon" />
+							<Text className="text-caption font-sans text-muted-foreground">{formatCount(pullRequest.commentCount)}</Text>
 						</View>
 					)}
 				</View>

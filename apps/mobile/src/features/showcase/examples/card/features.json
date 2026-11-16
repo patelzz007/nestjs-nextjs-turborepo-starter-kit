@@ -1,0 +1,128 @@
+[
+	{
+		"id": "c-card-1",
+		"label": "Basic",
+		"description": "Basic card. Best for the plain anatomy of title, description, body text and a full width outline button in the footer.",
+		"file": "card-1",
+		"export": "Card1Example"
+	},
+	{
+		"id": "c-card-2",
+		"label": "Bordered Header",
+		"description": "Card header with border. Best for a header ruled off from the body by a bottom border, with a description line and no footer.",
+		"file": "card-2",
+		"export": "Card2Example"
+	},
+	{
+		"id": "c-card-3",
+		"label": "Border Separation",
+		"description": "Card with border separation. Best for tight zero gap sections: a slim header with its own button, a body ruled above and below, and a footer button.",
+		"file": "card-3",
+		"export": "Card3Example"
+	},
+	{
+		"id": "c-card-4",
+		"label": "Header & Footer",
+		"description": "Card with header and footer. Best for a titled header and a footer button, each split from the body by a rule, with no description line.",
+		"file": "card-4",
+		"export": "Card4Example"
+	},
+	{
+		"id": "c-card-5",
+		"label": "Link Action",
+		"description": "Card with link. Best for a help notice whose only action is a link style button with an external link icon.",
+		"file": "card-5",
+		"export": "Card5Example"
+	},
+	{
+		"id": "c-card-6",
+		"label": "Dropdown Menu",
+		"description": "Card with dropdown menu. Best for a help notice with an overflow menu of team actions in the header and an avatar chip button in the footer.",
+		"file": "card-6",
+		"export": "Card6Example"
+	},
+	{
+		"id": "c-card-7",
+		"label": "Inset Image",
+		"description": "Card with image. Best for a rounded photo inset above a Trending badge, a Featured tag, a blurb and a Get Started button.",
+		"file": "card-7",
+		"export": "Card7Example"
+	},
+	{
+		"id": "c-card-8",
+		"label": "Image Hover Zoom",
+		"description": "Card with full bleed image. Best for an edge to edge photo under a bottom dark fade holding a white title and line.",
+		"file": "card-8",
+		"export": "Card8Example"
+	},
+	{
+		"id": "c-card-9",
+		"label": "Full Image",
+		"description": "Card with full image. Best for an edge to edge photo flush with the top, then a centered badge, blurb and a fit width call to action.",
+		"file": "card-9",
+		"export": "Card9Example"
+	},
+	{
+		"id": "c-card-10",
+		"label": "Image Shadow Fade",
+		"description": "Full card with image and shadow fade effect. Best for a tall photo with dark fades top and bottom and an author row of verified avatar, email and New badge.",
+		"file": "card-10",
+		"export": "Card10Example"
+	},
+	{
+		"id": "c-card-11",
+		"label": "Stacked Depth",
+		"description": "Card with stacked depth effect. Best for a stacked deck look from 2 blank layers peeking out below the bottom edge, behind a standard title, body and footer.",
+		"file": "card-11",
+		"export": "Card11Example"
+	},
+	{
+		"id": "c-card-12",
+		"label": "Login Form",
+		"description": "Advanced clean login form card. Best for a sign in form with email, a password field that toggles visibility, a forgot link, a GitHub button and terms.",
+		"file": "card-12",
+		"export": "Card12Example"
+	},
+	{
+		"id": "c-card-13",
+		"label": "Billing Usage",
+		"description": "Expandable billing usage card. Best for credit used against the plan on a progress bar over cost rows that a round toggle expands to the full list.",
+		"file": "card-13",
+		"export": "Card13Example"
+	},
+	{
+		"id": "c-card-14",
+		"label": "Deployment Status",
+		"description": "Deployment status summary card. Best for a deployment success message under a terminal icon on a violet band, then 4 striped label and value rows.",
+		"file": "card-14",
+		"export": "Card14Example"
+	},
+	{
+		"id": "c-card-15",
+		"label": "Stat Trend",
+		"description": "Stat card with trend and overflow menu. Best for a single KPI with label, large figure, a trend badge that flips color and arrow for a drop, last month value and a 5 item menu.",
+		"file": "card-15",
+		"export": "Card15Example"
+	},
+	{
+		"id": "c-card-16",
+		"label": "Badge & Actions",
+		"description": "Card with header badge and actions. Best for an integration tile: a Live strip with a dots menu, an Installed badge, 3 avatars plus a count, and a full width Open button.",
+		"file": "card-16",
+		"export": "Card16Example"
+	},
+	{
+		"id": "c-card-17",
+		"label": "Icon & Link",
+		"description": "Card with icon, title and link. Best for a solid brand icon tile above a linked title, a muted summary and a small View link.",
+		"file": "card-17",
+		"export": "Card17Example"
+	},
+	{
+		"id": "c-card-18",
+		"label": "Label & Link",
+		"description": "Card with header label and link. Best for a muted icon and label in a bordered top strip, then a summary and a small link with a leading chain icon.",
+		"file": "card-18",
+		"export": "Card18Example"
+	}
+]

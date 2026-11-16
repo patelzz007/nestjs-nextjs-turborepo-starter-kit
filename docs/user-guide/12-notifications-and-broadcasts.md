@@ -3,8 +3,11 @@ title: "12. Notifications and broadcasts"
 description: "What reaches whom and where: the bell and the notifications page, phone notifications, notification settings, unsubscribing and reporting, merchants messaging their customers, and what platform staff see and review."
 order: 13
 author: "Product & Platform Team"
+category: "User guide"
+date: 1793491200000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/user-guide/12-notifications-and-broadcasts.webp"
 tags: ["user-guide", "notifications", "broadcasts", "push", "settings"]
 ---
 

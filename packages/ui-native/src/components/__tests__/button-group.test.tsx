@@ -3,7 +3,7 @@ import * as React from "react";
 import type { ViewInstance } from "react-native";
 
 import { Button } from "../button";
-import { ButtonGroup } from "../button-group";
+import { ButtonGroup, ButtonGroupSeparator, ButtonGroupText } from "../button-group";
 
 describe("ButtonGroup", () => {
 	it("is a named group whose buttons keep their own events", async () => {
@@ -83,5 +83,18 @@ describe("ButtonGroup", () => {
 		const className = String(screen.getByTestId("group").props.className);
 		expect(className).toContain("gap-4");
 		expect(className).not.toContain("gap-2");
+	});
+
+	it("joins a text cell to its buttons, and draws a separator between solid ones", async () => {
+		await render(
+			<ButtonGroup accessibilityLabel="Likes" testID="group">
+				<Button label="Like" onPress={jest.fn()} />
+				<ButtonGroupSeparator tone="primary" testID="separator" />
+				<ButtonGroupText label="1.2K" variant="primary" testID="count" />
+			</ButtonGroup>,
+		);
+		expect(screen.getByText("1.2K")).toBeOnTheScreen();
+		expect(String(screen.getByTestId("count").props.className)).toContain("rounded-l-none");
+		expect(String(screen.getByTestId("separator", { includeHiddenElements: true }).props.className)).toContain("bg-primary-foreground/30");
 	});
 });

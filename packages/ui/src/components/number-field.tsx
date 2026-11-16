@@ -55,6 +55,7 @@ const numberFieldGroupVariants = cva(
 	"relative flex w-full justify-between rounded-md border border-input bg-transparent shadow-xs transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 focus-within:has-aria-invalid:border-destructive focus-within:has-aria-invalid:ring-destructive/20 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:focus-within:has-aria-invalid:ring-destructive/40 dark:aria-invalid:ring-destructive/40 data-disabled:pointer-events-none data-disabled:opacity-50",
 	{
 		variants: {
+			/** Height of the field and its buttons: `sm`, `default` or `lg`. */
 			size: {
 				sm: "h-8 text-sm",
 				default: "h-9 text-sm",
@@ -73,6 +74,7 @@ const numberFieldButtonVariants = cva(
 	"relative flex shrink-0 cursor-pointer items-center justify-center transition-colors outline-none hover:bg-accent focus-visible:bg-accent disabled:cursor-not-allowed pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11",
 	{
 		variants: {
+			/** Height of the button; set once on `NumberField`. */
 			size: {
 				sm: "px-2 [&_svg:not([class*='size-'])]:size-3.5",
 				default: "px-2.5 [&_svg:not([class*='size-'])]:size-4",
@@ -87,6 +89,7 @@ const numberFieldButtonVariants = cva(
 
 const numberFieldInputVariants = cva("w-full min-w-0 flex-1 bg-transparent text-center tabular-nums outline-none", {
 	variants: {
+		/** Height of the input; set once on `NumberField`. */
 		size: {
 			sm: "px-2 py-0.5",
 			default: "px-2.5 py-1",
@@ -104,6 +107,7 @@ type NumberFieldProps = NumberFieldPrimitive.Root.Props &
 		readonly labels?: UiKitLabelsOverride<"numberField"> | undefined;
 	};
 
+/** A numeric field on Base UI's number field: typing, the arrow keys, `min`, `max`, `step` and `Intl.NumberFormat` options. `size` sets the height of every part. `onValueChange` receives `null` when the field is cleared. */
 const NumberField = React.forwardRef<HTMLDivElement, NumberFieldProps>(function NumberField(
 	{ id, className, size, disabled, labels: labelsOverride, "aria-invalid": ariaInvalid, ...props },
 	ref,
@@ -134,6 +138,7 @@ const NumberField = React.forwardRef<HTMLDivElement, NumberFieldProps>(function 
 
 type NumberFieldGroupProps = NumberFieldPrimitive.Group.Props & Omit<VariantProps<typeof numberFieldGroupVariants>, "state">;
 
+/** Joins the decrement button, the input and the increment button into one control. Set `aria-invalid` here to show an error. */
 const NumberFieldGroup = React.forwardRef<HTMLDivElement, NumberFieldGroupProps>(function NumberFieldGroup({ className, size: sizeProp, ...props }, ref): React.JSX.Element {
 	const context = useNumberFieldContext("NumberFieldGroup");
 	const size = sizeProp ?? context.size;
@@ -151,6 +156,7 @@ const NumberFieldGroup = React.forwardRef<HTMLDivElement, NumberFieldGroupProps>
 
 type NumberFieldDecrementProps = NumberFieldPrimitive.Decrement.Props & VariantProps<typeof numberFieldButtonVariants>;
 
+/** Steps the value down by `step`; disabled at `min`. */
 const NumberFieldDecrement = React.forwardRef<HTMLButtonElement, NumberFieldDecrementProps>(function NumberFieldDecrement(
 	{ className, size: sizeProp, children, ...props },
 	ref,
@@ -172,6 +178,7 @@ const NumberFieldDecrement = React.forwardRef<HTMLButtonElement, NumberFieldDecr
 
 type NumberFieldIncrementProps = NumberFieldPrimitive.Increment.Props & VariantProps<typeof numberFieldButtonVariants>;
 
+/** Steps the value up by `step`; disabled at `max`. */
 const NumberFieldIncrement = React.forwardRef<HTMLButtonElement, NumberFieldIncrementProps>(function NumberFieldIncrement(
 	{ className, size: sizeProp, children, ...props },
 	ref,
@@ -193,6 +200,7 @@ const NumberFieldIncrement = React.forwardRef<HTMLButtonElement, NumberFieldIncr
 
 type NumberFieldInputProps = Omit<NumberFieldPrimitive.Input.Props, "size"> & VariantProps<typeof numberFieldInputVariants>;
 
+/** The text input: `role="spinbutton"` with the value, the minimum and the maximum exposed. */
 const NumberFieldInput = React.forwardRef<HTMLInputElement, NumberFieldInputProps>(function NumberFieldInput({ className, size: sizeProp, ...props }, ref): React.JSX.Element {
 	const context = useNumberFieldContext("NumberFieldInput");
 	const size = sizeProp ?? context.size;
@@ -221,6 +229,7 @@ function CursorGrowIcon(props: React.ComponentProps<"svg">): React.JSX.Element {
 	);
 }
 
+/** A label that changes the value when dragged sideways (pointer lock while dragging). */
 const NumberFieldScrubArea = React.forwardRef<HTMLSpanElement, NumberFieldScrubAreaProps>(function NumberFieldScrubArea(
 	{ className, label, ...props },
 	ref,

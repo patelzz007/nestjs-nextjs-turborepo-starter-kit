@@ -77,16 +77,16 @@ describe("Runtime feature flags (e2e)", () => {
 	it("lists every declared flag with its setting and who changed it, and answers the bare settings", async () => {
 		const list = FeatureFlagListSchema.parse(DataSchema.parse((await call("GET", "/admin/feature-flags", superAdmin)).json()).data);
 		expect(list.flags.map((flag) => [flag.key, flag.mode])).toStrictEqual([
-			["component-gallery", "ON"],
+			["showcase", "ON"],
 			["merchant-invites", "DEFAULT"],
 			["till-redemption", "DEFAULT"],
 		]);
-		expect(list.flags.at(0)).toMatchObject({ title: "Component gallery", reason: "Everyone on staff uses the gallery now" });
+		expect(list.flags.at(0)).toMatchObject({ title: "Component showcase", reason: "Everyone on staff uses the showcase now" });
 		expect(list.flags.at(0)?.updatedByName).toMatch(/.+/u);
 
 		const settings = FeatureFlagSettingsSchema.parse(DataSchema.parse((await call("GET", "/admin/feature-flags/settings", superAdmin)).json()).data);
 		expect(settings.settings).toStrictEqual([
-			{ key: "component-gallery", mode: "ON", percentage: null },
+			{ key: "showcase", mode: "ON", percentage: null },
 			{ key: "merchant-invites", mode: "DEFAULT", percentage: null },
 			{ key: "till-redemption", mode: "DEFAULT", percentage: null },
 		]);
@@ -120,7 +120,7 @@ describe("Runtime feature flags (e2e)", () => {
 	it("is for admin staff only", async () => {
 		expect((await call("GET", "/admin/feature-flags/settings", customer)).statusCode).toBeGreaterThanOrEqual(401);
 		expect(
-			(await call("PUT", "/admin/feature-flags/component-gallery", customer, { mode: "OFF", percentage: null, reason: "Customers can't do this" })).statusCode,
+			(await call("PUT", "/admin/feature-flags/showcase", customer, { mode: "OFF", percentage: null, reason: "Customers can't do this" })).statusCode,
 		).toBeGreaterThanOrEqual(401);
 	});
 
@@ -179,7 +179,7 @@ describe("Runtime feature flags (e2e)", () => {
 		expect((await remove()).statusCode).toBe(404);
 		expect(
 			(
-				await call("PUT", "/admin/feature-flags/component-gallery/overrides", superAdmin, {
+				await call("PUT", "/admin/feature-flags/showcase/overrides", superAdmin, {
 					tenantId: TENANT_SEED_IDS.klTenant,
 					locationId: null,
 					enabled: true,

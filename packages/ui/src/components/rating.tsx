@@ -41,6 +41,7 @@ const FIRST_STAR = 1;
 
 const ratingVariants = cva("flex items-center", {
 	variants: {
+		/** The size of the stars and spacing. */
 		size: {
 			sm: "gap-2",
 			default: "gap-2.5",

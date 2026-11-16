@@ -3,8 +3,11 @@ title: "Technical documentation — start here"
 description: "Index of the engineering documentation: setup, architecture, dos and don'ts, the generated API reference, configuration, database, security, messaging, storage, email, frontend, tooling, operations — plus the known gaps."
 order: 1
 author: "Platform Team"
+category: "Engineering"
+date: 1791072000000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&h=630&fit=crop"
+editedAt: 1794489806547
+coverImage: "/images/covers/technical/README.webp"
 tags: ["overview", "technical", "index"]
 ---
 
@@ -34,6 +37,7 @@ AI agents (and humans) also follow the rulebook: [`AGENTS.md`](../../AGENTS.md) 
 | Data | [Database, migrations and seed](./database.md) · [Messaging, jobs, outbox](./messaging.md) |
 | Authorization | [Start here](./authorization/overview.md) · [Backend](./authorization/backend.md) · [Frontend](./authorization/frontend.md) · [Tenancy and RLS](./authorization/tenancy-and-rls.md) · [Recipes, troubleshooting and tests](./authorization/recipes.md) |
 | Security | [Authentication, MFA, impersonation](./security/authentication.md) · [Token refresh](./security/token-refresh.md) · [Database security](./security/database-security.md) · [Encryption and KMS](./security/encryption-and-kms.md) · [Threat model](./security/threat-model.md) · [Data classification](./security/data-classification.md) |
+| Docs publishing | [**Notion integration**](./notion-integration.md) · [Runbook: Docs publishing](./operations/docs-publishing.md) |
 | Files and email | [Storage overview](./storage/overview.md) · [**AWS S3 setup**](./storage/aws-s3.md) · [**Firebase Storage setup**](./storage/firebase.md) · [**Resend setup**](./email/resend-setup.md) · [Email templates](./email/templates.md) |
 | Notifications | [**How they work**](./notifications/overview.md) · [**Push setup (Firebase, APNs)**](./notifications/push-setup.md) · [Broadcasts](./notifications/broadcasts.md) |
 | Frontend | [Routing and URL conventions](./frontend/routing.md) · [Admin panel](./frontend/admin-panel.md) · [Analytics dashboards](./frontend/analytics-charts.md) · [Toasts](./frontend/toast.md) · [Date pickers](./frontend/date-pickers.md) · [QR codes](./frontend/qr-codes.md) · [PDF viewer](./frontend/pdf-viewer.md) · [Carousels](./frontend/carousel.md) · [Image resizer](./frontend/image-resizer.md) · [Streams (RxJS)](./frontend/streams.md) |

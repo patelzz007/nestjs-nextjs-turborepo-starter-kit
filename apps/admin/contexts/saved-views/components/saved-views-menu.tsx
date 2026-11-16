@@ -11,7 +11,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/component
 import { Switch } from "@workspace/ui/components/switch";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { Bookmark, Trash2 } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { toastMutationError } from "@/lib/api/mutation-error";
@@ -34,7 +35,7 @@ export interface SavedViewsMenuProps {
 export function SavedViewsMenu({ listKey }: SavedViewsMenuProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const pathname = usePathname();
 	const search = useSearchParams().toString();
 	const [open, setOpen] = React.useState(false);

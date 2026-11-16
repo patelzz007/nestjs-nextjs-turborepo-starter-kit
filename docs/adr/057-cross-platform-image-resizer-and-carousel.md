@@ -3,8 +3,11 @@ title: "ADR 057: One Image-Resize Geometry, and Carousel Parity, on Every Platfo
 tags: ["adr", "image", "carousel", "ui", "mobile", "docs"]
 description: "The drag-to-resize image's geometry lives once in @workspace/shared and each kit renders it with its own input system. Carousels stay on Embla on the web and in the docs, and on a paging ScrollView in the native kit, with the same controls everywhere. The docs reuse the web components as hydrated islands."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792108800000
 lastUpdated: 1792195200000
-coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792174621000
+coverImage: "/images/covers/adr/057-cross-platform-image-resizer-and-carousel.webp"
 order: 57
 ---
 

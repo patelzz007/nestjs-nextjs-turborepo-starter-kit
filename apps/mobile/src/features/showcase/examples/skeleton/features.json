@@ -1,0 +1,72 @@
+[
+	{
+		"id": "c-skeleton-1",
+		"label": "Avatar Info",
+		"description": "Skeleton loader for avatars and user info. Best for a 48pt avatar circle beside 2 text bars, the second shorter, with no card around them.",
+		"file": "skeleton-1",
+		"export": "Skeleton1Example"
+	},
+	{
+		"id": "c-skeleton-2",
+		"label": "Card",
+		"description": "Skeleton loader for a card component. Best for a card that opens with 2 title bars of falling width above a 16:9 media block, with no footer.",
+		"file": "skeleton-2",
+		"export": "Skeleton2Example"
+	},
+	{
+		"id": "c-skeleton-3",
+		"label": "Text Paragraphs",
+		"description": "Skeleton loader for text and paragraphs. Best for body copy in 2 paragraphs of full width lines, each closing on a shorter line, with no heading or image.",
+		"file": "skeleton-3",
+		"export": "Skeleton3Example"
+	},
+	{
+		"id": "c-skeleton-4",
+		"label": "Form",
+		"description": "Skeleton loader for a form. Best for a stack of 2 label bars over full width input bars, closed by one shorter button bar.",
+		"file": "skeleton-4",
+		"export": "Skeleton4Example"
+	},
+	{
+		"id": "c-skeleton-5",
+		"label": "Data Table",
+		"description": "Skeleton loader for a data table. Best for a 3 column header row with a bottom border over 4 body rows, laid out with flex rows.",
+		"file": "skeleton-5",
+		"export": "Skeleton5Example"
+	},
+	{
+		"id": "c-skeleton-6",
+		"label": "Stats Row",
+		"description": "Skeleton loader for a dashboard stats row. Best for a row of 3 metric cards, each a small label bar over a tall value bar and a caption line.",
+		"file": "skeleton-6",
+		"export": "Skeleton6Example"
+	},
+	{
+		"id": "c-skeleton-7",
+		"label": "List With Actions",
+		"description": "Skeleton loader for a list with actions. Best for a titled list with a header button bar over 3 divided rows of avatar, 2 text lines and a trailing action bar.",
+		"file": "skeleton-7",
+		"export": "Skeleton7Example"
+	},
+	{
+		"id": "c-skeleton-8",
+		"label": "Card Grid",
+		"description": "Skeleton loader for a card grid. Best for a card led by a 16:9 media block, then a heading bar and 2 copy lines over a footer with a wide and a square button bar.",
+		"file": "skeleton-8",
+		"export": "Skeleton8Example"
+	},
+	{
+		"id": "c-skeleton-9",
+		"label": "Profile Page",
+		"description": "Skeleton loader for a full profile screen. Best for a profile card with an 80px avatar, name lines and 3 stat pairs, above a details card of 4 label and value rows.",
+		"file": "skeleton-9",
+		"export": "Skeleton9Example"
+	},
+	{
+		"id": "c-skeleton-10",
+		"label": "Chat Messages",
+		"description": "Skeleton loader for chat messages. Best for incoming bubbles with an avatar and sender bar, one outgoing bubble on the right and a reply field with a square button bar.",
+		"file": "skeleton-10",
+		"export": "Skeleton10Example"
+	}
+]

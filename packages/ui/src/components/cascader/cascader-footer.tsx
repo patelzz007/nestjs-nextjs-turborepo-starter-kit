@@ -209,6 +209,7 @@ function CascaderActionList({ items }: CascaderActionListProps): React.JSX.Eleme
 /* -------------------------------------------------------------------------- */
 
 export interface CascaderActionProps extends Omit<React.ComponentPropsWithoutRef<"button">, "onSelect"> {
+	/** Leading icon. */
 	readonly icon?: React.ReactNode;
 	/** Fires on press, after `onClick`, and not at all when disabled. */
 	readonly onSelect?: (() => void) | undefined;
@@ -320,9 +321,13 @@ export function useCascaderSubmenu(): CascaderSubmenuContextValue {
 }
 
 export interface CascaderSubmenuProps {
+	/** Controlled open state. */
 	readonly open?: boolean | undefined;
+	/** Uncontrolled initial state. */
 	readonly defaultOpen?: boolean | undefined;
+	/** Fires on every change. */
 	readonly onOpenChange?: ((open: boolean) => void) | undefined;
+	/** The submenu's trigger and content. */
 	readonly children?: React.ReactNode;
 }
 
@@ -375,6 +380,7 @@ function CascaderSubmenu({ open: openProp, defaultOpen = false, onOpenChange, ch
 }
 
 export interface CascaderSubmenuTriggerProps extends Omit<React.ComponentPropsWithoutRef<"button">, "onSelect"> {
+	/** Leading icon. */
 	readonly icon?: React.ReactNode;
 }
 

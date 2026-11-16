@@ -1,0 +1,58 @@
+[
+	{
+		"id": "c-command-1",
+		"label": "Basic",
+		"description": "Basic command list. Best for an always open list on a card, with a disabled Calculator row and shortcut hints on the Settings rows only.",
+		"file": "command-1",
+		"export": "Command1Example"
+	},
+	{
+		"id": "c-command-2",
+		"label": "Shortcuts",
+		"description": "Command palette with shortcuts. Best for the smallest palette, a single Settings group of 3 rows with a shortcut on each, in a sheet.",
+		"file": "command-2",
+		"export": "Command2Example"
+	},
+	{
+		"id": "c-command-3",
+		"label": "Groups",
+		"description": "Command palette with groups. Best for a palette with 2 groups, Suggestions as plain rows and Settings rows with shortcuts.",
+		"file": "command-3",
+		"export": "Command3Example"
+	},
+	{
+		"id": "c-command-4",
+		"label": "Many Groups",
+		"description": "Command palette with many groups. Best for a dense palette of 5 groups and 23 rows, from navigation and file actions to view, account and tools.",
+		"file": "command-4",
+		"export": "Command4Example"
+	},
+	{
+		"id": "c-command-5",
+		"label": "File Search",
+		"description": "File search palette. Best for a file finder whose rows show a name, a muted path and a type badge, opened from a Search files button.",
+		"file": "command-5",
+		"export": "Command5Example"
+	},
+	{
+		"id": "c-command-6",
+		"label": "User Search",
+		"description": "People search with avatars. Best for a people search with an avatar, a name over an email, and a role badge tinted per Admin, Editor or Viewer.",
+		"file": "command-6",
+		"export": "Command6Example"
+	},
+	{
+		"id": "c-command-7",
+		"label": "Action Palette",
+		"description": "Action palette with keyboard shortcuts. Best for verbs grouped as Create, Navigate and System, from New project and Invite member to dark mode and sign out.",
+		"file": "command-7",
+		"export": "Command7Example"
+	},
+	{
+		"id": "c-command-8",
+		"label": "Recent & Favorites",
+		"description": "Recent and favourites. Best for a jump list of starred favourites, recent pages stamped 2m to 2h ago and help links, opened from a Search button.",
+		"file": "command-8",
+		"export": "Command8Example"
+	}
+]

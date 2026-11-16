@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep steps few",
+		"do": {
+			"text": "Use a stepper for 3 to 5 steps, with Previous and Next to move.",
+			"file": "stepper-do-1",
+			"export": "StepperDo1Example"
+		},
+		"dont": {
+			"text": "Don't squeeze 8 steps into a phone's width.",
+			"file": "stepper-dont-1",
+			"export": "StepperDont1Example"
+		}
+	},
+	{
+		"title": "Show what is done",
+		"do": {
+			"text": "Mark finished steps (a check, a filled link) and name each step.",
+			"file": "stepper-do-2",
+			"export": "StepperDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave steps unnamed and undistinguished: people cannot tell how far they are.",
+			"file": "stepper-dont-2",
+			"export": "StepperDont2Example"
+		}
+	}
+]

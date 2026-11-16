@@ -3,8 +3,11 @@ title: "ADR 055: QR Scanning on Mobile Only, Through expo-camera, for the Till"
 tags: ["adr", "qr-code", "mobile", "rewards", "pos"]
 description: "QR codes are scanned only in the mobile app: Google's code scanner on Android with Play services, the kit's own expo-camera scanner elsewhere. The scanner powers a till mode that pairs as a POS terminal and redeems customers' reward QR codes with the terminal's API key."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792108800000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792165699000
+coverImage: "/images/covers/adr/055-mobile-qr-scanning-and-till.webp"
 order: 55
 ---
 

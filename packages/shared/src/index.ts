@@ -12,8 +12,12 @@ export * from "./contexts/saved-views/index";
 export * from "./contexts/feature-flags/index";
 export { buildMerchantSubmittedKybFields } from "./lib/merchant-kyb";
 export { assertNever } from "./lib/assert-never";
+export { defineStateMachine, StateMachine, StateMachineDefinitionError } from "./lib/state-machine";
+export type { StateMachineDefinition, StateMachineEdge, StateTransition } from "./lib/state-machine";
 export type { Prettify, ToDiscoUnion } from "./lib/disco-union";
 export { hasGlobalConstructor, hasGlobalValue, hasMethod, isBrowserRuntime } from "./lib/global-runtime";
+// Epoch-millisecond building and the units of time (MS_PER_DAY, MINUTES_PER_HOUR, …), defined once.
+export * from "./lib/time";
 export {
 	isArrayValue,
 	isBigIntPrimitive,
@@ -68,3 +72,8 @@ export * from "./lib/pdf/index";
 export * from "./lib/image-resize/index";
 export * from "./lib/network-quality/index";
 export * from "./lib/navigation-menu/index";
+// The UI kits' component logic (Gantt, event calendar, filters, data table, data grid, kanban, file type) lives
+// in @workspace/ui-kit-logic, not here: a bundler keeps every module this barrel reaches, so every app that
+// imports anything from @workspace/shared would otherwise carry it (and date-fns) whether it draws one or not.
+export * from "./lib/entity-avatar-tone";
+export * from "./lib/image-sources";

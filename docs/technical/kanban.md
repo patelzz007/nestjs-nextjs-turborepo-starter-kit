@@ -3,8 +3,11 @@ title: "Kanban board"
 description: "The platform staff's two linked kanban boards: the epic → feature → story → task → subtask hierarchy with item keys, planning stages and work states, Move to…, ⌘K search, rollups, ordering under the board lock, optimistic locking, checklists, links, watchers, history, comments with files, CSV import and attachments through the files pipeline."
 order: 13
 author: "Platform Team"
+category: "Engineering"
+date: 1792800000000
 lastUpdated: 1792886400000
-coverImage: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/kanban.webp"
 tags: ["kanban", "admin", "cqrs", "files", "concurrency"]
 ---
 
@@ -193,8 +196,8 @@ current baseline) only added things: the new tables and enums, nullable `plannin
 
 ## Placement in the admin
 
-The boards are in the sidebar's **Components** section, beside the UI kit gallery, so they follow that
-section's `component-gallery` flag (`ADMIN_COMPONENT_GALLERY`: on in development and test, off in
+The boards are in the sidebar's **Components** section, beside the UI kit showcase, so they follow that
+section's `showcase` flag (`ADMIN_SHOWCASE`: on in development and test, off in
 production unless set; the CI browser job sets it, since its admin suite drives the board). To make them a product page everywhere, move the menu entry (and route folder)
 out of the Components section and drop the flag from the item-page rules in
 `apps/admin/lib/navigation/route-authorization.ts`.

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	SUPPORT_ACCESS_GRANT_LIFECYCLE,
 	supportAccessGrantListQuery,
 	SupportAccessGrantStatusSchema,
 	type Envelope,
@@ -44,11 +45,9 @@ export const SUPPORT_ACCESS_STATUS_LABELS: Readonly<Record<SupportAccessGrantSta
 	DENIED: "Denied",
 };
 
-/** Statuses a grant can still be revoked from (the API's own table). */
-const REVOCABLE: ReadonlySet<SupportAccessGrantStatus> = new Set<SupportAccessGrantStatus>(["PENDING_APPROVAL", "PENDING_TENANT_APPROVAL", "ACTIVE"]);
-
+/** Whether the grant's status allows a revoke — the shared lifecycle table the API enforces. */
 export function isRevocable(grant: SupportAccessGrantDetail): boolean {
-	return REVOCABLE.has(grant.status);
+	return SUPPORT_ACCESS_GRANT_LIFECYCLE.can("revoke", grant.status);
 }
 
 const TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {

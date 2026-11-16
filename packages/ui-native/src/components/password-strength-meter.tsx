@@ -80,7 +80,7 @@ export const passwordStrengthBadgeVariants = cva("flex-row items-center gap-1.5 
 	defaultVariants: { tone: "weak" },
 });
 
-export const passwordStrengthBadgeTextVariants = cva("font-sans-medium text-xs", {
+export const passwordStrengthBadgeTextVariants = cva("font-sans-medium text-caption", {
 	variants: {
 		tone: {
 			weak: "text-destructive-foreground",
@@ -206,7 +206,7 @@ export const PasswordStrengthMeter = React.memo(
 		return (
 			<View ref={ref} testID={testID} className={cn(passwordStrengthMeterVariants({ variant, size }), className)}>
 				<View accessibilityLiveRegion="polite" className="flex-row flex-wrap items-center justify-between gap-x-3 gap-y-1">
-					<Text className="font-sans-medium text-xs text-muted-foreground">{title}</Text>
+					<Text className="font-sans-medium text-caption text-muted-foreground">{title}</Text>
 					<View className={passwordStrengthBadgeVariants({ tone })}>
 						<Icon icon={glyph.icon} size="sm" colorClassName={glyph.colorClassName} />
 						<Text className={passwordStrengthBadgeTextVariants({ tone })}>{label}</Text>
@@ -248,7 +248,7 @@ function StrengthChecklist({ criteria, missing, metLabel, unmetLabel }: Strength
 			{rows.map((criterion: PasswordStrengthCriterion): React.JSX.Element => (
 				<View key={criterion.label} accessible accessibilityLabel={`${criterion.label}: ${criterion.met ? metLabel : unmetLabel}`} className="flex-row items-center gap-1.5">
 					<Icon icon={criterion.met ? CircleCheckBigIcon : CircleXIcon} size="sm" colorClassName={criterion.met ? "accent-success-foreground" : "accent-muted-foreground"} />
-					<Text className={cn("min-w-0 shrink font-sans text-xs", criterion.met ? "text-foreground" : "text-muted-foreground")}>{criterion.label}</Text>
+					<Text className={cn("text-caption min-w-0 shrink font-sans", criterion.met ? "text-foreground" : "text-muted-foreground")}>{criterion.label}</Text>
 				</View>
 			))}
 		</View>

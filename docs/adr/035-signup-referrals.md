@@ -3,8 +3,11 @@ title: "ADR 035: Signup Referrals"
 tags: ["adr", "rewards", "referrals"]
 description: "A signup referral is a registration-time relationship through a rotating referral code. It becomes successful when the referee redeems a reward, and it does not pay the referrer."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/035-signup-referrals.webp"
 order: 35
 ---
 

@@ -19,7 +19,7 @@ import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import { Eye } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 import * as React from "react";
@@ -55,7 +55,7 @@ export interface MfaRecoveryQueueProps {
  */
 export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueueProps>(function MfaRecoveryQueue({ initialPage }, ref): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const [urlState, updateUrlState] = useUrlState(MFA_RECOVERY_URL_STATE);
 	const statusFilter = urlState.status;
 	const isFiltered = statusFilter !== undefined;

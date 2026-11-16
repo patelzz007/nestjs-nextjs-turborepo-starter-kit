@@ -17,10 +17,10 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 }));
 
 const GALLERY: FeatureFlag = {
-	key: "component-gallery",
-	title: "Component gallery",
+	key: "showcase",
+	title: "Component showcase",
 	description: "The developer gallery.",
-	defaultFrom: "ADMIN_COMPONENT_GALLERY",
+	defaultFrom: "ADMIN_SHOWCASE",
 	scope: "platform",
 	mode: "ON",
 	percentage: null,
@@ -52,16 +52,16 @@ describe("FeatureFlagsView", () => {
 		// Read as a look-only staff member: no change form, so each setting's words appear once.
 		permissions.granted = new Set();
 		render(<FeatureFlagsView />, { wrapper: UiKitTestProviders });
-		const gallery = within(screen.getByRole("region", { name: "Component gallery" }));
+		const gallery = within(screen.getByRole("region", { name: "Component showcase" }));
 		expect(gallery.getByText("On")).toBeTruthy();
-		expect(gallery.getByText("ADMIN_COMPONENT_GALLERY")).toBeTruthy();
+		expect(gallery.getByText("ADMIN_SHOWCASE")).toBeTruthy();
 		expect(gallery.getByText(/by Sam Staff: Everyone uses it/u)).toBeTruthy();
 		expect(within(screen.getByRole("region", { name: "Merchant invites" })).getByText("Default")).toBeTruthy();
 	});
 
 	it("saves a change only with a reason", () => {
 		render(<FeatureFlagsView />, { wrapper: UiKitTestProviders });
-		const form = within(screen.getByRole("form", { name: "Change Component gallery" }));
+		const form = within(screen.getByRole("form", { name: "Change Component showcase" }));
 		expect(form.getByRole("button", { name: "Save" })).toHaveProperty("disabled", true);
 		act((): void => {
 			fireEvent.change(form.getByLabelText("Why (kept in the audit log)"), { target: { value: "Back to the deployment default" } });
@@ -69,13 +69,13 @@ describe("FeatureFlagsView", () => {
 		act((): void => {
 			fireEvent.click(form.getByRole("button", { name: "Save" }));
 		});
-		expect(updateMutate).toHaveBeenCalledWith({ key: "component-gallery", mode: "ON", percentage: null, reason: "Back to the deployment default" });
+		expect(updateMutate).toHaveBeenCalledWith({ key: "showcase", mode: "ON", percentage: null, reason: "Back to the deployment default" });
 	});
 
 	it("offers no change to staff who may only look", () => {
 		permissions.granted = new Set();
 		render(<FeatureFlagsView />, { wrapper: UiKitTestProviders });
-		expect(screen.queryByRole("form", { name: "Change Component gallery" })).toBeNull();
+		expect(screen.queryByRole("form", { name: "Change Component showcase" })).toBeNull();
 	});
 
 	it("has no serious accessibility problems (enhancement 3.2)", async () => {

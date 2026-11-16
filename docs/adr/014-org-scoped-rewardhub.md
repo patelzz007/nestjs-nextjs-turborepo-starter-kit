@@ -3,8 +3,11 @@ title: "ADR 014: Org-Scoped RewardHub"
 tags: ["adr", "rewardhub", "organization", "tenancy", "cedar"]
 description: "Architecture decision record for scoping RewardHub to Organization and removing MerchantOrg/MerchantMember."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/adr/014-org-scoped-rewardhub.webp"
 order: 14
 ---
 

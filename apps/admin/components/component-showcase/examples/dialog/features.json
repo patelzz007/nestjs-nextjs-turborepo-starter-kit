@@ -1,0 +1,72 @@
+[
+	{
+		"id": "c-dialog-1",
+		"label": "Basic",
+		"description": "Basic dialog. Best for a 2 field profile edit form with Cancel and Save changes in the footer.",
+		"file": "dialog-1",
+		"export": "Dialog1Example"
+	},
+	{
+		"id": "c-dialog-2",
+		"label": "Scrollable Content",
+		"description": "Dialog with scrollable content. Best for read only text in a body capped at 70vh that scrolls under the title, with no footer.",
+		"file": "dialog-2",
+		"export": "Dialog2Example"
+	},
+	{
+		"id": "c-dialog-3",
+		"label": "Sticky Footer",
+		"description": "Dialog with scrollable content and sticky footer. Best for a 70vh scrolling body above a footer whose Close button stays in view.",
+		"file": "dialog-3",
+		"export": "Dialog3Example"
+	},
+	{
+		"id": "c-dialog-4",
+		"label": "No Close Button",
+		"description": "Dialog without a close button. Best for a notice whose corner X is removed, leaving a footer Close button as the visible exit.",
+		"file": "dialog-4",
+		"export": "Dialog4Example"
+	},
+	{
+		"id": "c-dialog-5",
+		"label": "Custom Close Button",
+		"description": "Dialog with custom close button. Best for a profile form whose corner close button becomes a round bordered chip floating past the top right edge.",
+		"file": "dialog-5",
+		"export": "Dialog5Example"
+	},
+	{
+		"id": "c-dialog-6",
+		"label": "Full-Screen",
+		"description": "Full-screen fluid dialog with sticky header and footer. Best for a near full viewport modal with bordered header and footer bars around a scrolling body.",
+		"file": "dialog-6",
+		"export": "Dialog6Example"
+	},
+	{
+		"id": "c-dialog-7",
+		"label": "Destructive Confirmation",
+		"description": "Confirmation dialog with destructive action. Best for a delete prompt laid out as a dialog with a warning icon and a destructive button.",
+		"file": "dialog-7",
+		"export": "Dialog7Example"
+	},
+	{
+		"id": "c-dialog-8",
+		"label": "Cookie Consent",
+		"description": "Cookie consent dialog. Best for cookie category switches with a locked essential row and Save Preferences or Accept All actions.",
+		"file": "dialog-8",
+		"export": "Dialog8Example"
+	},
+	{
+		"id": "c-dialog-9",
+		"label": "Keyboard Shortcuts",
+		"description": "Dialog with keyboard shortcuts list. Best for a read only shortcut reference split into 2 columns of key chords in a wider modal.",
+		"file": "dialog-9",
+		"export": "Dialog9Example"
+	},
+	{
+		"id": "c-dialog-10",
+		"label": "Full Width Button",
+		"description": "Dialog with full width button. Best for a session timeout notice with one full width Sign In Again button and no Cancel.",
+		"file": "dialog-10",
+		"export": "Dialog10Example"
+	}
+]

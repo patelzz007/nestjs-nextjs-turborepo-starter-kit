@@ -1,0 +1,86 @@
+[
+	{
+		"id": "c-filters-1",
+		"label": "Full Filter Bar",
+		"description": "Everything in one filter bar. Best for nine fields on one bar with picks pinned atop every option list, an exclusive Unassigned row and the query printed as JSON.",
+		"file": "filters-1",
+		"export": "Filters1Example"
+	},
+	{
+		"id": "c-filters-2",
+		"label": "Nested Attributes",
+		"description": "Nested attributes at workspace scale. Best for a 2,000 attribute branch generated across eight record types, with search synonyms such as zip for postcode and type icons on nested leaves.",
+		"file": "filters-2",
+		"export": "Filters2Example"
+	},
+	{
+		"id": "c-filters-3",
+		"label": "Status Badges",
+		"description": "Status and priority colour badges. Best for picks shown as tinted badges until a third one folds them into a swatch stack with a count, plus a chip that takes no value.",
+		"file": "filters-3",
+		"export": "Filters3Example"
+	},
+	{
+		"id": "c-filters-4",
+		"label": "Avatars & Paging",
+		"description": "Avatars, paging and a restored view. Best for a stored query of bare ids restored by a button, with contact names fetched for ids no search has loaded yet, and a Reset to the seed.",
+		"file": "filters-4",
+		"export": "Filters4Example"
+	},
+	{
+		"id": "c-filters-5",
+		"label": "Date Editors",
+		"description": "A date and a date range editor. Best for typed phrases like next friday or a calendar click for one day, and a two month calendar with last 7 and 30 day presets for a range.",
+		"file": "filters-5",
+		"export": "Filters5Example"
+	},
+	{
+		"id": "c-filters-6",
+		"label": "Slider Editor",
+		"description": "Sliders as the value editor. Best for health score and monthly spend bounds dragged on a thumb, with the closed chip drawing a mini rail of the span and its maximum.",
+		"file": "filters-6",
+		"export": "Filters6Example"
+	},
+	{
+		"id": "c-filters-7",
+		"label": "Table Filtering",
+		"description": "Filtering a table. Best for a chip bar in a Card over a 12 person staff grid that sorts, pages, returns to page 1 on every edit and shows an empty message.",
+		"file": "filters-7",
+		"export": "Filters7Example"
+	},
+	{
+		"id": "c-filters-8",
+		"label": "Choice Controls",
+		"description": "Choice controls as editors. Best for kit form controls as editors that commit per press, staying open for multi picks and closing after a single plan or region pick.",
+		"file": "filters-8",
+		"export": "Filters8Example"
+	},
+	{
+		"id": "c-filters-9",
+		"label": "Typed Inputs",
+		"description": "Typed values in kit inputs. Best for dollar amounts with a per month unit, pasted keywords one per line, a 6 character code that commits when full and a domain check.",
+		"file": "filters-9",
+		"export": "Filters9Example"
+	},
+	{
+		"id": "c-filters-10",
+		"label": "Popover Builder",
+		"description": "Nested groups in a popover. Best for a deal pipeline card whose header trigger opens a reorderable builder seeded with an OR group, with short operator words such as at least.",
+		"file": "filters-10",
+		"export": "Filters10Example"
+	},
+	{
+		"id": "c-filters-11",
+		"label": "Inline Builder",
+		"description": "Nested groups inline, walked back out. Best for fields mapped to storage columns such as story_points, with a button that loads a group nested two deep and a live rule count.",
+		"file": "filters-11",
+		"export": "Filters11Example"
+	},
+	{
+		"id": "c-filters-12",
+		"label": "Controlled & Translated",
+		"description": "Controlled, sized and translated. Best for english, German and Japanese copy over one query, a small or default size switch, read only and disabled states and a log of change reasons.",
+		"file": "filters-12",
+		"export": "Filters12Example"
+	}
+]

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "One target per row",
+		"do": {
+			"text": "Make the row a link, or give it buttons — not both.",
+			"file": "item-do-1",
+			"export": "ItemDo1Example"
+		},
+		"dont": {
+			"text": "Don't put a button inside a clickable row: two targets on top of each other.",
+			"file": "item-dont-1",
+			"export": "ItemDont1Example"
+		}
+	},
+	{
+		"title": "Keep the description short",
+		"do": {
+			"text": "Give the description a line of facts.",
+			"file": "item-do-2",
+			"export": "ItemDo2Example"
+		},
+		"dont": {
+			"text": "Don't write a paragraph: the row cuts it off after two lines.",
+			"file": "item-dont-2",
+			"export": "ItemDont2Example"
+		}
+	}
+]

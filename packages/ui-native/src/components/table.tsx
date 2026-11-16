@@ -5,16 +5,24 @@
 // screen readers as one sentence — its first cell, then every other column's
 // name and value — so the header is not read on its own.
 //
+// A cell can be drawn as anything (`content`: an avatar and a name, a badge,
+// a menu) while its text stays what screen readers hear; a row holding
+// controls (`interactive`) is read cell by cell so each control is reachable.
+// Columns take a width; a wide table scrolls sideways (`scrollable`); the
+// caption can show under the rows (`showCaption`).
+//
 // Presentational and generic over the column keys: the caller formats every
 // cell. The web kit's `Table` / `DataTable` map onto this one component.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View, type ViewInstance } from "react-native";
+import { ScrollView, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
 export type TableAlign = "start" | "end";
+/** A column's width after the first: `sm` (the default) fits a number; the first column takes the room left. */
+export type TableColumnWidth = "xs" | "sm" | "md" | "lg";
 
 export interface TableColumn<TKey extends string> {
 	readonly key: TKey;
@@ -22,11 +30,18 @@ export interface TableColumn<TKey extends string> {
 	readonly label: string;
 	/** `end` for numbers. The first column names the row and is always `start`. */
 	readonly align?: TableAlign;
+	/** How wide the column is (not the first). Default `sm`. */
+	readonly width?: TableColumnWidth | undefined;
 }
 
 export interface TableRow<TKey extends string> {
 	readonly key: string;
+	/** Every cell as text: what screen readers hear, and what is drawn where `content` has nothing. */
 	readonly cells: Readonly<Record<TKey, string>>;
+	/** Cells drawn as anything (an avatar and a name, a badge, a menu) in place of their text. */
+	readonly content?: Partial<Readonly<Record<TKey, React.ReactNode>>> | undefined;
+	/** The row holds controls (an input, a menu): its cells are read one by one, so each control stays reachable. */
+	readonly interactive?: boolean | undefined;
 }
 
 export const tableVariants = cva("gap-0.5", {
@@ -51,21 +66,26 @@ type CellTone = "header" | "body" | "footer";
 export const tableCellVariants = cva("", {
 	variants: {
 		tone: {
-			header: "font-sans-medium text-xs text-muted-foreground",
+			header: "font-sans-medium text-caption text-muted-foreground",
 			body: "font-sans text-foreground",
 			footer: "font-sans-semibold text-foreground",
 		},
 		size: { md: "", sm: "" },
-		/** The first cell takes the room left over; the others fit their numbers. */
-		position: { first: "flex-1 text-left", other: "w-24 text-left" },
+		/** The first cell takes the room left over (a fixed column when the table scrolls); the others take their width. */
+		position: { first: "flex-1 text-left", fixed: "w-40 text-left", other: "text-left" },
+		width: { xs: "", sm: "", md: "", lg: "" },
 		align: { start: "", end: "" },
 	},
 	compoundVariants: [
-		{ tone: ["body", "footer"], size: "md", className: "text-sm" },
-		{ tone: ["body", "footer"], size: "sm", className: "text-xs" },
+		{ tone: ["body", "footer"], size: "md", className: "text-body" },
+		{ tone: ["body", "footer"], size: "sm", className: "text-caption" },
 		{ position: "other", align: "end", className: "text-right tabular-nums" },
+		{ position: "other", width: "xs", className: "w-16" },
+		{ position: "other", width: "sm", className: "w-24" },
+		{ position: "other", width: "md", className: "w-32" },
+		{ position: "other", width: "lg", className: "w-40" },
 	],
-	defaultVariants: { tone: "body", size: "md", position: "other", align: "start" },
+	defaultVariants: { tone: "body", size: "md", position: "other", align: "start", width: "sm" },
 });
 
 type TableVariantProps = VariantProps<typeof tableVariants>;
@@ -80,6 +100,10 @@ export interface TableProps<TKey extends string> {
 	readonly rows: readonly TableRow<TKey>[];
 	/** A closing row, e.g. the total. */
 	readonly footer?: TableRow<TKey>;
+	/** Shows the caption under the rows, as well as naming the table. */
+	readonly showCaption?: boolean | undefined;
+	/** A wide table scrolls sideways; its first column then takes a fixed width. */
+	readonly scrollable?: boolean | undefined;
 	readonly variant?: TableVariant;
 	readonly size?: TableSize;
 	/** Extra classes for the container, merged last (layout: `mt-2`). */
@@ -101,24 +125,40 @@ export function describeTableRow<TKey extends string>(columns: readonly TableCol
 type TableComponent = <TKey extends string>(props: TableProps<TKey> & React.RefAttributes<ViewInstance>) => React.ReactNode;
 
 const TableBase = React.forwardRef<ViewInstance, TableProps<string>>(function Table(
-	{ caption, columns, rows, footer, variant = "banded", size = "md", className, testID },
+	{ caption, columns, rows, footer, showCaption = false, scrollable = false, variant = "banded", size = "md", className, testID },
 	ref,
 ): React.JSX.Element {
-	return (
-		<View ref={ref} className={cn(tableVariants({ variant, size }), className)} accessibilityLabel={caption} testID={testID}>
+	const body = (
+		<View className={tableVariants({ variant, size })}>
 			<View className="flex-row gap-3 px-3 pb-1" importantForAccessibility="no-hide-descendants">
 				{columns.map((column: TableColumn<string>, index: number): React.JSX.Element => (
-					<Cell key={column.key} text={column.label} isFirst={index === 0} align={column.align} tone="header" size={size} />
+					<Cell key={column.key} text={column.label} first={index === 0} fixedFirst={scrollable} column={column} tone="header" size={size} />
 				))}
 			</View>
 			{rows.map((row: TableRow<string>, index: number): React.JSX.Element => (
-				<Row key={row.key} columns={columns} row={row} banded={variant === "banded" ? index % 2 === 0 : false} tone="body" size={size} />
+				<Row key={row.key} columns={columns} row={row} banded={variant === "banded" ? index % 2 === 0 : false} fixedFirst={scrollable} tone="body" size={size} />
 			))}
 			{footer === undefined ? null : (
 				<View className="pt-1">
-					<Row columns={columns} row={footer} banded={false} tone="footer" size={size} />
+					<Row columns={columns} row={footer} banded={false} fixedFirst={scrollable} tone="footer" size={size} />
 				</View>
 			)}
+		</View>
+	);
+	return (
+		<View ref={ref} className={cn("gap-2", className)} accessibilityLabel={caption} testID={testID}>
+			{scrollable ? (
+				<ScrollView horizontal showsHorizontalScrollIndicator={false} testID={testID === undefined ? undefined : `${testID}-scroll`}>
+					{body}
+				</ScrollView>
+			) : (
+				body
+			)}
+			{showCaption ? (
+				<Text importantForAccessibility="no" className="text-caption text-center font-sans text-muted-foreground">
+					{caption}
+				</Text>
+			) : null}
 		</View>
 	);
 });
@@ -134,31 +174,49 @@ interface RowProps {
 	readonly columns: readonly TableColumn<string>[];
 	readonly row: TableRow<string>;
 	readonly banded: boolean;
+	readonly fixedFirst: boolean;
 	readonly tone: CellTone;
 	readonly size: TableSize;
 }
 
-const Row = React.memo(function Row({ columns, row, banded, tone, size }: RowProps): React.JSX.Element {
+const Row = React.memo(function Row({ columns, row, banded, fixedFirst, tone, size }: RowProps): React.JSX.Element {
+	const interactive = row.interactive === true;
 	return (
-		<View className={tableRowVariants({ size, banded })} accessible accessibilityLabel={describeTableRow(columns, row)}>
-			{columns.map((column: TableColumn<string>, index: number): React.JSX.Element => (
-				<Cell key={column.key} text={row.cells[column.key] ?? ""} isFirst={index === 0} align={column.align} tone={tone} size={size} />
-			))}
+		<View className={tableRowVariants({ size, banded })} accessible={!interactive} accessibilityLabel={interactive ? undefined : describeTableRow(columns, row)}>
+			{columns.map((column: TableColumn<string>, index: number): React.JSX.Element => {
+				const node = row.content?.[column.key];
+				return node === undefined ? (
+					<Cell key={column.key} text={row.cells[column.key] ?? ""} first={index === 0} fixedFirst={fixedFirst} column={column} tone={tone} size={size} />
+				) : (
+					<View key={column.key} className={tableCellVariants({ tone, size, position: cellPositionOf(index === 0, fixedFirst), align: column.align, width: column.width })}>
+						{node}
+					</View>
+				);
+			})}
 		</View>
 	);
 });
 
+/** Where a cell sits: the first column flexes, or takes a fixed width when the table scrolls. */
+function cellPositionOf(first: boolean, fixedFirst: boolean): "first" | "fixed" | "other" {
+	if (!first) {
+		return "other";
+	}
+	return fixedFirst ? "fixed" : "first";
+}
+
 interface CellProps {
 	readonly text: string;
-	readonly isFirst: boolean;
-	readonly align: TableAlign | undefined;
+	readonly first: boolean;
+	readonly fixedFirst: boolean;
+	readonly column: TableColumn<string>;
 	readonly tone: CellTone;
 	readonly size: TableSize;
 }
 
-const Cell = React.memo(function Cell({ text, isFirst, align = "start", tone, size }: CellProps): React.JSX.Element {
+const Cell = React.memo(function Cell({ text, first, fixedFirst, column, tone, size }: CellProps): React.JSX.Element {
 	return (
-		<Text className={tableCellVariants({ tone, size, position: isFirst ? "first" : "other", align })} numberOfLines={1}>
+		<Text className={tableCellVariants({ tone, size, position: cellPositionOf(first, fixedFirst), align: column.align ?? "start", width: column.width })} numberOfLines={1}>
 			{text}
 		</Text>
 	);

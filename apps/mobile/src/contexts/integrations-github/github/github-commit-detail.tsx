@@ -147,18 +147,18 @@ function CommitHeader({ commit, nowMs }: CommitHeaderProps): React.JSX.Element {
 	return (
 		<Card>
 			<View className="gap-2">
-				<Text accessibilityRole="header" selectable className="font-sans-semibold text-lg leading-6 text-foreground">
+				<Text accessibilityRole="header" selectable className="font-sans-semibold text-h3 text-foreground">
 					{commit.headline}
 				</Text>
 				{body === null ? null : (
-					<Text selectable className="font-mono text-sm leading-5 text-muted-foreground">
+					<Text selectable className="text-body font-mono text-muted-foreground">
 						{body}
 					</Text>
 				)}
 			</View>
 			<View className="flex-row items-center gap-2">
 				<Avatar name={author} imageUrl={commit.author.avatarUrl} size="sm" />
-				<Text className="flex-1 font-sans text-sm text-muted-foreground">
+				<Text className="text-body flex-1 font-sans text-muted-foreground">
 					<Text className="font-sans-semibold text-foreground">{author}</Text> {committedLabel(commit, nowMs)}
 				</Text>
 			</View>
@@ -168,7 +168,7 @@ function CommitHeader({ commit, nowMs }: CommitHeaderProps): React.JSX.Element {
 					<View className="flex-row flex-wrap items-center gap-2">
 						<MutedText>{parentsLabel(commit.parents.length)}</MutedText>
 						{commit.parents.map((parent: GithubCommitParent): React.JSX.Element => (
-							<Text key={parent.sha} selectable className="font-mono text-sm text-foreground">
+							<Text key={parent.sha} selectable className="text-body font-mono text-foreground">
 								{parent.shortSha}
 							</Text>
 						))}
@@ -204,8 +204,8 @@ function CopyShaButton({ sha, shortSha }: CopyShaButtonProps): React.JSX.Element
 			onPress={copy}
 			hitSlop={8}
 			className="min-h-9 flex-row items-center gap-1.5 rounded-md border border-border bg-muted px-2.5 active:opacity-70">
-			<Text className="font-mono text-sm text-foreground">{shortSha}</Text>
-			<Icon icon={CopyIcon} size="sm" colorClassName="accent-muted-foreground" />
+			<Text className="text-body font-mono text-foreground">{shortSha}</Text>
+			<Icon icon={CopyIcon} size="sm" colorClassName="accent-icon" />
 		</Pressable>
 	);
 }

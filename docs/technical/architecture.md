@@ -3,8 +3,11 @@ title: "Architecture"
 description: "The big picture: workspaces and their boundaries, runtime topology, the request lifecycle, data ownership, tenancy, messaging and API versioning — with diagrams."
 order: 3
 author: "Platform Team"
+category: "Engineering"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1794485625193
+coverImage: "/images/covers/technical/architecture.webp"
 tags: ["architecture", "system-design", "monorepo"]
 ---
 
@@ -57,7 +60,7 @@ NestJS; the API never imports frontend code. Oxlint import-boundary rules enforc
 ## 2. Runtime topology
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Browsers
       W[Web :3000]
       A[Admin :3001]

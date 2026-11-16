@@ -57,12 +57,12 @@ function RankedBarRow({ item, percent, fillClassName }: RankedBarRowProps): Reac
 		<View className="gap-1.5" accessible accessibilityLabel={description}>
 			<View className="flex-row items-baseline gap-3">
 				<View className="flex-1 gap-0.5">
-					<Text className="font-sans-medium text-sm text-foreground" numberOfLines={1}>
+					<Text className="font-sans-medium text-body text-foreground" numberOfLines={1}>
 						{item.label}
 					</Text>
-					{item.detail === undefined ? null : <Text className="font-sans text-xs text-muted-foreground">{item.detail}</Text>}
+					{item.detail === undefined ? null : <Text className="text-caption font-sans text-muted-foreground">{item.detail}</Text>}
 				</View>
-				<Text className="font-sans-semibold text-sm text-foreground">{item.valueLabel}</Text>
+				<Text className="font-sans-semibold text-body text-foreground">{item.valueLabel}</Text>
 			</View>
 			<View className="h-1.5 flex-row overflow-hidden rounded-full bg-muted">
 				<View style={barStyle} className={`basis-0 rounded-full ${fillClassName}`} />

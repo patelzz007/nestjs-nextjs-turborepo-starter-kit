@@ -135,8 +135,11 @@ export const iconTileVariants = cva(
 	],
 	{
 		variants: {
+			/** The surface treatment of the tile. */
 			variant: VARIANT_CLASSES,
+			/** The colour: `brand`, `neutral`, `green`, `blue`, `yellow`, `red`, `orange`, `teal` or `violet`. */
 			tone: TONE_AXIS,
+			/** The tile size, which also sets the glyph size. */
 			size: {
 				xs: "[--icon-tile-icon-size:--spacing(3.5)] [--icon-tile-inset:--spacing(0.5)] [--icon-tile-size-radius:var(--radius-sm)] [--icon-tile-size:--spacing(6)]",
 				sm: "[--icon-tile-icon-size:--spacing(4)] [--icon-tile-inset:--spacing(0.5)] [--icon-tile-size-radius:var(--radius-md)] [--icon-tile-size:--spacing(8)]",
@@ -166,6 +169,7 @@ export type IconTileRadius = NonNullable<VariantProps<typeof iconTileVariants>["
 
 export interface IconTileProps extends useRender.ComponentProps<"span">, VariantProps<typeof iconTileVariants> {}
 
+/** A square (or circular) surface for one icon, initials or a count, with a consistent size, radius and tone. It sizes its child `svg`; decorative tiles take `aria-hidden`. */
 export const IconTile = React.forwardRef<HTMLSpanElement, IconTileProps>(function IconTile(
 	{ className, variant = "tint", tone = "neutral", size = "md", radius = "default", render, ...props },
 	ref,

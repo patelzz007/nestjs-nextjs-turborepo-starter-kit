@@ -1,0 +1,17 @@
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Button } from "@workspace/ui-native/components/button";
+import * as React from "react";
+
+import { ignorePress, SAMPLE_PERSON } from "../example-support";
+
+export function Button58Example(): React.JSX.Element {
+	return (
+		<Button
+			label={SAMPLE_PERSON.handle}
+			variant="outline"
+			size="sm"
+			leading={<Avatar name={SAMPLE_PERSON.name} imageUrl={SAMPLE_PERSON.imageUrl} size="sm" />}
+			onPress={ignorePress}
+		/>
+	);
+}

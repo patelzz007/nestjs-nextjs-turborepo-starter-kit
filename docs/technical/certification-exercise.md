@@ -3,8 +3,11 @@ title: "Certification exercise"
 description: "A timed exercise for a new developer: add one field to the sample category end to end — contract, database, seed, API, admin form and tests — then let the checker confirm every layer and run the gate."
 order: 6
 author: "Platform Team"
+category: "Engineering"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/certification-exercise.webp"
 tags: ["guide", "onboarding", "development"]
 ---
 

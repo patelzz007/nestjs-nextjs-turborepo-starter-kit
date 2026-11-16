@@ -3,8 +3,11 @@ title: "ADR 054: An In-House QR Code Encoder in packages/shared"
 tags: ["adr", "qr-code", "ui", "mobile", "dependencies"]
 description: "Every QR code (web, merchant, admin, mobile, the API's 2FA data URL and the docs) is drawn by one ISO/IEC 18004 encoder in packages/shared. react-qr-code and qrcode are removed."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792108800000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792165699000
+coverImage: "/images/covers/adr/054-in-house-qr-encoder.webp"
 order: 54
 ---
 

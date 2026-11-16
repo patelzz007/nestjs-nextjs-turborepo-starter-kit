@@ -3,8 +3,11 @@ title: "ADR 052: GitHub Pull Requests — Per-Admin Token, Writes as the Admin, 
 tags: ["adr", "api", "mobile", "integration", "github", "security"]
 description: "Admins link their own fine-grained GitHub token (stored encrypted, never returned) to read the pull requests of every repository it can see — private ones included — comment, review and close them as themselves, and see changes live through verified GitHub webhooks fanned out over Server-Sent Events."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792022400000
 lastUpdated: 1792022400000
-coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=1200&h=630&fit=crop"
+editedAt: 1792086278000
+coverImage: "/images/covers/adr/052-github-pull-requests.webp"
 order: 52
 ---
 

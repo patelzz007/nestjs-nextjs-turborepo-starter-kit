@@ -90,7 +90,7 @@ function ProfileEditor({ profile }: ProfileEditorProps): React.JSX.Element {
 			<View className="flex-row items-center gap-4" testID="profile-identity">
 				<Avatar name={profile.fullName} imageUrl={profile.avatar?.url ?? null} />
 				<View className="flex-1 gap-0.5">
-					<Text className="font-sans-bold text-xl tracking-tight text-foreground" numberOfLines={1}>
+					<Text className="font-sans-bold text-h3 tracking-tight text-foreground" numberOfLines={1}>
 						{profile.fullName}
 					</Text>
 					<MutedText numberOfLines={1} accessibilityLabel={`Email: ${profile.email}`}>

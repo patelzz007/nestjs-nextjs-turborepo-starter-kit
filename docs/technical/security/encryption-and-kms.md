@@ -3,8 +3,11 @@ title: "Encryption, keys and KMS"
 description: "Which secrets and key rings the API uses, tenant envelope encryption, key rotation, and the decision on managed KMS providers (only local today)."
 order: 32
 author: "Platform Team"
+category: "Security"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&h=630&fit=crop"
+editedAt: 1794485004159
+coverImage: "/images/covers/technical/security/encryption-and-kms.webp"
 tags: ["security", "encryption", "kms", "secrets"]
 ---
 
@@ -44,7 +47,7 @@ committed or copied into a deployed environment:
 ## Tenant envelope encryption
 
 ```mermaid
-flowchart LR
+flowchart TD
     KEK[KEK<br/>TENANT_ENCRYPTION_MASTER_KEY v N] -->|wraps| DEK[Per-tenant data key<br/>tenant_encryption_keys]
     DEK -->|AES-256-GCM| CT["ciphertext<br/>&lt;keyVersion&gt;:&lt;iv&gt;:&lt;tag&gt;:&lt;data&gt;"]
 ```

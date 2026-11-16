@@ -92,11 +92,13 @@ function featureFlagAttribute(isLoaded: boolean, read: () => boolean): TreeFlagA
 }
 
 interface TreeProps<T> extends Omit<React.ComponentProps<"div">, "ref"> {
+	/** The tree's root element. */
 	readonly ref?: React.Ref<HTMLDivElement> | undefined;
 	/** The headless-tree instance (`useTree` from `@headless-tree/react`). */
 	readonly tree: TreeInstance<T>;
 	/** Pixels per nesting level. */
 	readonly indent?: number | undefined;
+	/** The type of icon used for expanding/collapsing folders. */
 	readonly toggleIconType?: TreeToggleIconType | undefined;
 }
 
@@ -124,7 +126,9 @@ function Tree<T>({ ref, tree, indent = DEFAULT_TREE_INDENT_PX, toggleIconType = 
 }
 
 interface TreeItemProps<T> extends Omit<useRender.ComponentProps<"button">, "indent" | "ref"> {
+	/** The row's element. */
 	readonly ref?: React.Ref<HTMLButtonElement> | undefined;
+	/** The instance of the current tree item. */
 	readonly item: ItemInstance<T>;
 	/** Pixels per nesting level for this item, overriding the root's. */
 	readonly indent?: number | undefined;
@@ -189,6 +193,7 @@ function TreeToggleIcon({ type, isExpanded }: TreeToggleIconProps): React.JSX.El
 }
 
 interface TreeItemLabelProps<T> extends Omit<React.ComponentProps<"span">, "ref"> {
+	/** The label's element. */
 	readonly ref?: React.Ref<HTMLSpanElement> | undefined;
 	/** The item to label; defaults to the enclosing `TreeItem`'s. */
 	readonly item?: ItemInstance<T> | undefined;
@@ -215,6 +220,7 @@ function TreeItemLabel<T>({ ref, item, children, className, ...props }: TreeItem
 	);
 }
 
+/** The line showing where a dragged item will land. */
 const TreeDragLine = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function TreeDragLine({ className, style, ...props }, ref): React.JSX.Element | null {
 	const { getDragLineStyle } = useTreeContext();
 	if (getDragLineStyle === null) {

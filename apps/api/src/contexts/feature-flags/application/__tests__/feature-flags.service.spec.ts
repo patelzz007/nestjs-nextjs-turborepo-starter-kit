@@ -77,14 +77,14 @@ const BRANCH = "0190f0e0-0000-7000-8000-000000000002";
 const OVERRIDE_ID = "0190f0e0-0000-7000-8000-000000000003";
 
 const clock = { now: (): EpochMs => NOW };
-const GALLERY_ON: FeatureFlagRecord = { key: "component-gallery", mode: "ON", percentage: null, reason: "Everyone", updatedAt: NOW, updatedByName: "Ann" };
+const GALLERY_ON: FeatureFlagRecord = { key: "showcase", mode: "ON", percentage: null, reason: "Everyone", updatedAt: NOW, updatedByName: "Ann" };
 
 describe("FeatureFlagsService", () => {
 	it("lists every declared flag, DEFAULT where nothing is stored, with names", async () => {
 		const store = new FakeStore([GALLERY_ON]);
 		const { flags } = await new FeatureFlagsService(store, clock).list(ACTOR);
 		expect(flags.map((flag) => [flag.key, flag.mode, flag.updatedByName])).toStrictEqual([
-			["component-gallery", "ON", "Ann"],
+			["showcase", "ON", "Ann"],
 			["merchant-invites", "DEFAULT", null],
 			["till-redemption", "DEFAULT", null],
 		]);
@@ -96,7 +96,7 @@ describe("FeatureFlagsService", () => {
 		const store = new FakeStore([GALLERY_ON]);
 		await expect(new FeatureFlagsService(store, clock).settings(ACTOR)).resolves.toStrictEqual({
 			settings: [
-				{ key: "component-gallery", mode: "ON", percentage: null },
+				{ key: "showcase", mode: "ON", percentage: null },
 				{ key: "merchant-invites", mode: "DEFAULT", percentage: null },
 				{ key: "till-redemption", mode: "DEFAULT", percentage: null },
 			],

@@ -37,10 +37,13 @@ interface TimelineProps extends useRender.ComponentProps<"div"> {
 	readonly defaultValue?: number | undefined;
 	/** The active step, controlled. Items up to and including it render as completed. */
 	readonly value?: number | undefined;
+	/** Callback fired when the active step changes. */
 	readonly onValueChange?: ((value: number) => void) | undefined;
+	/** The layout orientation of the timeline. */
 	readonly orientation?: TimelineOrientation | undefined;
 }
 
+/** Events along a line, vertical or horizontal. Items up to `value` are marked completed. */
 const Timeline = React.forwardRef<HTMLDivElement, TimelineProps>(function Timeline(
 	{ defaultValue = DEFAULT_TIMELINE_STEP, value, onValueChange, orientation = "vertical", className, render, children, ...props },
 	ref,
@@ -77,6 +80,7 @@ const Timeline = React.forwardRef<HTMLDivElement, TimelineProps>(function Timeli
 	return <TimelineContext.Provider value={contextValue}>{element}</TimelineContext.Provider>;
 });
 
+/** The event's body text. */
 const TimelineContent = React.forwardRef<HTMLDivElement, useRender.ComponentProps<"div">>(function TimelineContent(
 	{ className, render, children, ...props },
 	ref,
@@ -92,6 +96,7 @@ const TimelineContent = React.forwardRef<HTMLDivElement, useRender.ComponentProp
 
 type TimelineDateProps = useRender.ComponentProps<"time">;
 
+/** When the event happened. */
 const TimelineDate = React.forwardRef<HTMLTimeElement, TimelineDateProps>(function TimelineDate({ className, render, children, ...props }, ref): React.ReactElement {
 	return useRender({
 		ref,
@@ -108,6 +113,7 @@ const TimelineDate = React.forwardRef<HTMLTimeElement, TimelineDateProps>(functi
 	});
 });
 
+/** Groups the date and the title. */
 const TimelineHeader = React.forwardRef<HTMLDivElement, useRender.ComponentProps<"div">>(function TimelineHeader(
 	{ className, render, children, ...props },
 	ref,
@@ -123,6 +129,7 @@ const TimelineHeader = React.forwardRef<HTMLDivElement, useRender.ComponentProps
 
 type TimelineIndicatorProps = useRender.ComponentProps<"div">;
 
+/** The marker on the line; holds an icon, an avatar or nothing. */
 const TimelineIndicator = React.forwardRef<HTMLDivElement, TimelineIndicatorProps>(function TimelineIndicator(
 	{ className, children, render, ...props },
 	ref,
@@ -151,6 +158,7 @@ interface TimelineItemProps extends useRender.ComponentProps<"div"> {
 	readonly step: number;
 }
 
+/** One event, identified by its `step`. Keep it a direct child of `Timeline`. */
 const TimelineItem = React.forwardRef<HTMLDivElement, TimelineItemProps>(function TimelineItem({ step, className, render, children, ...props }, ref): React.ReactElement {
 	const { activeStep } = useTimeline();
 
@@ -172,6 +180,7 @@ const TimelineItem = React.forwardRef<HTMLDivElement, TimelineItemProps>(functio
 	});
 });
 
+/** The line to the next event, hidden on the last one. */
 const TimelineSeparator = React.forwardRef<HTMLDivElement, useRender.ComponentProps<"div">>(function TimelineSeparator(
 	{ className, render, children, ...props },
 	ref,
@@ -195,6 +204,7 @@ const TimelineSeparator = React.forwardRef<HTMLDivElement, useRender.ComponentPr
 	});
 });
 
+/** What happened. */
 const TimelineTitle = React.forwardRef<HTMLHeadingElement, useRender.ComponentProps<"h3">>(function TimelineTitle(
 	{ className, render, children, ...props },
 	ref,

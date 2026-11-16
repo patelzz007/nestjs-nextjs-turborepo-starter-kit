@@ -3,8 +3,11 @@ title: "ADR: RabbitMQ Placeholder"
 tags: ["adr", "rabbitmq", "messaging", "infrastructure"]
 description: "Architecture decision record for keeping RabbitMQ in Docker Compose as a placeholder until a non-Node worker needs AMQP."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1788480000000
 lastUpdated: 1788643200000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1788542462000
+coverImage: "/images/covers/adr/rabbitmq-placeholder.webp"
 order: 8
 ---
 

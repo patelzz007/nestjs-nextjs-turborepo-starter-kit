@@ -11,11 +11,11 @@ describe("Badge", () => {
 		expect(screen.getByText("New")).toBeTruthy();
 	});
 
-	it("applies ReUI's solid destructive fill with the status text token", (): void => {
+	it("fills a solid destructive badge with the AA text tone and the page colour as text, in every theme", (): void => {
 		render(<Badge variant="destructive">Danger</Badge>);
 		const badge = screen.getByText("Danger");
-		expect(badge.className).toContain("bg-destructive");
-		expect(badge.className).toContain("text-status-foreground");
+		expect(badge.className).toContain("bg-destructive-foreground");
+		expect(badge.className).toContain("text-background");
 	});
 
 	it("applies a light status variant: a tint with the status foreground text", (): void => {

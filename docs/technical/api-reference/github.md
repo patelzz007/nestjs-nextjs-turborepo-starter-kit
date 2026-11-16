@@ -1,10 +1,13 @@
 ---
 title: "API reference — GitHub contributions"
 description: "Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with."
-order: 15
+order: 16
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/github.webp"
 tags: ["api", "reference", "generated"]
 ---
 

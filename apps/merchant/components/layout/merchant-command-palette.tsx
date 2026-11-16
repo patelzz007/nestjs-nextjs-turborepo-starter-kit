@@ -13,7 +13,7 @@ import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPalet
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
 import { SunMoon, Ticket } from "lucide-react";
 import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -23,7 +23,7 @@ export interface MerchantCommandPaletteProps {
 }
 
 export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSetOpen }: MerchantCommandPaletteProps): React.JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { toggleTheme } = useThemeToggle();
 	const { can } = useAuthorization();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();

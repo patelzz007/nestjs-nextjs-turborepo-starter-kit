@@ -3,8 +3,11 @@ title: "ADR 070: Multi-channel notifications — one catalog for in-app, push, e
 tags: ["adr", "notifications", "push", "sms", "email", "in-app", "consent", "plan"]
 description: "One notifications context owns every channel: a typed, locale-ready catalog; users and contact points as recipients; notify() through the outbox; a fan-out that resolves surfaces, preferences, consent, suppressions, quiet hours, grouping, digests and fallbacks; delivery rows with their own state machine; direct FCM and APNs; Twilio; Mailpit as the local sink for every channel; and the bell, inbox, preferences and delivery-log screens on web, merchant, admin and mobile."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793491200000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/070-multi-channel-notifications.webp"
 order: 70
 ---
 

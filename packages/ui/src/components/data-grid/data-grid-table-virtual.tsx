@@ -129,11 +129,13 @@ export interface DataGridTableVirtualProps extends Omit<DataGridTableViewportPro
 	readonly renderHeader?: boolean | undefined;
 	/** Infinite mode: called once per row count when the window nears the last row. */
 	readonly onFetchMore?: (() => void) | undefined;
+	/** Whether additional data is currently being loaded. */
 	readonly isFetchingMore?: boolean | undefined;
 	/** `false` once every row is loaded: the all-rows-loaded footer row shows and fetching stops. */
 	readonly hasMore?: boolean | undefined;
 	/** How many rows before the last one the window may reach before `onFetchMore` fires. */
 	readonly fetchMoreOffset?: number | undefined;
+	/** Optional passthrough for TanStack Virtual settings like `enabled`, `getItemKey`, `measureElement`, `rangeExtractor`, and `onChange`. */
 	readonly virtualizerOptions?: DataGridTableVirtualizerOptions | undefined;
 }
 
@@ -169,6 +171,7 @@ export interface DataGridTableColumnScrollRequest {
 	readonly scrollElement: HTMLElement;
 }
 
+/** Whether two column scroll requests ask for the same column, to skip a repeated scroll. */
 export function isSameDataGridTableColumnScrollRequest(previous: DataGridTableColumnScrollRequest | null, next: DataGridTableColumnScrollRequest): boolean {
 	return (
 		previous !== null &&
@@ -192,6 +195,7 @@ export interface DataGridTableVirtualScrollRequest {
 	readonly scrollElement: HTMLElement;
 }
 
+/** Whether two scroll requests ask for the same cell, to skip a repeated scroll. */
 export function isSameDataGridTableScrollRequest(previous: DataGridTableVirtualScrollRequest | null, next: DataGridTableVirtualScrollRequest): boolean {
 	return (
 		previous !== null &&
@@ -409,6 +413,7 @@ export interface DataGridTableVirtualSpacers {
 	readonly trailing: number;
 }
 
+/** The spacer heights above and below the rendered window of a virtualised body. */
 export function getDataGridTableVirtualSpacers(virtualItems: readonly VirtualItem[], totalSize: number): DataGridTableVirtualSpacers {
 	const first = virtualItems.at(0);
 	const last = virtualItems.at(-1);

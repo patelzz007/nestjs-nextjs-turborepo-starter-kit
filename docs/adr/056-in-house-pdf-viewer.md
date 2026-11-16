@@ -3,8 +3,11 @@ title: "ADR 056: An In-House PDF Viewer on Each Platform's Own PDF Engine"
 tags: ["adr", "pdf", "ui", "mobile", "docs", "dependencies"]
 description: "PDFs are shown by the kit's own viewer around the PDF engine each platform ships (the browser, PDFKit, PdfRenderer). No PDF library is installed; the mobile engine is a local Expo module with an Expo Go fallback."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792108800000
 lastUpdated: 1793232000000
-coverImage: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793310586000
+coverImage: "/images/covers/adr/056-in-house-pdf-viewer.webp"
 order: 56
 ---
 

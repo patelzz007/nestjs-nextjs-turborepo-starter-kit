@@ -8,6 +8,7 @@ interface AspectRatioProps extends React.ComponentProps<"div"> {
 	readonly ratio: number;
 }
 
+/** Holds a width-to-height `ratio` (such as `16 / 9`), so media takes its space before it loads. Set the width on a parent. */
 const AspectRatio = React.forwardRef<HTMLDivElement, AspectRatioProps>(function AspectRatio({ ratio, className, style, ...props }, ref): React.JSX.Element {
 	// One style object per ratio/style change, not per render.
 	const aspectStyle = React.useMemo((): AspectRatioStyle => ({ ...style, "--ratio": ratio }), [ratio, style]);

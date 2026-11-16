@@ -1,12 +1,13 @@
 import { isBrowserRuntime } from "@workspace/shared";
+import {
+	parseDataTablePersistedPrefs,
+	parseDataTablePrefsPatch,
+	type DataTablePersistedPrefs,
+	type DataTablePersistedPrefsPatch,
+	type DataTableStorageAdapter,
+} from "@workspace/ui-kit-logic";
 
-import { parseDataTablePersistedPrefs, parseDataTablePrefsPatch, type DataTablePersistedPrefs, type DataTablePersistedPrefsPatch } from "./prefs";
-
-/** Injectable persistence boundary — smart parents can supply memory, session, or custom storage. */
-export interface DataTableStorageAdapter {
-	read(key: string): DataTablePersistedPrefs | null;
-	write(key: string, patch: DataTablePersistedPrefsPatch): void;
-}
+export type { DataTableStorageAdapter } from "@workspace/ui-kit-logic";
 
 const STORAGE_PREFIX = "datatable:v1:";
 

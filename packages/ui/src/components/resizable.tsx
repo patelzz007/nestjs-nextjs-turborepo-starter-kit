@@ -4,6 +4,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 import * as ResizablePrimitive from "react-resizable-panels";
 
+/** Lays out panels and handles side by side (`horizontal`) or stacked (`vertical`), on `react-resizable-panels`. Panels and handles must be its direct children. */
 const ResizablePanelGroup = React.forwardRef<HTMLDivElement, ResizablePrimitive.GroupProps>(function ResizablePanelGroup({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<ResizablePrimitive.Group
@@ -15,6 +16,7 @@ const ResizablePanelGroup = React.forwardRef<HTMLDivElement, ResizablePrimitive.
 	);
 });
 
+/** One pane. `defaultSize`, `minSize` and `maxSize` take pixels as a number or a share as a string (`"30%"`). */
 const ResizablePanel = React.forwardRef<HTMLDivElement, ResizablePrimitive.PanelProps>(function ResizablePanel(props, ref): React.JSX.Element {
 	return <ResizablePrimitive.Panel elementRef={ref} data-slot="resizable-panel" {...props} />;
 });
@@ -24,6 +26,7 @@ interface ResizableHandleProps extends ResizablePrimitive.SeparatorProps {
 	readonly withHandle?: boolean;
 }
 
+/** The divider people drag (or move with the arrow keys) to resize the panels on either side. `withHandle` draws a grip. */
 const ResizableHandle = React.forwardRef<HTMLDivElement, ResizableHandleProps>(function ResizableHandle({ withHandle, className, ...props }, ref): React.JSX.Element {
 	return (
 		<ResizablePrimitive.Separator

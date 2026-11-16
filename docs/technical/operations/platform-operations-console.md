@@ -3,8 +3,11 @@ title: "Platform operations console (servers, backups, load tests)"
 tags: ["operations", "monitoring", "backups", "load-testing", "adr-068"]
 description: "How the admin panel's operations console works: the server agent, live and historical metrics, alerts, database backups, load tests, and how to run each piece locally and on a droplet."
 author: "Platform Team"
+category: "Operations"
+date: 1793145600000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/operations/platform-operations-console.webp"
 order: 8
 ---
 

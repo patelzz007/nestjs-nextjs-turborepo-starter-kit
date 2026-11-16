@@ -69,6 +69,7 @@ function IconStackLayer({ opacity, x, y, active }: IconStackLayerSpec): React.JS
 
 type IconStackProps = React.ComponentProps<"div">;
 
+/** A layered isometric stack with an icon (or small content) on top, for empty states and feature cards. Decorative: mark it `aria-hidden`. */
 const IconStack = React.forwardRef<HTMLDivElement, IconStackProps>(function IconStack({ className, children, style, ...props }, ref): React.JSX.Element {
 	const mergedStyle = React.useMemo((): IconStackStyle => ({ ...ICON_STACK_DEFAULT_STYLE, ...style }), [style]);
 	return (

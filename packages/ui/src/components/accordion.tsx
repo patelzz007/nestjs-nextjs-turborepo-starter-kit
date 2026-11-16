@@ -66,6 +66,7 @@ export interface AccordionProps extends AccordionPrimitive.Root.Props<string> {
 	readonly ariaLabel?: string;
 }
 
+/** A stack of expandable sections on Base UI's accordion. One item open at a time unless `multiple`; `value` is always an array. The `ref` exposes `expand`, `collapse`, `toggle`, `expandAll` and `collapseAll`. */
 const Accordion = forwardRef<AccordionRef, AccordionProps>(function Accordion(
 	{
 		className,

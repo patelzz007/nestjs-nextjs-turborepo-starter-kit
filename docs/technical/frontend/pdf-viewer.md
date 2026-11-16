@@ -4,8 +4,11 @@ tags: ["pdf", "ui", "mobile", "docs", "files"]
 description: "The in-house PDF viewer: the kit's own toolbar and states around each platform's built-in PDF engine (the browser on web, PDFKit on iOS, PdfRenderer on Android), with no PDF library, in the web apps, the mobile app and the docs."
 order: 27
 author: "Platform Team"
+category: "Frontend"
+date: 1792108800000
 lastUpdated: 1792195200000
-coverImage: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/frontend/pdf-viewer.webp"
 ---
 
 # PDF viewer
@@ -86,7 +89,7 @@ const [source, setSource] = React.useState<PdfViewerSource | null>(null);
 | --- | --- |
 | Admin, merchant verification review (`apps/admin/contexts/tenants/components/kyb-review-panel.tsx`) | The KYB document's signed `inline` and `attachment` URLs |
 | Merchant, verification settings (`packages/client/src/lib/contexts/tenants/kyb/verification-view.tsx`) | The same, for the merchant's own documents |
-| Admin component gallery (`/components/pdf-viewer`) | An in-memory sample (`buildTextPdf`), plus any PDF picked from the device |
+| Admin component showcase (`/components/pdf-viewer`) | An in-memory sample (`buildTextPdf`), plus any PDF picked from the device |
 
 Both KYB previews go through `MerchantKybDocumentPreviewDialog`
 (`packages/client/src/lib/contexts/tenants/kyb/document-preview-dialog.tsx`): a PDF opens in `PdfViewer`,
@@ -152,7 +155,7 @@ description is [the mobile app guide, §10.18](../mobile/mobile-app.md#1018-pdf-
 | `useFullscreen`, inline support | `packages/ui/src/hooks/__tests__/use-fullscreen.test.tsx`, `packages/ui/src/lib/media/__tests__/pdf-inline-support.test.tsx` |
 | `PdfViewer` (toolbar, states, file picker, unsupported browsers, fullscreen, label overrides) | `packages/ui/src/components/__tests__/pdf-viewer.test.tsx` |
 | KYB preview dialog (PDF vs image) | `packages/client/src/lib/contexts/tenants/kyb/__tests__/document-preview-dialog.test.tsx` |
-| Admin gallery demo | `apps/admin/components/component-gallery/__tests__/family-demos.test.tsx` |
+| Admin showcase example | `apps/admin/components/component-showcase/__tests__/showcase-features-render.test.tsx` (renders every showcase feature) |
 | Native kit viewer and its layout maths | `packages/ui-native/src/components/__tests__/pdf-viewer.test.tsx`, `packages/ui-native/src/lib/__tests__/pdf-viewer-layout.test.ts` |
 | Mobile engine mapping, sources, files, screen, gallery (with fake native, picker, sharing and file-system modules) | `apps/mobile/src/features/pdf-viewer/__tests__/`, `apps/mobile/src/__tests__/app/(app)/settings/pdf-viewer.test.tsx` |
 | Docs fence, sample, unsupported-browser script | `packages/docs-renderer/src/markdown/__tests__/pdf-embed.test.ts`, `apps/docs/src/lib/__tests__/pdf-sample.test.ts`, `apps/docs/src/browser/__tests__/pdf-embeds.test.ts` |

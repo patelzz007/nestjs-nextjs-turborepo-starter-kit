@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
-import { LIST_SLOT_INDEX } from "@workspace/shared";
+import { getEntityAvatarTone } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { fixedImageSizes, imageSrcSet, type ImageSourceEntry } from "@workspace/ui/lib/media/image-sources";
@@ -16,12 +16,14 @@ import * as React from "react";
  */
 const entityAvatarVariants = cva("shrink-0 overflow-hidden bg-background", {
 	variants: {
+		/** The mark's size: `sm` to `xl`. */
 		size: {
 			sm: "size-8",
 			md: "size-10",
 			lg: "size-12",
 			xl: "size-16",
 		},
+		/** `rounded` (a rounded square) or `circle`. */
 		shape: {
 			rounded: "",
 			circle: "rounded-full after:rounded-full",
@@ -64,27 +66,8 @@ const entityAvatarMonogramVariants = cva("flex size-full items-center justify-ce
 	},
 });
 
-export type EntityAvatarTone = NonNullable<VariantProps<typeof entityAvatarMonogramVariants>["tone"]>;
-
-const ENTITY_AVATAR_TONES: readonly [EntityAvatarTone, EntityAvatarTone, EntityAvatarTone, EntityAvatarTone] = ["chart-1", "chart-2", "chart-3", "chart-4"];
-
-/** Classic 31-multiplier string hash (as in Java's `String#hashCode`) — stable across runs and platforms. */
-const NAME_HASH_MULTIPLIER = 31;
-
-function hashName(name: string): number {
-	let hash = 0;
-	for (const character of name.trim().toLocaleLowerCase()) {
-		// `>>> 0` keeps the running hash an unsigned 32-bit integer.
-		hash = (hash * NAME_HASH_MULTIPLIER + (character.codePointAt(0) ?? 0)) >>> 0;
-	}
-	return hash;
-}
-
-/** The monogram tint for a name — deterministic, case- and surrounding-whitespace-insensitive. */
-export function getEntityAvatarTone(name: string): EntityAvatarTone {
-	// The modulo keeps the index in range, so the fallback is never reached.
-	return ENTITY_AVATAR_TONES[hashName(name) % ENTITY_AVATAR_TONES.length] ?? ENTITY_AVATAR_TONES[LIST_SLOT_INDEX.first];
-}
+export type { EntityAvatarTone } from "@workspace/shared";
+export { getEntityAvatarTone };
 
 export interface EntityAvatarProps extends Omit<React.ComponentPropsWithoutRef<"span">, "children">, VariantProps<typeof entityAvatarVariants> {
 	/** The entity's display name — drives the monogram, its tint and the default accessible name. */
@@ -110,6 +93,7 @@ export interface EntityAvatarProps extends Omit<React.ComponentPropsWithoutRef<"
 /** How wide each size draws the mark, in CSS pixels (`size-8` … `size-16`) — the `sizes` of its `srcset`. */
 const ENTITY_AVATAR_PX: Readonly<Record<NonNullable<EntityAvatarProps["size"]>, number>> = { sm: 32, md: 40, lg: 48, xl: 64 };
 
+/** An organisation's, a store's or a team's mark: its logo, or a monogram from its name in a tint derived from the name. */
 const EntityAvatar = React.forwardRef<HTMLSpanElement, EntityAvatarProps>(function EntityAvatar(
 	{ name, src, sources, alt, size, shape, className, ...props },
 	ref,

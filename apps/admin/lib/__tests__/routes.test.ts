@@ -28,6 +28,8 @@ describe("ROUTES", () => {
 		expect(ROUTES.rewards.reviewDetail("a/b")).toBe("/rewards/review/a%2Fb");
 		expect(ROUTES.catalog.products.edit("x?y")).toBe("/catalog/products/x%3Fy/edit");
 		expect(ROUTES.components.component("button-group")).toBe("/components/button-group");
+		expect(ROUTES.components.docs("button-group")).toBe("/components/button-group/docs");
+		expect(ROUTES.components.docs("a b")).toBe("/components/a%20b/docs");
 	});
 
 	it("keeps in-page selection in an encoded query string", () => {
@@ -44,7 +46,7 @@ describe("ROUTES", () => {
 		expect(isPathWithin(ROUTES.catalog.categories.list, ROUTES.catalog.index)).toBe(true);
 		expect(isPathWithin(ROUTES.account.security, ROUTES.account.index)).toBe(true);
 		expect(isPathWithin(ROUTES.users.mfaRecovery, ROUTES.users.list)).toBe(true);
-		expect(isPathWithin(ROUTES.components.component("button"), ROUTES.components.index)).toBe(true);
+		expect(isPathWithin(ROUTES.kanban.board, ROUTES.components.index)).toBe(true);
 	});
 });
 

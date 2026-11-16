@@ -1,0 +1,149 @@
+[
+	{
+		"id": "c-sonner-1",
+		"label": "Basic",
+		"description": "Basic toast notification. Best for a single line message from one bare call with no options, the minimum a toast needs.",
+		"file": "sonner-1",
+		"export": "Sonner1Example"
+	},
+	{
+		"id": "c-sonner-2",
+		"label": "With Description",
+		"description": "Toast notification with description. Best for a title over a second line passed as description, here an event name with its date and time.",
+		"file": "sonner-2",
+		"export": "Sonner2Example"
+	},
+	{
+		"id": "c-sonner-3",
+		"label": "Positions",
+		"description": "Toast positions. Best for the two places a phone shows a toast, under the header or above the home indicator, each from its own button.",
+		"file": "sonner-3",
+		"export": "Sonner3Example"
+	},
+	{
+		"id": "c-sonner-4",
+		"label": "Variant Icons",
+		"description": "Toast variants with colored icons. Best for default, success, error, warning, info and loading side by side, with the 4 status icons each tinted its own color.",
+		"file": "sonner-4",
+		"export": "Sonner4Example"
+	},
+	{
+		"id": "c-sonner-5",
+		"label": "Durations",
+		"description": "Toast duration options. Best for timers of 2, 5 and 10 seconds beside a persistent notice that stays until it is closed.",
+		"file": "sonner-5",
+		"export": "Sonner5Example"
+	},
+	{
+		"id": "c-sonner-6",
+		"label": "Action Button",
+		"description": "Toast with action button. Best for an archive notice with an Undo button inside the toast that confirms with a second success toast.",
+		"file": "sonner-6",
+		"export": "Sonner6Example"
+	},
+	{
+		"id": "c-sonner-7",
+		"label": "Promise",
+		"description": "Promise toast with loading state. Best for a deploy whose spinner becomes a success or error line when its promise settles, quoting the resolved name.",
+		"file": "sonner-7",
+		"export": "Sonner7Example"
+	},
+	{
+		"id": "c-sonner-8",
+		"label": "Action & Close",
+		"description": "Toast with custom close and cancel buttons. Best for a delete prompt inside the toast with a Delete action and a Cancel button that just closes it.",
+		"file": "sonner-8",
+		"export": "Sonner8Example"
+	},
+	{
+		"id": "c-sonner-9",
+		"label": "Rich Content",
+		"description": "Toast with custom rich content. Best for a teammate chat message with avatar, sender, time ago and Reply and Dismiss buttons on the popover surface.",
+		"file": "sonner-9",
+		"export": "Sonner9Example"
+	},
+	{
+		"id": "c-sonner-10",
+		"label": "Upload Progress",
+		"description": "Toast with upload progress simulation. Best for a file card whose progress bar fills in place under one toast id, closing 3 seconds after it reaches 100.",
+		"file": "sonner-10",
+		"export": "Sonner10Example"
+	},
+	{
+		"id": "c-sonner-11",
+		"label": "Status Alert",
+		"description": "Toast with status alert markup. Best for a deploy result with a green status dot, environment, duration and commit rows, and View Logs and Open Site.",
+		"file": "sonner-11",
+		"export": "Sonner11Example"
+	},
+	{
+		"id": "c-sonner-12",
+		"label": "Info with Action",
+		"description": "Accent edge toast. Best for a release notice marked by a thick blue edge and an info icon, offering Later or Update Now.",
+		"file": "sonner-12",
+		"export": "Sonner12Example"
+	},
+	{
+		"id": "c-sonner-13",
+		"label": "Success with Action",
+		"description": "Custom invert success toast. Best for a paid invoice confirmation on the inverted surface with a green check badge and one View Receipt button.",
+		"file": "sonner-13",
+		"export": "Sonner13Example"
+	},
+	{
+		"id": "c-sonner-14",
+		"label": "Error with Details",
+		"description": "Custom invert error toast with details. Best for a failed build listing 2 file and line errors in monospace above View Logs and a red Retry Build.",
+		"file": "sonner-14",
+		"export": "Sonner14Example"
+	},
+	{
+		"id": "c-sonner-15",
+		"label": "Avatar Icon",
+		"description": "Custom invert info toast with avatar. Best for a collaboration invite from a named teammate with an avatar, a Decline and a blue Accept on the inverted surface.",
+		"file": "sonner-15",
+		"export": "Sonner15Example"
+	},
+	{
+		"id": "c-sonner-16",
+		"label": "Warning with Action",
+		"description": "Custom invert warning toast with countdown. Best for a session timeout warning held for 10 seconds, whose amber Extend Session button swaps in a success toast.",
+		"file": "sonner-16",
+		"export": "Sonner16Example"
+	},
+	{
+		"id": "c-sonner-17",
+		"label": "Avatar Group",
+		"description": "Multi-action invert toast with avatar group. Best for a pull request ready to merge, with an overlapping stack of 3 reviewer avatars and View and green Merge.",
+		"file": "sonner-17",
+		"export": "Sonner17Example"
+	},
+	{
+		"id": "c-sonner-18",
+		"label": "Close Button",
+		"description": "Toast with a close button and no timer. Best for an uploaded file notice that stays until its close button is pressed.",
+		"file": "sonner-18",
+		"export": "Sonner18Example"
+	},
+	{
+		"id": "c-sonner-19",
+		"label": "Custom Icon",
+		"description": "Toast with custom icon. Best for a row of 3 plain notices that each pass their own leading glyph: send, download and bookmark.",
+		"file": "sonner-19",
+		"export": "Sonner19Example"
+	},
+	{
+		"id": "c-sonner-20",
+		"label": "Integration",
+		"description": "Custom integration toast. Best for a connected workspace card with a link tile, Active status, a channel sync line and Configure and Open Dashboard.",
+		"file": "sonner-20",
+		"export": "Sonner20Example"
+	},
+	{
+		"id": "c-sonner-21",
+		"label": "Updatable",
+		"description": "Updatable toast with ID. Best for a spinner line rewritten through a stored toast id from preparing to 30 and 70 percent, then a success card.",
+		"file": "sonner-21",
+		"export": "Sonner21Example"
+	}
+]

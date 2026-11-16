@@ -33,7 +33,14 @@ export interface ComboboxValueProps {
  * no DOM element of its own (it returns the label text), so there is nothing to
  * forward a ref to — the smart component reads it from the root context.
  */
-export function ComboboxValue({ children, formatValue, placeholder }: ComboboxValueProps & { readonly children?: React.ReactNode }): React.JSX.Element {
+export function ComboboxValue({
+	children,
+	formatValue,
+	placeholder,
+}: ComboboxValueProps & {
+	/** Custom content in place of the chosen option's label. */
+	readonly children?: React.ReactNode;
+}): React.JSX.Element {
 	return (
 		<ComboboxPrimitive.Value data-slot="combobox-value" placeholder={placeholder}>
 			{formatValue !== undefined ? (value: string): React.ReactNode => formatValue(value) : children}
@@ -48,6 +55,7 @@ export interface ComboboxTriggerProps extends ComboboxPrimitive.Trigger.Props {
 	readonly ariaLabel?: string;
 }
 
+/** A button that opens the list, for a combobox opened from a button. */
 export const ComboboxTrigger = React.forwardRef<HTMLButtonElement, ComboboxTriggerProps>(function ComboboxTrigger(
 	{ className, children, ariaLabel, ...props },
 	ref,
@@ -73,6 +81,7 @@ export interface ComboboxClearProps extends ComboboxPrimitive.Clear.Props {
 	readonly ariaLabel?: string;
 }
 
+/** A button that clears the selection. Hidden while nothing is chosen. */
 export const ComboboxClear = React.forwardRef<HTMLButtonElement, ComboboxClearProps>(function ComboboxClear({ className, ariaLabel, ...props }, ref): React.JSX.Element {
 	const labels = useComboboxLabels();
 	return (
@@ -105,6 +114,7 @@ export interface ComboboxInputProps extends ComboboxPrimitive.Input.Props {
 	readonly invalid?: boolean;
 }
 
+/** The search field. Typing filters the options; the arrow keys move the highlight while focus stays here. */
 export const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputProps>(function ComboboxInput(
 	{ className, children, disabled = false, invalid: invalidProp, showTrigger = true, showClear = false, placeholder, ...props },
 	ref,
@@ -153,6 +163,7 @@ export const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputPro
 export interface ComboboxContentProps
 	extends ComboboxPrimitive.Popup.Props, Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor"> {}
 
+/** The popup: a portal, a positioner and the list's surface in one part. Pass `anchor` to position it against the chips. */
 export const ComboboxContent = React.forwardRef<HTMLDivElement, ComboboxContentProps>(function ComboboxContent(
 	{ className, side = "bottom", sideOffset = 6, align = "start", alignOffset = 0, anchor, ...props },
 	ref,
@@ -184,6 +195,7 @@ export interface ComboboxListProps extends Omit<ComboboxPrimitive.List.Props, "c
 	readonly loadingLabel?: string;
 }
 
+/** The `listbox` of options. */
 export const ComboboxList = React.forwardRef<HTMLDivElement, ComboboxListProps>(function ComboboxList(
 	{ className, children, loadingLabel, ...props },
 	ref,
@@ -207,9 +219,11 @@ export const ComboboxList = React.forwardRef<HTMLDivElement, ComboboxListProps>(
 export interface ComboboxLoadingProps {
 	/** The loading message — always supplied by the smart component (rule 9). */
 	readonly label: string;
+	/** Classes for the loading row. */
 	readonly className?: string;
 }
 
+/** Shown while options are loading. */
 export const ComboboxLoading = React.forwardRef<HTMLDivElement, ComboboxLoadingProps>(function ComboboxLoading({ label, className }, ref): React.JSX.Element {
 	return <CollectionLoading ref={ref} slot="combobox-loading" label={label} className={className} />;
 });
@@ -221,6 +235,7 @@ export interface ComboboxItemProps extends ComboboxPrimitive.Item.Props {
 	readonly description?: string;
 }
 
+/** One option. Picking it sets the combobox's value. */
 export const ComboboxItem = React.forwardRef<HTMLDivElement, ComboboxItemProps>(function ComboboxItem({ className, children, description, ...props }, ref): React.JSX.Element {
 	const context = useComboboxContext();
 
@@ -249,10 +264,12 @@ export const ComboboxItem = React.forwardRef<HTMLDivElement, ComboboxItemProps>(
 
 // ── Group / Label / Collection ──────────────────────────────────────────────
 
+/** A labelled group of options. */
 export const ComboboxGroup = React.forwardRef<HTMLDivElement, ComboboxPrimitive.Group.Props>(function ComboboxGroup({ className, ...props }, ref): React.JSX.Element {
 	return <ComboboxPrimitive.Group ref={ref} data-slot="combobox-group" className={cn(className)} {...props} />;
 });
 
+/** The visible name of a `ComboboxGroup`. */
 export const ComboboxLabel = React.forwardRef<HTMLDivElement, ComboboxPrimitive.GroupLabel.Props>(function ComboboxLabel({ className, ...props }, ref): React.JSX.Element {
 	return <ComboboxPrimitive.GroupLabel ref={ref} data-slot="combobox-label" className={cn("px-2 py-1.5 text-xs text-muted-foreground", className)} {...props} />;
 });
@@ -276,6 +293,7 @@ export interface ComboboxEmptyProps extends ComboboxPrimitive.Empty.Props {
 	readonly onAction?: () => void;
 }
 
+/** Shown while no option matches the search. */
 export const ComboboxEmpty = React.forwardRef<HTMLDivElement, ComboboxEmptyProps>(function ComboboxEmpty(
 	{ className, text, actionLabel, onAction, ...props },
 	ref,
@@ -296,6 +314,7 @@ export const ComboboxEmpty = React.forwardRef<HTMLDivElement, ComboboxEmptyProps
 
 // ── Separator ───────────────────────────────────────────────────────────────
 
+/** A divider between groups of options. */
 export const ComboboxSeparator = React.forwardRef<HTMLDivElement, ComboboxPrimitive.Separator.Props>(function ComboboxSeparator(
 	{ className, ...props },
 	ref,
@@ -314,6 +333,7 @@ export interface ComboboxChipsProps extends Omit<ComboboxPrimitive.Chips.Props, 
 	readonly overflowLabel?: string;
 }
 
+/** The field holding the chosen values as chips and the input, for `multiple`. Anchor the popup to it with `useComboboxAnchor`. */
 export const ComboboxChips = React.forwardRef<HTMLDivElement, ComboboxChipsProps>(function ComboboxChips(
 	{ className, children, maxChips: maxChipsProp, overflowLabel, ...props },
 	ref,
@@ -398,6 +418,7 @@ export const ComboboxChip = React.memo(
 
 // ── Chips input ─────────────────────────────────────────────────────────────
 
+/** The search input inside `ComboboxChips`. */
 export const ComboboxChipsInput = React.forwardRef<HTMLInputElement, ComboboxPrimitive.Input.Props>(function ComboboxChipsInput(
 	{ className, ...props },
 	ref,

@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-kpi-stat-card-1",
+		"label": "Overview",
+		"description": "KPI cards with a value, a change against the previous period and a loading state you can toggle. Best for dashboard headlines that show a trend.",
+		"file": "kpi-stat-card-1",
+		"export": "KpiStatCard1Example"
+	}
+]

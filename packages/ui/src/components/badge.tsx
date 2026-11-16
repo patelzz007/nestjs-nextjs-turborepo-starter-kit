@@ -24,22 +24,23 @@ const badgeVariants = cva(
 	],
 	{
 		variants: {
+			/** "invert"` */
 			variant: {
 				default: "bg-primary text-primary-foreground",
 				outline: "border-border bg-transparent dark:bg-input/32",
 				secondary: "bg-secondary text-secondary-foreground",
-				info: "bg-info text-status-foreground",
+				info: "bg-info-foreground text-background",
 				focus: "bg-focus text-status-foreground",
-				success: "bg-success text-status-foreground",
-				warning: "bg-warning text-status-foreground",
-				destructive: "bg-destructive text-status-foreground",
+				success: "bg-success-foreground text-background",
+				warning: "bg-warning-foreground text-background",
+				destructive: "bg-destructive-foreground text-background",
 				invert: "bg-invert text-invert-foreground",
 				"primary-light": "border-primary/10 bg-primary/10 text-primary dark:border-primary/25 dark:bg-primary/15 dark:text-primary",
-				"warning-light": "border-warning/15 bg-warning/10 text-warning-foreground dark:border-warning/25 dark:bg-warning/15 dark:text-warning",
-				"success-light": "border-success/15 bg-success/10 text-success-foreground dark:border-success/25 dark:bg-success/15 dark:text-success",
-				"info-light": "border-info/15 bg-info/10 text-info-foreground dark:border-info/25 dark:bg-info/15 dark:text-info",
+				"warning-light": "border-warning/15 bg-warning/10 text-warning-foreground dark:border-warning/25 dark:bg-warning/15",
+				"success-light": "border-success/15 bg-success/10 text-success-foreground dark:border-success/25 dark:bg-success/15",
+				"info-light": "border-info/15 bg-info/10 text-info-foreground dark:border-info/25 dark:bg-info/15",
 				"focus-light": "border-focus/15 bg-focus/10 text-focus-foreground dark:border-focus/25 dark:bg-focus/15 dark:text-focus",
-				"destructive-light": "border-destructive/15 bg-destructive/10 text-destructive-foreground dark:border-destructive/25 dark:bg-destructive/15 dark:text-destructive",
+				"destructive-light": "border-destructive/15 bg-destructive/10 text-destructive-foreground dark:border-destructive/25 dark:bg-destructive/15",
 				"invert-light": "border-invert/15 bg-invert/10 text-foreground dark:border-invert/45 dark:bg-invert/35 dark:text-invert-foreground",
 				"primary-outline": "border-border bg-background text-primary dark:bg-input/30",
 				"warning-outline": "border-border bg-background text-warning-foreground dark:bg-input/30",
@@ -59,6 +60,7 @@ const badgeVariants = cva(
 				teal: "bg-tone-teal-soft text-tone-teal [a]:hover:bg-tone-teal-soft/80",
 				violet: "bg-tone-violet-soft text-tone-violet [a]:hover:bg-tone-violet-soft/80",
 			},
+			/** "xl"` */
 			size: {
 				xs: "h-4 min-w-4 gap-1 px-1 py-0.25 text-[length:var(--text-badge-xs)] leading-none",
 				sm: "h-4.5 min-w-4.5 gap-1 px-1 py-0.25 text-[length:var(--text-badge-sm)] leading-none",
@@ -84,6 +86,7 @@ type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
 
 interface BadgeProps extends useRender.ComponentProps<"span">, VariantProps<typeof badgeVariants> {}
 
+/** A short label for a status, a count or a tag: solid, `-light` and `-outline` tones of every semantic colour, in several sizes. `render` makes it a link. */
 const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(function Badge({ className, variant = "default", size, radius, render, ...props }, ref): React.ReactElement {
 	return useRender({
 		ref,

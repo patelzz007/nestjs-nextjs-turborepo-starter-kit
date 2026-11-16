@@ -3,8 +3,11 @@ title: "ADR 010: Transaction-Local RLS Contract"
 tags: ["adr", "rls", "postgres", "security"]
 description: "Architecture decision record for fail-closed tenant units of work with transaction-local PostgreSQL session context."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/010-rls-transaction-contract.webp"
 order: 10
 ---
 

@@ -49,12 +49,12 @@ export function ProgressList({ items, display = "bar", color = "chart-1", testID
 					accessibilityValue={{ min: 0, max: item.max, now: Math.min(Math.max(0, item.value), item.max), text: item.valueLabel }}>
 					<View className="flex-row items-baseline gap-3">
 						<View className="flex-1 gap-0.5">
-							<Text className="font-sans-medium text-sm text-foreground" numberOfLines={1}>
+							<Text className="font-sans-medium text-body text-foreground" numberOfLines={1}>
 								{item.label}
 							</Text>
-							{item.detail === undefined ? null : <Text className="font-sans text-xs text-muted-foreground">{item.detail}</Text>}
+							{item.detail === undefined ? null : <Text className="text-caption font-sans text-muted-foreground">{item.detail}</Text>}
 						</View>
-						<Text className="font-sans-semibold text-sm text-foreground">{item.valueLabel}</Text>
+						<Text className="font-sans-semibold text-body text-foreground">{item.valueLabel}</Text>
 					</View>
 					{display === "steps" ? (
 						<StepsMeter value={item.value} max={item.max} fillClassName={fillClassName} testID={`progress-${item.key}`} />

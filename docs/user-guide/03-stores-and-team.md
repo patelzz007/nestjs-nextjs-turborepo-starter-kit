@@ -3,8 +3,11 @@ title: "3. Stores and team"
 description: "Request, approve, reject, edit and close stores; set the store logo; invite staff, give them roles and stores, approve access requests and remove someone from a store."
 order: 4
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1792604185000
+coverImage: "/images/covers/user-guide/03-stores-and-team.webp"
 tags: ["user-guide", "merchant", "stores", "team", "invites"]
 ---
 

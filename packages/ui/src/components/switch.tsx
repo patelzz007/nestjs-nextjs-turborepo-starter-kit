@@ -27,11 +27,13 @@ const SWITCH_GLYPH_SIZE_CLASSES: Readonly<Record<SwitchSize, string>> = { defaul
 
 type SwitchProps = SwitchPrimitive.Root.Props &
 	VariantProps<typeof switchVariants> & {
+		/** Disables the switch and dims it while the change is being saved. */
 		readonly loading?: boolean;
 		/** Kept as it is by a policy ("Always on"): a lock in the thumb, and it never changes. */
 		readonly locked?: boolean;
 	};
 
+/** An on/off control that applies at once, on Base UI's switch: `role="switch"` with a hidden native input. Controlled with `checked` / `onCheckedChange`. */
 const Switch = React.forwardRef<HTMLElement, SwitchProps>(function Switch(
 	{ className, variant, size = "default", loading = false, locked = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,

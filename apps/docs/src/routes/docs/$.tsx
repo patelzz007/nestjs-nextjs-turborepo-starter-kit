@@ -1,15 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import { ArticlePage } from "@/components/article-page";
 import { NavTree } from "@/components/nav-tree";
 import { docHref } from "@/lib/navigation";
+import { PERMANENT_REDIRECT_STATUS, redirectTarget } from "@/lib/redirects";
 import { pageHead } from "@/lib/seo";
 import { SITE_DESCRIPTION } from "@/lib/site";
 import { fetchGuide } from "@/server/functions";
 import { Route as RootRoute } from "../__root";
 
 export const Route = createFileRoute("/docs/$")({
+	beforeLoad: ({ params }) => {
+		const target = redirectTarget(docHref(params._splat ?? ""));
+		if (target !== null) {
+			redirect({ href: target, statusCode: PERMANENT_REDIRECT_STATUS, throw: true });
+		}
+	},
 	loader: ({ params }) => fetchGuide({ data: { id: params._splat ?? "" } }),
 	head: ({ loaderData }) =>
 		loaderData === undefined

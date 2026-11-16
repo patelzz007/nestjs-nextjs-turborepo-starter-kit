@@ -44,6 +44,7 @@ import { adminTenantsContract, tenantsContract, rewardsAdminTenantContract } fro
 import { productContract, sampleCategoryContract } from "../contexts/catalog/contract";
 import { kanbanContract } from "../contexts/kanban/contract";
 import { operationsContract } from "../contexts/operations/contract";
+import { docsPublishingContract } from "../contexts/docs-publishing/docs-publishing.contract";
 import { receivedWebhooksContract } from "../contexts/webhooks/received-webhooks.contract";
 import { tenantWebhooksContract } from "../contexts/webhooks/outbound-webhooks.contract";
 
@@ -139,6 +140,7 @@ export const apiContract = {
 	product: productContract,
 	kanban: kanbanContract,
 	operations: operationsContract,
+	docsPublishing: docsPublishingContract,
 	receivedWebhooks: receivedWebhooksContract,
 	tenantWebhooks: tenantWebhooksContract,
 };

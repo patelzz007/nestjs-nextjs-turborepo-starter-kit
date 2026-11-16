@@ -10,6 +10,8 @@
  * UNCONTROLLED (`default…` seeds internal state). Never both for one key.
  */
 import { hasGlobalValue } from "@workspace/shared";
+import { DEFAULT_SCHEDULE_MODE, resolveScheduleMode } from "@workspace/ui-kit-logic";
+
 import type { Locale } from "date-fns";
 import type * as React from "react";
 
@@ -45,7 +47,6 @@ import type {
 	GanttResourceReorder,
 	GanttRowAlign,
 	GanttScale,
-	GanttScheduleMode,
 	GanttSelection,
 	GanttSlotDraft,
 	GanttSlotInfo,
@@ -57,9 +58,6 @@ export const DEFAULT_INTERACTIONS: GanttInteractions = { drag: true, resize: tru
 
 /** Infinite-scroll growth cap, in whole periods per side. */
 export const MAX_RANGE_WINDOW = 12;
-
-/** A node holds as many concurrent schedules as it needs unless told otherwise. */
-export const DEFAULT_SCHEDULE_MODE: GanttScheduleMode = "multiple";
 
 /** Tree label sits on the first schedule's baseline, not the grown row's middle. */
 export const DEFAULT_ROW_ALIGN: GanttRowAlign = "start";
@@ -80,13 +78,8 @@ export const EMPTY_SELECTION: GanttSelection = { eventKeys: [], slot: null };
 
 const NO_RESOURCES: readonly GanttResource[] = [];
 
-/**
- * A node's cardinality: its own override wins over the view-level default.
- * Shared by the layout pass and the gesture engine so both read one rule.
- */
-export function resolveScheduleMode(node: GanttResource | null | undefined, scheduleMode: GanttScheduleMode | undefined): GanttScheduleMode {
-	return node?.scheduleMode ?? scheduleMode ?? DEFAULT_SCHEDULE_MODE;
-}
+/** A node's cardinality (its own override wins over the view-level default): shared by the layout and the gestures. */
+export { DEFAULT_SCHEDULE_MODE, resolveScheduleMode };
 
 /** Row context handed to tree-panel column and label renderers. */
 export interface GanttColumnContext {
@@ -123,14 +116,19 @@ export interface GanttRangeBounds {
 type GanttMouseEvent = React.MouseEvent<HTMLElement>;
 
 export interface GanttCallbacks<TData extends GanttData = GanttData> {
+	/** Fires when a bar is clicked. */
 	readonly onEventClick?: GanttHandler<[occurrence: GanttOccurrence<TData>, event: GanttMouseEvent], void> | undefined;
+	/** Fires when a bar is double-clicked, typically to edit it. */
 	readonly onEventDoubleClick?: GanttHandler<[occurrence: GanttOccurrence<TData>, event: GanttMouseEvent], void> | undefined;
 	/** The commit gate: return false to revert, an adjustment object to accept with changes. */
 	readonly onEventUpdate?: GanttHandler<[update: GanttProposedUpdate<TData>], GanttUpdateResult> | undefined;
 	/** Live validity while a gesture is in flight (advisory unless enforceCanDrop). */
 	readonly canDropEvent?: GanttHandler<[update: GanttProposedUpdate<TData>], boolean> | undefined;
+	/** Fires when an empty slot of the timeline is clicked. */
 	readonly onSlotClick?: GanttHandler<[slot: GanttSlotInfo, event: GanttMouseEvent], void> | undefined;
+	/** Fires when a slot is selected on an empty row, to schedule it. */
 	readonly onSelectSlot?: GanttHandler<[slot: GanttSlotDraft], void> | undefined;
+	/** Decides whether a slot can be selected. */
 	readonly canSelectSlot?: GanttHandler<[slot: GanttSlotDraft], boolean> | undefined;
 	/** Fires when the "add task" hint is activated; create a new tree row. */
 	readonly onCreateTask?: GanttHandler<[context: GanttCreateTaskContext], void> | undefined;
@@ -138,12 +136,19 @@ export interface GanttCallbacks<TData extends GanttData = GanttData> {
 	readonly canCreateTask?: GanttHandler<[context: { readonly parentId: string | null }], boolean> | undefined;
 	/** Click on a tree row's surface (chevron/checkbox/grip clicks excluded). */
 	readonly onResourceClick?: GanttHandler<[context: GanttColumnContext, event: GanttMouseEvent], void> | undefined;
+	/** Fires when a row in the tree pane is double-clicked. */
 	readonly onResourceDoubleClick?: GanttHandler<[context: GanttColumnContext, event: GanttMouseEvent], void> | undefined;
+	/** Fires when the visible date range changes. */
 	readonly onRangeChange?: GanttHandler<[info: GanttRangeInfo], void> | undefined;
+	/** Fires when the scale changes (day to year). */
 	readonly onScaleChange?: GanttHandler<[scale: GanttScale], void> | undefined;
+	/** Fires when the anchor date changes. */
 	readonly onDateChange?: GanttHandler<[date: Date], void> | undefined;
+	/** Fires when the selected bars change. */
 	readonly onSelectionChange?: GanttHandler<[selection: GanttSelection], void> | undefined;
+	/** Fires when the enabled interactions change. */
 	readonly onInteractionsChange?: GanttHandler<[interactions: GanttInteractions], void> | undefined;
+	/** Fires with the whole events array after a change, for a controlled chart. */
 	readonly onEventsChange?: GanttHandler<[events: readonly GanttEvent<TData>[]], void> | undefined;
 	/**
 	 * Commit gate for row drag reorder. Return false to reject; apply the move
@@ -158,25 +163,41 @@ export interface GanttCallbacks<TData extends GanttData = GanttData> {
 }
 
 export interface UseGanttStateOptions<TData extends GanttData = GanttData> extends GanttCallbacks<TData> {
+	/** Controlled events; pairs with `onEventsChange`. */
 	readonly events?: readonly GanttEvent<TData>[] | undefined;
+	/** Initial events (uncontrolled). */
 	readonly defaultEvents?: readonly GanttEvent<TData>[] | undefined;
+	/** Controlled scale; pairs with `onScaleChange`. */
 	readonly scale?: GanttScale | undefined;
+	/** Initial scale (uncontrolled). */
 	readonly defaultScale?: GanttScale | undefined;
+	/** Controlled anchor date; pairs with `onDateChange`. */
 	readonly date?: Date | undefined;
+	/** Initial anchor date (uncontrolled). */
 	readonly defaultDate?: Date | undefined;
+	/** Controlled selection; pairs with `onSelectionChange`. */
 	readonly selection?: GanttSelection | undefined;
+	/** Initial selection (uncontrolled). */
 	readonly defaultSelection?: GanttSelection | undefined;
+	/** Controlled interaction switches; pairs with `onInteractionsChange`. */
 	readonly interactions?: Partial<GanttInteractions> | undefined;
+	/** Initial interaction switches (uncontrolled). */
 	readonly defaultInteractions?: Partial<GanttInteractions> | undefined;
+	/** Loading flag mirrored into state. */
 	readonly loading?: boolean | undefined;
 	/** IANA display zone; defaults to the runtime's zone. */
 	readonly timeZone?: string | undefined;
+	/** date-fns locale for all formatting. */
 	readonly locale?: Locale | undefined;
+	/** First day of the week; defaults from `locale` when one is set. */
 	readonly weekStartsOn?: WeekStartsOn | undefined;
+	/** Minimum created-slot length in minutes for a bare create click. */
 	readonly slotDuration?: number | undefined;
+	/** Minute snapping on the day scale; other scales snap to whole zoned days. */
 	readonly snapDuration?: number | undefined;
 	/** Per-usage overrides of the provider's `gantt` labels. */
 	readonly i18n?: GanttI18nOverrides | undefined;
+	/** Hard travel bounds for navigation and infinite scrolling; either side may be omitted. */
 	readonly rangeBounds?: GanttRangeBounds | undefined;
 	/** Pointer-activation threshold overrides for drag/resize/create. */
 	readonly activation?: GanttActivationConfig | undefined;
@@ -188,8 +209,11 @@ export interface UseGanttStateOptions<TData extends GanttData = GanttData> exten
 	readonly overlap?: GanttOverlapPolicy | undefined;
 	/** Make canDropEvent binding: a release whose last verdict was invalid reverts. */
 	readonly enforceCanDrop?: boolean | undefined;
+	/** Packing prominence per event. */
 	readonly getEventPriority?: GanttHandler<[event: GanttEvent<TData>], number> | undefined;
+	/** Occurrence sort; the default orders higher `getEventPriority` first, then start/duration/key. */
 	readonly eventOrder?: GanttHandler<[a: GanttOccurrence<TData>, b: GanttOccurrence<TData>], number> | undefined;
+	/** Escape hatch for exotic recurrence: return the expanded occurrences yourself. */
 	readonly getOccurrences?: GanttOccurrencesResolver<TData> | undefined;
 	/** The source of "now" (Today, the now-line, past bars). Defaults to the system clock. */
 	readonly clock?: GanttClock | undefined;

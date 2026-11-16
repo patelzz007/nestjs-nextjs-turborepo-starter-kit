@@ -151,7 +151,7 @@ describe("Dialog", () => {
 		await render(
 			<Dialog open onOpenChange={jest.fn()} className="max-w-lg p-8" testID="dialog">
 				<DialogHeader className="gap-4" testID="header">
-					<DialogTitle className="text-xl" testID="title">
+					<DialogTitle className="text-h2" testID="title">
 						{TITLE}
 					</DialogTitle>
 				</DialogHeader>
@@ -168,8 +168,8 @@ describe("Dialog", () => {
 		expect(card).not.toContain("max-w-md");
 		expect(classNameOf("header")).toContain("gap-4");
 		expect(classNameOf("header")).not.toContain("gap-1.5");
-		expect(classNameOf("title")).toContain("text-xl");
-		expect(classNameOf("title")).not.toContain("text-lg");
+		expect(classNameOf("title")).toContain("text-h2");
+		expect(classNameOf("title")).not.toContain("text-h3");
 		expect(classNameOf("footer")).toContain("flex-row");
 	});
 });

@@ -40,6 +40,22 @@ export const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(["localhost", "12
  * 127.0.0.1, ::1). A production build whose `APP_URL` is loopback is someone
  * running the production bundle on their own machine, not a deployment.
  */
+/** Starting the docs sync needs the credential, the repository and the branch together (ADR 084). */
+export function checkDocsSyncDispatchRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	const settings: readonly (keyof ApiEnv)[] = ["DOCS_SYNC_GITHUB_TOKEN", "DOCS_SYNC_GITHUB_REPOSITORY", "DOCS_SYNC_GITHUB_REF"];
+	const missing = settings.filter((name) => env[name] === undefined);
+	if (missing.length === 0 || missing.length === settings.length) {
+		return;
+	}
+	for (const name of missing) {
+		context.addIssue({
+			code: "custom",
+			path: [name],
+			message: "must be set together with DOCS_SYNC_GITHUB_TOKEN, DOCS_SYNC_GITHUB_REPOSITORY and DOCS_SYNC_GITHUB_REF, or leave all three unset",
+		});
+	}
+}
+
 /** Live updates need both halves, GitHub only delivers to https, and they ride on the linked tokens. */
 export function checkGithubWebhookRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
 	if ((env.GITHUB_WEBHOOK_URL === undefined) !== (env.GITHUB_WEBHOOK_SECRET === undefined)) {
@@ -406,6 +422,7 @@ export function checkCacheRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): 
 /** A repository list needs a token to read it with, stays small, and names each repository once (GitHub names are case-insensitive). */
 export function checkGithubRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
 	checkGithubWebhookRules(env, context);
+	checkDocsSyncDispatchRules(env, context);
 	const repositories: readonly string[] = env.GITHUB_REPOSITORIES ?? [];
 	if (repositories.length === 0) {
 		return;

@@ -1,0 +1,18 @@
+{
+	"extends": "@workspace/typescript-config/base.json",
+	"compilerOptions": {
+		// Run on Node directly by the sync CLI (type stripping), so this package must use erasable syntax only. That
+		// cannot be switched on here: `development` type-checks @workspace/shared's source, which uses parameter properties.
+		"allowImportingTsExtensions": true,
+		"customConditions": ["development"],
+		"declaration": false,
+		"declarationMap": false,
+		"lib": ["esnext"],
+		"noEmit": true,
+		"target": "ESNext",
+		"types": ["node"],
+		"verbatimModuleSyntax": true
+	},
+	"include": ["src", "*.ts"],
+	"exclude": ["node_modules"]
+}

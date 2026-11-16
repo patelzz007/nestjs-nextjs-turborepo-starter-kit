@@ -3,8 +3,11 @@ title: "Outgoing webhooks"
 description: "How a merchant sends their store's events to their own systems: turning webhooks on locally, adding an endpoint in the merchant console, running a receiver that checks the signature, triggering every event type, rotating secrets, retries, redelivery, auto-disable, the payload catalog and troubleshooting."
 order: 27
 author: "Platform Team"
+category: "API"
+date: 1793836800000
 lastUpdated: 1793836800000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/api/outgoing-webhooks.webp"
 tags: ["api", "webhooks", "integrations", "merchant", "guide"]
 ---
 

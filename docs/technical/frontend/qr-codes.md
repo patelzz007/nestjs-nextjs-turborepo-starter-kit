@@ -4,8 +4,11 @@ tags: ["qr-code", "ui", "mobile", "docs", "encoder", "2fa"]
 description: "The in-house QR code generator: an ISO/IEC 18004 encoder in packages/shared with no third-party library, the web and native QrCode components, the API's 2FA SVG data URL, the merchant pairing QR, and qr fences in the docs."
 order: 26
 author: "Platform Team"
+category: "Frontend"
+date: 1792108800000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/frontend/qr-codes.webp"
 ---
 
 # QR codes

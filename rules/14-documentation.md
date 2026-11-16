@@ -97,6 +97,34 @@ A six-month developer should be able to understand, from the docs: why this exis
    // (see ADR 0012). Do not remove this retry without re-reading that ADR.
 ```
 
+## Docs page front matter
+
+Every page under `docs/` (guides and blog posts) needs `title`, `author`, `category` and three dates in epoch ms. The docs site's build refuses a page without them (`apps/docs/src/lib/frontmatter.ts`):
+
+| Field | Meaning | Who sets it |
+|---|---|---|
+| `date` | First published | The writer, once, at UTC midnight |
+| `lastUpdated` | Last changed in a way a reader should know about | The writer, at UTC midnight. Bump it for a real change, not a typo |
+| `editedAt` | Last edited at all | The docs sync, from the writing tool's edit time. On a page no tool owns yet, set it to now when you edit the page |
+
+In Notion these are the **Category**, **Date** and **Last updated** properties. Notion keeps the edit time itself.
+
+## Flowchart direction
+
+The docs site lays out a flowchart too wide for its column the other way round (usually top to bottom) instead of shrinking it. Notion and other tools draw what the file says. So write a flowchart the way the site shows it: a long chain of steps is `flowchart TD`, not `flowchart LR`. `apps/docs`' test `diagram-direction.test.ts` lays out every chart in `docs/` with the site's own engine and options, and fails naming the file, the chart and the direction to write.
+
+## Flowchart colours
+
+Covers: every guide has a cover of its own, never shared and never a stock-photo or other third-party link: `coverImage: "/images/covers/<the guide's path>.webp"` (`docs/images/covers/` mirrors `docs/`, so `docs/adr/021-list-query-grammar.md` uses `/images/covers/adr/021-list-query-grammar.webp`). `apps/docs/src/lib/__tests__/covers.test.ts` fails for a guide without its own cover, so a new guide needs a new cover: add the `coverImage` line, run `pnpm docs:covers <the guide's path>`, and commit the image. Covers are drawn from the guide (its code, sections or ADR decision, over a screenshot of the apps), never by hand; see `apps/docs/README.md` → Covers.
+
+Don't colour diagrams in the `.md` (`classDef`, `style`, `linkStyle`). The docs site colours each flowchart node by what it is for (entry, step, store, decision, outcome, person; `packages/docs-content/src/diagram-roles.ts`) in the reader's theme, and a node the author styled keeps fixed colours instead. Notion draws plain Mermaid, so the Notion import appends a style block with the same colours by the same rules, between `%% docs-sync:style-start` and `%% docs-sync:style-end`, and the sync removes it on the way back (`packages/docs-sync/src/sources/notion/notion-diagram-style.ts`). The block also draws labels as SVG text in one font (Notion measured and drew them in different fonts, which cut long labels off), makes edge labels solid, padded pills (never resize their text: Mermaid sized the pill for it), and draws yes/no edges green/red. In Notion, colour a node you add by putting its id on the matching `class` line.
+
+## Docs written in a tool (ADR 084)
+
+Once a page is synced, it is generated: it carries a `source` field in its front matter and is listed in `docs/sync/manifest.json`. Edit it in its writing tool, never in the repository; CI's Docs guard refuses a hand edit. `AGENTS.md`, `CLAUDE.md`, `rules/`, skills and `docs/generated/` are never synced.
+
+A pull request that changes behaviour carries one line, checked by the Docs guard: `Docs: updated in <link>` or `Docs: not needed, <reason>`. It is a signal, not proof that the docs are right.
+
 ## Keeping docs from rotting
 
 If you notice an existing doc is out of date while working on something unrelated: fix it inline if it's a small correction, or flag it explicitly for follow-up if it's a larger rewrite — never leave a known-wrong doc silently in place, since a wrong doc is often worse than no doc at all (it actively misleads the next reader with false confidence). "Were the docs updated?" is an explicit item in `33-code-review-checklist.md`.

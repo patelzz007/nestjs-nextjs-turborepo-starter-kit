@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Start in the likely country",
+		"do": {
+			"text": "Pass `defaultCountry`: the country most people will be in.",
+			"file": "phone-input-do-1",
+			"export": "PhoneInputDo1Example"
+		},
+		"dont": {
+			"text": "Don't make everyone pick a country first when most are in one.",
+			"file": "phone-input-dont-1",
+			"export": "PhoneInputDont1Example"
+		}
+	},
+	{
+		"title": "Store one format",
+		"do": {
+			"text": "Save the value as reported (E.164, `+60123456789`), and format it when showing it.",
+			"file": "phone-input-do-2",
+			"export": "PhoneInputDo2Example"
+		},
+		"dont": {
+			"text": "Don't use a plain text field for phones: \"012-345 6789\" and \"+60123456789\" end up stored as two numbers.",
+			"file": "phone-input-dont-2",
+			"export": "PhoneInputDont2Example"
+		}
+	}
+]

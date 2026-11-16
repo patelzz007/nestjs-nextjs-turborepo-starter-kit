@@ -22,7 +22,7 @@ import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { toastMutationError } from "@/lib/api/mutation-error";
@@ -186,7 +186,7 @@ function LiveSection({ server }: { readonly server: OpsServerDetail }): React.JS
 
 export function ServerDetail({ serverId }: { readonly serverId: string }): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const { isSuperAdmin } = useSuperAdminStatus();
 	const [range, setRange] = React.useState<OpsHistoryRange>("1h");

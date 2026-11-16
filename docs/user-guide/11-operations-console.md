@@ -3,8 +3,11 @@ title: "11. Operations console"
 description: "Watch the platform's servers, instances and dependencies, read their history, act on alerts, back up the database and load test the platform."
 order: 12
 author: "Product & Platform Team"
+category: "User guide"
+date: 1793145600000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/user-guide/11-operations-console.webp"
 tags: ["user-guide", "operations", "monitoring", "backups", "load-testing"]
 ---
 

@@ -54,7 +54,7 @@ export const ANALYTICS_INTERVAL_OPTIONS: readonly PickerOption<AnalyticsInterval
 const PICKED_DAY_REGION_ZONE = "UTC";
 
 /**
- * Custom days as the calendar trigger shows them — "1 – 30 Sept 2026", or the
+ * Custom days as the calendar trigger shows them — "1–30 Sep 2026", or the
  * first day alone while the second is being picked. `YYYY-MM-DD` strings are
  * calendar days (no instant), so they are formatted as UTC midnights in UTC.
  */

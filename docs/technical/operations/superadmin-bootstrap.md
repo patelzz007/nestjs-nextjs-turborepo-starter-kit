@@ -3,8 +3,11 @@ title: "Bootstrap the first SuperAdmin"
 tags: ["operations", "runbook", "security", "production"]
 description: "Create the platform's first SuperAdmin from the command line on a deployment where the seed never runs: usage, guarantees, audit trail, refusals and recovery."
 author: "Platform Team"
+category: "Operations"
+date: 1791072000000
 lastUpdated: 1792368000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/operations/superadmin-bootstrap.webp"
 order: 5
 ---
 

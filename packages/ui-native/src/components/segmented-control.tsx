@@ -60,7 +60,7 @@ export const segmentVariants = cva("flex-1 items-center justify-center px-2", {
 
 export const segmentLabelVariants = cva("font-sans-semibold", {
 	variants: {
-		size: { md: "text-sm", sm: "text-xs" },
+		size: { md: "text-body", sm: "text-caption" },
 		selected: { true: "text-foreground", false: "text-muted-foreground" },
 	},
 	defaultVariants: { size: "md", selected: false },

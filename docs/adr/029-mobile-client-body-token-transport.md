@@ -3,8 +3,11 @@ title: "ADR 029: Mobile Is a Client Type With Body-Delivered Tokens"
 tags: ["adr", "auth", "mobile", "sessions"]
 description: "The Expo app authenticates as a fourth client type, `mobile`, that receives its access and refresh tokens in response bodies and sends them back as a Bearer header and a refresh body, instead of httpOnly cookies."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791417600000
 lastUpdated: 1791417600000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1791550954000
+coverImage: "/images/covers/adr/029-mobile-client-body-token-transport.webp"
 order: 29
 ---
 

@@ -632,8 +632,8 @@ const FilterMenuRow = React.memo(function FilterMenuRow({ item, selected, divide
 
 /**
  * One accessible list, shared by the operator menu and every option editor: a
- * `Command` (a Base UI listbox) run flat with its own search; the caller
- * filters, so `shouldFilter` is off and the list renders exactly its rows.
+ * `Command` (the kit listbox) run flat with its own search. It tracks the
+ * highlight by VALUE, so a live re-pin never moves it under the pointer.
  */
 export const FilterMenu = React.forwardRef<HTMLDivElement, FilterMenuProps>(function FilterMenu(
 	{

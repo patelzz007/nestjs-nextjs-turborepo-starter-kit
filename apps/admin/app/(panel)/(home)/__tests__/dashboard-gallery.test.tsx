@@ -28,7 +28,7 @@ afterEach(() => {
 
 describe("the admin landing page", () => {
 	it("shows the overview, then the component gallery's samples where the gallery is served", () => {
-		render(<DashboardGallery showComponentGallery />, { wrapper: UiKitTestProviders });
+		render(<DashboardGallery showShowcase />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("region", { name: "Platform sales" })).toBeDefined();
 		expect(screen.getByRole("navigation", { name: "Jump to component demos" })).toBeDefined();
@@ -36,7 +36,7 @@ describe("the admin landing page", () => {
 	});
 
 	it("shows the overview alone in a deployment without the gallery", () => {
-		render(<DashboardGallery showComponentGallery={false} />, { wrapper: UiKitTestProviders });
+		render(<DashboardGallery showShowcase={false} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("region", { name: "Platform sales" })).toBeDefined();
 		expect(screen.queryByRole("navigation", { name: "Jump to component demos" })).toBeNull();

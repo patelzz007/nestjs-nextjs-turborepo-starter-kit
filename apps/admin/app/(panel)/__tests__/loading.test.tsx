@@ -11,8 +11,8 @@ import AnalyticsLoading from "../analytics/loading";
 import AuditLogDetailLoading from "../audit-logs/[id]/loading";
 import AuditLogsLoading from "../audit-logs/loading";
 import CatalogLoading from "../catalog/loading";
-import ComponentPageLoading from "../components/(gallery)/[slug]/loading";
-import ComponentsLoading from "../components/(gallery)/loading";
+import ComponentLoading from "../components/(showcase)/[slug]/loading";
+import ComponentsLoading from "../components/(showcase)/loading";
 import EditCategoryLoading from "../catalog/categories/[id]/edit/loading";
 import CategoryDetailLoading from "../catalog/categories/[id]/loading";
 import CategoriesLoading from "../catalog/categories/loading";
@@ -110,14 +110,14 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 	{
 		route: "/components",
 		loadingView: ComponentsLoading,
-		announcement: "Loading components…",
-		landmarks: ['[data-skeleton="component-gallery-header"]', '[data-skeleton="component-gallery-family"]', '[data-skeleton="component-gallery-card"]'],
+		announcement: "Loading the component showcase…",
+		landmarks: ['[data-skeleton="showcase-header"]', '[data-skeleton="showcase-family"]', '[data-skeleton="showcase-card"]'],
 	},
 	{
 		route: "/components/[slug]",
-		loadingView: ComponentPageLoading,
-		announcement: "Loading component…",
-		landmarks: ['[data-skeleton="component-page-header"]', '[data-skeleton="section"]'],
+		loadingView: ComponentLoading,
+		announcement: "Loading the component…",
+		landmarks: ['[data-skeleton="showcase-component-header"]', '[data-skeleton="showcase-feature"]'],
 	},
 	{
 		route: "/emails",

@@ -345,12 +345,13 @@ One type system for every app and the docs site:
 | Headings and large reward figures | Bricolage Grotesque | `--font-heading` (`font-heading`) |
 | UI, body, buttons | Geist | `--font-sans` (`font-sans`; `--font-button` aliases it) |
 | Sidebar navigation | Bricolage Grotesque | `--font-sidebar` (`font-[family-name:var(--font-sidebar)]` on nav rows; aliases `--font-heading`) |
-| Code, IDs, keyboard hints | Geist Mono | `--font-mono` (`font-mono`) |
+| Code blocks (code, file names) | JetBrains Mono | `--font-code` (read by `CodeBlock` as `--code-block-font`, falls back to `--font-mono`) |
+| IDs, keyboard hints, inline code | Geist Mono | `--font-mono` (`font-mono`) |
 
 The faces live in `packages/ui/src/fonts/` (`bricolage-grotesque.ts`, `geist-sans.ts`,
-`geist-mono.ts`); each app's root `layout.tsx` adds all three `.variable` classes to `<html>`.
+`geist-mono.ts`, `jetbrains-mono.ts`); each app's root `layout.tsx` adds all four `.variable` classes to `<html>`.
 The docs site is a reading surface with its own identity: IBM Plex Sans and IBM Plex Mono, self-hosted from
-Fontsource (`apps/docs/src/styles/app.css`). Do not add a fourth family per app — if a screen needs emphasis,
+Fontsource (`apps/docs/src/styles/app.css`). Do not add a fifth family per app — if a screen needs emphasis,
 use weight, size and the display face, not another typeface.
 
 ## Status badges and icon tiles — meaning, not colour

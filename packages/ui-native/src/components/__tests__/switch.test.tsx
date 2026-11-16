@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { Switch, switchThumbVariants, switchTrackVariants } from "../switch";
 
@@ -113,5 +113,14 @@ describe("Switch", () => {
 		expect(JSON.stringify(screen.toJSON())).not.toContain("border-dashed");
 		await fireEvent.press(control);
 		expect(onChange).not.toHaveBeenCalled();
+	});
+
+	it("draws extras around the label, the switch first, a coloured track and a destructive label", async () => {
+		await render(
+			<Switch label="Wipe data" checked onChange={jest.fn()} tone="green" controlPosition="start" destructive leading={<Text>icon</Text>} trailing={<Text>Beta</Text>} />,
+		);
+		expect(screen.getByText("icon")).toBeOnTheScreen();
+		expect(screen.getByText("Beta")).toBeOnTheScreen();
+		expect(screen.getByText("Wipe data")).toHaveProp("className", expect.stringContaining("text-destructive-foreground"));
 	});
 });

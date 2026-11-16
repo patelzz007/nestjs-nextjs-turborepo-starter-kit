@@ -205,6 +205,7 @@ export interface DataGridTableRowSections<TData extends RowData> {
 	readonly bottomRows: readonly DataGridRow<TData>[];
 }
 
+/** Splits rows into top-pinned, scrolling and bottom-pinned sections. */
 export function getDataGridTableRowSections<TData extends RowData>(table: DataGridCoreTable<TData>, rowsPinnable: boolean): DataGridTableRowSections<TData> {
 	if (!rowsPinnable) {
 		return { topRows: [], centerRows: table.getRowModel().rows, bottomRows: [] };
@@ -218,6 +219,7 @@ export interface DataGridTableResolvedRow<TData extends RowData> {
 	readonly pinnedBoundary: DataGridTablePinnedBoundary | undefined;
 }
 
+/** The rows to render, with pinned rows split out of the scrolling ones. */
 export function getDataGridTableResolvedRows<TData extends RowData>(table: DataGridCoreTable<TData>, rowsPinnable: boolean): DataGridTableResolvedRow<TData>[] {
 	const { topRows, centerRows, bottomRows } = getDataGridTableRowSections(table, rowsPinnable);
 	const lastTopIndex = topRows.length - 1;
@@ -244,6 +246,7 @@ export interface DataGridTableColumnEdges {
 	readonly isLast: boolean;
 }
 
+/** The pixel edges of each visible column, for scrolling a column into view. */
 export function getDataGridTableColumnEdges<TData extends RowData>(table: DataGridCoreTable<TData>, columnId: string): DataGridTableColumnEdges {
 	const ordered = getDataGridTableOrderedVisibleColumns(table);
 	return { isFirst: ordered.at(0)?.id === columnId, isLast: ordered.at(-1)?.id === columnId };
@@ -379,6 +382,7 @@ export function getDataGridHeadCellSizeVar<TData extends RowData>(header: DataGr
 	return `calc((${sizes.join(" + ")}) * 1px)`;
 }
 
+/** Whether any column is pinned to the end. */
 export function hasDataGridTableRightPinnedColumns<TData extends RowData>(table: DataGridCoreTable<TData>): boolean {
 	return table.atoms.columnPinning.get().end.length > 0;
 }

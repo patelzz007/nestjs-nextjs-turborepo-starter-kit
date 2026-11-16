@@ -3,8 +3,11 @@ title: "API conventions"
 description: "What every endpoint shares: base URL and versioning, authentication and client type, CSRF intent header, the response and error envelopes, list queries, idempotency, rate limits — and how the generated API reference is produced."
 order: 20
 author: "Platform Team"
+category: "API"
+date: 1791072000000
 lastUpdated: 1791158400000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1794485625193
+coverImage: "/images/covers/technical/api/README.webp"
 tags: ["api", "conventions", "reference"]
 ---
 
@@ -85,7 +88,7 @@ calls are limited per API key (120/min); analytics exports per user or API key (
 ## How the reference is generated
 
 ```mermaid
-flowchart LR
+flowchart TD
     Z[zod contracts +<br/>controllers] -->|pnpm --filter @workspace/api openapi:export| O[docs/generated/openapi.json]
     Z -->|decorators read from source| R
     S[seeded throwaway API] -->|apps/docs/scripts/capture-api-samples.mjs| J[docs/generated/api-samples.json]

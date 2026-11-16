@@ -11,4 +11,8 @@ export * from "./schemas/merchant";
 export * from "./schemas/tenant-enums";
 export * from "./schemas/tenant";
 export * from "./schemas/tenant-lifecycle";
+export * from "./schemas/tenant-lifecycle-machine";
+export * from "./schemas/support-access-grant-machine";
+export * from "./schemas/location-machine";
+export * from "./schemas/kyb-review-machine";
 export * from "./schemas/customer-bans";

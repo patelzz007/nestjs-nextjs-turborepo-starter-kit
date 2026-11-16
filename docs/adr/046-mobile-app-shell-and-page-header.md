@@ -3,8 +3,11 @@ title: "ADR 046: Mobile App Shell and a Page Header That Is Not a Bar"
 tags: ["adr", "mobile", "navigation", "design"]
 description: "Every signed-in mobile screen sits in one app shell — status, drawer and a page header rendered once — whose header carries menu or back, the page's title (moving with the page) and the status pills, on the page's own colour with no band, divider or shadow."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791676800000
 lastUpdated: 1791763200000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/046-mobile-app-shell-and-page-header.webp"
 order: 46
 ---
 

@@ -48,8 +48,12 @@ export const ROUTES = {
 	/** The app's language (ADR 076): this device's choice, saved on the profile too. */
 	language: "/settings/language",
 	twoFactorSetup: "/settings/two-factor",
-	/** The UI kit's live gallery (@workspace/ui-native), opened from the drawer's Developer section. */
-	components: "/settings/components",
+	/**
+	 * The UI kit's component showcase (features/showcase): every component, live, with its code and docs — the web
+	 * admin's showcase on a phone. `/showcase/<slug>` and `/showcase/<slug>/docs` are its component screens
+	 * (features/showcase/showcase-routes.ts). Opened from the drawer's Developer section.
+	 */
+	showcase: "/showcase",
 	/** This phone as a POS till: pair it, then scan and redeem customers' reward QR codes (features/till). */
 	till: "/settings/till",
 	/** The inbox (ADR 070), opened from the header's bell and from a tapped push. */

@@ -3,8 +3,11 @@ title: "Local Infrastructure (Docker Compose)"
 tags: ["operations", "docker", "postgres", "local-development"]
 description: "Every service in compose.yml, its ports and dev credentials, how to override them, and how to fix common start-up problems."
 author: "Platform Team"
+category: "Operations"
+date: 1791072000000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/technical/operations/local-infrastructure.webp"
 order: 3
 ---
 

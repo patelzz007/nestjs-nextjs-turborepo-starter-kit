@@ -9,11 +9,13 @@ const attachmentVariants = cva(
 	"group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-colors focus-within:ring-1 focus-within:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
 	{
 		variants: {
+			/** `default`, `sm` or `xs`. */
 			size: {
 				default: "gap-2 text-sm has-data-[slot=attachment-content]:px-2.5 has-data-[slot=attachment-content]:py-2 has-data-[slot=attachment-media]:p-2",
 				sm: "gap-2.5 text-xs has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5",
 				xs: "gap-1.5 rounded-lg text-xs has-data-[slot=attachment-content]:px-1.5 has-data-[slot=attachment-content]:py-1 has-data-[slot=attachment-media]:p-1",
 			},
+			/** `horizontal` (a chip) or `vertical` (a card). */
 			orientation: {
 				horizontal: "min-w-40 items-center",
 				vertical: "w-24 flex-col has-data-[slot=attachment-content]:w-30",
@@ -30,6 +32,7 @@ type AttachmentProps = React.ComponentProps<"div"> &
 		state?: AttachmentState;
 	};
 
+/** One file as a chip or a card: media, a title, a description and actions. `state` styles it as idle, uploading, processing, failed or done; it uploads nothing itself. */
 const Attachment = React.forwardRef<HTMLDivElement, AttachmentProps>(function Attachment(
 	{ className, state = "done", size = "default", orientation = "horizontal", ...props },
 	ref,
@@ -51,6 +54,7 @@ const attachmentMediaVariants = cva(
 	"relative flex aspect-square w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted text-foreground group-data-[orientation=vertical]/attachment:w-full group-data-[size=sm]/attachment:w-8 group-data-[size=xs]/attachment:w-7 group-data-[size=xs]/attachment:rounded-md group-data-[state=error]/attachment:bg-destructive/10 group-data-[state=error]/attachment:text-destructive group-data-[orientation=vertical]/attachment:*:data-[slot=spinner]:size-6! [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 group-data-[orientation=vertical]/attachment:[&_svg:not([class*='size-'])]:size-6 group-data-[size=xs]/attachment:[&_svg:not([class*='size-'])]:size-3.5",
 	{
 		variants: {
+			/** `icon` (a file-type icon) or `image` (a thumbnail). */
 			variant: {
 				icon: "",
 				image:
@@ -65,10 +69,12 @@ const attachmentMediaVariants = cva(
 
 type AttachmentMediaProps = React.ComponentProps<"div"> & VariantProps<typeof attachmentMediaVariants>;
 
+/** The file's thumbnail or icon. */
 const AttachmentMedia = React.forwardRef<HTMLDivElement, AttachmentMediaProps>(function AttachmentMedia({ className, variant = "icon", ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="attachment-media" data-variant={variant} className={cn(attachmentMediaVariants({ variant }), className)} {...props} />;
 });
 
+/** Groups the title and the description. */
 const AttachmentContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function AttachmentContent({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -80,6 +86,7 @@ const AttachmentContent = React.forwardRef<HTMLDivElement, React.ComponentProps<
 	);
 });
 
+/** The file's name. */
 const AttachmentTitle = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function AttachmentTitle({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<span
@@ -94,6 +101,7 @@ const AttachmentTitle = React.forwardRef<HTMLSpanElement, React.ComponentProps<"
 	);
 });
 
+/** A line under the name: the size, the state, an error. */
 const AttachmentDescription = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function AttachmentDescription({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<span
@@ -105,6 +113,7 @@ const AttachmentDescription = React.forwardRef<HTMLSpanElement, React.ComponentP
 	);
 });
 
+/** Holds the actions, such as remove or retry. */
 const AttachmentActions = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function AttachmentActions({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -121,6 +130,7 @@ const AttachmentActions = React.forwardRef<HTMLDivElement, React.ComponentProps<
 
 type AttachmentActionProps = React.ComponentPropsWithoutRef<typeof Button>;
 
+/** A compact action button. Name an icon-only one for its file. */
 const AttachmentAction = React.forwardRef<HTMLElement, AttachmentActionProps>(function AttachmentAction(
 	{ className, variant, size = "icon-xs", ...props },
 	ref,
@@ -128,6 +138,7 @@ const AttachmentAction = React.forwardRef<HTMLElement, AttachmentActionProps>(fu
 	return <Button ref={ref} data-slot="attachment-action" variant={variant ?? "ghost"} size={size} className={className} {...props} />;
 });
 
+/** Makes the attachment open a preview when pressed. */
 const AttachmentTrigger = React.forwardRef<HTMLButtonElement, useRender.ComponentProps<"button">>(function AttachmentTrigger(
 	{ className, render, type, ...props },
 	ref,
@@ -149,6 +160,7 @@ const AttachmentTrigger = React.forwardRef<HTMLButtonElement, useRender.Componen
 	});
 });
 
+/** Lays attachments out in a wrapping row or a sideways scroller. */
 const AttachmentGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function AttachmentGroup({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div

@@ -3,8 +3,11 @@ title: "ADR 081: One Receiver for Inbound Webhooks"
 tags: ["adr", "webhooks", "integrations", "security", "idempotency"]
 description: "Every webhook a provider sends the platform takes one path: verify the signature with the provider's keyed scheme, claim the provider's delivery id once, hand it to the owning context, and record the outcome in one received-webhook log that admins can read."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793836800000
 lastUpdated: 1793836800000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/081-inbound-webhook-receiver.webp"
 order: 81
 ---
 

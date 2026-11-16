@@ -1,3 +1,4 @@
+import DownloadIcon from "lucide-react-native/icons/download";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import ImageIcon from "lucide-react-native/icons/image";
 import * as React from "react";
@@ -73,7 +74,7 @@ describe("Attachment", () => {
 		const className = String(screen.getByTestId("chip").props.className);
 		expect(className).toContain("bg-muted");
 		expect(className).toContain("min-h-11");
-		expect(screen.getByText(NAME)).toHaveProp("className", expect.stringContaining("text-xs"));
+		expect(screen.getByText(NAME)).toHaveProp("className", expect.stringContaining("text-caption"));
 	});
 
 	it("merges the caller's className last", async () => {
@@ -88,5 +89,34 @@ describe("Attachment", () => {
 		const ref = React.createRef<ViewInstance>();
 		await render(<Attachment ref={ref} name={NAME} />);
 		expect(ref.current).not.toBeNull();
+	});
+});
+
+describe("Attachment states, previews and actions", () => {
+	it("dashes a queued file, says an uploading or processing one is busy, and marks a failed one", async () => {
+		const { rerender } = await render(<Attachment name="terms.pdf" state="idle" testID="file" />);
+		expect(screen.getByTestId("file")).toHaveProp("className", expect.stringContaining("border-dashed"));
+		await rerender(<Attachment name="terms.pdf" state="processing" testID="file" />);
+		expect(screen.getByLabelText("terms.pdf")).toHaveProp("accessibilityState", expect.objectContaining({ busy: true }));
+		await rerender(<Attachment name="terms.pdf" state="error" description="Upload failed" testID="file" />);
+		expect(screen.getByTestId("file")).toHaveProp("className", expect.stringContaining("border-destructive"));
+	});
+
+	it("shows an image preview, runs its actions, and marks the chosen card in a vertical strip", async () => {
+		const download = jest.fn();
+		await render(
+			<Attachment
+				name="beach.jpg"
+				imageUri="https://cdn.example.com/beach.jpg"
+				orientation="vertical"
+				size="xs"
+				pressed
+				onPress={jest.fn()}
+				actions={[{ key: "download", label: "Download beach.jpg", icon: DownloadIcon, onPress: download }]}
+			/>,
+		);
+		expect(screen.getByRole("button", { name: "beach.jpg" })).toHaveProp("accessibilityState", expect.objectContaining({ selected: true }));
+		await fireEvent.press(screen.getByRole("button", { name: "Download beach.jpg" }));
+		expect(download).toHaveBeenCalledTimes(1);
 	});
 });

@@ -88,6 +88,7 @@ export const DataGridTableLoader = React.forwardRef<HTMLDivElement, Omit<React.C
 // ── Row affordances (rendered by column defs) ──────────────────────────────
 
 export interface DataGridTableRowAffordanceProps<TData extends RowData> {
+	/** The TanStack Table row instance. */
 	readonly row: DataGridRow<TData>;
 }
 
@@ -192,6 +193,7 @@ export function DataGridTableRowSelectAll(): React.JSX.Element {
 export interface DataGridTableRowExpandProps<TData extends RowData> extends DataGridTableRowAffordanceProps<TData> {
 	/** Horizontal offset in px per tree depth level. */
 	readonly indent?: number;
+	/** Additional CSS classes for the wrapper. */
 	readonly className?: string;
 	/** Custom toggle icon; replaces the default chevron. */
 	readonly children?: React.ReactNode;

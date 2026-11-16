@@ -3,8 +3,11 @@ title: "ADR 025: One Global, Append-Only HTTP Audit Log"
 tags: ["adr", "security", "audit", "rls", "nestjs"]
 description: "Every HTTP request — reads included — produces exactly one complete, redacted, append-only audit row — written by a global interceptor (success) and the global exception filter (failure), or inside the handler's own transaction."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1791072000000
 lastUpdated: 1792972800000
-coverImage: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/025-global-http-audit-log.webp"
 order: 25
 ---
 

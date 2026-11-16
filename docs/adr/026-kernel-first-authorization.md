@@ -3,8 +3,11 @@ title: "ADR 026: One In-House Authorization Kernel Behind One Global Guard"
 tags: ["adr", "authorization", "rbac", "acl", "abac", "kernel"]
 description: "Every authorization decision goes through AuthorizationKernelService, called by the single global AuthorizationGuard or by services; no second engine, no feature flag between old and new paths, no manual checks in controllers, and no third-party policy engine for the platform kernel."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793192519000
+coverImage: "/images/covers/adr/026-kernel-first-authorization.webp"
 order: 26
 ---
 

@@ -3,8 +3,11 @@ title: "ADR 051: Every Row Change Is Recorded by the Database Itself"
 tags: ["adr", "security", "audit", "rls", "postgresql"]
 description: "A trigger on every captured table records each INSERT / UPDATE / DELETE / TRUNCATE in data_change_logs in the same transaction — the full row before and after, redacted — attributed from the session variables the API already sets and joined to its HTTP request by correlation id."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1791936000000
 lastUpdated: 1791936000000
-coverImage: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/051-database-change-audit-trail.webp"
 order: 51
 ---
 

@@ -3,8 +3,11 @@ title: "9. Platform administration"
 description: "Users, roles and permissions, the audit log, email templates and log, geography, catalog data and the kanban board in the admin panel."
 order: 10
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1792540800000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1794485004159
+coverImage: "/images/covers/user-guide/09-platform-administration.webp"
 tags: ["user-guide", "admin", "rbac", "audit"]
 ---
 
@@ -41,7 +44,7 @@ merchant list. The seeded **Lucky Gold Traders** is banned, for trying it out.
 ## Roles and permissions (Settings → Access control)
 
 ```mermaid
-flowchart LR
+flowchart TD
     U[User] -->|has roles| R[Role<br/>e.g. Manager]
     R -->|grants| Pm[Permissions<br/>ACTION:RESOURCE]
     U -->|direct ALLOW / DENY<br/>optional expiry| Pm
@@ -170,7 +173,7 @@ items, `UPDATE` to edit, move, link, tick checklists, comment and attach, `DELET
 they have no children), and `UPDATE` on `KANBAN_BOARD` to rearrange columns and set WIP limits. Admins
 have all of them. Anyone holding `READ` can be assigned.
 The boards sit in the Components section, so they are shown where that section is enabled
-(`ADMIN_COMPONENT_GALLERY`).
+(`ADMIN_SHOWCASE`).
 
 ## Under the hood
 

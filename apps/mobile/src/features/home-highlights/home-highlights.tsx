@@ -73,11 +73,11 @@ function HighlightCard({ highlight, onOpen }: HighlightCardProps): React.JSX.Ele
 	}, [highlight, onOpen]);
 	return (
 		// Compact (ADR 079): the glyph beside the title and its line, the action a full-width button under them.
-		<View className="flex-1 justify-between gap-4 rounded-2xl border border-border bg-card p-4" testID={`home-highlight-${highlight.key}`}>
+		<View className="rounded-card flex-1 justify-between gap-4 border border-border bg-card p-4" testID={`home-highlight-${highlight.key}`}>
 			<View className="flex-row items-start gap-3">
 				<IconTile icon={highlight.icon} tone={highlight.tone} size="sm" />
 				<View className="flex-1 gap-1">
-					<Text numberOfLines={1} accessibilityRole="header" className="font-sans-semibold text-base text-foreground">
+					<Text numberOfLines={1} accessibilityRole="header" className="font-sans-semibold text-body-lg text-foreground">
 						{highlight.title}
 					</Text>
 					<MutedText numberOfLines={3}>{highlight.body}</MutedText>

@@ -7,9 +7,11 @@ import * as React from "react";
 
 type InputProps = Omit<React.ComponentProps<"input">, "size"> &
 	VariantProps<typeof inputVariants> & {
+		/** Styles the field as busy while something is checked. It does not disable the field; set `disabled` too if typing should stop. */
 		readonly loading?: boolean;
 	};
 
+/** The kit's single-line text field, a native `input` on Base UI. Every native attribute passes through; `aria-invalid`, `disabled` and `loading` set its state. */
 const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
 	{ className, type, variant, size, loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,

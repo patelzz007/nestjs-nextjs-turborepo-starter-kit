@@ -17,14 +17,17 @@ const inputBaseClasses =
 
 export const inputVariants = cva(inputBaseClasses, {
 	variants: {
+		/** The field's look; one shared treatment for every text-like input. */
 		variant: {
 			default: "",
 		},
+		/** The field's height and text size: `sm`, `default` or `lg`. */
 		size: {
 			default: "h-9 px-2.5 py-1 text-base file:h-7 file:text-sm md:text-sm",
 			sm: "h-8 px-2 text-sm file:h-6 file:text-xs",
 			lg: "h-10 px-3 py-2 text-base file:h-8 md:text-sm",
 		},
+		/** The field's visual state. Computed from `disabled`, `loading` and `aria-invalid`; leave it unset. */
 		state: fieldStateVariants.state,
 	},
 	defaultVariants: {
@@ -38,14 +41,17 @@ export const textareaVariants = cva(
 	"flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-2.5 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30",
 	{
 		variants: {
+			/** The field's look; one shared treatment for every text field. */
 			variant: {
 				default: "",
 			},
+			/** The field's text size and padding: `sm`, `default` or `lg`. */
 			size: {
 				default: "min-h-16 text-base md:text-sm",
 				sm: "min-h-12 text-sm",
 				lg: "min-h-24 text-base md:text-sm",
 			},
+			/** The visual state. Computed from `disabled`, `loading` and `aria-invalid`; leave it unset. */
 			state: fieldStateVariants.state,
 		},
 		defaultVariants: {
@@ -64,14 +70,17 @@ export const checkboxVariants = cva(
 	"peer relative flex shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-input shadow-xs transition-shadow outline-none group-has-disabled/field:opacity-50 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-indeterminate:border-primary data-indeterminate:bg-primary data-indeterminate:text-primary-foreground data-locked:cursor-not-allowed dark:bg-input/30 dark:data-indeterminate:bg-primary data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground data-locked:data-checked:border-transparent data-locked:data-checked:bg-primary/20 data-locked:data-checked:text-primary dark:data-checked:bg-primary dark:data-locked:data-checked:bg-primary/25",
 	{
 		variants: {
+			/** The checkbox's look; one treatment today. */
 			variant: {
 				default: "",
 			},
+			/** Size of the box: `sm`, `default` or `lg`. */
 			size: {
 				default: "size-4",
 				sm: "size-3.5",
 				lg: "size-5",
 			},
+			/** The visual state. Computed from `disabled`, `loading` and `aria-invalid`; leave it unset. */
 			state: fieldStateVariants.state,
 		},
 		defaultVariants: {
@@ -92,13 +101,16 @@ export const switchVariants = cva(
 	"peer group/switch relative inline-flex shrink-0 items-center rounded-full border-2 px-(--switch-thumb-inset) transition-colors outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-3 focus-visible:ring-ring/50 data-checked:border-transparent data-checked:bg-primary aria-invalid:data-checked:border-destructive data-unchecked:border-muted-foreground data-unchecked:bg-transparent aria-invalid:data-unchecked:border-destructive data-disabled:cursor-not-allowed data-disabled:border-dashed data-locked:data-disabled:border-solid data-disabled:data-checked:border-muted-foreground/50 data-disabled:data-checked:bg-muted data-locked:data-disabled:data-checked:border-transparent data-locked:data-disabled:data-checked:bg-primary/30 data-disabled:data-unchecked:border-muted-foreground/50 data-disabled:data-unchecked:bg-muted",
 	{
 		variants: {
+			/** The switch's look; one treatment today. */
 			variant: {
 				default: "",
 			},
+			/** Size of the switch: `sm` or `default`. */
 			size: {
 				default: "h-[var(--switch-height)] w-[var(--switch-width)]",
 				sm: "h-[var(--switch-height-sm)] w-[var(--switch-width-sm)]",
 			},
+			/** The visual state. Computed from `disabled`, `loading` and `aria-invalid`; leave it unset. */
 			state: {
 				default: "",
 				loading: "pointer-events-none opacity-60",
@@ -157,14 +169,17 @@ export const comboboxInputGroupVariants = cva("w-auto", {
 
 export const sliderVariants = cva("data-horizontal:w-full data-vertical:h-full", {
 	variants: {
+		/** The slider's look; one treatment today. */
 		variant: {
 			default: "",
 		},
+		/** Size of the track and thumbs: `sm`, `default` or `lg`. */
 		size: {
 			default: "",
 			sm: "[&_[data-slot=slider-thumb]]:size-3 data-horizontal:[&_[data-slot=slider-track]]:h-1 data-vertical:[&_[data-slot=slider-track]]:w-1",
 			lg: "[&_[data-slot=slider-thumb]]:size-5 data-horizontal:[&_[data-slot=slider-track]]:h-2 data-vertical:[&_[data-slot=slider-track]]:w-2",
 		},
+		/** The visual state. Computed from `disabled`, `loading` and `aria-invalid`; leave it unset. */
 		state: {
 			default: "",
 			loading: "pointer-events-none opacity-60",

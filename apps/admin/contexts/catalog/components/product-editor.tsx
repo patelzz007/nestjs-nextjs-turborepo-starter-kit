@@ -6,7 +6,7 @@ import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { ApiErrorCodes, type CreateProductInput, type Envelope, type Product } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { ProductForm } from "@/contexts/catalog/components/catalog/product-form";
@@ -38,7 +38,7 @@ function useInvalidateProduct(): (productId: string) => Promise<void> {
 /** `/catalog/products/new` — `POST /product`, then the new product's page. */
 export function CreateProductView(): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const invalidateProduct = useInvalidateProduct();
 	const createProduct = api.product.create.useMutation({
 		onSuccess: async (response) => {
@@ -81,7 +81,7 @@ export interface EditProductViewProps {
 /** The edit form for a loaded product — keyed by its version so a reload re-seeds the form. */
 function EditProductForm({ product }: { readonly product: Product }): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const invalidateProduct = useInvalidateProduct();
 	const updateProduct = api.product.update.useMutation({
 		onSuccess: async (response) => {

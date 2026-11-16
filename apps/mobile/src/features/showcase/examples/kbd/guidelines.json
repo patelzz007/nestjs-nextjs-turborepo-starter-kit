@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say the shortcut in words too",
+		"do": {
+			"text": "Name the chord for screen readers with `accessibilityLabel` (\"Command K\").",
+			"file": "kbd-do-1",
+			"export": "KbdDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave a chord unnamed where it is the only place the shortcut appears: a screen reader skips it.",
+			"file": "kbd-dont-1",
+			"export": "KbdDont1Example"
+		}
+	},
+	{
+		"title": "One cap per key",
+		"do": {
+			"text": "Split a chord into its keys with `KbdGroup`.",
+			"file": "kbd-do-2",
+			"export": "KbdDo2Example"
+		},
+		"dont": {
+			"text": "Don't write a long chord into one cap: it reads as one key named \"Ctrl Shift P\".",
+			"file": "kbd-dont-2",
+			"export": "KbdDont2Example"
+		}
+	}
+]

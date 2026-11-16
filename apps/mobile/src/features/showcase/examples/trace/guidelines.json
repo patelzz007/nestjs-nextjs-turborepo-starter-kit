@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say the outcome in the title",
+		"do": {
+			"text": "Say what happened in the title: “pnpm lint failed with 1 error”.",
+			"file": "trace-do-1",
+			"export": "TraceDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave the colour to say a step failed: the glyph and the tint are not read out.",
+			"file": "trace-dont-1",
+			"export": "TraceDont1Example"
+		}
+	},
+	{
+		"title": "Fold the detail into the step",
+		"do": {
+			"text": "Put a step's output inside it, folded until asked for.",
+			"file": "trace-do-2",
+			"export": "TraceDo2Example"
+		},
+		"dont": {
+			"text": "Don't lay every step's output open between the steps.",
+			"file": "trace-dont-2",
+			"export": "TraceDont2Example"
+		}
+	}
+]

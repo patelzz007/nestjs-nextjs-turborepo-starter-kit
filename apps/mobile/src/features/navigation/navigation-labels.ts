@@ -34,7 +34,7 @@ export type SubScreen =
 	| "appearance"
 	| "appLock"
 	| "language"
-	| "components"
+	| "showcase"
 	| "till"
 	| "notifications"
 	| "notificationSettings"
@@ -103,7 +103,7 @@ const EN: NavigationLabels = {
 		appearance: { title: "Appearance", subtitle: "Choose how the app looks" },
 		appLock: { title: "App lock", subtitle: "Lock the app when you leave it" },
 		language: { title: "Language", subtitle: "Choose the app's language" },
-		components: { title: "Components", subtitle: "The UI kit, live" },
+		showcase: { title: "Showcase", subtitle: "Every kit component, live, with its code" },
 		till: { title: TILL_TITLE, subtitle: "Scan and redeem customers' rewards" },
 		notifications: { title: NOTIFICATIONS_TITLE, subtitle: "Everything we've told you" },
 		notificationSettings: { title: NOTIFICATION_SETTINGS_TITLE, subtitle: "What reaches you, and where" },
@@ -165,7 +165,7 @@ const MS: NavigationLabels = {
 		appearance: { title: "Penampilan", subtitle: "Pilih rupa aplikasi" },
 		appLock: { title: "Kunci aplikasi", subtitle: "Kunci aplikasi apabila anda meninggalkannya" },
 		language: { title: "Bahasa", subtitle: "Pilih bahasa aplikasi" },
-		components: { title: "Komponen", subtitle: "Kit UI, secara langsung" },
+		showcase: { title: "Pameran", subtitle: "Setiap komponen kit, secara langsung, dengan kodnya" },
 		till: { title: "Kaunter", subtitle: "Imbas dan tebus ganjaran pelanggan" },
 		notifications: { title: "Pemberitahuan", subtitle: "Semua yang telah kami beritahu anda" },
 		notificationSettings: { title: "Tetapan pemberitahuan", subtitle: "Apa yang sampai kepada anda, dan di mana" },
@@ -227,7 +227,7 @@ const ZH_HANS: NavigationLabels = {
 		appearance: { title: "外观", subtitle: "选择应用的外观" },
 		appLock: { title: "应用锁", subtitle: "离开时锁定应用" },
 		language: { title: "语言", subtitle: "选择应用的语言" },
-		components: { title: "组件", subtitle: "UI 组件库实时预览" },
+		showcase: { title: "组件展示", subtitle: "每个组件实时运行，附带代码" },
 		till: { title: "收银台", subtitle: "扫描并兑换顾客的奖励" },
 		notifications: { title: "通知", subtitle: "我们发给您的所有消息" },
 		notificationSettings: { title: "通知设置", subtitle: "您会收到哪些消息，以及在哪里收到" },
@@ -289,7 +289,7 @@ const TA: NavigationLabels = {
 		appearance: { title: "தோற்றம்", subtitle: "செயலி எப்படித் தோன்ற வேண்டும் எனத் தேர்ந்தெடுங்கள்" },
 		appLock: { title: "செயலிப் பூட்டு", subtitle: "செயலியை விட்டு வெளியேறும்போது பூட்டுங்கள்" },
 		language: { title: "மொழி", subtitle: "செயலியின் மொழியைத் தேர்ந்தெடுங்கள்" },
-		components: { title: "கூறுகள்", subtitle: "UI தொகுப்பு, நேரலையில்" },
+		showcase: { title: "காட்சியகம்", subtitle: "ஒவ்வொரு கூறும் நேரலையில், அதன் குறியீட்டுடன்" },
 		till: { title: "கட்டண முனையம்", subtitle: "வாடிக்கையாளர்களின் வெகுமதிகளை ஸ்கேன் செய்து மீட்டெடுங்கள்" },
 		notifications: { title: "அறிவிப்புகள்", subtitle: "நாங்கள் உங்களுக்குச் சொன்ன அனைத்தும்" },
 		notificationSettings: { title: "அறிவிப்பு அமைப்புகள்", subtitle: "உங்களுக்கு எது, எங்கே வந்து சேரும்" },

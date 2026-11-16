@@ -24,7 +24,7 @@ import {
 	type PanelSidebarSwitcherOption,
 } from "@workspace/ui/components/panel-sidebar-switcher";
 import { Layers, List, MapPin, MapPinPlus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -135,7 +135,7 @@ export function MerchantContextSwitcher({ memberships, hasMoreStores, tenantSlug
 	const commands = useTenantContextCommands();
 	const logo = useActiveTenantLogo();
 	const { can } = useAuthorization();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const locationsPath = useTenantPath(TENANT_ROUTES.settings.locations);
 	const storesPath = useTenantPath(TENANT_ROUTES.stores);
 	// The active store and the member's role in it come from the tenant context, not from the list page.

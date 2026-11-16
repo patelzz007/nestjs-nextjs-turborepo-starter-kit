@@ -1,0 +1,121 @@
+[
+	{
+		"id": "c-table-1",
+		"label": "Basic",
+		"description": "Basic table. Best for a plain invoice list with a caption under the rows, a payment method column and status written as text.",
+		"file": "table-1",
+		"export": "Table1Example"
+	},
+	{
+		"id": "c-table-2",
+		"label": "With Footer",
+		"description": "Table with footer. Best for a footer row whose Total label spans 2 columns beside a bold sum of the amounts.",
+		"file": "table-2",
+		"export": "Table2Example"
+	},
+	{
+		"id": "c-table-3",
+		"label": "Status Badges",
+		"description": "Table in card with status badges. Best for a 2 column task list set inside a Card, with a tinted status badge end aligned.",
+		"file": "table-3",
+		"export": "Table3Example"
+	},
+	{
+		"id": "c-table-4",
+		"label": "Actions Column",
+		"description": "Table card with actions column. Best for a dots menu on each product row that opens Edit, Duplicate and a destructive Delete.",
+		"file": "table-4",
+		"export": "Table4Example"
+	},
+	{
+		"id": "c-table-5",
+		"label": "Interactive Rows",
+		"description": "Table with interactive elements. Best for a number stepper in each row for changing a quantity in place, inside a Card.",
+		"file": "table-5",
+		"export": "Table5Example"
+	},
+	{
+		"id": "c-table-6",
+		"label": "Team Members",
+		"description": "Team members table with avatars, roles, and status. Best for team members with avatar, name and email over role and presence badges, inside a Frame panel.",
+		"file": "table-6",
+		"export": "Table6Example"
+	},
+	{
+		"id": "c-table-7",
+		"label": "Orders",
+		"description": "Orders table with customer info and payment status. Best for recent orders with a monospace order number, a customer name over the order date beside an avatar, and a right aligned amount.",
+		"file": "table-7",
+		"export": "Table7Example"
+	},
+	{
+		"id": "c-table-8",
+		"label": "Projects",
+		"description": "Projects table with team avatars and status. Best for projects with a folder icon tile, stacked team avatars plus an overflow count and a due date.",
+		"file": "table-8",
+		"export": "Table8Example"
+	},
+	{
+		"id": "c-table-9",
+		"label": "Activity Log",
+		"description": "Activity log table with user avatars and timestamps. Best for an audit trail of who did what, with an action badge, a monospace target such as a branch and a relative time.",
+		"file": "table-9",
+		"export": "Table9Example"
+	},
+	{
+		"id": "c-table-10",
+		"label": "Subscriptions",
+		"description": "Subscriptions table with plan badges and billing info. Best for software subscriptions with a plan badge, monthly price, next billing date and a Manage button on each row.",
+		"file": "table-10",
+		"export": "Table10Example"
+	},
+	{
+		"id": "c-table-11",
+		"label": "Inventory",
+		"description": "Product inventory table with stock badges and prices. Best for products with a SKU under the name, a stock level badge beside the unit count and an Edit, Restock, Archive menu.",
+		"file": "table-11",
+		"export": "Table11Example"
+	},
+	{
+		"id": "c-table-12",
+		"label": "API Keys",
+		"description": "API keys table with permission badges and actions. Best for masked secret keys in a code chip, with xs permission badges and icon buttons to copy or regenerate.",
+		"file": "table-12",
+		"export": "Table12Example"
+	},
+	{
+		"id": "c-table-13",
+		"label": "File Manager",
+		"description": "File manager table with owners and sharing badges. Best for files and folders with a type icon, owner avatar, a sharing scope badge, size and last modified time.",
+		"file": "table-13",
+		"export": "Table13Example"
+	},
+	{
+		"id": "c-table-14",
+		"label": "Issues",
+		"description": "Issues table with priority, assignee, and labels. Best for issue rows with a monospace ID, a title followed by an outline label badge, the assignee and a status badge.",
+		"file": "table-14",
+		"export": "Table14Example"
+	},
+	{
+		"id": "c-table-15",
+		"label": "Leaderboard",
+		"description": "Leaderboard table with rank, score, and level badges. Best for a ranked list with a position number, player handle, level badge, formatted score and a colored up or down change.",
+		"file": "table-15",
+		"export": "Table15Example"
+	},
+	{
+		"id": "c-table-16",
+		"label": "Employee Profile",
+		"description": "Vertical table with employee profile details. Best for one employee’s details as label and value rows, with a shaded label column.",
+		"file": "table-16",
+		"export": "Table16Example"
+	},
+	{
+		"id": "c-table-17",
+		"label": "Server Config",
+		"description": "Vertical table with server configuration details. Best for a titled server panel with a pulsing status dot, CPU and memory bars and tag badges.",
+		"file": "table-17",
+		"export": "Table17Example"
+	}
+]

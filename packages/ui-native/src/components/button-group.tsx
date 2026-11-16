@@ -3,13 +3,16 @@
 // Composition only — the buttons are passed as children and keep their own
 // labels, events and states; the group only adds layout classes to each one
 // through its `className`, which every kit component merges last. The mobile
-// counterpart of the web kit's `ButtonGroup`.
+// counterpart of the web kit's `ButtonGroup`. `ButtonGroupText` is a text cell
+// joined to the buttons (a count, a readout) and `ButtonGroupSeparator` the line
+// between solid buttons, whose own edges do not show one.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View, type ViewInstance } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
+import { Icon, type LucideIcon } from "./icon";
 
 export const buttonGroupVariants = cva("", {
 	variants: {
@@ -93,6 +96,93 @@ export const ButtonGroup = React.memo(
 					return React.cloneElement(child, { className: cn(groupClass, child.props.className) });
 				})}
 			</View>
+		);
+	}),
+);
+
+export const buttonGroupTextVariants = cva("min-h-12 flex-row items-center justify-center gap-2 px-4", {
+	variants: {
+		/** `outline`: a bordered cell beside outline buttons. `muted`: a soft filled cell. `primary`: outlined in the action colour, beside a solid button. `plain`: text only. */
+		variant: {
+			outline: "rounded-button border border-input bg-card",
+			muted: "rounded-button border border-input bg-muted",
+			primary: "rounded-button border border-primary bg-card",
+			plain: "bg-transparent",
+		},
+		size: { md: "min-h-12 px-4", sm: "min-h-9 px-3" },
+	},
+	defaultVariants: { variant: "outline", size: "md" },
+});
+
+export const buttonGroupTextLabelVariants = cva("tabular-nums", {
+	variants: {
+		variant: { outline: "text-foreground", muted: "text-muted-foreground", primary: "text-foreground", plain: "text-muted-foreground" },
+		size: { md: "text-button font-sans-medium", sm: "text-body font-sans-medium" },
+	},
+	defaultVariants: { variant: "outline", size: "md" },
+});
+
+type ButtonGroupTextVariantProps = VariantProps<typeof buttonGroupTextVariants>;
+export type ButtonGroupTextVariant = NonNullable<ButtonGroupTextVariantProps["variant"]>;
+export type ButtonGroupTextSize = NonNullable<ButtonGroupTextVariantProps["size"]>;
+
+export interface ButtonGroupTextProps {
+	/** The cell's text: a count, a unit, a readout ("1.2K", "100%"). */
+	readonly label: string;
+	/** A glyph before the text; decorative. */
+	readonly icon?: LucideIcon | undefined;
+	readonly variant?: ButtonGroupTextVariant | undefined;
+	readonly size?: ButtonGroupTextSize | undefined;
+	/** Extra classes, merged last (the group adds its joining classes here). */
+	readonly className?: string | undefined;
+	readonly testID?: string | undefined;
+}
+
+/** A text cell joined to the buttons beside it (a count, a readout): not pressable, read out as text. */
+export const ButtonGroupText = React.memo(
+	React.forwardRef<ViewInstance, ButtonGroupTextProps>(function ButtonGroupText({ label, icon, variant = "outline", size = "md", className, testID }, ref): React.JSX.Element {
+		return (
+			<View ref={ref} testID={testID} className={cn(buttonGroupTextVariants({ variant, size }), className)}>
+				{icon === undefined ? null : <Icon icon={icon} size="sm" colorClassName="accent-icon" />}
+				<Text numberOfLines={1} className={buttonGroupTextLabelVariants({ variant, size })}>
+					{label}
+				</Text>
+			</View>
+		);
+	}),
+);
+
+export const buttonGroupSeparatorVariants = cva("", {
+	variants: {
+		orientation: { horizontal: "w-px self-stretch", vertical: "h-px self-stretch" },
+		/** `primary`: a faint line between solid buttons. `default`: the hairline between outline ones. */
+		tone: { primary: "bg-primary-foreground/30", default: "bg-border" },
+	},
+	defaultVariants: { orientation: "horizontal", tone: "default" },
+});
+
+export interface ButtonGroupSeparatorProps {
+	readonly orientation?: ButtonGroupOrientation | undefined;
+	readonly tone?: NonNullable<VariantProps<typeof buttonGroupSeparatorVariants>["tone"]> | undefined;
+	/** Extra classes, merged last. */
+	readonly className?: string | undefined;
+	readonly testID?: string | undefined;
+}
+
+/** The line between two joined buttons, where their own borders do not show one (solid buttons). Decorative. */
+export const ButtonGroupSeparator = React.memo(
+	React.forwardRef<ViewInstance, ButtonGroupSeparatorProps>(function ButtonGroupSeparator(
+		{ orientation = "horizontal", tone = "default", className, testID },
+		ref,
+	): React.JSX.Element {
+		return (
+			<View
+				ref={ref}
+				testID={testID}
+				accessible={false}
+				importantForAccessibility="no-hide-descendants"
+				className={cn(buttonGroupSeparatorVariants({ orientation, tone }), "rounded-none border-0", className)}
+			/>
 		);
 	}),
 );

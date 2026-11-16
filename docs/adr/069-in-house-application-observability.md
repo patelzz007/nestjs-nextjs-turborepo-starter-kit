@@ -3,8 +3,11 @@ title: "ADR 069: In-house application observability — our own agents, collecto
 tags: ["adr", "observability", "tracing", "errors", "logs", "replay", "plan"]
 description: "Replace @nestjs/observe with our own NestJS, web and Expo agents, a collector in the API backed by PostgreSQL and object storage, and an Observe section in the admin panel: traces, issues, logs, jobs, metrics, profiler, objectives, releases, Web Vitals and session replay — and the one rule exception it needs."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793232000000
 lastUpdated: 1793232000000
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
+editedAt: 1793272383000
+coverImage: "/images/covers/adr/069-in-house-application-observability.webp"
 order: 69
 ---
 

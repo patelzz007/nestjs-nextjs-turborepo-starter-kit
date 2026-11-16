@@ -21,7 +21,7 @@ import { DataTable, type Action, type DataTableFeatures, type Filter } from "@wo
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/routes";
@@ -59,7 +59,7 @@ export default function UsersAllTable({
 	description = "Manage accounts, roles, and direct permissions.",
 }: UsersAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const [urlState, updateUrlState] = useUrlState(USERS_TABLE_URL_STATE);
 	const isFiltered = urlState.search !== undefined || urlState.status !== undefined || urlState.referrerId !== undefined || urlState.referralStatus !== undefined;
 

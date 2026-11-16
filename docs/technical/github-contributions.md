@@ -3,8 +3,11 @@ title: "GitHub contributions"
 description: "Read-only views of the GitHub repositories the API is configured with — summary, commit history with line counts, one commit with its diff, contributor totals — and how the mobile Profile shows them."
 order: 11
 author: "Platform Team"
+category: "Engineering"
+date: 1791676800000
 lastUpdated: 1791763200000
-coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=1200&h=630&fit=crop"
+editedAt: 1794485004159
+coverImage: "/images/covers/technical/github-contributions.webp"
 tags: ["github", "integration", "api", "mobile"]
 ---
 
@@ -17,7 +20,7 @@ public repositories plus the public ones it contributed to). The mobile app show
 [API reference](./api-reference/github.md).
 
 ```mermaid
-flowchart LR
+flowchart TD
     M[Mobile Profile] -->|GET /github/repositories/...| A[GithubController<br/>READ:GITHUB]
     A --> S[GithubContributionsService<br/>allowlist + cache]
     S -->|miss / stale| C[GithubApiClient<br/>token, timeout, typed errors]

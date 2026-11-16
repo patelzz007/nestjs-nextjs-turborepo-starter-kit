@@ -130,4 +130,26 @@ describe("toggleGroupValues", () => {
 		expect(toggleGroupValues(OPTIONS, ["underline"], "bold")).toEqual(["bold", "underline"]);
 		expect(toggleGroupValues(OPTIONS, ["bold", "underline"], "bold")).toEqual(["underline"]);
 	});
+
+	it("joins its chips when attached, stacks them when vertical, and shows an option's badge", async () => {
+		await render(
+			<ToggleGroup
+				type="single"
+				label="Billing"
+				options={[
+					{ value: "monthly", label: "Monthly" },
+					{ value: "yearly", label: "Yearly", badge: "Save 20%" },
+				]}
+				value="monthly"
+				onChange={jest.fn()}
+				spacing="attached"
+				orientation="vertical"
+				testID="group"
+			/>,
+		);
+		expect(String(screen.getByTestId("group").props.className)).toContain("flex-col");
+		expect(String(screen.getByRole("radio", { name: "Monthly" }).props.className)).toContain("rounded-b-none");
+		expect(String(screen.getByRole("radio", { name: "Yearly" }).props.className)).toContain("border-t-0");
+		expect(screen.getByText("Save 20%")).toBeOnTheScreen();
+	});
 });

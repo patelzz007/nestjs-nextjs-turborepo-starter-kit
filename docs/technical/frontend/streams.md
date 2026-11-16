@@ -3,8 +3,11 @@ title: "Streams (RxJS) in the frontends"
 description: "When the frontends use RxJS instead of TanStack Query, the useObservable binding, the session-badge pipeline as the worked example, and how to test streams with virtual time."
 order: 63
 author: "Platform Team"
+category: "Frontend"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1794485004159
+coverImage: "/images/covers/technical/frontend/streams.webp"
 tags: ["frontend", "rxjs", "react", "streams", "testing"]
 ---
 
@@ -53,7 +56,7 @@ const state = useObservable(sessionState$, { status: "loading" });
 `buildSessionBadgeStreams()` returns three streams from one fetch pipeline:
 
 ```mermaid
-flowchart LR
+flowchart TD
     V[visibilitychange<br/>startWith + distinct] -->|became visible| T
     P["timer(pollMs)<br/>only while visible"] --> T[merge: refetch triggers]
     T -->|switchMap| F[fetch GET /session<br/>retry while visible]

@@ -3,8 +3,11 @@ title: "ADR 020: Payments as a Provider-Neutral Port (No Real Provider Yet)"
 tags: ["adr", "payments", "billing", "adapters"]
 description: "Payments and billing are modelled as a provider-neutral port with domain types and a fake adapter; no real provider (Stripe etc.) is integrated until the product needs one."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1790812800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/020-payments-provider-port.webp"
 order: 20
 ---
 

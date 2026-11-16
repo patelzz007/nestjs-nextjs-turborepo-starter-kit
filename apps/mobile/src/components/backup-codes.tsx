@@ -35,7 +35,7 @@ export function BackupCodes({
 			<View accessibilityLabel={`Backup codes: ${codes.join(", ")}`} accessible className="flex-row flex-wrap gap-2">
 				{codes.map((code: string): React.JSX.Element => (
 					<View key={code} className="min-w-[46%] flex-1 rounded-md border border-border bg-muted px-2 py-1.5">
-						<Text selectable className="text-center font-mono text-sm text-foreground">
+						<Text selectable className="text-body text-center font-mono text-foreground">
 							{code}
 						</Text>
 					</View>

@@ -3,8 +3,11 @@ title: "ADR 059: Selective CQRS and Three Event Mechanisms"
 tags: ["adr", "cqrs", "events", "performance"]
 description: "Commands and queries are used where a use case has a real state change or a read model. Domain events, integration events and the outbox stay three different mechanisms. Boot work is lazy and is not cached."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792281600000
 lastUpdated: 1792281600000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792438386000
+coverImage: "/images/covers/adr/059-selective-cqrs-and-event-mechanisms.webp"
 order: 59
 ---
 

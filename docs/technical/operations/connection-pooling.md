@@ -2,8 +2,11 @@
 title: "Connection Pooling (PgBouncer)"
 tags: ["operations", "database", "postgres", "pgbouncer"]
 author: "Platform Team"
+category: "Operations"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/operations/connection-pooling.webp"
 order: 4
 description: "How to put a transaction-mode pooler such as PgBouncer in front of the API's database safely: what works, the two things that need a real session (DATABASE_SESSION_URL), the login role rule that keeps row-level security, and how migrations connect."
 ---

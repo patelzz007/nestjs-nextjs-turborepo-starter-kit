@@ -93,6 +93,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"GithubWebhookSubscription",
 		"GithubWebhookDelivery",
 		"ReceivedWebhook",
+		"DocsSyncRun",
 		"WebhookEvent",
 		"OpsServer",
 		"OpsServerSample",

@@ -101,7 +101,7 @@ export const relativeTimeVariants = cva("font-sans", {
 	variants: {
 		/** `default`: running text. `muted`: metadata beside a title ("octocat · 3 minutes ago"). */
 		variant: { default: "text-foreground", muted: "text-muted-foreground" },
-		size: { md: "text-base", sm: "text-sm", xs: "text-xs" },
+		size: { md: "text-body-lg", sm: "text-body", xs: "text-caption" },
 	},
 	defaultVariants: { variant: "muted", size: "sm" },
 });

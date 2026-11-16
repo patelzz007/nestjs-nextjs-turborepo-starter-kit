@@ -4,8 +4,11 @@ tags: ["authorization", "multi-tenancy", "locations", "rls", "postgres", "prisma
 description: "Tenants, stores, locations and memberships; how client tenant ids are verified; how PostgreSQL RLS knows who is asking; system operations; the two Prisma clients; and applying RLS safely."
 order: 22
 author: "Platform Team"
+category: "Authorization"
+date: 1790726400000
 lastUpdated: 1792972800000
-coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/authorization/tenancy-and-rls.webp"
 ---
 
 # Tenancy, Locations and Row-Level Security

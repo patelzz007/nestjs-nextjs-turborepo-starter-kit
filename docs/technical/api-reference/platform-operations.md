@@ -1,10 +1,13 @@
 ---
 title: "API reference — Platform operations (servers, backups, load tests)"
 description: "The admin panel's operations console (ADR 068): servers and their history, instances, dependencies, alerts, database backups and load tests — and the endpoint a server agent reports to."
-order: 21
+order: 22
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/platform-operations.webp"
 tags: ["api", "reference", "generated"]
 ---
 

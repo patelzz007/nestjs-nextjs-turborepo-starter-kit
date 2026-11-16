@@ -5,6 +5,7 @@
 // that owns the calendar state the way a real parent would (so interactions
 // round-trip through the change callbacks), and a stub for the ResizeObserver
 // jsdom does not implement.
+import { parseISO } from "date-fns";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 
@@ -13,17 +14,17 @@ import type { CalendarEvent, CalendarView, EventCalendarSelection, EventCalendar
 
 export const TEST_TIME_ZONE = "UTC";
 /** Sunday 15 March 2026, 10:00 UTC. */
-export const TEST_NOW = new Date("2026-03-15T10:00:00Z");
+export const TEST_NOW = parseISO("2026-03-15T10:00:00Z");
 
 export interface TestEventData {
 	readonly owner: string;
 }
 
 export const TEST_EVENTS: readonly CalendarEvent<TestEventData>[] = [
-	{ id: "standup", title: "Standup", start: new Date("2026-03-16T09:00:00Z"), end: new Date("2026-03-16T09:30:00Z"), color: "blue", data: { owner: "ana" } },
-	{ id: "review", title: "Design review", start: new Date("2026-03-16T09:15:00Z"), end: new Date("2026-03-16T10:30:00Z"), color: "green", data: { owner: "ben" } },
-	{ id: "offsite", title: "Offsite", start: new Date("2026-03-18T00:00:00Z"), end: new Date("2026-03-20T00:00:00Z"), allDay: true, color: "violet", data: { owner: "cy" } },
-	{ id: "locked", title: "Locked slot", start: new Date("2026-03-17T13:00:00Z"), end: new Date("2026-03-17T14:00:00Z"), readOnly: true, data: { owner: "dee" } },
+	{ id: "standup", title: "Standup", start: parseISO("2026-03-16T09:00:00Z"), end: parseISO("2026-03-16T09:30:00Z"), color: "blue", data: { owner: "ana" } },
+	{ id: "review", title: "Design review", start: parseISO("2026-03-16T09:15:00Z"), end: parseISO("2026-03-16T10:30:00Z"), color: "green", data: { owner: "ben" } },
+	{ id: "offsite", title: "Offsite", start: parseISO("2026-03-18T00:00:00Z"), end: parseISO("2026-03-20T00:00:00Z"), allDay: true, color: "violet", data: { owner: "cy" } },
+	{ id: "locked", title: "Locked slot", start: parseISO("2026-03-17T13:00:00Z"), end: parseISO("2026-03-17T14:00:00Z"), readOnly: true, data: { owner: "dee" } },
 ];
 
 export type HarnessProps = Omit<Partial<EventCalendarProps<TestEventData>>, "children"> & { readonly children: React.ReactNode };

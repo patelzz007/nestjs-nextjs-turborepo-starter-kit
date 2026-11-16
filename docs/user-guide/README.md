@@ -3,8 +3,11 @@ title: "User guide — start here"
 description: "What the platform does, who uses which app, and the whole journey from platform setup to a customer redeeming a reward, as one flowchart."
 order: 1
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/user-guide/README.webp"
 tags: ["user-guide", "overview", "flows"]
 ---
 

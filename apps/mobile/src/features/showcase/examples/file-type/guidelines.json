@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Resolve a name first",
+		"do": {
+			"text": "Pass a file name through getFileType to get its type.",
+			"file": "file-type-do-1",
+			"export": "FileTypeDo1Example"
+		},
+		"dont": {
+			"text": "Don't pass the whole name as the type: it draws a neutral page with the name on it.",
+			"file": "file-type-dont-1",
+			"export": "FileTypeDont1Example"
+		}
+	},
+	{
+		"title": "Keep a type's own colour",
+		"do": {
+			"text": "Let each type keep its tone: green for spreadsheets.",
+			"file": "file-type-do-2",
+			"export": "FileTypeDo2Example"
+		},
+		"dont": {
+			"text": "Don't recolour a type with a tone that means something else.",
+			"file": "file-type-dont-2",
+			"export": "FileTypeDont2Example"
+		}
+	}
+]

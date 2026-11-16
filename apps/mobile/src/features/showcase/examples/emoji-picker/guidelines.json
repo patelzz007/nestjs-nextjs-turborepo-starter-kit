@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Open it when asked",
+		"do": {
+			"text": "In a form or a composer, put the picker behind a button: it opens in a sheet only when wanted.",
+			"file": "emoji-picker-do-1",
+			"export": "EmojiPickerDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave a whole picker open in a form for one emoji: it takes the screen.",
+			"file": "emoji-picker-dont-1",
+			"export": "EmojiPickerDont1Example"
+		}
+	},
+	{
+		"title": "Name the button",
+		"do": {
+			"text": "Give the button a label saying what the emoji is for (\"Project icon\"): screen readers read it with the emoji.",
+			"file": "emoji-picker-do-2",
+			"export": "EmojiPickerDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave the label empty: a screen reader then hears only \"rocket\", with no idea what it sets.",
+			"file": "emoji-picker-dont-2",
+			"export": "EmojiPickerDont2Example"
+		}
+	}
+]

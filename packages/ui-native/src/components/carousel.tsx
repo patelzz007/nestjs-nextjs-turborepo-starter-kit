@@ -35,6 +35,11 @@
 //
 //       [ 3' ][ 1 ][ 2 ][ 3 ][ 1' ]   3 → 1' slides left, then 1' → 1 in place;
 //                                      1 → 3' slides right, then 3' → 3 in place
+//
+//   - `perView`: several slides in view at once (a row of square photos), each step one slide.
+//   - `align="center"`: with a `peek`, the shown slide sits in the middle and both neighbours peek.
+//   - `orientation="vertical"`: slides stacked in a column that scrolls up and down (give the carousel a
+//     height). Looping keeps to one horizontal or vertical slide per view.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import ChevronLeftIcon from "lucide-react-native/icons/chevron-left";
@@ -119,13 +124,33 @@ export function carouselGapOf(peek: number, gap: number | undefined): number {
 	return gap ?? (peek > NO_PEEK ? DEFAULT_CAROUSEL_GAP : NO_GAP);
 }
 
+/** How slides line up: the shown one at the start, or (with a peek) in the middle with both neighbours peeking. */
+export type CarouselAlign = "start" | "center";
+
+/** How many sides a centred slide's peek shows on. */
+const CENTRED_SIDES = 2;
+
 /**
- * One slide's width and the distance from one slide's start to the next's, for a carousel `width` wide:
- * a peeking slide leaves room for the peek and the gap; a full-width one is the whole width, `gap` apart.
+ * One slide's length (its width, or its height when vertical), the distance from one slide's start to the next's,
+ * and the inset before the first slide, for a carousel `length` long: a peeking slide leaves room for the peek and
+ * the gap (on both sides when centred); `perView` slides share the length; a full-length one is the whole length.
  */
-export function carouselSlideMetrics(width: number, peek: number, gap: number): { readonly slideWidth: number; readonly interval: number } {
-	const slideWidth = peek > NO_PEEK ? Math.max(width - peek - gap, NO_PEEK) : width;
-	return { slideWidth, interval: slideWidth + gap };
+export function carouselSlideMetrics(
+	length: number,
+	peek: number,
+	gap: number,
+	perView = POSITION_OFFSET,
+	align: CarouselAlign = "start",
+): { readonly slideWidth: number; readonly interval: number; readonly inset: number } {
+	const centred = align === "center" && peek > NO_PEEK;
+	const slideWidth = centred
+		? Math.max(length - CENTRED_SIDES * (peek + gap), NO_PEEK)
+		: peek > NO_PEEK
+			? Math.max(length - peek - gap, NO_PEEK)
+			: perView > POSITION_OFFSET
+				? Math.max((length - gap * (perView - POSITION_OFFSET)) / perView, NO_PEEK)
+				: length;
+	return { slideWidth, interval: slideWidth + gap, inset: centred ? (length - slideWidth) / CENTRED_SIDES : NO_PEEK };
 }
 
 /** The slide after `index`, back to the first after the last (auto-play's order). */
@@ -221,6 +246,12 @@ export interface CarouselProps {
 	 * on with `autoPlayIntervalMs`.
 	 */
 	readonly loop?: boolean | undefined;
+	/** Slides in view at once (each step moves one). Default 1. */
+	readonly perView?: number | undefined;
+	/** With a `peek`: `center` puts the shown slide in the middle, both neighbours peeking. Default `start`. */
+	readonly align?: CarouselAlign | undefined;
+	/** `vertical` stacks the slides in a column that scrolls up and down: give the carousel a height. */
+	readonly orientation?: "horizontal" | "vertical" | undefined;
 	readonly variant?: CarouselVariant | undefined;
 	readonly size?: CarouselSize | undefined;
 	/** Extra classes for the container, merged last (layout: `mt-4`). */
@@ -243,6 +274,9 @@ export const Carousel = React.memo(
 			gap: requestedGap,
 			autoPlayIntervalMs,
 			loop = false,
+			perView = POSITION_OFFSET,
+			align = "start",
+			orientation = "horizontal",
 			variant = "plain",
 			size = "md",
 			className,
@@ -258,7 +292,10 @@ export const Carousel = React.memo(
 		const [tookOver, setTookOver] = React.useState(false);
 		const slides = React.Children.toArray(children);
 		const total = slides.length;
-		const loops = (loop || autoPlayIntervalMs !== undefined) && total > POSITION_OFFSET;
+		const vertical = orientation === "vertical";
+		const loops = (loop || autoPlayIntervalMs !== undefined) && total > POSITION_OFFSET && perView <= POSITION_OFFSET;
+		// The furthest the first shown slide can go: with several in view, the last ones fill the end.
+		const lastStart = Math.max(FIRST_INDEX, total - Math.max(perView, POSITION_OFFSET));
 		const [firstSlide] = slides;
 		const lastSlide = slides.at(-POSITION_OFFSET);
 		// A looping pager has the last slide's copy in front: every slide sits one place along.
@@ -271,14 +308,35 @@ export const Carousel = React.memo(
 		const placed = React.useRef(false);
 		const gap = carouselGapOf(peek, requestedGap);
 		// Slides that peek or sit apart snap slide by slide; full-width pages that touch page.
-		const snaps = peek > NO_PEEK || gap > NO_GAP;
-		const { slideWidth, interval } = carouselSlideMetrics(pageWidth, peek, gap);
-		const pageStyle = React.useMemo((): { readonly width: number } => ({ width: slideWidth }), [slideWidth]);
-		const trackStyle = React.useMemo((): { readonly gap: number } | undefined => (snaps ? { gap } : undefined), [gap, snaps]);
+		const snaps = peek > NO_PEEK || gap > NO_GAP || perView > POSITION_OFFSET;
+		const { slideWidth, interval, inset } = carouselSlideMetrics(pageWidth, peek, gap, perView, align);
+		const pageStyle = React.useMemo(
+			(): { readonly width: number } | { readonly height: number } => (vertical ? { height: slideWidth } : { width: slideWidth }),
+			[slideWidth, vertical],
+		);
+		const trackStyle = React.useMemo(() => {
+			if (!snaps) {
+				return undefined;
+			}
+			if (inset === NO_PEEK) {
+				return { gap };
+			}
+			return vertical ? { gap, paddingVertical: inset } : { gap, paddingHorizontal: inset };
+		}, [gap, inset, snaps, vertical]);
+		/** Scrolls the pager along its axis. */
+		const scrollPager = React.useCallback(
+			(offset: number, animated: boolean): void => {
+				scrollRef.current?.scrollTo(vertical ? { y: offset, animated } : { x: offset, animated });
+			},
+			[vertical],
+		);
 
-		const measure = React.useCallback((event: LayoutChangeEvent): void => {
-			setPageWidth(event.nativeEvent.layout.width);
-		}, []);
+		const measure = React.useCallback(
+			(event: LayoutChangeEvent): void => {
+				setPageWidth(vertical ? event.nativeEvent.layout.height : event.nativeEvent.layout.width);
+			},
+			[vertical],
+		);
 
 		// The caller moved `index` (a dot, or its own control): bring that page into view. Wrapping round,
 		// slide on to a copy; without motion there is nothing to see, so go straight to the slide.
@@ -292,12 +350,12 @@ export const Carousel = React.memo(
 			// Still on a copy (its last scroll report never came): swap first, so this move never rewinds.
 			if (onCopy.current !== "none" && wrap === "none") {
 				const real = onCopy.current === "forward" ? lead * interval : total * interval;
-				scrollRef.current?.scrollTo({ x: real, animated: false });
+				scrollPager(real, false);
 			}
 			onCopy.current = wrap;
 			placed.current = true;
-			scrollRef.current?.scrollTo({ x: carouselScrollTarget(index, interval, total, wrap, lead), animated });
-		}, [index, interval, lead, reduceMotion, total]);
+			scrollPager(carouselScrollTarget(Math.min(index, lastStart), interval, total, wrap, lead), animated);
+		}, [index, interval, lastStart, lead, reduceMotion, scrollPager, total]);
 
 		/** Go round (`loop`): past the last slide to the first, or before the first to the last. */
 		const wrapRound = React.useCallback(
@@ -316,18 +374,18 @@ export const Carousel = React.memo(
 					return null;
 				}
 				onCopy.current = "none";
-				scrollRef.current?.scrollTo({ x: jump.offset, animated: false });
+				scrollPager(jump.offset, false);
 				return jump.index;
 			},
-			[interval, loops, total],
+			[interval, loops, scrollPager, total],
 		);
 		const follow = React.useCallback(
 			(event: NativeSyntheticEvent<NativeScrollEvent>): void => {
 				if (onCopy.current !== "none") {
-					swapOffCopy(event.nativeEvent.contentOffset.x, SLIDING_ONTO_COPY_SHARE);
+					swapOffCopy(vertical ? event.nativeEvent.contentOffset.y : event.nativeEvent.contentOffset.x, SLIDING_ONTO_COPY_SHARE);
 				}
 			},
-			[swapOffCopy],
+			[swapOffCopy, vertical],
 		);
 
 		// Auto-play: one timer per slide shown, so a slide always gets the full interval.
@@ -359,19 +417,20 @@ export const Carousel = React.memo(
 					return;
 				}
 				// A swipe past either end settled on a copy: it is the slide it copies.
-				const real = swapOffCopy(event.nativeEvent.contentOffset.x, SETTLED_ON_COPY_SHARE);
+				const offset = vertical ? event.nativeEvent.contentOffset.y : event.nativeEvent.contentOffset.x;
+				const real = swapOffCopy(offset, SETTLED_ON_COPY_SHARE);
 				if (real !== null) {
 					if (real !== index) {
 						onChange(real);
 					}
 					return;
 				}
-				const page = clampCarouselIndex(Math.round(event.nativeEvent.contentOffset.x / interval) - lead, total);
+				const page = Math.min(clampCarouselIndex(Math.round(offset / interval) - lead, total), lastStart);
 				if (page !== index) {
 					onChange(page);
 				}
 			},
-			[index, interval, lead, onChange, swapOffCopy, total],
+			[index, interval, lastStart, lead, onChange, swapOffCopy, total, vertical],
 		);
 
 		const select = React.useCallback(
@@ -395,19 +454,26 @@ export const Carousel = React.memo(
 				wrapRound("forward");
 				return;
 			}
-			select(clampCarouselIndex(index + POSITION_OFFSET, total));
-		}, [index, loops, select, total, wrapRound]);
+			select(Math.min(clampCarouselIndex(index + POSITION_OFFSET, total), lastStart));
+		}, [index, lastStart, loops, select, total, wrapRound]);
+
+		/** Whether a slide is in view (the shown one, and the ones after it with several in view): only those are read. */
+		const inView = (slideIndex: number): boolean => slideIndex >= index && slideIndex < index + Math.max(perView, POSITION_OFFSET);
 
 		// An arrow stops at its end only when the carousel does not go round.
 		const previousOff = !loops && index <= FIRST_INDEX;
-		const nextOff = !loops && index >= total - POSITION_OFFSET;
+		const nextOff = !loops && index >= lastStart;
 
 		return (
-			<View ref={ref} testID={testID} onLayout={measure} className={cn(carouselVariants({ variant, size }), className)}>
+			<View ref={ref} testID={testID} onLayout={vertical ? undefined : measure} className={cn(carouselVariants({ variant, size }), className)}>
 				<ScrollView
 					ref={scrollRef}
-					horizontal
+					horizontal={!vertical}
+					// A vertical pager is measured itself: its height is what is left under the caller's height.
+					onLayout={vertical ? measure : undefined}
+					className={vertical ? "flex-1" : ""}
 					showsHorizontalScrollIndicator={false}
+					showsVerticalScrollIndicator={false}
 					// Full-width pages that touch page; slides that peek or sit apart snap to each slide's start.
 					{...(snaps ? { snapToInterval: interval, decelerationRate: "fast", disableIntervalMomentum: true } : { pagingEnabled: true })}
 					contentContainerStyle={trackStyle}
@@ -431,8 +497,8 @@ export const Carousel = React.memo(
 							// Children.toArray gives every slide a stable key; the position is its fallback.
 							key={React.isValidElement(slide) && slide.key !== null ? slide.key : slideIndex}
 							style={pageStyle}
-							accessibilityElementsHidden={slideIndex !== index}
-							importantForAccessibility={slideIndex === index ? "auto" : "no-hide-descendants"}>
+							accessibilityElementsHidden={!inView(slideIndex)}
+							importantForAccessibility={inView(slideIndex) ? "auto" : "no-hide-descendants"}>
 							{slide}
 						</View>
 					))}
@@ -462,7 +528,7 @@ export const Carousel = React.memo(
 						) : null}
 						{showIndicators ? (
 							<View className="flex-row items-center justify-center">
-								{slides.map((slide: React.ReactNode, slideIndex: number): React.JSX.Element => (
+								{slides.slice(FIRST_INDEX, lastStart + POSITION_OFFSET).map((slide: React.ReactNode, slideIndex: number): React.JSX.Element => (
 									<CarouselDot
 										key={React.isValidElement(slide) && slide.key !== null ? slide.key : slideIndex}
 										slideIndex={slideIndex}

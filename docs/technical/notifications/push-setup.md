@@ -3,8 +3,11 @@ title: "Set up push notifications"
 description: "Step by step: the Firebase project, FCM_SERVICE_ACCOUNT_JSON for the API, google-services.json for the Android app, the encryption keys, the one rebuild, APNs for iOS, verification and troubleshooting."
 order: 48
 author: "Platform Team"
+category: "Notifications"
+date: 1793491200000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/notifications/push-setup.webp"
 tags: ["notifications", "push", "firebase", "fcm", "apns", "setup"]
 ---
 

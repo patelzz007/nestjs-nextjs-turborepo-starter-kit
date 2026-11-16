@@ -28,7 +28,7 @@ Run the platform:
 - preview emails and read the email log;
 - manage geography and the catalog.
 
-The developer component gallery (`/components`, including Kanban) is served in development
+The developer component showcase (`/components`, including Kanban) is served in development
 and test only.
 
 ## Operating Context

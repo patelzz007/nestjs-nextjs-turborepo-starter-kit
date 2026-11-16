@@ -3,8 +3,11 @@ title: "Notifications: how they work"
 description: "One notifications system for web, merchant, admin and mobile: notify(), the fan-out, the four channels, the inbox and its live unread count, the mobile feed, settings, operations alerts, and how to try it all locally."
 order: 47
 author: "Platform Team"
+category: "Notifications"
+date: 1793491200000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/notifications/overview.webp"
 tags: ["notifications", "push", "inbox", "realtime", "mobile"]
 ---
 

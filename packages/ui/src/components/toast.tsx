@@ -175,6 +175,7 @@ const TOAST_EDGE_SWIPE: Readonly<Record<ToastEdge, ("up" | "down")[]>> = {
 
 const ToastViewportPositionContext = createContext<ToastPosition>("bottom-right");
 
+/** The corner the surrounding toasts stack in. */
 function useToastPosition(): ToastPosition {
 	return useContext(ToastViewportPositionContext);
 }
@@ -263,6 +264,7 @@ export interface ToastProviderProps extends ToastPrimitive.Provider.Props {
 	readonly countdownLabel?: ((seconds: number) => ReactNode) | undefined;
 }
 
+/** Holds the toast manager for the toasts inside it. Used by `Toaster`. */
 function ToastProvider({ timeout = DEFAULT_TOAST_TIMEOUT_MS, labels, countdownLabel, ...props }: ToastProviderProps): React.JSX.Element {
 	const familyLabels = useUiKitLabels("toast", labels);
 	const windowFocused = useWindowFocused();
@@ -320,6 +322,7 @@ function ToastProvider({ timeout = DEFAULT_TOAST_TIMEOUT_MS, labels, countdownLa
 	);
 }
 
+/** Moves the toasts to the end of `body`. Used by `Toaster`. */
 const ToastPortal = React.forwardRef<HTMLDivElement, ToastPrimitive.Portal.Props>(function ToastPortal({ ...props }, ref): React.JSX.Element {
 	return <ToastPrimitive.Portal ref={ref} data-slot="toast-portal" {...props} />;
 });
@@ -331,6 +334,7 @@ export interface ToastViewportProps extends ToastPrimitive.Viewport.Props {
 	readonly viewportLabel?: string;
 }
 
+/** The corner region the toasts stack in; a landmark keyboard users can jump to. */
 const ToastViewport = React.forwardRef<HTMLDivElement, ToastViewportProps>(function ToastViewport(
 	{ className, position = "bottom-right", viewportLabel, ...props },
 	ref,
@@ -349,6 +353,7 @@ const ToastViewport = React.forwardRef<HTMLDivElement, ToastViewportProps>(funct
 	);
 });
 
+/** One toast, rendered by the `Toaster` from the manager's queue. */
 const Toast = React.forwardRef<HTMLDivElement, ToastPrimitive.Root.Props>(function Toast({ className, ...props }, ref): React.JSX.Element {
 	const position = useToastPosition();
 	const edge = toastPositionEdge(position);
@@ -389,6 +394,7 @@ const Toast = React.forwardRef<HTMLDivElement, ToastPrimitive.Root.Props>(functi
 	);
 });
 
+/** Lays out a toast's icon, title, description and actions. */
 const ToastContent = React.forwardRef<HTMLDivElement, ToastPrimitive.Content.Props>(function ToastContent({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<ToastPrimitive.Content
@@ -403,10 +409,12 @@ const ToastContent = React.forwardRef<HTMLDivElement, ToastPrimitive.Content.Pro
 	);
 });
 
+/** A toast's heading. */
 const ToastTitle = React.forwardRef<HTMLHeadingElement, ToastPrimitive.Title.Props>(function ToastTitle({ className, ...props }, ref): React.JSX.Element {
 	return <ToastPrimitive.Title ref={ref} data-slot="toast-title" className={cn("text-sm font-medium", className)} {...props} />;
 });
 
+/** A toast's body text. */
 const ToastDescription = React.forwardRef<HTMLParagraphElement, ToastPrimitive.Description.Props>(function ToastDescription({ className, ...props }, ref): React.JSX.Element {
 	return <ToastPrimitive.Description ref={ref} data-slot="toast-description" className={cn("text-sm text-muted-foreground", className)} {...props} />;
 });
@@ -417,6 +425,7 @@ const TOAST_CLOSE_BUTTON = (
 	<Button variant="ghost" size="icon-lg" className="hover:bg-transparent hover:text-inherit aria-expanded:bg-transparent dark:hover:bg-transparent" />
 );
 
+/** A button in a toast, such as Undo or Retry. */
 const ToastAction = React.forwardRef<HTMLButtonElement, ToastPrimitive.Action.Props>(function ToastAction(
 	{ className, render = TOAST_ACTION_BUTTON, ...props },
 	ref,
@@ -429,6 +438,7 @@ export interface ToastCloseProps extends ToastPrimitive.Close.Props {
 	readonly closeLabel?: string;
 }
 
+/** The button that dismisses a toast. */
 const ToastClose = React.forwardRef<HTMLButtonElement, ToastCloseProps>(function ToastClose(
 	{ className, children, closeLabel, render = TOAST_CLOSE_BUTTON, ...props },
 	ref,
@@ -456,6 +466,7 @@ export interface ToastIconProps extends Omit<React.ComponentProps<"span">, "chil
 	readonly icon?: ReactNode;
 }
 
+/** The icon for the toast's type: success, error, warning, info or a spinner while loading. */
 const ToastIcon = React.forwardRef<HTMLSpanElement, ToastIconProps>(function ToastIcon({ type, icon, className, ...props }, ref): React.JSX.Element | null {
 	let content: ReactNode = icon;
 	if (icon === undefined) {
@@ -480,6 +491,7 @@ export interface ToastProgressProps extends Omit<React.ComponentProps<"div">, "c
 	readonly value: number;
 }
 
+/** A progress bar inside a toast, for uploads and other long work. */
 const ToastProgress = React.forwardRef<HTMLDivElement, ToastProgressProps>(function ToastProgress({ value, className, ...props }, ref): React.JSX.Element {
 	const clamped = Math.min(PROGRESS_MAX, Math.max(PROGRESS_MIN, value));
 	const barStyle = useMemo<React.CSSProperties>(() => ({ width: `${String(clamped)}%` }), [clamped]);
@@ -517,6 +529,7 @@ export interface ToastCountdownProps extends Omit<React.ComponentProps<"div">, "
 	readonly className?: string | undefined;
 }
 
+/** A ring that counts down the time left before the toast closes. */
 const ToastCountdown = React.forwardRef<HTMLDivElement, ToastCountdownProps>(function ToastCountdown(
 	{ duration, paused = false, className, ...props },
 	ref,
@@ -748,6 +761,7 @@ export interface ToasterProps extends ToastPrimitive.Provider.Props {
 
 // Mount exactly ONE <Toaster /> per manager — a second instance bound to the
 // same manager renders a duplicate viewport showing the same toasts.
+/** Renders the toasts in a corner. Mount it once near the app root; add toasts with `toastMessage` or `toast.add`. */
 function Toaster({
 	children,
 	toastManager = toast,
@@ -858,7 +872,9 @@ export function toastA11yProps(type: ToastType, labels: ToastLabels, customLabel
 	};
 }
 
+/** A separate toast manager, for a region with its own queue of toasts. */
 const createToastManager = ToastPrimitive.createToastManager;
+/** The surrounding toast manager: add, update and close toasts from a component. */
 const useToastManager = ToastPrimitive.useToastManager;
 export {
 	Toaster,

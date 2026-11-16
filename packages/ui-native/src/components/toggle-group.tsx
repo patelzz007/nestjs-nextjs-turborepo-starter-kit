@@ -16,18 +16,41 @@ import type { ValueHandler } from "../lib/value-handler";
 import { Icon, type LucideIcon } from "./icon";
 import { TOGGLE_ICON_SIZE, TOGGLE_SMALL_HIT_SLOP, toggleContentColorOf, toggleLabelVariants, toggleVariants, type ToggleSize, type ToggleVariant } from "./toggle";
 
-export const toggleGroupVariants = cva("flex-row flex-wrap", {
+export const toggleGroupVariants = cva("", {
 	variants: {
 		variant: { default: "", outline: "", pill: "" },
 		size: { sm: "gap-1.5", md: "gap-2", lg: "gap-2" },
+		/** `vertical`: chips stacked into a column (a settings list). */
+		orientation: { horizontal: "flex-row flex-wrap", vertical: "flex-col items-stretch" },
+		/** `attached`: the chips joined into one segmented control, no gap between them. */
+		spacing: { separated: "", attached: "gap-0" },
 		state: { default: "", loading: "", disabled: "", error: "" },
 	},
-	defaultVariants: { variant: "default", size: "md", state: "default" },
+	defaultVariants: { variant: "default", size: "md", orientation: "horizontal", spacing: "separated", state: "default" },
 });
+
+/** Squares the inner corners of attached chips and drops the doubled border where they meet. */
+const ATTACHED_ITEM_CLASSES: Readonly<Record<ToggleGroupOrientation, Readonly<Record<"only" | "first" | "middle" | "last", string>>>> = {
+	horizontal: { only: "", first: "rounded-r-none", middle: "rounded-none border-l-0", last: "rounded-l-none border-l-0" },
+	vertical: { only: "", first: "rounded-b-none", middle: "rounded-none border-t-0", last: "rounded-t-none border-t-0" },
+};
+
+function attachedClassOf(orientation: ToggleGroupOrientation, index: number, count: number): string {
+	const classes = ATTACHED_ITEM_CLASSES[orientation];
+	if (count === 1) {
+		return classes.only;
+	}
+	if (index === 0) {
+		return classes.first;
+	}
+	return index === count - 1 ? classes.last : classes.middle;
+}
 
 type ToggleGroupVariantProps = VariantProps<typeof toggleGroupVariants>;
 export type ToggleGroupVariant = NonNullable<ToggleGroupVariantProps["variant"]>;
 export type ToggleGroupSize = NonNullable<ToggleGroupVariantProps["size"]>;
+export type ToggleGroupOrientation = NonNullable<ToggleGroupVariantProps["orientation"]>;
+export type ToggleGroupSpacing = NonNullable<ToggleGroupVariantProps["spacing"]>;
 
 export interface ToggleGroupOption<TValue extends string> {
 	readonly value: TValue;
@@ -39,6 +62,8 @@ export interface ToggleGroupOption<TValue extends string> {
 	readonly accessibilityLabel?: string;
 	/** This one chip cannot be pressed. */
 	readonly disabled?: boolean;
+	/** A short pill after the label ("Save 20%"); say it in `accessibilityLabel` too. */
+	readonly badge?: string;
 }
 
 type FocusHandler = (event: NativeSyntheticEvent<TargetedEvent>) => void;
@@ -53,6 +78,8 @@ interface ToggleGroupBaseProps<TValue extends string> {
 	readonly hideLabels?: boolean;
 	readonly variant?: ToggleGroupVariant;
 	readonly size?: ToggleGroupSize;
+	readonly orientation?: ToggleGroupOrientation;
+	readonly spacing?: ToggleGroupSpacing;
 	readonly disabled?: boolean;
 	/** The change is being saved: blocks presses and announces busy. */
 	readonly loading?: boolean;
@@ -111,6 +138,8 @@ interface ToggleGroupItemProps {
 	readonly hideLabel: boolean;
 	readonly variant: ToggleVariant;
 	readonly size: ToggleSize;
+	/** The joining classes of an attached group, and a column item's alignment. */
+	readonly layoutClassName: string;
 	readonly onToggle: ValueHandler<string>;
 	readonly onFocus: FocusHandler | undefined;
 	readonly onBlur: FocusHandler | undefined;
@@ -126,6 +155,7 @@ const ToggleGroupItem = React.memo(function ToggleGroupItem({
 	hideLabel,
 	variant,
 	size,
+	layoutClassName,
 	onToggle,
 	onFocus,
 	onBlur,
@@ -149,7 +179,7 @@ const ToggleGroupItem = React.memo(function ToggleGroupItem({
 			onFocus={onFocus}
 			onBlur={onBlur}
 			hitSlop={size === "sm" ? TOGGLE_SMALL_HIT_SLOP : undefined}
-			className={cn(toggleVariants({ variant, size, pressed, state: itemState }))}>
+			className={cn(toggleVariants({ variant, size, pressed, state: itemState }), layoutClassName)}>
 			{loading && pressed ? <ActivityIndicator size="small" colorClassName={contentColor} /> : null}
 			{option.icon === undefined || (loading && pressed) ? null : <Icon icon={option.icon} size={TOGGLE_ICON_SIZE[size]} colorClassName={contentColor} />}
 			{showsLabel ? (
@@ -157,6 +187,11 @@ const ToggleGroupItem = React.memo(function ToggleGroupItem({
 					{option.label}
 				</Text>
 			) : null}
+			{option.badge === undefined ? null : (
+				<View className="rounded-full bg-primary px-2 py-0.5">
+					<Text className="text-overline font-sans-semibold text-primary-foreground">{option.badge}</Text>
+				</View>
+			)}
 		</Pressable>
 	);
 });
@@ -171,6 +206,8 @@ export const ToggleGroup: ToggleGroupComponent = React.memo(
 			hideLabels = false,
 			variant = "default",
 			size = "md",
+			orientation = "horizontal",
+			spacing = "separated",
 			disabled = false,
 			loading = false,
 			invalid = false,
@@ -209,8 +246,8 @@ export const ToggleGroup: ToggleGroupComponent = React.memo(
 				accessibilityLabel={label}
 				accessibilityState={accessibilityState}
 				testID={testID}
-				className={cn(toggleGroupVariants({ variant, size, state }), className)}>
-				{options.map((option: ToggleGroupOption<string>): React.JSX.Element => (
+				className={cn(toggleGroupVariants({ variant, size, orientation, spacing, state }), className)}>
+				{options.map((option: ToggleGroupOption<string>, index: number): React.JSX.Element => (
 					<ToggleGroupItem
 						key={option.value}
 						option={option}
@@ -222,6 +259,10 @@ export const ToggleGroup: ToggleGroupComponent = React.memo(
 						hideLabel={hideLabels}
 						variant={variant}
 						size={size}
+						layoutClassName={cn(
+							spacing === "attached" ? attachedClassOf(orientation, index, options.length) : undefined,
+							orientation === "vertical" ? "justify-start" : undefined,
+						)}
 						onToggle={toggle}
 						onFocus={onFocus}
 						onBlur={onBlur}

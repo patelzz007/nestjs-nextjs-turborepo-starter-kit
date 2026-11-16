@@ -1,0 +1,58 @@
+[
+	{
+		"id": "c-emoji-picker-1",
+		"label": "Inline",
+		"description": "Inline emoji picker. Best for the panel on its own, always open on a card and holding one controlled value with no button.",
+		"file": "emoji-picker-1",
+		"export": "EmojiPicker1Example"
+	},
+	{
+		"id": "c-emoji-picker-2",
+		"label": "Chat Composer",
+		"description": "Chat composer. Best for a bubble thread that scrolls to each send, with an emoji button beside the message field that stays open for several picks.",
+		"file": "emoji-picker-2",
+		"export": "EmojiPicker2Example"
+	},
+	{
+		"id": "c-emoji-picker-3",
+		"label": "Message Reactions",
+		"description": "Message reactions. Best for reaction pills split by skin tone with counts, plus a row of 6 one tap reactions placed above the search.",
+		"file": "emoji-picker-3",
+		"export": "EmojiPicker3Example"
+	},
+	{
+		"id": "c-emoji-picker-4",
+		"label": "Page Icon",
+		"description": "Page icon. Best for a large stored emoji that is its own button, swapping to an Add icon button once removed, echoed in the breadcrumb.",
+		"file": "emoji-picker-4",
+		"export": "EmojiPicker4Example"
+	},
+	{
+		"id": "c-emoji-picker-5",
+		"label": "Custom Team Emoji",
+		"description": "Custom team emoji. Best for image emoji in a team section placed ahead of Frequently used, stored as colon codes and drawn back as images.",
+		"file": "emoji-picker-5",
+		"export": "EmojiPicker5Example"
+	},
+	{
+		"id": "c-emoji-picker-6",
+		"label": "Shortcode Suggestions",
+		"description": "Shortcode suggestions. Best for a list of 5 ranked matches under a text box as a colon code is typed, plus an instant swap of a closed colon code.",
+		"file": "emoji-picker-6",
+		"export": "EmojiPicker6Example"
+	},
+	{
+		"id": "c-emoji-picker-7",
+		"label": "Workplace-Safe Set",
+		"description": "Workplace-safe set. Best for a picker without nature, food, travel or flags for a text box that spaces each pick off its neighbours, with Undo after posting.",
+		"file": "emoji-picker-7",
+		"export": "EmojiPicker7Example"
+	},
+	{
+		"id": "c-emoji-picker-8",
+		"label": "Localized Labels",
+		"description": "Localized data and labels. Best for a language switch that swaps the emoji data and the picker's labels, and clears the search.",
+		"file": "emoji-picker-8",
+		"export": "EmojiPicker8Example"
+	}
+]

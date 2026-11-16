@@ -7,6 +7,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { forwardRef, useMemo } from "react";
 
+/** A native `fieldset` grouping related fields under a `FieldLegend`. */
 const FieldSet = forwardRef<HTMLFieldSetElement, React.ComponentProps<"fieldset">>(function FieldSet({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<fieldset
@@ -18,10 +19,14 @@ const FieldSet = forwardRef<HTMLFieldSetElement, React.ComponentProps<"fieldset"
 	);
 });
 
-const FieldLegend = forwardRef<HTMLLegendElement, React.ComponentProps<"legend"> & { variant?: "legend" | "label" }>(function FieldLegend(
-	{ className, variant = "legend", ...props },
-	ref,
-): React.JSX.Element {
+/** The title of a `FieldSet`, as its native `legend`. */
+const FieldLegend = forwardRef<
+	HTMLLegendElement,
+	React.ComponentProps<"legend"> & {
+		/** `legend` for a section title, `label` for the size of a field label. */
+		variant?: "legend" | "label";
+	}
+>(function FieldLegend({ className, variant = "legend", ...props }, ref): React.JSX.Element {
 	return (
 		<legend
 			ref={ref}
@@ -33,6 +38,7 @@ const FieldLegend = forwardRef<HTMLLegendElement, React.ComponentProps<"legend">
 	);
 });
 
+/** Stacks fields with the form's spacing and is the container that `orientation="responsive"` fields measure. */
 const FieldGroup = forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function FieldGroup({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -46,6 +52,7 @@ const FieldGroup = forwardRef<HTMLDivElement, React.ComponentProps<"div">>(funct
 
 const fieldVariants = cva("group/field flex w-full gap-3 data-[invalid=true]:text-destructive", {
 	variants: {
+		/** `vertical` stacks label and control, `horizontal` puts them side by side, `responsive` does so only once the surrounding `FieldGroup` is wide enough. */
 		orientation: {
 			vertical: "flex-col *:w-full [&>.sr-only]:w-auto",
 			horizontal:
@@ -59,6 +66,7 @@ const fieldVariants = cva("group/field flex w-full gap-3 data-[invalid=true]:tex
 	},
 });
 
+/** One form control with its label, hint and error, laid out `vertical`, `horizontal` or `responsive`. Renders `role="group"`; `data-invalid` tints its text. */
 const Field = forwardRef<HTMLDivElement, React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>>(function Field(
 	{ className, orientation = "vertical", ...props },
 	ref,
@@ -66,10 +74,12 @@ const Field = forwardRef<HTMLDivElement, React.ComponentProps<"div"> & VariantPr
 	return <div ref={ref} role="group" data-slot="field" data-orientation={orientation} className={cn(fieldVariants({ orientation }), className)} {...props} />;
 });
 
+/** Groups a `FieldTitle` (or label) and a `FieldDescription` beside a checkbox, radio or switch. */
 const FieldContent = forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function FieldContent({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="field-content" className={cn("group/field-content flex flex-1 flex-col gap-1 leading-snug", className)} {...props} />;
 });
 
+/** The field's `label`: the kit's `Label`, styled for the field layout. Tie it to the control with `htmlFor`. */
 const FieldLabel = forwardRef<HTMLLabelElement, React.ComponentProps<typeof Label>>(function FieldLabel({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<Label
@@ -85,6 +95,7 @@ const FieldLabel = forwardRef<HTMLLabelElement, React.ComponentProps<typeof Labe
 	);
 });
 
+/** A field's title when no `label` element fits, as in a choice card. A plain `div`: it does not name a control. */
 const FieldTitle = forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function FieldTitle({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -96,6 +107,7 @@ const FieldTitle = forwardRef<HTMLDivElement, React.ComponentProps<"div">>(funct
 	);
 });
 
+/** A hint under (or beside) the control. Give it an id and list it in the control's `aria-describedby`. */
 const FieldDescription = forwardRef<HTMLParagraphElement, React.ComponentProps<"p">>(function FieldDescription({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<p
@@ -112,6 +124,7 @@ const FieldDescription = forwardRef<HTMLParagraphElement, React.ComponentProps<"
 	);
 });
 
+/** A divider between fields or groups, optionally with text in the middle ("Or continue with"). */
 const FieldSeparator = forwardRef<
 	HTMLDivElement,
 	React.ComponentProps<"div"> & {
@@ -135,9 +148,11 @@ const FieldSeparator = forwardRef<
 	);
 });
 
+/** The field's error: `children`, or the de-duplicated `errors` from a form library (one message, or a list). Renders nothing when there is no error, and `role="alert"` when there is. */
 const FieldError = forwardRef<
 	HTMLDivElement,
 	React.ComponentProps<"div"> & {
+		/** Errors from a form library (each with an optional `message`); duplicates are dropped and several render as a list. */
 		errors?: ({ message?: string } | undefined)[];
 	}
 >(function FieldError({ className, children, errors, ...props }, ref): React.JSX.Element | null {

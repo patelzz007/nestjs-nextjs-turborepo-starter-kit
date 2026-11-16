@@ -28,6 +28,7 @@ const COPIED_CONFIRMATION_MS = 1500;
 export interface ColorPickerProps extends Readonly<Pick<React.AriaAttributes, "aria-label" | "aria-labelledby" | "aria-describedby">> {
 	/** Controlled value: any colour `parseColor` reads. `null` is empty. */
 	readonly value?: string | null | undefined;
+	/** Initial value when uncontrolled, and what a form reset restores. */
 	readonly defaultValue?: string | null | undefined;
 	/** Fires on every change, a drag included, with the value in `format`. */
 	readonly onValueChange?: ((value: string | null) => void) | undefined;
@@ -39,15 +40,23 @@ export interface ColorPickerProps extends Readonly<Pick<React.AriaAttributes, "a
 	readonly alpha?: boolean | undefined;
 	/** Preset colours under the default panel. */
 	readonly swatches?: readonly ColorPickerSwatchInput[] | undefined;
+	/** Controlled popover state. */
 	readonly open?: boolean | undefined;
+	/** Initial popover state when uncontrolled. */
 	readonly defaultOpen?: boolean | undefined;
+	/** Fires when the popover opens or closes. */
 	readonly onOpenChange?: ((open: boolean) => void) | undefined;
+	/** Disables every part and stops the popover opening. A disabled picker submits nothing. */
 	readonly disabled?: boolean | undefined;
+	/** The popover opens and the controls take focus, but nothing changes the value. */
 	readonly readOnly?: boolean | undefined;
+	/** Sets `aria-invalid` on the trigger or the input, and `data-invalid` on the trigger. */
 	readonly invalid?: boolean | undefined;
 	/** Submits the value with a native form under this name. */
 	readonly name?: string | undefined;
+	/** Associates the field with a form elsewhere in the page. */
 	readonly form?: string | undefined;
+	/** Fails native form validation while empty. */
 	readonly required?: boolean | undefined;
 	/** The hidden form field, for form libraries that focus a field on error. */
 	readonly inputRef?: React.Ref<HTMLInputElement> | undefined;
@@ -57,7 +66,9 @@ export interface ColorPickerProps extends Readonly<Pick<React.AriaAttributes, "a
 	readonly i18n?: ColorPickerI18nOverrides | undefined;
 	/** Without children the picker renders a trigger and a popover; these reach the trigger. */
 	readonly placeholder?: React.ReactNode;
+	/** Classes for the default trigger. */
 	readonly className?: string | undefined;
+	/** The picker's parts. Leave it out to render the default trigger and popover. */
 	readonly children?: React.ReactNode;
 }
 

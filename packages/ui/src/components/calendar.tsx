@@ -4,10 +4,10 @@ import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { CalendarCaptionDropdowns } from "@workspace/ui/components/calendar-caption";
 import { mergeRefs } from "@workspace/ui/lib/core/merge-refs";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { addYears, endOfYear, startOfYear } from "date-fns";
+import { addYears, endOfYear, format, startOfYear } from "date-fns";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
 import * as React from "react";
-import { DayPicker, getDefaultClassNames, type ChevronProps, type DayButton, type Locale, type MonthCaptionProps } from "react-day-picker";
+import { DayPicker, getDefaultClassNames, type ChevronProps, type DateLib, type DayButton, type Locale, type MonthCaptionProps } from "react-day-picker";
 
 /** react-day-picker's static base class names — computed once, not per render. */
 const DEFAULT_CLASS_NAMES = getDefaultClassNames();
@@ -25,9 +25,11 @@ function hasYearDropdown(captionLayout: React.ComponentProps<typeof DayPicker>["
 	return captionLayout === "dropdown" || captionLayout === "dropdown-years";
 }
 
+/** The kit's month grid, on React DayPicker: `mode` `single`, `multiple` or `range`, disabled days, several months, dropdown captions and every other DayPicker prop, styled with the kit's buttons. */
 const Calendar = React.forwardRef<
 	HTMLDivElement,
 	React.ComponentProps<typeof DayPicker> & {
+		/** The kit `Button` variant of the previous and next month buttons. */
 		buttonVariant?: React.ComponentProps<typeof Button>["variant"];
 	}
 >(function Calendar(
@@ -101,10 +103,11 @@ const Calendar = React.forwardRef<
 
 	const calendarFormatters = React.useMemo(
 		() => ({
-			formatMonthDropdown: (date: Date): string => date.toLocaleString(locale?.code, { month: "short" }),
+			// DayPicker's DateLib is date-fns with the calendar's locale applied.
+			formatMonthDropdown: (date: Date, dateLib?: DateLib): string => (dateLib === undefined ? format(date, "LLL") : dateLib.format(date, "LLL")),
 			...formatters,
 		}),
-		[formatters, locale],
+		[formatters],
 	);
 
 	const showWeekNumber = props.showWeekNumber === true;
@@ -190,8 +193,12 @@ const Calendar = React.forwardRef<
 	);
 });
 
-type CalendarDayButtonProps = React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> | undefined };
+type CalendarDayButtonProps = React.ComponentProps<typeof DayButton> & {
+	/** The locale DayPicker formats the day's accessible name with. */
+	locale?: Partial<Locale> | undefined;
+};
 
+/** The button for one day: selected, today, outside the month, range ends and disabled days styled from DayPicker's modifiers. */
 const CalendarDayButton = React.forwardRef<HTMLButtonElement, CalendarDayButtonProps>(function CalendarDayButton(
 	{ className, day, modifiers, locale, ...props },
 	forwardedRef,
@@ -208,7 +215,7 @@ const CalendarDayButton = React.forwardRef<HTMLButtonElement, CalendarDayButtonP
 			ref={ref}
 			variant="ghost"
 			size="icon"
-			data-day={day.date.toLocaleDateString(locale?.code)}
+			data-day={format(day.date, "yyyy-MM-dd")}
 			data-selected-single={modifiers.selected && !modifiers.range_start && !modifiers.range_end ? !modifiers.range_middle : null}
 			data-range-start={modifiers.range_start}
 			data-range-end={modifiers.range_end}

@@ -3,8 +3,11 @@ title: "Multi-Tenancy Operations Runbook"
 tags: ["operations", "tenancy", "incident"]
 description: "Incident response, kill switches, backup/restore, and tenant recovery procedures."
 author: "Backend Team"
+category: "Operations"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/technical/operations/multi-tenancy-runbook.webp"
 order: 1
 ---
 

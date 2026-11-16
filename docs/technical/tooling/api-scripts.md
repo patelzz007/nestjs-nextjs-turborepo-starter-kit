@@ -4,8 +4,11 @@ tags: ["tooling", "database", "development", "scripts"]
 description: "The two command-line tools in apps/api/scripts — database and local development — and how to add a command."
 order: 8
 author: "Platform Team"
+category: "Tooling"
+date: 1792368000000
 lastUpdated: 1793404800000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793617407000
+coverImage: "/images/covers/technical/tooling/api-scripts.webp"
 ---
 
 # API tooling scripts

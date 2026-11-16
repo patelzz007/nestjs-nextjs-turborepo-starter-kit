@@ -1,10 +1,13 @@
 ---
 title: "API reference — Email log, templates and delivery webhooks"
 description: "The outbound email log, template previews and test sends, and the Resend delivery webhook."
-order: 12
+order: 13
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/email.webp"
 tags: ["api", "reference", "generated"]
 ---
 

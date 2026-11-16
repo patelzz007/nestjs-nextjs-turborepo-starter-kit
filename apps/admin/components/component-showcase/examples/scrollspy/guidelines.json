@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name sections clearly",
+		"do": {
+			"text": "Give each section a short, clear label.",
+			"file": "scrollspy-do-1",
+			"export": "ScrollspyDo1Example"
+		},
+		"dont": {
+			"text": "Don't number 8 sections as \"Section 1\" to \"Section 8\".",
+			"file": "scrollspy-dont-1",
+			"export": "ScrollspyDont1Example"
+		}
+	},
+	{
+		"title": "Give the panel room",
+		"do": {
+			"text": "Give the panel enough height to read a section.",
+			"file": "scrollspy-do-2",
+			"export": "ScrollspyDo2Example"
+		},
+		"dont": {
+			"text": "Don't squeeze the panel so only a line of each section shows.",
+			"file": "scrollspy-dont-2",
+			"export": "ScrollspyDont2Example"
+		}
+	}
+]

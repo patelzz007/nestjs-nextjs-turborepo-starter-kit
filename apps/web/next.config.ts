@@ -7,7 +7,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 
 const nextConfig: NextConfig = {
 	typedRoutes: true,
-	transpilePackages: ["@workspace/api-client", "@workspace/client", "@workspace/ui", "@workspace/shared"],
+	transpilePackages: ["@workspace/api-client", "@workspace/client", "@workspace/ui", "@workspace/ui-kit-logic", "@workspace/shared"],
 	redirects: () => Promise.resolve([...LEGACY_REDIRECTS]),
 };
 

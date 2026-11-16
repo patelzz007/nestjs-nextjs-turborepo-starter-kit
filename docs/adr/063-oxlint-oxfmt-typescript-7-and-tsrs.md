@@ -3,8 +3,11 @@ title: "ADR 063: Oxlint, Oxfmt, TypeScript 7 and tsrs"
 tags: ["adr", "tooling", "linting", "formatting", "typescript"]
 description: "ESLint and Prettier are replaced by Oxlint (with oxlint-tsgolint for type-aware rules) and Oxfmt; the workspaces move to TypeScript 7; tsrs type-checks and builds every TypeScript workspace."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792886400000
 lastUpdated: 1792886400000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/063-oxlint-oxfmt-typescript-7-and-tsrs.webp"
 order: 63
 ---
 

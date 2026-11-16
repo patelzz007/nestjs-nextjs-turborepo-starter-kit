@@ -2,10 +2,15 @@
 // step of a flow). Controlled: the caller passes `value` out of `max`, and the
 // bar fills to match — easing to each new value, and jumping there under
 // Reduce Motion. Screen readers hear it as a progress bar with its value.
+//
+// A `label` over the bar names it on screen ("Upload progress"), and
+// `showValue` puts its value at the row's end ("56%", or `valueText`). That
+// row is for sighted readers only: the bar itself already announces both. The
+// ref and `className` stay on the bar.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View, type ViewInstance } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming, type WithTimingConfig } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -18,8 +23,8 @@ const StyledAnimatedView = withUniwind(Animated.View);
 
 export const progressVariants = cva("w-full flex-row overflow-hidden rounded-full bg-muted", {
 	variants: {
-		variant: { default: "", success: "", warning: "", destructive: "" },
-		size: { sm: "h-1", md: "h-1.5", lg: "h-2.5" },
+		variant: { default: "", info: "", success: "", warning: "", destructive: "" },
+		size: { sm: "h-1", md: "h-1.5", lg: "h-2.5", xl: "h-3" },
 		state: {
 			default: "",
 			loading: "opacity-60",
@@ -35,6 +40,7 @@ export const progressIndicatorVariants = cva("h-full basis-0 rounded-full", {
 	variants: {
 		variant: {
 			default: "bg-primary",
+			info: "bg-info",
 			success: "bg-success",
 			warning: "bg-warning",
 			destructive: "bg-destructive",
@@ -68,6 +74,13 @@ export function progressFractionOf(value: number, max: number): number {
 	return Math.min(Math.max(value, MIN_VALUE), max) / max;
 }
 
+const PERCENT = 100;
+
+/** A fraction (0–1) as a whole percent: "56%". */
+export function progressPercentOf(fraction: number): string {
+	return `${String(Math.round(fraction * PERCENT))}%`;
+}
+
 /** The fill and the rest of the track share the track's width by their grow factors (fraction and 1 − fraction). */
 interface GrowStyle {
 	readonly flexGrow: number;
@@ -90,6 +103,12 @@ export interface ProgressProps {
 	readonly loading?: boolean;
 	/** The work failed: the fill turns destructive. */
 	readonly invalid?: boolean;
+	/** A fill of the caller's (a palette colour, `bg-tone-violet`), in place of the variant's. */
+	readonly indicatorClassName?: string | undefined;
+	/** A name shown over the bar. */
+	readonly label?: string | undefined;
+	/** Shows the value at the end of the label row: `valueText`, else the percent done. */
+	readonly showValue?: boolean | undefined;
 	/** Extra classes for the track, merged last. */
 	readonly className?: string;
 	readonly testID?: string;
@@ -97,7 +116,22 @@ export interface ProgressProps {
 
 export const Progress = React.memo(
 	React.forwardRef<ViewInstance, ProgressProps>(function Progress(
-		{ value, max = DEFAULT_MAX, accessibilityLabel, valueText, variant = "default", size = "md", disabled = false, loading = false, invalid = false, className, testID },
+		{
+			value,
+			max = DEFAULT_MAX,
+			accessibilityLabel,
+			valueText,
+			variant = "default",
+			size = "md",
+			disabled = false,
+			loading = false,
+			invalid = false,
+			indicatorClassName,
+			label,
+			showValue = false,
+			className,
+			testID,
+		},
 		ref,
 	): React.JSX.Element {
 		const state = resolveControlState({ disabled, loading, invalid });
@@ -117,7 +151,7 @@ export const Progress = React.memo(
 		);
 		const accessibilityState = React.useMemo(() => ({ disabled, busy: loading }), [disabled, loading]);
 
-		return (
+		const bar = (
 			<View
 				ref={ref}
 				accessible
@@ -127,8 +161,26 @@ export const Progress = React.memo(
 				accessibilityState={accessibilityState}
 				testID={testID}
 				className={cn(progressVariants({ variant, size, state }), className)}>
-				<StyledAnimatedView style={fillStyle} className={progressIndicatorVariants({ variant, state })} testID={testID === undefined ? undefined : `${testID}-indicator`} />
+				<StyledAnimatedView
+					style={fillStyle}
+					className={cn(progressIndicatorVariants({ variant, state }), indicatorClassName)}
+					testID={testID === undefined ? undefined : `${testID}-indicator`}
+				/>
 				<StyledAnimatedView style={restStyle} className="basis-0" />
+			</View>
+		);
+		if (label === undefined && !showValue) {
+			return bar;
+		}
+		return (
+			<View className="w-full gap-2">
+				<View className="flex-row items-center justify-between gap-3" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+					<Text numberOfLines={1} className="text-label font-sans-medium shrink text-foreground">
+						{label ?? ""}
+					</Text>
+					{showValue ? <Text className="text-label font-sans text-muted-foreground tabular-nums">{valueText ?? progressPercentOf(fraction)}</Text> : null}
+				</View>
+				{bar}
 			</View>
 		);
 	}),

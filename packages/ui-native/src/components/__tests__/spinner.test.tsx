@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
-import { Spinner, type SpinnerVariant } from "../spinner";
+import { LoadingDots, Spinner, type SpinnerVariant } from "../spinner";
 
 const VARIANT_COLORS: readonly (readonly [SpinnerVariant, string])[] = [
 	["default", "accent-foreground"],
@@ -72,5 +72,12 @@ describe("Spinner", () => {
 		const className = String(screen.getByRole("progressbar", { name: "Loading" }).props.className);
 		expect(className).toContain("justify-start");
 		expect(className).not.toContain("justify-center");
+	});
+});
+
+describe("LoadingDots", () => {
+	it("is a busy progress bar named for what is loading, its dots in the caller's fill", async () => {
+		await render(<LoadingDots accessibilityLabel="Assistant is typing" size="lg" dotClassName="bg-muted-foreground" testID="dots" />);
+		expect(screen.getByRole("progressbar", { name: "Assistant is typing" })).toHaveProp("accessibilityState", { busy: true });
 	});
 });

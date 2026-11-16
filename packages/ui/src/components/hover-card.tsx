@@ -12,14 +12,17 @@ const HOVER_CARD_ALIGN_OFFSET = 4;
 // Root renders no DOM element of its own (a base-ui provider), so like the
 // Select Root it intentionally stays a plain function — the ref lives on the
 // parts that render DOM (Trigger/Content).
+/** A preview shown while a link is hovered or focused, on Base UI's preview card. */
 function HoverCard({ ...props }: PreviewCardPrimitive.Root.Props): React.JSX.Element {
 	return <PreviewCardPrimitive.Root data-slot="hover-card" {...props} />;
 }
 
+/** The link that shows the card. Render a real link or button through `render`; `delay` and `closeDelay` set the timing. */
 const HoverCardTrigger = React.forwardRef<HTMLAnchorElement, PreviewCardPrimitive.Trigger.Props>(function HoverCardTrigger({ ...props }, ref): React.JSX.Element {
 	return <PreviewCardPrimitive.Trigger ref={ref} data-slot="hover-card-trigger" {...props} />;
 });
 
+/** The card: a portal, a positioner and the popup. `side` and `align` place it. */
 const HoverCardContent = React.forwardRef<
 	HTMLDivElement,
 	PreviewCardPrimitive.Popup.Props & Pick<PreviewCardPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">

@@ -55,7 +55,7 @@ describe("GanttNav", (): void => {
 		);
 		expect(screen.getByRole("button", { name: "Today" }).getAttribute("data-active")).toBe("");
 		expect(screen.getByRole("button", { name: "Previous" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Select view" }).textContent).toContain("Week");
+		expect(screen.getByRole("button", { name: /^Select view:/u }).textContent).toContain("Week");
 		expect(document.querySelector("[data-slot=gantt-title]")?.textContent).toBe("March 8 – 14, 2026");
 	});
 
@@ -87,13 +87,13 @@ describe("GanttNav", (): void => {
 			{ wrapper: GanttTestProviders },
 		);
 		act((): void => {
-			fireEvent.click(screen.getByRole("button", { name: "Select view" }));
+			fireEvent.click(screen.getByRole("button", { name: /^Select view:/u }));
 		});
 		act((): void => {
 			fireEvent.click(screen.getByRole("menuitem", { name: "Month" }));
 		});
 		expect(onScaleChange).toHaveBeenCalledWith("month");
-		expect(screen.getByRole("button", { name: "Select view" }).textContent).toContain("Month");
+		expect(screen.getByRole("button", { name: /^Select view:/u }).textContent).toContain("Month");
 	});
 
 	it("reads overrides from the i18n prop", (): void => {
@@ -105,7 +105,7 @@ describe("GanttNav", (): void => {
 		);
 		expect(screen.getByRole("button", { name: "Heute" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Weiter" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Select view" }).textContent).toContain("Woche");
+		expect(screen.getByRole("button", { name: /^Select view:/u }).textContent).toContain("Woche");
 	});
 
 	it("opens the go-to-date picker", (): void => {

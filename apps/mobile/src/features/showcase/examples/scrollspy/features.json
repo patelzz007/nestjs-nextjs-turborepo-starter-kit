@@ -1,0 +1,16 @@
+[
+	{
+		"id": "c-scrollspy-1",
+		"label": "Vertical Nav",
+		"description": "Scrollspy with links beside the panel. Best for a column of 5 section links to the left of a tall scrolling panel.",
+		"file": "scrollspy-1",
+		"export": "Scrollspy1Example"
+	},
+	{
+		"id": "c-scrollspy-2",
+		"label": "Horizontal Nav",
+		"description": "Scrollspy with links above the panel. Best for a row of 5 section links above a full width scrolling panel.",
+		"file": "scrollspy-2",
+		"export": "Scrollspy2Example"
+	}
+]

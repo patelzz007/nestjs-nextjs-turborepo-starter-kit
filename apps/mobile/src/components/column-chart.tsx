@@ -72,11 +72,11 @@ export function ColumnChart({ title, columns, hint, color = "chart-1", testID }:
 		<View className="gap-3" accessibilityLabel={title} testID={testID}>
 			<View className="min-h-11 justify-center" importantForAccessibility="no-hide-descendants">
 				{picked === null ? (
-					<Text className="font-sans text-sm text-muted-foreground">{hint}</Text>
+					<Text className="text-body font-sans text-muted-foreground">{hint}</Text>
 				) : (
 					<>
-						<Text className="font-sans-medium text-xs text-muted-foreground">{picked.fullLabel}</Text>
-						<Text className="font-sans-semibold text-base text-foreground">{picked.valueLabel}</Text>
+						<Text className="font-sans-medium text-caption text-muted-foreground">{picked.fullLabel}</Text>
+						<Text className="font-sans-semibold text-body-lg text-foreground">{picked.valueLabel}</Text>
 					</>
 				)}
 			</View>
@@ -95,7 +95,7 @@ export function ColumnChart({ title, columns, hint, color = "chart-1", testID }:
 			</View>
 			<View className="flex-row gap-1.5" importantForAccessibility="no-hide-descendants">
 				{columns.map((column: ColumnDatum): React.JSX.Element => (
-					<Text key={column.key} className={`flex-1 text-center font-sans text-xs ${picked?.key === column.key ? "text-foreground" : "text-muted-foreground"}`}>
+					<Text key={column.key} className={`text-caption flex-1 text-center font-sans ${picked?.key === column.key ? "text-foreground" : "text-muted-foreground"}`}>
 						{column.label}
 					</Text>
 				))}

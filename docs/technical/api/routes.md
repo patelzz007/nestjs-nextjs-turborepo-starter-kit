@@ -4,8 +4,11 @@ tags: ["api", "routes", "contracts", "type-safety", "shared"]
 description: "How every API endpoint path is defined once in api-routes.ts and consumed by contracts, controllers, and the client — with zero duplication."
 order: 13
 author: "Platform Team"
+category: "API"
+date: 1791072000000
 lastUpdated: 1793059200000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1794485625193
+coverImage: "/images/covers/technical/api/routes.webp"
 ---
 
 # API Routes — Single Source of Truth
@@ -66,7 +69,7 @@ export const apiRoutes = {
 ## 3. How each layer consumes it
 
 ```mermaid
-flowchart LR
+flowchart TD
     R[api-routes.ts] --> C[contracts/index.ts<br/>apiContract.rewards.detail.path]
     C --> E[packages/client endpoints.ts<br/>apiRouter.rewards.detail]
     C --> N[NestJS controller<br/>@ZodParams apiContract.rewards.detail.input]

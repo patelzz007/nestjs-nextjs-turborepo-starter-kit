@@ -1,0 +1,30 @@
+[
+	{
+		"id": "c-sheet-1",
+		"label": "Profile Editor",
+		"description": "Sheet containing a form for editing profile information. Best for a right side profile editor with 2 fields, Save changes, Cancel and the corner X.",
+		"file": "sheet-1",
+		"export": "Sheet1Example"
+	},
+	{
+		"id": "c-sheet-2",
+		"label": "No Close Button",
+		"description": "Sheet without a corner close button. Best for the profile editor without the corner X, leaving footer Cancel as the visible way out.",
+		"file": "sheet-2",
+		"export": "Sheet2Example"
+	},
+	{
+		"id": "c-sheet-3",
+		"label": "Any Side",
+		"description": "Sheets that open from any side. Best for one trigger per edge, top, right, bottom and left, with top and bottom sheets held to half the screen.",
+		"file": "sheet-3",
+		"export": "Sheet3Example"
+	},
+	{
+		"id": "c-sheet-4",
+		"label": "Scrollable Content",
+		"description": "Sheet with scrollable content. Best for a long body in a ScrollArea between a pinned header and a Save and Cancel footer.",
+		"file": "sheet-4",
+		"export": "Sheet4Example"
+	}
+]

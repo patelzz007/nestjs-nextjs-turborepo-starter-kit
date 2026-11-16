@@ -3,8 +3,11 @@ title: "Testing the offline till and inbox on a phone"
 description: "Step by step: install the preview build, pair the phone as a till, redeem a reward with no connection and watch it go through when the connection comes back, then read the inbox offline. Enhancement 6.4."
 order: 4
 author: "Platform Team"
+category: "Mobile"
+date: 1793836800000
 lastUpdated: 1793865600000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/mobile/testing-offline-till-and-inbox.webp"
 tags: ["mobile", "offline", "pos", "till", "notifications", "testing"]
 ---
 

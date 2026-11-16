@@ -1,0 +1,28 @@
+[
+	{
+		"title": "One surface per thought",
+		"do": {
+			"text": "Group one topic on one card.",
+			"file": "card-do-1",
+			"export": "CardDo1Example"
+		},
+		"dont": {
+			"text": "Don't nest a card inside a card: two borders around one thought.",
+			"file": "card-dont-1",
+			"export": "CardDont1Example"
+		}
+	},
+	{
+		"title": "Lead with one action",
+		"do": {
+			"text": "Give a card one clear action.",
+			"file": "card-do-2",
+			"export": "CardDo2Example"
+		},
+		"dont": {
+			"text": "Don't line up several equal buttons: nothing says which one the card is for.",
+			"file": "card-dont-2",
+			"export": "CardDont2Example"
+		}
+	}
+]

@@ -9,6 +9,7 @@ const buttonVariants = cva(
 	"group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding font-button text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
+			/** The look: a filled `default`, `secondary`, a bordered `outline`, a borderless `ghost`, a red `destructive`, a text-only `link`, or `nav` for a full-width row in a menu. */
 			variant: {
 				default:
 					"bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_color-mix(in_oklch,var(--primary)_var(--primary-glow-mix),transparent)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_10%)] hover:text-primary-foreground",
@@ -18,10 +19,11 @@ const buttonVariants = cva(
 					"bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_8%)] hover:text-secondary-foreground aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
 				ghost: "text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/60",
 				destructive:
-					"bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+					"bg-destructive/10 text-destructive-foreground hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
 				link: "text-primary underline-offset-4 hover:underline",
 				nav: "h-auto min-h-0 w-full justify-between border-0 bg-transparent px-0 py-0 shadow-none ring-0 focus-visible:ring-0 active:translate-y-0",
 			},
+			/** The height and padding: `xs` to `lg` for text buttons, `icon-xs` to `icon-lg` for square icon-only ones. */
 			size: {
 				default: "h-10 gap-1.5 px-3 text-sm in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pe-2.5 has-data-[icon=inline-start]:ps-2.5",
 				xs: "h-7 gap-1 rounded-[min(var(--radius-md),8px)] px-2 text-xs in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pe-1.5 has-data-[icon=inline-start]:ps-1.5 [&_svg:not([class*='size-'])]:size-3",
@@ -33,6 +35,7 @@ const buttonVariants = cva(
 				"icon-sm": "size-9 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-md",
 				"icon-lg": "size-11",
 			},
+			/** The visual state. Computed from `disabled`, `loading` and `aria-invalid`; leave it unset. */
 			state: {
 				default: "",
 				loading: "pointer-events-none opacity-80",
@@ -50,9 +53,11 @@ const buttonVariants = cva(
 
 type ButtonProps = ButtonPrimitive.Props &
 	VariantProps<typeof buttonVariants> & {
+		/** Shows a spinner before the label and disables the button until the work it started finishes. */
 		readonly loading?: boolean;
 	};
 
+/** The kit's action control: a native `button` (`type="button"` by default) on Base UI, in seven variants and nine sizes, with `loading`, `disabled` and `aria-invalid` states. `render` makes it a link or another element. */
 const Button = React.forwardRef<HTMLElement, ButtonProps>(function Button(
 	{ className, variant = "default", size = "default", loading = false, disabled, "aria-invalid": ariaInvalid, children, ...props },
 	ref,

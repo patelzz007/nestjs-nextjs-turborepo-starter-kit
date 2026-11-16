@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name the consequence",
+		"do": {
+			"text": "Say exactly what is lost, and label the buttons with the action.",
+			"file": "alert-dialog-do-1",
+			"export": "AlertDialogDo1Example"
+		},
+		"dont": {
+			"text": "Don't ask a vague question with Yes and No.",
+			"file": "alert-dialog-dont-1",
+			"export": "AlertDialogDont1Example"
+		}
+	},
+	{
+		"title": "Interrupt only for decisions",
+		"do": {
+			"text": "Use an alert dialog when the person must decide before going on.",
+			"file": "alert-dialog-do-2",
+			"export": "AlertDialogDo2Example"
+		},
+		"dont": {
+			"text": "Don't use one to tell people something already happened: use a [Toast](/components/toast).",
+			"file": "alert-dialog-dont-2",
+			"export": "AlertDialogDont2Example"
+		}
+	}
+]

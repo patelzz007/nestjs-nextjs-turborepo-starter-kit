@@ -4,8 +4,11 @@ tags: ["tooling", "starter-kit", "branding"]
 description: "Rename a product built on the starter in one place: project.json holds the slug and display name, and pnpm project:sync applies them everywhere."
 order: 9
 author: "Platform Team"
+category: "Tooling"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/tooling/project-identity.webp"
 ---
 
 # Project identity

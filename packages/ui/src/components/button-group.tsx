@@ -9,6 +9,7 @@ const buttonGroupVariants = cva(
 	"flex w-fit items-stretch *:focus-visible:relative *:focus-visible:z-10 has-[>[data-slot=button-group]]:gap-2 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-e-md [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1",
 	{
 		variants: {
+			/** Joins the seams side by side (`horizontal`) or stacked (`vertical`). */
 			orientation: {
 				horizontal:
 					"*:data-slot:rounded-e-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-e-md! [&>[data-slot]~[data-slot]]:rounded-s-none [&>[data-slot]~[data-slot]]:border-s-0",
@@ -22,6 +23,7 @@ const buttonGroupVariants = cva(
 	},
 );
 
+/** Joins related controls into one segmented strip: the seams between children that carry a `data-slot` lose their inner corners and borders. Renders `role="group"`; name it with `aria-label`. */
 const ButtonGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>>(function ButtonGroup(
 	{ className, orientation, ...props },
 	ref,
@@ -29,6 +31,7 @@ const ButtonGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">
 	return <div ref={ref} role="group" data-slot="button-group" data-orientation={orientation} className={cn(buttonGroupVariants({ orientation }), className)} {...props} />;
 });
 
+/** A non-interactive segment of a group: a label, a count, a unit or any markup of your own that should join at the seams. */
 const ButtonGroupText = React.forwardRef<HTMLDivElement, useRender.ComponentProps<"div">>(function ButtonGroupText({ className, render, ...props }, ref): React.JSX.Element {
 	return useRender({
 		ref,
@@ -49,6 +52,7 @@ const ButtonGroupText = React.forwardRef<HTMLDivElement, useRender.ComponentProp
 	});
 });
 
+/** A divider between two segments of a group that should stay visually distinct. */
 const ButtonGroupSeparator = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof Separator>>(function ButtonGroupSeparator(
 	{ className, orientation = "vertical", ...props },
 	ref,

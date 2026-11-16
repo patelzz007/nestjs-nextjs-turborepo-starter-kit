@@ -1,0 +1,65 @@
+[
+	{
+		"id": "c-tabs-1",
+		"label": "Basic",
+		"description": "Basic tabs. Best for the smallest setup: 2 tabs on a muted track switching between an account card and a password card.",
+		"file": "tabs-1",
+		"export": "Tabs1Example"
+	},
+	{
+		"id": "c-tabs-2",
+		"label": "Line Variant",
+		"description": "Tabs with the line style. Best for an underlined row stretched full width over 3 cards for account, password and preference forms.",
+		"file": "tabs-2",
+		"export": "Tabs2Example"
+	},
+	{
+		"id": "c-tabs-3",
+		"label": "Vertical",
+		"description": "Vertical tabs. Best for a muted column of 3 tabs on the left, with the matching card beside it.",
+		"file": "tabs-3",
+		"export": "Tabs3Example"
+	},
+	{
+		"id": "c-tabs-4",
+		"label": "Vertical Line",
+		"description": "Vertical tabs in the line style. Best for a column where a bar on its end edge marks the open section, beside wider cards.",
+		"file": "tabs-4",
+		"export": "Tabs4Example"
+	},
+	{
+		"id": "c-tabs-5",
+		"label": "Icons",
+		"description": "Tabs with icons. Best for user, lock and gear icons ahead of each label on a muted track sized to its content.",
+		"file": "tabs-5",
+		"export": "Tabs5Example"
+	},
+	{
+		"id": "c-tabs-6",
+		"label": "Full Width Icons",
+		"description": "Full width tabs with icons. Best for a full width track of Overview, Analytics and Settings with icons, over one line placeholder cards.",
+		"file": "tabs-6",
+		"export": "Tabs6Example"
+	},
+	{
+		"id": "c-tabs-7",
+		"label": "Badge Counts",
+		"description": "Tabs with counts. Best for mail folders on an underlined row, with tinted counts on Inbox, Drafts and Spam and none on Sent.",
+		"file": "tabs-7",
+		"export": "Tabs7Example"
+	},
+	{
+		"id": "c-tabs-8",
+		"label": "Side List Icons",
+		"description": "Side list with icons and counts. Best for a side list of Projects, Tasks, Team and Reports, each led by an icon, 2 ending in a count.",
+		"file": "tabs-8",
+		"export": "Tabs8Example"
+	},
+	{
+		"id": "c-tabs-9",
+		"label": "Segmented Control",
+		"description": "Segmented control. Best for a controlled Daily to Yearly switch kept in state, each choice showing one large visitor total.",
+		"file": "tabs-9",
+		"export": "Tabs9Example"
+	}
+]

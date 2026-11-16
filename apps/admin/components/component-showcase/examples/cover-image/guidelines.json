@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Describe the picture",
+		"do": {
+			"text": "Give every cover image alt text that says what it shows.",
+			"file": "cover-image-do-1",
+			"export": "CoverImageDo1Example"
+		},
+		"dont": {
+			"text": "Don't name the file or say \"image\": a screen reader learns nothing.",
+			"file": "cover-image-dont-1",
+			"export": "CoverImageDont1Example"
+		}
+	},
+	{
+		"title": "Plan for a missing image",
+		"do": {
+			"text": "Give the frame a `fallback`, so a missing image still reads as intentional.",
+			"file": "cover-image-do-2",
+			"export": "CoverImageDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave an empty grey box where the image failed to come.",
+			"file": "cover-image-dont-2",
+			"export": "CoverImageDont2Example"
+		}
+	}
+]

@@ -86,8 +86,8 @@ function MergeBoxRow({ line }: { readonly line: MergeBoxLine }): React.JSX.Eleme
 		<View accessible accessibilityLabel={`${line.title}. ${line.detail}`} className={`flex-row items-center gap-3 rounded-xl border px-4 py-3 ${style.box}`}>
 			<Icon icon={style.icon} size="md" colorClassName={style.iconColor} />
 			<View className="flex-1 gap-0.5">
-				<Text className="font-sans-semibold text-sm text-foreground">{line.title}</Text>
-				<Text className="font-sans text-sm text-muted-foreground">{line.detail}</Text>
+				<Text className="font-sans-semibold text-body text-foreground">{line.title}</Text>
+				<Text className="text-body font-sans text-muted-foreground">{line.detail}</Text>
 			</View>
 		</View>
 	);

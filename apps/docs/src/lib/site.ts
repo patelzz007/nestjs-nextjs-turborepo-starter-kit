@@ -1,3 +1,6 @@
+import type { DocsSourceKind } from "@workspace/docs-content/document";
+import type { SyncedFrom } from "@workspace/docs-content/front-matter";
+
 /**
  * Site-wide constants: names, the public origin (canonical URLs, sitemap,
  * RSS), the GitHub repository ("Edit this page"), and outbound app links.
@@ -65,6 +68,27 @@ export const CONTENT_FOLDERS: Readonly<Record<"docs" | "blog", string>> = { docs
 /** "Edit this page" URL for a file in a content folder. */
 export function githubEditUrl(folder: "docs" | "blog", filePath: string): string {
 	return `${GITHUB_URL}/blob/${GITHUB_BRANCH}/${CONTENT_FOLDERS[folder]}/${filePath}`;
+}
+
+/** Where a page is edited, and what the link says. */
+export interface EditLink {
+	readonly editUrl: string;
+	readonly editLabel: string;
+}
+
+const GITHUB_EDIT_LABEL = "Edit on GitHub";
+
+/** What each writing tool's edit link says (ADR 084). */
+const SOURCE_EDIT_LABELS: Readonly<Record<DocsSourceKind, string>> = {
+	NOTION: "Edit in Notion",
+};
+
+/** A synced page is edited in its writing tool: a change made on GitHub would be overwritten. Other pages are edited on GitHub. */
+export function editLinkOf(folder: "docs" | "blog", filePath: string, source: SyncedFrom | undefined): EditLink {
+	if (source?.url === undefined || source.url === null) {
+		return { editUrl: githubEditUrl(folder, filePath), editLabel: GITHUB_EDIT_LABEL };
+	}
+	return { editUrl: source.url, editLabel: SOURCE_EDIT_LABELS[source.kind] };
 }
 
 /** `robots.txt`: every page may be indexed, and the sitemap (written by the Start build) lists them. */

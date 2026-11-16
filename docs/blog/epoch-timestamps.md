@@ -3,6 +3,8 @@ title: "Epoch Timestamps and date-fns: A Date Strategy That Won't Bite You"
 description: "We standardised on epoch milliseconds in the database and date-fns on the client. Here is why that convention removed an entire class of timezone bugs."
 author: "Acme Inc."
 date: 1786752000000
+lastUpdated: 1786752000000
+editedAt: 1793976836000
 category: "Engineering"
 ---
 

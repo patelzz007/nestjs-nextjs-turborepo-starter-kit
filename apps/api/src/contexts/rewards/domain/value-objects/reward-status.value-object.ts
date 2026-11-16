@@ -1,4 +1,4 @@
-import { DAY_MS } from "@workspace/shared";
+import { DAY_MS, defineStateMachine, type StateMachine } from "@workspace/shared";
 import { z } from "zod";
 
 /**
@@ -10,6 +10,28 @@ export const RewardLifecycleStatusSchema = z.enum(["DRAFT", "PENDING_REVIEW", "P
 export type RewardLifecycleStatus = z.output<typeof RewardLifecycleStatusSchema>;
 
 export const REWARD_LIFECYCLE_STATUSES: readonly RewardLifecycleStatus[] = RewardLifecycleStatusSchema.options;
+
+/** The named moves of the reward review lifecycle — one per aggregate command. */
+export type RewardLifecycleEvent = "submitForReview" | "approve" | "reject" | "autoPublish";
+
+/**
+ * The reward review lifecycle (docs/architecture/state-machines.md): a merchant submits a draft, a
+ * reviewer approves or rejects it (back to draft, with a reason), or the review window elapses and
+ * it publishes itself. A published reward has no way back (decision #40: nothing expires or disables
+ * it). The `Reward` aggregate enforces this table and adds what a table cannot hold (the window).
+ */
+export const REWARD_LIFECYCLE: StateMachine<RewardLifecycleStatus, RewardLifecycleEvent> = defineStateMachine({
+	name: "RewardLifecycle",
+	states: REWARD_LIFECYCLE_STATUSES,
+	initial: ["DRAFT"],
+	terminal: ["PUBLISHED"],
+	transitions: {
+		submitForReview: { from: ["DRAFT"], to: "PENDING_REVIEW" },
+		approve: { from: ["PENDING_REVIEW"], to: "PUBLISHED" },
+		reject: { from: ["PENDING_REVIEW"], to: "DRAFT" },
+		autoPublish: { from: ["PENDING_REVIEW"], to: "PUBLISHED" },
+	},
+});
 
 /** A reward is the consumer offer or the referrer bonus its referrals earn (Prisma `RewardKind`). */
 export const RewardKindValueSchema = z.enum(["CONSUMER", "REFERRER"]);

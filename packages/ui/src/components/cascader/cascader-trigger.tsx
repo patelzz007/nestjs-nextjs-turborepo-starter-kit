@@ -50,6 +50,7 @@ export type CascaderTriggerVariant = "default" | "plain";
 export interface CascaderTriggerProps extends ComboboxPrimitive.Trigger.Props {
 	/** Hides the trailing chevron, for a trigger that supplies its own. */
 	readonly showIcon?: boolean | undefined;
+	/** The trigger's look, as a kit field (`default`) or a ghost button. */
 	readonly variant?: CascaderTriggerVariant | undefined;
 }
 
@@ -169,6 +170,7 @@ export const CascaderChips = React.forwardRef<HTMLDivElement, CascaderChipsProps
 });
 
 export interface CascaderChipProps extends Omit<ComboboxPrimitive.Chip.Props, "children"> {
+	/** The chosen node the chip shows. */
 	readonly node: CascaderNodeBase;
 	/** Prefix the label with its ancestor trail. */
 	readonly showPath?: boolean | undefined;

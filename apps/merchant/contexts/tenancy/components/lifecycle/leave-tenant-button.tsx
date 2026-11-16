@@ -5,7 +5,7 @@ import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-message
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { Button } from "@workspace/ui/components/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { ROUTES } from "@/lib/routes";
@@ -24,7 +24,7 @@ export interface LeaveTenantButtonProps {
 export const LeaveTenantButton = React.forwardRef<HTMLDivElement, LeaveTenantButtonProps>(function LeaveTenantButton({ tenantSlug, tenantName }, ref): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const [confirming, setConfirming] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
 	const leave = api.tenants.leaveTenant.useMutation({

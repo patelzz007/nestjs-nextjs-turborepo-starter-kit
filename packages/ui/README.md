@@ -81,6 +81,16 @@ component family (`combobox`, `dataTable`, `sidebar`, `toast`, …). The kit shi
 Content that is not kit chrome — page titles, domain messages, a QR code's description — stays a
 regular prop owned by the page.
 
+## Navigation progress (`navigation-progress.tsx`)
+
+`NavigationProgressProvider` draws a thin bar along the top of the viewport while the app moves
+to another page. It is router-agnostic: it starts by itself on a plain click on a same-origin
+link (any router's link renders an `<a>`) and on back/forward; navigation in code calls
+`useNavigationProgress().start(href)` first, and the router integration calls `done()` once the
+new page has arrived. The Next apps get both through `AppNavigationProgress` and
+`useProgressRouter` in `@workspace/client/lib/navigation/`. The bar waits 120 ms before it
+shows (a prefetched page never flashes it), is `aria-hidden`, and stays still under reduced motion.
+
 ## Sidebar (`sidebar.tsx`)
 
 Composable shadcn-style sidebar primitives. **Admin app uses a bespoke sidebar** (`apps/admin/components/layout/sidebar.tsx`) for search, section reorder, and Zustand — the UI kit sidebar targets simpler apps.
@@ -133,8 +143,8 @@ Two modules:
 `useCodeBlockConfig`, `useCodeBlockFolding`, `useCodeBlockSelection`.
 
 **Main `CodeBlock` props:** `code` + `language` (client highlighting) **or** `lines`
-(pre-highlighted), `themes` (`{ light, dark }`, default github-light/dark; `"css-variables"`
-for token theming), `highlight`, `showLineNumbers` + `startLine` (CSS counter — numbers never
+(pre-highlighted), `themes` (`{ light, dark }`, default One Dark Pro on both sides, its
+low-contrast token colours lifted to WCAG AA; `"css-variables"` for token theming), `highlight`, `showLineNumbers` + `startLine` (CSS counter — numbers never
 copy), `highlightedLines` / `focusedLines` / `diff` / `lineLevels` (line specs: `[2, 3]` or
 `"2-4,7"`, source-numbered), `highlightedWords`, `transformers` (Shiki; `[!code ++]` notation lands
 in the same line state — hoist the array to module scope), `streaming` (deferred tokenisation,
@@ -143,6 +153,10 @@ caret, stick-to-bottom, completion announcement), `wrap` / `defaultWrap` / `onWr
 `folded` / `defaultFolded` / `onFoldedChange`, `selectable` + `selectedLines` /
 `defaultSelectedLines` / `onSelectedLinesChange`, `variant` (`default | ghost`), `label`,
 `completeAnnouncement`, and an optional **`labels`** override.
+
+**Font.** Code, file names and the language badge use `--code-block-font`, which reads the
+app's `--font-code` (JetBrains Mono, `@workspace/ui/fonts/jetbrains-mono`) and falls back to
+`--font-mono` in an app that does not load it.
 
 **Labels.** The kit ships no copy: the block reads the `codeBlock` family (`CodeBlockLabels`) of
 the app's `UiKitLabelsProvider` (`UI_KIT_LABELS_EN.codeBlock` in English), and throws without a
@@ -295,10 +309,15 @@ docs. Each file's header comment records its exact deviations. The recurring one
 - **Typed callbacks:** callbacks such as `onEventUpdate` return a verdict
   (`true | false | adjustment`) instead of `void`.
 
-Every ReUI component example (`c-<component>-<n>`) is ported into the admin's component gallery,
-on each component's own page (`/components/<file name>`). See
-`apps/admin/components/component-gallery/examples/`; `pnpm --filter @workspace/admin
-gallery:examples` regenerates its registry and its example-count manifest.
+Every ReUI component example (`c-<component>-<n>`) is ported into the admin's component showcase as
+one of the component's features, on its own page (`/components/<file name>`), with its live preview and
+exact code a tab away, and each component has a docs page (`/components/<file name>/docs`) with usage,
+anatomy, accessibility notes and an API reference generated from this package's types and JSDoc — so
+keep the JSDoc on every exported component, prop and hook current. See
+`apps/admin/components/component-showcase/examples/<component>/` (each folder's `features.json` names
+and describes its features, `overview.md` and `docs.md` hold the prose); `pnpm --filter @workspace/admin
+showcase:generate` regenerates the modules under `component-showcase/generated/`, which tests keep in
+sync.
 
 Two decisions, made with a maintainer:
 

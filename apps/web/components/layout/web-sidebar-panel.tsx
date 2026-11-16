@@ -26,7 +26,8 @@ import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
 import { AlertCircle } from "lucide-react";
 import { webProfileMenuItems } from "@/components/layout/web-profile-menu";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
 import { useTranslatedSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
@@ -55,7 +56,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 	// The picture comes from the own profile, which every avatar change reloads — so the sidebar shows it at once.
 	const avatar = useOwnAvatar();
 	const { capabilities, isAuthenticated } = useWebSession();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const canAccessPath = useCanAccessWebPath();
 	const { status: breadcrumbStatus } = useWebBreadcrumb();
 

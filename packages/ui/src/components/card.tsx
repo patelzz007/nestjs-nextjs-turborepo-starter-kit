@@ -8,6 +8,7 @@ const cardVariants = cva(
 	"group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-lg bg-card py-(--card-spacing) text-sm text-card-foreground shadow-sm ring-1 inset-shadow-edge ring-foreground/10 has-[>img:first-child]:pt-0 *:[img:first-child]:rounded-t-lg *:[img:last-child]:rounded-b-lg",
 	{
 		variants: {
+			/** Padding and gaps of every part: `default` or `sm`. */
 			size: {
 				default: "[--card-spacing:--spacing(6)]",
 				sm: "[--card-spacing:--spacing(4)]",
@@ -21,12 +22,17 @@ const cardVariants = cva(
 
 type CardSize = NonNullable<VariantProps<typeof cardVariants>["size"]>;
 
-type CardProps = React.ComponentProps<"div"> & { size?: CardSize };
+type CardProps = React.ComponentProps<"div"> & {
+	/** Padding and gaps of every part: `default` or `sm`. */
+	size?: CardSize;
+};
 
+/** A titled container for related content. Every part pads itself from one variable, so `size` keeps the spacing consistent. */
 const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card({ className, size = "default", ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="card" data-size={size} className={cn(cardVariants({ size }), className)} {...props} />;
 });
 
+/** The top of the card: the title, the description and an optional action. */
 const CardHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function CardHeader({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -41,22 +47,27 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>
 	);
 });
 
+/** The card's title. */
 const CardTitle = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function CardTitle({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="card-title" className={cn("font-heading text-base leading-normal font-medium group-data-[size=sm]/card:text-sm", className)} {...props} />;
 });
 
+/** A line under the title. */
 const CardDescription = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function CardDescription({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="card-description" className={cn("text-sm text-muted-foreground", className)} {...props} />;
 });
 
+/** Sits in the header's top-right corner, beside the title, for a menu or a link. */
 const CardAction = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function CardAction({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="card-action" className={cn("col-start-2 row-span-2 row-start-1 self-start justify-self-end", className)} {...props} />;
 });
 
+/** The card's body. */
 const CardContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function CardContent({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="card-content" className={cn("px-(--card-spacing)", className)} {...props} />;
 });
 
+/** The bottom of the card, for actions. */
 const CardFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function CardFooter({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="card-footer" className={cn("flex items-center rounded-b-lg px-(--card-spacing) [.border-t]:pt-(--card-spacing)", className)} {...props} />;
 });

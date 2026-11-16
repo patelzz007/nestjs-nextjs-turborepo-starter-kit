@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Rule out impossible days",
+		"do": {
+			"text": "Start a delivery date at today with `fromDate`, so past days cannot be clicked.",
+			"file": "date-picker-do-1",
+			"export": "DatePickerDo1Example"
+		},
+		"dont": {
+			"text": "Don't offer days that can never be valid and reject them afterwards.",
+			"file": "date-picker-dont-1",
+			"export": "DatePickerDont1Example"
+		}
+	},
+	{
+		"title": "Say what to do",
+		"do": {
+			"text": "Write an error that says which day is wanted.",
+			"file": "date-picker-do-2",
+			"export": "DatePickerDo2Example"
+		},
+		"dont": {
+			"text": "Don't answer with \"Invalid.\": it does not say what to pick.",
+			"file": "date-picker-dont-2",
+			"export": "DatePickerDont2Example"
+		}
+	}
+]

@@ -1,0 +1,310 @@
+[
+	{
+		"id": "c-stepper-1",
+		"label": "Basic",
+		"description": "Basic stepper. Best for a row of 4 numbered circles, uncontrolled, whose connector takes the primary color after each passed step.",
+		"file": "stepper-1",
+		"export": "Stepper1Example"
+	},
+	{
+		"id": "c-stepper-2",
+		"label": "Completed State",
+		"description": "Stepper with completed state. Best for passed steps painted green on both the circle and its connector, with later numbers in gray.",
+		"file": "stepper-2",
+		"export": "Stepper2Example"
+	},
+	{
+		"id": "c-stepper-3",
+		"label": "Loading State",
+		"description": "Stepper with loading state. Best for number free ring markers: a dot marks the current step, a spinner the loading one and a check each passed step.",
+		"file": "stepper-3",
+		"export": "Stepper3Example"
+	},
+	{
+		"id": "c-stepper-4",
+		"label": "Controlled",
+		"description": "Controlled stepper. Best for the active step kept in React state and moved by Previous and Next buttons that disable at either end.",
+		"file": "stepper-4",
+		"export": "Stepper4Example"
+	},
+	{
+		"id": "c-stepper-5",
+		"label": "Labels Below",
+		"description": "Stepper with title and indicator. Best for numbered circles that become checks once passed, each with a short label centered below it.",
+		"file": "stepper-5",
+		"export": "Stepper5Example"
+	},
+	{
+		"id": "c-stepper-6",
+		"label": "Left Aligned Titles",
+		"description": "Stepper with progress bar indicator. Best for left aligned numbers over bold titles from User Details to Preview Form, with no lines between steps.",
+		"file": "stepper-6",
+		"export": "Stepper6Example"
+	},
+	{
+		"id": "c-stepper-7",
+		"label": "Icons & Badges",
+		"description": "Stepper with icons and badges. Best for icon circles above a Step N eyebrow, a bold title and an In Progress, Completed or Pending badge.",
+		"file": "stepper-7",
+		"export": "Stepper7Example"
+	},
+	{
+		"id": "c-stepper-8",
+		"label": "Descriptions",
+		"description": "Stepper with descriptions. Best for centered steps stacking a number, a title and a one line description, with connectors between them.",
+		"file": "stepper-8",
+		"export": "Stepper8Example"
+	},
+	{
+		"id": "c-stepper-9",
+		"label": "Inline Titles",
+		"description": "Stepper with inline titles. Best for a number or check beside each title in one row, with a connector that fills once the step is passed.",
+		"file": "stepper-9",
+		"export": "Stepper9Example"
+	},
+	{
+		"id": "c-stepper-10",
+		"label": "Title & Caption",
+		"description": "Stepper with content for each step. Best for a number or check beside a 2 line title and caption per step, joined by muted connectors that never fill.",
+		"file": "stepper-10",
+		"export": "Stepper10Example"
+	},
+	{
+		"id": "c-stepper-11",
+		"label": "Bar With Titles",
+		"description": "Stepper with progress bar and titles. Best for full width bar segments, one per step, filling with the primary color up to the current one, titles below.",
+		"file": "stepper-11",
+		"export": "Stepper11Example"
+	},
+	{
+		"id": "c-stepper-12",
+		"label": "Segmented Bar",
+		"description": "Stepper with segmented progress bar. Best for one thick bar of 4 joined segments, a Back link, a current of total counter and a Next button.",
+		"file": "stepper-12",
+		"export": "Stepper12Example"
+	},
+	{
+		"id": "c-stepper-13",
+		"label": "Vertical Descriptions",
+		"description": "Stepper with vertical orientation and descriptions. Best for a top to bottom column of numbered markers, each with a title and a description beside it, links greening once done.",
+		"file": "stepper-13",
+		"export": "Stepper13Example"
+	},
+	{
+		"id": "c-stepper-14",
+		"label": "Vertical",
+		"description": "Stepper with vertical orientation. Best for a bare column of 3 numbered circles with green links between finished ones and a spinner on the loading step.",
+		"file": "stepper-14",
+		"export": "Stepper14Example"
+	},
+	{
+		"id": "c-stepper-15",
+		"label": "Vertical Titles",
+		"description": "Stepper with vertical orientation and titles. Best for vertical numbered steps labelled with one title each and no supporting text, content centered below.",
+		"file": "stepper-15",
+		"export": "Stepper15Example"
+	},
+	{
+		"id": "c-stepper-16",
+		"label": "Delivery Stops",
+		"description": "Stepper with delivery stops and ETAs. Best for a route list that moves beside its stop detail in wider containers, a spinner on the current stop, Previous and Next.",
+		"file": "stepper-16",
+		"export": "Stepper16Example"
+	},
+	{
+		"id": "c-stepper-17",
+		"label": "Dotted Progress",
+		"description": "Stepper with dotted progress. Best for tiny ring dots joined by dotted links in a box at most 240px wide, each named only by its aria label.",
+		"file": "stepper-17",
+		"export": "Stepper17Example"
+	},
+	{
+		"id": "c-stepper-18",
+		"label": "Stage Details",
+		"description": "Stepper with key-value stage details. Best for a stage row that turns into a draggable carousel with faded edges when it overflows, each stage listing label and value pairs.",
+		"file": "stepper-18",
+		"export": "Stepper18Example"
+	},
+	{
+		"id": "c-stepper-19",
+		"label": "Frame Icon Tiles",
+		"description": "Stepper with icon tiles in a frame. Best for a muted Frame header strip with arrows between steps above an empty placeholder panel and Previous and Next.",
+		"file": "stepper-19",
+		"export": "Stepper19Example"
+	},
+	{
+		"id": "c-stepper-20",
+		"label": "Purchase Orders",
+		"description": "Stepper with purchase order checks. Best for a Tree of orders with Ready or Review badges and an actions menu on the active step row, also opened by Shift+F10.",
+		"file": "stepper-20",
+		"export": "Stepper20Example"
+	},
+	{
+		"id": "c-stepper-21",
+		"label": "Security Checks",
+		"description": "Stepper with grouped security checks. Best for a 3 level Tree of areas, numbered steps and checks, whose row status follows where the active check sits.",
+		"file": "stepper-21",
+		"export": "Stepper21Example"
+	},
+	{
+		"id": "c-stepper-22",
+		"label": "Bottom Color Bars",
+		"description": "Stepper with color-coded bottom bars. Best for step tabs pinned under the content as a footer strip, each in its own color, shortening to numbers when narrow.",
+		"file": "stepper-22",
+		"export": "Stepper22Example"
+	},
+	{
+		"id": "c-stepper-23",
+		"label": "Top Color Bars",
+		"description": "Stepper with top color bars and card art. Best for colored tabs across the top of a Frame panel over static card artwork, for a card entry flow with no fields yet.",
+		"file": "stepper-23",
+		"export": "Stepper23Example"
+	},
+	{
+		"id": "c-stepper-24",
+		"label": "Icon Tile Rows",
+		"description": "Stepper with icon tile rows. Best for stacked Frame rows clickable edge to edge, each with an IconTile and a status marker at its end, above a Step N of 4 detail.",
+		"file": "stepper-24",
+		"export": "Stepper24Example"
+	},
+	{
+		"id": "c-stepper-25",
+		"label": "Phase Track",
+		"description": "Stepper with phase track. Best for a pale track where only the current phase's slice fills blue, with a spinning dashed dot and refund case copy below.",
+		"file": "stepper-25",
+		"export": "Stepper25Example"
+	},
+	{
+		"id": "c-stepper-26",
+		"label": "Timestamped Checkpoints",
+		"description": "Stepper with timestamped checkpoints. Best for a muted track whose current slice fills with the foreground color, and times shown only for reached checkpoints.",
+		"file": "stepper-26",
+		"export": "Stepper26Example"
+	},
+	{
+		"id": "c-stepper-27",
+		"label": "Transit Arrow",
+		"description": "Stepper with transit arrow. Best for times on passed stops and estimates for the rest, over tick marks with an arrow drawn into the selected stop.",
+		"file": "stepper-27",
+		"export": "Stepper27Example"
+	},
+	{
+		"id": "c-stepper-28",
+		"label": "Breadcrumb Steps",
+		"description": "Stepper with breadcrumb steps. Best for text only step names beside an Onboarding label and a step counter, dropping to a row of their own below 48rem.",
+		"file": "stepper-28",
+		"export": "Stepper28Example"
+	},
+	{
+		"id": "c-stepper-29",
+		"label": "Compact Inline",
+		"description": "Stepper with compact inline progress. Best for a row of dashed rings and names that keeps only the current name when narrow, the current ring spinning and done ones blue.",
+		"file": "stepper-29",
+		"export": "Stepper29Example"
+	},
+	{
+		"id": "c-stepper-30",
+		"label": "Truck Route",
+		"description": "Stepper with truck route and rest stops. Best for icon stops in rings with short fixed legs for rest breaks and a green destination once it is selected.",
+		"file": "stepper-30",
+		"export": "Stepper30Example"
+	},
+	{
+		"id": "c-stepper-31",
+		"label": "Chevron Icon Tiles",
+		"description": "Stepper with icon tiles and chevrons. Best for a row of IconTile steps split by chevron icons, with the focus ring drawn on the tile, folding to bare tiles when narrow.",
+		"file": "stepper-31",
+		"export": "Stepper31Example"
+	},
+	{
+		"id": "c-stepper-32",
+		"label": "Numbered Chevrons",
+		"description": "Stepper with numbered chevron stages. Best for clip path chevrons that nest notch into arrow, outlined by a drop shadow on focus because the clip hides the ring.",
+		"file": "stepper-32",
+		"export": "Stepper32Example"
+	},
+	{
+		"id": "c-stepper-33",
+		"label": "Filled Chevrons",
+		"description": "Stepper with filled status chevrons. Best for an inverse Frame strip of chevrons that hug their labels with no done count, folding to icons around the current step.",
+		"file": "stepper-33",
+		"export": "Stepper33Example"
+	},
+	{
+		"id": "c-stepper-34",
+		"label": "Outlined Chevrons",
+		"description": "Stepper with outlined chevron plan. Best for full width chevrons whose traced SVG edges outline the done and current steps at low opacity, after a Plan count chip.",
+		"file": "stepper-34",
+		"export": "Stepper34Example"
+	},
+	{
+		"id": "c-stepper-35",
+		"label": "Flat Chevrons",
+		"description": "Stepper with flat chevron plan. Best for chevrons clipped on the trigger itself, with an inner pill that draws the focus ring, for a contract plan.",
+		"file": "stepper-35",
+		"export": "Stepper35Example"
+	},
+	{
+		"id": "c-stepper-36",
+		"label": "Shipping Route",
+		"description": "Stepper with shipping route and stop details. Best for a container query route that sheds rows as it narrows, a skewed segment bar on one leg and an arrow past the last port.",
+		"file": "stepper-36",
+		"export": "Stepper36Example"
+	},
+	{
+		"id": "c-stepper-37",
+		"label": "Horizontal Step Cards",
+		"description": "Stepper with horizontal step cards. Best for cards that are the tabs themselves via a FramePanel render, in a 2 or 4 column grid above the detail.",
+		"file": "stepper-37",
+		"export": "Stepper37Example"
+	},
+	{
+		"id": "c-stepper-38",
+		"label": "Shipment Progress",
+		"description": "Stepper with shipment progress bar. Best for icon labels under a tick track that turns solid green when passed, folding to evenly spaced bare icons when narrow.",
+		"file": "stepper-38",
+		"export": "Stepper38Example"
+	},
+	{
+		"id": "c-stepper-39",
+		"label": "Vertical Step Cards",
+		"description": "Stepper with vertical step cards. Best for stacked tab cards in a 240px column with useId scoped ids, the detail moving under them below 28rem.",
+		"file": "stepper-39",
+		"export": "Stepper39Example"
+	},
+	{
+		"id": "c-stepper-40",
+		"label": "Side Rail Icons",
+		"description": "Stepper with side rail and step icons. Best for a glyph of its own per row that turns blue when selected, and a solid green check only at the end of finished rows.",
+		"file": "stepper-40",
+		"export": "Stepper40Example"
+	},
+	{
+		"id": "c-stepper-41",
+		"label": "Status List",
+		"description": "Stepper with status list. Best for a 180px rail whose current title turns blue, with a spinning ring that follows the selection and useId scoped ids.",
+		"file": "stepper-41",
+		"export": "Stepper41Example"
+	},
+	{
+		"id": "c-stepper-42",
+		"label": "Vertical Status Bars",
+		"description": "Stepper with vertical status bars. Best for a bar per row that splits into 4 dashes on the current step, with the focus ring moved onto the label clear of it.",
+		"file": "stepper-42",
+		"export": "Stepper42Example"
+	},
+	{
+		"id": "c-stepper-43",
+		"label": "Collapsible Sub-Steps",
+		"description": "Stepper with sub-steps in a collapsible card. Best for numbered phases with a turning chevron, the open one boxed in a Frame that folds when picked again, its live task on a blue edge bar.",
+		"file": "stepper-43",
+		"export": "Stepper43Example"
+	},
+	{
+		"id": "c-stepper-44",
+		"label": "Right-Aligned Sub-Steps",
+		"description": "Stepper with right-aligned sub-steps. Best for end aligned labels on a segmented rail with a nested task rail, and status announced through useStepItem.",
+		"file": "stepper-44",
+		"export": "Stepper44Example"
+	}
+]

@@ -41,6 +41,7 @@ import { adminTenantsRoutes, tenantsRoutes, rewardsAdminTenantRoutes } from "./c
 import { productRoutes, sampleCategoryRoutes } from "./contexts/catalog/routes";
 import { kanbanRoutes } from "./contexts/kanban/routes";
 import { operationsRoutes } from "./contexts/operations/routes";
+import { docsPublishingRoutes } from "./contexts/docs-publishing/docs-publishing.routes";
 import { receivedWebhooksRoutes } from "./contexts/webhooks/received-webhooks.routes";
 import { tenantWebhooksRoutes } from "./contexts/webhooks/outbound-webhooks.routes";
 import type { RouteTree } from "./route-tree";
@@ -108,6 +109,7 @@ export const apiRoutes = {
 	product: productRoutes,
 	kanban: kanbanRoutes,
 	operations: operationsRoutes,
+	docsPublishing: docsPublishingRoutes,
 	receivedWebhooks: receivedWebhooksRoutes,
 	tenantWebhooks: tenantWebhooksRoutes,
 } satisfies Record<string, RouteTree>;

@@ -3,8 +3,11 @@ title: "ADR 007: Tenancy Mode and RLS Bypass"
 tags: ["adr", "rls", "tenancy", "security", "postgres"]
 description: "Architecture decision record for configurable single-tenant vs multi-tenant RLS bypass and organization scoping."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1772000000000
 lastUpdated: 1772000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/007-tenancy-and-rls-bypass.webp"
 order: 7
 ---
 

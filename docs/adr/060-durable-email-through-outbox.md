@@ -3,8 +3,11 @@ title: "ADR 060: Durable Email Through the Outbox"
 tags: ["adr", "email", "outbox", "notifications"]
 description: "An email is requested in the same transaction as the business row. The outbox routes notification.email.requested to the existing BullMQ email queue, with an inline send when Redis is off."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792281600000
 lastUpdated: 1792281600000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1792438386000
+coverImage: "/images/covers/adr/060-durable-email-through-outbox.webp"
 order: 60
 ---
 

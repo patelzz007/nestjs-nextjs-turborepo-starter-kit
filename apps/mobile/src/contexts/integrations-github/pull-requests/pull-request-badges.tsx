@@ -42,7 +42,7 @@ export function PullRequestStatePill({ state, testID }: PullRequestStatePillProp
 	return (
 		<View accessible accessibilityLabel={label} testID={testID} className={`flex-row items-center gap-1.5 self-start rounded-full px-3 py-1 ${style.fill}`}>
 			<Icon icon={style.icon} size="sm" colorClassName="accent-status-foreground" />
-			<Text className="font-sans-semibold text-sm text-status-foreground">{label}</Text>
+			<Text className="font-sans-semibold text-body text-status-foreground">{label}</Text>
 		</View>
 	);
 }
@@ -63,7 +63,7 @@ export function LabelChip({ label }: { readonly label: GithubLabel }): React.JSX
 	return (
 		// The colours are GitHub data, not design tokens: they are set inline.
 		<View accessible accessibilityLabel={`Label ${label.name}`} className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: colors.background }}>
-			<Text className="font-sans-medium text-xs" style={{ color: colors.text }}>
+			<Text className="font-sans-medium text-caption" style={{ color: colors.text }}>
 				{label.name}
 			</Text>
 		</View>

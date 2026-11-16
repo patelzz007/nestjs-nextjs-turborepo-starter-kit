@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Format the figures",
+		"do": {
+			"text": "Pass values already formatted for the reader: “RM 4,210”.",
+			"file": "stat-card-do-1",
+			"export": "StatCardDo1Example"
+		},
+		"dont": {
+			"text": "Don't pass raw numbers like 4210.5.",
+			"file": "stat-card-dont-1",
+			"export": "StatCardDont1Example"
+		}
+	},
+	{
+		"title": "Keep it to a few headlines",
+		"do": {
+			"text": "Show the two to four numbers that matter on this screen.",
+			"file": "stat-card-do-2",
+			"export": "StatCardDo2Example"
+		},
+		"dont": {
+			"text": "Don't line up eight figures: none of them reads as the headline.",
+			"file": "stat-card-dont-2",
+			"export": "StatCardDont2Example"
+		}
+	}
+]

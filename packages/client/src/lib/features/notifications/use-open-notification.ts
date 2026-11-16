@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { InAppNotificationResponse, NotificationSurface } from "@workspace/shared";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "../../navigation/use-progress-router";
 import { useCallback } from "react";
 
 import { apiRouter } from "../../api/endpoints";
@@ -19,7 +19,7 @@ const INBOX_SCOPE = apiRouter.notifications.inbox.scopeKey(undefined);
 export function useOpenNotification(surface: NotificationSurface): (notification: InAppNotificationResponse) => void {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const markRead = api.notifications.read.useMutation();
 
 	return useCallback(

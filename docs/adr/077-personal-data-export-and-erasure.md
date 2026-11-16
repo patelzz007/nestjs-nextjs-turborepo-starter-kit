@@ -3,8 +3,11 @@ title: "ADR 077: Personal-data export and account erasure"
 tags: ["adr", "privacy", "security", "data"]
 description: "\"Download my data\" streams a zip of a person's own data; \"Delete my account\" classifies every table (erase, anonymise, keep masked, merchant's record, blocks erasure), keeps a tombstone user row, waits a 30-day grace period, and lets support erase with a recorded, audited reason."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&h=630"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/077-personal-data-export-and-erasure.webp"
 order: 77
 ---
 

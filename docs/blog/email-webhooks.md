@@ -3,6 +3,8 @@ title: "Delivering Reliable Email with Resend Webhooks"
 description: "Transaction emails are only as good as their delivery pipeline. We wired Resend webhooks into the API with signature verification, per-IP rate limiting and live status tracking."
 author: "Acme Inc."
 date: 1786665600000
+lastUpdated: 1786665600000
+editedAt: 1793976836000
 category: "Integrations"
 ---
 

@@ -1,12 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import { ArticlePage } from "@/components/article-page";
 import { postHref } from "@/lib/blog";
+import { PERMANENT_REDIRECT_STATUS, redirectTarget } from "@/lib/redirects";
 import { pageHead } from "@/lib/seo";
 import { fetchPost } from "@/server/functions";
 
 export const Route = createFileRoute("/blog/$")({
+	beforeLoad: ({ params }) => {
+		const target = redirectTarget(postHref(params._splat ?? ""));
+		if (target !== null) {
+			redirect({ href: target, statusCode: PERMANENT_REDIRECT_STATUS, throw: true });
+		}
+	},
 	loader: ({ params }) => fetchPost({ data: { id: params._splat ?? "" } }),
 	head: ({ loaderData }) =>
 		loaderData === undefined

@@ -25,6 +25,8 @@ export const ROOT_TOKEN_CLASS = [
 	"data-[has-diff]:[--code-block-gutter-gap:--spacing(4)]",
 	"[--code-block-line-height:1.5rem]",
 	"[--code-block-font-size:0.8125rem]",
+	/* The code face: the app's `--font-code` (JetBrains Mono in these apps), else its mono font. */
+	"[--code-block-font:var(--font-code,var(--font-mono))]",
 	"[--code-block-copy-inset:--spacing(2)]",
 	/* Where a PINNED control starts. With a header composed in, the root's top
 	   edge is the header, so an unadjusted inset drops the copy button onto the
@@ -56,7 +58,12 @@ export const ROOT_TOKEN_CLASS = [
 	"[--code-block-caret-color:var(--primary)]",
 ].join(" ");
 
-export const ROOT_BASE_CLASS = "group/code-block relative flex min-w-0 flex-col rounded-(--code-block-radius) text-left";
+/**
+ * `isolate`: the block's own layers (the sticky line numbers at z-10, diff glyphs at z-20) stack
+ * inside it, never against the page's: without it they painted over a sticky page header with
+ * the same z-index (the showcase search bar).
+ */
+export const ROOT_BASE_CLASS = "group/code-block relative isolate flex min-w-0 flex-col rounded-(--code-block-radius) text-left";
 
 export const ROOT_SURFACE_CLASS = "border border-border bg-card text-card-foreground bg-clip-padding";
 

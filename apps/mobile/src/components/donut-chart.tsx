@@ -63,10 +63,10 @@ export function DonutChart({ title, segments, centerValue, centerLabel, testID }
 					);
 				})}
 				<View className="absolute inset-0 items-center justify-center px-8" importantForAccessibility="no-hide-descendants">
-					<Text className="font-sans-semibold text-xl text-foreground" numberOfLines={1} adjustsFontSizeToFit>
+					<Text className="font-sans-semibold text-h3 text-foreground" numberOfLines={1} adjustsFontSizeToFit>
 						{centerValue}
 					</Text>
-					<Text className="font-sans text-xs text-muted-foreground">{centerLabel}</Text>
+					<Text className="text-caption font-sans text-muted-foreground">{centerLabel}</Text>
 				</View>
 			</View>
 			<ShareLegend segments={segments} />

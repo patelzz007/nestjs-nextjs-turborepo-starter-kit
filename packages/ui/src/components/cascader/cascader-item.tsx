@@ -111,6 +111,7 @@ const INDICATOR_RENDER = <span data-slot="cascader-item-indicator" className={IN
 export type CascaderItemAriaProps = Pick<React.AriaAttributes, "aria-label" | "aria-setsize" | "aria-posinset" | "aria-expanded" | "aria-controls">;
 
 export interface CascaderItemProps extends CascaderItemAriaProps {
+	/** The node this row renders. */
 	readonly node: CascaderNodeBase;
 	/** Explicit render index. Required while virtualized and DELIBERATELY IGNORED otherwise: it self-registers the row and breaks `aria-activedescendant`. */
 	readonly index?: number | undefined;
@@ -126,7 +127,9 @@ export interface CascaderItemProps extends CascaderItemAriaProps {
 	readonly indent?: number | undefined;
 	/** Whether the node has children. Defaults to the cascader's own answer, as do the four below: callers pass them so a memoised row stays off the volatile context. */
 	readonly branch?: boolean | undefined;
+	/** Whether the node may be committed. */
 	readonly selectable?: boolean | undefined;
+	/** Whether the node is currently selected. */
 	readonly selected?: boolean | undefined;
 	/** Some but not all of the loaded subtree selected. `cascade` only. */
 	readonly indeterminate?: boolean | undefined;
@@ -140,15 +143,21 @@ export interface CascaderItemProps extends CascaderItemAriaProps {
 	readonly childrenLoading?: boolean | undefined;
 	/** Branch row only: the last fetch of this node's children failed. The same box becomes the retry. */
 	readonly childrenError?: boolean | undefined;
+	/** Classes for the row. */
 	readonly className?: string | undefined;
+	/** Applied to the outer shell, which is the element that owns the height. */
 	readonly style?: React.CSSProperties | undefined;
+	/** Runs BEFORE the row decides what a press means, so it is the place to veto one. */
 	readonly onClick?: ((event: CascaderRowEvent) => void) | undefined;
+	/** The same, on the drag-select path Base UI also commits from. */
 	readonly onMouseUp?: ((event: CascaderRowEvent) => void) | undefined;
+	/** The row's tooltip text, for a label that may be truncated. */
 	readonly title?: string | undefined;
 	/** The position the virtualizer measures this row at, written to `data-index`. Windowed rows only. */
 	readonly measureIndex?: number | undefined;
 	/** Trail rows only: this row's column is open to its right. */
 	readonly open?: boolean | undefined;
+	/** Replaces the row's whole body - icon, label, description, count, chevron and check - while the row keeps its role, its ARIA and its press behaviour. The root's `renderItem` still wins over it. This is the hand-composition escape hatch: reach for it on a row you are already placing yourself. */
 	readonly children?: React.ReactNode;
 }
 
@@ -871,6 +880,7 @@ const CASCADER_LABEL_CLASS = `${ROW_INSET_CLASS} ${ROW_FLUSH_CLASS} block trunca
 const CASCADER_SEPARATOR_CLASS = "-mx-(--cascader-list-pad) my-1 h-px shrink-0 bg-border";
 
 export interface CascaderGroupProps extends Omit<ComboboxPrimitive.Group.Props, "className"> {
+	/** Classes for the group. */
 	readonly className?: string | undefined;
 }
 
@@ -889,7 +899,9 @@ const CascaderGroup = React.forwardRef<HTMLDivElement, CascaderGroupProps>(funct
 });
 
 export interface CascaderLabelProps extends Omit<ComboboxPrimitive.GroupLabel.Props, "className" | "style"> {
+	/** Classes for the group label. */
 	readonly className?: string | undefined;
+	/** Applied to the outer shell, which is the element that owns the height. */
 	readonly style?: React.CSSProperties | undefined;
 }
 
@@ -911,6 +923,7 @@ const CascaderLabel = React.forwardRef<HTMLDivElement, CascaderLabelProps>(funct
 });
 
 export interface CascaderSeparatorProps extends Omit<ComboboxPrimitive.Separator.Props, "className"> {
+	/** Classes for the separator. */
 	readonly className?: string | undefined;
 }
 

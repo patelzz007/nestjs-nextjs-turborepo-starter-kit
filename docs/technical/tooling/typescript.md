@@ -4,8 +4,11 @@ tags: ["typescript", "tooling", "config"]
 description: "How TypeScript is configured across the monorepo via the shared @workspace/typescript-config package."
 order: 5
 author: "Platform Team"
+category: "Tooling"
+date: 1788220800000
 lastUpdated: 1792886400000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/tooling/typescript.webp"
 ---
 
 # TypeScript Configs & How To Use Them

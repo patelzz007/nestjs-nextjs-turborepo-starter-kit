@@ -3,8 +3,11 @@ title: "ADR 034: Immediate Per-Session Revocation"
 tags: ["adr", "auth", "sessions", "jwt"]
 description: "Access tokens carry the id of the session that issued them, and the per-request token-state check rejects revoked sessions, so signing out one device takes effect on that device's next request."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1791550954000
+coverImage: "/images/covers/adr/034-immediate-per-session-revocation.webp"
 order: 34
 ---
 

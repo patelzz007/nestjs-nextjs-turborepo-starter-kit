@@ -3,8 +3,11 @@ title: "ADR 083: Generated Standard RLS Policies"
 tags: ["adr", "rls", "security", "database", "tooling"]
 description: "Policies that repeat across tables are generated from one per-table list; one-off policies stay hand-written SQL."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793923200000
 lastUpdated: 1793923200000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/083-generated-standard-rls-policies.webp"
 order: 83
 ---
 

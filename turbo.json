@@ -44,6 +44,9 @@
 		"CORS_ORIGINS",
 		"DATABASE_URL",
 		"DATABASE_SESSION_URL",
+		"DOCS_SYNC_GITHUB_REF",
+		"DOCS_SYNC_GITHUB_REPOSITORY",
+		"DOCS_SYNC_GITHUB_TOKEN",
 		"EMAIL_FROM_ADDRESS",
 		"EMAIL_MAX_ATTEMPTS",
 		"EMAIL_MODE",
@@ -111,7 +114,7 @@
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": [".next/**", "!.next/cache/**", "dist/**"],
 			"env": [
-				"ADMIN_COMPONENT_GALLERY",
+				"ADMIN_SHOWCASE",
 				"EXPO_PUBLIC_API_URL",
 				"EXPO_PUBLIC_API_PORT",
 				"EXPO_PUBLIC_IOS_STORE_URL",

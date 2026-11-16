@@ -95,7 +95,7 @@ export function ActivityDashboard({ dashboard, insights, selection }: ActivityDa
 			</Card>
 			{/* One surface split by hairlines, not four boxes: the inner row runs a point past the frame on the
 			    right and bottom, so the last column's and last row's lines fall outside its clipped edge. */}
-			<View className="overflow-hidden rounded-2xl border border-border bg-card">
+			<View className="rounded-card overflow-hidden border border-border bg-card">
 				<View className="-mr-px -mb-px flex-row flex-wrap" testID="analytics-kpis">
 					{ACTIVITY_KPIS.map((definition: KpiDefinition): React.JSX.Element => (
 						<KpiCard key={definition.key} view={kpiViewOf(definition, dashboard, formatters)} comparisonLabel={comparisonLabel} />

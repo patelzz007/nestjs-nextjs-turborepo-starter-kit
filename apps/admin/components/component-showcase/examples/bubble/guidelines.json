@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep each side to one colour",
+		"do": {
+			"text": "Use one colour for the viewer's bubbles and one for everyone else's.",
+			"file": "bubble-do-1",
+			"export": "BubbleDo1Example"
+		},
+		"dont": {
+			"text": "Don't mix colours on one side: people cannot tell who said what.",
+			"file": "bubble-dont-1",
+			"export": "BubbleDont1Example"
+		}
+	},
+	{
+		"title": "Save red for real trouble",
+		"do": {
+			"text": "Use the `destructive` variant only for failures that need attention.",
+			"file": "bubble-do-2",
+			"export": "BubbleDo2Example"
+		},
+		"dont": {
+			"text": "Don't colour ordinary replies red: real alerts stop standing out.",
+			"file": "bubble-dont-2",
+			"export": "BubbleDont2Example"
+		}
+	}
+]

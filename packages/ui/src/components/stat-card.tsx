@@ -3,10 +3,13 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 export interface StatCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "children"> {
+	/** What the number counts. */
 	readonly label: string;
 	/** The formatted headline value. */
 	readonly value: string;
+	/** Context under the value, such as "+42 this week". */
 	readonly hint: string;
+	/** An icon for the metric, drawn in a tinted tile. */
 	readonly icon: React.ReactNode;
 	/** The icon tile's colour — pick by what the stat is about, so a row of cards scans by meaning. */
 	readonly tone?: IconTileTone;

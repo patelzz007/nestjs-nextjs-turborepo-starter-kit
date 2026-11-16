@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say the limits up front",
+		"do": {
+			"text": "Show the types and size allowed before people pick.",
+			"file": "file-upload-do-1",
+			"export": "FileUploadDo1Example"
+		},
+		"dont": {
+			"text": "Don't let people find the limits by being refused.",
+			"file": "file-upload-dont-1",
+			"export": "FileUploadDont1Example"
+		}
+	},
+	{
+		"title": "Show progress",
+		"do": {
+			"text": "Show each file's progress while it uploads.",
+			"file": "file-upload-do-2",
+			"export": "FileUploadDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave people guessing whether a large file is still sending.",
+			"file": "file-upload-dont-2",
+			"export": "FileUploadDont2Example"
+		}
+	}
+]

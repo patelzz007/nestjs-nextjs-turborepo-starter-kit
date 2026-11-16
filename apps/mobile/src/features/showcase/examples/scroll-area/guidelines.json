@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say there is more",
+		"do": {
+			"text": "Fade the edges or show the bar so people know the area scrolls.",
+			"file": "scroll-area-do-1",
+			"export": "ScrollAreaDo1Example"
+		},
+		"dont": {
+			"text": "Don't hide the bar on a short box that clips its content without a hint.",
+			"file": "scroll-area-dont-1",
+			"export": "ScrollAreaDont1Example"
+		}
+	},
+	{
+		"title": "Scroll only when needed",
+		"do": {
+			"text": "Use a scroll area for content longer than its box.",
+			"file": "scroll-area-do-2",
+			"export": "ScrollAreaDo2Example"
+		},
+		"dont": {
+			"text": "Don't box content that already fits: it only adds a frame.",
+			"file": "scroll-area-dont-2",
+			"export": "ScrollAreaDont2Example"
+		}
+	}
+]

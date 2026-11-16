@@ -35,7 +35,7 @@ import { PasswordStrengthMeter } from "@workspace/ui/components/password-strengt
 import { Separator } from "@workspace/ui/components/separator";
 import { KeyRound } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "../../../navigation/use-progress-router";
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 
 import { resolveAuthErrorMessage } from "../../../api/error-messages";
@@ -96,7 +96,7 @@ export function LoginForm({
 	const [backupCode, setBackupCode] = useState("");
 	const [verificationId, setVerificationId] = useState<string | null>(null);
 	const [verificationCode, setVerificationCode] = useState("");
-	const router = useRouter();
+	const router = useProgressRouter();
 	// The one-time-code field of the current step. When the form switches to a
 	// code step (email verification, authenticator, backup code) focus moves to
 	// it, so keyboard and screen-reader users land where the new step starts.

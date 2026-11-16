@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { SidebarAuthorizationSchema, type SidebarAuthorization, type SidebarMenuData, type SidebarMenuItem } from "@/lib/navigation/sidebar";
 import { SIDEBAR_MENU_DATA } from "@/lib/navigation/sidebar-menu";
-import { COMPONENT_GALLERY_FEATURE } from "@/lib/feature-flags";
+import { SHOWCASE_FEATURE } from "@/lib/feature-flags";
 import { ROUTE_PATTERNS, ROUTES } from "@/lib/routes";
 
 /**
@@ -161,13 +161,13 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	{
 		prefix: ROUTE_PATTERNS.kanban.task,
 		authorization: { permissions: [PERMISSION.KANBAN_TASK.READ, PERMISSION.KANBAN_TASK.LIST], mode: "all" },
-		featureFlag: COMPONENT_GALLERY_FEATURE,
+		featureFlag: SHOWCASE_FEATURE,
 	},
 	// GET + PATCH /admin/kanban/tasks/:taskId (READ + UPDATE)
 	{
 		prefix: ROUTE_PATTERNS.kanban.editTask,
 		authorization: { permissions: [PERMISSION.KANBAN_TASK.READ, PERMISSION.KANBAN_TASK.UPDATE], mode: "all" },
-		featureFlag: COMPONENT_GALLERY_FEATURE,
+		featureFlag: SHOWCASE_FEATURE,
 	},
 	// GET /admin/operations/backups — @SuperAdminOnly (ADR 068)
 	// Platform broadcasts (ADR 073): write (CREATE), open one (READ), edit a draft (READ + UPDATE).

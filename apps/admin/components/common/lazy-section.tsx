@@ -24,13 +24,59 @@ export interface LazySectionProps {
 	 * bones repaint on every frame while the page scrolls.
 	 */
 	readonly placeholder?: React.ReactNode;
+	/**
+	 * How the content appears once mounted. `animate` (the default) fades and
+	 * slides it in. `instant` shows it as is — for a long page of sections that
+	 * mount well before they scroll into view (a large `rootMargin`), where a
+	 * reveal would only ever play on screen as flicker.
+	 */
+	readonly reveal?: LazySectionReveal;
+	/**
+	 * How the mount is committed. `transition` (the default) time-slices a heavy
+	 * mount so scrolling stays smooth, but React then holds every section that
+	 * reveals in the same moment until all of their lazy chunks have loaded.
+	 * `urgent` commits at once, so each section's own loading state shows and it
+	 * fills in as soon as ITS chunk arrives — for a page of many sections that
+	 * each load their own code (a showcase page's examples).
+	 */
+	readonly commit?: LazySectionCommit;
 }
+
+export type LazySectionCommit = "transition" | "urgent";
+
+/** Overflow values that make an element scroll its content (and clip what lies outside it). */
+const SCROLLING_OVERFLOW = /(auto|scroll|overlay)/u;
+
+/**
+ * The element `node` scrolls inside: its nearest ancestor whose content
+ * scrolls vertically, or `null` for the document (the viewport). The observer
+ * measures against it, because a `rootMargin` only extends the ROOT — a
+ * section clipped by a scrolling ancestor (the panel's `<main>`) would
+ * otherwise count as hidden however large the margin.
+ */
+export function scrollParentOf(node: HTMLElement): HTMLElement | null {
+	for (let parent = node.parentElement; parent !== null; parent = parent.parentElement) {
+		if (SCROLLING_OVERFLOW.test(getComputedStyle(parent).overflowY)) {
+			return parent;
+		}
+	}
+	return null;
+}
+
+export type LazySectionReveal = "animate" | "instant";
+
+const REVEAL_CLASS_NAMES: Readonly<Record<LazySectionReveal, string | undefined>> = {
+	animate: "animate-in duration-300 fill-mode-both fade-in slide-in-from-bottom-2",
+	instant: undefined,
+};
 
 /**
  * Viewport-triggered mounting for below-the-fold sections.
  *
  * Renders fixed-height section bones until an `IntersectionObserver` reports the
- * wrapper is near the viewport (default: within 300px), then mounts `children`
+ * wrapper is near the viewport (default: within 300px) — measured against the
+ * element it scrolls inside, so the margin holds inside a scrolling panel —
+ * then mounts `children`
  * with a fade + slide-up reveal animation. The mount is a transition, so React
  * renders it in slices between frames and scrolling stays smooth while a heavy
  * section mounts. Once revealed it stays mounted (no
@@ -54,7 +100,7 @@ export interface LazySectionProps {
  * in the scroll path. Do NOT wrap a `LazySection` inside a `display: none`
  * container (closed tab/accordion) — it would never trigger until shown.
  */
-export function LazySection({ height, children, rootMargin = "300px 0px", placeholder }: LazySectionProps): React.JSX.Element {
+export function LazySection({ height, children, rootMargin = "300px 0px", placeholder, reveal = "animate", commit = "transition" }: LazySectionProps): React.JSX.Element {
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const [hasIntersected, setHasIntersected] = React.useState(false);
 	const isClient = useIsClient();
@@ -70,29 +116,29 @@ export function LazySection({ height, children, rootMargin = "300px 0px", placeh
 		const observer = new IntersectionObserver(
 			(entries) => {
 				if (entries.some((entry) => entry.isIntersecting)) {
-					// A transition: mounting a heavy section (a data grid, a chart) is
-					// time-sliced and yields to scrolling instead of blocking frames.
-					React.startTransition((): void => {
+					if (commit === "urgent") {
 						setHasIntersected(true);
-					});
+					} else {
+						// A transition: mounting a heavy section (a data grid, a chart) is
+						// time-sliced and yields to scrolling instead of blocking frames.
+						React.startTransition((): void => {
+							setHasIntersected(true);
+						});
+					}
 					observer.disconnect();
 				}
 			},
-			{ rootMargin },
+			{ root: scrollParentOf(node), rootMargin },
 		);
 		observer.observe(node);
 		return (): void => {
 			observer.disconnect();
 		};
-	}, [visible, rootMargin]);
+	}, [visible, rootMargin, commit]);
 
 	return (
 		<div ref={containerRef}>
-			{visible ? (
-				<div className="animate-in duration-300 fill-mode-both fade-in slide-in-from-bottom-2">{children}</div>
-			) : (
-				<div aria-hidden="true">{placeholder ?? <SectionBones height={height} />}</div>
-			)}
+			{visible ? <div className={REVEAL_CLASS_NAMES[reveal]}>{children}</div> : <div aria-hidden="true">{placeholder ?? <SectionBones height={height} />}</div>}
 		</div>
 	);
 }

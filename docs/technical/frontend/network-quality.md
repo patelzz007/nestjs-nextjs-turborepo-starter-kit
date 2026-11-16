@@ -4,8 +4,11 @@ tags: ["network", "ping", "ui", "mobile", "status"]
 description: "The connection pill in every app shell (admin, web, merchant, mobile): a speedtest-style ping, jitter and packet-loss test against the API's GET /health/ping, graded green / yellow / red."
 order: 27
 author: "Platform Team"
+category: "Frontend"
+date: 1792886400000
 lastUpdated: 1792972800000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792949879000
+coverImage: "/images/covers/technical/frontend/network-quality.webp"
 ---
 
 # Connection quality indicator

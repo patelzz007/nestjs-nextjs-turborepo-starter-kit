@@ -12,13 +12,14 @@ import * as React from "react";
 import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
+import { FieldSurfaceProvider } from "../lib/field-surface";
 import { Separator } from "./separator";
 
 export const listGroupVariants = cva("gap-2");
 /** The one surface the rows sit on. */
-export const listGroupSurfaceVariants = cva("overflow-hidden rounded-2xl border border-border bg-card");
-export const listGroupTitleVariants = cva("font-sans-semibold px-1 text-sm text-muted-foreground");
-export const listGroupFooterVariants = cva("px-1 font-sans text-sm leading-5 text-muted-foreground");
+export const listGroupSurfaceVariants = cva("rounded-card overflow-hidden border border-border bg-card");
+export const listGroupTitleVariants = cva("font-sans-semibold text-body px-1 text-muted-foreground");
+export const listGroupFooterVariants = cva("text-body px-1 font-sans text-muted-foreground");
 /** Each row's side padding inside the surface. */
 export const listGroupRowVariants = cva("px-4");
 
@@ -53,7 +54,8 @@ export const ListGroup = React.memo(
 					{rows.map((row, position) => (
 						<View key={rowKeyOf(row, position)} className={listGroupRowVariants()}>
 							{position === 0 ? null : <Separator {...(testID === undefined ? {} : { testID: `${testID}-line` })} />}
-							{row}
+							{/* A field in a row takes the group's card fill. */}
+							<FieldSurfaceProvider surface="card">{row}</FieldSurfaceProvider>
 						</View>
 					))}
 				</View>

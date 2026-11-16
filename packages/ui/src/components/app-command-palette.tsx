@@ -58,7 +58,7 @@ export interface AppCommandPaletteProps {
 	readonly renderIcon: (iconName: string | undefined, className: string) => React.ReactNode;
 	readonly aliasMap?: Readonly<Record<string, readonly string[]>>;
 	/**
-	 * The app's own result groups (`CommandGroup`s: records found by the
+	 * The app's own result groups (kit `CommandGroup`s: records found by the
 	 * search text, actions for the page in focus), listed first. `hasExtraResults`
 	 * says whether they hold anything, so the empty state and the suggestion only
 	 * show when nothing at all matched.
@@ -187,6 +187,10 @@ export const AppCommandPalette = React.forwardRef<HTMLDivElement, AppCommandPale
 		return map;
 	}, [searchableItems]);
 
+	// Rows are keyed by id, not URL: two entries may lead to one page (a section and its "All …" child),
+	// and a shared value would highlight both rows at once.
+	const searchableItemById = React.useMemo(() => new Map(searchableItems.map((item): [string, PaletteSearchableItem] => [item.id, item])), [searchableItems]);
+
 	/* ── Pinned navigation items ────────────────────────────────── */
 
 	const pinnedItems = React.useMemo(() => {
@@ -244,10 +248,13 @@ export const AppCommandPalette = React.forwardRef<HTMLDivElement, AppCommandPale
 	);
 
 	const handleSelectItem = React.useCallback(
-		(value: string): void => {
-			navigateToUrl(value);
+		(itemId: string): void => {
+			const item = searchableItemById.get(itemId);
+			if (item !== undefined) {
+				navigateToUrl(item.url);
+			}
 		},
-		[navigateToUrl],
+		[navigateToUrl, searchableItemById],
 	);
 
 	const handleSelectChip = React.useCallback(

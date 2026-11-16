@@ -1,0 +1,72 @@
+[
+	{
+		"id": "c-context-menu-1",
+		"label": "Basic",
+		"description": "Basic context menu.. Best for the bare minimum of 3 plain text rows in a single group, with the middle row disabled.",
+		"file": "context-menu-1",
+		"export": "ContextMenu1Example"
+	},
+	{
+		"id": "c-context-menu-2",
+		"label": "Icons",
+		"description": "Context menu with icons for common actions.. Best for clipboard commands, Copy, Cut and Paste, each with a leading icon, and a destructive Delete below a divider.",
+		"file": "context-menu-2",
+		"export": "ContextMenu2Example"
+	},
+	{
+		"id": "c-context-menu-3",
+		"label": "Shortcuts",
+		"description": "Context menu with keyboard shortcuts.. Best for navigation and save commands with a trailing key hint on each row and Forward disabled.",
+		"file": "context-menu-3",
+		"export": "ContextMenu3Example"
+	},
+	{
+		"id": "c-context-menu-4",
+		"label": "Nested Submenus",
+		"description": "Context menu with nested submenus.. Best for a More Tools flyout of 3 divided groups, Delete last, below 2 clipboard rows with key hints.",
+		"file": "context-menu-4",
+		"export": "ContextMenu4Example"
+	},
+	{
+		"id": "c-context-menu-5",
+		"label": "Labels & Separators",
+		"description": "Context menu labels and separators.. Best for a list of 4 groups, File and Edit headed by labels, with a key hint on every row down to a destructive Delete.",
+		"file": "context-menu-5",
+		"export": "ContextMenu5Example"
+	},
+	{
+		"id": "c-context-menu-6",
+		"label": "Checkbox Items",
+		"description": "Context menu with checkbox items.. Best for a list of 3 browser view toggles that show a check when on, 2 of them on at load.",
+		"file": "context-menu-6",
+		"export": "ContextMenu6Example"
+	},
+	{
+		"id": "c-context-menu-7",
+		"label": "Radio Items",
+		"description": "Context menu with radio items.. Best for a person picker and a Light, Dark or System theme switch, each a headed radio set held in state.",
+		"file": "context-menu-7",
+		"export": "ContextMenu7Example"
+	},
+	{
+		"id": "c-context-menu-8",
+		"label": "Destructive Actions",
+		"description": "Context menu with destructive actions.. Best for edit and Share over a divider, then Archive and a destructive Delete, every row led by an icon.",
+		"file": "context-menu-8",
+		"export": "ContextMenu8Example"
+	},
+	{
+		"id": "c-context-menu-9",
+		"label": "Alignment Sides",
+		"description": "Context menu with different alignment sides.. Best for a row of 6 triggers that each open on a different side, the logical inline start and end included.",
+		"file": "context-menu-9",
+		"export": "ContextMenu9Example"
+	},
+	{
+		"id": "c-context-menu-10",
+		"label": "Inside Dialog",
+		"description": "Context menu used inside a dialog component.. Best for a right click area inside a modal window, with icon rows, a More Options flyout and a destructive Delete.",
+		"file": "context-menu-10",
+		"export": "ContextMenu10Example"
+	}
+]

@@ -24,7 +24,9 @@
 export const COMPOSED_COMPONENTS: Readonly<Record<string, string>> = {
 	combobox: "./select-field",
 	"date-field": "./calendar-field",
+	"hover-card": "./popover",
 	"multi-date-field": "./calendar-field",
+	"native-select": "./select-field",
 	"text-field": "./input",
 };
 

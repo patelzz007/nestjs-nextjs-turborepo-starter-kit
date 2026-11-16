@@ -3,8 +3,11 @@ title: "POS Integration"
 tags: ["pos", "redemptions", "checkout", "api-keys", "terminals", "pairing", "sales"]
 description: "How a merchant's point-of-sale checks customers' reward QR codes and deducts rewards after payment."
 author: "Platform Team"
+category: "Engineering"
+date: 1790899200000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/technical/pos-integration.webp"
 ---
 
 # POS integration

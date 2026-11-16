@@ -10,7 +10,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { ArrowRightLeft, CircleDot, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { DetailBreadcrumb } from "@/components/common/detail-breadcrumb";
@@ -114,7 +114,7 @@ export interface KanbanTaskDetailViewProps {
 export function KanbanTaskDetailView({ taskId, initialTask }: KanbanTaskDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { can } = useAuthorization();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const canUpdate = can(PERMISSION.KANBAN_TASK.UPDATE);
 	const canDelete = can(PERMISSION.KANBAN_TASK.DELETE);

@@ -4,8 +4,11 @@ tags: ["configuration", "environment", "nextjs", "zod", "security"]
 description: "How web, admin and merchant read environment variables: one zod-validated config per app, split into a browser-safe env.client and a server-only env.server, validated once and failing fast with value-free errors. Also the Expo app's EXPO_PUBLIC_* and MOBILE_* variables."
 order: 7
 author: "Platform Team"
+category: "Configuration"
+date: 1790899200000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/configuration/frontend.webp"
 ---
 
 # Configuration & Environment Variables (Next.js apps)
@@ -132,7 +135,7 @@ Every app's `.env.example` lists these with comments. Copy it to `.env`.
 | `NEXT_PUBLIC_SESSION_POLL_MS` | | optional | | client | whole ms. Unset or `0` → `null` (disabled) |
 | `NODE_ENV` | set by Next | set by Next | set by Next | server | `development` / `test` / `production` |
 | `COOKIE_DOMAIN` | optional | optional | optional | server | bare host (`localhost`, `.example.com`) |
-| `ADMIN_COMPONENT_GALLERY` | | optional | | server | `true` / `false`. Unset → the developer component gallery (`/components`) is served in development and test, **not** in production; off, the route answers 404 and the sidebar hides it |
+| `ADMIN_SHOWCASE` | | optional | | server | `true` / `false`. Unset → the developer component showcase (`/components`, the `showcase` flag's default) is served in development and test, **not** in production; off, the route answers 404 and the sidebar hides it |
 
 Empty values (`FOO=`) are treated as unset. There are **no hardcoded URL
 fallbacks**. A missing origin fails fast instead of silently pointing

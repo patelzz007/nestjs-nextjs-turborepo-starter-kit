@@ -73,20 +73,20 @@ function ServerCard({ server, onOpen }: { readonly server: OpsServerSummary; rea
 				<View className="gap-3">
 					<View className="flex-row items-start justify-between gap-3">
 						<View className="min-w-0 flex-1 gap-0.5">
-							<Text className="font-sans-semibold text-base text-foreground" numberOfLines={1}>
+							<Text className="font-sans-semibold text-body-lg text-foreground" numberOfLines={1}>
 								{server.name}
 							</Text>
-							<Text className="font-sans text-sm text-muted-foreground" numberOfLines={1}>
+							<Text className="text-body font-sans text-muted-foreground" numberOfLines={1}>
 								{`${PROVIDER_LABELS[server.provider]} · ${server.hostname ?? "agent not reporting yet"}`}
 							</Text>
-							<Text className="font-sans text-xs text-muted-foreground" numberOfLines={2}>
+							<Text className="text-caption font-sans text-muted-foreground" numberOfLines={2}>
 								{machineSpecLine(server)}
 							</Text>
 						</View>
 						<StatusBadge icon={ActivityIcon} label={health.label} accessibilityLabel={`Health: ${health.label}`} tone={health.tone} pulsing={server.health === "UP"} />
 					</View>
 					{items.length === 0 ? (
-						<Text className="font-sans text-sm text-muted-foreground">No live sample: the agent has not reported in the last 30 seconds.</Text>
+						<Text className="text-body font-sans text-muted-foreground">No live sample: the agent has not reported in the last 30 seconds.</Text>
 					) : (
 						<ProgressList items={items} testID={`server-${server.id}-usage`} />
 					)}
@@ -116,7 +116,7 @@ export function ServersScreen(): React.JSX.Element {
 				overview.isError ? (
 					<ErrorState message="The servers could not be loaded." retryLabel="Try again" onRetry={refresh} retrying={overview.isRefetching} />
 				) : (
-					<Text className="font-sans text-sm text-muted-foreground">Loading…</Text>
+					<Text className="text-body font-sans text-muted-foreground">Loading…</Text>
 				)
 			) : servers.length === 0 ? (
 				<EmptyState icon={ServerIcon} title="No servers yet" message="A SuperAdmin registers servers in the admin panel." />

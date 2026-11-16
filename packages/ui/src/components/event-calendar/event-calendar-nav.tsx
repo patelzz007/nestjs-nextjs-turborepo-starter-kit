@@ -202,7 +202,10 @@ function ViewOption({ view, dayCount, active, label, shortcut, onSelect }: ViewO
 	);
 }
 
-export type EventCalendarViewSwitcherProps = Omit<React.ComponentPropsWithoutRef<"button">, "children"> & { readonly children?: React.ReactNode };
+export type EventCalendarViewSwitcherProps = Omit<React.ComponentPropsWithoutRef<"button">, "children"> & {
+	/** Custom content in place of the view menu's label. */
+	readonly children?: React.ReactNode;
+};
 
 /** Dropdown listing the available views (and the N-day presets). */
 export const EventCalendarViewSwitcher = React.forwardRef<HTMLButtonElement, EventCalendarViewSwitcherProps>(function EventCalendarViewSwitcher(
@@ -279,7 +282,10 @@ export const EventCalendarViewSwitcher = React.forwardRef<HTMLButtonElement, Eve
 	);
 });
 
-export type EventCalendarDatePickerProps = Omit<React.ComponentPropsWithoutRef<"button">, "children"> & { readonly children?: React.ReactNode };
+export type EventCalendarDatePickerProps = Omit<React.ComponentPropsWithoutRef<"button">, "children"> & {
+	/** Custom content in place of the date button's label. */
+	readonly children?: React.ReactNode;
+};
 
 /** Optional go-to-date picker (the kit Calendar in a popover); not part of the default nav. */
 export const EventCalendarDatePicker = React.forwardRef<HTMLButtonElement, EventCalendarDatePickerProps>(function EventCalendarDatePicker(
@@ -349,7 +355,11 @@ export const EventCalendarNav = React.forwardRef<HTMLDivElement, EventCalendarNa
 ): React.JSX.Element {
 	const viewConfig = useEventCalendarViewConfig();
 	return (
-		<div ref={forwardedRef} data-slot="event-calendar-nav" className={cn("flex min-w-0 flex-wrap items-center gap-1 p-2", viewConfig.classNames?.nav, className)} {...props}>
+		<div
+			ref={forwardedRef}
+			data-slot="event-calendar-nav"
+			className={cn("flex min-w-0 flex-wrap items-center gap-1 p-2", viewConfig.stickyNav && "sticky top-0 z-sticky bg-card", viewConfig.classNames?.nav, className)}
+			{...props}>
 			{children ?? (
 				<>
 					<EventCalendarNavToday />

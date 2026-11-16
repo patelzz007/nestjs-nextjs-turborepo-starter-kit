@@ -3,8 +3,11 @@ title: "DDD/CQRS migration: handoff and pending work"
 description: "Where the DDD + CQRS migration stands, how to resume it, and every task still open."
 tags: ["architecture", "ddd", "cqrs", "migration"]
 author: "Platform Team"
+category: "Architecture"
+date: 1792368000000
 lastUpdated: 1792368000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/architecture/ddd-cqrs-handoff.webp"
 order: 99
 ---
 

@@ -62,7 +62,7 @@ const SUB_SCREENS: ReadonlyMap<AppRoute, ScreenHeadingOf> = new Map<AppRoute, Sc
 	[ROUTES.appearance, translated("appearance")],
 	[ROUTES.appLock, translated("appLock")],
 	[ROUTES.language, translated("language")],
-	[ROUTES.components, translated("components")],
+	[ROUTES.showcase, translated("showcase")],
 	[ROUTES.till, translated("till")],
 	[ROUTES.notifications, translated("notifications")],
 	[ROUTES.notificationSettings, translated("notificationSettings")],
@@ -89,7 +89,41 @@ const SCREENS: ReadonlyMap<string, ScreenHeadingOf> = new Map<string, ScreenHead
 
 const NO_HEADING: ScreenHeading = { title: "", subtitle: "" };
 
+/** A showcase component's screen (`/showcase/button-group`) or its docs (`…/docs`). */
+const SHOWCASE_COMPONENT_PATH = /^\/showcase\/(?<slug>[a-z0-9-]+)(?<docs>\/docs)?$/u;
+
+/** `button-group` → "Button group": a component's name from its slug, without loading the showcase (it is not in every build). */
+export function componentNameOfSlug(slug: string): string {
+	const words = slug.split("-").join(" ");
+	return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
+/** A showcase component's page: which component, and whether it is its docs. */
+export interface ShowcasePage {
+	readonly slug: string;
+	readonly docs: boolean;
+}
+
+/** The second line under a component's docs page: its name, then this. */
+export const SHOWCASE_DOCS_LABEL = "Docs & API";
+
+/** The showcase component page at `pathname` (`/showcase/button`, `/showcase/button/docs`), or `null`. */
+export function showcasePageOf(pathname: string): ShowcasePage | null {
+	const match = SHOWCASE_COMPONENT_PATH.exec(pathname)?.groups;
+	return match?.slug === undefined ? null : { slug: match.slug, docs: match.docs !== undefined };
+}
+
+/** A showcase component's heading: the showcase's title, and which component (and whether its docs) under it. */
+function showcaseComponentHeading(pathname: string, labels: NavigationLabels): ScreenHeading | null {
+	const page = showcasePageOf(pathname);
+	if (page === null) {
+		return null;
+	}
+	const name = componentNameOfSlug(page.slug);
+	return { title: labels.headings.showcase.title, subtitle: page.docs ? `${name} · ${SHOWCASE_DOCS_LABEL}` : name };
+}
+
 /** The heading of the screen at `pathname`, in `labels`' language; empty for a path the app does not have. */
 export function screenHeadingOf(pathname: string, params: ScreenParams, labels: NavigationLabels): ScreenHeading {
-	return SCREENS.get(pathname)?.(labels, params) ?? NO_HEADING;
+	return SCREENS.get(pathname)?.(labels, params) ?? showcaseComponentHeading(pathname, labels) ?? NO_HEADING;
 }

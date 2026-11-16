@@ -144,7 +144,9 @@ export const dataGridScrollbarVariants = cva(
 const SCROLLBAR_THUMB_CLASS_NAME = "relative flex-1 rounded-full bg-border before:absolute before:-inset-0.5";
 
 export interface DataGridScrollAreaProps extends Omit<ScrollAreaPrimitive.Root.Props, "children"> {
+	/** The grid content to wrap. */
 	readonly children: React.ReactNode;
+	/** Which scrollbars to render. */
 	readonly orientation?: DataGridScrollAreaOrientation;
 }
 

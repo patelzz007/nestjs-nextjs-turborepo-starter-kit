@@ -1,0 +1,93 @@
+[
+	{
+		"id": "c-time-picker-1",
+		"label": "Inline Panel",
+		"description": "Inline time panel. Best for an always open panel set flush in a Card, where each column pick commits at once with no OK step.",
+		"file": "time-picker-1",
+		"export": "TimePicker1Example"
+	},
+	{
+		"id": "c-time-picker-2",
+		"label": "Popover",
+		"description": "Popover picker. Best for the bare root with no children and no state, drawing its own trigger and popover and starting empty.",
+		"file": "time-picker-2",
+		"export": "TimePicker2Example"
+	},
+	{
+		"id": "c-time-picker-3",
+		"label": "Typable Input",
+		"description": "Typable time input. Best for keyboard first entry in a text field with a clock button, where typed times snap to 5 minute steps.",
+		"file": "time-picker-3",
+		"export": "TimePicker3Example"
+	},
+	{
+		"id": "c-time-picker-4",
+		"label": "12-Hour Seconds",
+		"description": "12-hour clock with seconds. Best for second level precision where the trigger reads 02:45:30 PM while the stored value stays 14:45:30.",
+		"file": "time-picker-4",
+		"export": "TimePicker4Example"
+	},
+	{
+		"id": "c-time-picker-5",
+		"label": "Hour Only",
+		"description": "Hour only. Best for a small fixed width trigger at the end of a settings Item row, with only hour and AM/PM columns.",
+		"file": "time-picker-5",
+		"export": "TimePicker5Example"
+	},
+	{
+		"id": "c-time-picker-6",
+		"label": "Opening Hours",
+		"description": "Steps and opening hours. Best for an empty picker whose columns open on 08:30, the first allowed time, so an hour pick lands inside the window.",
+		"file": "time-picker-6",
+		"export": "TimePicker6Example"
+	},
+	{
+		"id": "c-time-picker-7",
+		"label": "Unavailable Slots",
+		"description": "Unavailable slots. Best for a lunch hour and a set of booked slots greyed out by one predicate, so hour 12 is disabled whole.",
+		"file": "time-picker-7",
+		"export": "TimePicker7Example"
+	},
+	{
+		"id": "c-time-picker-8",
+		"label": "Start & End",
+		"description": "Start and end time. Best for two linked pickers where moving the start shifts the end by the same amount and earlier end slots are disabled.",
+		"file": "time-picker-8",
+		"export": "TimePicker8Example"
+	},
+	{
+		"id": "c-time-picker-9",
+		"label": "Time Zone",
+		"description": "Time zone label. Best for hand composed trigger content and footer: the value, a fixed zone name and the clock, then only Clear and OK.",
+		"file": "time-picker-9",
+		"export": "TimePicker9Example"
+	},
+	{
+		"id": "c-time-picker-10",
+		"label": "Confirm Before Apply",
+		"description": "Confirm before applying. Best for popover picks, Now and Clear held as a draft that closing throws away, with OK drawn as the primary button.",
+		"file": "time-picker-10",
+		"export": "TimePicker10Example"
+	},
+	{
+		"id": "c-time-picker-11",
+		"label": "Localized",
+		"description": "Localized labels. Best for one stored value shown through 4 locale tabs, Chinese leading with the period and Arabic digits from a custom formatter.",
+		"file": "time-picker-11",
+		"export": "TimePicker11Example"
+	},
+	{
+		"id": "c-time-picker-12",
+		"label": "Form Validation",
+		"description": "Form field with validation. Best for a native form that reads the time from FormData on submit, swaps in a FieldError when empty and clears it on Reset.",
+		"file": "time-picker-12",
+		"export": "TimePicker12Example"
+	},
+	{
+		"id": "c-time-picker-13",
+		"label": "Date & Time",
+		"description": "Date and time. Best for a day and a time merged into one summary line, with 7 row columns, no footer and a Schedule button.",
+		"file": "time-picker-13",
+		"export": "TimePicker13Example"
+	}
+]

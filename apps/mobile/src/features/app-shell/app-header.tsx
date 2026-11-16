@@ -5,9 +5,13 @@
 // slim bar that keeps the menu, the title and notifications. The app draws edge to edge and the
 // header is the page's colour, so the status bar's icons follow the app's theme: dark on a light
 // page, light on a dark one. Search opens the command palette (ADR 079); the connection and session
-// pills live in the drawer. The bell carries the unread count, live (contexts/notifications).
+// pills live in the drawer. The bell carries the unread count, live (contexts/notifications). Below a tab's
+// first screen, the subtitle line holds the breadcrumb trail instead: where the page sits in the app
+// (features/navigation/app-breadcrumb.ts, the web's logic), small and on one line; a level above the page
+// goes back to it.
 
-import { useGlobalSearchParams, usePathname, useRouter } from "expo-router";
+import { Breadcrumb, type BreadcrumbItemData } from "@workspace/ui-native/components/breadcrumb";
+import { useGlobalSearchParams, usePathname, useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as React from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,7 +25,9 @@ import { usePageHeaderProgress, type PageHeaderScroll } from "../../lib/page-hea
 import { ROUTES } from "../../runtime/routes";
 import { useAppDrawerCommands } from "../app-drawer/facade";
 import { useLabels } from "../language/use-app-language";
+import { resolveAppTrail, type AppCrumb } from "../navigation/app-breadcrumb";
 import { screenHeadingOf } from "../navigation/app-screens";
+import { useDrawerGroups } from "../navigation/use-drawer-groups";
 import { AppCommandPalette } from "../navigation/app-command-palette";
 import { NAVIGATION_LABELS } from "../navigation/navigation-labels";
 import { isTabRoot } from "../navigation/drawer-destinations";
@@ -33,6 +39,27 @@ interface PathChange {
 }
 
 const NO_DRIFT = 0;
+
+/** A trail of one level only repeats the title: the header shows a trail from two levels. */
+const MIN_TRAIL_LENGTH = 2;
+/** A long trail folds its middle levels into an ellipsis (a glyph that fits the line, not a menu button). */
+const MAX_TRAIL_ITEMS = 4;
+
+/** A crumb as the kit's Breadcrumb draws it: a level above the page goes back to that screen. */
+function breadcrumbItemOf(crumb: AppCrumb, goUpTo: (href: Href) => void): BreadcrumbItemData {
+	const { href } = crumb;
+	return {
+		key: crumb.key,
+		label: crumb.label,
+		icon: crumb.icon,
+		onPress:
+			href === null
+				? undefined
+				: (): void => {
+						goUpTo(href);
+					},
+	};
+}
 export interface AppHeaderProps {
 	/** The header's scroll link, owned by the shell. */
 	readonly scroll: PageHeaderScroll;
@@ -72,6 +99,20 @@ export function AppHeader({ scroll, onHeightChange, onCollapseDistanceChange }: 
 	const unreadNotifications = useUnreadNotifications();
 	const navigationLabels = useLabels(NAVIGATION_LABELS);
 	const heading = screenHeadingOf(pathname, params, navigationLabels);
+	const drawerGroups = useDrawerGroups();
+	// Back to a level above the page: the screens over it close (it opens in its place when it is not under them).
+	const goUpTo = React.useCallback(
+		(href: Href): void => {
+			router.dismissTo(href);
+		},
+		[router],
+	);
+	const trail = React.useMemo(
+		(): readonly BreadcrumbItemData[] =>
+			resolveAppTrail(pathname, params, drawerGroups, navigationLabels).map((crumb: AppCrumb): BreadcrumbItemData => breadcrumbItemOf(crumb, goUpTo)),
+		[drawerGroups, goUpTo, navigationLabels, params, pathname],
+	);
+	const breadcrumb = trail.length < MIN_TRAIL_LENGTH ? undefined : <Breadcrumb items={trail} maxItems={MAX_TRAIL_ITEMS} size="sm" testID="app-breadcrumb" />;
 	const progress = usePageHeaderProgress(scroll);
 
 	return (
@@ -93,6 +134,7 @@ export function AppHeader({ scroll, onHeightChange, onCollapseDistanceChange }: 
 				collapseDistance={scroll.collapseDistance}
 				onHeightChange={onHeightChange}
 				onCollapseDistanceChange={onCollapseDistanceChange}
+				breadcrumb={breadcrumb}
 				testID="app-header"
 			/>
 			<AppCommandPalette visible={paletteOpen} onClose={closePalette} />

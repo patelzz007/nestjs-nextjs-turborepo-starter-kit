@@ -91,7 +91,9 @@ export function DataGridTableDndSkeletonRows<TData extends RowData>({
 	table,
 	pageSize,
 }: {
+	/** The TanStack Table instance. */
 	readonly table: DataGridCoreTable<TData>;
+	/** How many skeleton rows to draw. */
 	readonly pageSize: number;
 }): React.JSX.Element {
 	const startAndCenter = [...table.getStartVisibleLeafColumns(), ...table.getCenterVisibleLeafColumns()];
@@ -114,6 +116,7 @@ export function DataGridTableDndSkeletonRows<TData extends RowData>({
 }
 
 interface DataGridTableDndFrozenGateProps {
+	/** Content that stays put while a column is dragged. */
 	readonly children: React.ReactNode;
 	/** `true` while a column resize is in flight: widths move through CSS variables, rows need no reconciliation. */
 	readonly frozen: boolean;
@@ -223,6 +226,7 @@ const dndHandleVariants = cva("-ms-2 size-6", {
 });
 
 export interface DataGridTableDndHeaderProps<TData extends RowData> {
+	/** CSS classes for the `<thead>` element. */
 	readonly header: DataGridHeader<TData>;
 	/** Headers this cell spans through `meta.headerColSpan`. */
 	readonly coveredHeaders?: readonly DataGridHeader<TData>[] | undefined;
@@ -272,7 +276,12 @@ export function DataGridTableDndHeader<TData extends RowData>({ header, coveredH
 }
 
 /** A body cell that follows its column while the column is carried. */
-export function DataGridTableDndCell<TData extends RowData>({ cell }: { readonly cell: DataGridCell<TData> }): React.JSX.Element {
+export function DataGridTableDndCell<TData extends RowData>({
+	cell,
+}: {
+	/** The TanStack cell this `td` draws. */
+	readonly cell: DataGridCell<TData>;
+}): React.JSX.Element {
 	const { props } = useDataGrid();
 	const { tableLayout } = props;
 	const { column } = cell;
@@ -336,6 +345,7 @@ export interface DataGridTableDndProps {
 	readonly footerContent?: React.ReactNode;
 	/** Forwarded to dnd-kit's `DndContext`: screen-reader instructions and live-region announcements. */
 	readonly accessibility?: DndContextProps["accessibility"];
+	/** Classes for the table. */
 	readonly className?: string;
 }
 

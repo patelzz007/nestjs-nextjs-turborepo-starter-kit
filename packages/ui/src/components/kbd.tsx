@@ -1,6 +1,7 @@
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
+/** A key cap, rendered as the semantic `<kbd>` element. Inert: no pointer events or text selection. Inside a tooltip it takes the tooltip's colours. */
 const Kbd = React.forwardRef<HTMLElement, React.ComponentProps<"kbd">>(function Kbd({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<kbd

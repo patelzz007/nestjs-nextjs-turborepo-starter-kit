@@ -8,8 +8,10 @@ import {
 	compareCalendarMonths,
 	firstDayOf,
 	isCalendarMonthWithin,
+	isoWeekOf,
 	monthWeeks,
 	pickRangeDay,
+	rangeCrossesUnavailable,
 	rangeDayRoleOf,
 	toggleCalendarDay,
 	type CalendarMonth,
@@ -142,5 +144,22 @@ describe("rangeDayRoleOf", () => {
 		expect(rangeDayRoleOf({ from: "2026-10-03", to: null }, "2026-10-03")).toBe("single");
 		expect(rangeDayRoleOf({ from: "2026-10-03", to: "2026-10-03" }, "2026-10-03")).toBe("single");
 		expect(rangeDayRoleOf({ from: null, to: null }, "2026-10-03")).toBe("none");
+	});
+});
+
+describe("isoWeekOf", () => {
+	it("numbers weeks from the one holding the year's first Thursday", () => {
+		expect(isoWeekOf("2026-01-01")).toBe(1);
+		expect(isoWeekOf("2026-11-15")).toBe(46);
+		expect(isoWeekOf("2027-01-01")).toBe(53);
+		expect(isoWeekOf("2024-12-30")).toBe(1);
+	});
+});
+
+describe("rangeCrossesUnavailable", () => {
+	it("finds a ruled out day between the ends, both included", () => {
+		const isWeekend = (day: string): boolean => day === "2026-11-14" || day === "2026-11-15";
+		expect(rangeCrossesUnavailable("2026-11-10", "2026-11-14", isWeekend)).toBe(true);
+		expect(rangeCrossesUnavailable("2026-11-10", "2026-11-13", isWeekend)).toBe(false);
 	});
 });

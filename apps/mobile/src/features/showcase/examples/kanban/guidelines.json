@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name what moves",
+		"do": {
+			"text": "Give each column and card a `label`: handles, move actions and announcements read it.",
+			"file": "kanban-do-1",
+			"export": "KanbanDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave columns and cards unlabelled: screen readers hear only their ids.",
+			"file": "kanban-dont-1",
+			"export": "KanbanDont1Example"
+		}
+	},
+	{
+		"title": "Drag by a grip",
+		"do": {
+			"text": "Put a grip handle on each card, so a swipe across the board still scrolls it.",
+			"file": "kanban-do-2",
+			"export": "KanbanDo2Example"
+		},
+		"dont": {
+			"text": "Don't make the whole card the handle: every swipe that lands on a card drags it.",
+			"file": "kanban-dont-2",
+			"export": "KanbanDont2Example"
+		}
+	}
+]

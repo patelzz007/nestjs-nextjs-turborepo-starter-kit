@@ -2,8 +2,8 @@ import { evaluateFeatureFlag, type FeatureFlagKey, type FeatureFlagSetting, type
 
 import type { AdminServerEnv } from "@/lib/env/env.schema";
 
-/** The sidebar's Components section (`/components`): the developer gallery and the kanban board. Its sidebar group carries this flag. */
-export const COMPONENT_GALLERY_FEATURE: PlatformFeatureFlagKey = "component-gallery";
+/** The sidebar's Components section (`/components`): the developer component showcase and the kanban board. Its sidebar group carries this flag. */
+export const SHOWCASE_FEATURE: PlatformFeatureFlagKey = "showcase";
 
 /** Merchant invites (`/merchants/invites`): off on a single-tenant deployment, which serves only its seeded tenant. */
 export const MERCHANT_INVITES_FEATURE: PlatformFeatureFlagKey = "merchant-invites";
@@ -15,14 +15,14 @@ export interface DeploymentFeatures {
 }
 
 /** The server config the flags are decided from. */
-export type FeatureFlagEnv = Pick<AdminServerEnv, "NODE_ENV" | "ADMIN_COMPONENT_GALLERY">;
+export type FeatureFlagEnv = Pick<AdminServerEnv, "NODE_ENV" | "ADMIN_SHOWCASE">;
 
 /**
- * Whether this deployment serves the component gallery: `ADMIN_COMPONENT_GALLERY` when it is set,
+ * Whether this deployment serves the component showcase: `ADMIN_SHOWCASE` when it is set,
  * otherwise every build except production. It is a developer tool, not part of the admin product.
  */
-export function isComponentGalleryEnabled(env: FeatureFlagEnv): boolean {
-	return env.ADMIN_COMPONENT_GALLERY === undefined ? env.NODE_ENV !== "production" : env.ADMIN_COMPONENT_GALLERY === "true";
+export function isShowcaseEnabled(env: FeatureFlagEnv): boolean {
+	return env.ADMIN_SHOWCASE === undefined ? env.NODE_ENV !== "production" : env.ADMIN_SHOWCASE === "true";
 }
 
 /** Who the flags are evaluated for, and what staff set at runtime (enhancement 5.6). */
@@ -40,7 +40,7 @@ export interface FeatureFlagContext {
  * to the client shell as data. Feature flags
  * are orthogonal to authorization: an item shows only when the permission is
  * allowed AND its feature is enabled. A flagged route also refuses itself
- * (`app/(panel)/components/(gallery)/layout.tsx` answers 404 while the gallery is off).
+ * (`app/(panel)/components/(showcase)/layout.tsx` answers 404 while the showcase is off).
  */
 export function resolveEnabledFeatureFlags(
 	env: FeatureFlagEnv,
@@ -50,10 +50,10 @@ export function resolveEnabledFeatureFlags(
 	// Each flag's default is the deployment fact it always was; a runtime setting (5.6) decides over it. Only the
 	// deployment-wide flags gate the console: a store flag (5.11) is decided where the store acts (its till), not here.
 	const defaults: Readonly<Record<PlatformFeatureFlagKey, boolean>> = {
-		"component-gallery": isComponentGalleryEnabled(env),
+		showcase: isShowcaseEnabled(env),
 		"merchant-invites": deployment.merchantInvitesOffered,
 	};
 	const settingOf = (key: FeatureFlagKey): FeatureFlagSetting | undefined => context.settings.find((setting) => setting.key === key);
-	const keys: readonly PlatformFeatureFlagKey[] = [COMPONENT_GALLERY_FEATURE, MERCHANT_INVITES_FEATURE];
+	const keys: readonly PlatformFeatureFlagKey[] = [SHOWCASE_FEATURE, MERCHANT_INVITES_FEATURE];
 	return keys.filter((key) => evaluateFeatureFlag(key, settingOf(key), defaults[key], context.subjectId));
 }

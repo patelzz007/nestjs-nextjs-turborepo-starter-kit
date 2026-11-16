@@ -1,0 +1,142 @@
+[
+	{
+		"id": "c-alert-1",
+		"label": "Title & Description",
+		"description": "Basic alert. Best for the plain neutral tone with just a title and a description line, no icon, colour or buttons.",
+		"file": "alert-1",
+		"export": "Alert1Example"
+	},
+	{
+		"id": "c-alert-2",
+		"label": "Leading Icon",
+		"description": "Alert with an icon. Best for a check mark in the leading column of a neutral notice, with no colour or actions.",
+		"file": "alert-2",
+		"export": "Alert2Example"
+	},
+	{
+		"id": "c-alert-3",
+		"label": "Icon & Actions",
+		"description": "Alert with icon and action buttons. Best for the full row: shield icon, title, description and an outline Dismiss beside a solid Update button.",
+		"file": "alert-3",
+		"export": "Alert3Example"
+	},
+	{
+		"id": "c-alert-4",
+		"label": "Payment Failure",
+		"description": "Destructive alert with icon and action buttons. Best for a destructive payment failure whose description holds a bulleted checklist of details to fix.",
+		"file": "alert-4",
+		"export": "Alert4Example"
+	},
+	{
+		"id": "c-alert-5",
+		"label": "Info Variant",
+		"description": "Info alert with icon and action buttons. Best for the info variant with a tinted border, fill and circle icon for a notice worth reading closely.",
+		"file": "alert-5",
+		"export": "Alert5Example"
+	},
+	{
+		"id": "c-alert-6",
+		"label": "Success Variant",
+		"description": "Success alert. Best for the success variant with a check icon, confirming everything works and the user can carry on.",
+		"file": "alert-6",
+		"export": "Alert6Example"
+	},
+	{
+		"id": "c-alert-7",
+		"label": "Warning Variant",
+		"description": "Warning alert. Best for the warning variant with a triangle icon, pointing the user to settings or support.",
+		"file": "alert-7",
+		"export": "Alert7Example"
+	},
+	{
+		"id": "c-alert-8",
+		"label": "Error Variant",
+		"description": "Error alert. Best for the destructive variant for a failed action, asking the user to try again or contact support.",
+		"file": "alert-8",
+		"export": "Alert8Example"
+	},
+	{
+		"id": "c-alert-9",
+		"label": "Invert Variant",
+		"description": "Invert alert. Best for the invert variant: a dark solid bar with light text and a success colored icon for contrast.",
+		"file": "alert-9",
+		"export": "Alert9Example"
+	},
+	{
+		"id": "c-alert-10",
+		"label": "Title & Actions",
+		"description": "Alert with icon and action buttons. Best for a single title line paired with Dismiss and Update, leaving the description out entirely.",
+		"file": "alert-10",
+		"export": "Alert10Example"
+	},
+	{
+		"id": "c-alert-11",
+		"label": "Description & Actions",
+		"description": "Alert with description and action buttons. Best for muted body copy beside Dismiss and Update with no title above it, for one sentence prompts.",
+		"file": "alert-11",
+		"export": "Alert11Example"
+	},
+	{
+		"id": "c-alert-12",
+		"label": "Frame Reset Borders",
+		"description": "Alert filling a framed panel. Best for a system update notice flush with a framed panel, edge to edge, in the error tint.",
+		"file": "alert-12",
+		"export": "Alert12Example"
+	},
+	{
+		"id": "c-alert-13",
+		"label": "Stacked in Frame",
+		"description": "Stacked alerts in a frame. Best for a pair in one frame: a deploy success above a resource limit warning with a Verify button.",
+		"file": "alert-13",
+		"export": "Alert13Example"
+	},
+	{
+		"id": "c-alert-14",
+		"label": "Frame With Actions",
+		"description": "Alert with actions in a frame. Best for a borderless neutral notice in a frame with a green shield, a longer security message and two actions.",
+		"file": "alert-14",
+		"export": "Alert14Example"
+	},
+	{
+		"id": "c-alert-15",
+		"label": "Pro Upsell",
+		"description": "Pro upsell. Best for a Pro upsell on the dark invert tone, with a yellow bolt and an Upgrade button beside Dismiss.",
+		"file": "alert-15",
+		"export": "Alert15Example"
+	},
+	{
+		"id": "c-alert-16",
+		"label": "Urgent Billing",
+		"description": "Urgent billing notice. Best for an expiring subscription notice in the destructive tint, with a credit card icon and a Renew Now button.",
+		"file": "alert-16",
+		"export": "Alert16Example"
+	},
+	{
+		"id": "c-alert-17",
+		"label": "Service Status",
+		"description": "Service status summary. Best for a 2 row service health summary in a frame: a connected database over an API latency warning with Retry.",
+		"file": "alert-17",
+		"export": "Alert17Example"
+	},
+	{
+		"id": "c-alert-18",
+		"label": "Feature Discovery",
+		"description": "Feature discovery. Best for a feature announcement on the info tint, with a close button and an Explore features link below the copy.",
+		"file": "alert-18",
+		"export": "Alert18Example"
+	},
+	{
+		"id": "c-alert-19",
+		"label": "Direct Message",
+		"description": "Direct message. Best for a direct message notice with the sender's avatar, a quoted preview and View and Reply buttons.",
+		"file": "alert-19",
+		"export": "Alert19Example"
+	},
+	{
+		"id": "c-alert-20",
+		"label": "Comment Mention",
+		"description": "Comment mention. Best for a mention on the dark invert tone, with an avatar and a View button.",
+		"file": "alert-20",
+		"export": "Alert20Example"
+	}
+]

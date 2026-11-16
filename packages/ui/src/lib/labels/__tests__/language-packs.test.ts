@@ -1,4 +1,5 @@
 import { catalogIssues, JsonValueSchema, MessageCatalogSchema, type JsonValue, type MessageCatalog } from "@workspace/shared";
+import { DATA_GRID_MESSAGES_EN, FILTER_MESSAGES_EN } from "@workspace/ui-kit-logic";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -104,5 +105,12 @@ describe("the UI kit language packs (ADR 076)", () => {
 		expect(pack.cascader.resultsAnnouncement(1).length).toBeGreaterThan(0);
 		expect(pack.colorPicker.colorName({ kind: "chromatic", hue: "blue", shade: "dark", tone: "normal" }).length).toBeGreaterThan(0);
 		expect(pack.fileUpload.formatSize(2048)).toMatch(/\d/u);
+	});
+});
+
+describe("the English messages the native kit builds from @workspace/shared", () => {
+	it("are the web's English catalogue, word for word", () => {
+		expect(MessageCatalogSchema.parse(DATA_GRID_MESSAGES_EN)).toEqual(CATALOGUES.en.dataGrid);
+		expect(MessageCatalogSchema.parse(FILTER_MESSAGES_EN)).toEqual(CATALOGUES.en.filters);
 	});
 });

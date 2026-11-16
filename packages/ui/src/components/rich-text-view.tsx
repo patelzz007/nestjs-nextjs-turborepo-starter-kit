@@ -12,6 +12,7 @@ import * as React from "react";
 export interface RichTextViewProps {
 	/** A body as the API answers it: each picture carries its address (`src`); one without isn't shown. */
 	readonly document: RichTextDocument;
+	/** Classes for the rendered document. */
 	readonly className?: string;
 }
 

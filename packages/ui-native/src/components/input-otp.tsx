@@ -15,6 +15,7 @@ import { Text, TextInput, type TextInputInstance, type TextInputProps, View } fr
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
+import { FIELD_SURFACE_FILL, useFieldSurface } from "../lib/field-surface";
 import { useFieldContext } from "./field";
 
 /** A TOTP / email code's usual length. */
@@ -40,8 +41,15 @@ export const inputOTPVariants = cva("flex-row", {
 	defaultVariants: { variant: "default", size: "md", state: "default" },
 });
 
-export const inputOTPCellVariants = cva("items-center justify-center rounded-lg border bg-card", {
+export const inputOTPCellVariants = cva("items-center justify-center rounded-lg border", {
 	variants: {
+		/** The surface the code sits on (lib/field-surface.ts): each cell takes its fill. */
+		surface: {
+			page: FIELD_SURFACE_FILL.page,
+			card: FIELD_SURFACE_FILL.card,
+			popover: FIELD_SURFACE_FILL.popover,
+		},
+
 		variant: {
 			default: "border-input",
 		},
@@ -65,15 +73,15 @@ export const inputOTPCellVariants = cva("items-center justify-center rounded-lg 
 		// The next cell to fill shows the focus ring; an error outranks it.
 		{ state: "default", active: true, className: "border-ring" },
 	],
-	defaultVariants: { variant: "default", size: "md", state: "default", active: false },
+	defaultVariants: { variant: "default", size: "md", state: "default", surface: "page", active: false },
 });
 
 export const inputOTPCharVariants = cva("font-sans-semibold text-foreground", {
 	variants: {
 		size: {
-			sm: "text-base",
-			md: "text-lg",
-			lg: "text-xl",
+			sm: "text-body-lg",
+			md: "text-h3",
+			lg: "text-h2",
 		},
 	},
 	defaultVariants: { size: "md" },
@@ -139,6 +147,7 @@ export const InputOTP = React.memo(
 	): React.JSX.Element {
 		const field = useFieldContext();
 		const isLoading = loading ?? field?.loading ?? false;
+		const surface = useFieldSurface();
 		const state = resolveControlState({ disabled: disabled ?? field?.disabled, loading: isLoading, invalid: invalid ?? field?.invalid });
 		const isInactive = isInactiveState(state);
 		const [isFocused, setFocused] = React.useState(false);
@@ -172,7 +181,7 @@ export const InputOTP = React.memo(
 						accessibilityElementsHidden
 						importantForAccessibility="no-hide-descendants"
 						testID={testID === undefined ? undefined : `${testID}-cell`}
-						className={inputOTPCellVariants({ variant, size, state, active: isFocused && index === Math.min(value.length, length - 1) })}>
+						className={inputOTPCellVariants({ variant, size, state, surface, active: isFocused && index === Math.min(value.length, length - 1) })}>
 						<Text className={inputOTPCharVariants({ size })}>{value.charAt(index)}</Text>
 					</View>
 				))}

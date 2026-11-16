@@ -10,6 +10,8 @@
 export type { BrandMarkFacet, BrandMarkFacetName } from "./brand";
 export { BRAND_MARK_FACETS, BRAND_MARK_SIZE, BRAND_MARK_VIEW_BOX, BRAND_NAME } from "./brand";
 export { PROJECT_DISPLAY_NAME, PROJECT_SLUG } from "./project-identity";
+export type { DiagramColorVariable } from "./diagram";
+export { DIAGRAM_COLOR_TOKENS } from "./diagram";
 export { LAYOUT } from "./layout";
 export { MOTION } from "./motion";
 export { PALETTE } from "./palette";
@@ -40,9 +42,16 @@ export type {
 	Themes,
 	TokenSource,
 	Typography,
+	MobileRadii,
+	MobileRadiusName,
+	MobileTextRole,
+	MobileTextStyle,
+	MobileTypeScale,
 } from "./schema";
 export { DARK_THEME, LIGHT_THEME, NORD_THEME, SHARED_COLORS, THEMES } from "./semantic";
+export { MOBILE_RADII, MOBILE_TYPE_SCALE } from "./mobile-typography";
 export { TOKEN_SOURCE } from "./source";
+export { formatSrgbHex } from "./generator/srgb-hex";
 export { DARK_THEME_NAMES, isDarkTheme, MOBILE_ONLY_THEME_NAMES, nextThemeName, THEME_NAMES } from "./theme-names";
 export { TAILWIND_THEME } from "./tailwind-theme";
 export { TYPOGRAPHY } from "./typography";

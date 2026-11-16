@@ -3,8 +3,11 @@ title: "Starter kit — production roadmap (extended reference)"
 description: "Long-form reference: agency fork strategy, locked product decisions, tenancy modes, Reward Hub removal, DigitalOcean, authorization kernel, Cedar, Kafka, semver releases, and improvement backlog."
 order: 6
 author: "Platform Team"
+category: "Engineering"
+date: 1791196800000
 lastUpdated: 1791196800000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/starter-kit-production-roadmap.webp"
 tags: ["starter-kit", "roadmap", "operations", "authorization", "agency", "tenancy", "digitalocean"]
 ---
 

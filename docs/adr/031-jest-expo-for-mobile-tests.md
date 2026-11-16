@@ -3,8 +3,11 @@ title: "ADR 031: jest-expo for the Mobile App's Tests"
 tags: ["adr", "testing", "mobile"]
 description: "The Expo app is tested with jest-expo and @testing-library/react-native, an explicit exception to the repo-wide Vitest standard; platform-neutral logic stays in shared packages under Vitest."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791417600000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1792871476000
+coverImage: "/images/covers/adr/031-jest-expo-for-mobile-tests.webp"
 order: 31
 ---
 

@@ -3,8 +3,11 @@ title: "DDD + CQRS migration gaps"
 description: "What the migration has not finished yet, and which task owns each gap."
 tags: ["architecture", "ddd", "cqrs", "migration"]
 author: "Platform Team"
+category: "Architecture"
+date: 1792368000000
 lastUpdated: 1792540800000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/architecture/ddd-cqrs-migration-gaps.webp"
 order: 4
 ---
 

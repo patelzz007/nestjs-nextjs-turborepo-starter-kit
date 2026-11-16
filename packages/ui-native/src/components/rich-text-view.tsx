@@ -139,7 +139,7 @@ function ListItems({
 		<View className="gap-1.5">
 			{positioned(items, "li").map(({ id, item }, position): React.JSX.Element => (
 				<View key={id} className="flex-row gap-2">
-					<Text className="font-sans text-base text-muted-foreground">{ordered ? `${String(start + position)}.` : "•"}</Text>
+					<Text className="text-body-lg font-sans text-muted-foreground">{ordered ? `${String(start + position)}.` : "•"}</Text>
 					<View className="flex-1">
 						<Blocks blocks={item.content} context={context} />
 					</View>
@@ -192,7 +192,7 @@ function CallToActionButton({ label, href, onOpenLink }: { readonly label: strin
 	return (
 		<View className="gap-1">
 			<Button label={label} onPress={handlePress} accessibilityHint={`Opens ${richTextLinkHost(href)}`} />
-			<Text className="text-center font-sans text-xs text-muted-foreground">{richTextLinkHost(href)}</Text>
+			<Text className="text-caption text-center font-sans text-muted-foreground">{richTextLinkHost(href)}</Text>
 		</View>
 	);
 }
@@ -205,14 +205,14 @@ function BodyImage({ uri, alt }: { readonly uri: string; readonly alt: string })
 function Block({ block, context }: { readonly block: RichTextBlock; readonly context: BlockContext }): React.JSX.Element | null {
 	switch (block.type) {
 		case "paragraph":
-			return <Inlines inlines={block.content ?? []} onOpenLink={context.onOpenLink} className="font-sans text-base text-foreground" />;
+			return <Inlines inlines={block.content ?? []} onOpenLink={context.onOpenLink} className="text-body-lg font-sans text-foreground" />;
 		case "heading":
 			return (
 				<Text accessibilityRole="header">
 					<Inlines
 						inlines={block.content ?? []}
 						onOpenLink={context.onOpenLink}
-						className={cn("font-heading text-foreground", block.attrs.level === 2 ? "text-xl" : "text-lg")}
+						className={cn("font-heading text-foreground", block.attrs.level === 2 ? "text-h3" : "text-h4")}
 					/>
 				</Text>
 			);

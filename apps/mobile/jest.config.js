@@ -9,7 +9,17 @@ const { transformIgnorePatterns: EXPO_TRANSFORM_IGNORE_PATTERNS } = require("jes
  * runs CommonJS, so Babel compiles them like React Native's own packages (FormatJS: the translation
  * catalogues' ICU messages, `formatMessage` in @workspace/shared).
  */
-const ES_MODULE_ONLY_PACKAGES = ["marked", "nuqs", "intl-messageformat", "@formatjs"];
+const ES_MODULE_ONLY_PACKAGES = [
+	"marked",
+	"nuqs",
+	"intl-messageformat",
+	"@formatjs",
+	"@tanstack/react-table",
+	"@tanstack/table-core",
+	"@tanstack/react-store",
+	"@tanstack/store",
+	"pele",
+];
 
 /** jest-expo's first pattern: skip node_modules except an allow-list, `(?!(a|b|…))`. */
 const ALLOW_LIST_START = "/node_modules/(?!(";

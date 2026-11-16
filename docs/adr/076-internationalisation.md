@@ -3,8 +3,11 @@ title: "ADR 076: Internationalisation — typed label packs in English, Malay, M
 tags: ["adr", "i18n", "frontend", "mobile"]
 description: "The apps speak English, Malay, Simplified Chinese (Mandarin) and Tamil through typed label packs (one object per language, checked complete by the compiler), chosen per user and per device, rolled out surface by surface starting with the UI kit."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1200&h=630"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/076-internationalisation.webp"
 order: 76
 ---
 

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name what moves",
+		"do": {
+			"text": "Give each grip an `aria-label` naming its item: screen readers and the move announcements read it.",
+			"file": "sortable-do-1",
+			"export": "SortableDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave grips unlabelled: screen readers hear only “button”.",
+			"file": "sortable-dont-1",
+			"export": "SortableDont1Example"
+		}
+	},
+	{
+		"title": "Keep the grip easy to hit",
+		"do": {
+			"text": "Keep the handle's target at least 24 by 24 pixels.",
+			"file": "sortable-do-2",
+			"export": "SortableDo2Example"
+		},
+		"dont": {
+			"text": "Don't shrink the handle below what a pointer or a finger can hit.",
+			"file": "sortable-dont-2",
+			"export": "SortableDont2Example"
+		}
+	}
+]

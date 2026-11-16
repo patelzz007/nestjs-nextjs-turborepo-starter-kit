@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Use it for small, related controls",
+		"do": {
+			"text": "Use a popover for a few controls tied to its trigger: dimensions, a couple of settings.",
+			"file": "popover-do-1",
+			"export": "PopoverDo1Example"
+		},
+		"dont": {
+			"text": "Don't open a popover just to say what a button does: use a tooltip, or a clearer label.",
+			"file": "popover-dont-1",
+			"export": "PopoverDont1Example"
+		}
+	},
+	{
+		"title": "Keep it small",
+		"do": {
+			"text": "Keep a popover to what fits beside its trigger.",
+			"file": "popover-do-2",
+			"export": "PopoverDo2Example"
+		},
+		"dont": {
+			"text": "Don't fit a whole form in a popover: use a sheet or a dialog.",
+			"file": "popover-dont-2",
+			"export": "PopoverDont2Example"
+		}
+	}
+]

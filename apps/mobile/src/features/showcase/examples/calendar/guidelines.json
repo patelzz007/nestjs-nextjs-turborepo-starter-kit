@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Inline or in a field",
+		"do": {
+			"text": "In a form, use a date field: it shows the picked day and opens the calendar only when needed.",
+			"file": "calendar-do-1",
+			"export": "CalendarDo1Example"
+		},
+		"dont": {
+			"text": "Don't put a whole month in a form for one date: it takes the screen and hides what was picked.",
+			"file": "calendar-dont-1",
+			"export": "CalendarDont1Example"
+		}
+	},
+	{
+		"title": "Rule out what cannot be picked",
+		"do": {
+			"text": "Set `minDate`, `maxDate` and `isUnavailable` so days that cannot be booked cannot be tapped.",
+			"file": "calendar-do-2",
+			"export": "CalendarDo2Example"
+		},
+		"dont": {
+			"text": "Don't let people tap a past day and only then tell them it has passed.",
+			"file": "calendar-dont-2",
+			"export": "CalendarDont2Example"
+		}
+	}
+]

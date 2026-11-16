@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Set the bounds",
+		"do": {
+			"text": "Give the field the range it accepts, so the steppers stop there.",
+			"file": "number-field-do-1",
+			"export": "NumberFieldDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave a count unbounded: people can step below zero.",
+			"file": "number-field-dont-1",
+			"export": "NumberFieldDont1Example"
+		}
+	},
+	{
+		"title": "Step by what makes sense",
+		"do": {
+			"text": "Step by the unit people think in (5 minutes, 10 dollars).",
+			"file": "number-field-do-2",
+			"export": "NumberFieldDo2Example"
+		},
+		"dont": {
+			"text": "Don't make people tap 30 times to reach a common value.",
+			"file": "number-field-dont-2",
+			"export": "NumberFieldDont2Example"
+		}
+	}
+]

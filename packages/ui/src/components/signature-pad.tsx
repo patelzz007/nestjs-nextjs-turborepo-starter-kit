@@ -566,10 +566,13 @@ function withAreaDefaults(area: HTMLDivElement | null, options: SignaturePadExpo
 export interface SignaturePadProps extends Omit<React.ComponentPropsWithoutRef<"div">, "defaultValue" | "onChange"> {
 	/** Strokes are compared by content, so a copy of the same value keeps undo; a different value from outside clears it. */
 	readonly value?: SignaturePadStroke[] | undefined;
+	/** Initial strokes when uncontrolled. */
 	readonly defaultValue?: SignaturePadStroke[] | undefined;
 	/** Fires once per finished stroke, and on clear, undo and redo. Never per pointer move. */
 	readonly onValueChange?: ((value: SignaturePadStroke[]) => void) | undefined;
+	/** Fires when a stroke begins, with the pointer that drew it. */
 	readonly onStrokeStart?: ((details: { readonly pointerType: SignaturePadPointerType }) => void) | undefined;
+	/** Fires with each finished stroke. */
 	readonly onStrokeEnd?: ((stroke: SignaturePadStroke) => void) | undefined;
 	/** The pad's API, for code outside the tree (a form library, a toolbar elsewhere). */
 	readonly apiRef?: React.Ref<SignaturePadApi> | undefined;
@@ -577,17 +580,23 @@ export interface SignaturePadProps extends Omit<React.ComponentPropsWithoutRef<"
 	readonly color?: string | undefined;
 	/** Ink diameter range in CSS pixels. Equal values draw a constant line. */
 	readonly minWidth?: number | undefined;
+	/** Thickest ink, in CSS pixels. */
 	readonly maxWidth?: number | undefined;
 	/** 0 is raw input; higher trades a little lag for smoother curves. */
 	readonly smoothing?: number | undefined;
+	/** Width source. `auto` uses pen pressure for a stylus and drawing speed otherwise. */
 	readonly sizing?: SignaturePadSizing | undefined;
 	/** Accept only these pointers, e.g. `["pen"]` to ignore a resting palm. */
 	readonly pointerTypes?: readonly SignaturePadPointerType[] | undefined;
+	/** Stops input, dims the pad and removes it from the tab order. */
 	readonly disabled?: boolean | undefined;
+	/** Stops input, keeps the ink at full strength and removes the pad from the tab order. */
 	readonly readOnly?: boolean | undefined;
 	/** Submits the signature with a native form under this name. */
 	readonly name?: string | undefined;
+	/** Associates the field with a form elsewhere in the page. */
 	readonly form?: string | undefined;
+	/** Fails native form validation while the pad is empty. */
 	readonly required?: boolean | undefined;
 	/** What the form field carries. `png` and `jpeg` rasterize on every stroke; `svg` is a string build. */
 	readonly format?: SignaturePadFormat | undefined;
@@ -1287,6 +1296,7 @@ const CONTROLS_POSITION_CLASS: Readonly<Record<SignaturePadControlsPosition, str
 };
 
 export interface SignaturePadControlsProps extends React.ComponentPropsWithoutRef<"div"> {
+	/** `"top-end"` */
 	readonly position?: SignaturePadControlsPosition | undefined;
 }
 
@@ -1326,6 +1336,7 @@ type ButtonClickEvent = Parameters<NonNullable<SignaturePadControlProps["onClick
  * control that disables itself would strand keyboard focus on `<body>`, so
  * each one hands focus to the area when its own action empties it.
  */
+/** Clears every stroke. */
 const SignaturePadClear = React.forwardRef<HTMLElement, SignaturePadControlProps>(function SignaturePadClear(
 	{ children, onClick, disabled, variant = "outline", size = "icon-sm", ...props },
 	ref,
@@ -1359,6 +1370,7 @@ const SignaturePadClear = React.forwardRef<HTMLElement, SignaturePadControlProps
 	);
 });
 
+/** Removes the last stroke (⌘Z / Ctrl Z). */
 const SignaturePadUndo = React.forwardRef<HTMLElement, SignaturePadControlProps>(function SignaturePadUndo(
 	{ children, onClick, disabled, variant = "outline", size = "icon-sm", ...props },
 	ref,
@@ -1394,6 +1406,7 @@ const SignaturePadUndo = React.forwardRef<HTMLElement, SignaturePadControlProps>
 	);
 });
 
+/** Puts back the last undone stroke (⌘⇧Z / Ctrl Y). */
 const SignaturePadRedo = React.forwardRef<HTMLElement, SignaturePadControlProps>(function SignaturePadRedo(
 	{ children, onClick, disabled, variant = "outline", size = "icon-sm", ...props },
 	ref,
@@ -1430,8 +1443,11 @@ const SignaturePadRedo = React.forwardRef<HTMLElement, SignaturePadControlProps>
 });
 
 export interface SignaturePadSaveProps extends SignaturePadControlProps {
+	/** Output format. */
 	readonly format?: SignaturePadFormat | undefined;
+	/** Crop, padding, color, background and scale. */
 	readonly options?: SignaturePadExportOptions | undefined;
+	/** Receives the serialized signature. */
 	readonly onSave?: ((value: string, strokes: SignaturePadStroke[]) => void) | undefined;
 }
 
@@ -1473,8 +1489,11 @@ const SignaturePadSave = React.forwardRef<HTMLElement, SignaturePadSaveProps>(fu
 /* -------------------------------------------------------------------------- */
 
 export interface SignaturePadPreviewProps extends Omit<React.ComponentPropsWithoutRef<"svg">, "color"> {
+	/** Renders nothing when empty. */
 	readonly strokes: SignaturePadStroke[];
+	/** Space around the ink. */
 	readonly padding?: number | undefined;
+	/** Ink for strokes without their own color. */
 	readonly color?: string | undefined;
 	/** Per-usage overrides of the `signaturePad` copy (its accessible name is `preview`). */
 	readonly labels?: UiKitLabelsOverride<"signaturePad"> | undefined;

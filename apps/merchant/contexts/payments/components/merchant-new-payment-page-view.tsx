@@ -28,7 +28,7 @@ import { Input } from "@workspace/ui/components/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@workspace/ui/components/input-group";
 import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -99,7 +99,7 @@ interface NewPaymentFormProps {
 }
 
 function NewPaymentForm({ tenantSlug, providers }: NewPaymentFormProps): React.JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const routes = tenantRoutes(tenantSlug).payments;
 	const [onlyProvider] = providers;

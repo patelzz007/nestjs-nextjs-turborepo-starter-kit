@@ -1,0 +1,128 @@
+[
+	{
+		"id": "c-dropdown-menu-1",
+		"label": "Basic",
+		"description": "Basic dropdown menu. Best for plain text rows in 2 groups, the first headed My Account, with a disabled API row.",
+		"file": "dropdown-menu-1",
+		"export": "DropdownMenu1Example"
+	},
+	{
+		"id": "c-dropdown-menu-2",
+		"label": "Opening Positions",
+		"description": "Menus opened from different places. Best for 3 triggers in a row, each opening the same rows in a sheet named for where it came from: on a phone a menu rises from the bottom.",
+		"file": "dropdown-menu-2",
+		"export": "DropdownMenu2Example"
+	},
+	{
+		"id": "c-dropdown-menu-3",
+		"label": "Icons",
+		"description": "Dropdown menu with icons. Best for a leading icon on each row and a destructive Log out set apart in its own group.",
+		"file": "dropdown-menu-3",
+		"export": "DropdownMenu3Example"
+	},
+	{
+		"id": "c-dropdown-menu-4",
+		"label": "Keyboard Shortcuts",
+		"description": "Dropdown menu with keyboard shortcuts. Best for key caps after every row of a short account list, for a hardware keyboard.",
+		"file": "dropdown-menu-4",
+		"export": "DropdownMenu4Example"
+	},
+	{
+		"id": "c-dropdown-menu-5",
+		"label": "Nested Submenus",
+		"description": "Dropdown menu with a submenu. Best for a single Invite users row between Team and New team, opening Email, Message and More in place, with a way back.",
+		"file": "dropdown-menu-5",
+		"export": "DropdownMenu5Example"
+	},
+	{
+		"id": "c-dropdown-menu-6",
+		"label": "Checkboxes",
+		"description": "Dropdown menu with checkboxes. Best for 3 panel toggles, each bound to its own boolean, with the Activity bar one disabled; the sheet stays open as they change.",
+		"file": "dropdown-menu-6",
+		"export": "DropdownMenu6Example"
+	},
+	{
+		"id": "c-dropdown-menu-7",
+		"label": "Radio Groups",
+		"description": "Dropdown menu with radio items. Best for an exclusive pick of panel position among 3 arrow icon options, with Right disabled.",
+		"file": "dropdown-menu-7",
+		"export": "DropdownMenu7Example"
+	},
+	{
+		"id": "c-dropdown-menu-8",
+		"label": "All Item Types",
+		"description": "Every item kind together. Best for an Open recent submenu, a theme radio set in a submenu, a checkbox and a delete.",
+		"file": "dropdown-menu-8",
+		"export": "DropdownMenu8Example"
+	},
+	{
+		"id": "c-dropdown-menu-9",
+		"label": "User Profile",
+		"description": "User profile menu. Best for a named account button opening an avatar and email header over profile, team, help and log out rows.",
+		"file": "dropdown-menu-9",
+		"export": "DropdownMenu9Example"
+	},
+	{
+		"id": "c-dropdown-menu-11",
+		"label": "Notification Feed",
+		"description": "Notification feed menu. Best for a bell with a count badge, 3 avatar activity rows with times and unread marks, and a Mark all as read button.",
+		"file": "dropdown-menu-11",
+		"export": "DropdownMenu11Example"
+	},
+	{
+		"id": "c-dropdown-menu-12",
+		"label": "Record Actions",
+		"description": "Record actions menu. Best for record actions on a vertical dots button: edit, duplicate, a move to submenu, share, copy link and delete.",
+		"file": "dropdown-menu-12",
+		"export": "DropdownMenu12Example"
+	},
+	{
+		"id": "c-dropdown-menu-13",
+		"label": "Share & Export",
+		"description": "Share and export menu. Best for a labelled Share button whose rows split into share channels and PDF, CSV or PNG export, ending in Print.",
+		"file": "dropdown-menu-13",
+		"export": "DropdownMenu13Example"
+	},
+	{
+		"id": "c-dropdown-menu-14",
+		"label": "Theme & Status",
+		"description": "Account menu with a theme switch and status. Best for an account sheet with an icon theme switch in its header, count rows and a presence radio set.",
+		"file": "dropdown-menu-14",
+		"export": "DropdownMenu14Example"
+	},
+	{
+		"id": "c-dropdown-menu-15",
+		"label": "User & Create",
+		"description": "Create and account menus. Best for a New button for customer, order and invoice records beside a bare avatar trigger for profile, billing and sign out.",
+		"file": "dropdown-menu-15",
+		"export": "DropdownMenu15Example"
+	},
+	{
+		"id": "c-dropdown-menu-16",
+		"label": "Quick Actions",
+		"description": "Quick actions menu. Best for a borderless horizontal dots button named More options, with Settings, Share and a destructive Remove.",
+		"file": "dropdown-menu-16",
+		"export": "DropdownMenu16Example"
+	},
+	{
+		"id": "c-dropdown-menu-17",
+		"label": "Notification Items",
+		"description": "Notification items menu. Best for a ghost bell button opening 3 one line alerts, the first with a trailing tick.",
+		"file": "dropdown-menu-17",
+		"export": "DropdownMenu17Example"
+	},
+	{
+		"id": "c-dropdown-menu-10",
+		"label": "Workspace Switcher",
+		"description": "Workspace switcher. Best for switching among 3 workspaces shown by logo, name and plan, with a tick on the active one and a create row.",
+		"file": "dropdown-menu-10",
+		"export": "DropdownMenu10Example"
+	},
+	{
+		"id": "c-dropdown-menu-18",
+		"label": "AI Model Selector",
+		"description": "Model picker with provider icons. Best for a Select model button listing 3 AI models by provider tile, with a tick on the chosen one.",
+		"file": "dropdown-menu-18",
+		"export": "DropdownMenu18Example"
+	}
+]

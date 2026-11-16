@@ -123,3 +123,22 @@ describe("TimelineRailIcon", () => {
 		expect(className).not.toContain("size-6");
 	});
 });
+
+describe("TimelineRailItem horizontal", () => {
+	it("lays an entry out under its node, with a date above and a line to the next", async () => {
+		await render(
+			<TimelineRailItem node={<Text>dot</Text>} above={<Text>Q1</Text>} orientation="horizontal" testID="phase">
+				<Text>Plan</Text>
+			</TimelineRailItem>,
+		);
+		expect(screen.getByText("Q1")).toBeOnTheScreen();
+		expect(screen.getByText("Plan")).toBeOnTheScreen();
+		expect(screen.getByTestId("phase-connector", { includeHiddenElements: true })).toHaveProp("className", expect.stringContaining("bg-border"));
+		await render(
+			<TimelineRailItem node={<Text>dot</Text>} orientation="horizontal" isLast testID="last">
+				<Text>Ship</Text>
+			</TimelineRailItem>,
+		);
+		expect(screen.getByTestId("last-connector", { includeHiddenElements: true })).toHaveProp("className", expect.stringContaining("bg-transparent"));
+	});
+});

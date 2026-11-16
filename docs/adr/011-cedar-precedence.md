@@ -3,8 +3,11 @@ title: "ADR 011: Cedar ABAC Precedence and Policy Governance"
 tags: ["adr", "authorization", "cedar", "abac"]
 description: "Architecture decision record for in-process Cedar evaluation with platform guardrails and structured tenant policy authoring."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/adr/011-cedar-precedence.webp"
 order: 11
 ---
 

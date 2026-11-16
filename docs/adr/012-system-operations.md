@@ -3,8 +3,11 @@ title: "ADR 012: Allowlisted System Operations"
 tags: ["adr", "tenancy", "rls", "operations"]
 description: "Architecture decision record for least-privilege system database access outside tenant request context."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1792438386000
+coverImage: "/images/covers/adr/012-system-operations.webp"
 order: 12
 ---
 

@@ -17,10 +17,12 @@ export const radioGroupVariants = cva("", {
 	variants: {
 		/** `default`: bare rows in a form. `card`: each option a bordered tile. */
 		variant: { default: "gap-1", card: "gap-2" },
+		/** `horizontal`: options side by side, wrapping. `grid`: two columns of tiles. */
+		orientation: { vertical: "", horizontal: "flex-row flex-wrap gap-x-4", grid: "flex-row flex-wrap" },
 		size: { md: "", sm: "" },
 		state: { default: "", loading: "opacity-60", disabled: "opacity-60", error: "" },
 	},
-	defaultVariants: { variant: "default", size: "md", state: "default" },
+	defaultVariants: { variant: "default", size: "md", orientation: "vertical", state: "default" },
 });
 
 /** One option's pressable row. */
@@ -28,7 +30,7 @@ export const radioItemVariants = cva("min-h-12 flex-row items-center gap-3 py-2.
 	variants: {
 		variant: {
 			default: "",
-			card: "rounded-2xl border border-border bg-card px-4",
+			card: "rounded-card border border-border bg-card px-4",
 		},
 		selected: { true: "", false: "" },
 		disabled: { true: "opacity-60", false: "" },
@@ -41,26 +43,39 @@ export const radioItemVariants = cva("min-h-12 flex-row items-center gap-3 py-2.
 export const radioIndicatorVariants = cva("items-center justify-center rounded-full border-2", {
 	variants: {
 		size: { md: "size-6", sm: "size-5" },
-		selected: { true: "border-primary", false: "border-control-ring" },
+		selected: { true: "", false: "border-control-ring" },
+		tone: { primary: "", blue: "", green: "", yellow: "" },
 		state: { default: "", loading: "", disabled: "", error: "border-destructive" },
 	},
-	defaultVariants: { size: "md", selected: false, state: "default" },
+	compoundVariants: [
+		{ selected: true, tone: "primary", className: "border-primary" },
+		{ selected: true, tone: "blue", className: "border-tone-blue" },
+		{ selected: true, tone: "green", className: "border-tone-green" },
+		{ selected: true, tone: "yellow", className: "border-tone-yellow" },
+	],
+	defaultVariants: { size: "md", selected: false, tone: "primary", state: "default" },
 });
 
 /** The dot inside a chosen ring. */
-export const radioDotVariants = cva("rounded-full bg-primary", {
-	variants: { size: { md: "size-3", sm: "size-2.5" } },
-	defaultVariants: { size: "md" },
+export const radioDotVariants = cva("rounded-full", {
+	variants: {
+		size: { md: "size-3", sm: "size-2.5" },
+		tone: { primary: "bg-primary", blue: "bg-tone-blue", green: "bg-tone-green", yellow: "bg-tone-yellow" },
+	},
+	defaultVariants: { size: "md", tone: "primary" },
 });
 
+export type RadioTone = NonNullable<VariantProps<typeof radioDotVariants>["tone"]>;
+
 const radioLabelVariants = cva("font-sans text-foreground", {
-	variants: { size: { md: "text-base", sm: "text-sm" } },
+	variants: { size: { md: "text-body-lg", sm: "text-body" } },
 	defaultVariants: { size: "md" },
 });
 
 type RadioGroupVariantProps = VariantProps<typeof radioGroupVariants>;
 export type RadioGroupVariant = NonNullable<RadioGroupVariantProps["variant"]>;
 export type RadioGroupSize = NonNullable<RadioGroupVariantProps["size"]>;
+export type RadioGroupOrientation = NonNullable<RadioGroupVariantProps["orientation"]>;
 
 /** Option values are strings or numbers (an enum, a timeout in ms). */
 export type RadioValue = string | number;
@@ -71,6 +86,10 @@ export interface RadioOption<TValue extends RadioValue> {
 	readonly description?: string;
 	/** This one option cannot be chosen (the rest still can). */
 	readonly disabled?: boolean;
+	/** Before the label: an icon, an avatar, a card brand; decorative. */
+	readonly leading?: React.ReactNode;
+	/** After the label: a badge, a price, a help tooltip. */
+	readonly trailing?: React.ReactNode;
 }
 
 export interface RadioGroupProps<TValue extends RadioValue> {
@@ -89,6 +108,12 @@ export interface RadioGroupProps<TValue extends RadioValue> {
 	readonly loading?: boolean;
 	/** The caller's validation outcome (a required choice left empty). */
 	readonly invalid?: boolean;
+	/** `horizontal`: side by side, wrapping. `grid`: two columns of tiles. */
+	readonly orientation?: RadioGroupOrientation | undefined;
+	/** The chosen ring's colour: `primary` (default), or a categorical tone. */
+	readonly tone?: RadioTone | undefined;
+	/** `end`: the ring at the row's end (a list of plans). */
+	readonly controlPosition?: "start" | "end" | undefined;
 	/** Extra classes for the group, merged last. */
 	readonly className?: string;
 	readonly testID?: string;
@@ -108,6 +133,10 @@ interface RadioRowProps {
 	readonly state: ControlState;
 	readonly variant: RadioGroupVariant;
 	readonly size: RadioGroupSize;
+	readonly tone: RadioTone;
+	readonly controlPosition: "start" | "end";
+	/** A grid tile takes half the row. */
+	readonly tile: boolean;
 	readonly onSelect: ValueHandler<RadioValue>;
 	readonly onFocus: ((event: NativeSyntheticEvent<TargetedEvent>) => void) | undefined;
 	readonly onBlur: ((event: NativeSyntheticEvent<TargetedEvent>) => void) | undefined;
@@ -121,6 +150,9 @@ const RadioRow = React.memo(function RadioRow({
 	state,
 	variant,
 	size,
+	tone,
+	controlPosition,
+	tile,
 	onSelect,
 	onFocus,
 	onBlur,
@@ -132,7 +164,13 @@ const RadioRow = React.memo(function RadioRow({
 			onSelect(option.value);
 		}
 	}, [onSelect, option.value, selected]);
-	return (
+	// The dot pops in when chosen (toggle-mark.tsx); the one shown at first stays still.
+	const ring = (
+		<ToggleMarkScope className={radioIndicatorVariants({ size, selected, tone, state })}>
+			{selected ? <ToggleMark className={radioDotVariants({ size, tone })} /> : null}
+		</ToggleMarkScope>
+	);
+	const row = (
 		<Pressable
 			accessibilityRole="radio"
 			accessibilityLabel={option.label}
@@ -142,17 +180,21 @@ const RadioRow = React.memo(function RadioRow({
 			onPress={handlePress}
 			onFocus={onFocus}
 			onBlur={onBlur}
-			className={radioItemVariants({ variant, selected, disabled: option.disabled === true && !groupInactive })}>
-			{/* The dot pops in when chosen (toggle-mark.tsx); the one shown at first stays still. */}
-			<ToggleMarkScope className={radioIndicatorVariants({ size, selected, state })}>
-				{selected ? <ToggleMark className={radioDotVariants({ size })} /> : null}
-			</ToggleMarkScope>
-			<View className="flex-1 gap-0.5">
-				<Text className={radioLabelVariants({ size })}>{option.label}</Text>
-				{option.description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{option.description}</Text>}
+			className={cn(radioItemVariants({ variant, selected, disabled: option.disabled === true && !groupInactive }), tile ? "flex-1 flex-col items-start" : undefined)}>
+			{controlPosition === "start" ? ring : null}
+			{option.leading}
+			<View className={tile ? "gap-0.5" : "flex-1 gap-0.5"}>
+				<View className="flex-row flex-wrap items-center gap-2">
+					<Text className={radioLabelVariants({ size })}>{option.label}</Text>
+					{option.trailing}
+				</View>
+				{option.description === undefined ? null : <Text className="text-body font-sans text-muted-foreground">{option.description}</Text>}
 			</View>
+			{controlPosition === "end" ? ring : null}
 		</Pressable>
 	);
+	// A grid tile: half the row, the gap as padding so two tiles sit side by side.
+	return tile ? <View className="w-1/2 p-1">{row}</View> : row;
 });
 
 export const RadioGroup: RadioGroupComponent = React.memo(
@@ -166,6 +208,9 @@ export const RadioGroup: RadioGroupComponent = React.memo(
 			onBlur,
 			variant = "default",
 			size = "md",
+			orientation = "vertical",
+			tone = "primary",
+			controlPosition = "start",
 			disabled = false,
 			loading = false,
 			invalid = false,
@@ -184,7 +229,7 @@ export const RadioGroup: RadioGroupComponent = React.memo(
 				accessibilityLabel={label}
 				accessibilityState={accessibilityState}
 				testID={testID}
-				className={cn(radioGroupVariants({ variant, size, state }), className)}>
+				className={cn(radioGroupVariants({ variant, size, orientation, state }), className)}>
 				{options.map((option: RadioOption<RadioValue>): React.JSX.Element => (
 					<RadioRow
 						key={String(option.value)}
@@ -195,6 +240,9 @@ export const RadioGroup: RadioGroupComponent = React.memo(
 						state={state}
 						variant={variant}
 						size={size}
+						tone={tone}
+						controlPosition={controlPosition}
+						tile={orientation === "grid"}
 						onSelect={onChange}
 						onFocus={onFocus}
 						onBlur={onBlur}

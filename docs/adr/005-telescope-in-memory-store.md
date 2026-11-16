@@ -3,8 +3,11 @@ title: "ADR 005: Telescope In-Memory Store with Optional Postgres Persistence"
 tags: ["adr", "telescope", "storage", "observability"]
 description: "Architecture decision record for dual-mode Telescope storage with in-memory default and Postgres option."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1756003200000
 lastUpdated: 1756003200000
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
+editedAt: 1788266614000
+coverImage: "/images/covers/adr/005-telescope-in-memory-store.webp"
 order: 5
 ---
 

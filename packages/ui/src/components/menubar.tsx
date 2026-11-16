@@ -31,10 +31,12 @@ const MENUBAR_CONTENT_SIDE_OFFSET = 8;
 // of their own, so they stay plain functions — every part that renders DOM
 // forwards its ref.
 
+/** An application menu bar of menus — File, Edit, View — on Base UI's menubar. */
 const Menubar = React.forwardRef<HTMLDivElement, MenubarPrimitive.Props>(function Menubar({ className, ...props }, ref): React.JSX.Element {
 	return <MenubarPrimitive ref={ref} data-slot="menubar" className={cn("flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs", className)} {...props} />;
 });
 
+/** The bar's button for one menu. */
 const MenubarTrigger = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof DropdownMenuTrigger>>(function MenubarTrigger(
 	{ className, ...props },
 	ref,
@@ -49,18 +51,22 @@ const MenubarTrigger = React.forwardRef<HTMLButtonElement, React.ComponentProps<
 	);
 });
 
+/** One menu of the bar: a trigger and its content. */
 function MenubarMenu({ ...props }: React.ComponentProps<typeof DropdownMenu>): React.JSX.Element {
 	return <DropdownMenu data-slot="menubar-menu" {...props} />;
 }
 
+/** Groups related items; a `MenubarLabel` must sit inside one. */
 const MenubarGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof DropdownMenuGroup>>(function MenubarGroup({ ...props }, ref): React.JSX.Element {
 	return <DropdownMenuGroup ref={ref} data-slot="menubar-group" {...props} />;
 });
 
+/** Moves a menu to the end of `body`. Used by `MenubarContent`. */
 function MenubarPortal({ ...props }: React.ComponentProps<typeof DropdownMenuPortal>): React.JSX.Element {
 	return <DropdownMenuPortal data-slot="menubar-portal" {...props} />;
 }
 
+/** A menu's popup. */
 const MenubarContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof DropdownMenuContent>>(function MenubarContent(
 	{ className, align = "start", alignOffset = MENUBAR_CONTENT_ALIGN_OFFSET, sideOffset = MENUBAR_CONTENT_SIDE_OFFSET, ...props },
 	ref,
@@ -81,6 +87,7 @@ const MenubarContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typ
 	);
 });
 
+/** A command. Run it from `onClick`. */
 const MenubarItem = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof DropdownMenuItem>>(function MenubarItem(
 	{ className, inset, variant = "default", ...props },
 	ref,
@@ -100,9 +107,11 @@ const MenubarItem = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof
 	);
 });
 
+/** An on/off item with a tick. */
 const MenubarCheckboxItem = React.forwardRef<
 	HTMLElement,
 	MenuPrimitive.CheckboxItem.Props & {
+		/** Indents the item to line up with items that have an icon. */
 		inset?: boolean;
 	}
 >(function MenubarCheckboxItem({ className, children, checked, inset, ...props }, ref): React.JSX.Element {
@@ -128,6 +137,7 @@ const MenubarCheckboxItem = React.forwardRef<
 	);
 });
 
+/** A set of `MenubarRadioItem`s holding one value. */
 const MenubarRadioGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof DropdownMenuRadioGroup>>(function MenubarRadioGroup(
 	{ ...props },
 	ref,
@@ -135,9 +145,11 @@ const MenubarRadioGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<
 	return <DropdownMenuRadioGroup ref={ref} data-slot="menubar-radio-group" {...props} />;
 });
 
+/** One choice of a `MenubarRadioGroup`. */
 const MenubarRadioItem = React.forwardRef<
 	HTMLElement,
 	MenuPrimitive.RadioItem.Props & {
+		/** Indents the item to line up with items that have an icon. */
 		inset?: boolean;
 	}
 >(function MenubarRadioItem({ className, children, inset, ...props }, ref): React.JSX.Element {
@@ -162,6 +174,7 @@ const MenubarRadioItem = React.forwardRef<
 	);
 });
 
+/** A heading for a group. Must sit inside a `MenubarGroup` or `MenubarRadioGroup`. */
 const MenubarLabel = React.forwardRef<
 	HTMLDivElement,
 	React.ComponentProps<typeof DropdownMenuLabel> & {
@@ -171,6 +184,7 @@ const MenubarLabel = React.forwardRef<
 	return <DropdownMenuLabel ref={ref} data-slot="menubar-label" data-inset={inset} className={cn("px-2 py-1.5 text-sm font-medium data-inset:ps-8", className)} {...props} />;
 });
 
+/** A divider between groups of items. */
 const MenubarSeparator = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof DropdownMenuSeparator>>(function MenubarSeparator(
 	{ className, ...props },
 	ref,
@@ -178,6 +192,7 @@ const MenubarSeparator = React.forwardRef<HTMLDivElement, React.ComponentProps<t
 	return <DropdownMenuSeparator ref={ref} data-slot="menubar-separator" className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />;
 });
 
+/** A key hint at the end of an item. Bind the key yourself. */
 const MenubarShortcut = React.forwardRef<HTMLSpanElement, React.ComponentProps<typeof DropdownMenuShortcut>>(function MenubarShortcut(
 	{ className, ...props },
 	ref,
@@ -192,10 +207,12 @@ const MenubarShortcut = React.forwardRef<HTMLSpanElement, React.ComponentProps<t
 	);
 });
 
+/** A nested menu. */
 function MenubarSub({ ...props }: React.ComponentProps<typeof DropdownMenuSub>): React.JSX.Element {
 	return <DropdownMenuSub data-slot="menubar-sub" {...props} />;
 }
 
+/** The item that opens a submenu. */
 const MenubarSubTrigger = React.forwardRef<
 	HTMLElement,
 	React.ComponentProps<typeof DropdownMenuSubTrigger> & {
@@ -213,6 +230,7 @@ const MenubarSubTrigger = React.forwardRef<
 	);
 });
 
+/** The submenu's popup, opened to the side. */
 const MenubarSubContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof DropdownMenuSubContent>>(function MenubarSubContent(
 	{ className, ...props },
 	ref,

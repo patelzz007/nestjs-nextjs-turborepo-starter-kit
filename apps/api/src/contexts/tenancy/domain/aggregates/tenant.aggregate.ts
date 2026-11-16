@@ -1,4 +1,4 @@
-import { TenantLifecycleStateSchema, type EpochMs, type TenantLifecycleState, type PilotCity } from "@workspace/shared";
+import { TENANT_LIFECYCLE, TenantLifecycleStateSchema, type EpochMs, type TenantLifecycleEvent, type TenantLifecycleState, type PilotCity } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import { TenantDeletionGraceOverError, TenantLifecycleTransitionError, TenantNotProvisioningError } from "../errors/tenants.errors";
@@ -29,16 +29,10 @@ export interface LifecycleTransition {
 	readonly reason: string;
 }
 
-/** Lifecycle states a platform admin may suspend a tenant from. */
-const SUSPENDABLE_STATES: readonly TenantLifecycleState[] = ["ACTIVE", "RESTRICTED"];
-
-/** Lifecycle states a super admin may ban a tenant from: a live tenant, suspended or not. */
-const BANNABLE_STATES: readonly TenantLifecycleState[] = ["ACTIVE", "RESTRICTED", "SUSPENDED"];
-
 /**
- * A tenant: its identity (slug, name) and lifecycle — PROVISIONING → ACTIVE at onboarding,
- * ACTIVE/RESTRICTED ⇄ SUSPENDED by a platform admin, ACTIVE/RESTRICTED/SUSPENDED → BANNED → ACTIVE
- * by a super admin, PENDING_DELETION → ACTIVE by its owner while the deletion grace period runs.
+ * A tenant: its identity (slug, name) and lifecycle. Which move may start from which state is
+ * {@link TENANT_LIFECYCLE} (`@workspace/shared`), the table the admin and merchant UIs read too;
+ * this aggregate enforces it and adds the rules a table cannot hold (the deletion grace period).
  */
 export class Tenant extends AggregateRoot<TenantsDomainEvent> {
 	private readonly transitions: LifecycleTransition[] = [];
@@ -106,29 +100,26 @@ export class Tenant extends AggregateRoot<TenantsDomainEvent> {
 
 	/** PROVISIONING → ACTIVE once onboarding is complete. */
 	public activate(actorUserId: string, now: EpochMs): void {
-		if (this.state !== "PROVISIONING") {
+		if (!TENANT_LIFECYCLE.can("activate", this.state)) {
 			throw new TenantNotProvisioningError();
 		}
-		this.state = "ACTIVE";
-		this.transitions.push({ from: "PROVISIONING", to: "ACTIVE", actorUserId, reason: "Onboarding complete" });
-		this.record(new TenantLifecycleChanged(now, this.id, "PROVISIONING", "ACTIVE"));
+		this.transition("activate", actorUserId, "Onboarding complete", now);
 	}
 
 	/** A platform admin suspends an ACTIVE or RESTRICTED tenant: only its lifecycle routes keep working. */
 	public suspend(adminUserId: string, reason: string, now: EpochMs): void {
-		const from = this.state;
-		if (!SUSPENDABLE_STATES.includes(from)) {
+		if (!TENANT_LIFECYCLE.can("suspend", this.state)) {
 			throw new TenantLifecycleTransitionError("Only an active or restricted tenant can be suspended");
 		}
-		this.transition(from, "SUSPENDED", adminUserId, reason, now);
+		this.transition("suspend", adminUserId, reason, now);
 	}
 
 	/** A platform admin reinstates a SUSPENDED tenant (after an appeal or on their own review). */
 	public reinstate(adminUserId: string, reason: string, now: EpochMs): void {
-		if (this.state !== "SUSPENDED") {
+		if (!TENANT_LIFECYCLE.can("reinstate", this.state)) {
 			throw new TenantLifecycleTransitionError("Only a suspended tenant can be reinstated");
 		}
-		this.transition("SUSPENDED", "ACTIVE", adminUserId, reason, now);
+		this.transition("reinstate", adminUserId, reason, now);
 	}
 
 	/**
@@ -136,41 +127,43 @@ export class Tenant extends AggregateRoot<TenantsDomainEvent> {
 	 * reactivated by its owner; only its lifecycle routes keep working (to read the status, or leave).
 	 */
 	public ban(adminUserId: string, reason: string, now: EpochMs): void {
-		const from = this.state;
-		if (!BANNABLE_STATES.includes(from)) {
+		if (!TENANT_LIFECYCLE.can("ban", this.state)) {
 			throw new TenantLifecycleTransitionError("Only an active, restricted or suspended tenant can be banned");
 		}
-		this.transition(from, "BANNED", adminUserId, reason, now);
+		this.transition("ban", adminUserId, reason, now);
 	}
 
 	/** A super admin lifts the ban: the tenant is ACTIVE again. */
 	public unban(adminUserId: string, reason: string, now: EpochMs): void {
-		if (this.state !== "BANNED") {
+		if (!TENANT_LIFECYCLE.can("unban", this.state)) {
 			throw new TenantLifecycleTransitionError("Only a banned tenant can be unbanned");
 		}
-		this.transition("BANNED", "ACTIVE", adminUserId, reason, now);
+		this.transition("unban", adminUserId, reason, now);
 	}
 
-	/** Whether a suspended tenant may appeal (the appeal itself is its own aggregate). */
+	/** Whether a suspended tenant may appeal (the appeal itself is its own aggregate); an appeal asks to be reinstated. */
 	public assertAppealable(): void {
-		if (this.state !== "SUSPENDED") {
+		if (!TENANT_LIFECYCLE.can("reinstate", this.state)) {
 			throw new TenantLifecycleTransitionError("Only a suspended tenant can appeal");
 		}
 	}
 
 	/** The owner cancels a pending deletion while its grace period runs: the tenant is ACTIVE again. */
 	public reactivate(ownerUserId: string, now: EpochMs): void {
-		if (this.state !== "PENDING_DELETION") {
+		if (!TENANT_LIFECYCLE.can("reactivate", this.state)) {
 			throw new TenantLifecycleTransitionError("Only a tenant pending deletion can be reactivated");
 		}
 		if (this.graceEndsAt !== null && this.graceEndsAt <= now) {
 			throw new TenantDeletionGraceOverError();
 		}
 		this.graceEndsAt = null;
-		this.transition("PENDING_DELETION", "ACTIVE", ownerUserId, "The owner cancelled the deletion", now);
+		this.transition("reactivate", ownerUserId, "The owner cancelled the deletion", now);
 	}
 
-	private transition(from: TenantLifecycleState, to: TenantLifecycleState, actorUserId: string, reason: string, now: EpochMs): void {
+	/** Makes a move the caller has checked with {@link TENANT_LIFECYCLE}: the new state, its lifecycle row and its event. */
+	private transition(event: TenantLifecycleEvent, actorUserId: string, reason: string, now: EpochMs): void {
+		const from = this.state;
+		const to = TENANT_LIFECYCLE.targetOf(event);
 		this.state = to;
 		this.transitions.push({ from, to, actorUserId, reason: reason.trim() });
 		this.record(new TenantLifecycleChanged(now, this.id, from, to));

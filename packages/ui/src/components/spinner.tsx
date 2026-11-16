@@ -5,16 +5,19 @@ import * as React from "react";
 
 const spinnerVariants = cva("animate-spin", {
 	variants: {
+		/** The spinner's look; one treatment today. */
 		variant: {
 			default: "text-current",
 			muted: "text-muted-foreground",
 			primary: "text-primary",
 		},
+		/** Size of the spinner: `sm`, `default` or `lg` (or a `size-*` class). */
 		size: {
 			default: "size-4",
 			sm: "size-3",
 			lg: "size-6",
 		},
+		/** The visual state; leave it unset. */
 		state: {
 			default: "",
 			loading: "",
@@ -35,6 +38,7 @@ type SpinnerProps = Omit<React.ComponentProps<"svg">, "children" | "aria-label">
 		readonly ariaLabel?: string;
 	};
 
+/** A rotating indicator for a wait of unknown length. `role="status"` with a localised "Loading" name unless `aria-hidden`; inherits colour and size. */
 const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>(function Spinner(
 	{ className, variant, size, state, ariaLabel, "aria-hidden": ariaHidden, ...props },
 	ref,

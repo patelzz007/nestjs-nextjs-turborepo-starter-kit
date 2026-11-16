@@ -1,0 +1,19 @@
+import { Table, type TableColumn, type TableRow } from "@workspace/ui-native/components/table";
+import * as React from "react";
+
+type Column = "item" | "amount";
+
+// Amounts left-aligned: their digits no longer line up, so they cannot be compared at a glance.
+const COLUMNS: readonly TableColumn<Column>[] = [
+	{ key: "item", label: "Item" },
+	{ key: "amount", label: "Amount" },
+];
+
+const ROWS: readonly TableRow<Column>[] = [
+	{ key: "coffee", cells: { item: "Coffee", amount: "RM 9.00" } },
+	{ key: "bagel", cells: { item: "Bagel", amount: "RM 12.50" } },
+];
+
+export function TableDont1Example(): React.JSX.Element {
+	return <Table caption="Receipt" columns={COLUMNS} rows={ROWS} />;
+}

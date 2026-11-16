@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name the writing area",
+		"do": {
+			"text": "Give the editor a `label` that says what is being written (\"Broadcast\").",
+			"file": "rich-text-editor-do-1",
+			"export": "RichTextEditorDo1Example"
+		},
+		"dont": {
+			"text": "Don't name it after the control (\"Editor\"): a screen reader hears nothing about what to write.",
+			"file": "rich-text-editor-dont-1",
+			"export": "RichTextEditorDont1Example"
+		}
+	},
+	{
+		"title": "Offer only the formatting that is needed",
+		"do": {
+			"text": "Use a short toolbar for short messages.",
+			"file": "rich-text-editor-do-2",
+			"export": "RichTextEditorDo2Example"
+		},
+		"dont": {
+			"text": "Don't show every tool for a two-line note: the toolbar crowds the text.",
+			"file": "rich-text-editor-dont-2",
+			"export": "RichTextEditorDont2Example"
+		}
+	}
+]

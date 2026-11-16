@@ -1,0 +1,107 @@
+[
+	{
+		"id": "c-pagination-1",
+		"label": "Basic",
+		"description": "Basic pagination. Best for the stock pattern: labelled Previous and Next around 3 page buttons, with page 2 outlined as current.",
+		"file": "pagination-1",
+		"export": "Pagination1Example"
+	},
+	{
+		"id": "c-pagination-2",
+		"label": "No Labels",
+		"description": "Pagination without labels. Best for chevron only arrows, named for screen readers, around 3 numbers with page 2 current.",
+		"file": "pagination-2",
+		"export": "Pagination2Example"
+	},
+	{
+		"id": "c-pagination-3",
+		"label": "Hover Border",
+		"description": "Pagination with borderless pages. Best for labelled arrows around 3 pages whose idle numbers have no border, like a toolbar.",
+		"file": "pagination-3",
+		"export": "Pagination3Example"
+	},
+	{
+		"id": "c-pagination-4",
+		"label": "Circle Buttons",
+		"description": "Pagination with round buttons. Best for fully round page buttons, with page 2 outlined as current.",
+		"file": "pagination-4",
+		"export": "Pagination4Example"
+	},
+	{
+		"id": "c-pagination-5",
+		"label": "Compact Go-To",
+		"description": "Compact pagination with go-to-page. Best for chevrons, the first pages and an ellipsis above a small Go to page number field.",
+		"file": "pagination-5",
+		"export": "Pagination5Example"
+	},
+	{
+		"id": "c-pagination-6",
+		"label": "In Card",
+		"description": "Numbered pagination on a card. Best for a padded card holding round chevrons, pages 1 to 3, an ellipsis, then the last pages, with the current page filled.",
+		"file": "pagination-6",
+		"export": "Pagination6Example"
+	},
+	{
+		"id": "c-pagination-7",
+		"label": "Arrow Links",
+		"description": "Arrow-only pagination. Best for two arrow buttons pushed to opposite ends of a row, and no page numbers at all.",
+		"file": "pagination-7",
+		"export": "Pagination7Example"
+	},
+	{
+		"id": "c-pagination-8",
+		"label": "Centered Page Info",
+		"description": "Pagination with centred page info. Best for chevron arrows at both ends with a centred Page 1 of 10 between them.",
+		"file": "pagination-8",
+		"export": "Pagination8Example"
+	},
+	{
+		"id": "c-pagination-9",
+		"label": "Left Page Info",
+		"description": "Pagination with page info first. Best for a Page 1 of 10 count at the start, with the arrows grouped at the end.",
+		"file": "pagination-9",
+		"export": "Pagination9Example"
+	},
+	{
+		"id": "c-pagination-10",
+		"label": "Trailing Ellipsis",
+		"description": "Pagination with a trailing ellipsis. Best for labelled arrows around the first pages and a trailing ellipsis, with no last page after it.",
+		"file": "pagination-10",
+		"export": "Pagination10Example"
+	},
+	{
+		"id": "c-pagination-11",
+		"label": "Outline Strip",
+		"description": "Joined page strip. Best for one bordered strip of joined square cells split by rules, with a muted fill on the current page.",
+		"file": "pagination-11",
+		"export": "Pagination11Example"
+	},
+	{
+		"id": "c-pagination-12",
+		"label": "Rows Per Page",
+		"description": "Rows per page with range info. Best for a footer with no page numbers: a rows per page select, and a 1–25 of 100 range with first, previous, next and last buttons.",
+		"file": "pagination-12",
+		"export": "Pagination12Example"
+	},
+	{
+		"id": "c-pagination-13",
+		"label": "Page Select",
+		"description": "Page select with first and last jumps. Best for a Page 1 to Page 10 select beside first, previous, next and last icon buttons.",
+		"file": "pagination-13",
+		"export": "Pagination13Example"
+	},
+	{
+		"id": "c-pagination-14",
+		"label": "Full Width Go-To",
+		"description": "Numbered pagination with go-to-page. Best for chevrons and the pages near the current one above a page number field at the end.",
+		"file": "pagination-14",
+		"export": "Pagination14Example"
+	},
+	{
+		"id": "c-pagination-15",
+		"label": "Info & Per-Page",
+		"description": "Page info, pages and per-page select. Best for a 3 part footer: a Page 1 of 10 count, arrows around the first pages, and a per page select.",
+		"file": "pagination-15",
+		"export": "Pagination15Example"
+	}
+]

@@ -35,8 +35,8 @@ vi.mock("pele/lazy", async (importOriginal) => {
 	};
 });
 
-const { flowchartRoles, initDiagrams } = await import("../diagrams");
-const { load, parse } = await import("pele/lazy");
+const { drawnFlowchartRoles, initDiagrams, SHAPE_ROLES } = await import("../diagrams");
+const { load, parse, render } = await import("pele/lazy");
 // `pele/lazy` registers a diagram type on first use; the unit test below parses before any render.
 await load("flowchart");
 
@@ -69,15 +69,21 @@ const FLOWCHART = `flowchart LR
   classDef hot fill:#f00
   Styled:::hot`;
 
-describe("flowchartRoles", () => {
-	it("derives each node's role from its shape and edges, and skips nodes the author styled", () => {
+describe("drawnFlowchartRoles", () => {
+	it("derives each node's role from its drawn shape and edges, and skips nodes the author styled", () => {
 		const model = parse(FLOWCHART);
 		if (model.type !== "flowchart") {
 			throw new Error("expected a flowchart model");
 		}
 		const shapes: Readonly<Record<string, string>> = { Check: "pele-shape-diam", Store: "pele-shape-cyl", Person: "pele-shape-circle" };
-		const roles = flowchartRoles(model, (id) => shapes[id] ?? "pele-shape-rect");
+		const roles = drawnFlowchartRoles(model, (id) => shapes[id] ?? "pele-shape-rect");
 		expect(Object.fromEntries(roles)).toEqual({ Start: "entry", Check: "decision", Store: "store", Done: "outcome", Person: "person" });
+	});
+
+	it("knows every shape class Pele draws for a role-bearing shape, a double circle included", () => {
+		const svg = render("flowchart TD\n  A[(store)] --> B{decision} --> C((person)) --> D(((person)))\n", { idPrefix: "shapes" }).svg;
+		const drawn = [...svg.matchAll(/class="pele-node (?<shape>pele-shape-[a-z]+)/gu)].map((match) => match.groups?.shape ?? "");
+		expect(drawn.map((shape) => SHAPE_ROLES[shape])).toEqual(["store", "decision", "person", "person"]);
 	});
 });
 

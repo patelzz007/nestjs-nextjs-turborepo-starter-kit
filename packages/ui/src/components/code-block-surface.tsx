@@ -10,6 +10,7 @@ import { CodeBlockLineRow } from "./code-block-line";
 import { MIN_GUTTER_DIGITS, OVERFLOW_TOLERANCE_PX, STICK_TO_BOTTOM_THRESHOLD_PX, TOKEN_COLOR_CLASS } from "./code-block-styles";
 
 export interface CodeBlockContentProps {
+	/** Classes for the composed code surface. */
 	className?: string;
 }
 
@@ -190,10 +191,23 @@ export const CodeBlockSurface = React.forwardRef<HTMLDivElement, CodeBlockSurfac
 		};
 	}, [streaming, lineCount, resolveScroller]);
 
+	/* Whether the current stream has decided to stick yet. Following an
+	   ANCESTOR (the page, a transcript) is only right when the reader was
+	   already at its bottom as the stream began: a block streaming further down
+	   a page someone is reading from the top must not drag the page to it. The
+	   block's own viewport always starts stuck, as it holds nothing else. */
+	const streamStartedRef = React.useRef(false);
 	useIsoLayoutEffect(() => {
-		if (!streaming || !stickRef.current || lines.length < 0) return;
+		if (!streaming) {
+			streamStartedRef.current = false;
+			return;
+		}
 		const scroller = resolveScroller();
-		if (scroller) scroller.scrollTop = scroller.scrollHeight;
+		if (!streamStartedRef.current) {
+			streamStartedRef.current = true;
+			stickRef.current = scroller === null || scroller === viewportRef.current || distanceFromBottom(scroller) < STICK_TO_BOTTOM_THRESHOLD_PX;
+		}
+		if (stickRef.current && scroller && lines.length >= 0) scroller.scrollTop = scroller.scrollHeight;
 	}, [lines, streaming, resolveScroller]);
 
 	/* One listener for the whole surface rather than a handler per line: the
@@ -382,7 +396,7 @@ export const CodeBlockSurface = React.forwardRef<HTMLDivElement, CodeBlockSurfac
 					aria-activedescendant={selectable && activeLine !== null ? `${contentId}-L${String(activeLine)}` : undefined}
 					aria-label={selectable ? labels.lines(label) : undefined}
 					className={cn(
-						"w-max min-w-full py-(--code-block-padding) font-mono text-(length:--code-block-font-size)",
+						"w-max min-w-full py-(--code-block-padding) font-(family-name:--code-block-font) text-(length:--code-block-font-size)",
 						TOKEN_COLOR_CLASS,
 						/* `min-w-0` must beat the `min-w-full` above, or the pre keeps
 						   a floor of 100% of a scroll container that is itself wider
@@ -405,7 +419,8 @@ export const CodeBlockSurface = React.forwardRef<HTMLDivElement, CodeBlockSurfac
 					    number). Windowing here means rendering fewer rows, not
 					    containing them. */}
 					{/* presentation, so the listbox owns its options directly. */}
-					<code data-slot="code-block-code" role={selectable ? "presentation" : undefined}>
+					{/* Preflight gives every <code> the theme's mono face directly, so the code face is set here too, not only inherited from the <pre>. */}
+					<code data-slot="code-block-code" role={selectable ? "presentation" : undefined} className="font-(family-name:--code-block-font)">
 						{lines.map((line) => (
 							<CodeBlockLineRow
 								key={line.number}

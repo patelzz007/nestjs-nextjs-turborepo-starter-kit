@@ -15,7 +15,6 @@ const STRING_LITERAL = /"(?<value>[^"]+)"/gu;
 
 /** Unions that repeat an enum's words on purpose, each with why: the reason is the review. */
 const NOT_THE_SAME_SET = new Map<string, string>([
-	["apps/admin/components/component-gallery/examples/filters/filters-12.tsx#Locale", "Same words as another enum, a different meaning"],
 	["apps/admin/contexts/kanban/components/kanban-board-columns.tsx#KanbanColumnStep", "Same words as another enum, a different meaning"],
 	["apps/api/src/contexts/identity/application/services/pending-sign-in.ts#LoginVerificationMode", "The API env schema is config; identity must not import it"],
 	["apps/api/src/platform/application/ports/rate-limiter.port.ts#RateLimitFailMode", "Same words as a kanban rollup, unrelated"],
@@ -23,9 +22,7 @@ const NOT_THE_SAME_SET = new Map<string, string>([
 	["packages/shared/src/schemas/api/list-query.ts#SortDirection", "The list-query type, unrelated to the geo enum that repeats its words"],
 	["packages/tooling/src/api-ci-env/api-ci-env.ts#TenancyMode", "packages/tooling runs before an install, so it cannot import @workspace/shared"],
 	["packages/ui/src/components/cascader/cascader-types.tsx#CascaderSize", "Same words as another enum, a different meaning"],
-	["packages/ui/src/components/code-block-highlight.ts#CodeBlockFontStyle", "Same words as another enum, a different meaning"],
-	["packages/ui/src/components/gantt/gantt-types.tsx#GanttRowAlign", "Same words as another enum, a different meaning"],
-	["packages/ui/src/components/gantt/gantt.tsx#GanttBarLabel", "Same words as another enum, a different meaning"],
+	["packages/ui-kit-logic/src/gantt/gantt-types.ts#GanttRowAlign", "Same words as another enum, a different meaning"],
 	["packages/ui/src/components/number-field.tsx#NumberFieldSize", "Same words as another enum, a different meaning"],
 	["packages/ui/src/components/phone-input.tsx#PhoneInputSize", "Same words as another enum, a different meaning"],
 	["packages/ui/src/components/tree.tsx#TreeFlagAttribute", "Same words as another enum, a different meaning"],

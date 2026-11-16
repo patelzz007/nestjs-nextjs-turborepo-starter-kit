@@ -3,8 +3,11 @@ title: "Over-the-air updates with EAS"
 description: "Ship a JavaScript fix to installed phones without a store release: setting up EAS for the first time (a fresh clone or your own machine), every command, a step-by-step first test, publishing, rolling back, and what goes wrong. Enhancement 6.3."
 order: 3
 author: "Platform Team"
+category: "Mobile"
+date: 1793750400000
 lastUpdated: 1793750400000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/mobile/over-the-air-updates.webp"
 tags: ["mobile", "expo", "eas", "ota", "updates", "release"]
 ---
 

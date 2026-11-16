@@ -3,8 +3,11 @@ title: "ADR 004: Authorization Caching Strategy"
 tags: ["adr", "caching", "authorization", "performance"]
 description: "Architecture decision record for multi-level authorization caching with in-memory and Redis support."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1772000000000
 lastUpdated: 1772000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1791121913000
+coverImage: "/images/covers/adr/004-authorization-caching.webp"
 order: 4
 ---
 

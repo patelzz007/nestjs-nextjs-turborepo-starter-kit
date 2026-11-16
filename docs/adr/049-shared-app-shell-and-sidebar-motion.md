@@ -3,8 +3,11 @@ title: "ADR 049: One App Shell for Admin, Web and Merchant (App Shell 3), and a 
 tags: ["adr", "frontend", "ui", "layout", "motion", "sidebar"]
 description: "Admin, web and merchant render one shared panel shell — an inset sidebar that collapses completely, a floating page panel with a quiet header — and the sidebar opens and closes on one framer-motion spring that the whole layout follows, with charts held still while it moves."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791763200000
 lastUpdated: 1791763200000
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/adr/049-shared-app-shell-and-sidebar-motion.webp"
 order: 49
 ---
 

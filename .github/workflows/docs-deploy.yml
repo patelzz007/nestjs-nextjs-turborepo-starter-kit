@@ -1,0 +1,110 @@
+# Ships the docs site to the Droplet (ADR 084, plan §10). Built here, once, from the commit CI just passed: the Droplet
+# only runs it. Setup: docs/technical/operations/docs-publishing.md
+#
+# GitHub only sends one line over SSH, `receive <commit> <sha256>`, with the build on standard input, to a key that can
+# run nothing but the docs gate. A failed health check there rolls back on its own and fails this job. It never runs
+# migrations and never touches the API or web apps.
+#
+# Off until you switch it on: set the repository variable DOCS_DEPLOY_ENABLED=true and the `docs-production`
+# environment's secrets (DOCS_DEPLOY_HOST, DOCS_DEPLOY_USER, DOCS_DEPLOY_SSH_KEY, DOCS_DEPLOY_KNOWN_HOSTS).
+name: Docs deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time; a newer one replaces a queued older one, never a running one.
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: "24.22.1"
+
+jobs:
+  deploy:
+    name: Deploy the docs site
+    if: >-
+      vars.DOCS_DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: docs-production
+    steps:
+      - name: Check out the commit that passed CI
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          generate-prisma-client: "false"
+
+      - name: Build the site
+        env:
+          PUBLIC_SITE_URL: ${{ vars.DOCS_PUBLIC_SITE_URL }}
+          PUBLIC_ADMIN_URL: ${{ vars.DOCS_PUBLIC_ADMIN_URL }}
+          PUBLIC_API_DOCS_URL: ${{ vars.DOCS_PUBLIC_API_DOCS_URL }}
+        run: pnpm exec turbo run build --filter=@workspace/docs
+
+      - name: Pack the release
+        id: pack
+        run: |
+          commit="$(git rev-parse HEAD)"
+          # The Start server is not self-contained: the release carries production dependencies (no dev ones).
+          pnpm --filter @workspace/docs deploy --prod .artifacts/docs-release/apps/docs
+          rm -rf .artifacts/docs-release/apps/docs/dist .artifacts/docs-release/apps/docs/scripts
+          cp -R apps/docs/dist .artifacts/docs-release/apps/docs/dist
+          cp -R apps/docs/scripts .artifacts/docs-release/apps/docs/scripts
+          printf '{"commit":"%s"}\n' "$commit" > .artifacts/docs-release/apps/docs/dist/client/release.json
+          cp infra/pm2/docs.ecosystem.config.cjs .artifacts/docs-release/ecosystem.config.cjs
+          cp project.json .artifacts/docs-release/project.json
+          tar -czf .artifacts/docs-release.tar.gz -C .artifacts/docs-release .
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum .artifacts/docs-release.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy over SSH
+        env:
+          DOCS_DEPLOY_HOST: ${{ secrets.DOCS_DEPLOY_HOST }}
+          DOCS_DEPLOY_USER: ${{ secrets.DOCS_DEPLOY_USER }}
+          DOCS_DEPLOY_SSH_KEY: ${{ secrets.DOCS_DEPLOY_SSH_KEY }}
+          DOCS_DEPLOY_KNOWN_HOSTS: ${{ secrets.DOCS_DEPLOY_KNOWN_HOSTS }}
+          COMMIT: ${{ steps.pack.outputs.commit }}
+          SHA256: ${{ steps.pack.outputs.sha256 }}
+        run: |
+          for name in DOCS_DEPLOY_HOST DOCS_DEPLOY_USER DOCS_DEPLOY_SSH_KEY DOCS_DEPLOY_KNOWN_HOSTS; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::The docs-production environment has no $name secret."
+              exit 1
+            fi
+          done
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DOCS_DEPLOY_SSH_KEY" > ~/.ssh/docs_deploy_key
+          chmod 600 ~/.ssh/docs_deploy_key
+          # The Droplet's host key is pinned: a changed key fails here instead of trusting a stranger.
+          printf '%s\n' "$DOCS_DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/docs_deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
+            "$DOCS_DEPLOY_USER@$DOCS_DEPLOY_HOST" "receive $COMMIT $SHA256" < .artifacts/docs-release.tar.gz
+
+      - name: Forget the key
+        if: always()
+        run: rm -f ~/.ssh/docs_deploy_key

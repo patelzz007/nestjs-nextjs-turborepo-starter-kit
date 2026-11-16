@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Show the number too",
+		"do": {
+			"text": "Pass `showValue`, so the average's number sits beside the stars.",
+			"file": "rating-do-1",
+			"export": "RatingDo1Example"
+		},
+		"dont": {
+			"text": "Don't rely on star fill alone to tell 4.3 from 4.5.",
+			"file": "rating-dont-1",
+			"export": "RatingDont1Example"
+		}
+	},
+	{
+		"title": "Make picking obvious",
+		"do": {
+			"text": "Make a pickable rating (`editable`) large enough to hit.",
+			"file": "rating-do-2",
+			"export": "RatingDo2Example"
+		},
+		"dont": {
+			"text": "Don't ask for a rating with small stars that are hard to hit.",
+			"file": "rating-dont-2",
+			"export": "RatingDont2Example"
+		}
+	}
+]

@@ -25,7 +25,7 @@ describe("Timeline", () => {
 
 	it("has a compact size", async () => {
 		await render(<Timeline items={ITEMS} variant="muted" size="sm" />);
-		expect(screen.getByText("Kopi Kaki")).toHaveProp("className", expect.stringContaining("text-xs"));
+		expect(screen.getByText("Kopi Kaki")).toHaveProp("className", expect.stringContaining("text-caption"));
 	});
 
 	it("forwards its ref and merges className last", async () => {

@@ -237,6 +237,15 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 		payments: resolvePaymentsConfig(env, isProduction),
 		webhooks: { secretEncryptionKeys: env.WEBHOOK_SECRET_ENCRYPTION_KEYS ?? null, allowLoopbackUrls: env.WEBHOOK_ALLOW_LOOPBACK_URLS },
 		inboundWebhooks: { retentionDays: env.INBOUND_WEBHOOK_RETENTION_DAYS },
+		docsPublishing: {
+			notionWebhookSecret: env.NOTION_WEBHOOK_SECRET ?? null,
+			dispatch:
+				env.DOCS_SYNC_GITHUB_TOKEN === undefined || env.DOCS_SYNC_GITHUB_REPOSITORY === undefined || env.DOCS_SYNC_GITHUB_REF === undefined
+					? null
+					: { token: env.DOCS_SYNC_GITHUB_TOKEN, repository: env.DOCS_SYNC_GITHUB_REPOSITORY, ref: env.DOCS_SYNC_GITHUB_REF },
+			reportToken: env.DOCS_SYNC_REPORT_TOKEN ?? null,
+			retentionDays: env.DOCS_SYNC_RUN_RETENTION_DAYS,
+		},
 	};
 }
 

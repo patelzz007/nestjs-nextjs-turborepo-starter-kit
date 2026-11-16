@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Let people start again",
+		"do": {
+			"text": "Give the pad Clear (and Undo).",
+			"file": "signature-pad-do-1",
+			"export": "SignaturePadDo1Example"
+		},
+		"dont": {
+			"text": "Don't make a shaky first try final.",
+			"file": "signature-pad-dont-1",
+			"export": "SignaturePadDont1Example"
+		}
+	},
+	{
+		"title": "Give it room",
+		"do": {
+			"text": "Make the pad wide and tall enough to sign.",
+			"file": "signature-pad-do-2",
+			"export": "SignaturePadDo2Example"
+		},
+		"dont": {
+			"text": "Don't squeeze a signature into a small box.",
+			"file": "signature-pad-dont-2",
+			"export": "SignaturePadDont2Example"
+		}
+	}
+]

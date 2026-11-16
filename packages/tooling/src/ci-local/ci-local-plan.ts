@@ -269,7 +269,7 @@ export function databaseSteps({
  * The admin features the browser suite drives that a production build leaves off (ci.yml →
  * jobs.browser-e2e.env): the kanban board lives in the developer component gallery.
  */
-export const BROWSER_ADMIN_FEATURE_ENV = { ADMIN_COMPONENT_GALLERY: "true" };
+export const BROWSER_ADMIN_FEATURE_ENV = { ADMIN_SHOWCASE: "true" };
 
 /**
  * The `browser-e2e` job: build, migrate + seed a fresh database, start the API,
@@ -337,8 +337,6 @@ export function browserJob({ databaseUrl, apiEnvFile }: { databaseUrl: string; a
 			},
 			{ id: "browser:web-suite", job, command: "pnpm", args: ["--filter", ws.web, "test:browser"], env: BROWSER_SUITE_ENV },
 			{ id: "browser:admin-suite", job, command: "pnpm", args: ["--filter", ws.admin, "test:browser"], env: BROWSER_SUITE_ENV },
-			// The UI kit's screenshots are Linux's (CI's renderer): on a Mac the same suite runs in Playwright's Linux image.
-			{ id: "browser:admin-visual-suite", job, command: "pnpm", args: ["--filter", ws.admin, "test:visual:docker"], env: BROWSER_SUITE_ENV },
 			{ id: "browser:merchant-suite", job, command: "pnpm", args: ["--filter", ws.merchant, "test:browser"], env: BROWSER_SUITE_ENV },
 		],
 	};

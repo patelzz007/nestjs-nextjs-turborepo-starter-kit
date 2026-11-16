@@ -6,7 +6,7 @@ import { GuideFrontmatterSchema, parseMarkdownFile, PostFrontmatterSchema, type 
 import { docIcon, type IconName } from "./icons";
 import { buildNavSections, contentId, docHref, findNeighbours, findSection, flattenNav, type DocsMeta, type NavItem, type NavSection } from "./navigation";
 import { toPlainText, type SearchEntry } from "./search";
-import { CONTENT_FOLDERS, githubEditUrl } from "./site";
+import { CONTENT_FOLDERS, editLinkOf } from "./site";
 import { buildToc, topSections, type TocItem } from "./toc";
 
 /**
@@ -54,6 +54,11 @@ interface ArticleFields {
 	readonly title: string;
 	readonly description: string | null;
 	readonly author: string;
+	readonly category: string;
+	/** First published, last meaningfully updated, and last edited at all (epoch ms). */
+	readonly date: number;
+	readonly lastUpdated: number;
+	readonly editedAt: number;
 	readonly coverImage: string | null;
 	readonly html: string;
 	readonly toc: readonly TimelineItem[];
@@ -62,13 +67,14 @@ interface ArticleFields {
 	/** The source file in the repository (`docs/technical/database.md`), shown as the page's path. */
 	readonly sourcePath: string;
 	readonly editUrl: string;
+	/** What the edit link says: a synced page is edited in its writing tool, not on GitHub. */
+	readonly editLabel: string;
 	readonly previous: PageLink | null;
 	readonly next: PageLink | null;
 }
 
 export interface GuidePage extends ArticleFields {
 	readonly kind: "guide";
-	readonly lastUpdated: number;
 	readonly tags: readonly string[];
 	readonly superseded: boolean;
 	readonly section: string | null;
@@ -77,8 +83,6 @@ export interface GuidePage extends ArticleFields {
 
 export interface PostPage extends ArticleFields {
 	readonly kind: "post";
-	readonly date: number;
-	readonly category: string;
 }
 
 /** A page as its route receives it: everything but the body, which travels in the page's HTML once (src/lib/article-body.ts). */
@@ -159,6 +163,11 @@ function parseFiles<TData>(
 		.sort((left, right) => left.id.localeCompare(right.id));
 }
 
+/** The category and three dates every page carries in its front matter. */
+function datedFields(data: GuideFrontmatter | PostFrontmatter): Pick<ArticleFields, "category" | "date" | "lastUpdated" | "editedAt"> {
+	return { category: data.category, date: data.date, lastUpdated: data.lastUpdated, editedAt: data.editedAt };
+}
+
 function navLink(item: NavItem | null): PageLink | null {
 	return item === null ? null : { title: item.title, href: item.href };
 }
@@ -228,8 +237,8 @@ export function createContentStore(sources: ContentSources): ContentStore {
 			title: entry.data.title,
 			description: entry.data.description ?? null,
 			author: entry.data.author,
-			coverImage: entry.data.coverImage,
-			lastUpdated: entry.data.lastUpdated,
+			...datedFields(entry.data),
+			coverImage: entry.data.coverImage ?? null,
 			tags: entry.data.tags.filter((tag) => tag !== SUPERSEDED_TAG),
 			superseded: entry.data.tags.includes(SUPERSEDED_TAG),
 			section: findSection(sections, id)?.title ?? null,
@@ -239,7 +248,7 @@ export function createContentStore(sources: ContentSources): ContentStore {
 			words,
 			readingMinutes: readingMinutes(entry.body),
 			sourcePath: `docs/${entry.path}`,
-			editUrl: githubEditUrl("docs", entry.path),
+			...editLinkOf("docs", entry.path, entry.data.source),
 			previous: navLink(previous),
 			next: navLink(next),
 		};
@@ -273,15 +282,14 @@ export function createContentStore(sources: ContentSources): ContentStore {
 			title: entry.data.title,
 			description: entry.data.description,
 			author: entry.data.author,
+			...datedFields(entry.data),
 			coverImage: entry.data.coverImage ?? null,
-			date: entry.data.date,
-			category: entry.data.category,
 			html,
 			toc: buildTimeline(headings, entry.body),
 			words: countWords(entry.body.replace(FENCE_PATTERN, " ")),
 			readingMinutes: readingMinutes(entry.body),
 			sourcePath: `docs/blog/${entry.path}`,
-			editUrl: githubEditUrl("blog", entry.path),
+			...editLinkOf("blog", entry.path, entry.data.source),
 			previous: newer === undefined ? null : { title: newer.data.title, href: postHref(newer.id) },
 			next: older === undefined ? null : { title: older.data.title, href: postHref(older.id) },
 		};
@@ -301,7 +309,7 @@ export function createContentStore(sources: ContentSources): ContentStore {
 		const covers = Object.fromEntries(
 			flattenNav(sections).flatMap((item): [string, string][] => {
 				const entry = guidesById.get(item.id);
-				return entry === undefined ? [] : [[item.id, entry.data.coverImage]];
+				return entry?.data.coverImage === undefined ? [] : [[item.id, entry.data.coverImage]];
 			}),
 		);
 		return { sections, quickLinks: Object.fromEntries(entries), covers };

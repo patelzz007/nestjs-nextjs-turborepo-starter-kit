@@ -46,6 +46,7 @@ function useNavButtonLook(): NavButtonLook {
 }
 
 export interface GanttNavButtonProps extends Omit<React.ComponentProps<typeof Button>, "children" | "variant" | "size"> {
+	/** Custom button content. */
 	readonly children?: React.ReactNode;
 	/**
 	 * Hover / keyboard-focus tooltip. Icon-only buttons default to their
@@ -72,6 +73,7 @@ function NavTooltip({ content, children }: NavTooltipProps): React.ReactElement 
 	);
 }
 
+/** Jumps the view to today. */
 export const GanttNavToday = React.forwardRef<HTMLElement, GanttNavButtonProps>(function GanttNavToday({ className, children, tooltip, ...props }, ref): React.ReactElement {
 	const { today, isToday } = useGanttNavigation();
 	const settings = useGanttSettings();
@@ -96,6 +98,7 @@ export const GanttNavToday = React.forwardRef<HTMLElement, GanttNavButtonProps>(
 	);
 });
 
+/** Moves the view back one period. */
 export const GanttNavPrev = React.forwardRef<HTMLElement, GanttNavButtonProps>(function GanttNavPrev({ className, children, tooltip, ...props }, ref): React.ReactElement {
 	const { prev } = useGanttNavigation();
 	const settings = useGanttSettings();
@@ -110,6 +113,7 @@ export const GanttNavPrev = React.forwardRef<HTMLElement, GanttNavButtonProps>(f
 	);
 });
 
+/** Moves the view forward one period. */
 export const GanttNavNext = React.forwardRef<HTMLElement, GanttNavButtonProps>(function GanttNavNext({ className, children, tooltip, ...props }, ref): React.ReactElement {
 	const { next } = useGanttNavigation();
 	const settings = useGanttSettings();
@@ -125,9 +129,11 @@ export const GanttNavNext = React.forwardRef<HTMLElement, GanttNavButtonProps>(f
 });
 
 export interface GanttTitleProps extends useRender.ComponentProps<"div"> {
+	/** Wraps or replaces the formatted title text. */
 	readonly format?: ((context: { readonly title: string }) => React.ReactNode) | undefined;
 }
 
+/** The visible period, as text. */
 export const GanttTitle = React.forwardRef<HTMLDivElement, GanttTitleProps>(function GanttTitle(
 	{ className, render, format: formatTitle, ...props },
 	ref,
@@ -146,6 +152,7 @@ export const GanttTitle = React.forwardRef<HTMLDivElement, GanttTitleProps>(func
 });
 
 export interface GanttScaleSwitcherProps extends Omit<React.ComponentProps<typeof Button>, "children" | "variant" | "size"> {
+	/** Custom trigger content. */
 	readonly children?: React.ReactNode;
 	/** Hover hint; defaults to the "Select view" label. Pass null to disable. */
 	readonly tooltip?: React.ReactNode;
@@ -210,21 +217,12 @@ export const GanttScaleSwitcher = React.forwardRef<HTMLButtonElement, GanttScale
 				<DropdownMenuTrigger
 					ref={ref}
 					render={
-						<TooltipTrigger
-							render={
-								<Button
-									variant={look.variant}
-									size={look.size}
-									data-slot="gantt-scale-switcher"
-									aria-label={labels.selectView}
-									className={cn("gap-1", className)}
-									{...props}
-								/>
-							}
-						/>
+						<TooltipTrigger render={<Button variant={look.variant} size={look.size} data-slot="gantt-scale-switcher" className={cn("gap-1", className)} {...props} />} />
 					}>
 					{children ?? (
 						<>
+							{/* The action is announced, and the visible scale stays part of the name (WCAG 2.5.3). */}
+							<span className="sr-only">{labels.selectView}: </span>
 							{labels.scales[scale]}
 							<ChevronDownIcon aria-hidden className="size-4 opacity-60" />
 						</>
@@ -245,6 +243,7 @@ export const GanttScaleSwitcher = React.forwardRef<HTMLButtonElement, GanttScale
 });
 
 export interface GanttDatePickerProps {
+	/** Additional CSS classes. */
 	readonly className?: string | undefined;
 }
 
@@ -280,10 +279,12 @@ export const GanttDatePicker = React.forwardRef<HTMLButtonElement, GanttDatePick
 
 export const ganttNavVariants = cva("flex min-w-0 items-center", {
 	variants: {
+		/** The toolbar's look. */
 		variant: {
 			default: "flex-wrap border-b",
 			plain: "flex-wrap",
 		},
+		/** The toolbar's size. */
 		size: {
 			default: "gap-2 px-3 py-2",
 			sm: "gap-1.5 px-2 py-1.5",

@@ -22,7 +22,7 @@ describe("DetailList", () => {
 		await render(<DetailList items={ITEMS} variant="stacked" size="sm" testID="details" />);
 
 		expect(screen.getByText("Signed in")).toBeOnTheScreen();
-		expect(screen.getByText("Signed in")).toHaveProp("className", expect.stringContaining("text-xs"));
+		expect(screen.getByText("Signed in")).toHaveProp("className", expect.stringContaining("text-caption"));
 		expect(screen.getByTestId("details")).toHaveProp("className", expect.stringContaining("gap-0.5"));
 	});
 

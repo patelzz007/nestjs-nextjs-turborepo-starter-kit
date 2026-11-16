@@ -6,7 +6,7 @@ import { APP_FONTS, useAppFonts } from "../fonts";
 jest.mock("expo-font", () => ({ useFonts: jest.fn() }));
 
 describe("APP_FONTS", () => {
-	it("registers Geist, Bricolage Grotesque (button labels) and Geist Mono, one family per weight", () => {
+	it("registers Geist, Bricolage Grotesque (button labels), Geist Mono and JetBrains Mono (code blocks), one family per weight", () => {
 		expect(Object.keys(APP_FONTS)).toStrictEqual([
 			"Geist_400Regular",
 			"Geist_500Medium",
@@ -14,6 +14,7 @@ describe("APP_FONTS", () => {
 			"Geist_700Bold",
 			"BricolageGrotesque_600SemiBold",
 			"GeistMono_400Regular",
+			"JetBrainsMono_400Regular",
 		]);
 	});
 });

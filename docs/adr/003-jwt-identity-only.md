@@ -3,8 +3,11 @@ title: "ADR 003: JWT Contains Identity Only"
 tags: ["adr", "auth", "jwt", "security"]
 description: "Architecture decision record for keeping JWT payloads identity-only without embedded permissions."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1772000000000
 lastUpdated: 1772000000000
-coverImage: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&h=630&fit=crop"
+editedAt: 1791121913000
+coverImage: "/images/covers/adr/003-jwt-identity-only.webp"
 order: 3
 ---
 

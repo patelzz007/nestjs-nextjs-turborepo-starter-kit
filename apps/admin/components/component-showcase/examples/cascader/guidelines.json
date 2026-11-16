@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Use it for real hierarchies",
+		"do": {
+			"text": "Use a cascader when the options form a tree people walk: region, country, city.",
+			"file": "cascader-do-1",
+			"export": "CascaderDo1Example"
+		},
+		"dont": {
+			"text": "Don't wrap three flat sizes in a cascader: a select or a toggle group shows them at once.",
+			"file": "cascader-dont-1",
+			"export": "CascaderDont1Example"
+		}
+	},
+	{
+		"title": "Keep the path when names repeat",
+		"do": {
+			"text": "Show the path (`maxSegments`) when leaves share a name, so `settings / page.tsx` differs from `app / page.tsx`.",
+			"file": "cascader-do-2",
+			"export": "CascaderDo2Example"
+		},
+		"dont": {
+			"text": "Don't show only the leaf when several leaves are called `page.tsx`: the field no longer says which one.",
+			"file": "cascader-dont-2",
+			"export": "CascaderDont2Example"
+		}
+	}
+]

@@ -59,8 +59,8 @@ const SENTIMENT_CLASSES: Readonly<Record<KpiSentiment, { readonly container: str
 };
 
 const SIZE_CLASSES: Readonly<Record<"default" | "hero", { readonly value: string; readonly label: string }>> = {
-	default: { value: "text-2xl tracking-tight", label: "text-sm" },
-	hero: { value: "text-4xl tracking-tight", label: "text-base" },
+	default: { value: "text-h2 tracking-tight", label: "text-body" },
+	hero: { value: "text-display tracking-tight", label: "text-body-lg" },
 };
 
 /** What a screen reader says for the change ("Up 12.4% vs previous 30 days", "No change vs previous 7 days"). */
@@ -81,7 +81,7 @@ export function KpiTile({ label, value, change, comparisonLabel, trend, size = "
 			</Text>
 			<View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
 				<ChangePill change={change} />
-				{change.status === "change" ? <Text className="font-sans text-xs text-muted-foreground">{comparisonLabel}</Text> : null}
+				{change.status === "change" ? <Text className="text-caption font-sans text-muted-foreground">{comparisonLabel}</Text> : null}
 			</View>
 			{trend === undefined ? null : <Sparkline values={trend.values} color={trend.color} />}
 		</View>
@@ -94,13 +94,13 @@ interface ChangePillProps {
 
 function ChangePill({ change }: ChangePillProps): React.JSX.Element {
 	if (change.status === "noPrevious") {
-		return <Text className="font-sans text-xs text-muted-foreground">{change.label}</Text>;
+		return <Text className="text-caption font-sans text-muted-foreground">{change.label}</Text>;
 	}
 	const classes = SENTIMENT_CLASSES[change.sentiment];
 	return (
 		<View className={`flex-row items-center gap-0.5 rounded-full py-0.5 pr-2 pl-1.5 ${classes.container}`}>
 			<Icon icon={DIRECTION_ICONS[change.direction]} size="sm" weight="bold" colorClassName={classes.icon} />
-			<Text className={`font-sans-semibold text-xs ${classes.text}`}>{change.label}</Text>
+			<Text className={`font-sans-semibold text-caption ${classes.text}`}>{change.label}</Text>
 		</View>
 	);
 }

@@ -9,6 +9,9 @@
 // hint and takes its state (./field.tsx); its own props win.
 //
 // Whether the input has focus is display state (it only moves the border).
+//
+// The outlined input takes the fill of the surface it sits on (lib/field-surface.ts): a card's colour
+// inside a card, the popover's in a dialog or a sheet, the page's anywhere else (owner, 2026-11-15).
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
@@ -16,21 +19,27 @@ import { ActivityIndicator, TextInput, type TextInputInstance, type TextInputPro
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
+import { FIELD_SURFACE_FILL, useFieldSurface } from "../lib/field-surface";
 import { useFieldContext } from "./field";
 
 /** The box around the text: border, fill, height, padding. */
 export const inputVariants = cva("flex-row gap-2", {
 	variants: {
-		/** `default`: the outlined input. `ghost`: no border or fill, for an input inside another surface. */
+		/** `default`: the outlined input. `ghost`: no border or fill, for an input inside another surface. `filled`: a muted well. `underline`: a bottom rule only. */
 		variant: {
-			/** The page colour, so a field inside a card reads as a recessed well (ADR 079); on the page it is the page. */
-			default: "border border-input bg-background",
+			/** Outlined, in the fill of the surface under it (`surface`). */
+			default: "border border-input",
 			ghost: "border border-transparent bg-transparent",
+			/** A soft muted well with no edge, the same focused or not. */
+			filled: "border border-transparent",
+			/** Only a bottom rule, square, no fill: a form on a plain page. */
+			underline: "rounded-none border-0 border-b border-input bg-transparent px-0",
 		},
 		size: {
-			sm: "min-h-10 rounded-lg px-3",
-			md: "min-h-12 rounded-xl px-3.5",
-			lg: "min-h-14 rounded-xl px-4",
+			sm: "rounded-button min-h-10 px-3",
+			/** 48 pt (the mobile visual spec), with the button's 10 pt corners. */
+			md: "rounded-button min-h-12 px-3.5",
+			lg: "rounded-button min-h-14 px-4",
 		},
 		state: {
 			default: "",
@@ -42,6 +51,12 @@ export const inputVariants = cva("flex-row gap-2", {
 			true: "",
 			false: "",
 		},
+		/** The surface the input sits on: the outlined input takes its fill. */
+		surface: {
+			page: FIELD_SURFACE_FILL.page,
+			card: FIELD_SURFACE_FILL.card,
+			popover: FIELD_SURFACE_FILL.popover,
+		},
 		/** Several lines: the text starts at the top and the addons align with the first line. */
 		multiline: {
 			true: "items-start",
@@ -51,17 +66,21 @@ export const inputVariants = cva("flex-row gap-2", {
 	compoundVariants: [
 		// Focus shows on an outlined input only, and an error outranks it.
 		{ variant: "default", state: "default", focused: true, className: "border-ring" },
+		// The ghost and underline inputs draw no fill on any surface; the filled one its muted well.
+		{ variant: ["ghost", "underline"], className: "bg-transparent" },
+		{ variant: "filled", className: "bg-muted" },
+		{ variant: "underline", state: "default", focused: true, className: "border-ring" },
 	],
-	defaultVariants: { variant: "default", size: "md", state: "default", focused: false, multiline: false },
+	defaultVariants: { variant: "default", size: "md", state: "default", focused: false, multiline: false, surface: "page" },
 });
 
 /** The typed text itself. */
 export const inputTextVariants = cva("flex-1 self-stretch font-sans text-foreground", {
 	variants: {
 		size: {
-			sm: "py-2 text-sm",
-			md: "py-3 text-base",
-			lg: "py-3.5 text-lg",
+			sm: "text-body py-2",
+			md: "text-body-lg py-3",
+			lg: "text-h3 py-3.5",
 		},
 	},
 	defaultVariants: { size: "md" },
@@ -77,6 +96,7 @@ type PassThroughInputProps = Pick<
 	| "autoComplete"
 	| "autoCorrect"
 	| "autoFocus"
+	| "editable"
 	| "keyboardType"
 	| "maxLength"
 	| "returnKeyType"
@@ -130,6 +150,7 @@ export const Input = React.memo(
 			loading,
 			multiline = false,
 			secureTextEntry = false,
+			editable = true,
 			leading,
 			trailing,
 			accessibilityLabel,
@@ -141,6 +162,7 @@ export const Input = React.memo(
 		ref,
 	): React.JSX.Element {
 		const field = useFieldContext();
+		const surface = useFieldSurface();
 		const isLoading = loading ?? field?.loading ?? false;
 		const state = resolveControlState({
 			disabled: disabled ?? field?.disabled,
@@ -167,7 +189,7 @@ export const Input = React.memo(
 		}, [onBlur]);
 
 		return (
-			<View className={cn(inputVariants({ variant, size, state, focused: isFocused, multiline }), className)}>
+			<View className={cn(inputVariants({ variant, size, state, focused: isFocused, multiline, surface }), className)}>
 				{leading}
 				<TextInput
 					ref={ref}
@@ -179,7 +201,7 @@ export const Input = React.memo(
 					onChangeText={handleChangeText}
 					onFocus={handleFocus}
 					onBlur={handleBlur}
-					editable={!isInactive}
+					editable={isInactive ? false : editable}
 					secureTextEntry={secureTextEntry}
 					multiline={multiline}
 					textAlignVertical={multiline ? "top" : "center"}

@@ -3,8 +3,11 @@ title: "ADR 028: Epoch-Millisecond Timestamps Everywhere"
 tags: ["adr", "database", "prisma", "time", "contracts"]
 description: "Every timestamp is an integer of milliseconds since the Unix epoch — BigInt in PostgreSQL, a number in JSON and TypeScript — instead of DateTime / timestamptz and ISO strings."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1791183761000
+coverImage: "/images/covers/adr/028-epoch-millisecond-timestamps.webp"
 order: 28
 ---
 

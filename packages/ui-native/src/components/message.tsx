@@ -62,6 +62,10 @@ export interface MessageProps {
 	readonly author?: string | undefined;
 	/** When it was sent, formatted by the caller ("09:41"). */
 	readonly timestamp?: string | undefined;
+	/** Above the bubbles in place of the name: a name, a dot and a time; a role badge. */
+	readonly header?: React.ReactNode;
+	/** Under the bubbles: a delivery status ("Read"), reply actions. */
+	readonly footer?: React.ReactNode;
 	/** Extra classes for the row, merged last. */
 	readonly className?: string | undefined;
 	readonly testID?: string | undefined;
@@ -69,20 +73,22 @@ export interface MessageProps {
 
 export const Message = React.memo(
 	React.forwardRef<ViewInstance, MessageProps>(function Message(
-		{ children, variant = "received", size = "md", avatar, author, timestamp, className, testID },
+		{ children, variant = "received", size = "md", avatar, author, timestamp, header, footer, className, testID },
 		ref,
 	): React.JSX.Element {
 		return (
 			<View ref={ref} testID={testID} className={cn(messageVariants({ variant, size }), className)}>
 				{avatar === undefined ? null : <View className="shrink-0">{avatar}</View>}
 				<View className={messageContentVariants({ variant, size })}>
+					{header === undefined ? null : <View className="flex-row items-center gap-1.5 px-1">{header}</View>}
 					{author === undefined ? null : (
-						<Text numberOfLines={1} className="font-sans-medium px-1 text-xs text-muted-foreground">
+						<Text numberOfLines={1} className="font-sans-medium text-caption px-1 text-muted-foreground">
 							{author}
 						</Text>
 					)}
 					{children}
-					{timestamp === undefined ? null : <Text className="px-1 font-sans text-xs text-muted-foreground">{timestamp}</Text>}
+					{timestamp === undefined ? null : <Text className="text-caption px-1 font-sans text-muted-foreground">{timestamp}</Text>}
+					{footer === undefined ? null : <View className="flex-row items-center gap-1 px-1">{footer}</View>}
 				</View>
 			</View>
 		);

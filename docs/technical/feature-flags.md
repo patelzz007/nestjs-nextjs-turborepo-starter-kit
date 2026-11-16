@@ -3,8 +3,11 @@ title: "Feature flags"
 description: "Runtime feature flags: how a flag is declared, how staff turn it on, off or on for a share of people from Settings, per merchant or per branch for a store flag, and how the apps and the API evaluate it."
 order: 7
 author: "Platform Team"
+category: "Engineering"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/feature-flags.webp"
 tags: ["guide", "operations", "development"]
 ---
 
@@ -20,7 +23,7 @@ can then be changed at runtime from **Settings → Feature flags**, without a re
 | Evaluating | `evaluateFeatureFlag(key, setting, defaultOn, personId)`: the setting decides over the default. A percentage puts each person in a stable bucket (FNV-1a of the flag and the person), so the same person always gets the same answer and raising the share only adds people |
 | In the admin | One answer per request (`loadEnabledFeatureFlags`) feeds the sidebar, the home page and the flagged routes, so a menu item and its page never disagree. The person comes from the API-verified session. If the settings can't be read, every flag stays on its default |
 | Permissions | Any admin staff member reads the bare settings (to evaluate them); `FEATURE_FLAG:LIST` sees who changed what, `FEATURE_FLAG:UPDATE` changes one |
-| Two kinds | A **platform** flag (`component-gallery`, `merchant-invites`) is one answer for the whole deployment. A **store** flag (`till-redemption`, `STORE_FEATURE_FLAG_DEFAULTS`) is asked where a store acts, and can also be set per merchant or per branch |
+| Two kinds | A **platform** flag (`showcase`, `merchant-invites`) is one answer for the whole deployment. A **store** flag (`till-redemption`, `STORE_FEATURE_FLAG_DEFAULTS`) is asked where a store acts, and can also be set per merchant or per branch |
 
 ## Per store (enhancement 5.11)
 

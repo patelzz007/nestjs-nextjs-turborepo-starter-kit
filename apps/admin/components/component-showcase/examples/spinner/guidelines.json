@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say what is loading",
+		"do": {
+			"text": "Pair a spinner with a few words, or name it for screen readers.",
+			"file": "spinner-do-1",
+			"export": "SpinnerDo1Example"
+		},
+		"dont": {
+			"text": "Don't scatter bare spinners across a page.",
+			"file": "spinner-dont-1",
+			"export": "SpinnerDont1Example"
+		}
+	},
+	{
+		"title": "Hold the action while it runs",
+		"do": {
+			"text": "Pass `loading` to a busy button: it shows a spinner and holds the action.",
+			"file": "spinner-do-2",
+			"export": "SpinnerDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave a pending button clickable: it invites a second click.",
+			"file": "spinner-dont-2",
+			"export": "SpinnerDont2Example"
+		}
+	}
+]

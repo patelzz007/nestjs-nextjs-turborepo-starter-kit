@@ -4,8 +4,11 @@ tags: ["loading", "skeleton", "suspense", "ui", "accessibility"]
 description: "How every page and every pending query in web, admin and merchant shows a skeleton shaped like the content it stands in for — the kit primitives, the loading.tsx convention, accessibility, motion, and testing."
 order: 23
 author: "Platform Team"
+category: "Frontend"
+date: 1791763200000
 lastUpdated: 1791763200000
-coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/frontend/loading-skeletons.webp"
 ---
 
 # Loading skeletons

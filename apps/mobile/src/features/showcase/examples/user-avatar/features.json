@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-user-avatar-1",
+		"label": "Overview",
+		"description": "A user's photo from the rendition sharp at its size, and the initials for someone without one. Best for profile pictures served in several sizes.",
+		"file": "user-avatar-1",
+		"export": "UserAvatar1Example"
+	}
+]

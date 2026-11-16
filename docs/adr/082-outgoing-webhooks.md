@@ -3,8 +3,11 @@ title: "ADR 082: Outgoing Webhooks for Integrators"
 tags: ["adr", "webhooks", "integrations", "outbox", "security", "merchant"]
 description: "A tenant registers HTTPS endpoints and chooses events from a versioned public catalog. Events are written in the producing transaction, fanned out to one delivery per endpoint, signed with a timestamped HMAC, sent over the SSRF-guarded client outside any transaction, retried with back-off for about three hours, and an endpoint that keeps failing turns itself off and tells its owners."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793836800000
 lastUpdated: 1793836800000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/082-outgoing-webhooks.webp"
 order: 82
 ---
 

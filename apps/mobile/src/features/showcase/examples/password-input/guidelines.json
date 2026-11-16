@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Let people check it",
+		"do": {
+			"text": "Use `PasswordInput`, so people can show what they typed.",
+			"file": "password-input-do-1",
+			"export": "PasswordInputDo1Example"
+		},
+		"dont": {
+			"text": "Don't use a plain masked input: a typo stays hidden until sign-in fails.",
+			"file": "password-input-dont-1",
+			"export": "PasswordInputDont1Example"
+		}
+	},
+	{
+		"title": "Never prefill a password",
+		"do": {
+			"text": "Start the field empty and let autofill offer the saved one.",
+			"file": "password-input-do-2",
+			"export": "PasswordInputDo2Example"
+		},
+		"dont": {
+			"text": "Don't show a password the app kept: it is secret, even from the screen.",
+			"file": "password-input-dont-2",
+			"export": "PasswordInputDont2Example"
+		}
+	}
+]

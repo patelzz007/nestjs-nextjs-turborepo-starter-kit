@@ -555,6 +555,11 @@ CREATE POLICY received_webhook_bypass ON public."ReceivedWebhook"
   USING ((SELECT app_rls_bypass_on('ReceivedWebhook')))
   WITH CHECK ((SELECT app_rls_bypass_on('ReceivedWebhook')));
 
+DROP POLICY IF EXISTS docs_sync_run_bypass ON public."DocsSyncRun";
+CREATE POLICY docs_sync_run_bypass ON public."DocsSyncRun"
+  USING ((SELECT app_rls_bypass_on('DocsSyncRun')))
+  WITH CHECK ((SELECT app_rls_bypass_on('DocsSyncRun')));
+
 DROP POLICY IF EXISTS refresh_tokens_own ON public."RefreshToken";
 CREATE POLICY refresh_tokens_own ON public."RefreshToken"
   USING (app_owns("userId") OR (SELECT app_rls_bypass_on('RefreshToken')))

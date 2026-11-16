@@ -31,6 +31,7 @@ import { IconButton } from "@workspace/ui-native/components/icon-button";
 import { MutedText } from "@workspace/ui-native/components/text";
 import { TextField } from "@workspace/ui-native/components/text-field";
 import { TimelineRailItem } from "@workspace/ui-native/components/timeline-rail";
+import { FieldSurfaceProvider } from "@workspace/ui-native/lib/field-surface";
 import { useApi } from "../../../lib/api-context";
 import { errorMessageOf } from "../../../lib/error-messages";
 import { useIdempotencyKeys } from "../../../lib/idempotency-keys";
@@ -111,19 +112,22 @@ export function CommentComposer({ pullRequest, viewer, onReview }: CommentCompos
 
 	return (
 		<TimelineRailItem node={<Avatar name={loginOf(viewer)} imageUrl={viewer?.avatarUrl ?? null} size="md" />} isLast testID="pull-request-comment-composer">
-			<View className="gap-3 rounded-xl border border-border bg-card p-3">
+			<View className="rounded-card gap-3 border border-border bg-card p-3">
 				{requestError === null ? null : <Alert tone="error" message={requestError} />}
 				{picture.error === null ? null : <Alert tone="error" message={picture.error} />}
-				<TextField
-					label="Add a comment"
-					value={body}
-					onChange={change}
-					error={fieldError}
-					placeholder="Leave a comment"
-					multiline
-					autoCapitalize="sentences"
-					testID="pull-request-comment-field"
-				/>
+				{/* The composer is a card, so its field takes the card's fill. */}
+				<FieldSurfaceProvider surface="card">
+					<TextField
+						label="Add a comment"
+						value={body}
+						onChange={change}
+						error={fieldError}
+						placeholder="Leave a comment"
+						multiline
+						autoCapitalize="sentences"
+						testID="pull-request-comment-field"
+					/>
+				</FieldSurfaceProvider>
 				{/* Tools for the text sit on their own row, so the two actions below always keep their full labels. */}
 				<View className="flex-row gap-2">
 					<AddPictureButton attach={picture} testID="pull-request-comment-picture" />

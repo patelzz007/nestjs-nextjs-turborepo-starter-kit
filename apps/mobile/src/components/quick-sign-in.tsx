@@ -26,7 +26,7 @@ export function QuickSignIn({ title, choices, onSelect, disabled = false, testID
 		<View className="gap-3" testID={testID}>
 			<View className="flex-row items-center gap-3">
 				<View className="h-px flex-1 bg-border" />
-				<Text accessibilityRole="header" className="font-sans-medium text-sm text-muted-foreground">
+				<Text accessibilityRole="header" className="font-sans-medium text-body text-muted-foreground">
 					{title}
 				</Text>
 				<View className="h-px flex-1 bg-border" />
@@ -58,7 +58,7 @@ function QuickSignInButton({ choice, onSelect, disabled }: QuickSignInButtonProp
 			disabled={disabled}
 			onPress={press}
 			className={`min-h-11 grow basis-[46%] items-center justify-center rounded-xl border border-border bg-card px-3 active:bg-muted ${disabled ? "opacity-60" : ""}`}>
-			<Text numberOfLines={1} className="font-sans-medium text-sm text-foreground">
+			<Text numberOfLines={1} className="font-sans-medium text-body text-foreground">
 				{choice.label}
 			</Text>
 		</Pressable>

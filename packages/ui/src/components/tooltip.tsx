@@ -10,18 +10,22 @@ const TOOLTIP_SIDE_OFFSET = 4;
 // Provider/Root render no DOM element of their own (base-ui providers), so like
 // the Select Root they intentionally stay plain functions — the ref lives on
 // the parts that render DOM (Trigger/Content).
+/** Shares a delay between the tooltips inside it, so moving from one to the next opens it at once. */
 function TooltipProvider({ delay = 0, ...props }: TooltipPrimitive.Provider.Props): React.JSX.Element {
 	return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} {...props} />;
 }
 
+/** A short text label shown while its trigger is hovered or focused, on Base UI's tooltip. */
 function Tooltip({ ...props }: TooltipPrimitive.Root.Props): React.JSX.Element {
 	return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
+/** The element the tooltip labels; renders a `button`, so pass your own `Button` through `render` instead of nesting it. */
 const TooltipTrigger = React.forwardRef<HTMLButtonElement, TooltipPrimitive.Trigger.Props>(function TooltipTrigger({ ...props }, ref): React.JSX.Element {
 	return <TooltipPrimitive.Trigger ref={ref} data-slot="tooltip-trigger" {...props} />;
 });
 
+/** The bubble: a portal, a positioner and the popup. Holds text and `Kbd` hints, nothing interactive. */
 const TooltipContent = React.forwardRef<
 	HTMLDivElement,
 	TooltipPrimitive.Popup.Props & Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">

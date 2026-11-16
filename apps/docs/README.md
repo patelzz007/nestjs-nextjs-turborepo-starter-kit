@@ -23,6 +23,25 @@ Run these from `apps/docs` (or with `pnpm --filter @workspace/docs <script>` fro
 | `pnpm check:links`            | Only the link checker (`scripts/check-links.ts`)                                                        |
 | `pnpm check:baseline`         | Only the regression check of `dist/` against `regression-baseline/`                                      |
 | `pnpm tools docs:api`         | Re-render `docs/technical/api-reference/` (lives in `packages/docs-renderer`)                            |
+| `pnpm docs:covers [prefix …]` | Draw every guide's cover (or those whose path starts with a prefix) into `docs/images/covers/`, below    |
+
+## Covers
+
+Every guide's cover is drawn from the guide itself by `pnpm docs:covers` (`scripts/covers.ts`, which photographs
+`src/lib/covers/` in Chromium and writes WebP, about 60 KB each). A cover is a glow in two of the design tokens' tones
+behind a real screenshot of the apps (`docs/images/readme/`, picked by the words of the guide's path and its tags; a
+phone frame for a mobile screen), with a card in front that says what the guide is about:
+
+| Guide                              | Card                                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------- |
+| An ADR                             | The decision: number, status, title, summary, tags                         |
+| Code that fills a card (4+ lines)  | That code, highlighted like the docs' code blocks; a terminal; HTTP; a diagram small enough to read |
+| Three or more sections             | "On this page": the section headings                                       |
+| Anything else                      | Its title, description and tags                                            |
+
+The page is 1600 × 840 (a link preview's shape); the site shows its middle band, so the card sits inside it. It is
+deterministic: redraw after editing a guide's code, sections or description, or after retaking the screenshots, and
+commit the images. `pnpm docs:covers` also draws the Notion home page's cover (`notion-home.webp`).
 
 ## TanStack, and the shared kit
 
@@ -66,7 +85,9 @@ apps/docs/
   its title, h1, sharing image, canonical path and every heading anchor. `pnpm build` fails if the new site
   loses any of them (`src/lib/baseline.ts`, `scripts/check-baseline.ts`), so no saved link breaks. Two
   differences are deliberate and listed in `EXPECTED_CHANGES`: the 404 page is served by the Start server,
-  and the sitemap is one `/sitemap.xml`; a heading renamed on purpose is listed in `RENAMED_ANCHORS`.
+  and the sitemap is one `/sitemap.xml`; a heading renamed on purpose is listed in `RENAMED_ANCHORS`. A sharing image
+  recorded as an Unsplash photo may now be one of the docs' own covers (`isReplacedCover`: the stock covers were
+  replaced 2026-11-13); any other new sharing image still fails.
   `search-results.json` records the ranked results of 12 queries.
 - **Search** — `/search-index.json` is written at build (one entry per guide, per h2/h3 and per post). The
   `⌘K` / `Ctrl K` / `/` dialog loads it on first open with TanStack Query, validates it with zod and ranks
@@ -112,7 +133,7 @@ across the top and its page icon over the edge.
    order: 4 # optional
    author: "Backend Team"
    lastUpdated: 1790812800000 # epoch ms, UTC midnight of the day you edited it
-   coverImage: "https://images.unsplash.com/…" # the page's cover band and its link preview (og:image)
+   coverImage: "/images/covers/<this page's path>.webp" # the page's own cover band and link preview (og:image); every guide has its own (docs/images/covers/, checked by src/lib/__tests__/covers.test.ts)
    tags: ["infrastructure", "messaging"] # optional; "superseded" hides it from the sidebar
    ---
    ```

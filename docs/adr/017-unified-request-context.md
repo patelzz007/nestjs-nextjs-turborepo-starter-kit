@@ -3,8 +3,11 @@ title: "ADR 017: One Typed Request Context and a Separate RLS Store"
 tags: ["adr", "observability", "logging", "rls", "nestjs"]
 description: "Architecture decision record for exactly one AsyncLocalStorage request context (correlation id, principal, tenant, IP, user agent), how it is populated, and why the transaction-scoped RLS store stays separate but is fed from it."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1790812800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/017-unified-request-context.webp"
 order: 17
 ---
 

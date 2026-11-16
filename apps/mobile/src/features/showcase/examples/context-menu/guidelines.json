@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Mirror visible actions",
+		"do": {
+			"text": "Offer shortcuts to actions that are also on screen.",
+			"file": "context-menu-do-1",
+			"export": "ContextMenuDo1Example"
+		},
+		"dont": {
+			"text": "Don't hide the only way to delete in a long-press menu.",
+			"file": "context-menu-dont-1",
+			"export": "ContextMenuDont1Example"
+		}
+	},
+	{
+		"title": "Keep it short",
+		"do": {
+			"text": "Keep a context menu to a handful of actions, grouped.",
+			"file": "context-menu-do-2",
+			"export": "ContextMenuDo2Example"
+		},
+		"dont": {
+			"text": "Don't list eight near-identical copy options.",
+			"file": "context-menu-dont-2",
+			"export": "ContextMenuDont2Example"
+		}
+	}
+]

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Separate groups, not every line",
+		"do": {
+			"text": "Rule off one group from the next.",
+			"file": "separator-do-1",
+			"export": "SeparatorDo1Example"
+		},
+		"dont": {
+			"text": "Don't stack rules, or rule inside a box that already draws its edges.",
+			"file": "separator-dont-1",
+			"export": "SeparatorDont1Example"
+		}
+	},
+	{
+		"title": "Use the theme's rule",
+		"do": {
+			"text": "Use Separator, so the rule follows the theme.",
+			"file": "separator-do-2",
+			"export": "SeparatorDo2Example"
+		},
+		"dont": {
+			"text": "Don't hand-draw a thick coloured line that ignores the theme.",
+			"file": "separator-dont-2",
+			"export": "SeparatorDont2Example"
+		}
+	}
+]

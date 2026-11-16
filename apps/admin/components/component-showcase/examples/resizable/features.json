@@ -1,0 +1,72 @@
+[
+	{
+		"id": "c-resizable-1",
+		"label": "Horizontal Layout",
+		"description": "Horizontal resizable layout. Best for a header pane stacked over a content pane, split 25 to 75, with a plain line dragged up and down.",
+		"file": "resizable-1",
+		"export": "Resizable1Example"
+	},
+	{
+		"id": "c-resizable-2",
+		"label": "Vertical Layout",
+		"description": "Vertical resizable layout.. Best for a sidebar beside a content pane, split 25 to 75, with a plain 1px divider dragged left and right.",
+		"file": "resizable-2",
+		"export": "Resizable2Example"
+	},
+	{
+		"id": "c-resizable-3",
+		"label": "Mixed Directions",
+		"description": "Nested mixed-direction resizable layout.. Best for a side pane beside a column that splits again into top and bottom, 3 panes in 2 directions on plain line dividers.",
+		"file": "resizable-3",
+		"export": "Resizable3Example"
+	},
+	{
+		"id": "c-resizable-4",
+		"label": "Nested Grips",
+		"description": "Nested resizable. Best for equal halves where the right half splits 25 to 75 top and bottom, on grip dividers with sizes written as percent strings.",
+		"file": "resizable-4",
+		"export": "Resizable4Example"
+	},
+	{
+		"id": "c-resizable-5",
+		"label": "Animated Pill",
+		"description": "Handle with animated pill indicator. Best for a short pill on a 30 to 70 split that lengthens on hover, then grows longer and turns primary while pressed.",
+		"file": "resizable-5",
+		"export": "Resizable5Example"
+	},
+	{
+		"id": "c-resizable-6",
+		"label": "Spring Pill",
+		"description": "Handle pill with spring scale on drag. Best for a pill drawn at 75 percent scale that eases to full scale on hover, then stretches and turns primary while pressed.",
+		"file": "resizable-6",
+		"export": "Resizable6Example"
+	},
+	{
+		"id": "c-resizable-7",
+		"label": "Capsule Expansion",
+		"description": "Handle with large capsule expansion on drag. Best for the longest press state: a pill that widens on hover and reaches 5rem while pressed, as the whole divider line tints primary.",
+		"file": "resizable-7",
+		"export": "Resizable7Example"
+	},
+	{
+		"id": "c-resizable-8",
+		"label": "Nested Pills",
+		"description": "Nested layout with animated pill handles. Best for nav beside a toolbar over an editor, with an upright pill on the outer divider and a wide pill on the inner one.",
+		"file": "resizable-8",
+		"export": "Resizable8Example"
+	},
+	{
+		"id": "c-resizable-9",
+		"label": "Three Panels",
+		"description": "Three-panel layout with animated pill handles. Best for files, editor and preview in one row split 25, 50 and 25, with 2 pill handles and a minimum size on every pane.",
+		"file": "resizable-9",
+		"export": "Resizable9Example"
+	},
+	{
+		"id": "c-resizable-10",
+		"label": "Size Tracking",
+		"description": "State-tracked resizable layout.. Best for live percentage readouts in each pane, fed from the group layout callback into React state as the divider moves.",
+		"file": "resizable-10",
+		"export": "Resizable10Example"
+	}
+]

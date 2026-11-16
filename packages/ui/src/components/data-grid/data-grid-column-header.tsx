@@ -24,7 +24,7 @@ import {
 } from "@workspace/ui/components/dropdown-menu";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { CellData, Column, RowData } from "@tanstack/react-table";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 import {
 	ArrowDownIcon,
 	ArrowLeftIcon,
@@ -54,11 +54,12 @@ export const dataGridColumnHeaderVariants = cva("flex h-full items-center", {
 const HEADER_BUTTON_CLASS_NAME =
 	"h-6 rounded-md px-2 font-normal text-secondary-foreground/80 hover:bg-secondary hover:text-foreground aria-expanded:bg-secondary aria-expanded:text-foreground";
 
-export interface DataGridColumnHeaderProps<TData extends RowData, TValue extends CellData>
-	extends Omit<React.ComponentProps<"div">, "title" | "ref">, Omit<VariantProps<typeof dataGridColumnHeaderVariants>, "variant"> {
+export interface DataGridColumnHeaderProps<TData extends RowData, TValue extends CellData> extends Omit<React.ComponentProps<"div">, "title" | "ref"> {
+	/** The TanStack Column instance. */
 	readonly column: Column<DataGridFeatures, TData, TValue>;
 	/** Defaults to `meta.headerTitle`, then a string `columnDef.header`, then `column.id`. */
 	readonly title?: string;
+	/** Optional icon to display next to the title. */
 	readonly icon?: React.ReactNode;
 	/** Rendered as the menu's first section (e.g. a `DataGridColumnFilter`). */
 	readonly filter?: React.ReactNode;

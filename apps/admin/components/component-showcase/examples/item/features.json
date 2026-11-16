@@ -1,0 +1,86 @@
+[
+	{
+		"id": "c-item-1",
+		"label": "Variants",
+		"description": "Basic item with title and description. Best for the 3 row variants stacked for comparison, default, outline and muted, as text only rows with no media or actions.",
+		"file": "item-1",
+		"export": "Item1Example"
+	},
+	{
+		"id": "c-item-2",
+		"label": "Icon & Actions",
+		"description": "Items with icon media and action buttons. Best for notification channel rows at the default size, each a leading icon and 1 button, outline Configure or filled Enable.",
+		"file": "item-2",
+		"export": "Item2Example"
+	},
+	{
+		"id": "c-item-3",
+		"label": "User Follow",
+		"description": "User item with avatar, info, and follow button. Best for compact people rows with a photo and job title that show the follow button in both states, Follow and Following.",
+		"file": "item-3",
+		"export": "Item3Example"
+	},
+	{
+		"id": "c-item-4",
+		"label": "Navigation Links",
+		"description": "Clickable navigation items with icons and chevron. Best for account menu links, Profile, Security and Billing, where each whole row is an anchor and separators divide them.",
+		"file": "item-4",
+		"export": "Item4Example"
+	},
+	{
+		"id": "c-item-5",
+		"label": "Status Badges",
+		"description": "Item group with status badges. Best for team presence rows in a spaced group, each with a photo, a role and an Online, Away or Offline badge.",
+		"file": "item-5",
+		"export": "Item5Example"
+	},
+	{
+		"id": "c-item-6",
+		"label": "File Rows",
+		"description": "File items with icon media, size, and actions. Best for file rows with size and last update, a Final, Draft or Review badge and an Open button on each.",
+		"file": "item-6",
+		"export": "Item6Example"
+	},
+	{
+		"id": "c-item-7",
+		"label": "Keyboard Shortcuts",
+		"description": "Items with keyboard shortcuts. Best for a narrow command menu of 5 link rows, each an icon and label with its key combination in a Kbd on the right.",
+		"file": "item-7",
+		"export": "Item7Example"
+	},
+	{
+		"id": "c-item-8",
+		"label": "Small Count Badges",
+		"description": "Small-size items with badges. Best for mailbox folder links from Inbox to Trash in a narrow column, with a rounded count badge on Inbox and Drafts only.",
+		"file": "item-8",
+		"export": "Item8Example"
+	},
+	{
+		"id": "c-item-9",
+		"label": "Team Roles",
+		"description": "Team members with roles and multiple actions. Best for member rows with email under the name, a role badge and a dots menu of Change Role, View Profile and Remove.",
+		"file": "item-9",
+		"export": "Item9Example"
+	},
+	{
+		"id": "c-item-10",
+		"label": "Header & Footer",
+		"description": "Item with header and footer sections. Best for a narrow project card: kind label and In Progress badge on top, avatar stack and a 65% progress bar below.",
+		"file": "item-10",
+		"export": "Item10Example"
+	},
+	{
+		"id": "c-item-11",
+		"label": "Integrations",
+		"description": "Integration items with connect actions. Best for data source rows where linked services show a Connected badge and the rest offer a Connect button.",
+		"file": "item-11",
+		"export": "Item11Example"
+	},
+	{
+		"id": "c-item-12",
+		"label": "Activity Feed",
+		"description": "Activity feed items with avatars and actions. Best for a team log of deploys, merges and issues: a small photo, the person, a colored verb badge, the target and a relative time.",
+		"file": "item-12",
+		"export": "Item12Example"
+	}
+]

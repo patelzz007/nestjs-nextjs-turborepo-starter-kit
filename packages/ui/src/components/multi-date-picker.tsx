@@ -42,6 +42,7 @@ function toDateStrings(dates: readonly Date[] | undefined): readonly string[] {
 }
 
 export interface MultiDatePickerProps extends VariantProps<typeof inputVariants> {
+	/** The trigger's id, for a `Label`'s `htmlFor`. */
 	readonly id?: string;
 	/** Submitted as one `name=yyyy-MM-dd` entry per picked day. */
 	readonly name?: string;
@@ -51,14 +52,19 @@ export interface MultiDatePickerProps extends VariantProps<typeof inputVariants>
 	readonly defaultValue?: readonly string[];
 	/** Shown on the trigger while no date is picked — supplied by the caller (i18n). */
 	readonly placeholder?: string;
+	/** Disables the trigger. */
 	readonly disabled?: boolean;
+	/** Shows the trigger as busy and disables it. */
 	readonly loading?: boolean;
+	/** Classes for the trigger. */
 	readonly className?: string;
 	/** Styles the trigger as invalid. A button cannot carry `aria-invalid`, so link the error text with `ariaDescribedBy`. */
 	readonly ariaInvalid?: boolean | "true" | "false" | "grammar" | "spelling";
 	/** Id(s) of the element(s) describing the field — its hint and, when invalid, its error message. */
 	readonly ariaDescribedBy?: string;
+	/** The first day that can be picked, as `yyyy-MM-dd`. */
 	readonly fromDate?: string;
+	/** The last day that can be picked, as `yyyy-MM-dd`. */
 	readonly toDate?: string;
 	/** The most days that can be picked; once reached, only picked days can be clicked (to unpick). No limit when absent. */
 	readonly maxDates?: number;
@@ -72,7 +78,9 @@ export interface MultiDatePickerProps extends VariantProps<typeof inputVariants>
 	readonly onOpenChange?: (open: boolean) => void;
 	/** Fired with every pick or unpick: all picked days, in date order. */
 	readonly onValueChange?: (value: readonly string[]) => void;
+	/** Fires when the trigger loses focus, for a form library's touched state. */
 	readonly onBlur?: React.FocusEventHandler<HTMLButtonElement>;
+	/** Fires when the trigger takes focus. */
 	readonly onFocus?: React.FocusEventHandler<HTMLButtonElement>;
 }
 

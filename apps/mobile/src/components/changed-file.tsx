@@ -59,22 +59,22 @@ export function ChangedFile({
 				accessibilityHint={expanded ? "Hides the changes" : "Shows the changes"}
 				onPress={onToggle}
 				className={`min-h-12 flex-row items-center gap-2 bg-muted px-3 py-2.5 active:opacity-70 ${expanded ? "border-b border-border" : ""}`}>
-				<Icon icon={expanded ? ChevronDownIcon : ChevronRightIcon} size="sm" colorClassName="accent-muted-foreground" />
+				<Icon icon={expanded ? ChevronDownIcon : ChevronRightIcon} size="sm" colorClassName="accent-icon" />
 				<Icon icon={statusIcon} size="sm" colorClassName={statusColorClassName} />
 				<View className="flex-1 gap-0.5" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-					<Text className="font-mono text-sm text-foreground" numberOfLines={2} ellipsizeMode="head">
+					<Text className="text-body font-mono text-foreground" numberOfLines={2} ellipsizeMode="head">
 						{path}
 					</Text>
 					{previousPath === null ? null : (
-						<Text className="font-mono text-xs text-muted-foreground" numberOfLines={1} ellipsizeMode="head">
+						<Text className="text-caption font-mono text-muted-foreground" numberOfLines={1} ellipsizeMode="head">
 							{`from ${previousPath}`}
 						</Text>
 					)}
 				</View>
 				<View className="items-end gap-1" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
 					<View className="flex-row gap-1.5">
-						<Text className="font-mono text-xs text-success-foreground">+{additions}</Text>
-						<Text className="font-mono text-xs text-destructive-foreground">−{deletions}</Text>
+						<Text className="text-caption font-mono text-success-foreground">+{additions}</Text>
+						<Text className="text-caption font-mono text-destructive-foreground">−{deletions}</Text>
 					</View>
 					<DiffStat blocks={blocks} />
 				</View>

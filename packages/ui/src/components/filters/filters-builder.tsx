@@ -36,8 +36,11 @@ export const FILTER_FIELD_PICKER_MAX_HEIGHT = 260;
 export interface FilterFieldPickerProps {
 	/** The level being browsed. Not the chosen field. */
 	readonly path: readonly string[];
+	/** Fires on every level change. */
 	readonly onPathChange: (path: readonly string[]) => void;
+	/** Controlled search text. */
 	readonly query: string;
+	/** Fires as the query changes. */
 	readonly onQueryChange: (query: string) => void;
 	/** A field was chosen, with its starting operator already resolved. */
 	readonly onSelect: (path: readonly string[], defaultOperator: string | null) => void;
@@ -47,6 +50,7 @@ export interface FilterFieldPickerProps {
 	readonly labels?: Partial<FilterLabels> | undefined;
 	/** Pinned footer rows, OUT of the option ring so arrows never land on one. */
 	readonly actions?: readonly FilterFieldPickerAction[] | undefined;
+	/** Classes for the attribute picker. */
 	readonly className?: string | undefined;
 }
 
@@ -233,6 +237,7 @@ const EMPTY_PATH: readonly string[] = [];
 export interface FiltersBuilderProps {
 	/** Replaces the default Add filter button. Rendered as the popover's trigger. */
 	readonly trigger?: React.ReactElement | undefined;
+	/** Applied to the popover content. */
 	readonly className?: string | undefined;
 }
 

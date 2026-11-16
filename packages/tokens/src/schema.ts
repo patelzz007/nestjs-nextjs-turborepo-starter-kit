@@ -524,9 +524,13 @@ export const AdminThemeOverridesSchema = z.partialRecord(ThemeNameSchema, z.part
 export type AdminThemeOverrides = z.infer<typeof AdminThemeOverridesSchema>;
 
 /**
- * Colours that belong to one mobile component and to no theme role, so a change to the shared roles
- * can never move them (ADR 079): the floating tab bar's pill, edge, selected capsule, the capsule's icon
- * and label and the unselected icons; and the chip an original (full-colour) brand logo sits on.
+ * Colours that belong to the mobile app and to no theme role, so a change to the shared roles can never
+ * move them (ADR 079): the floating tab bar's pill, edge, selected capsule, the capsule's icon and label and
+ * the unselected icons; the chip an original (full-colour) brand logo sits on; and the
+ * mobile visual spec's own roles (2026-11-15) that the shared themes have no name for — a solid button
+ * while it is pressed (`primary-pressed`), a selected row's fill (`surface-selected`), the subtle primary
+ * fill (`primary-subtle`), default glyphs (`icon`), decorative glyphs too faint for text (`text-tertiary`)
+ * and a disabled control's fill (`disabled`).
  */
 export const MobileComponentColorNameSchema = z.enum([
 	"tab-bar",
@@ -536,12 +540,57 @@ export const MobileComponentColorNameSchema = z.enum([
 	"tab-bar-icon",
 	"control-ring",
 	"logo-tile",
+	"primary-pressed",
+	"primary-subtle",
+	"surface-selected",
+	"icon",
+	"text-tertiary",
+	"disabled",
+	"code-plain",
+	"code-keyword",
+	"code-function",
+	"code-constant",
+	"code-string",
+	"code-comment",
+	"code-tag",
+	"code-parameter",
 ]);
 export type MobileComponentColorName = z.infer<typeof MobileComponentColorNameSchema>;
 
 /** Every component colour, in every theme (no partial theme: each theme must say what its tab bar is). */
 export const MobileComponentColorsSchema = z.record(MobileThemeNameSchema, z.record(MobileComponentColorNameSchema, ColorValueSchema));
 export type MobileComponentColors = z.infer<typeof MobileComponentColorsSchema>;
+
+// ─── Mobile type scale and radii ──────────────────────────────────────────
+
+/**
+ * The phone's type roles (the mobile visual spec, 2026-11-15): one utility each (`text-h1`, `text-body`, …),
+ * setting the size and the line height together. Sizes scale with the system text size (sp); the weight is
+ * the role's typeface, applied by the kit's text roles (React Native picks a font by family, not by weight).
+ */
+export const MobileTextRoleSchema = z.enum(["display", "h1", "h2", "h3", "h4", "body-lg", "body", "body-medium", "label", "caption", "button", "nav", "overline"]);
+export type MobileTextRole = z.infer<typeof MobileTextRoleSchema>;
+
+/** The four weights the phone uses: Regular, Medium, Semibold, Bold — each its own Geist family. */
+export const MobileFontWeightSchema = z.union([z.literal(400), z.literal(500), z.literal(600), z.literal(700)]);
+export type MobileFontWeight = z.infer<typeof MobileFontWeightSchema>;
+
+export const MobileTextStyleSchema = z.strictObject({
+	size: LengthSchema,
+	lineHeight: LengthSchema,
+	weight: MobileFontWeightSchema,
+});
+export type MobileTextStyle = z.infer<typeof MobileTextStyleSchema>;
+
+export const MobileTypeScaleSchema = z.record(MobileTextRoleSchema, MobileTextStyleSchema);
+export type MobileTypeScale = z.infer<typeof MobileTypeScaleSchema>;
+
+/** The phone's named corner radii: a button's, a card's and a large card's (`rounded-button`, `rounded-card`, `rounded-card-lg`). */
+export const MobileRadiusNameSchema = z.enum(["button", "card", "card-lg"]);
+export type MobileRadiusName = z.infer<typeof MobileRadiusNameSchema>;
+
+export const MobileRadiiSchema = z.record(MobileRadiusNameSchema, LengthSchema);
+export type MobileRadii = z.infer<typeof MobileRadiiSchema>;
 
 export const TokenSourceSchema = z.strictObject({
 	palette: PaletteSchema,
@@ -556,6 +605,10 @@ export const TokenSourceSchema = z.strictObject({
 	mobileThemeOverrides: MobileThemeOverridesSchema,
 	/** The Expo app's component colours (the floating tab bar), mobile.css only. */
 	mobileComponentColors: MobileComponentColorsSchema,
+	/** The Expo app's type roles (`text-h1` …), mobile.css only. */
+	mobileTypeScale: MobileTypeScaleSchema,
+	/** The Expo app's named radii (`rounded-card` …), mobile.css only. */
+	mobileRadii: MobileRadiiSchema,
 	/** The admin panel's re-maps of any themed role, web.css under `.admin-app` only. */
 	adminThemeOverrides: AdminThemeOverridesSchema,
 });

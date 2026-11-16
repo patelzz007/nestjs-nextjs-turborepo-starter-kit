@@ -1,6 +1,6 @@
 "use client";
 
-import type { LocationResponse, LocationScopeType, LocationStatus } from "@workspace/shared";
+import { LOCATION_LIFECYCLE, type LocationResponse, type LocationScopeType, type LocationStatus } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card } from "@workspace/ui/components/card";
 import { MapPin, Phone } from "lucide-react";
@@ -123,7 +123,9 @@ export function LocationList({
 							{location.status === "REJECTED" && location.rejectionReason !== null ? <p className="text-destructive">Reason: {location.rejectionReason}</p> : null}
 							{location.status === "PENDING_APPROVAL" ? <p className="text-xs">This store is hidden from customers until the platform team approves it.</p> : null}
 						</div>
-						{location.status === "REJECTED" && onEditRejected !== undefined ? <LocationResubmitButton location={location} onEditRejected={onEditRejected} /> : null}
+						{LOCATION_LIFECYCLE.can("resubmit", location.status) && onEditRejected !== undefined ? (
+							<LocationResubmitButton location={location} onEditRejected={onEditRejected} />
+						) : null}
 					</Card>
 				);
 			})}

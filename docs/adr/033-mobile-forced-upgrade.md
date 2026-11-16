@@ -3,8 +3,11 @@ title: "ADR 033: Minimum Supported Mobile App Version (Forced Upgrade)"
 tags: ["adr", "mobile", "api", "versioning"]
 description: "The mobile app sends its version on every request; the API rejects versions below a configured minimum with 426 Upgrade Required in the standard error envelope, and the app shows a blocking update screen."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791417600000
 lastUpdated: 1791417600000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1791550954000
+coverImage: "/images/covers/adr/033-mobile-forced-upgrade.webp"
 order: 33
 ---
 

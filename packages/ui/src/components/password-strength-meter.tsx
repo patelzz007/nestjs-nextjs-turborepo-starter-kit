@@ -95,6 +95,7 @@ function tierForScore(score: number): StrengthTier {
 
 const EMPTY_MISSING: readonly string[] = [];
 
+/** Shows a password's strength — a segmented bar, a word and the policy's rules with a mark for each one met. Presentational: the caller computes `score`, `label`, `percent` and `criteria`. */
 const PasswordStrengthMeter = React.memo(
 	React.forwardRef<HTMLDivElement, PasswordStrengthMeterProps>(function PasswordStrengthMeter(
 		{ score, label, percent, criteria, missing = EMPTY_MISSING, className, labels: labelsOverride },

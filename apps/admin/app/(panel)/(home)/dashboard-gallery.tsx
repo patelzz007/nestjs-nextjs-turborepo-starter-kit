@@ -8,7 +8,7 @@ import { Button } from "@workspace/ui/components/button";
 import { LazySection } from "@/components/common/lazy-section";
 import { PlatformSalesCards } from "@/components/dashboard/platform-sales-cards";
 import { SectionSkeleton } from "@/components/loading/section-skeleton";
-import { ACCORDION_FAQ_ITEMS, ACCORDION_REORDER_ITEMS, ACCORDION_STATUS_ITEMS, ACCORDION_VARIANT_ITEMS } from "@/components/component-gallery/showcase/accordion-demo-items";
+import { ACCORDION_FAQ_ITEMS, ACCORDION_REORDER_ITEMS, ACCORDION_STATUS_ITEMS, ACCORDION_VARIANT_ITEMS } from "@/components/dashboard/showcase/accordion-demo-items";
 
 // ── Lazy demo sections ────────────────────────────────────────────────────
 // Every showcase below the fold (chart, table, accordion, …) is code-split so
@@ -27,31 +27,31 @@ const toastSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-
 
 // Every gallery section is viewport-gated by `<LazySection>` and only mounts
 // when scrolled near — the chunk then downloads on demand and the section fades in.
-const DataTableShowcase = dynamic(() => import("@/components/component-gallery/showcase/data-table-showcase").then((m) => m.DataTableShowcase), {
+const DataTableShowcase = dynamic(() => import("@/components/component-showcase/examples/data-table/data-table-14").then((m) => m.DataTable14Example), {
 	loading: tableSectionLoading,
 });
 
-const AccordionShowcase = dynamic(() => import("@/components/component-gallery/showcase/accordion-showcase").then((m) => m.AccordionShowcase), {
+const AccordionShowcase = dynamic(() => import("@/components/dashboard/showcase/accordion-showcase").then((m) => m.AccordionShowcase), {
 	loading: accordionSectionLoading,
 });
 
-const BreadcrumbShowcase = dynamic(() => import("@/components/component-gallery/showcase/breadcrumb-showcase").then((m) => m.BreadcrumbShowcase), {
+const BreadcrumbShowcase = dynamic(() => import("@/components/dashboard/showcase/breadcrumb-showcase").then((m) => m.BreadcrumbShowcase), {
 	loading: breadcrumbSectionLoading,
 });
 
-const ComboboxShowcase = dynamic(() => import("@/components/component-gallery/showcase/combobox-showcase").then((m) => m.ComboboxShowcase), {
+const ComboboxShowcase = dynamic(() => import("@/components/dashboard/showcase/combobox-showcase").then((m) => m.ComboboxShowcase), {
 	loading: comboboxSectionLoading,
 });
 
-const SelectShowcase = dynamic(() => import("@/components/component-gallery/showcase/select-showcase").then((m) => m.SelectShowcase), {
+const SelectShowcase = dynamic(() => import("@/components/dashboard/showcase/select-showcase").then((m) => m.SelectShowcase), {
 	loading: selectSectionLoading,
 });
 
-const AlertShowcase = dynamic(() => import("@/components/component-gallery/showcase/alert-showcase").then((m) => m.AlertShowcase), {
+const AlertShowcase = dynamic(() => import("@/components/dashboard/showcase/alert-showcase").then((m) => m.AlertShowcase), {
 	loading: alertSectionLoading,
 });
 
-const ToastShowcase = dynamic(() => import("@/components/component-gallery/showcase/toast-showcase").then((m) => m.ToastShowcase), {
+const ToastShowcase = dynamic(() => import("@/components/dashboard/showcase/toast-showcase").then((m) => m.ToastShowcase), {
 	loading: toastSectionLoading,
 });
 
@@ -76,11 +76,11 @@ function scrollToDemo(id: string): void {
 }
 
 export interface DashboardGalleryProps {
-	/** Whether this deployment serves the developer component gallery (`isComponentGalleryEnabled`, decided on the server). */
-	readonly showComponentGallery: boolean;
+	/** Whether this deployment serves the developer component showcase (the `showcase` flag, decided on the server). */
+	readonly showShowcase: boolean;
 }
 
-export default function Page({ showComponentGallery }: DashboardGalleryProps): React.JSX.Element {
+export default function Page({ showShowcase }: DashboardGalleryProps): React.JSX.Element {
 	// Single delegated handler — reads the target id from the button's data
 	// attribute, so the mapped buttons never bind per-item closures (rule 16).
 	const handleDemoNav = React.useCallback((event: React.MouseEvent<HTMLButtonElement>): void => {
@@ -95,7 +95,7 @@ export default function Page({ showComponentGallery }: DashboardGalleryProps): R
 			<div className="flex flex-col gap-4 pt-4 pb-0 md:gap-6 md:pt-6 md:pb-0">
 				{/* In-page demo index — the gallery sections sit far down the page, so
 				    this makes every demo one click away instead of a 2.5-viewport scroll. */}
-				{showComponentGallery ? (
+				{showShowcase ? (
 					<nav aria-label="Jump to component demos" className="flex flex-wrap items-center gap-2 px-4 lg:px-6">
 						<span className="text-xs font-medium text-muted-foreground">Jump to</span>
 						{DEMO_ANCHORS.map((anchor) => (
@@ -107,7 +107,7 @@ export default function Page({ showComponentGallery }: DashboardGalleryProps): R
 				) : null}
 
 				<PlatformSalesCards />
-				{showComponentGallery ? <ComponentGallerySamples /> : null}
+				{showShowcase ? <ComponentGallerySamples /> : null}
 			</div>
 		</div>
 	);

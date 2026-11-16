@@ -77,3 +77,15 @@ describe("Message", () => {
 		expect(ref.current).not.toBeNull();
 	});
 });
+
+describe("Message header and footer", () => {
+	it("draws a header in place of the name and a footer under the bubbles", async () => {
+		await render(
+			<Message header={<Text>Ava · 09:41</Text>} footer={<Text>Read</Text>}>
+				<Text>Hello</Text>
+			</Message>,
+		);
+		expect(screen.getByText("Ava · 09:41")).toBeOnTheScreen();
+		expect(screen.getByText("Read")).toBeOnTheScreen();
+	});
+});

@@ -3,8 +3,11 @@ title: "Runbook: Rotating Encryption Keys"
 tags: ["security", "encryption", "runbook", "operations"]
 description: "How to rotate every key and key ring the API uses — add the new version, move data to it where needed, retire the old one — and which test proves each step."
 author: "Platform Team"
+category: "Security"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/security/key-rotation.webp"
 order: 7
 ---
 

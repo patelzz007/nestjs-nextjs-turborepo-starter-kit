@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-stat-card-1",
+		"label": "Overview",
+		"description": "Three metric cards, each with a label, a value, a hint and an icon. Best for a compact row of headline numbers on a dashboard.",
+		"file": "stat-card-1",
+		"export": "StatCard1Example"
+	}
+]

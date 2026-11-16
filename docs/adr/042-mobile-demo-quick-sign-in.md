@@ -3,8 +3,11 @@ title: "ADR 042: Quick Sign-In with Demo Accounts on Mobile"
 tags: ["adr", "mobile", "auth", "security", "dx"]
 description: "Development builds of the Expo app offer one-tap sign-in as the seeded demo accounts, like the web login pages; the list is imported inside an `if (__DEV__)` branch that Metro removes from production bundles."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791590400000
 lastUpdated: 1793232000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793310586000
+coverImage: "/images/covers/adr/042-mobile-demo-quick-sign-in.webp"
 order: 42
 ---
 

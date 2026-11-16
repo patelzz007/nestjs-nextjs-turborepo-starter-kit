@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Show there is more",
+		"do": {
+			"text": "Let the next slide peek, or show dots, so people know to swipe.",
+			"file": "carousel-do-1",
+			"export": "CarouselDo1Example"
+		},
+		"dont": {
+			"text": "Don't hide every cue: a lone full-width slide looks like the only one.",
+			"file": "carousel-dont-1",
+			"export": "CarouselDont1Example"
+		}
+	},
+	{
+		"title": "Let people control motion",
+		"do": {
+			"text": "Auto-play only where it helps, and let a touch stop it for good.",
+			"file": "carousel-do-2",
+			"export": "CarouselDo2Example"
+		},
+		"dont": {
+			"text": "Don't rotate slides fast with no way to stop: people cannot finish reading.",
+			"file": "carousel-dont-2",
+			"export": "CarouselDont2Example"
+		}
+	}
+]

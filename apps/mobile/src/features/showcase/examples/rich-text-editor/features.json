@@ -1,0 +1,16 @@
+[
+	{
+		"id": "c-rich-text-editor-1",
+		"label": "Broadcast Toolbar",
+		"description": "A rich text editor with the full toolbar: undo, marks, links, headings, lists, quotes, code, a divider and the one button. Best for composing long formatted content.",
+		"file": "rich-text-editor-1",
+		"export": "RichTextEditor1Example"
+	},
+	{
+		"id": "c-rich-text-editor-2",
+		"label": "With Live Preview",
+		"description": "A compact editor above a live read-only preview of the same document. Best for composing a message while seeing exactly how it will look.",
+		"file": "rich-text-editor-2",
+		"export": "RichTextEditor2Example"
+	}
+]

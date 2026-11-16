@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-user-avatar-1",
+		"label": "Overview",
+		"description": "A person's photo, and the initials it falls back to when there is none. Best for showing who did something in lists, menus and comments.",
+		"file": "user-avatar-1",
+		"export": "UserAvatar1Example"
+	}
+]

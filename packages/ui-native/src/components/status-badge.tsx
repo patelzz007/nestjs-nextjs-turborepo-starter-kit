@@ -7,7 +7,8 @@
 //
 // The tone is what the status MEANS (rules/07, "Status badges and icon
 // tiles"): `success` live / usable, `warning` waiting on someone, `destructive`
-// failed / blocked, `info` in progress, `neutral` settled or inactive.
+// failed / blocked, `info` in progress, `neutral` settled or inactive,
+// `muted` set aside (archived: an outline only, quieter than neutral).
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
@@ -30,6 +31,7 @@ export const statusBadgeVariants = cva("flex-row items-center gap-1.5 self-start
 			success: "border-transparent bg-success-soft",
 			warning: "border-transparent bg-warning-soft",
 			destructive: "border-transparent bg-destructive-soft",
+			muted: "border-border bg-transparent",
 		},
 		/** The tone's full-strength border: a change that just happened. */
 		emphasized: { true: "", false: "" },
@@ -42,11 +44,12 @@ export const statusBadgeVariants = cva("flex-row items-center gap-1.5 self-start
 		{ emphasized: true, tone: "success", className: "border-success" },
 		{ emphasized: true, tone: "warning", className: "border-warning" },
 		{ emphasized: true, tone: "destructive", className: "border-destructive" },
+		{ emphasized: true, tone: "muted", className: "border-muted-foreground" },
 	],
 	defaultVariants: { tone: "neutral", emphasized: false, iconOnly: false },
 });
 
-export const statusBadgeLabelVariants = cva("text-xs", {
+export const statusBadgeLabelVariants = cva("text-caption", {
 	variants: {
 		tone: {
 			neutral: "text-muted-foreground",
@@ -54,6 +57,7 @@ export const statusBadgeLabelVariants = cva("text-xs", {
 			success: "text-success-foreground",
 			warning: "text-warning-foreground",
 			destructive: "text-destructive-foreground",
+			muted: "text-muted-foreground",
 		},
 		/** Monospaced digits, so a ticking value does not resize the pill. */
 		tabular: { true: "font-mono", false: "font-sans-medium" },
@@ -70,6 +74,7 @@ export const statusBadgeIconVariants = cva("", {
 			success: "accent-success-foreground",
 			warning: "accent-warning-foreground",
 			destructive: "accent-destructive-foreground",
+			muted: "accent-muted-foreground",
 		},
 	},
 	defaultVariants: { tone: "neutral" },

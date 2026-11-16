@@ -20,7 +20,7 @@ import { toastMessage } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { format } from "date-fns";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -41,7 +41,7 @@ export function sendBlockedReasonOf(allowance: BroadcastWeeklyAllowance | undefi
 /** After a save: refresh the list and allowance, keep the broadcast's own answer, and show its page. */
 function useAfterBroadcastSave(tenantSlug: string): (response: { readonly data: BroadcastResponse }) => void {
 	const queryClient = useQueryClient();
-	const router = useRouter();
+	const router = useProgressRouter();
 	return React.useCallback(
 		(response: { readonly data: BroadcastResponse }): void => {
 			const defs = apiRouter.tenantNotifications;

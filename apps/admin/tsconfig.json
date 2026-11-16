@@ -9,7 +9,9 @@
 				"name": "next"
 			}
 		],
-		"customConditions": ["development"]
+		"customConditions": ["development"],
+		// scripts/ run on Node directly (type stripping), so they import each other with `.ts`.
+		"allowImportingTsExtensions": true
 	},
 	"include": ["next-env.d.ts", "next.config.ts", "**/*.ts", "**/*.tsx", "**/*.mts", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
 	"exclude": ["node_modules"]

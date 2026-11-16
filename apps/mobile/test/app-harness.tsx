@@ -39,6 +39,7 @@ export const TEST_RAW_ENV: RawMobileEnv = {
 	androidStoreUrl: undefined,
 	showDemoAccount: undefined,
 	allowLanHttpApi: undefined,
+	showcase: undefined,
 };
 
 /** A development build with no update running and no install time: the build line shows its type and version only. */
@@ -106,7 +107,7 @@ export function AppProviders({ runtime, children }: AppProvidersProps): React.JS
 								<ToastStoreProvider store={toastStore}>
 									<View className="flex-1">
 										{children}
-										<ToastHost top={0} />
+										<ToastHost top={0} bottom={0} />
 									</View>
 								</ToastStoreProvider>
 							</AppDrawerStoreProvider>

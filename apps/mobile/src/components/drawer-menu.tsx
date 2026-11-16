@@ -29,9 +29,9 @@ export type DrawerProfileLayout = "row" | "stacked" | "centred";
 export type DrawerAction = "chevron" | "link" | "none";
 
 const PROFILE_LAYOUT_CLASSES: Readonly<Record<DrawerProfileLayout, { readonly root: string; readonly ring: string; readonly name: string; readonly text: string }>> = {
-	row: { root: "flex-row items-center gap-3 px-5 pt-4 pb-5", ring: "", name: "text-lg", text: "flex-1 gap-0.5" },
-	stacked: { root: "gap-3 px-6 pt-4 pb-5", ring: "self-start", name: "text-2xl", text: "gap-0.5" },
-	centred: { root: "items-center gap-3 px-5 pt-3 pb-6", ring: "", name: "text-xl", text: "items-center gap-0.5" },
+	row: { root: "flex-row items-center gap-3 px-5 pt-4 pb-5", ring: "", name: "text-h4", text: "flex-1 gap-0.5" },
+	stacked: { root: "gap-3 px-6 pt-4 pb-5", ring: "self-start", name: "text-h2", text: "gap-0.5" },
+	centred: { root: "items-center gap-3 px-5 pt-3 pb-6", ring: "", name: "text-h3", text: "items-center gap-0.5" },
 };
 
 /** The person's colours: white on the ink panel, the page's own ink anywhere else. */
@@ -69,10 +69,10 @@ export function DrawerProfile({ name, email, imageUrl, actionLabel, onPress, lay
 					<Text numberOfLines={1} accessibilityRole="header" className={`font-sans-bold tracking-tight ${shape.name} ${tone.name}`}>
 						{name}
 					</Text>
-					<Text numberOfLines={1} className={`font-sans text-sm ${tone.muted}`}>
+					<Text numberOfLines={1} className={`text-body font-sans ${tone.muted}`}>
 						{email}
 					</Text>
-					{action === "link" ? <Text className="font-sans-semibold mt-1 text-sm text-link">{actionLabel}</Text> : null}
+					{action === "link" ? <Text className="font-sans-semibold text-body mt-1 text-link">{actionLabel}</Text> : null}
 					{detail === undefined ? null : <View className="mt-1">{detail}</View>}
 				</View>
 				{action === "chevron" ? <Icon icon={ChevronRightIcon} size="sm" colorClassName={tone.glyph} /> : null}
@@ -119,7 +119,7 @@ export function DrawerSection({ title, children, testID }: DrawerSectionProps): 
 	return (
 		<View className="gap-0.5 px-2.5" testID={testID}>
 			{title === undefined ? null : (
-				<Text accessibilityRole="header" className="font-sans-semibold px-3.5 pt-1 pb-1 text-sm text-muted-foreground">
+				<Text accessibilityRole="header" className="font-sans-semibold text-body px-3.5 pt-1 pb-1 text-muted-foreground">
 					{title}
 				</Text>
 			)}
@@ -185,10 +185,10 @@ export function DrawerRow({ icon, label, onPress, value, selected = false, tone 
 			testID={testID}
 			className={`min-h-12 flex-row items-center gap-3.5 rounded-full px-3.5 py-2 ${selected ? capsule.row : "active:bg-muted"}`}>
 			<Icon icon={icon} size="sm" weight={selected ? "bold" : "regular"} colorClassName={iconClass} />
-			<Text numberOfLines={1} className={`flex-1 text-base ${labelClass}`}>
+			<Text numberOfLines={1} className={`text-body-lg flex-1 ${labelClass}`}>
 				{label}
 			</Text>
-			{value === undefined ? null : <Text className={`font-sans text-sm ${valueClass}`}>{value}</Text>}
+			{value === undefined ? null : <Text className={`text-body font-sans ${valueClass}`}>{value}</Text>}
 			{expanded === undefined ? null : (
 				<Icon
 					icon={expanded ? ChevronDownIcon : ChevronRightIcon}

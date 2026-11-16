@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-multi-date-picker-1",
+		"label": "Overview",
+		"description": "A field that collects several separate dates from one calendar popover, shown as removable chips. Best for blackout days, holidays or delivery dates.",
+		"file": "multi-date-picker-1",
+		"export": "MultiDatePicker1Example"
+	}
+]

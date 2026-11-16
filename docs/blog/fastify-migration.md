@@ -3,6 +3,8 @@ title: "Why We Moved the API from Express to Fastify"
 description: "The API started on NestJS's default Express adapter. Here is why we migrated to Fastify — the benchmark-driven rationale, the traps we hit along the way, and the numbers afterwards."
 author: "Acme Inc."
 date: 1786924800000
+lastUpdated: 1786924800000
+editedAt: 1793976836000
 category: "Architecture"
 ---
 

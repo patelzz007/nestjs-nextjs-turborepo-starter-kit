@@ -266,7 +266,7 @@ function CodeEntry({ till, credentials, onChecked, onExchange }: CodeEntryProps)
 						testID="till-scan-google"
 					/>
 					<Button label={TILL_COPY.scanWithCamera} icon={CameraIcon} variant="outline" onPress={openCameraScanner} disabled={validation.isPending} testID="till-scan-camera" />
-					<Text className="font-sans text-xs text-muted-foreground">{hasGoogleScanner ? TILL_COPY.scanChoiceHint : TILL_COPY.googleScannerUnavailable}</Text>
+					<Text className="text-caption font-sans text-muted-foreground">{hasGoogleScanner ? TILL_COPY.scanChoiceHint : TILL_COPY.googleScannerUnavailable}</Text>
 				</View>
 				<QrScanFromGalleryButton onScan={handleScan} testID="till-scan-gallery" />
 				<TextField

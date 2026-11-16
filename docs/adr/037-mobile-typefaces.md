@@ -3,8 +3,11 @@ title: "ADR 037: The Web's Typefaces on Mobile"
 tags: ["adr", "mobile", "ui", "typography"]
 description: "The Expo app uses the same typefaces as the web apps (Geist, Bricolage Grotesque, Geist Mono), loaded from Expo's Google Fonts packages as one family per weight."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/037-mobile-typefaces.webp"
 order: 37
 ---
 

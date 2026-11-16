@@ -1,0 +1,86 @@
+[
+	{
+		"id": "c-autocomplete-1",
+		"label": "Basic",
+		"description": "Basic autocomplete control. Best for the minimal uncontrolled setup, with 41 tag and component names matched by the built in filter.",
+		"file": "autocomplete-1",
+		"export": "Autocomplete1Example"
+	},
+	{
+		"id": "c-autocomplete-2",
+		"label": "Disabled",
+		"description": "Disabled state. Best for a field locked from the root, so the input takes no focus and its list never opens.",
+		"file": "autocomplete-2",
+		"export": "Autocomplete2Example"
+	},
+	{
+		"id": "c-autocomplete-3",
+		"label": "Auto Highlight",
+		"description": "Auto highlight option as you type. Best for the first match highlighted as soon as the user types, so Enter fills the input without arrow keys.",
+		"file": "autocomplete-3",
+		"export": "Autocomplete3Example"
+	},
+	{
+		"id": "c-autocomplete-4",
+		"label": "Labeled",
+		"description": "Control with label. Best for a kit Label stacked above the input and tied to it by a shared id, with auto highlight on.",
+		"file": "autocomplete-4",
+		"export": "Autocomplete4Example"
+	},
+	{
+		"id": "c-autocomplete-5",
+		"label": "Clear Button",
+		"description": "With clear button. Best for a query held in React state, with an X inside the input that appears once text is typed and empties it.",
+		"file": "autocomplete-5",
+		"export": "Autocomplete5Example"
+	},
+	{
+		"id": "c-autocomplete-6",
+		"label": "Trigger Button",
+		"description": "With trigger button. Best for a chevron button at the end of the input that opens the full list before anything is typed.",
+		"file": "autocomplete-6",
+		"export": "Autocomplete6Example"
+	},
+	{
+		"id": "c-autocomplete-7",
+		"label": "Clear & Trigger",
+		"description": "With clear and trigger buttons. Best for both end buttons at the default h-8 size in one spot: the chevron opens the list while empty, the X takes over once text is typed.",
+		"file": "autocomplete-7",
+		"export": "Autocomplete7Example"
+	},
+	{
+		"id": "c-autocomplete-8",
+		"label": "Groups & Labels",
+		"description": "With groups and labels. Best for a people directory of 26 users in 6 teams under sticky labels, matched on name, team or job title.",
+		"file": "autocomplete-8",
+		"export": "Autocomplete8Example"
+	},
+	{
+		"id": "c-autocomplete-9",
+		"label": "Search Results",
+		"description": "With search results. Best for a debounced lookup of 25 developers with a spinner, error text and result count in a status line.",
+		"file": "autocomplete-9",
+		"export": "Autocomplete9Example"
+	},
+	{
+		"id": "c-autocomplete-10",
+		"label": "Small",
+		"description": "Small autocomplete. Best for the sm size at h-7 with the clear X and chevron, for dense filter bars and toolbars.",
+		"file": "autocomplete-10",
+		"export": "Autocomplete10Example"
+	},
+	{
+		"id": "c-autocomplete-11",
+		"label": "Large",
+		"description": "Large autocomplete. Best for the lg size at h-9, keeping the chevron and clear X, for a search bar that leads a screen.",
+		"file": "autocomplete-11",
+		"export": "Autocomplete11Example"
+	},
+	{
+		"id": "c-autocomplete-12",
+		"label": "Form Integration",
+		"description": "Form integration. Best for a React Hook Form field checked by zod that rejects text matching no item, with the error shown on submit.",
+		"file": "autocomplete-12",
+		"export": "Autocomplete12Example"
+	}
+]

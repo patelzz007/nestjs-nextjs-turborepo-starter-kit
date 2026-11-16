@@ -3,7 +3,7 @@
 import { Button } from "@workspace/ui/components/button";
 import { UserAvatar } from "@workspace/ui/components/user-avatar";
 import { CircleUserRound, KeyRound, LogOut, Settings, Shield } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { useCanAccessRoute } from "@/components/layout/authorized-navigation";
@@ -32,7 +32,7 @@ interface ProfileMenuItem {
  * `/account`; Settings is platform configuration.
  */
 export function Profile01({ user, onLogout }: Profile01Props): React.JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const canAccessRoute = useCanAccessRoute();
 
 	// Links go through the route guard's rules: a page the session cannot open is not offered.

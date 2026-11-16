@@ -1,4 +1,5 @@
-// The (app) group: tabs — Home, Analytics, Search, Profile, Settings (§9.2) — under the
+// The (app) group: tabs — Home, Analytics, Search, Profile, Settings (§9.2) — and screens with no tab of
+// their own (the showcase), under the
 // floating tab bar (ADR 036), inside the app shell (ADR 046): the drawer
 // (ADR 038) and the page header, rendered once above every screen. Reachable
 // only with a full session (the root guard). The tabs, their order, titles and
@@ -13,7 +14,7 @@ import { AppShell } from "../../features/app-shell/app-shell";
 import { withRootGate } from "../../runtime/root-navigator";
 import { AppTabBar } from "../../features/navigation/app-tab-bar";
 import { FreezeHiddenTab } from "../../features/navigation/freeze-hidden-tab";
-import { APP_TABS, type AppTab } from "../../features/navigation/app-tabs";
+import { APP_TABS, APP_UNTABBED_SCREENS, type AppTab } from "../../features/navigation/app-tabs";
 import { useLabels } from "../../features/language/use-app-language";
 import { NAVIGATION_LABELS } from "../../features/navigation/navigation-labels";
 import { TAB_TRANSITION_SPEC, tabSceneStyle } from "../../lib/screen-transitions";
@@ -48,6 +49,10 @@ function AppTabsLayout(): React.JSX.Element {
 			<Tabs screenOptions={SCREEN_OPTIONS} tabBar={renderTabBar} screenLayout={renderTabLayout}>
 				{APP_TABS.map((tab: AppTab): React.JSX.Element => (
 					<Tabs.Screen key={tab.name} name={tab.name} options={{ title: headings[tab.name].title }} />
+				))}
+				{/* Screens with no tab button: declared, or the tab navigator would never focus them. */}
+				{APP_UNTABBED_SCREENS.map((name: string): React.JSX.Element => (
+					<Tabs.Screen key={name} name={name} />
 				))}
 			</Tabs>
 		</AppShell>

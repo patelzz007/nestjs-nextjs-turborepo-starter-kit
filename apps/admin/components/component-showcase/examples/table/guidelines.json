@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Line numbers up",
+		"do": {
+			"text": "Align amounts to the end, with `tabular-nums`, so their digits line up.",
+			"file": "table-do-1",
+			"export": "TableDo1Example"
+		},
+		"dont": {
+			"text": "Don't left-align a column of amounts.",
+			"file": "table-dont-1",
+			"export": "TableDont1Example"
+		}
+	},
+	{
+		"title": "Give every drawn cell its text",
+		"do": {
+			"text": "When a cell draws a badge or an icon, keep its meaning in text that screen readers hear.",
+			"file": "table-do-2",
+			"export": "TableDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave a drawn cell with no text: a glyph alone says nothing to a screen reader.",
+			"file": "table-dont-2",
+			"export": "TableDont2Example"
+		}
+	}
+]

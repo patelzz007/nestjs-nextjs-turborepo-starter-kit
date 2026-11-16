@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { LIST_SLOT_INDEX } from "@workspace/shared";
+import { LIST_SLOT_INDEX, utcEpochMs } from "@workspace/shared";
 import {
 	buildDataGridClearDetails,
 	buildDataGridPasteDetails,
@@ -207,7 +207,7 @@ describe("clipboard text", () => {
 		expect(stringifyDataGridCellValue("x")).toBe("x");
 		expect(stringifyDataGridCellValue(42)).toBe("42");
 		expect(stringifyDataGridCellValue(true)).toBe("true");
-		expect(stringifyDataGridCellValue(new Date(Date.UTC(2024, 0, 2)))).toBe("2024-01-02T00:00:00.000Z");
+		expect(stringifyDataGridCellValue(new Date(utcEpochMs(2024, 1, 2)))).toBe("2024-01-02T00:00:00Z");
 		expect(stringifyDataGridCellValue({ a: 1 })).toBe('{"a":1}');
 	});
 });

@@ -1,4 +1,4 @@
-import { SupportAccessGrantModeSchema, SupportAccessGrantStatusSchema, type EpochMs } from "@workspace/shared";
+import { SUPPORT_ACCESS_GRANT_LIFECYCLE, SupportAccessGrantModeSchema, SupportAccessGrantStatusSchema, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
 import { SupportAccessGrantNotPendingError, SupportAccessGrantNotRevocableError } from "../errors/authorization.errors";
@@ -12,12 +12,6 @@ export const SUPPORT_TICKET_REF_MAX_LENGTH = 120;
 
 export type SupportAccessGrantStatus = z.output<typeof SupportAccessGrantStatusSchema>;
 export type SupportAccessGrantMode = z.output<typeof SupportAccessGrantModeSchema>;
-
-/**
- * Statuses a grant can still be revoked from. REVOKED, EXPIRED and DENIED are terminal. The code never
- * sets PENDING_APPROVAL, but a row in that state stays revocable, exactly as before the migration.
- */
-const REVOCABLE_STATUSES: ReadonlySet<SupportAccessGrantStatus> = new Set<SupportAccessGrantStatus>(["PENDING_APPROVAL", "PENDING_TENANT_APPROVAL", "ACTIVE"]);
 
 const SupportAccessGrantStateSchema = z.object({
 	id: z.string().min(1),
@@ -50,8 +44,9 @@ export interface NewSupportAccessGrant {
  *
  * A SuperAdmin requests a grant (PENDING_TENANT_APPROVAL); an active owner of the grant's tenant
  * approves it (ACTIVE); a SuperAdmin revokes it (REVOKED); the expiry job ends it once its time runs
- * out (EXPIRED). Every transition is compared-and-set on the
- * status the grant was loaded with, so a revoked or expired grant can never be revived.
+ * out (EXPIRED). The moves are {@link SUPPORT_ACCESS_GRANT_LIFECYCLE} (`@workspace/shared`); every one
+ * is compared-and-set on the status the grant was loaded with, so a revoked or expired grant can
+ * never be revived.
  */
 export class SupportAccessGrantAggregate {
 	private constructor(
@@ -107,10 +102,10 @@ export class SupportAccessGrantAggregate {
 	 * @throws SupportAccessGrantNotPendingError when it is decided, revoked, expired, or self-requested.
 	 */
 	public approve(approverUserId: string, now: EpochMs): void {
-		if (this.state.status !== "PENDING_TENANT_APPROVAL" || this.state.expiresAt <= now || this.state.supportUserId === approverUserId) {
+		if (!SUPPORT_ACCESS_GRANT_LIFECYCLE.can("approve", this.state.status) || this.state.expiresAt <= now || this.state.supportUserId === approverUserId) {
 			throw new SupportAccessGrantNotPendingError();
 		}
-		this.state = { ...this.state, status: "ACTIVE", tenantApprovedById: approverUserId };
+		this.state = { ...this.state, status: SUPPORT_ACCESS_GRANT_LIFECYCLE.targetOf("approve"), tenantApprovedById: approverUserId };
 	}
 
 	/**
@@ -119,18 +114,18 @@ export class SupportAccessGrantAggregate {
 	 * change) for a terminal grant or one that has not expired yet.
 	 */
 	public expire(now: EpochMs): boolean {
-		if (!REVOCABLE_STATUSES.has(this.state.status) || this.state.expiresAt > now) {
+		if (!SUPPORT_ACCESS_GRANT_LIFECYCLE.can("expire", this.state.status) || this.state.expiresAt > now) {
 			return false;
 		}
-		this.state = { ...this.state, status: "EXPIRED" };
+		this.state = { ...this.state, status: SUPPORT_ACCESS_GRANT_LIFECYCLE.targetOf("expire") };
 		return true;
 	}
 
 	/** @throws SupportAccessGrantNotRevocableError for a terminal grant (never revived, never re-revoked). */
 	public revoke(now: EpochMs): void {
-		if (!REVOCABLE_STATUSES.has(this.state.status)) {
+		if (!SUPPORT_ACCESS_GRANT_LIFECYCLE.can("revoke", this.state.status)) {
 			throw new SupportAccessGrantNotRevocableError();
 		}
-		this.state = { ...this.state, status: "REVOKED", revokedAt: now };
+		this.state = { ...this.state, status: SUPPORT_ACCESS_GRANT_LIFECYCLE.targetOf("revoke"), revokedAt: now };
 	}
 }

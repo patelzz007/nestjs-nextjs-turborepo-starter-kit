@@ -1,7 +1,8 @@
 // The app's typefaces (ADR 037, ADR 079): Geist for everything — running text,
 // the UI and headings, which are Geist SemiBold and Bold in a real type ramp —
-// Geist Mono for codes and IDs, and Bricolage Grotesque SemiBold for one thing
-// only: the label of a button (`font-button`), so an action reads as an action.
+// Geist Mono for codes and IDs, JetBrains Mono for blocks of source code
+// (`font-code`, the web's code font), and Bricolage Grotesque SemiBold for one
+// thing only: the label of a button (`font-button`), so an action reads as an action.
 //
 // React Native picks a font by FAMILY NAME, not by weight: a custom font has
 // no "semibold" unless that weight is loaded as its own family. So every
@@ -18,6 +19,7 @@ import { Geist_500Medium } from "@expo-google-fonts/geist/500Medium";
 import { Geist_600SemiBold } from "@expo-google-fonts/geist/600SemiBold";
 import { Geist_700Bold } from "@expo-google-fonts/geist/700Bold";
 import { GeistMono_400Regular } from "@expo-google-fonts/geist-mono/400Regular";
+import { JetBrainsMono_400Regular } from "@expo-google-fonts/jetbrains-mono/400Regular";
 import { useFonts } from "expo-font";
 
 /**
@@ -31,6 +33,7 @@ export const APP_FONTS = {
 	Geist_700Bold,
 	BricolageGrotesque_600SemiBold,
 	GeistMono_400Regular,
+	JetBrainsMono_400Regular,
 } satisfies Readonly<Record<string, number>>;
 
 /**

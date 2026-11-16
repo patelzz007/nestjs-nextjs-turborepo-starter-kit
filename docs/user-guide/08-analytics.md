@@ -3,8 +3,11 @@ title: "8. Analytics"
 description: "What merchants, platform admins and customers see in analytics: any date range by day, week or month, numbers compared with the previous period, breakdowns by store, reward, category and city, and CSV / Excel / PDF exports for merchants and admins."
 order: 9
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1791158400000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1792532799000
+coverImage: "/images/covers/user-guide/08-analytics.webp"
 tags: ["user-guide", "analytics", "sales", "exports"]
 ---
 

@@ -88,6 +88,7 @@ function usePhoneInputContext(): PhoneInputContextValue {
 
 type PhoneInputProps = Omit<React.ComponentProps<"input">, "onChange" | "value" | "ref" | "size" | "defaultValue" | "style"> &
 	Omit<BasePhoneInput.FeatureProps<object>, "flagComponent" | "countrySelectComponent" | "inputComponent"> & {
+		/** The current phone number value in E.164 format. */
 		readonly value?: BasePhoneInput.Value | undefined;
 		/** Called with the number in E.164 (e.g. "+60123456789"), or "" once the field is emptied. */
 		readonly onChange?: ((value: BasePhoneInput.Value) => void) | undefined;

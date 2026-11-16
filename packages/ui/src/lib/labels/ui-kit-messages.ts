@@ -10,10 +10,10 @@
 // branch) keeps them in a group under its own key, which the function replaces.
 
 import { formatMessage, MAX_PDF_VIEWER_FILE_BYTES, type MessageValues } from "@workspace/shared";
+import { buildDataGridLabels, buildFilterLabels } from "@workspace/ui-kit-logic";
 import { z } from "zod";
 
 import type { ColorDescription } from "../color/color-name";
-import type { FilterRelativeDate } from "../../components/filters/filters-types";
 import { formatBytes } from "../format/bytes";
 import type ENGLISH_MESSAGES from "./messages/en.json";
 import type { UiKitLanguage } from "./language-packs";
@@ -53,17 +53,6 @@ export function bindUiKitLabels(language: UiKitLanguage, m: UiKitMessages): UiKi
 			return names.neutral[description.name];
 		}
 		return t(names.chromatic, { shade: names.shade[description.shade], tone: names.tone[description.tone], hue: names.hue[description.hue] });
-	};
-
-	const relativeDateOf = ({ unit, offset }: FilterRelativeDate): string => {
-		const words = m.filters.relativeDate;
-		if (offset === 0) {
-			return t(words.current, { unit });
-		}
-		if (unit === "day" && Math.abs(offset) === 1) {
-			return offset > 0 ? words.tomorrow : words.yesterday;
-		}
-		return t(offset > 0 ? words.future : words.past, { unit, count: Math.abs(offset) });
 	};
 
 	return {
@@ -138,15 +127,7 @@ export function bindUiKitLabels(language: UiKitLanguage, m: UiKitMessages): UiKi
 			removeOption: (label) => t(m.combobox.removeOption, { label }),
 			selectedCount: (count) => t(m.combobox.selectedCount, { count }),
 		},
-		dataGrid: {
-			...m.dataGrid,
-			unpinColumn: (title) => t(m.dataGrid.unpinColumn, { title }),
-			paginationInfo: ({ from, to, count }) => t(m.dataGrid.paginationInfo, { from, to, count }),
-			goToPage: (page) => t(m.dataGrid.goToPage, { page }),
-			filterSelectedCount: (count) => t(m.dataGrid.filterSelectedCount, { count }),
-			resizeColumn: (title) => t(m.dataGrid.resizeColumn, { title }),
-			selectionBarCount: (count) => t(m.dataGrid.selectionBarCount, { count }),
-		},
+		dataGrid: buildDataGridLabels(m.dataGrid, t),
 		dataTable: m.dataTable,
 		datePicker: m.datePicker,
 		dateSelector: m.dateSelector,
@@ -195,6 +176,7 @@ export function bindUiKitLabels(language: UiKitLanguage, m: UiKitMessages): UiKi
 			weekGroup: (weekLabel, rangeLabel) => t(m.gantt.weekGroup, { weekLabel, rangeLabel }),
 		},
 		dialog: m.dialog,
+		diagram: m.diagram,
 		kpiDirection: m.kpiDirection,
 		listPager: {
 			...m.listPager,
@@ -272,31 +254,7 @@ export function bindUiKitLabels(language: UiKitLanguage, m: UiKitMessages): UiKi
 			droppedOutside: (id) => t(m.sortable.droppedOutside, { id }),
 			cancelled: (id) => t(m.sortable.cancelled, { id }),
 		},
-		filters: {
-			...m.filters,
-			moveToGroup: (position) => t(m.filters.moveToGroup, { position }),
-			rowLabel: (condition, depth) => t(m.filters.rowLabel, { condition, depth }),
-			groupLabel: (description, depth) => t(m.filters.groupLabel, { description, depth }),
-			groupAnnouncement: (added) => t(m.filters.groupAnnouncement, { added: String(added) }),
-			reorderAnnouncement: (label, position, total) => t(m.filters.reorderAnnouncement, { label, position, total }),
-			moveAnnouncement: (label, destination, position, total) => t(m.filters.moveAnnouncement, { label, destination, position, total }),
-			combinatorLabel: (word) => t(m.filters.combinatorLabel, { word }),
-			chipMenu: (fieldLabel) => t(m.filters.chipMenu, { fieldLabel }),
-			filterLabel: (condition) => t(m.filters.filterLabel, { condition }),
-			exclusiveAnnouncement: (label, cleared) => t(m.filters.exclusiveAnnouncement, { label, cleared }),
-			itemCount: (count) => t(m.filters.itemCount, { count }),
-			resultsAnnouncement: (count) => t(m.filters.resultsAnnouncement, { count }),
-			stepAnnouncement: (step, label) => t(m.filters.stepAnnouncement, { step, label }),
-			countAnnouncement: (count) => t(m.filters.countAnnouncement, { count }),
-			valueCount: (count) => t(m.filters.valueCount, { count }),
-			valueDetail: (summary, values) => t(m.filters.valueDetail.message, { summary, values: values.join(m.filters.valueDetail.separator) }),
-			valueRange: (from, to) => t(m.filters.valueRange, { from, to }),
-			rangeFrom: (fieldLabel) => t(m.filters.rangeFrom, { fieldLabel }),
-			rangeTo: (fieldLabel) => t(m.filters.rangeTo, { fieldLabel }),
-			negated: (operatorLabel) => t(m.filters.negated, { operatorLabel }),
-			relativeDate: (date) => relativeDateOf(date),
-			issueSummary: (count) => t(m.filters.issueSummary, { count }),
-		},
+		filters: buildFilterLabels(m.filters, t),
 		filterOperators: m.filterOperators,
 		questionnaire: {
 			...m.questionnaire,

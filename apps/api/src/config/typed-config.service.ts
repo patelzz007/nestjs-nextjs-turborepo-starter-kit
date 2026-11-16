@@ -22,6 +22,7 @@ import type {
 	StorageConfig,
 	TenancyConfig,
 	WebhooksConfig,
+	DocsPublishingConfig,
 	InboundWebhooksConfig,
 } from "./api-config.schema";
 import { RedisNamespace } from "../platform/infrastructure/redis/redis-namespace";
@@ -139,6 +140,11 @@ export class TypedConfigService {
 	/** The received-webhook log (ADR 081). */
 	public get inboundWebhooks(): InboundWebhooksConfig {
 		return this.config.inboundWebhooks;
+	}
+
+	/** Docs publishing (ADR 084). */
+	public get docsPublishing(): DocsPublishingConfig {
+		return this.config.docsPublishing;
 	}
 
 	public get observability(): ObservabilityConfig {

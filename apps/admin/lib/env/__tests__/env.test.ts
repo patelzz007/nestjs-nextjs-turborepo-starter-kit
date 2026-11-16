@@ -60,13 +60,13 @@ describe("AdminClientEnvSchema", () => {
 
 describe("AdminServerEnvSchema", () => {
 	it("requires NODE_ENV, leaves COOKIE_DOMAIN optional", () => {
-		expect(AdminServerEnvSchema.parse({ NODE_ENV: "development" })).toEqual({ NODE_ENV: "development", COOKIE_DOMAIN: undefined, ADMIN_COMPONENT_GALLERY: undefined });
+		expect(AdminServerEnvSchema.parse({ NODE_ENV: "development" })).toEqual({ NODE_ENV: "development", COOKIE_DOMAIN: undefined, ADMIN_SHOWCASE: undefined });
 		expect(AdminServerEnvSchema.safeParse({ COOKIE_DOMAIN: "localhost" }).success).toBe(false);
 	});
 
-	it("takes an explicit component-gallery switch and refuses anything but true / false", () => {
-		expect(AdminServerEnvSchema.parse({ NODE_ENV: "production", ADMIN_COMPONENT_GALLERY: "true" }).ADMIN_COMPONENT_GALLERY).toBe("true");
-		expect(AdminServerEnvSchema.safeParse({ NODE_ENV: "production", ADMIN_COMPONENT_GALLERY: "yes" }).success).toBe(false);
+	it("takes an explicit showcase switch and refuses anything but true / false", () => {
+		expect(AdminServerEnvSchema.parse({ NODE_ENV: "production", ADMIN_SHOWCASE: "true" }).ADMIN_SHOWCASE).toBe("true");
+		expect(AdminServerEnvSchema.safeParse({ NODE_ENV: "production", ADMIN_SHOWCASE: "yes" }).success).toBe(false);
 	});
 
 	it("has no demo-accounts switch, so demo accounts cannot be forced on by configuration", () => {

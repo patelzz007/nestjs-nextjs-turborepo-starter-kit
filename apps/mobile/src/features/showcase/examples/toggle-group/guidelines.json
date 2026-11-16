@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Few, short options",
+		"do": {
+			"text": "Offer a few short options that fit on one row.",
+			"file": "toggle-group-do-1",
+			"export": "ToggleGroupDo1Example"
+		},
+		"dont": {
+			"text": "Don't fill a group with many long options: they wrap and stop reading as one control. Use a select.",
+			"file": "toggle-group-dont-1",
+			"export": "ToggleGroupDont1Example"
+		}
+	},
+	{
+		"title": "Name icon-only options",
+		"do": {
+			"text": "Give every icon-only option a label: screen readers read it.",
+			"file": "toggle-group-do-2",
+			"export": "ToggleGroupDo2Example"
+		},
+		"dont": {
+			"text": "Don't label the options by position (\"Option 1\"): the glyph says nothing to a screen reader.",
+			"file": "toggle-group-dont-2",
+			"export": "ToggleGroupDont2Example"
+		}
+	}
+]

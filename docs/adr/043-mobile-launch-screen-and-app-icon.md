@@ -3,8 +3,11 @@ title: "ADR 043: Mobile Launch Screen and App Icon"
 tags: ["adr", "mobile", "ui", "brand", "tokens"]
 description: "The Expo app launches on a slate splash with the brand mark — native assets generated from the token source — and hands over seamlessly to an in-app launch screen that adds the app's name and a tagline."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/adr/043-mobile-launch-screen-and-app-icon.webp"
 order: 43
 ---
 

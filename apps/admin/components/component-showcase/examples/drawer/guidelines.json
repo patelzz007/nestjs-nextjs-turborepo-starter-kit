@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Show it can be swiped",
+		"do": {
+			"text": "Keep the grab handle (`showSwipeHandle`), so people see the drawer can be swiped away.",
+			"file": "drawer-do-1",
+			"export": "DrawerDo1Example"
+		},
+		"dont": {
+			"text": "Don't hide the handle on a drawer that closes by swiping.",
+			"file": "drawer-dont-1",
+			"export": "DrawerDont1Example"
+		}
+	},
+	{
+		"title": "Keep drawers short",
+		"do": {
+			"text": "Use a drawer for a short task: a note, a few choices.",
+			"file": "drawer-do-2",
+			"export": "DrawerDo2Example"
+		},
+		"dont": {
+			"text": "Don't fit a long checkout form in a drawer: give it a page.",
+			"file": "drawer-dont-2",
+			"export": "DrawerDont2Example"
+		}
+	}
+]

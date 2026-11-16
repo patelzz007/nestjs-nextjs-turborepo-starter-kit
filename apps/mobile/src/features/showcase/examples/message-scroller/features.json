@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-message-scroller-1",
+		"label": "Jump to Latest",
+		"description": "Chat transcript with jump to latest. Best for a read-only 9 turn thread on the provider defaults, opening at the newest message.",
+		"file": "message-scroller-1",
+		"export": "MessageScroller1Example"
+	},
+	{
+		"id": "c-message-scroller-2",
+		"label": "Streaming Reply",
+		"description": "Streaming reply that follows the edge. Best for a reply typed out 4 characters every 28 ms under a Working badge, with a Replay stream button.",
+		"file": "message-scroller-2",
+		"export": "MessageScroller2Example"
+	},
+	{
+		"id": "c-message-scroller-3",
+		"label": "Anchored Turn",
+		"description": "Anchored turn with a previous peek. Best for a composer that sends questions and gets a canned answer after 900 ms, each question lifted near the top under a 64 point peek.",
+		"file": "message-scroller-3",
+		"export": "MessageScroller3Example"
+	},
+	{
+		"id": "c-message-scroller-4",
+		"label": "Opening Position",
+		"description": "Opening position for a saved thread. Best for a segmented switch over the 3 opening positions, with a day divider on top.",
+		"file": "message-scroller-4",
+		"export": "MessageScroller4Example"
+	},
+	{
+		"id": "c-message-scroller-5",
+		"label": "Load Earlier",
+		"description": "Load earlier without losing your place. Best for a Load earlier button adding 5 older turns per press to a 6 of 16 window, with a badge that reports whether the view can scroll up.",
+		"file": "message-scroller-5",
+		"export": "MessageScroller5Example"
+	},
+	{
+		"id": "c-message-scroller-6",
+		"label": "Thread Navigator",
+		"description": "Thread navigator for stepping turns. Best for previous and next buttons around a turn counter and the current question, tracked from the anchor and jumped with scrolling.",
+		"file": "message-scroller-6",
+		"export": "MessageScroller6Example"
+	}
+]

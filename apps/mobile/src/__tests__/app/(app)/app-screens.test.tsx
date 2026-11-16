@@ -26,6 +26,9 @@ import SearchScreen from "../../../app/(app)/search";
 
 const mockSetTheme = jest.fn();
 
+/** Home's greeting for the account signed in; which part of the day depends on the clock (features/home/__tests__/greeting.test.ts pins each one). */
+const HOME_GREETING = /^Good (morning|afternoon|evening|night), Alex Morgan$/;
+
 /** What the OS sends when the keyboard moves. */
 const KEYBOARD_EVENT: KeyboardEvent = {
 	duration: 0,
@@ -70,7 +73,7 @@ describe("(app) tabs", () => {
 		stubAccount();
 		await renderSignedIn(TAB_SCREENS, "/");
 
-		expect(await screen.findByText("Alex Morgan")).toBeOnTheScreen();
+		expect(await screen.findByText(HOME_GREETING)).toBeOnTheScreen();
 		const tabs = screen.getAllByRole("tab");
 		expect(tabs).toHaveLength(5);
 		const [home, analytics, search, profile, settings] = tabs;
@@ -87,7 +90,7 @@ describe("(app) tabs", () => {
 		const selection = jest.spyOn(Haptics, "selectionAsync").mockResolvedValue(undefined);
 		stubAccount();
 		await renderSignedIn(TAB_SCREENS, "/");
-		await screen.findByText("Alex Morgan");
+		await screen.findByText(HOME_GREETING);
 
 		await fireEvent.press(screen.getByRole("tab", { name: "Home" }));
 		expect(selection).not.toHaveBeenCalled();
@@ -107,14 +110,14 @@ describe("(app) tabs", () => {
 		expect(screen.getByText("Soon you'll be able to find anything in the app from here.")).toBeOnTheScreen();
 		await fireEvent.press(screen.getByRole("button", { name: "Back to home" }));
 
-		expect(await screen.findByText("Alex Morgan")).toBeOnTheScreen();
+		expect(await screen.findByText(HOME_GREETING)).toBeOnTheScreen();
 		expect(screen.getByRole("tab", { name: "Home" })).toBeSelected();
 	});
 
 	it("hides the tab bar while the keyboard is open", async () => {
 		stubAccount();
 		await renderSignedIn(TAB_SCREENS, "/");
-		await screen.findByText("Alex Morgan");
+		await screen.findByText(HOME_GREETING);
 
 		await act(async (): Promise<void> => {
 			DeviceEventEmitter.emit("keyboardWillShow", KEYBOARD_EVENT);
@@ -131,7 +134,7 @@ describe("(app) tabs", () => {
 	it("keeps each tab's content clear of the floating bar", async () => {
 		stubAccount();
 		await renderSignedIn(TAB_SCREENS, "/");
-		await screen.findByText("Alex Morgan");
+		await screen.findByText(HOME_GREETING);
 
 		await fireEvent(screen.getByTestId("app-tab-bar"), "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 106 } } });
 
@@ -140,11 +143,11 @@ describe("(app) tabs", () => {
 });
 
 describe("Home (§10.7)", () => {
-	it("shows who is signed in", async () => {
+	it("greets who is signed in by name for the time of day, above their email", async () => {
 		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()) });
 		await renderSignedIn({ index: HomeScreen }, "/");
 
-		expect(await screen.findByText("Alex Morgan")).toBeOnTheScreen();
+		expect(await screen.findByText(HOME_GREETING)).toBeOnTheScreen();
 		expect(screen.getByText("member@example.com")).toBeOnTheScreen();
 		expect(screen.getByLabelText("Alex Morgan's initials")).toHaveTextContent("AM");
 		expect(screen.getByText("This is the starter shell")).toBeOnTheScreen();
@@ -162,7 +165,7 @@ describe("Home (§10.7)", () => {
 		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()) });
 		await renderSignedIn({ index: HomeScreen }, "/");
 
-		expect(await screen.findByText("Alex Morgan")).toBeOnTheScreen();
+		expect(await screen.findByText(HOME_GREETING)).toBeOnTheScreen();
 		expect(screen.queryByRole("progressbar", { name: "Loading your account" })).toBeNull();
 	});
 
@@ -190,7 +193,7 @@ describe("Home (§10.7)", () => {
 
 		expect(await screen.findByText("Not allowed")).toBeOnTheScreen();
 		await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
-		expect(await screen.findByText("Alex Morgan")).toBeOnTheScreen();
+		expect(await screen.findByText(HOME_GREETING)).toBeOnTheScreen();
 	});
 });
 

@@ -3,8 +3,11 @@ title: "ADR 006: Module-Level Health Indicators"
 tags: ["adr", "health", "monitoring", "observability"]
 description: "Architecture decision record for implementing per-module health indicators with aggregated deep health checks."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1788220800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1200&h=630&fit=crop"
+editedAt: 1791121913000
+coverImage: "/images/covers/adr/006-module-health-indicators.webp"
 order: 6
 ---
 

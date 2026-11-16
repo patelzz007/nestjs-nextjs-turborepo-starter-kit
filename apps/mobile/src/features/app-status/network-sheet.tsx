@@ -25,7 +25,7 @@ function Metric({ metric, first }: { readonly metric: NetworkMetric; readonly fi
 			className={first ? "flex-1 gap-1 px-3 py-3" : "flex-1 gap-1 border-l border-border px-3 py-3"}>
 			<MutedText>{metric.label}</MutedText>
 			<View className="flex-row items-baseline gap-0.5">
-				<Text className="font-mono text-xl text-foreground">{metric.value}</Text>
+				<Text className="text-h3 font-mono text-foreground">{metric.value}</Text>
 				<MutedText>{metric.unit}</MutedText>
 			</View>
 		</View>

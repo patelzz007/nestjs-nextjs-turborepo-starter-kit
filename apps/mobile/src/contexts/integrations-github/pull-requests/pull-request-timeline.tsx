@@ -139,7 +139,7 @@ const TimelineEntry = React.memo(function TimelineEntry({ item, nowMs, pullReque
 			const sentence = `${loginOf(item.actor)} ${eventSentence(item.kind, item.detail)} ${formatRelativeTime(item.createdAt, nowMs)}`;
 			return (
 				<TimelineRailItem node={<TimelineRailIcon icon={style.icon} tone={style.tone} />} compact>
-					<Text accessible accessibilityLabel={sentence} className="font-sans text-sm leading-5 text-muted-foreground">
+					<Text accessible accessibilityLabel={sentence} className="text-body font-sans text-muted-foreground">
 						<Text className="font-sans-semibold text-foreground">{loginOf(item.actor)}</Text> {eventSentence(item.kind, item.detail)}{" "}
 						{formatRelativeTime(item.createdAt, nowMs)}
 					</Text>
@@ -168,10 +168,10 @@ function CommitEntry({
 				accessibilityHint="Shows the commit's changes"
 				onPress={open}
 				className="min-h-11 flex-row items-center gap-3 active:opacity-70">
-				<Text numberOfLines={1} className="flex-1 font-sans text-sm text-foreground">
+				<Text numberOfLines={1} className="text-body flex-1 font-sans text-foreground">
 					{item.commit.headline}
 				</Text>
-				<Text className="font-mono text-xs text-muted-foreground">{item.commit.shortSha}</Text>
+				<Text className="text-caption font-mono text-muted-foreground">{item.commit.shortSha}</Text>
 			</Pressable>
 		</TimelineRailItem>
 	);
@@ -198,15 +198,15 @@ export function CommentCard({ comment, action, isPullRequestAuthor = false, show
 	// Each picture loads from where the API listed it — signed in, for one GitHub shows only to signed-in readers.
 	const images = useGithubPictureLoader(comment.images);
 	return (
-		<View className="overflow-hidden rounded-2xl border border-border bg-card" testID={`comment-${comment.id}`}>
+		<View className="rounded-card overflow-hidden border border-border bg-card" testID={`comment-${comment.id}`}>
 			<View className="min-h-11 flex-row items-center gap-2 border-b border-border bg-muted px-3 py-2">
 				{showAvatar ? <Avatar name={login} imageUrl={comment.author?.avatarUrl ?? null} size="sm" /> : null}
-				<Text className="flex-1 font-sans text-sm text-muted-foreground" numberOfLines={2}>
+				<Text className="text-body flex-1 font-sans text-muted-foreground" numberOfLines={2}>
 					<Text className="font-sans-semibold text-foreground">{login}</Text> {action}
 				</Text>
 				{isPullRequestAuthor ? (
 					<View className="rounded-full border border-border px-2 py-0.5">
-						<Text className="font-sans-medium text-xs text-muted-foreground">{AUTHOR_BADGE}</Text>
+						<Text className="font-sans-medium text-caption text-muted-foreground">{AUTHOR_BADGE}</Text>
 					</View>
 				) : null}
 				{edited === null ? null : (
@@ -217,7 +217,7 @@ export function CommentCard({ comment, action, isPullRequestAuthor = false, show
 						onPress={showEdits}
 						hitSlop={8}
 						className="min-h-9 justify-center active:opacity-60">
-						<Text className="font-sans text-sm text-muted-foreground underline">{edited}</Text>
+						<Text className="text-body font-sans text-muted-foreground underline">{edited}</Text>
 					</Pressable>
 				)}
 			</View>
@@ -246,7 +246,7 @@ function ReviewEntry({ item, nowMs, pullRequestAuthor, onShowEdits }: ReviewEntr
 			<View className="gap-3">
 				<View className="min-h-8 flex-row items-center gap-2">
 					<Avatar name={loginOf(review.author)} imageUrl={review.author?.avatarUrl ?? null} size="sm" />
-					<Text className="flex-1 font-sans text-sm text-muted-foreground">
+					<Text className="text-body flex-1 font-sans text-muted-foreground">
 						<Text className="font-sans-semibold text-foreground">{loginOf(review.author)}</Text> {verdict}
 					</Text>
 				</View>
@@ -271,8 +271,8 @@ interface ReviewCommentCardProps {
 export function ReviewCommentCard({ comment, nowMs, onShowEdits }: ReviewCommentCardProps): React.JSX.Element {
 	const lines = React.useMemo(() => parsePatch(comment.diffHunk).slice(-REVIEW_COMMENT_CONTEXT_LINES), [comment.diffHunk]);
 	return (
-		<View className="overflow-hidden rounded-2xl border border-border bg-card">
-			<Text numberOfLines={1} className="border-b border-border bg-muted px-3 py-2 font-mono text-xs text-foreground">
+		<View className="rounded-card overflow-hidden border border-border bg-card">
+			<Text numberOfLines={1} className="text-caption border-b border-border bg-muted px-3 py-2 font-mono text-foreground">
 				{comment.path}
 			</Text>
 			<DiffView lines={lines} />

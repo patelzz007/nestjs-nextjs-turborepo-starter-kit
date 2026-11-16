@@ -83,6 +83,7 @@ export const PERMISSION: PermissionRegistry = {
 	BACKGROUND_JOB: actionSlugs("BACKGROUND_JOB"),
 	STATUS_INCIDENT: actionSlugs("STATUS_INCIDENT"),
 	FEATURE_FLAG: actionSlugs("FEATURE_FLAG"),
+	DOCS_SYNC: actionSlugs("DOCS_SYNC"),
 	MEMBER: actionSlugs("MEMBER"),
 	KYB: actionSlugs("KYB"),
 	ACCESS_REQUEST: actionSlugs("ACCESS_REQUEST"),

@@ -1,0 +1,30 @@
+[
+	{
+		"id": "c-navigation-menu-1",
+		"label": "Basic",
+		"description": "Basic navigation menu.. Best for a Getting started panel of 2 described links next to a plain Documentation link styled as a trigger.",
+		"file": "navigation-menu-1",
+		"export": "NavigationMenu1Example"
+	},
+	{
+		"id": "c-navigation-menu-2",
+		"label": "Grid Layout",
+		"description": "Navigation menu with grid layout.. Best for a Components trigger whose 4 titled summaries sit in 1 column and split into 2 columns from md up.",
+		"file": "navigation-menu-2",
+		"export": "NavigationMenu2Example"
+	},
+	{
+		"id": "c-navigation-menu-3",
+		"label": "With Icons",
+		"description": "Navigation menu with icons.. Best for a narrow Status panel of 2 one line links, Backlog and Done, each led by a status glyph.",
+		"file": "navigation-menu-3",
+		"export": "NavigationMenu3Example"
+	},
+	{
+		"id": "c-navigation-menu-4",
+		"label": "Learn More Button",
+		"description": "Navigation menu with grid layout and learn more button.. Best for an Industries panel of 8 segments in a fixed 2 column grid, each with a glyph and summary, above a full width Learn more button.",
+		"file": "navigation-menu-4",
+		"export": "NavigationMenu4Example"
+	}
+]

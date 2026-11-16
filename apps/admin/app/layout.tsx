@@ -10,6 +10,8 @@ import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guar
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { geistMono } from "@workspace/ui/fonts/geist-mono";
 import { geistSans } from "@workspace/ui/fonts/geist-sans";
+import { jetBrainsMono } from "@workspace/ui/fonts/jetbrains-mono";
+import { AppNavigationProgress } from "@workspace/client/lib/navigation/navigation-progress";
 
 import { serverRenderedSessionOf } from "@workspace/client/lib/contexts/identity/session/load-server-session";
 
@@ -44,22 +46,25 @@ export default async function RootLayout({
 	return (
 		<AppDocumentShell
 			lang={language}
-			htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)}
+			htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable, jetBrainsMono.variable)}
 			bodyClassName="admin-app">
 			{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
 			<ReduxDevToolsGuard />
-			<AppLanguageProvider language={language}>
-				<UrlStateProvider>
-					<QueryProvider>
-						<AdminClientAuthWrapper serverSession={serverSession}>
-							<ThemeProvider {...nonceProps(nonce)}>
-								{children}
-								<Toaster />
-							</ThemeProvider>
-						</AdminClientAuthWrapper>
-					</QueryProvider>
-				</UrlStateProvider>
-			</AppLanguageProvider>
+			{/* The top progress bar while the app moves to another page (link clicks, back/forward, useProgressRouter). */}
+			<AppNavigationProgress>
+				<AppLanguageProvider language={language}>
+					<UrlStateProvider>
+						<QueryProvider>
+							<AdminClientAuthWrapper serverSession={serverSession}>
+								<ThemeProvider {...nonceProps(nonce)}>
+									{children}
+									<Toaster />
+								</ThemeProvider>
+							</AdminClientAuthWrapper>
+						</QueryProvider>
+					</UrlStateProvider>
+				</AppLanguageProvider>
+			</AppNavigationProgress>
 		</AppDocumentShell>
 	);
 }

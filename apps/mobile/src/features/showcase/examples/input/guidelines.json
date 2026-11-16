@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Pick the right keyboard",
+		"do": {
+			"text": "Set `keyboardType` for the value's kind, so people get the keys they need.",
+			"file": "input-do-1",
+			"export": "InputDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave an email field on the default keyboard with auto-capitalisation on.",
+			"file": "input-dont-1",
+			"export": "InputDont1Example"
+		}
+	},
+	{
+		"title": "One look per form",
+		"do": {
+			"text": "Keep the fields of one form in one look.",
+			"file": "input-do-2",
+			"export": "InputDo2Example"
+		},
+		"dont": {
+			"text": "Don't mix outlined, filled and underline fields: the form reads as several.",
+			"file": "input-dont-2",
+			"export": "InputDont2Example"
+		}
+	}
+]

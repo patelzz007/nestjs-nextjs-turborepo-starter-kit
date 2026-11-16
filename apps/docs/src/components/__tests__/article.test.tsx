@@ -57,11 +57,25 @@ describe("ArticlePage", () => {
 		expect(screen.getByText("Platform Team")).toBeTruthy();
 		expect(screen.getByText("4 min read")).toBeTruthy();
 		expect(screen.getByRole("link", { name: "Edit on GitHub" }).getAttribute("href")).toBe(guidePage().editUrl);
-		expect(within(screen.getByRole("list", { name: "Tags" })).getAllByRole("listitem")).toHaveLength(2);
+		const labels = within(screen.getByRole("list", { name: "Category and tags" }));
+		expect(labels.getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Category: Authorization", "rbac", "rls"]);
 		expect(screen.getByText("Every request walks one path.")).toBeTruthy();
 		expect(screen.getByRole("link", { name: /Next\s*Backend/ })).toBeTruthy();
 		expect(screen.getByText("Guide tree")).toBeTruthy();
-		expect(document.querySelector("time")?.getAttribute("datetime")).toBe(new Date(1793145600000).toISOString());
+	});
+
+	it("should show a page's three dates: first published, last updated and last edited", async () => {
+		const page = guidePage();
+		await renderWithRouter(<ArticlePage page={page} />);
+		const dates = [...document.querySelectorAll("dl div")].flatMap((fact) => {
+			const time = fact.querySelector("time");
+			return time === null ? [] : [[fact.querySelector("dt")?.textContent, time.getAttribute("datetime")]];
+		});
+		expect(dates).toEqual([
+			["Published", new Date(page.date).toISOString()],
+			["Updated", new Date(page.lastUpdated).toISOString()],
+			["Edited", new Date(page.editedAt).toISOString()],
+		]);
 	});
 
 	it("should warn on a superseded guide", async () => {
@@ -70,10 +84,14 @@ describe("ArticlePage", () => {
 		expect(screen.getByText("Superseded")).toBeTruthy();
 	});
 
-	it("should show a post without a cover, with its category as the tag and its publish date", async () => {
+	it("should show a post without a cover, with its category and its dates", async () => {
 		await renderWithRouter(<ArticlePage page={postPage()} />);
 		expect(screen.getByText("Published")).toBeTruthy();
-		expect(screen.getByText("Architecture")).toBeTruthy();
+		expect(
+			within(screen.getByRole("list", { name: "Category and tags" }))
+				.getAllByRole("listitem")
+				.map((item) => item.textContent),
+		).toEqual(["Category: Architecture"]);
 		expect(screen.getByRole("link", { name: /Previous\s*Changelog/ })).toBeTruthy();
 		expect(screen.queryByRole("complementary", { name: "On this page" })).toBeNull();
 	});

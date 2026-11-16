@@ -1,0 +1,41 @@
+[
+	{
+		"title": "Pick the right control",
+		"do": {
+			"text": "Use a select for five or more options that need not all show at once.",
+			"file": "select-do-1",
+			"export": "SelectDo1Example"
+		},
+		"dont": {
+			"text": "Don't hide two options behind a sheet: a switch or a radio group shows both in one look.",
+			"file": "select-dont-1",
+			"export": "SelectDont1Example"
+		}
+	},
+	{
+		"title": "Let long lists be searched",
+		"do": {
+			"text": "Turn on `searchable` (or use a combobox) once the list runs past a screenful.",
+			"file": "select-do-2",
+			"export": "SelectDo2Example"
+		},
+		"dont": {
+			"text": "Don't make people scroll through 120 rows to find one.",
+			"file": "select-dont-2",
+			"export": "SelectDont2Example"
+		}
+	},
+	{
+		"title": "Say what is wrong",
+		"do": {
+			"text": "Pass `error` with a sentence that says how to fix it; screen readers announce it.",
+			"file": "select-do-3",
+			"export": "SelectDo3Example"
+		},
+		"dont": {
+			"text": "Don't mark the field red with `invalid` alone: colour by itself tells no one what to do.",
+			"file": "select-dont-3",
+			"export": "SelectDont3Example"
+		}
+	}
+]

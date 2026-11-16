@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep labels short",
+		"do": {
+			"text": "Name the field in a word or two (\"Email\"), and put any guidance in the description.",
+			"file": "label-do-1",
+			"export": "LabelDo1Example"
+		},
+		"dont": {
+			"text": "Don't write instructions into the label: put them in the description.",
+			"file": "label-dont-1",
+			"export": "LabelDont1Example"
+		}
+	},
+	{
+		"title": "Mark what is required",
+		"do": {
+			"text": "Mark a required field with `required` on its input, and show the mark beside the label, hidden from screen readers.",
+			"file": "label-do-2",
+			"export": "LabelDo2Example"
+		},
+		"dont": {
+			"text": "Don't type a star into the label text alone: screen readers read \"star\", and the input is not required.",
+			"file": "label-dont-2",
+			"export": "LabelDont2Example"
+		}
+	}
+]

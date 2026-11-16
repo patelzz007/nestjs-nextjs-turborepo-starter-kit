@@ -9,7 +9,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { walletClaimPath } from "@/lib/routes";
 import { BRAND_NAME } from "@workspace/tokens";
@@ -37,7 +37,7 @@ export interface RewardClaimFlowProps {
  */
 export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed, onHoldChanged }: RewardClaimFlowProps): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 
 	const checkoutQuery = api.legal.status.useQuery(undefined);
 	const checkout = checkoutQuery.data?.data;

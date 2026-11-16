@@ -3,8 +3,11 @@ title: "Database security: RLS, roles and system operations"
 description: "How PostgreSQL row-level security backs every request: database roles, session settings, the API-key principal, allow-listed system operations and withheld privileges."
 order: 31
 author: "Platform Team"
+category: "Security"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/security/database-security.webp"
 tags: ["security", "rls", "postgres", "tenancy"]
 ---
 

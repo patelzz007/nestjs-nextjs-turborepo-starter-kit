@@ -1,0 +1,240 @@
+[
+	{
+		"id": "c-data-grid-1",
+		"label": "Pagination",
+		"description": "Data grid with pagination. Best for a starting point for client side paging over an in-memory list of users.",
+		"file": "data-grid-1",
+		"export": "DataGrid1Example"
+	},
+	{
+		"id": "c-data-grid-2",
+		"label": "Cell Borders",
+		"description": "Data grid with cell border. Best for vertical lines between columns as well as rows, with the table set in a Card and the pager below it.",
+		"file": "data-grid-2",
+		"export": "DataGrid2Example"
+	},
+	{
+		"id": "c-data-grid-3",
+		"label": "Dense Layout",
+		"description": "Data grid with dense layout. Best for shorter rows and tighter cell padding that fit more records into the same height.",
+		"file": "data-grid-3",
+		"export": "DataGrid3Example"
+	},
+	{
+		"id": "c-data-grid-4",
+		"label": "Borderless",
+		"description": "Data grid without table borders. Best for rows with no divider lines, rounded row ends and a coloured presence dot on each avatar.",
+		"file": "data-grid-4",
+		"export": "DataGrid4Example"
+	},
+	{
+		"id": "c-data-grid-5",
+		"label": "Striped Rows",
+		"description": "Data grid with striped rows. Best for alternating shaded rows with rounded ends that help the eye follow a record across columns.",
+		"file": "data-grid-5",
+		"export": "DataGrid5Example"
+	},
+	{
+		"id": "c-data-grid-6",
+		"label": "Auto Width",
+		"description": "Data grid with auto width. Best for a few columns that share the phone's width by their sizes, with no sideways scroll.",
+		"file": "data-grid-6",
+		"export": "DataGrid6Example"
+	},
+	{
+		"id": "c-data-grid-7",
+		"label": "Row Selection",
+		"description": "Data grid with row selection. Best for a checkbox per row plus a header checkbox that selects the current screen, held in controlled state.",
+		"file": "data-grid-7",
+		"export": "DataGrid7Example"
+	},
+	{
+		"id": "c-data-grid-8",
+		"label": "Expandable Rows",
+		"description": "Data grid with expandable rows. Best for a chevron that opens a short note under each row, drawn by the column's expandedContent and kept in view as the grid scrolls.",
+		"file": "data-grid-8",
+		"export": "DataGrid8Example"
+	},
+	{
+		"id": "c-data-grid-9",
+		"label": "Sub Table",
+		"description": "Data grid with sub table. Best for order rows that expand into a nested grid of line items, each with its own sorting and paging.",
+		"file": "data-grid-9",
+		"export": "DataGrid9Example"
+	},
+	{
+		"id": "c-data-grid-10",
+		"label": "Column Icons",
+		"description": "Data grid with column icons. Best for an icon beside each header title, with sorting switched off so every header is a plain label.",
+		"file": "data-grid-10",
+		"export": "DataGrid10Example"
+	},
+	{
+		"id": "c-data-grid-11",
+		"label": "Sortable Columns",
+		"description": "Data grid with sortable columns. Best for header buttons that step each column through ascending, descending and unsorted, with an arrow.",
+		"file": "data-grid-11",
+		"export": "DataGrid11Example"
+	},
+	{
+		"id": "c-data-grid-12",
+		"label": "Movable Columns",
+		"description": "Data grid with movable columns. Best for a header menu with sort entries plus Move to left and Move to right for reordering columns.",
+		"file": "data-grid-12",
+		"export": "DataGrid12Example"
+	},
+	{
+		"id": "c-data-grid-13",
+		"label": "Draggable Columns",
+		"description": "Data grid with draggable columns. Best for a grip on each header that drags its column to a new place, with move actions for screen readers.",
+		"file": "data-grid-13",
+		"export": "DataGrid13Example"
+	},
+	{
+		"id": "c-data-grid-14",
+		"label": "Draggable Rows",
+		"description": "Data grid with draggable rows. Best for a grip on each row that drags it to a new place (or move actions), with the order kept by the example.",
+		"file": "data-grid-14",
+		"export": "DataGrid14Example"
+	},
+	{
+		"id": "c-data-grid-15",
+		"label": "Column Resizing",
+		"description": "Data grid with column resizing. Best for handles on header ends dragged to set widths (stepped by screen readers), with Staff taking spare width and Status locked.",
+		"file": "data-grid-15",
+		"export": "DataGrid15Example"
+	},
+	{
+		"id": "c-data-grid-16",
+		"label": "Pinnable Columns",
+		"description": "Data grid with pinnable columns. Best for an 8 column grid that scrolls sideways under a Name column pinned at the start, pinnable from each header's menu.",
+		"file": "data-grid-16",
+		"export": "DataGrid16Example"
+	},
+	{
+		"id": "c-data-grid-17",
+		"label": "Sticky Header",
+		"description": "Data grid with sticky header. Best for a header that stays put while a page of 10 rows scrolls inside a fixed height.",
+		"file": "data-grid-17",
+		"export": "DataGrid17Example"
+	},
+	{
+		"id": "c-data-grid-18",
+		"label": "Column Controls",
+		"description": "Data grid with column controls. Best for header menus that combine sort, pin, move and a column visibility list, plus resize handles.",
+		"file": "data-grid-18",
+		"export": "DataGrid18Example"
+	},
+	{
+		"id": "c-data-grid-19",
+		"label": "Card Container",
+		"description": "Data grid with card container. Best for a Card with a Users title, an Add user action and the pager in its footer around the rows.",
+		"file": "data-grid-19",
+		"export": "DataGrid19Example"
+	},
+	{
+		"id": "c-data-grid-20",
+		"label": "Column Visibility",
+		"description": "Data grid with column visibility controls. Best for a Columns button in the card header that shows or hides each hideable column.",
+		"file": "data-grid-20",
+		"export": "DataGrid20Example"
+	},
+	{
+		"id": "c-data-grid-21",
+		"label": "Loading Skeleton",
+		"description": "Data grid with loading skeleton. Best for placeholder rows drawn from each column's skeleton, with an avatar and two text bars standing in for a person.",
+		"file": "data-grid-21",
+		"export": "DataGrid21Example"
+	},
+	{
+		"id": "c-data-grid-22",
+		"label": "CRUD Admin",
+		"description": "Data grid with CRUD features. Best for a member admin list with search, a status filter menu showing counts, row checkboxes and a row actions menu.",
+		"file": "data-grid-22",
+		"export": "DataGrid22Example"
+	},
+	{
+		"id": "c-data-grid-23",
+		"label": "CRUD in Frame",
+		"description": "Data grid with CRUD in a frame. Best for search, a status filter and row actions in a dense stacked Frame titled Team members.",
+		"file": "data-grid-23",
+		"export": "DataGrid23Example"
+	},
+	{
+		"id": "c-data-grid-24",
+		"label": "Totals Footer",
+		"description": "Data grid with column totals footer. Best for one footer row that sums every balance, with its label spanning the columns to the left.",
+		"file": "data-grid-24",
+		"export": "DataGrid24Example"
+	},
+	{
+		"id": "c-data-grid-25",
+		"label": "Summary Stats Footer",
+		"description": "Data grid with summary stats footer. Best for two footer rows of statistics: lowest and highest balance, then the average and an active member count.",
+		"file": "data-grid-25",
+		"export": "DataGrid25Example"
+	},
+	{
+		"id": "c-data-grid-26",
+		"label": "Aggregate Footer",
+		"description": "Data grid with per-column aggregate footer. Best for footer cells under Balance and Transactions that each show the average over a lowest to highest range.",
+		"file": "data-grid-26",
+		"export": "DataGrid26Example"
+	},
+	{
+		"id": "c-data-grid-27",
+		"label": "Local Infinite Scroll",
+		"description": "Data grid with local infinite scroll. Best for 200 in-memory rows drawn as they scroll into a 480 point window, with a sticky header and no pager.",
+		"file": "data-grid-27",
+		"export": "DataGrid27Example"
+	},
+	{
+		"id": "c-data-grid-28",
+		"label": "Remote Infinite Scroll",
+		"description": "Data grid with remote infinite scroll. Best for feeds that append the next server page as the reader reaches the end, and say when all are loaded.",
+		"file": "data-grid-28",
+		"export": "DataGrid28Example"
+	},
+	{
+		"id": "c-data-grid-29",
+		"label": "Row Pinning",
+		"description": "Data grid with row pinning. Best for rows pinned above the rest from a pin column, kept across pages with a count and Unpin all.",
+		"file": "data-grid-29",
+		"export": "DataGrid29Example"
+	},
+	{
+		"id": "c-data-grid-30",
+		"label": "Tree Rows",
+		"description": "Data grid with tree rows. Best for a department, team and member hierarchy with expand buttons, where each page counts departments only.",
+		"file": "data-grid-30",
+		"export": "DataGrid30Example"
+	},
+	{
+		"id": "c-data-grid-31",
+		"label": "Spreadsheet Editing",
+		"description": "Data grid with spreadsheet editing. Best for a product sheet where a tap picks a cell, a long press stretches the pick, and a bar copies, pastes, fills, clears and edits.",
+		"file": "data-grid-31",
+		"export": "DataGrid31Example"
+	},
+	{
+		"id": "c-data-grid-32",
+		"label": "Column Virtualization",
+		"description": "Data grid with column virtualization. Best for a matrix of 1000 rows by 36 metric columns, drawn both ways only as they come into view, with Row and Total pinned.",
+		"file": "data-grid-32",
+		"export": "DataGrid32Example"
+	},
+	{
+		"id": "c-data-grid-33",
+		"label": "Localized Labels",
+		"description": "Data grid with localized labels. Best for a language switch for English, German and Japanese that swaps the built-in sort, selection and pager words.",
+		"file": "data-grid-33",
+		"export": "DataGrid33Example"
+	},
+	{
+		"id": "c-data-grid-34",
+		"label": "Server-Side Pagination",
+		"description": "Data grid with server side pagination. Best for records paged on the server, with sorting, search and a status filter sent to it and a spinner while it answers.",
+		"file": "data-grid-34",
+		"export": "DataGrid34Example"
+	}
+]

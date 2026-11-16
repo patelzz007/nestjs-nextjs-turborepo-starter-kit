@@ -52,6 +52,7 @@ const alertVariants = cva(
 	],
 	{
 		variants: {
+			/** "invert"` */
 			variant: {
 				default: cn(NEUTRAL_SURFACE, "[--alert-tone:var(--muted-foreground)]"),
 				destructive: cn(NEUTRAL_SURFACE, "[--alert-tone:var(--destructive)]"),
@@ -65,6 +66,7 @@ const alertVariants = cva(
 			},
 			// `--alert-body-offset` drops a one-line title (or a title-less description) onto the
 			// tile's centre line: (tile height - line height) / 2, rounded to the measured mock.
+			/** Padding and text size: `sm` or `default`. */
 			size: {
 				sm: "px-3 py-2 text-xs [--alert-body-offset:--spacing(1)] [--alert-glyph-size:15px] [--alert-tile-radius:8px] [--alert-tile:--spacing(7)]",
 				default: "px-3.5 py-3 text-sm [--alert-body-offset:5px] [--alert-glyph-size:17px] [--alert-tile-radius:9px] [--alert-tile:--spacing(8)]",
@@ -98,6 +100,7 @@ interface AlertContextValue {
 // Outside an `Alert` the parts render as if titled on the default surface.
 const AlertContext = React.createContext<AlertContextValue>({ variant: "default", hasTitle: true });
 
+/** The alert's heading, clamped to one line. */
 const AlertTitle = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function AlertTitle({ className, ...props }, ref): React.JSX.Element {
 	const { variant } = React.useContext(AlertContext);
 	return (
@@ -121,6 +124,7 @@ function descriptionColor({ variant, hasTitle }: AlertContextValue): string {
 	return hasTitle ? "text-muted-foreground" : "text-foreground";
 }
 
+/** The alert's body text. */
 const AlertDescription = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function AlertDescription({ className, ...props }, ref): React.JSX.Element {
 	const context = React.useContext(AlertContext);
 	return (
@@ -141,6 +145,7 @@ const AlertDescription = React.forwardRef<HTMLDivElement, React.ComponentProps<"
 	);
 });
 
+/** Buttons or links that resolve the alert. */
 const AlertAction = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function AlertAction({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -165,6 +170,7 @@ function hasTitlePart(children: React.ReactNode): boolean {
 	return React.Children.toArray(children).some((child) => React.isValidElement(child) && child.type === AlertTitle);
 }
 
+/** An in-page message for an outcome or a risk: `default`, `info`, `success`, `warning`, `destructive` or `invert`, each with a default icon. `role="alert"` by default; pass `role="status"` for calm notices. */
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert({ className, variant, size, role = "alert", children, ...props }, ref): React.JSX.Element {
 	const resolvedVariant = variant ?? "default";
 	const hasTitle = hasTitlePart(children);

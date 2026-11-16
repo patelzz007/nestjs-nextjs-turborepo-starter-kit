@@ -7,8 +7,11 @@ import * as React from "react";
 
 const scrollAreaVariants = cva("relative", {
 	variants: {
+		/** The area's look; one treatment today. */
 		variant: { default: "" },
+		/** Text size inside: `default` or `sm`. */
 		size: { default: "", sm: "text-sm" },
+		/** `loading` or `disabled` dims the content. */
 		state: { default: "", loading: "opacity-60", disabled: "opacity-50", error: "" },
 	},
 	defaultVariants: { variant: "default", size: "default", state: "default" },
@@ -16,6 +19,7 @@ const scrollAreaVariants = cva("relative", {
 
 type ScrollAreaProps = ScrollAreaPrimitive.Root.Props & VariantProps<typeof scrollAreaVariants>;
 
+/** A region that scrolls inside itself with a slim, themed scrollbar, on Base UI's scroll area; scrolling stays native. Bound its size through `className`. */
 const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(function ScrollArea({ className, children, variant, size, state, ...props }, ref): React.JSX.Element {
 	return (
 		<ScrollAreaPrimitive.Root ref={ref} data-slot="scroll-area" className={cn(scrollAreaVariants({ variant, size, state }), className)} {...props}>
@@ -30,6 +34,7 @@ const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(function Sc
 	);
 });
 
+/** A scrollbar; the vertical one is drawn by default. Add one with `orientation="horizontal"` for sideways scrolling. */
 const ScrollBar = React.forwardRef<HTMLDivElement, ScrollAreaPrimitive.Scrollbar.Props>(function ScrollBar(
 	{ className, orientation = "vertical", ...props },
 	ref,

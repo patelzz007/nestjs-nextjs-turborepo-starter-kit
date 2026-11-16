@@ -78,8 +78,11 @@ const colorPickerSwatchesVariants = cva(
 );
 
 export type ColorPickerSwatchesProps = Omit<React.ComponentProps<"div">, "children" | "ref"> & {
+	/** The presets. Children replace them. */
 	readonly colors?: readonly ColorPickerSwatchInput[] | undefined;
+	/** `square` follows each style's radius. */
 	readonly shape?: SwatchShape | undefined;
+	/** Custom `ColorPickerSwatchItem`s, in place of the ones drawn from `colors`. */
 	readonly children?: React.ReactNode;
 };
 
@@ -189,6 +192,7 @@ export type ColorPickerSwatchItemProps = Omit<React.ComponentProps<"div">, "chil
 	readonly value: string;
 	/** Read out instead of the generated colour name. */
 	readonly label?: string | undefined;
+	/** Disables every part and stops the popover opening. A disabled picker submits nothing. */
 	readonly disabled?: boolean | undefined;
 };
 

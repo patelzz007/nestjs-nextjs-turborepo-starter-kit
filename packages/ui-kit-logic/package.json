@@ -1,0 +1,34 @@
+{
+	"name": "@workspace/ui-kit-logic",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"sideEffects": false,
+	"description": "The rules the web (@workspace/ui) and native (@workspace/ui-native) UI kits share for their data components: Gantt, event calendar, filters, data table, data grid, kanban and file type. Kept out of @workspace/shared so an app only carries them (and date-fns) when it draws one of these components.",
+	"scripts": {
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
+		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
+		"typecheck": "tsrs --noEmit",
+		"test": "vitest run --coverage"
+	},
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@date-fns/tz": "^1.5.0",
+		"@workspace/shared": "workspace:*",
+		"date-fns": "^4.4.0",
+		"zod": "4.6.7"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.6",
+		"@workspace/oxlint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
+		"oxfmt": "0.78.0",
+		"oxlint": "1.93.0",
+		"oxlint-tsgolint": "7.0.2006",
+		"tsrs": "0.24.0-ts7.1.0-beta",
+		"typescript": "7.0.2",
+		"vitest": "^5.1.0"
+	}
+}

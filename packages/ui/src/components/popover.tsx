@@ -7,14 +7,17 @@ import * as React from "react";
 /** Gap (px) between the trigger and the popover. */
 const POPOVER_SIDE_OFFSET = 4;
 
+/** A non-modal floating panel opened by clicking its trigger, on Base UI's popover. Controlled with `open` / `onOpenChange`. */
 function Popover({ ...props }: PopoverPrimitive.Root.Props): React.JSX.Element {
 	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
+/** The button that opens the popover. Pass your `Button` through `render`. */
 const PopoverTrigger = React.forwardRef<HTMLButtonElement, PopoverPrimitive.Trigger.Props>(function PopoverTrigger({ ...props }, ref): React.JSX.Element {
 	return <PopoverPrimitive.Trigger ref={ref} data-slot="popover-trigger" {...props} />;
 });
 
+/** The panel: a portal, a positioner and the popup in one part, `w-72` by default. `side` and `align` place it. */
 const PopoverContent = React.forwardRef<
 	HTMLDivElement,
 	PopoverPrimitive.Popup.Props & Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">
@@ -36,14 +39,17 @@ const PopoverContent = React.forwardRef<
 	);
 });
 
+/** Groups the title and the description. */
 const PopoverHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function PopoverHeader({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="popover-header" className={cn("flex flex-col gap-1 text-sm", className)} {...props} />;
 });
 
+/** Names the popover for assistive technology. */
 const PopoverTitle = React.forwardRef<HTMLHeadingElement, PopoverPrimitive.Title.Props>(function PopoverTitle({ className, ...props }, ref): React.JSX.Element {
 	return <PopoverPrimitive.Title ref={ref} data-slot="popover-title" className={cn("font-medium", className)} {...props} />;
 });
 
+/** Describes the popover to assistive technology. */
 const PopoverDescription = React.forwardRef<HTMLParagraphElement, PopoverPrimitive.Description.Props>(function PopoverDescription(
 	{ className, ...props },
 	ref,

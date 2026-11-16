@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { TextInstance, ViewInstance } from "react-native";
+import { Text, type TextInstance, type ViewInstance } from "react-native";
 
-import { Field, FieldError, FieldHint, FieldLabel } from "../field";
+import { Field, FieldError, FieldHint, FieldLabel, FieldSet } from "../field";
 import { Input } from "../input";
 
 const CUSTOM_LABEL = "Custom label";
@@ -89,7 +89,7 @@ describe("Field", () => {
 		const ref = React.createRef<TextInstance>();
 		await render(
 			<>
-				<FieldLabel ref={ref} className="text-base">
+				<FieldLabel ref={ref} className="text-body-lg">
 					{CUSTOM_LABEL}
 				</FieldLabel>
 				<FieldHint>{CUSTOM_HINT}</FieldHint>
@@ -98,8 +98,49 @@ describe("Field", () => {
 		);
 
 		expect(ref.current).not.toBeNull();
-		expect(screen.getByText("Custom label")).toHaveProp("className", expect.stringContaining("text-base"));
+		expect(screen.getByText("Custom label")).toHaveProp("className", expect.stringContaining("text-body-lg"));
 		expect(screen.getByText("Custom hint")).toBeOnTheScreen();
 		expect(screen.getByRole("alert")).toHaveTextContent("Custom error");
+	});
+
+	it("marks a required field, notes an optional one, and puts the caller's extras at the end of the label row", async () => {
+		await render(
+			<Field label="Email" required labelTrailing={<Text>0/50</Text>}>
+				<Input value="" onChange={jest.fn()} testID="email" />
+			</Field>,
+		);
+		expect(screen.getByText(" *")).toBeOnTheScreen();
+		expect(screen.getByText("0/50")).toBeOnTheScreen();
+		expect(screen.getByTestId("email")).toHaveProp("accessibilityLabel", "Email, required");
+
+		await render(
+			<Field label="Phone" optional="optional">
+				<Input value="" onChange={jest.fn()} />
+			</Field>,
+		);
+		expect(screen.getByText(" (optional)")).toBeOnTheScreen();
+	});
+
+	it("lists every failed rule, and sets the label beside the control when horizontal", async () => {
+		await render(
+			<Field label="Password" errors={["At least 8 characters", "One number"]} orientation="horizontal" testID="field">
+				<Input value="abc" onChange={jest.fn()} />
+			</Field>,
+		);
+		expect(screen.getAllByRole("alert")).toHaveLength(2);
+		expect(String(screen.getByTestId("field").props.className)).toContain("flex-row");
+	});
+});
+
+describe("FieldSet", () => {
+	it("groups fields under a legend that names the group", async () => {
+		await render(
+			<FieldSet legend="Delivery" description="Where alerts go" testID="set">
+				<Text>fields</Text>
+			</FieldSet>,
+		);
+		expect(screen.getByRole("header", { name: "Delivery" })).toBeOnTheScreen();
+		expect(screen.getByTestId("set")).toHaveProp("accessibilityLabel", "Delivery");
+		expect(screen.getByText("Where alerts go")).toBeOnTheScreen();
 	});
 });

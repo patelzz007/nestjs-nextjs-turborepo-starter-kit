@@ -23,13 +23,13 @@ describe("Icon", () => {
 	});
 
 	it("keeps one ascending size scale and a heavier bold stroke", () => {
-		expect([ICON_SIZES.xs, ICON_SIZES.sm, ICON_SIZES.md, ICON_SIZES.lg, ICON_SIZES.xl, ICON_SIZES["2xl"]]).toStrictEqual([12, 16, 20, 24, 32, 40]);
+		expect([ICON_SIZES.xs, ICON_SIZES.sm, ICON_SIZES.md, ICON_SIZES.lg, ICON_SIZES.xl, ICON_SIZES["2xl"]]).toStrictEqual([12, 18, 20, 24, 32, 40]);
 		expect(ICON_STROKE_WIDTHS.bold).toBeGreaterThan(ICON_STROKE_WIDTHS.regular);
 	});
 
 	it("sizes its box to the same step as the glyph", () => {
 		expect(iconVariants({ size: "xs" })).toContain("size-3");
-		expect(iconVariants({ size: "sm" })).toContain("size-4");
+		expect(iconVariants({ size: "sm" })).toContain("size-4.5");
 		expect(iconVariants({ size: "md" })).toContain("size-5");
 		expect(iconVariants({ size: "lg" })).toContain("size-6");
 		expect(iconVariants({ size: "xl" })).toContain("size-8");
@@ -45,6 +45,16 @@ describe("Icon", () => {
 		const className = String(box?.props.className);
 		expect(className).toContain("mt-0.5");
 		expect(className).toContain("size-5");
-		expect(className).not.toContain("size-4");
+		expect(className).not.toContain("size-4.5");
+	});
+
+	it("fills its shape in its colour when asked, and draws only the outline otherwise", async () => {
+		const view = await render(<Icon icon={HouseIcon} colorClassName="accent-primary" filled testID="icon" />);
+		const filled = screen.getByTestId("icon", { includeHiddenElements: true });
+		expect(filled.props.fill).toBe(filled.props.stroke);
+		expect(filled.props.fill).not.toBe("none");
+
+		await view.rerender(<Icon icon={HouseIcon} colorClassName="accent-primary" testID="icon" />);
+		expect(screen.getByTestId("icon", { includeHiddenElements: true }).props.fill).toBe("none");
 	});
 });

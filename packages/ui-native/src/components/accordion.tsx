@@ -19,8 +19,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger, type CollapsibleCo
 
 export const accordionVariants = cva("", {
 	variants: {
-		/** `default`: items divided by a rule; `separated`: each item its own card. */
-		variant: { default: "", separated: "gap-2" },
+		/** `default`: items divided by a rule; `separated`: each item its own card; `outlined`: the items in one bordered box, divided by rules. */
+		variant: { default: "", separated: "gap-2", outlined: "overflow-hidden rounded-lg border-x border-b border-border bg-card" },
 		size: { md: "", sm: "" },
 		state: { default: "", loading: "", disabled: "opacity-60", error: "" },
 	},
@@ -29,7 +29,7 @@ export const accordionVariants = cva("", {
 
 export const accordionItemVariants = cva("", {
 	variants: {
-		variant: { default: "border-b border-border", separated: "" },
+		variant: { default: "border-b border-border", separated: "", outlined: "border-t border-border" },
 	},
 	defaultVariants: { variant: "default" },
 });
@@ -43,6 +43,7 @@ export type AccordionType = "single" | "multiple";
 const ITEM_LOOK: Readonly<Record<AccordionVariant, CollapsibleVariant>> = {
 	default: "plain",
 	separated: "card",
+	outlined: "inset",
 };
 
 /**

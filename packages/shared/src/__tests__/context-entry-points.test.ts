@@ -22,6 +22,7 @@ import * as posEntry from "../contexts/pos/index";
 import * as referenceDataEntry from "../contexts/reference-data/index";
 import * as referralsEntry from "../contexts/referrals/index";
 import * as reportingEntry from "../contexts/reporting/index";
+import * as docsPublishingEntry from "../contexts/docs-publishing/index";
 import * as rewardsEntry from "../contexts/rewards/index";
 import * as webhooksEntry from "../contexts/webhooks/index";
 
@@ -39,6 +40,7 @@ const ENTRIES: Readonly<Record<string, Readonly<Record<string, ExportedValue>>>>
 	authorization: authorizationEntry,
 	catalog: catalogEntry,
 	claims: claimsEntry,
+	"docs-publishing": docsPublishingEntry,
 	files: filesEntry,
 	identity: identityEntry,
 	"integrations-github": integrationsGithubEntry,

@@ -27,10 +27,15 @@ export interface DataGridPaginationProps {
 	readonly info?: string;
 	/** Rendered instead of the info and page buttons while loading. */
 	readonly infoSkeleton?: React.ReactNode;
+	/** Additional CSS classes for the pagination container. */
 	readonly className?: string;
+	/** Visible label rendered next to the page size selector. */
 	readonly rowsPerPageLabel?: string;
+	/** Accessible label for the previous page button. */
 	readonly previousPageLabel?: string;
+	/** Accessible label for the next page button. */
 	readonly nextPageLabel?: string;
+	/** Text to display for the ellipsis button. */
 	readonly ellipsisText?: string;
 }
 

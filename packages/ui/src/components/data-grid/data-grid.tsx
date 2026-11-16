@@ -947,7 +947,9 @@ export interface DataGridProps<TData extends RowData> {
 	readonly table: DataGridTableInstance<TData>;
 	/** Total rows the grid represents (all pages); drives pagination copy and ARIA row counts. */
 	readonly recordCount: number;
+	/** The grid's parts: a table renderer, pagination, a scroll area, a selection bar. */
 	readonly children?: React.ReactNode;
+	/** Callback function triggered when a row is clicked. */
 	readonly onRowClick?: (row: TData) => void;
 	/** Receives every spreadsheet write batch (paste, cut, clear, fill, edit). Absent: copy still works, writes no-op. */
 	readonly onCellsChange?: (details: DataGridCellsChangeDetails<TData>) => void;
@@ -967,15 +969,23 @@ export interface DataGridProps<TData extends RowData> {
 	readonly getRowStatus?: (row: TData) => DataGridRowStatus | undefined;
 	/** Optional CRUD indication per cell: the corner mark on cells the consumer tracks as edited or invalid. */
 	readonly getCellStatus?: (row: TData, columnId: string) => DataGridCellStatus | undefined;
+	/** Whether the table is in a loading state. */
 	readonly isLoading?: boolean;
 	/** Overrides some of the `dataGrid` copy for this grid. Keep it a module constant. */
 	readonly labels?: DataGridLabelsOverride;
+	/** The visual style of the loading state. */
 	readonly loadingMode?: DataGridLoadingMode;
+	/** Message to display when `loadingMode` is `"spinner"`. */
 	readonly loadingMessage?: React.ReactNode;
+	/** Message to display while `DataGridTableVirtual` is fetching more rows. */
 	readonly fetchingMoreMessage?: React.ReactNode;
+	/** Message to display when virtual infinite scroll reaches the end. */
 	readonly allRowsLoadedMessage?: React.ReactNode;
+	/** Message to display when the table is empty. */
 	readonly emptyMessage?: React.ReactNode;
+	/** Configuration for table layout and features. */
 	readonly tableLayout?: DataGridTableLayout;
+	/** Custom CSS classes for various table parts. */
 	readonly tableClassNames?: DataGridTableClassNames;
 }
 
@@ -1135,6 +1145,7 @@ export const dataGridContainerVariants = cva(
 	"relative w-full overflow-hidden",
 	{
 		variants: {
+			/** `default` (no frame) or `bordered` (a rounded border around the grid). */
 			variant: {
 				default: "",
 				bordered: "rounded-lg border border-border",

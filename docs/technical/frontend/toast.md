@@ -4,8 +4,11 @@ tags: ["toast", "notifications", "ui", "sonner", "migration"]
 description: "The in-house base-ui Toast & Toastr manager — the typed toastMessage API (success/info/warning/error/loading/promise), six placements, progress bars, countdown bars, soft-solid theming, and the sonner migration that removed ~80 call sites."
 order: 20
 author: "Platform Team"
+category: "Frontend"
+date: 1788220800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/frontend/toast.webp"
 ---
 
 # Toast & Toastr
@@ -22,7 +25,7 @@ coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=form
 > - Component: `packages/ui/src/components/toast.tsx` (~900 lines)
 > - Mounted in: `apps/admin/app/layout.tsx` (one `<Toaster />` per manager). The docs site (`apps/docs`) is a reading surface and has no toasts.
 > - Call sites: ~80 across `apps/admin` (settings, emails, showcases, geo)
-> - Showcase + tests: `apps/admin/components/component-gallery/showcase/toast-showcase.tsx`, `apps/admin/components/component-gallery/showcase/__tests__/toast.test.tsx`
+> - Showcase + tests: `apps/admin/components/dashboard/showcase/toast-showcase.tsx`, `apps/admin/components/dashboard/showcase/__tests__/toast.test.tsx`
 
 ## Getting started
 

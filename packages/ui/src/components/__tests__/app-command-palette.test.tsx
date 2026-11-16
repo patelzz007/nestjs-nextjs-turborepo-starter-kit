@@ -10,7 +10,7 @@ import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { AppCommandPalette, type AppCommandPaletteProps } from "../app-command-palette";
 import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 
-/** Base UI measures the command list and scrolls the highlighted item into view — jsdom implements neither. */
+/** Popups measure themselves and the command list scrolls the active option into view — jsdom implements neither. */
 class NoopResizeObserver {
 	public observe(): void {
 		return undefined;
@@ -73,7 +73,25 @@ const GERMAN_LABELS: UiKitLabels = {
 	appCommandPalette: { ...UI_KIT_LABELS_EN.appCommandPalette, placeholder: "Seiten, Befehle, Einstellungen suchen…", footerNavigate: "navigieren" },
 };
 
+/** A section and its "All …" child that lead to the same page. */
+const SHARED_URL_ITEMS: readonly PaletteSearchableItem[] = [
+	{ id: "transactions", title: "Transactions", url: "/transactions", section: "Trade finance", breadcrumb: ["Trade finance", "Transactions"] },
+	{ id: "transactions-all", title: "All transactions", url: "/transactions", section: "Trade finance", breadcrumb: ["Transactions", "All transactions"] },
+];
+
 describe("AppCommandPalette", () => {
+	it("highlights one row when two items share a URL, and opens that URL from either", (): void => {
+		const onNavigate = vi.fn();
+		renderPalette({ searchableItems: SHARED_URL_ITEMS, onNavigate });
+		fireEvent.change(screen.getByRole("combobox"), { target: { value: "trans" } });
+
+		const selected = screen.getAllByRole("option").filter((option) => option.getAttribute("aria-selected") === "true");
+		expect(selected).toHaveLength(1);
+
+		fireEvent.click(screen.getByRole("option", { name: /^All transactions/u }));
+		expect(onNavigate).toHaveBeenCalledWith("/transactions");
+	});
+
 	it("renders its copy from the appCommandPalette family", (): void => {
 		renderPalette();
 		expect(screen.getByPlaceholderText(UI_KIT_LABELS_EN.appCommandPalette.placeholder)).toBeTruthy();

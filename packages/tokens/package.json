@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"type": "module",
 	"private": true,
+	"sideEffects": [
+		"*.css"
+	],
 	"description": "The single source of the design tokens (ADR 030): TypeScript token data plus a generator that writes the committed web and mobile CSS. No runtime dependencies.",
 	"scripts": {
 		"generate": "tsx scripts/generate.ts",
@@ -22,13 +25,13 @@
 		"@types/node": "^26.6.6",
 		"@workspace/oxlint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
-		"oxfmt": "0.75.0",
-		"oxlint": "1.90.0",
-		"oxlint-tsgolint": "7.0.2005",
-		"tsrs": "0.20.1-ts7.1.0-beta",
+		"oxfmt": "0.78.0",
+		"oxlint": "1.93.0",
+		"oxlint-tsgolint": "7.0.2006",
+		"tsrs": "0.24.0-ts7.1.0-beta",
 		"tsx": "^4.23.15",
 		"typescript": "7.0.2",
-		"vitest": "^5.0.5",
+		"vitest": "^5.1.0",
 		"zod": "4.6.7"
 	}
 }

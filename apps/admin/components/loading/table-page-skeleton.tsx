@@ -36,6 +36,8 @@ export const AUDIT_LOG_TABLE_PAGE: TablePageShape = { columns: 5, actions: 1, wi
 export const EMAIL_LOG_TABLE_PAGE: TablePageShape = { columns: 5, actions: 2, withAvatar: false, withCardDescription: true, className: "mx-auto w-full max-w-10xl" };
 /** `/webhooks/received` — select + Received, Provider, Event, Delivery id, Signature, Outcome, Status, Attempts; "Refresh" in the header. */
 export const RECEIVED_WEBHOOKS_TABLE_PAGE: TablePageShape = { columns: 9, actions: 1, withAvatar: false, withCardDescription: true, className: "mx-auto w-full max-w-10xl" };
+/** `/operations/docs-sync` — select + Started, Started by, Status, Changes, Unchanged. */
+export const DOCS_SYNC_TABLE_PAGE: TablePageShape = { columns: 6, actions: 2, withAvatar: false, withCardDescription: true, className: "mx-auto w-full max-w-10xl" };
 /** `/users/mfa-recovery` — select + User, Status, Requested + row actions. */
 export const MFA_RECOVERY_TABLE_PAGE: TablePageShape = { columns: 5, actions: 0, withAvatar: false, withCardDescription: true, className: "" };
 

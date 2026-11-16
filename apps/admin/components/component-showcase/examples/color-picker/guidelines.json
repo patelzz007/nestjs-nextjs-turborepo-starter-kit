@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Offer presets",
+		"do": {
+			"text": "Lead with the brand's `swatches`; keep the free picker for the exceptions.",
+			"file": "color-picker-do-1",
+			"export": "ColorPickerDo1Example"
+		},
+		"dont": {
+			"text": "Don't make people find the brand colour by eye every time.",
+			"file": "color-picker-dont-1",
+			"export": "ColorPickerDont1Example"
+		}
+	},
+	{
+		"title": "Check contrast",
+		"do": {
+			"text": "Warn when text on the colour would be hard to read.",
+			"file": "color-picker-do-2",
+			"export": "ColorPickerDo2Example"
+		},
+		"dont": {
+			"text": "Don't accept any colour for a surface that carries text.",
+			"file": "color-picker-dont-2",
+			"export": "ColorPickerDont2Example"
+		}
+	}
+]

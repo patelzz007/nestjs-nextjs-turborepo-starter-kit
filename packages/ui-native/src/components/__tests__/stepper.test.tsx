@@ -1,8 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import CreditCardIcon from "lucide-react-native/icons/credit-card";
+import ShoppingCartIcon from "lucide-react-native/icons/shopping-cart";
+import TruckIcon from "lucide-react-native/icons/truck";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
-import { Stepper, stepStateFor, type StepState, type StepperStep } from "../stepper";
+import { Stepper, stepStateFor, type StepState, type StepperStep, type StepperVariant } from "../stepper";
 
 const STEPS: readonly StepperStep[] = [
 	{ key: "details", title: "Details" },
@@ -67,7 +70,7 @@ describe("Stepper", () => {
 
 		expect(screen.queryByRole("tab")).toBeNull();
 		expect(screen.getByLabelText("Step 3 of 4: Payment, current")).toBeOnTheScreen();
-		expect(screen.getByText("Payment")).toHaveProp("className", expect.stringContaining("text-xs"));
+		expect(screen.getByText("Payment")).toHaveProp("className", expect.stringContaining("text-caption"));
 	});
 
 	it("takes overridden copy", async () => {
@@ -85,5 +88,31 @@ describe("Stepper", () => {
 		const className = String(screen.getByTestId("stepper").props.className);
 		expect(className).toContain("gap-4");
 		expect(className).not.toContain("gap-2");
+	});
+});
+
+const LOOK_STEPS: readonly StepperStep[] = [
+	{ key: "cart", title: "Cart", icon: ShoppingCartIcon, meta: "09:40" },
+	{ key: "ship", title: "Shipping", icon: TruckIcon, badge: <Text>In progress</Text>, loading: true },
+	{ key: "pay", title: "Payment", icon: CreditCardIcon },
+];
+
+describe("Stepper looks", () => {
+	it("draws every look with the step's state in its name", async () => {
+		const looks: readonly StepperVariant[] = ["default", "dots", "bar", "segmented", "chevron", "tiles", "trail"];
+		for (const variant of looks) {
+			await render(<Stepper steps={LOOK_STEPS} value={2} variant={variant} completedTone="success" testID="stepper" />);
+			expect(screen.getByLabelText("Step 1 of 3: Cart, completed")).toBeOnTheScreen();
+			expect(screen.getByLabelText("Step 3 of 3: Payment, upcoming")).toBeOnTheScreen();
+		}
+	});
+
+	it("puts titles beside rings, shows glyphs, badges and times, and hides titles when asked", async () => {
+		await render(<Stepper steps={LOOK_STEPS} value={2} labelPosition="inline" indicator="ring" fillConnectors={false} />);
+		expect(screen.getByText("09:40")).toBeOnTheScreen();
+		expect(screen.getByText("In progress", { includeHiddenElements: true })).toBeOnTheScreen();
+		await render(<Stepper steps={LOOK_STEPS} value={3} indicator="icon" labelPosition="none" />);
+		expect(screen.queryByText("Cart")).toBeNull();
+		expect(screen.getByLabelText("Step 3 of 3: Payment, current")).toBeOnTheScreen();
 	});
 });

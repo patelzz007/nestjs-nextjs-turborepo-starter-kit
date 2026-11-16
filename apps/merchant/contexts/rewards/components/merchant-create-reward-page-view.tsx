@@ -22,7 +22,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { addDays, format } from "date-fns";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { z } from "zod";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
@@ -99,7 +99,7 @@ export function MerchantCreateRewardPageView(props: MerchantCreateRewardPageView
 function MerchantCreateRewardPageContent({ tenantSlug, defaultCategory }: MerchantCreateRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { locationId: activeLocationId, accessibleLocations } = useMerchantLocation();
 	const tenantName = useActiveTenantName();
 	const hasMultipleLocations = accessibleLocations.length > 1;

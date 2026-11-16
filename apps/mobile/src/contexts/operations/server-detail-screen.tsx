@@ -107,7 +107,7 @@ function HistoryCard({ serverId }: { readonly serverId: string }): React.JSX.Ele
 			<View className="gap-3">
 				<SegmentedControl label="History range" options={MOBILE_RANGES} value={range} onChange={setRange} loading={history.isFetching ? history.data === undefined : false} />
 				{buckets.length < 2 ? (
-					<Text className="font-sans text-sm text-muted-foreground">{history.isLoading ? "Loading…" : "No history in this range yet."}</Text>
+					<Text className="text-body font-sans text-muted-foreground">{history.isLoading ? "Loading…" : "No history in this range yet."}</Text>
 				) : (
 					<TrendChart
 						title="CPU and memory over time"
@@ -150,7 +150,7 @@ function ServerDetail({ serverId }: { readonly serverId: string }): React.JSX.El
 				{detail.isError ? (
 					<ErrorState message="This server could not be loaded." retryLabel="Try again" onRetry={refresh} retrying={detail.isRefetching} />
 				) : (
-					<Text className="font-sans text-sm text-muted-foreground">Loading…</Text>
+					<Text className="text-body font-sans text-muted-foreground">Loading…</Text>
 				)}
 			</Screen>
 		);
@@ -167,7 +167,7 @@ function ServerDetail({ serverId }: { readonly serverId: string }): React.JSX.El
 			<View className="gap-4">
 				<StatusBadge icon={ActivityIcon} label={health.label} accessibilityLabel={`Health: ${health.label}`} tone={health.tone} pulsing={server.health === "UP"} />
 				{tiles.length === 0 ? (
-					<Text className="font-sans text-sm text-muted-foreground">No live sample: the agent has not reported in the last 30 seconds.</Text>
+					<Text className="text-body font-sans text-muted-foreground">No live sample: the agent has not reported in the last 30 seconds.</Text>
 				) : (
 					<StatTiles items={tiles} testID="server-live" />
 				)}

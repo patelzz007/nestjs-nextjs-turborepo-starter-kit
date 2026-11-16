@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say the whole line in words",
+		"do": {
+			"text": "Write a line that reads whole without its glyph.",
+			"file": "marker-do-1",
+			"export": "MarkerDo1Example"
+		},
+		"dont": {
+			"text": "Don't lean on the glyph (“Ran this one”): screen readers never hear it.",
+			"file": "marker-dont-1",
+			"export": "MarkerDont1Example"
+		}
+	},
+	{
+		"title": "Mark a failure with words",
+		"do": {
+			"text": "Mark a failure with a badge that says so.",
+			"file": "marker-do-2",
+			"export": "MarkerDo2Example"
+		},
+		"dont": {
+			"text": "Don't mark it with a red text colour alone.",
+			"file": "marker-dont-2",
+			"export": "MarkerDont2Example"
+		}
+	}
+]

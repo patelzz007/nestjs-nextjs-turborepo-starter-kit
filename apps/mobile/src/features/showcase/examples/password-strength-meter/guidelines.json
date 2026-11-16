@@ -1,0 +1,28 @@
+[
+	{
+		"title": "List the rules",
+		"do": {
+			"text": "Show the rules, ticked off, so people know what to add.",
+			"file": "password-strength-meter-do-1",
+			"export": "PasswordStrengthMeterDo1Example"
+		},
+		"dont": {
+			"text": "Don't show only a bar: \"Weak\" without a reason leaves people guessing.",
+			"file": "password-strength-meter-dont-1",
+			"export": "PasswordStrengthMeterDont1Example"
+		}
+	},
+	{
+		"title": "Only where a password is chosen",
+		"do": {
+			"text": "Show it when a new password is set.",
+			"file": "password-strength-meter-do-2",
+			"export": "PasswordStrengthMeterDo2Example"
+		},
+		"dont": {
+			"text": "Don't score a password at sign-in: it is already chosen, and the meter only worries people.",
+			"file": "password-strength-meter-dont-2",
+			"export": "PasswordStrengthMeterDont2Example"
+		}
+	}
+]

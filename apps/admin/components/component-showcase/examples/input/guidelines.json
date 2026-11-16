@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Pick the right keyboard",
+		"do": {
+			"text": "Set `type`, `inputMode` and `autoComplete` for the value's kind, so phones show the keys people need and browsers can fill it in.",
+			"file": "input-do-1",
+			"export": "InputDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave an email field as plain text: phones capitalise it and hide the @ key, and autofill cannot help.",
+			"file": "input-dont-1",
+			"export": "InputDont1Example"
+		}
+	},
+	{
+		"title": "One look per form",
+		"do": {
+			"text": "Keep the fields of one form in one look.",
+			"file": "input-do-2",
+			"export": "InputDo2Example"
+		},
+		"dont": {
+			"text": "Don't mix outlined, filled and underlined fields: the form reads as several.",
+			"file": "input-dont-2",
+			"export": "InputDont2Example"
+		}
+	}
+]

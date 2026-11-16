@@ -1,0 +1,30 @@
+[
+	{
+		"id": "c-date-selector-1",
+		"label": "Basic Inline",
+		"description": "Basic date selector. Best for the whole selector laid inline in a Card with typed entry, and a JSON readout of the value under it.",
+		"file": "date-selector-1",
+		"export": "DateSelector1Example"
+	},
+	{
+		"id": "c-date-selector-2",
+		"label": "Popover",
+		"description": "Date selector with popover. Best for a popover anchored under an outline trigger, with typed shortcuts and Apply and Cancel below the selector.",
+		"file": "date-selector-2",
+		"export": "DateSelector2Example"
+	},
+	{
+		"id": "c-date-selector-3",
+		"label": "Dialog",
+		"description": "Date selector with dialog. Best for a modal titled Select Due Date with a read only field, closing on Cancel or committing on Apply.",
+		"file": "date-selector-3",
+		"export": "DateSelector3Example"
+	},
+	{
+		"id": "c-date-selector-4",
+		"label": "Language Menu",
+		"description": "Date selector with dropdown menu. Best for a language menu switching English, Spanish, French and German labels, date format and first weekday.",
+		"file": "date-selector-4",
+		"export": "DateSelector4Example"
+	}
+]

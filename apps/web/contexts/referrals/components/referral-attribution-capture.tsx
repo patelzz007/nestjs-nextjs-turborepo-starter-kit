@@ -2,7 +2,8 @@
 
 import { useWebSession } from "@/contexts/identity";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { referralAttributionMessage } from "../lib/referral-link";
@@ -24,7 +25,7 @@ export interface ReferralAttributionCaptureProps {
 export function ReferralAttributionCapture({ attributionToken, onMessage }: ReferralAttributionCaptureProps): null {
 	const { api } = useAuth();
 	const { isAuthenticated } = useWebSession();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const pathname = usePathname();
 	const recordedToken = React.useRef<string | null>(null);
 

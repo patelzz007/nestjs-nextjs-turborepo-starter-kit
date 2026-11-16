@@ -4,8 +4,11 @@ tags: ["image", "ui", "mobile", "docs", "accessibility"]
 description: "The drag-to-resize image: one geometry module in packages/shared, the web and native ImageResizer components, the admin and mobile gallery demos, and image-resize fences in the docs."
 order: 28
 author: "Platform Team"
+category: "Frontend"
+date: 1792108800000
 lastUpdated: 1792195200000
-coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/frontend/image-resizer.webp"
 ---
 
 # Image resizer

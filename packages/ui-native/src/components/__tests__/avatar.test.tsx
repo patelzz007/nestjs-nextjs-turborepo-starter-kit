@@ -1,6 +1,8 @@
-import { render, screen } from "@testing-library/react-native";
+import CheckIcon from "lucide-react-native/icons/check";
+import { fireEvent, render, screen } from "@testing-library/react-native";
+import { getEntityAvatarTone } from "@workspace/shared";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { PixelRatio, type ViewInstance } from "react-native";
 
 import { AVATAR_POINTS, Avatar, initialsOf, type AvatarSize } from "../avatar";
 
@@ -90,5 +92,66 @@ describe("initialsOf", () => {
 		["", ""],
 	])("initials of %j are %j", (name: string, initials: string) => {
 		expect(initialsOf(name)).toBe(initials);
+	});
+});
+
+describe("Avatar renditions, logos and name tints", () => {
+	const SOURCES = [
+		{ width: 256, url: "https://cdn.example.com/256.png" },
+		{ width: 64, url: "https://cdn.example.com/64.png" },
+		{ width: 128, url: "https://cdn.example.com/128.png" },
+	];
+
+	it("shows the rendition that is sharp at its size on this screen", async () => {
+		const ratio = PixelRatio.getPixelSizeForLayoutSize(AVATAR_POINTS.lg);
+		await render(<Avatar name="Ada Lovelace" imageUrl="https://cdn.example.com/original.png" sources={SOURCES} />);
+		const expected =
+			SOURCES.filter((source) => source.width >= ratio)
+				.sort((a, b) => a.width - b.width)
+				.at(0)?.url ?? "https://cdn.example.com/256.png";
+		expect(screen.getByLabelText("Ada Lovelace's profile picture")).toHaveProp("source", { uri: expected });
+	});
+
+	it("falls back to the initials when the picture fails to load", async () => {
+		await render(<Avatar name="Ada Lovelace" imageUrl="https://cdn.example.com/broken.png" />);
+		await fireEvent(screen.getByLabelText("Ada Lovelace's profile picture"), "error");
+		expect(screen.getByLabelText("Ada Lovelace's initials")).toBeOnTheScreen();
+	});
+
+	it("contains a logo on a plain tile, and tints a mark's monogram from its name", async () => {
+		const { rerender } = await render(<Avatar name="Acme Coffee" imageUrl="https://cdn.example.com/logo.png" shape="rounded" />);
+		expect(screen.getByLabelText("Acme Coffee logo")).toHaveProp("resizeMode", "contain");
+		await rerender(<Avatar name="Acme Coffee" imageUrl={null} shape="rounded" tone="name" testID="mark" />);
+		expect(screen.getByTestId("mark")).toHaveProp("className", expect.stringContaining(`bg-${getEntityAvatarTone("Acme Coffee")}/20`));
+	});
+});
+
+describe("Avatar colours, rings, badges and loading", () => {
+	it("fills its initials softly or solidly in a colour, at the new sizes", async () => {
+		const { rerender } = await render(<Avatar name="Ada Lovelace" imageUrl={null} tone="soft" color="success" size="xs" testID="avatar" />);
+		expect(screen.getByTestId("avatar")).toHaveProp("className", expect.stringContaining("bg-tone-green-soft"));
+		await rerender(<Avatar name="Ada Lovelace" imageUrl={null} tone="filled" color="violet" size="xl" testID="avatar" />);
+		expect(screen.getByTestId("avatar")).toHaveProp("className", expect.stringContaining("bg-tone-violet"));
+	});
+
+	it("draws a ring, named badges on its corners and a loading veil", async () => {
+		await render(
+			<Avatar
+				name="Ada Lovelace"
+				imageUrl="https://cdn.example.com/ada.png"
+				ring="destructive"
+				loading
+				badges={[
+					{ label: "Online", color: "success" },
+					{ label: "3 unread", count: 3, color: "destructive", position: "top-right" },
+					{ label: "Verified", icon: CheckIcon, color: "info", position: "top-left" },
+				]}
+				testID="avatar"
+			/>,
+		);
+		expect(screen.getByLabelText("Online")).toBeOnTheScreen();
+		expect(screen.getByText("3")).toBeOnTheScreen();
+		expect(screen.getByLabelText("Verified")).toBeOnTheScreen();
+		expect(screen.getByLabelText("Updating Ada Lovelace's picture")).toHaveProp("accessibilityState", { busy: true });
 	});
 });

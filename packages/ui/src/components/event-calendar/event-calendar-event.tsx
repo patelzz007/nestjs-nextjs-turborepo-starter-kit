@@ -166,6 +166,7 @@ export function useEventCalendarEventChip(): EventCalendarChipContextValue {
 const TIME_GRID_VIEWS: readonly CalendarView[] = ["week", "day", "days", "resource"];
 
 export interface EventCalendarEventProps extends Omit<React.ComponentPropsWithoutRef<"button">, "children" | "color"> {
+	/** The part of the event this chip draws (one day of a multi-day event). */
 	readonly segment: EventCalendarSegment;
 	/** Replaces the default chip CONTENT; the wrapper stays calendar-owned. */
 	readonly children?: React.ReactNode;

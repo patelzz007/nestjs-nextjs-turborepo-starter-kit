@@ -55,6 +55,7 @@ import {
 } from "react-native";
 
 import { cn } from "../lib/cn";
+import { FieldSurfaceProvider } from "../lib/field-surface";
 import {
 	clampPdfPageIndex,
 	firstPdfMatchFrom,
@@ -540,7 +541,7 @@ function PdfDocument({ pages, renderPage, onOpenExternally, onDownload, onSearch
 				/>
 				<Text
 					accessibilityLabel={pageCount === 0 ? undefined : labels.pageIndicator(pageIndex + 1, pageCount)}
-					className="font-sans-medium min-w-0 shrink text-center text-sm text-foreground"
+					className="font-sans-medium text-body min-w-0 shrink text-center text-foreground"
 					accessibilityLiveRegion="polite"
 					numberOfLines={1}>
 					{pageCount === 0 ? "" : labels.pageIndicatorShort(pageIndex + 1, pageCount)}
@@ -556,7 +557,7 @@ function PdfDocument({ pages, renderPage, onOpenExternally, onDownload, onSearch
 				/>
 				<View className="flex-1" />
 				<IconButton icon={ZoomOutIcon} label={labels.zoomOut} variant="ghost" size="sm" onPress={zoomOut} disabled={!isZoomed} {...partTestId(testID, "zoom-out")} />
-				<Text className="w-12 text-center font-mono text-xs text-muted-foreground" {...partTestId(testID, "zoom")}>
+				<Text className="text-caption w-12 text-center font-mono text-muted-foreground" {...partTestId(testID, "zoom")}>
 					{formatPdfZoom(zoom)}
 				</Text>
 				<IconButton
@@ -672,21 +673,24 @@ function PdfSearchBar({ query, onQueryChange, onSubmit, search, onPrevious, onNe
 	const canStep = search.status === "found" && search.matches.length > 1;
 	return (
 		<View accessibilityRole="search" className="flex-row items-center gap-1 border-b border-border bg-card px-2 py-1.5" {...partTestId(testID, "search-bar")}>
-			<Input
-				value={query}
-				onChange={onQueryChange}
-				onSubmitEditing={onSubmit}
-				placeholder={labels.searchPlaceholder}
-				accessibilityLabel={labels.searchPlaceholder}
-				returnKeyType="search"
-				autoCapitalize="none"
-				autoCorrect={false}
-				autoFocus
-				size="sm"
-				className="min-w-0 flex-1"
-				{...partTestId(testID, "search-input")}
-			/>
-			<Text className="font-sans text-xs text-muted-foreground" accessibilityLiveRegion="polite" numberOfLines={1} {...partTestId(testID, "search-status")}>
+			{/* The search bar is card-coloured, so its field takes the card's fill. */}
+			<FieldSurfaceProvider surface="card">
+				<Input
+					value={query}
+					onChange={onQueryChange}
+					onSubmitEditing={onSubmit}
+					placeholder={labels.searchPlaceholder}
+					accessibilityLabel={labels.searchPlaceholder}
+					returnKeyType="search"
+					autoCapitalize="none"
+					autoCorrect={false}
+					autoFocus
+					size="sm"
+					className="min-w-0 flex-1"
+					{...partTestId(testID, "search-input")}
+				/>
+			</FieldSurfaceProvider>
+			<Text className="text-caption font-sans text-muted-foreground" accessibilityLiveRegion="polite" numberOfLines={1} {...partTestId(testID, "search-status")}>
 				{searchStatusText(search, labels)}
 			</Text>
 			<IconButton
@@ -766,8 +770,8 @@ const PdfPage = React.memo(function PdfPage({
 				<Image source={imageSource} accessible={false} contentFit="contain" style={imageStyle} {...partTestId(testID, "image")} />
 			) : image.status === "failed" ? (
 				<View className="size-full items-center justify-center gap-2 p-4">
-					<Icon icon={FileWarningIcon} size="lg" colorClassName="accent-muted-foreground" />
-					<Text className="text-center font-sans text-sm text-muted-foreground">{failedLabel}</Text>
+					<Icon icon={FileWarningIcon} size="lg" colorClassName="accent-icon" />
+					<Text className="text-body text-center font-sans text-muted-foreground">{failedLabel}</Text>
 				</View>
 			) : (
 				<SkeletonGroup className="size-full">

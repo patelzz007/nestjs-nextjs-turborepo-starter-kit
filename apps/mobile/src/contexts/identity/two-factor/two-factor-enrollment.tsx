@@ -276,7 +276,7 @@ function VerifyStep({ setup, onEnabled }: VerifyStepProps): React.JSX.Element {
 				{linkFailed ? <Alert tone="warning" message={NO_AUTHENTICATOR_MESSAGE} /> : null}
 				<View className="gap-2">
 					<MutedText>Setup key</MutedText>
-					<Text selectable accessibilityLabel={`Setup key ${setup.secret.split("").join(" ")}`} className="font-mono text-base text-foreground">
+					<Text selectable accessibilityLabel={`Setup key ${setup.secret.split("").join(" ")}`} className="text-body-lg font-mono text-foreground">
 						{groupSetupKey(setup.secret)}
 					</Text>
 					<Button label={keyCopied ? "Setup key copied" : "Copy setup key"} variant="outline" onPress={copySetupKey} />

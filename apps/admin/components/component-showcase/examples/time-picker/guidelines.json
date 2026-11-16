@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Use sensible steps",
+		"do": {
+			"text": "Set `minuteStep` to what the booking allows.",
+			"file": "time-picker-do-1",
+			"export": "TimePickerDo1Example"
+		},
+		"dont": {
+			"text": "Don't offer every minute for a 30-minute slot.",
+			"file": "time-picker-dont-1",
+			"export": "TimePickerDont1Example"
+		}
+	},
+	{
+		"title": "Grey out what cannot be picked",
+		"do": {
+			"text": "Set `min`, `max` and `isTimeDisabled` so booked or closed times cannot be picked.",
+			"file": "time-picker-do-2",
+			"export": "TimePickerDo2Example"
+		},
+		"dont": {
+			"text": "Don't let people pick a closed time and reject it later.",
+			"file": "time-picker-dont-2",
+			"export": "TimePickerDont2Example"
+		}
+	}
+]

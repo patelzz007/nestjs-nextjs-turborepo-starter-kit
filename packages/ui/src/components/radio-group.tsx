@@ -12,9 +12,11 @@ const radioGroupItemVariants = cva(
 	"group/radio-group-item peer relative flex aspect-square shrink-0 items-center justify-center rounded-full border border-input outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary",
 	{
 		variants: {
+			/** The radio's look; one treatment today. */
 			variant: {
 				default: "",
 			},
+			/** Size of the radio: `sm`, `default` or `lg`. */
 			size: {
 				default: "size-4 **:data-[slot=radio-group-dot]:size-2 *:data-[slot=radio-group-indicator]:size-4",
 				sm: "size-3.5 **:data-[slot=radio-group-dot]:size-1.5 *:data-[slot=radio-group-indicator]:size-3.5",
@@ -30,6 +32,7 @@ const radioGroupItemVariants = cva(
 	},
 );
 
+/** A single choice from a set of `RadioGroupItem`s, on Base UI's radio group: `role="radiogroup"`, one tab stop, the arrow keys move the choice. Controlled with `value` / `onValueChange`. */
 const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupPrimitive.Props>(function RadioGroup({ className, ...props }, ref): React.JSX.Element {
 	return <RadioGroupPrimitive ref={ref} data-slot="radio-group" className={cn("grid w-full gap-3", className)} {...props} />;
 });
@@ -40,6 +43,7 @@ type RadioGroupItemProps = RadioPrimitive.Root.Props &
 		readonly loading?: boolean;
 	};
 
+/** One option of a `RadioGroup`, identified by its `value`. Tie a `Label` to its `id`. */
 const RadioGroupItem = React.forwardRef<HTMLElement, RadioGroupItemProps>(function RadioGroupItem(
 	{ className, variant, size, loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,

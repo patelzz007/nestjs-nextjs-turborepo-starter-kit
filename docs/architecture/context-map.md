@@ -2,8 +2,11 @@
 title: "Context map"
 description: "The fourteen bounded contexts, who they may call, and which relationship they use."
 author: "Platform Team"
+category: "Architecture"
+date: 1792368000000
 lastUpdated: 1792368000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1794485625193
+coverImage: "/images/covers/architecture/context-map.webp"
 order: 2
 tags: ["architecture", "ddd", "contexts"]
 ---
@@ -13,7 +16,7 @@ tags: ["architecture", "ddd", "contexts"]
 The API is one process (ADR 058). A box is a bounded context under `apps/api/src/contexts/<name>/`. An arrow is a call through that context's `public-api.ts`, or an outbox event (ADR 015, ADR 060). Platform code under `apps/api/src/platform/` is shared infrastructure, not a fifteenth business context.
 
 ```mermaid
-flowchart LR
+flowchart TD
   identity[identity]
   authorization[authorization]
   tenants[tenants]

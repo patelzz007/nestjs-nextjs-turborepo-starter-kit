@@ -3,8 +3,11 @@ title: "ADR 009: URL-Derived Tenant Resolution"
 tags: ["adr", "tenancy", "routing", "security"]
 description: "Architecture decision record for resolving organization context from URL slugs with server-side membership verification."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1789288557000
+coverImage: "/images/covers/adr/009-url-tenant-resolution.webp"
 order: 9
 ---
 

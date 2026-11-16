@@ -62,7 +62,16 @@ describe("Card", () => {
 				<BodyText>{BODY}</BodyText>
 			</Card>,
 		);
-		expect(String(screen.getByTestId("card").props.className).split(" ")).toContain("p-4");
+		expect(String(screen.getByTestId("card").props.className).split(" ")).toContain("p-3");
+	});
+
+	it("draws the spec's card: 12 pt corners and 16 pt padding", async () => {
+		await render(
+			<Card testID="card">
+				<BodyText>{BODY}</BodyText>
+			</Card>,
+		);
+		expect(String(screen.getByTestId("card").props.className).split(" ")).toEqual(expect.arrayContaining(["rounded-card", "p-4"]));
 	});
 
 	it("forwards the ref of every part", async () => {
@@ -95,7 +104,7 @@ describe("Card", () => {
 	it("merges the caller's className last, on the card and its parts", async () => {
 		await render(
 			<Card className="p-6" testID="card">
-				<CardTitle className="text-base" testID="title">
+				<CardTitle className="text-body-lg" testID="title">
 					{TITLE}
 				</CardTitle>
 			</Card>,
@@ -105,7 +114,7 @@ describe("Card", () => {
 		expect(cardClassName).toContain("p-6");
 		expect(cardClassName).not.toContain("p-4");
 		const titleClassName = String(screen.getByTestId("title").props.className).split(" ");
-		expect(titleClassName).toContain("text-base");
-		expect(titleClassName).not.toContain("text-lg");
+		expect(titleClassName).toContain("text-body-lg");
+		expect(titleClassName).not.toContain("text-h4");
 	});
 });

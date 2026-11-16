@@ -30,7 +30,7 @@ describe("ListGroup", () => {
 
 		expect(screen.getByText("Appearance")).toBeOnTheScreen();
 		expect(screen.getByText("App lock")).toBeOnTheScreen();
-		expect(classNameOf("group-surface")).toContain("rounded-2xl border border-border bg-card");
+		expect(classNameOf("group-surface").split(" ")).toEqual(expect.arrayContaining(["rounded-card", "border", "border-border", "bg-card"]));
 		expect(screen.getAllByTestId("group-line", { includeHiddenElements: true })).toHaveLength(2);
 	});
 

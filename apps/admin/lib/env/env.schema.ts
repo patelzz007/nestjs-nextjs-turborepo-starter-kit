@@ -30,10 +30,10 @@ export type AdminClientEnv = z.output<typeof AdminClientEnvSchema>;
 /** Server-only config (never bundled for the browser). */
 export const AdminServerEnvSchema = NextAppServerEnvSchema.extend({
 	/**
-	 * The developer component gallery (`/components`): `"true"` / `"false"`. Unset follows the build — on
+	 * The developer component showcase (`/components`): `"true"` / `"false"`. Unset follows the build — on
 	 * in development and test, off in production, so a deployed admin panel does not serve it unless asked.
 	 */
-	ADMIN_COMPONENT_GALLERY: z.enum(["true", "false"], { error: 'must be "true" or "false"' }).optional(),
+	ADMIN_SHOWCASE: z.enum(["true", "false"], { error: 'must be "true" or "false"' }).optional(),
 });
 export type AdminServerEnv = z.output<typeof AdminServerEnvSchema>;
 

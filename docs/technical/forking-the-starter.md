@@ -3,8 +3,11 @@ title: "Forking the Starter Kit"
 tags: ["starter-kit", "getting-started", "upgrades"]
 description: "Start a product from the starter kit, make it yours in one place, and keep pulling later starter releases without losing your work."
 author: "Platform Team"
+category: "Engineering"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/forking-the-starter.webp"
 order: 3
 ---
 

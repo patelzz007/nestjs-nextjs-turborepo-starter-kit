@@ -1,4 +1,4 @@
-import { segmentsOfPath } from "@workspace/ui/lib/sidebar/navigation/breadcrumb-tree";
+import { segmentsOfPath } from "@workspace/shared";
 
 /**
  * Route patterns in the App Router's own notation: `/users/[id]/edit`.

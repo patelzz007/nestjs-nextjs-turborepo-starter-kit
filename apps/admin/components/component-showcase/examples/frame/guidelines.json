@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Group related panels",
+		"do": {
+			"text": "Use a frame to hold several related panels under one title.",
+			"file": "frame-do-1",
+			"export": "FrameDo1Example"
+		},
+		"dont": {
+			"text": "Don't frame a single line: a tray, a panel and a title bar for one fact.",
+			"file": "frame-dont-1",
+			"export": "FrameDont1Example"
+		}
+	},
+	{
+		"title": "Stack a list",
+		"do": {
+			"text": "Stack panels that read as one list (a log, a set of services).",
+			"file": "frame-do-2",
+			"export": "FrameDo2Example"
+		},
+		"dont": {
+			"text": "Don't line up many separate frames for one list: it reads as a column of boxes.",
+			"file": "frame-dont-2",
+			"export": "FrameDont2Example"
+		}
+	}
+]

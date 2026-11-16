@@ -3,8 +3,11 @@ title: "Dos and don'ts"
 description: "The pull-request checklist for engineers building on the starter kit: the non-negotiables, backend, contracts, database and RLS, authorization, frontend, messaging, storage, testing and docs — with links to the full rule."
 order: 4
 author: "Platform Team"
+category: "Engineering"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/technical/dos-and-donts.webp"
 tags: ["best-practices", "code-review", "rules"]
 ---
 

@@ -3,8 +3,11 @@ title: "4. Rewards: create, review, publish"
 description: "How a merchant creates a reward, submits it for review, and how a platform admin approves or returns it."
 order: 5
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/user-guide/04-rewards.webp"
 tags: ["user-guide", "rewards", "review"]
 ---
 

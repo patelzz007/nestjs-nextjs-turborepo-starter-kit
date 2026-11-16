@@ -87,7 +87,7 @@ export const CoverImage = React.memo(
 					/>
 				) : (
 					<View accessible accessibilityRole="image" accessibilityLabel={alt} className="size-full items-center justify-center">
-						{fallback ?? <Icon icon={ImageOffIcon} size="xl" colorClassName="accent-muted-foreground" />}
+						{fallback ?? <Icon icon={ImageOffIcon} size="xl" colorClassName="accent-icon" />}
 					</View>
 				)}
 			</View>

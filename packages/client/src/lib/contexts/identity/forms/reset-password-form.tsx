@@ -6,7 +6,7 @@ import { Label } from "@workspace/ui/components/label";
 import { PasswordInput } from "@workspace/ui/components/password-input";
 import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "../../../navigation/use-progress-router";
 import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 
 import { resolveAuthErrorMessage } from "../../../api/error-messages";
@@ -29,7 +29,7 @@ export function ResetPasswordForm({ token, loginHref = APP_LINKS.auth.login, for
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isTokenValid, setIsTokenValid] = useState<boolean | null>(token.length === 0 ? false : null);
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { api } = useAuth();
 	const mutation = api.auth.resetPassword.useMutation();
 	const { mutateAsync: validateResetToken } = api.auth.validateResetToken.useMutation();

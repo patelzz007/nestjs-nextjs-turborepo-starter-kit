@@ -19,7 +19,7 @@ export const serverEnv: Readonly<AdminServerEnv> = parseAppEnv(
 	{
 		NODE_ENV: process.env.NODE_ENV,
 		COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
-		ADMIN_COMPONENT_GALLERY: process.env.ADMIN_COMPONENT_GALLERY,
+		ADMIN_SHOWCASE: process.env.ADMIN_SHOWCASE,
 	},
 	ADMIN_ENV_SCOPE.server,
 );

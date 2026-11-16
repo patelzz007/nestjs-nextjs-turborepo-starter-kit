@@ -71,6 +71,7 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 	neverSoftDeleted("AccountErasure", "An erasure request ends as cancelled or completed, never deleted: it is the evidence it was asked for and carried out."),
 	neverSoftDeleted("AuditLegalHold", "A legal hold is lifted, never deleted: the record of who held what, and why, stays."),
 	...[
+		"DocsSyncRun",
 		"GithubWebhookDelivery",
 		"InboxDeadLetter",
 		"InboxProcessedEvent",

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Match the tone to the meaning",
+		"do": {
+			"text": "Show a failure in the destructive tone.",
+			"file": "status-badge-do-1",
+			"export": "StatusBadgeDo1Example"
+		},
+		"dont": {
+			"text": "Don't show a failure in the success tone.",
+			"file": "status-badge-dont-1",
+			"export": "StatusBadgeDont1Example"
+		}
+	},
+	{
+		"title": "Name an icon-only badge by its state",
+		"do": {
+			"text": "Name an icon-only badge by the state it shows (“Offline”).",
+			"file": "status-badge-do-2",
+			"export": "StatusBadgeDo2Example"
+		},
+		"dont": {
+			"text": "Don't name it after the glyph, or leave it unnamed.",
+			"file": "status-badge-dont-2",
+			"export": "StatusBadgeDont2Example"
+		}
+	}
+]

@@ -35,7 +35,8 @@ import { MerchantContextSwitcher } from "@/components/layout/merchant-context-sw
 import { merchantProfileMenuItems } from "@/components/layout/merchant-profile-menu";
 import { useActiveMembership } from "@/features/tenant-context/facade";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
 import { useTranslatedSidebarMenu } from "@workspace/client/lib/sidebar/sidebar-menu-labels";
@@ -117,7 +118,7 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, o
 	);
 
 	const logout = useMerchantLogout();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const settingsPath = useTenantPath(TENANT_ROUTES.settings.index);
 	const accountPath = useTenantPath(TENANT_ROUTES.account);
 	const dashboardPath = useTenantPath(TENANT_ROUTES.dashboard);

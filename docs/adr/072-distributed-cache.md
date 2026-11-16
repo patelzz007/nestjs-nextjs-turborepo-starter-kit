@@ -3,8 +3,11 @@ title: "ADR 072: Distributed cache — one typed, tenant-safe, encrypted, two-ti
 tags: ["adr", "cache", "redis", "performance", "multi-tenancy", "plan"]
 description: "One cache module for every rarely-changing thing the API reads: declared namespaces with zod schemas and versions, local, shared or two-tier storage, tenant-scoped keys by construction, encryption of personal data with the key version in the key, single flight and leases, stale-while-revalidate, explicit after-commit invalidation broadcast to every instance with a TTL safety net, per-namespace budgets on one noeviction Redis, and a Cache page in the admin panel."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793404800000
 lastUpdated: 1793404800000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/adr/072-distributed-cache.webp"
 order: 72
 ---
 

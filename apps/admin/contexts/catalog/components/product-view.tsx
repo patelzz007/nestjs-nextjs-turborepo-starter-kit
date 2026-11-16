@@ -27,7 +27,7 @@ import { Input } from "@workspace/ui/components/input";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import { useCallback, useMemo } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/toast";
@@ -67,7 +67,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 	const canUpdate = can(PERMISSION.PRODUCT.UPDATE);
 	const canDelete = can(PERMISSION.PRODUCT.DELETE);
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const [urlState, updateUrlState] = useUrlState(PRODUCTS_TABLE_URL_STATE);
 	const isFiltered =

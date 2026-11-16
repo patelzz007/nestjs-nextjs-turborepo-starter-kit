@@ -1,0 +1,100 @@
+[
+	{
+		"id": "c-alert-dialog-1",
+		"label": "Basic",
+		"description": "Basic alert dialog with a title, a description and two actions. Best for a plain confirmation with centred title and copy above Continue and Cancel.",
+		"file": "alert-dialog-1",
+		"export": "AlertDialog1Example"
+	},
+	{
+		"id": "c-alert-dialog-2",
+		"label": "Small Size",
+		"description": "Small alert dialog for quick confirmations. Best for a compact permission prompt in the small size, its 2 buttons sharing the footer's width.",
+		"file": "alert-dialog-2",
+		"export": "AlertDialog2Example"
+	},
+	{
+		"id": "c-alert-dialog-3",
+		"label": "With Icon",
+		"description": "Alert dialog with an icon. Best for a prompt with an icon tile above the title, here pairing a Bluetooth device.",
+		"file": "alert-dialog-3",
+		"export": "AlertDialog3Example"
+	},
+	{
+		"id": "c-alert-dialog-4",
+		"label": "Small With Icon",
+		"description": "Small alert dialog with an icon. Best for the small size with an icon tile, for a quick yes or no question about an accessory.",
+		"file": "alert-dialog-4",
+		"export": "AlertDialog4Example"
+	},
+	{
+		"id": "c-alert-dialog-5",
+		"label": "Destructive Delete",
+		"description": "Destructive alert dialog for irreversible actions. Best for an irreversible delete with a red trash icon, a destructive button and a help address in the copy.",
+		"file": "alert-dialog-5",
+		"export": "AlertDialog5Example"
+	},
+	{
+		"id": "c-alert-dialog-6",
+		"label": "Nested In Dialog",
+		"description": "Alert dialog opened from inside a dialog. Best for a confirmation launched from a button inside an open dialog, shown above it.",
+		"file": "alert-dialog-6",
+		"export": "AlertDialog6Example"
+	},
+	{
+		"id": "c-alert-dialog-7",
+		"label": "Success Notice",
+		"description": "Task success notice. Best for a success notice with a green check and a don't show again checkbox above its one button.",
+		"file": "alert-dialog-7",
+		"export": "AlertDialog7Example"
+	},
+	{
+		"id": "c-alert-dialog-8",
+		"label": "Account Deactivation",
+		"description": "Account deactivation confirmation. Best for an account deactivation warning with the icon beside the title and a destructive confirm.",
+		"file": "alert-dialog-8",
+		"export": "AlertDialog8Example"
+	},
+	{
+		"id": "c-alert-dialog-9",
+		"label": "Unsaved Changes",
+		"description": "Unsaved changes guard. Best for an unsaved changes check inside a card's editor, with Stay, Discard and a don't ask again box.",
+		"file": "alert-dialog-9",
+		"export": "AlertDialog9Example"
+	},
+	{
+		"id": "c-alert-dialog-10",
+		"label": "E-Ticket Receipt",
+		"description": "Booking confirmation. Best for a booking receipt listing 5 order fields above one full width Back to home button.",
+		"file": "alert-dialog-10",
+		"export": "AlertDialog10Example"
+	},
+	{
+		"id": "c-alert-dialog-11",
+		"label": "System Update",
+		"description": "Update prompt that needs a restart. Best for an update prompt with a version badge beside its icon, and Restart now or Later.",
+		"file": "alert-dialog-11",
+		"export": "AlertDialog11Example"
+	},
+	{
+		"id": "c-alert-dialog-12",
+		"label": "Billing Warning",
+		"description": "Billing warning. Best for a plan expiry warning with a red bell, an Expires in 2 days badge and an Update payment action.",
+		"file": "alert-dialog-12",
+		"export": "AlertDialog12Example"
+	},
+	{
+		"id": "c-alert-dialog-13",
+		"label": "Logout Confirmation",
+		"description": "Sign out confirmation. Best for a sign out check whose No and Yes buttons split the footer into 2 flush cells with a rule between them.",
+		"file": "alert-dialog-13",
+		"export": "AlertDialog13Example"
+	},
+	{
+		"id": "c-alert-dialog-14",
+		"label": "Security Audit",
+		"description": "Security audit confirmation. Best for a summary of 3 security checks with Pending or Done badges above stacked full width buttons.",
+		"file": "alert-dialog-14",
+		"export": "AlertDialog14Example"
+	}
+]

@@ -72,7 +72,7 @@ describe("formatShareOfTotal", () => {
 
 describe("range labels", () => {
 	it("writes the range with its zone", () => {
-		expect(spaced(formatAnalyticsRangeLabel(Date.UTC(2026, 8, 6), Date.UTC(2026, 9, 6), UTC_REGION))).toBe("6 Sept – 5 Oct 2026 · UTC");
+		expect(spaced(formatAnalyticsRangeLabel(Date.UTC(2026, 8, 6), Date.UTC(2026, 9, 6), UTC_REGION))).toBe("6 Sep – 5 Oct 2026 · UTC");
 	});
 
 	it("names the comparison period", () => {
@@ -84,7 +84,7 @@ describe("range labels", () => {
 			previousFrom: Date.UTC(2026, 7, 7),
 			previousTo: Date.UTC(2026, 8, 6),
 		});
-		expect(spaced(formatPreviousPeriodLabel(range, UTC_REGION))).toBe("vs 7 Aug – 5 Sept 2026");
+		expect(spaced(formatPreviousPeriodLabel(range, UTC_REGION))).toBe("vs 7 Aug – 5 Sep 2026");
 	});
 });
 
@@ -186,8 +186,8 @@ describe("analyticsFormatters", () => {
 
 describe("formatCustomDays", () => {
 	it("writes picked calendar days as they are, whatever the runtime zone", () => {
-		expect(spaced(formatCustomDays({ from: "2026-09-01", to: "2026-09-30" }, LOCALE))).toBe("1–30 Sept 2026");
-		expect(spaced(formatCustomDays({ from: "2026-09-14", to: "" }, LOCALE))).toBe("14 Sept 2026");
+		expect(spaced(formatCustomDays({ from: "2026-09-01", to: "2026-09-30" }, LOCALE))).toBe("1–30 Sep 2026");
+		expect(spaced(formatCustomDays({ from: "2026-09-14", to: "" }, LOCALE))).toBe("14 Sep 2026");
 		expect(formatCustomDays({ from: "", to: "" }, LOCALE)).toBe("");
 	});
 });

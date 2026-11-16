@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-qr-code-1",
+		"label": "Overview",
+		"description": "A QR code redrawn as you type its value. Best for sharing a link, a voucher or a pairing code with another phone.",
+		"file": "qr-code-1",
+		"export": "QrCode1Example"
+	}
+]

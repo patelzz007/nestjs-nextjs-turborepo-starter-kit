@@ -55,6 +55,7 @@ interface StepItemContextValue {
 const StepperContext = React.createContext<StepperContextValue | null>(null);
 const StepItemContext = React.createContext<StepItemContextValue | null>(null);
 
+/** The stepper's state (`activeStep`, `setActiveStep`, the orientation), inside a `Stepper`. */
 function useStepper(): StepperContextValue {
 	const context = React.useContext(StepperContext);
 	if (context === null) {
@@ -63,6 +64,7 @@ function useStepper(): StepperContextValue {
 	return context;
 }
 
+/** The surrounding step's state (`step`, `state`, `isLoading`, `isDisabled`), inside a `StepperItem`. */
 function useStepItem(): StepItemContextValue {
 	const context = React.useContext(StepItemContext);
 	if (context === null) {
@@ -81,10 +83,13 @@ interface StepperProps extends React.ComponentProps<"div"> {
 	readonly value: number;
 	/** Called with the step a trigger asks for; omit it to make triggers inert. */
 	readonly onValueChange?: ((value: number) => void) | undefined;
+	/** The layout direction of the stepper. */
 	readonly orientation?: StepperOrientation | undefined;
+	/** Custom icons or elements for different step states. */
 	readonly indicators?: StepIndicators | undefined;
 }
 
+/** A process shown as steps, horizontal or vertical. Controlled with `value` / `onValueChange` (the current step number). */
 const Stepper = React.forwardRef<HTMLDivElement, StepperProps>(function Stepper(
 	{ value, onValueChange, orientation = "horizontal", indicators = NO_INDICATORS, className, children, ...props },
 	ref,
@@ -135,6 +140,7 @@ interface StepperItemProps extends React.ComponentProps<"div"> {
 	readonly step: number;
 	/** Marks the step completed regardless of the active step. */
 	readonly completed?: boolean | undefined;
+	/** Disable interactions for this step. */
 	readonly disabled?: boolean | undefined;
 	/** Shows the loading indicator while this step is active. */
 	readonly loading?: boolean | undefined;
@@ -147,6 +153,7 @@ function stepStateFor(step: number, activeStep: number, completed: boolean): Ste
 	return step === activeStep ? "active" : "inactive";
 }
 
+/** One step, identified by its `step` number; `completed`, `loading` and `disabled` set its state. */
 const StepperItem = React.forwardRef<HTMLDivElement, StepperItemProps>(function StepperItem(
 	{ step, completed = false, disabled = false, loading = false, className, children, ...props },
 	ref,
@@ -222,6 +229,7 @@ function focusSiblingTrigger(trigger: HTMLElement, key: string): boolean {
 
 type StepperTriggerProps = useRender.ComponentProps<"button">;
 
+/** The step's button, which moves to it. A tab controlling the step's panel; swap its element through `render`. */
 const StepperTrigger = React.forwardRef<HTMLButtonElement, StepperTriggerProps>(function StepperTrigger(
 	{ className, children, tabIndex, render, ...props },
 	ref,
@@ -275,6 +283,7 @@ const stepperIndicatorVariants = cva(
 	"relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border-background bg-accent text-accent-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=completed]:bg-primary data-[state=completed]:text-primary-foreground",
 	{
 		variants: {
+			/** Size of the marker. */
 			size: {
 				sm: "size-6 text-xs",
 				md: "size-8 text-sm",
@@ -296,6 +305,7 @@ function indicatorFor(indicators: StepIndicators, state: StepState, isLoading: b
 
 interface StepperIndicatorProps extends React.ComponentProps<"div">, VariantProps<typeof stepperIndicatorVariants> {}
 
+/** The step's marker: its number, a tick when completed, a spinner while loading, or your own content. */
 const StepperIndicator = React.forwardRef<HTMLDivElement, StepperIndicatorProps>(function StepperIndicator({ children, className, size, ...props }, ref): React.JSX.Element {
 	const { state, isLoading } = useStepItem();
 	const { indicators } = useStepper();
@@ -308,6 +318,7 @@ const StepperIndicator = React.forwardRef<HTMLDivElement, StepperIndicatorProps>
 	);
 });
 
+/** The line from one step to the next, filled once the step is completed. */
 const StepperSeparator = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function StepperSeparator({ className, ...props }, ref): React.JSX.Element {
 	const { state } = useStepItem();
 
@@ -326,6 +337,7 @@ const StepperSeparator = React.forwardRef<HTMLDivElement, React.ComponentProps<"
 	);
 });
 
+/** The step's name. */
 const StepperTitle = React.forwardRef<HTMLHeadingElement, React.ComponentProps<"h3">>(function StepperTitle({ className, children, ...props }, ref): React.JSX.Element {
 	const { state } = useStepItem();
 
@@ -336,12 +348,14 @@ const StepperTitle = React.forwardRef<HTMLHeadingElement, React.ComponentProps<"
 	);
 });
 
+/** A line under the step's title. */
 const StepperDescription = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function StepperDescription({ className, ...props }, ref): React.JSX.Element {
 	const { state } = useStepItem();
 
 	return <div ref={ref} data-slot="stepper-description" data-state={state} className={cn("text-sm text-muted-foreground", className)} {...props} />;
 });
 
+/** The row (or column) of steps: the tab list. */
 const StepperNav = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function StepperNav({ className, ...props }, ref): React.JSX.Element {
 	const { activeStep, orientation } = useStepper();
 
@@ -362,6 +376,7 @@ const StepperNav = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>
 	);
 });
 
+/** Holds the steps' content panels. */
 const StepperPanel = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function StepperPanel({ className, ...props }, ref): React.JSX.Element {
 	const { activeStep } = useStepper();
 
@@ -375,6 +390,7 @@ interface StepperContentProps extends React.ComponentProps<"div"> {
 	readonly forceMount?: boolean | undefined;
 }
 
+/** The panel for one step's `value`. Only the active one renders unless `forceMount`. */
 const StepperContent = React.forwardRef<HTMLDivElement, StepperContentProps>(function StepperContent(
 	{ value, forceMount = false, className, ...props },
 	ref,

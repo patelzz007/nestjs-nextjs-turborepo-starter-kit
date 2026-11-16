@@ -152,6 +152,35 @@
 	}
 }
 
+/*
+ * Code blocks on a dark highlighting theme (One Dark Pro, the default) carry the `.dark` tokens and
+ * One Dark Pro's own editor chrome in every app theme: the editor background, the tab-bar header and
+ * the group border. Its token colours that fall below WCAG AA on that background are lifted just enough
+ * to pass (ONE_DARK_PRO_AA_FOREGROUNDS in components/ui/code-block-highlight.ts).
+ */
+:root {
+	--code-block-dark-surface: #282c34; /* editor.background */
+	--code-block-dark-chrome: #21252b; /* editorGroupHeader.tabsBackground */
+	--code-block-dark-border: #181a1f; /* editorGroup.border */
+	/* Line numbers: One Dark Pro's gutter grey, lifted to AA like its comments. */
+	--code-block-dark-line-number: #8f949d;
+}
+
+[data-slot="code-block"][data-surface="dark"][data-variant="default"] {
+	background-color: var(--code-block-dark-surface);
+	border-color: var(--code-block-dark-border);
+	--code-block-bg: var(--code-block-dark-surface);
+}
+
+[data-slot="code-block"][data-surface="dark"][data-variant="default"] [data-slot="code-block-header"] {
+	background-color: var(--code-block-dark-chrome);
+	border-color: var(--code-block-dark-border);
+}
+
+[data-slot="code-block"][data-surface="dark"][data-variant="default"] [data-code-line-numbers] [data-code-line]::before {
+	color: var(--code-block-dark-line-number);
+}
+
 /* ── Code block rows (CodeBlock, code-block-line.tsx) ────────────────────────
    One class instead of utilities on every row: each row of each block used to
    carry the whole list below (~2,600 characters), 27 MB of the docs build.

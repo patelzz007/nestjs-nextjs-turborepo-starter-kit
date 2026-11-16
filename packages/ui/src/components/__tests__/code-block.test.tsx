@@ -284,6 +284,30 @@ describe("CodeBlock chrome", () => {
 		expect(container.querySelector("[data-slot=code-block-language]")).toBeNull();
 	});
 
+	it("keeps its own layers inside it, so its sticky line numbers never paint over a sticky page header", (): void => {
+		const { container } = render(<CodeBlock code="a" showLineNumbers highlight={false} />);
+		expect(container.querySelector("[data-slot=code-block]")?.className.split(" ")).toContain("isolate");
+	});
+
+	it("sets the code, file name and language in the app's code face, falling back to its mono face", (): void => {
+		const { container } = render(
+			<CodeBlock code="a" language="ts" highlight={false}>
+				<CodeBlockHeader>
+					<CodeBlockTitle>a.ts</CodeBlockTitle>
+					<CodeBlockLanguage />
+				</CodeBlockHeader>
+			</CodeBlock>,
+		);
+		const face = "font-(family-name:--code-block-font)";
+		expect(container.querySelector("[data-slot=code-block]")?.className).toContain("[--code-block-font:var(--font-code,var(--font-mono))]");
+		expect(pre(container).className).toContain(face);
+		// Preflight sets <code>'s font directly, so inheriting from the <pre> is not enough.
+		expect(container.querySelector("[data-slot=code-block-code]")?.className).toContain(face);
+		expect(container.querySelector("[data-slot=code-block-title]")?.className).toContain(face);
+		expect(container.querySelector("[data-slot=code-block-language]")?.className).toContain(face);
+		expect(pre(container).className).not.toContain("font-mono");
+	});
+
 	it("throws a helpful error when a part is used outside a CodeBlock", (): void => {
 		vi.spyOn(console, "error").mockImplementation((): void => undefined);
 		expect((): void => {

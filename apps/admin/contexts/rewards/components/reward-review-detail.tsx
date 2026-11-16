@@ -17,7 +17,7 @@ import { Textarea } from "@workspace/ui/components/textarea";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { Check, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { RewardReviewDetailPageSkeleton } from "@/components/loading/rewards-skeletons";
@@ -122,7 +122,7 @@ function RejectRewardDialog({ open, onOpenChange, isPending, onConfirm }: Reject
  */
 export default function RewardReviewDetailView({ rewardId, initialReward }: RewardReviewDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const [isRejectOpen, setIsRejectOpen] = React.useState(false);
 	// GET /admin/rewards/:rewardId needs APPROVE REWARD, which the route guard enforces for this page.

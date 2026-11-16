@@ -74,12 +74,18 @@
       "ApiErrorResponseDto__schema0": {
         "anyOf": [
           {
-            "type": [
-              "string",
-              "number",
-              "boolean",
-              "null"
-            ]
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "nullable": true
           },
           {
             "items": {
@@ -11680,6 +11686,1280 @@
         ]
       }
     },
+    "/api/v1/admin/docs-publishing/overview": {
+      "get": {
+        "operationId": "DocsPublishingAdminController_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "dispatchConfigured": {
+                          "type": "boolean"
+                        },
+                        "handshakePending": {
+                          "type": "boolean"
+                        },
+                        "latestGoodRun": {
+                          "nullable": true,
+                          "properties": {
+                            "commitSha": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "converterVersion": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "errorSummary": {
+                              "maxLength": 500,
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "finishedAt": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "pagesHeldBack": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "pagesProcessed": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "pagesRemoved": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "pagesUnchanged": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "pullRequestUrl": {
+                              "format": "uri",
+                              "maxLength": 2048,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "runId": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "pattern": "^[a-zA-Z0-9-]+$",
+                              "type": "string"
+                            },
+                            "source": {
+                              "enum": [
+                                "NOTION"
+                              ],
+                              "type": "string"
+                            },
+                            "startedAt": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "status": {
+                              "enum": [
+                                "SUCCEEDED",
+                                "PARTIAL",
+                                "BLOCKED",
+                                "FAILED"
+                              ],
+                              "type": "string"
+                            },
+                            "trigger": {
+                              "enum": [
+                                "WEBHOOK",
+                                "SCHEDULE",
+                                "NIGHTLY",
+                                "MANUAL"
+                              ],
+                              "type": "string"
+                            },
+                            "warnings": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "runId",
+                            "source",
+                            "trigger",
+                            "status",
+                            "converterVersion",
+                            "pagesProcessed",
+                            "pagesUnchanged",
+                            "pagesRemoved",
+                            "pagesHeldBack",
+                            "warnings",
+                            "errorSummary",
+                            "pullRequestUrl",
+                            "commitSha",
+                            "startedAt",
+                            "finishedAt",
+                            "id"
+                          ],
+                          "type": "object"
+                        },
+                        "latestRun": {
+                          "nullable": true,
+                          "properties": {
+                            "commitSha": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "converterVersion": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "errorSummary": {
+                              "maxLength": 500,
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "finishedAt": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "pagesHeldBack": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "pagesProcessed": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "pagesRemoved": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "pagesUnchanged": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "pullRequestUrl": {
+                              "format": "uri",
+                              "maxLength": 2048,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "runId": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "pattern": "^[a-zA-Z0-9-]+$",
+                              "type": "string"
+                            },
+                            "source": {
+                              "enum": [
+                                "NOTION"
+                              ],
+                              "type": "string"
+                            },
+                            "startedAt": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "status": {
+                              "enum": [
+                                "SUCCEEDED",
+                                "PARTIAL",
+                                "BLOCKED",
+                                "FAILED"
+                              ],
+                              "type": "string"
+                            },
+                            "trigger": {
+                              "enum": [
+                                "WEBHOOK",
+                                "SCHEDULE",
+                                "NIGHTLY",
+                                "MANUAL"
+                              ],
+                              "type": "string"
+                            },
+                            "warnings": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "runId",
+                            "source",
+                            "trigger",
+                            "status",
+                            "converterVersion",
+                            "pagesProcessed",
+                            "pagesUnchanged",
+                            "pagesRemoved",
+                            "pagesHeldBack",
+                            "warnings",
+                            "errorSummary",
+                            "pullRequestUrl",
+                            "commitSha",
+                            "startedAt",
+                            "finishedAt",
+                            "id"
+                          ],
+                          "type": "object"
+                        },
+                        "reportingConfigured": {
+                          "type": "boolean"
+                        },
+                        "webhookConfigured": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "webhookConfigured",
+                        "dispatchConfigured",
+                        "reportingConfigured",
+                        "handshakePending",
+                        "latestRun",
+                        "latestGoodRun"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The overview"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "What is set up, and how the latest sync went",
+        "tags": [
+          "Docs publishing"
+        ]
+      }
+    },
+    "/api/v1/admin/docs-publishing/runs": {
+      "get": {
+        "operationId": "DocsPublishingAdminController_runs",
+        "parameters": [
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: startedAt. Default: -startedAt",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: startedAt. Default: -startedAt",
+              "example": "-startedAt",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, trigger, source",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, trigger, source",
+              "properties": {
+                "source": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "NOTION"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "NOTION"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "status": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "SUCCEEDED",
+                        "PARTIAL",
+                        "BLOCKED",
+                        "FAILED"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "SUCCEEDED",
+                          "PARTIAL",
+                          "BLOCKED",
+                          "FAILED"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "trigger": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "WEBHOOK",
+                        "SCHEDULE",
+                        "NIGHTLY",
+                        "MANUAL"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "WEBHOOK",
+                          "SCHEDULE",
+                          "NIGHTLY",
+                          "MANUAL"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "properties": {
+                          "commitSha": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "converterVersion": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "errorSummary": {
+                            "maxLength": 500,
+                            "minLength": 1,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "finishedAt": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "pagesHeldBack": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "pagesProcessed": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "pagesRemoved": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "pagesUnchanged": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "pullRequestUrl": {
+                            "format": "uri",
+                            "maxLength": 2048,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "runId": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "pattern": "^[a-zA-Z0-9-]+$",
+                            "type": "string"
+                          },
+                          "source": {
+                            "enum": [
+                              "NOTION"
+                            ],
+                            "type": "string"
+                          },
+                          "startedAt": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "status": {
+                            "enum": [
+                              "SUCCEEDED",
+                              "PARTIAL",
+                              "BLOCKED",
+                              "FAILED"
+                            ],
+                            "type": "string"
+                          },
+                          "trigger": {
+                            "enum": [
+                              "WEBHOOK",
+                              "SCHEDULE",
+                              "NIGHTLY",
+                              "MANUAL"
+                            ],
+                            "type": "string"
+                          },
+                          "warnings": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "source",
+                          "trigger",
+                          "status",
+                          "converterVersion",
+                          "pagesProcessed",
+                          "pagesUnchanged",
+                          "pagesRemoved",
+                          "pagesHeldBack",
+                          "warnings",
+                          "errorSummary",
+                          "pullRequestUrl",
+                          "commitSha",
+                          "startedAt",
+                          "finishedAt",
+                          "id"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalIsCapped": {
+                          "description": "True when `total` is a lower bound: counting stopped at the list's cap, so there are at least this many rows (page through with `nextCursor`). Absent or false: `total` is exact.",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Paginated runs; pagination is in `meta`"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "List docs sync runs (newest first)",
+        "tags": [
+          "Docs publishing"
+        ]
+      }
+    },
+    "/api/v1/admin/docs-publishing/runs/{id}": {
+      "get": {
+        "operationId": "DocsPublishingAdminController_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "commitSha": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "converterVersion": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "errorSummary": {
+                          "maxLength": 500,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "finishedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "heldBack": {
+                          "items": {
+                            "properties": {
+                              "issues": {
+                                "items": {
+                                  "properties": {
+                                    "blockId": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "blockType": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "fix": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "reason": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "blockId",
+                                    "blockType",
+                                    "reason",
+                                    "fix"
+                                  ],
+                                  "type": "object"
+                                },
+                                "maxItems": 50,
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "slug": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "sourceId": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "sourceUrl": {
+                                "format": "uri",
+                                "maxLength": 2048,
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "title": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "sourceId",
+                              "title",
+                              "slug",
+                              "sourceUrl",
+                              "issues"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 200,
+                          "type": "array"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "pagesHeldBack": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "pagesProcessed": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "pagesRemoved": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "pagesUnchanged": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "pullRequestUrl": {
+                          "format": "uri",
+                          "maxLength": 2048,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "runId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "pattern": "^[a-zA-Z0-9-]+$",
+                          "type": "string"
+                        },
+                        "source": {
+                          "enum": [
+                            "NOTION"
+                          ],
+                          "type": "string"
+                        },
+                        "startedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "status": {
+                          "enum": [
+                            "SUCCEEDED",
+                            "PARTIAL",
+                            "BLOCKED",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "trigger": {
+                          "enum": [
+                            "WEBHOOK",
+                            "SCHEDULE",
+                            "NIGHTLY",
+                            "MANUAL"
+                          ],
+                          "type": "string"
+                        },
+                        "warnings": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "runId",
+                        "source",
+                        "trigger",
+                        "status",
+                        "converterVersion",
+                        "pagesProcessed",
+                        "pagesUnchanged",
+                        "pagesRemoved",
+                        "pagesHeldBack",
+                        "warnings",
+                        "heldBack",
+                        "errorSummary",
+                        "pullRequestUrl",
+                        "commitSha",
+                        "startedAt",
+                        "finishedAt",
+                        "id"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The run"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Get one docs sync run with its held-back pages",
+        "tags": [
+          "Docs publishing"
+        ]
+      }
+    },
+    "/api/v1/admin/docs-publishing/sync": {
+      "post": {
+        "operationId": "DocsPublishingAdminController_startSync",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "full": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "started": {
+                          "enum": [
+                            true
+                          ],
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "started"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "GitHub accepted the request"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Start a docs sync now",
+        "tags": [
+          "Docs publishing"
+        ]
+      }
+    },
+    "/api/v1/admin/docs-publishing/webhook-handshake/reveal": {
+      "post": {
+        "description": "A POST so that reading a secret is audited.",
+        "operationId": "DocsPublishingAdminController_revealHandshake",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "receivedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "source": {
+                          "enum": [
+                            "NOTION"
+                          ],
+                          "type": "string"
+                        },
+                        "verificationToken": {
+                          "maxLength": 500,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "verificationToken",
+                        "receivedAt"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The token"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Show the waiting webhook verification token",
+        "tags": [
+          "Docs publishing"
+        ]
+      }
+    },
     "/api/v1/admin/feature-flags": {
       "get": {
         "operationId": "FeatureFlagsController_list",
@@ -11703,7 +12983,7 @@
                               },
                               "key": {
                                 "enum": [
-                                  "component-gallery",
+                                  "showcase",
                                   "merchant-invites",
                                   "till-redemption"
                                 ],
@@ -11864,7 +13144,7 @@
                             "properties": {
                               "key": {
                                 "enum": [
-                                  "component-gallery",
+                                  "showcase",
                                   "merchant-invites",
                                   "till-redemption"
                                 ],
@@ -12132,7 +13412,7 @@
             "required": true,
             "schema": {
               "enum": [
-                "component-gallery",
+                "showcase",
                 "merchant-invites",
                 "till-redemption"
               ],
@@ -12194,7 +13474,7 @@
                         },
                         "key": {
                           "enum": [
-                            "component-gallery",
+                            "showcase",
                             "merchant-invites",
                             "till-redemption"
                           ],
@@ -46360,7 +47640,8 @@
                         "BACKGROUND_JOB",
                         "STATUS_INCIDENT",
                         "FEATURE_FLAG",
-                        "WEBHOOK"
+                        "WEBHOOK",
+                        "DOCS_SYNC"
                       ],
                       "type": "string"
                     },
@@ -46415,7 +47696,8 @@
                           "BACKGROUND_JOB",
                           "STATUS_INCIDENT",
                           "FEATURE_FLAG",
-                          "WEBHOOK"
+                          "WEBHOOK",
+                          "DOCS_SYNC"
                         ],
                         "type": "string"
                       },
@@ -46536,7 +47818,8 @@
                               "BACKGROUND_JOB",
                               "STATUS_INCIDENT",
                               "FEATURE_FLAG",
-                              "WEBHOOK"
+                              "WEBHOOK",
+                              "DOCS_SYNC"
                             ],
                             "type": "string"
                           }
@@ -46774,7 +48057,8 @@
                       "BACKGROUND_JOB",
                       "STATUS_INCIDENT",
                       "FEATURE_FLAG",
-                      "WEBHOOK"
+                      "WEBHOOK",
+                      "DOCS_SYNC"
                     ],
                     "example": "USER",
                     "type": "string"
@@ -46900,7 +48184,8 @@
                             "BACKGROUND_JOB",
                             "STATUS_INCIDENT",
                             "FEATURE_FLAG",
-                            "WEBHOOK"
+                            "WEBHOOK",
+                            "DOCS_SYNC"
                           ],
                           "type": "string"
                         },
@@ -47093,7 +48378,8 @@
                       "BACKGROUND_JOB",
                       "STATUS_INCIDENT",
                       "FEATURE_FLAG",
-                      "WEBHOOK"
+                      "WEBHOOK",
+                      "DOCS_SYNC"
                     ],
                     "type": "string"
                   },
@@ -47968,7 +49254,8 @@
                             "BACKGROUND_JOB",
                             "STATUS_INCIDENT",
                             "FEATURE_FLAG",
-                            "WEBHOOK"
+                            "WEBHOOK",
+                            "DOCS_SYNC"
                           ],
                           "type": "string"
                         },
@@ -48224,7 +49511,8 @@
                             "BACKGROUND_JOB",
                             "STATUS_INCIDENT",
                             "FEATURE_FLAG",
-                            "WEBHOOK"
+                            "WEBHOOK",
+                            "DOCS_SYNC"
                           ],
                           "type": "string"
                         },
@@ -48461,7 +49749,8 @@
                             "BACKGROUND_JOB",
                             "STATUS_INCIDENT",
                             "FEATURE_FLAG",
-                            "WEBHOOK"
+                            "WEBHOOK",
+                            "DOCS_SYNC"
                           ],
                           "type": "string"
                         },
@@ -53629,7 +54918,8 @@
                         "BILLPLZ",
                         "CHIP",
                         "FAKE_PAYMENTS",
-                        "TWILIO"
+                        "TWILIO",
+                        "NOTION"
                       ],
                       "type": "string"
                     },
@@ -53641,7 +54931,8 @@
                           "BILLPLZ",
                           "CHIP",
                           "FAKE_PAYMENTS",
-                          "TWILIO"
+                          "TWILIO",
+                          "NOTION"
                         ],
                         "type": "string"
                       },
@@ -53785,7 +55076,8 @@
                               "BILLPLZ",
                               "CHIP",
                               "FAKE_PAYMENTS",
-                              "TWILIO"
+                              "TWILIO",
+                              "NOTION"
                             ],
                             "type": "string"
                           },
@@ -54075,7 +55367,8 @@
                             "BILLPLZ",
                             "CHIP",
                             "FAKE_PAYMENTS",
-                            "TWILIO"
+                            "TWILIO",
+                            "NOTION"
                           ],
                           "type": "string"
                         },
@@ -67108,7 +68401,8 @@
                             "BACKGROUND_JOB",
                             "STATUS_INCIDENT",
                             "FEATURE_FLAG",
-                            "WEBHOOK"
+                            "WEBHOOK",
+                            "DOCS_SYNC"
                           ],
                           "type": "string"
                         },
@@ -67221,7 +68515,8 @@
                                   "BACKGROUND_JOB",
                                   "STATUS_INCIDENT",
                                   "FEATURE_FLAG",
-                                  "WEBHOOK"
+                                  "WEBHOOK",
+                                  "DOCS_SYNC"
                                 ],
                                 "type": "string"
                               },
@@ -67404,7 +68699,8 @@
                 "BACKGROUND_JOB",
                 "STATUS_INCIDENT",
                 "FEATURE_FLAG",
-                "WEBHOOK"
+                "WEBHOOK",
+                "DOCS_SYNC"
               ],
               "type": "string"
             }
@@ -70148,6 +71444,299 @@
         "summary": "Issue fresh QR and backup codes for an active claim (the previous codes stop working)",
         "tags": [
           "Claims"
+        ]
+      }
+    },
+    "/api/v1/docs-publishing/sync-runs": {
+      "post": {
+        "operationId": "DocsSyncReportController_report",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "commitSha": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "converterVersion": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "errorSummary": {
+                    "maxLength": 500,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "finishedAt": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "heldBack": {
+                    "items": {
+                      "properties": {
+                        "issues": {
+                          "items": {
+                            "properties": {
+                              "blockId": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "blockType": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "fix": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "reason": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "blockId",
+                              "blockType",
+                              "reason",
+                              "fix"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 50,
+                          "minItems": 1,
+                          "type": "array"
+                        },
+                        "slug": {
+                          "maxLength": 500,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "sourceId": {
+                          "maxLength": 500,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "sourceUrl": {
+                          "format": "uri",
+                          "maxLength": 2048,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "title": {
+                          "maxLength": 500,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "sourceId",
+                        "title",
+                        "slug",
+                        "sourceUrl",
+                        "issues"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 200,
+                    "type": "array"
+                  },
+                  "pagesHeldBack": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "pagesProcessed": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "pagesRemoved": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "pagesUnchanged": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "pullRequestUrl": {
+                    "format": "uri",
+                    "maxLength": 2048,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "runId": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9-]+$",
+                    "type": "string"
+                  },
+                  "source": {
+                    "enum": [
+                      "NOTION"
+                    ],
+                    "type": "string"
+                  },
+                  "startedAt": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "status": {
+                    "enum": [
+                      "SUCCEEDED",
+                      "PARTIAL",
+                      "BLOCKED",
+                      "FAILED"
+                    ],
+                    "type": "string"
+                  },
+                  "trigger": {
+                    "enum": [
+                      "WEBHOOK",
+                      "SCHEDULE",
+                      "NIGHTLY",
+                      "MANUAL"
+                    ],
+                    "type": "string"
+                  },
+                  "warnings": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "runId",
+                  "source",
+                  "trigger",
+                  "status",
+                  "converterVersion",
+                  "pagesProcessed",
+                  "pagesUnchanged",
+                  "pagesRemoved",
+                  "pagesHeldBack",
+                  "warnings",
+                  "heldBack",
+                  "errorSummary",
+                  "pullRequestUrl",
+                  "commitSha",
+                  "startedAt",
+                  "finishedAt"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "recorded": {
+                          "enum": [
+                            true
+                          ],
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "recorded"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The run was recorded"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {},
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "A docs sync's report (bearer: DOCS_SYNC_REPORT_TOKEN)",
+        "tags": [
+          "Docs publishing"
         ]
       }
     },
@@ -93555,6 +95144,124 @@
         ]
       }
     },
+    "/api/v1/integrations/notion/webhook": {
+      "post": {
+        "operationId": "NotionWebhookController_receive",
+        "parameters": [
+          {
+            "description": "`sha256=` + HMAC-SHA256 of the raw body with the verification token; not checked on the first handshake, which delivers that token",
+            "in": "header",
+            "name": "X-Notion-Signature",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "outcome": {
+                          "enum": [
+                            "handshake",
+                            "dispatched",
+                            "duplicate",
+                            "ignored"
+                          ],
+                          "type": "string"
+                        },
+                        "received": {
+                          "enum": [
+                            true
+                          ],
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "received",
+                        "outcome"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The event was verified, or the handshake was kept"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {},
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Receive a Notion webhook event",
+        "tags": [
+          "Docs publishing"
+        ]
+      }
+    },
     "/api/v1/legal/accept": {
       "post": {
         "operationId": "RewardLegalController_acceptLegal",
@@ -109394,7 +111101,8 @@
                                   "BACKGROUND_JOB",
                                   "STATUS_INCIDENT",
                                   "FEATURE_FLAG",
-                                  "WEBHOOK"
+                                  "WEBHOOK",
+                                  "DOCS_SYNC"
                                 ],
                                 "type": "string"
                               }
@@ -109638,7 +111346,8 @@
                           "BACKGROUND_JOB",
                           "STATUS_INCIDENT",
                           "FEATURE_FLAG",
-                          "WEBHOOK"
+                          "WEBHOOK",
+                          "DOCS_SYNC"
                         ],
                         "type": "string"
                       }
@@ -109773,7 +111482,8 @@
                                 "BACKGROUND_JOB",
                                 "STATUS_INCIDENT",
                                 "FEATURE_FLAG",
-                                "WEBHOOK"
+                                "WEBHOOK",
+                                "DOCS_SYNC"
                               ],
                               "type": "string"
                             }
@@ -110187,7 +111897,8 @@
                                     "BACKGROUND_JOB",
                                     "STATUS_INCIDENT",
                                     "FEATURE_FLAG",
-                                    "WEBHOOK"
+                                    "WEBHOOK",
+                                    "DOCS_SYNC"
                                   ],
                                   "type": "string"
                                 }
@@ -110424,7 +112135,8 @@
                             "BACKGROUND_JOB",
                             "STATUS_INCIDENT",
                             "FEATURE_FLAG",
-                            "WEBHOOK"
+                            "WEBHOOK",
+                            "DOCS_SYNC"
                           ],
                           "type": "string"
                         }
@@ -110542,7 +112254,8 @@
                                   "BACKGROUND_JOB",
                                   "STATUS_INCIDENT",
                                   "FEATURE_FLAG",
-                                  "WEBHOOK"
+                                  "WEBHOOK",
+                                  "DOCS_SYNC"
                                 ],
                                 "type": "string"
                               }
@@ -110951,7 +112664,8 @@
                             "BACKGROUND_JOB",
                             "STATUS_INCIDENT",
                             "FEATURE_FLAG",
-                            "WEBHOOK"
+                            "WEBHOOK",
+                            "DOCS_SYNC"
                           ],
                           "type": "string"
                         }
@@ -111065,7 +112779,8 @@
                                   "BACKGROUND_JOB",
                                   "STATUS_INCIDENT",
                                   "FEATURE_FLAG",
-                                  "WEBHOOK"
+                                  "WEBHOOK",
+                                  "DOCS_SYNC"
                                 ],
                                 "type": "string"
                               }
@@ -111713,7 +113428,8 @@
                                   "BACKGROUND_JOB",
                                   "STATUS_INCIDENT",
                                   "FEATURE_FLAG",
-                                  "WEBHOOK"
+                                  "WEBHOOK",
+                                  "DOCS_SYNC"
                                 ],
                                 "type": "string"
                               }

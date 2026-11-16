@@ -1,0 +1,31 @@
+import { Button } from "@workspace/ui-native/components/button";
+import { Stepper, type StepperStep } from "@workspace/ui-native/components/stepper";
+import * as React from "react";
+import { Text, View } from "react-native";
+
+const STEPS: readonly StepperStep[] = [
+	{ key: "account", title: "Account" },
+	{ key: "profile", title: "Profile" },
+	{ key: "plan", title: "Plan" },
+	{ key: "review", title: "Review" },
+];
+
+export function Stepper12Example(): React.JSX.Element {
+	const [step, setStep] = React.useState(2);
+	const back = React.useCallback((): void => {
+		setStep((current: number): number => Math.max(current - 1, 1));
+	}, []);
+	const next = React.useCallback((): void => {
+		setStep((current: number): number => Math.min(current + 1, STEPS.length));
+	}, []);
+	return (
+		<View className="gap-3">
+			<Stepper steps={STEPS} value={step} variant="segmented" labelPosition="none" />
+			<View className="flex-row items-center justify-between">
+				<Button label="Back" variant="link" size="sm" onPress={back} disabled={step === 1} />
+				<Text className="text-body font-sans text-muted-foreground tabular-nums">{`${String(step)} / ${String(STEPS.length)}`}</Text>
+				<Button label="Next" size="sm" onPress={next} disabled={step === STEPS.length} />
+			</View>
+		</View>
+	);
+}

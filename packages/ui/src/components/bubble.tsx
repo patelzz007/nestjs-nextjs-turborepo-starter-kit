@@ -4,6 +4,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
+/** Joins consecutive turns from one sender with tighter corners. */
 const BubbleGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function BubbleGroup({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="bubble-group" className={cn("flex min-w-0 flex-col gap-2", className)} {...props} />;
 });
@@ -12,6 +13,7 @@ const bubbleVariants = cva(
 	"group/bubble relative flex w-fit max-w-4/5 min-w-0 flex-col gap-1 group-data-[align=end]/message:self-end data-[align=end]:self-end data-[variant=ghost]:max-w-full",
 	{
 		variants: {
+			/** `default`, `secondary`, `muted`, `tinted`, `outline`, `ghost` or `destructive`. */
 			variant: {
 				default:
 					"*:data-[slot=bubble-content]:bg-primary *:data-[slot=bubble-content]:text-primary-foreground [&>[data-slot=bubble-content]:is(button,a):hover]:bg-primary/80",
@@ -36,13 +38,16 @@ const bubbleVariants = cva(
 
 type BubbleProps = React.ComponentProps<"div"> &
 	VariantProps<typeof bubbleVariants> & {
+		/** `start` (the other side) or `end` (the sender's side). */
 		align?: "start" | "end";
 	};
 
+/** One chat turn's surface. `align` puts it on the start or the end side; it needs a flex-column parent. */
 const Bubble = React.forwardRef<HTMLDivElement, BubbleProps>(function Bubble({ variant = "default", align = "start", className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="bubble" data-variant={variant} data-align={align} className={cn(bubbleVariants({ variant }), className)} {...props} />;
 });
 
+/** The bubble's text. Render it as a button or a link through `render` to make it pressable. */
 const BubbleContent = React.forwardRef<HTMLDivElement, useRender.ComponentProps<"div">>(function BubbleContent({ className, render, ...props }, ref): React.ReactElement {
 	return useRender({
 		ref,
@@ -84,10 +89,13 @@ const bubbleReactionsVariants = cva(
 );
 
 type BubbleReactionsProps = React.ComponentProps<"div"> & {
+	/** Which end of the bubble the reactions line up with. */
 	align?: "start" | "end";
+	/** Whether the reactions sit above (`top`) or under (`bottom`) the bubble. */
 	side?: "top" | "bottom";
 };
 
+/** Emoji reactions under the bubble. */
 const BubbleReactions = React.forwardRef<HTMLDivElement, BubbleReactionsProps>(function BubbleReactions(
 	{ side = "bottom", align = "end", className, ...props },
 	ref,

@@ -29,6 +29,6 @@ import { SystemClock } from "./system-clock";
 		{ provide: OPERATIONAL_ALERTS, useExisting: LoggerOperationalAlerts },
 		SystemCommandDispatcher,
 	],
-	exports: [SystemCommandDispatcher, CLOCK],
+	exports: [SystemCommandDispatcher, CLOCK, OPERATIONAL_ALERTS],
 })
 export class SystemCommandModule {}

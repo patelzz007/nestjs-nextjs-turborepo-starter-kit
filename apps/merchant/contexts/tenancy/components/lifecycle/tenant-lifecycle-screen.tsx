@@ -5,6 +5,7 @@ import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-message
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import {
 	PLATFORM_DISPLAY_REGION,
+	TENANT_LIFECYCLE,
 	TENANT_LIFECYCLE_TEXT_MAX_LENGTH,
 	type TenantAppealStatus,
 	type TenantLifecycleResponse,
@@ -128,9 +129,10 @@ export const TenantLifecycleScreen = React.forwardRef<HTMLDivElement, TenantLife
 		);
 	}
 
-	const suspended = lifecycle.lifecycleState === "SUSPENDED";
-	const banned = lifecycle.lifecycleState === "BANNED";
-	const pendingDeletion = lifecycle.lifecycleState === "PENDING_DELETION";
+	// What the members may do comes from the lifecycle table the API enforces: an appeal asks to be reinstated.
+	const suspended = TENANT_LIFECYCLE.can("reinstate", lifecycle.lifecycleState);
+	const banned = TENANT_LIFECYCLE.can("unban", lifecycle.lifecycleState);
+	const pendingDeletion = TENANT_LIFECYCLE.can("reactivate", lifecycle.lifecycleState);
 	const hasPendingAppeal = lifecycle.appeals.some((candidate) => candidate.status === "PENDING");
 
 	return (

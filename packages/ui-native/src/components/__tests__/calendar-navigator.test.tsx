@@ -110,3 +110,16 @@ describe("CalendarNavigator", () => {
 		expect(className).not.toContain("gap-2");
 	});
 });
+
+describe("CalendarNavigator layout", () => {
+	it("puts the month and year first and both steps together at the end", async () => {
+		await render(
+			<CalendarNavigator month={MAX_MONTH} minMonth={MIN_MONTH} maxMonth={MAX_MONTH} locale="en-MY" onMonthChange={jest.fn()} layout="start">
+				<Text>days</Text>
+			</CalendarNavigator>,
+		);
+		const previous = screen.getByRole("button", { name: "Previous month" });
+		expect(previous.parent?.parent).toBe(screen.getByRole("button", { name: "Next month" }).parent?.parent);
+		expect(screen.getByRole("button", { name: "Month: October" })).toBeOnTheScreen();
+	});
+});

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Track rows by id",
+		"do": {
+			"text": "Give the table `getRowId`, so a selection or an edit follows its row through a sort, a filter or a page.",
+			"file": "data-table-do-1",
+			"export": "DataTableDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave rows tracked by position: after a sort, the tick lands on whichever row moved there.",
+			"file": "data-table-dont-1",
+			"export": "DataTableDont1Example"
+		}
+	},
+	{
+		"title": "Keep a narrow table narrow",
+		"do": {
+			"text": "Show the few columns a reader compares; put the rest behind a row action or the columns menu.",
+			"file": "data-table-do-2",
+			"export": "DataTableDo2Example"
+		},
+		"dont": {
+			"text": "Don't show every field: the reader scrolls sideways and loses their row.",
+			"file": "data-table-dont-2",
+			"export": "DataTableDont2Example"
+		}
+	}
+]

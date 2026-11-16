@@ -106,11 +106,15 @@ export function MarkdownPicture({ image, source, link, onFailed }: MarkdownPictu
 	if (source !== null && failedKey === keyOf(source)) {
 		return (
 			<View className="flex-row items-center gap-3 rounded-md border border-border bg-muted px-3 py-3" testID="markdown-picture-failed">
-				<Icon icon={ImageOffIcon} size="md" colorClassName="accent-muted-foreground" />
+				<Icon icon={ImageOffIcon} size="md" colorClassName="accent-icon" />
 				<View className="flex-1 gap-1">
-					<Text className="font-sans text-sm text-foreground">{`${description} can't be shown here.`}</Text>
+					<Text className="text-body font-sans text-foreground">{`${description} can't be shown here.`}</Text>
 					{openableHref(image.href) === null ? null : (
-						<Text accessibilityRole="link" accessibilityHint="Opens in your browser" onPress={openSource} className="font-sans-medium text-sm text-info-foreground underline">
+						<Text
+							accessibilityRole="link"
+							accessibilityHint="Opens in your browser"
+							onPress={openSource}
+							className="font-sans-medium text-body text-info-foreground underline">
 							Open in browser
 						</Text>
 					)}

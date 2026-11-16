@@ -37,6 +37,23 @@ describe("EventCalendarNav", () => {
 		expect(screen.getByText("March 2026").getAttribute("aria-live")).toBe("polite");
 	});
 
+	it("pins itself to the top of the scroll container only with stickyNav", (): void => {
+		const ref = React.createRef<HTMLDivElement>();
+		const { rerender } = render(
+			<CalendarHarness>
+				<EventCalendarNav ref={ref} />
+			</CalendarHarness>,
+		);
+		expect(ref.current?.classList.contains("sticky")).toBe(false);
+		rerender(
+			<CalendarHarness stickyNav>
+				<EventCalendarNav ref={ref} />
+			</CalendarHarness>,
+		);
+		expect(ref.current?.classList.contains("sticky")).toBe(true);
+		expect(ref.current?.classList.contains("z-sticky")).toBe(true);
+	});
+
 	it("navigates with prev, next and today", (): void => {
 		const onDateChange = vi.fn<(date: Date) => void>();
 		render(

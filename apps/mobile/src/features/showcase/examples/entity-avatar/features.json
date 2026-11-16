@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-entity-avatar-1",
+		"label": "Overview",
+		"description": "Shops without logos as monograms tinted from their names, one in a circle. Best for tenants, merchants and teams.",
+		"file": "entity-avatar-1",
+		"export": "EntityAvatar1Example"
+	}
+]

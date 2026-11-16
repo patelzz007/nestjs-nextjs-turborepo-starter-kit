@@ -20,6 +20,7 @@ const DOT_CLASSES: Readonly<Record<StatusBadgeTone, string>> = {
 	success: "bg-success",
 	warning: "bg-warning",
 	destructive: "bg-destructive",
+	muted: "border border-muted-foreground",
 };
 
 function StatusDot({ tone }: { readonly tone: StatusBadgeTone }): React.JSX.Element {
@@ -78,7 +79,7 @@ function SessionText({ className, testID }: { readonly className: string; readon
 
 /** "● Strong, 42 ms · 149m 19s left". */
 export function StatusLine({ onInk, testID }: StatusLineProps): React.JSX.Element {
-	const textClass = `font-sans text-xs ${onInk ? "text-auth-panel-muted" : "text-muted-foreground"}`;
+	const textClass = `font-sans text-caption ${onInk ? "text-auth-panel-muted" : "text-muted-foreground"}`;
 	return (
 		<View className="flex-row items-center gap-1.5" testID={testID}>
 			<NetworkButton className="flex-row items-center gap-1.5" {...(testID === undefined ? {} : { testID: `${testID}-network` })}>
@@ -99,9 +100,9 @@ export function StatusLine({ onInk, testID }: StatusLineProps): React.JSX.Elemen
 	);
 }
 
-const CARD_CLASS = "flex-1 gap-0.5 rounded-2xl border border-border bg-card px-3 py-2";
-const CARD_TITLE_CLASS = "font-sans text-xs text-muted-foreground";
-const CARD_VALUE_CLASS = "font-sans-semibold flex-shrink text-sm text-foreground";
+const CARD_CLASS = "flex-1 gap-0.5 rounded-card border border-border bg-card px-3 py-2";
+const CARD_TITLE_CLASS = "font-sans text-caption text-muted-foreground";
+const CARD_VALUE_CLASS = "font-sans-semibold flex-shrink text-body text-foreground";
 
 export interface StatusCardsProps {
 	readonly connectionTitle: string;

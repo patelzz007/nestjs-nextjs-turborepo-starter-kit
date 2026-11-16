@@ -1,0 +1,121 @@
+[
+	{
+		"id": "c-icon-tile-1",
+		"label": "Default",
+		"description": "Outline icon tile. Best for a bordered surface in the brand tone around a folder glyph.",
+		"file": "icon-tile-1",
+		"export": "IconTile1Example"
+	},
+	{
+		"id": "c-icon-tile-2",
+		"label": "Elevated",
+		"description": "Elevated icon tile. Best for a lone raised chip with a muted fill, a screen colored ring and a soft shadow, around a package glyph.",
+		"file": "icon-tile-2",
+		"export": "IconTile2Example"
+	},
+	{
+		"id": "c-icon-tile-3",
+		"label": "Framed",
+		"description": "Framed icon tile. Best for a muted outer ring around an inset card, the double surface that echoes the Frame primitive, around a dashboard glyph.",
+		"file": "icon-tile-3",
+		"export": "IconTile3Example"
+	},
+	{
+		"id": "c-icon-tile-4",
+		"label": "All Variants",
+		"description": "All variants. Best for the 5 surface treatments in one row around the same package glyph, for comparing them before picking one.",
+		"file": "icon-tile-4",
+		"export": "IconTile4Example"
+	},
+	{
+		"id": "c-icon-tile-5",
+		"label": "Sizes",
+		"description": "Sizes. Best for elevated tiles at xs, sm, md, lg and xl, bottom aligned so box and glyph growth compare step by step.",
+		"file": "icon-tile-5",
+		"export": "IconTile5Example"
+	},
+	{
+		"id": "c-icon-tile-6",
+		"label": "Circular",
+		"description": "Circular tiles. Best for large round tiles in the outline, elevated and nested card surfaces, with globe, star and check glyphs.",
+		"file": "icon-tile-6",
+		"export": "IconTile6Example"
+	},
+	{
+		"id": "c-icon-tile-7",
+		"label": "Custom Sizing",
+		"description": "Custom sizing. Best for a tile sized past the scale with a class on the box, while the size prop still picks the glyph.",
+		"file": "icon-tile-7",
+		"export": "IconTile7Example"
+	},
+	{
+		"id": "c-icon-tile-8",
+		"label": "Color Tones",
+		"description": "Color tones. Best for tint tiles in brand, green, yellow and red, each tone painting its own soft fill and glyph colour.",
+		"file": "icon-tile-8",
+		"export": "IconTile8Example"
+	},
+	{
+		"id": "c-icon-tile-9",
+		"label": "Text Content",
+		"description": "Text content. Best for initials and a count in place of a glyph, the first on a raised tile and the second in a round outline with muted text.",
+		"file": "icon-tile-9",
+		"export": "IconTile9Example"
+	},
+	{
+		"id": "c-icon-tile-10",
+		"label": "List Row",
+		"description": "List row. Best for a small raised tile at the start of an outlined row, beside a file title and an updated by line.",
+		"file": "icon-tile-10",
+		"export": "IconTile10Example"
+	},
+	{
+		"id": "c-icon-tile-11",
+		"label": "Feature Card",
+		"description": "Feature card. Best for a large raised tile heading a card, stacked over a feature title and one sentence of copy.",
+		"file": "icon-tile-11",
+		"export": "IconTile11Example"
+	},
+	{
+		"id": "c-icon-tile-12",
+		"label": "Empty State",
+		"description": "Empty state. Best for the largest tile in its frame surface as the illustration of an empty state, above a no files title and hint.",
+		"file": "icon-tile-12",
+		"export": "IconTile12Example"
+	},
+	{
+		"id": "c-icon-tile-13",
+		"label": "Interactive",
+		"description": "Interactive tile. Best for a raised tile that is a link with its own accessible name, dimming while pressed.",
+		"file": "icon-tile-13",
+		"export": "IconTile13Example"
+	},
+	{
+		"id": "c-icon-tile-14",
+		"label": "Status Overlay",
+		"description": "Status overlay. Best for a raised globe tile with a green dot pinned to its top end corner, cut out by a screen coloured ring.",
+		"file": "icon-tile-14",
+		"export": "IconTile14Example"
+	},
+	{
+		"id": "c-icon-tile-15",
+		"label": "Soft Tones",
+		"description": "Soft tones. Best for soft tiles in five tones, each tinting its ring, inner card and glyph.",
+		"file": "icon-tile-15",
+		"export": "IconTile15Example"
+	},
+	{
+		"id": "c-icon-tile-16",
+		"label": "Solid Tones",
+		"description": "Solid tones. Best for filled tiles in brand, blue, green, yellow and red with a contrasting glyph.",
+		"file": "icon-tile-16",
+		"export": "IconTile16Example"
+	},
+	{
+		"id": "c-icon-tile-17",
+		"label": "Brand Colors",
+		"description": "Brand colors. Best for solid tiles in violet, orange, green and red that keep the elevated ring and shadow.",
+		"file": "icon-tile-17",
+		"export": "IconTile17Example"
+	}
+]

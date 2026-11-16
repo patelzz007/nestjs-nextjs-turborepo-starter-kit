@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Match the ratio to the media",
+		"do": {
+			"text": "Frame each photo or video at the ratio it was made in (16:9 video, 4:5 portrait posts).",
+			"file": "aspect-ratio-do-1",
+			"export": "AspectRatioDo1Example"
+		},
+		"dont": {
+			"text": "Don't force portrait media into a wide frame: the subject is cropped away.",
+			"file": "aspect-ratio-dont-1",
+			"export": "AspectRatioDont1Example"
+		}
+	},
+	{
+		"title": "Keep tall frames narrow",
+		"do": {
+			"text": "Cap tall frames to a column's width so the rest of the page stays in view.",
+			"file": "aspect-ratio-do-2",
+			"export": "AspectRatioDo2Example"
+		},
+		"dont": {
+			"text": "Don't let a 9:16 frame fill the width: it pushes everything else out of view.",
+			"file": "aspect-ratio-dont-2",
+			"export": "AspectRatioDont2Example"
+		}
+	}
+]

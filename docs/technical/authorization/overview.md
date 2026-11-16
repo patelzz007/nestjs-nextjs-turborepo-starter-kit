@@ -4,8 +4,11 @@ tags: ["authorization", "rbac", "rebac", "rls", "tenancy", "overview", "onboardi
 description: "The whole access system as one story, then where its code lives, the golden rules and the words: who you are, which merchant you act for, what your role lets you do, and the database's own safety net."
 order: 20
 author: "Platform Team"
+category: "Authorization"
+date: 1790726400000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793192519000
+coverImage: "/images/covers/technical/authorization/overview.webp"
 ---
 
 # Authorization: start here

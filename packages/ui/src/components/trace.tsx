@@ -52,6 +52,7 @@ const Trace = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(func
 });
 
 interface TraceLineProps extends React.ComponentProps<"span"> {
+	/** The step's state: `running`, `error` or `pending`; no status means done. Say it in the title too. */
 	readonly status?: TraceLineStatus | undefined;
 }
 
@@ -91,8 +92,12 @@ type CollapsibleRootProps = React.ComponentProps<typeof Collapsible>;
 /** Uncontrolled (`defaultOpen`), or controlled — then `open` and `onOpenChange` come together. */
 type TraceCollapsibleProps = Omit<CollapsibleRootProps, "open"> &
 	(
-		| { readonly open?: undefined }
 		| {
+				/** Uncontrolled: the step opens and closes by itself. */
+				readonly open?: undefined;
+		  }
+		| {
+				/** Whether the step's detail is shown, controlled; pair with `onOpenChange`. */
 				readonly open: boolean;
 				readonly onOpenChange: NonNullable<CollapsibleRootProps["onOpenChange"]>;
 		  }

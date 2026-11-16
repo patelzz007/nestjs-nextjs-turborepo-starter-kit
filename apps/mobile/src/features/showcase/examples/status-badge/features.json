@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-status-badge-1",
+		"label": "Overview",
+		"description": "Every member status mapped to a tone and a label in one badge. Best for showing a record's state consistently across tables and screens.",
+		"file": "status-badge-1",
+		"export": "StatusBadge1Example"
+	}
+]

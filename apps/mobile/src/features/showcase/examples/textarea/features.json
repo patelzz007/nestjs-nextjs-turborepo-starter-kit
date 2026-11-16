@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-textarea-1",
+		"label": "Basic",
+		"description": "Basic textarea. Best for the bare multi line box with placeholder text and no label, Field or hint around it.",
+		"file": "textarea-1",
+		"export": "Textarea1Example"
+	},
+	{
+		"id": "c-textarea-2",
+		"label": "Invalid",
+		"description": "Invalid textarea. Best for the red invalid state set by invalid alone, with no label or message saying what is wrong.",
+		"file": "textarea-2",
+		"export": "Textarea2Example"
+	},
+	{
+		"id": "c-textarea-3",
+		"label": "With Label",
+		"description": "Textarea with label. Best for a Your Message label above the box, tied to it by htmlFor and id, with nothing printed below.",
+		"file": "textarea-3",
+		"export": "Textarea3Example"
+	},
+	{
+		"id": "c-textarea-4",
+		"label": "With Description",
+		"description": "Textarea with description. Best for a Feedback label above the box and one line of help text printed below it.",
+		"file": "textarea-4",
+		"export": "Textarea4Example"
+	},
+	{
+		"id": "c-textarea-5",
+		"label": "Disabled",
+		"description": "Disabled textarea. Best for a labeled box locked by the disabled attribute, dimmed to half opacity with a not allowed cursor.",
+		"file": "textarea-5",
+		"export": "Textarea5Example"
+	},
+	{
+		"id": "c-textarea-6",
+		"label": "Auto-Resize Counter",
+		"description": "Auto-resize textarea with character count. Best for a 280 character Bio whose live count by the label turns to the warning tone 20 short of the cap and red at it.",
+		"file": "textarea-6",
+		"export": "Textarea6Example"
+	}
+]

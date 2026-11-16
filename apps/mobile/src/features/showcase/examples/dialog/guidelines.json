@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep it to one short task",
+		"do": {
+			"text": "Use a dialog for one short task: a rename, a confirmation, a two-field edit.",
+			"file": "dialog-do-1",
+			"export": "DialogDo1Example"
+		},
+		"dont": {
+			"text": "Don't put a long form in a dialog: use a screen or a sheet.",
+			"file": "dialog-dont-1",
+			"export": "DialogDont1Example"
+		}
+	},
+	{
+		"title": "Say what will happen",
+		"do": {
+			"text": "Name the action in the title and on the button (\"Delete project\").",
+			"file": "dialog-do-2",
+			"export": "DialogDo2Example"
+		},
+		"dont": {
+			"text": "Don't ask \"Are you sure?\" with an \"OK\" button: neither says what happens.",
+			"file": "dialog-dont-2",
+			"export": "DialogDont2Example"
+		}
+	}
+]

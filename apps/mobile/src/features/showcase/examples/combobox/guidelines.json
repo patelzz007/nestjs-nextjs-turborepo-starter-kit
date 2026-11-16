@@ -1,0 +1,41 @@
+[
+	{
+		"title": "Search where it pays",
+		"do": {
+			"text": "Use a combobox for a long list people find by typing: countries, people, repositories.",
+			"file": "combobox-do-1",
+			"export": "ComboboxDo1Example"
+		},
+		"dont": {
+			"text": "Don't make people search three sizes they can read at a glance: use a select or a toggle group.",
+			"file": "combobox-dont-1",
+			"export": "ComboboxDont1Example"
+		}
+	},
+	{
+		"title": "Help when nothing matches",
+		"do": {
+			"text": "Say what to try next when the search finds nothing.",
+			"file": "combobox-do-2",
+			"export": "ComboboxDo2Example"
+		},
+		"dont": {
+			"text": "Don't answer a search with \"Error.\": nothing went wrong, and it says nothing useful.",
+			"file": "combobox-dont-2",
+			"export": "ComboboxDont2Example"
+		}
+	},
+	{
+		"title": "Show what is chosen",
+		"do": {
+			"text": "Show several picks as chips people can see and remove one by one.",
+			"file": "combobox-do-3",
+			"export": "ComboboxDo3Example"
+		},
+		"dont": {
+			"text": "Don't squeeze many picks into one truncated line that hides most of them.",
+			"file": "combobox-dont-3",
+			"export": "ComboboxDont3Example"
+		}
+	}
+]

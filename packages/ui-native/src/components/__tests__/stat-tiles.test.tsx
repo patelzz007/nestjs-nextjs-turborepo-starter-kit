@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react-native";
+import StoreIcon from "lucide-react-native/icons/store";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
-import { StatTiles, type StatTile } from "../stat-tiles";
+import { describeStatTile, StatTiles, type StatTile } from "../stat-tiles";
 
 const ITEMS: readonly StatTile[] = [
 	{ label: "Stars", value: "1,204" },
@@ -14,7 +15,7 @@ describe("StatTiles", () => {
 		await render(<StatTiles items={ITEMS} />);
 
 		expect(screen.getByLabelText("Stars: 1,204")).toBeOnTheScreen();
-		expect(screen.getByText("1,204")).toHaveProp("className", expect.stringContaining("text-xl"));
+		expect(screen.getByText("1,204")).toHaveProp("className", expect.stringContaining("text-h3"));
 	});
 
 	it("stands its figures on the surface by default, with no box of their own", async () => {
@@ -34,7 +35,7 @@ describe("StatTiles", () => {
 		await render(<StatTiles items={ITEMS} variant="outline" size="sm" />);
 
 		expect(screen.getByLabelText("Stars: 1,204")).toHaveProp("className", expect.stringContaining("border-border"));
-		expect(screen.getByText("1,204")).toHaveProp("className", expect.stringContaining("text-base"));
+		expect(screen.getByText("1,204")).toHaveProp("className", expect.stringContaining("text-body-lg"));
 	});
 
 	it("forwards its ref and merges className last", async () => {
@@ -45,5 +46,12 @@ describe("StatTiles", () => {
 		const className = String(screen.getByTestId("tiles").props.className);
 		expect(className).toContain("gap-4");
 		expect(className).not.toContain("gap-x-6");
+	});
+
+	it("reads a tile's hint after its value, and draws its glyph tile", async () => {
+		await render(<StatTiles items={[{ label: "Active merchants", value: "1,284", hint: "+42 this week", icon: StoreIcon, iconTone: "brand" }]} />);
+		expect(screen.getByLabelText("Active merchants: 1,284, +42 this week")).toBeOnTheScreen();
+		expect(screen.getByText("+42 this week")).toBeOnTheScreen();
+		expect(describeStatTile({ label: "Stars", value: "42" })).toBe("Stars: 42");
 	});
 });

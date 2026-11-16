@@ -86,11 +86,11 @@ export default function AnalyticsScreen(): React.JSX.Element {
 						onPress={openPicker}
 						testID="analytics-range-button"
 						className="min-h-11 flex-row items-center gap-2 rounded-xl border border-border bg-card px-3 active:opacity-70">
-						<Icon icon={CalendarRangeIcon} size="sm" colorClassName="accent-muted-foreground" />
-						<Text className="font-sans-medium text-sm text-foreground" testID="analytics-range-label">
+						<Icon icon={CalendarRangeIcon} size="sm" colorClassName="accent-icon" />
+						<Text className="font-sans-medium text-body text-foreground" testID="analytics-range-label">
 							{rangeLabel}
 						</Text>
-						<Icon icon={ChevronDownIcon} size="sm" colorClassName="accent-muted-foreground" />
+						<Icon icon={ChevronDownIcon} size="sm" colorClassName="accent-icon" />
 					</Pressable>
 					<Badge label="Sample data" />
 				</View>

@@ -3,8 +3,11 @@ title: "Analytics API — dashboards and exports"
 description: "The customer, merchant and admin analytics dashboards (custom range, day/week/month buckets computed in Postgres, compared totals, breakdowns) and the merchant/admin CSV, XLSX and PDF exports: contracts, authorization, time zones, limits, samples and how the code is laid out."
 order: 17
 author: "Platform Team"
+category: "API"
+date: 1791158400000
 lastUpdated: 1791158400000
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/api/analytics.webp"
 tags: ["api", "analytics", "exports", "csv", "xlsx", "pdf"]
 ---
 

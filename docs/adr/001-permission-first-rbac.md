@@ -3,8 +3,11 @@ title: "ADR 001: Permission-First RBAC Architecture"
 tags: ["adr", "authorization", "rbac"]
 description: "Architecture decision record for implementing permission-first RBAC with Spatie Laravel Permission patterns."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1756003200000
 lastUpdated: 1756003200000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1788266614000
+coverImage: "/images/covers/adr/001-permission-first-rbac.webp"
 order: 1
 ---
 

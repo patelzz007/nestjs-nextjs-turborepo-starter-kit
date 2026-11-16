@@ -102,7 +102,7 @@ export function GithubContributionsSection(): React.JSX.Element | null {
 		// Grouped like Settings (ADR 079): the section's title on the page, the picker, then one surface per part.
 		<View className="gap-4" testID="github-contributions">
 			<View className="gap-1 pt-2">
-				<Text accessibilityRole="header" className="font-sans-bold text-2xl tracking-tight text-foreground">
+				<Text accessibilityRole="header" className="font-sans-bold text-h2 tracking-tight text-foreground">
 					{GITHUB_SECTION_TITLE}
 				</Text>
 				{description === null ? null : <MutedText>{description}</MutedText>}

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say what to do next",
+		"do": {
+			"text": "Say what went wrong and what to do about it.",
+			"file": "alert-do-1",
+			"export": "AlertDo1Example"
+		},
+		"dont": {
+			"text": "Don't show a bare error code with no way forward.",
+			"file": "alert-dont-1",
+			"export": "AlertDont1Example"
+		}
+	},
+	{
+		"title": "Match the tone to the news",
+		"do": {
+			"text": "Use the success tone for good news.",
+			"file": "alert-do-2",
+			"export": "AlertDo2Example"
+		},
+		"dont": {
+			"text": "Don't announce a success in the error tone.",
+			"file": "alert-dont-2",
+			"export": "AlertDont2Example"
+		}
+	}
+]

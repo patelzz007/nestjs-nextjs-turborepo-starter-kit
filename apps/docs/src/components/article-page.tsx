@@ -29,15 +29,20 @@ export interface ArticlePageProps {
 interface ArticleFacts {
 	readonly href: string;
 	readonly icon: IconName;
-	readonly date: number;
-	readonly dateLabel: string;
 	readonly tags: readonly string[];
 }
 
 function facts(page: GuideMeta | PostMeta): ArticleFacts {
-	return page.kind === "guide"
-		? { href: docHref(page.id), icon: page.icon, date: page.lastUpdated, dateLabel: "Updated", tags: page.tags }
-		: { href: postHref(page.id), icon: "newspaper", date: page.date, dateLabel: "Published", tags: [page.category] };
+	return page.kind === "guide" ? { href: docHref(page.id), icon: page.icon, tags: page.tags } : { href: postHref(page.id), icon: "newspaper", tags: [] };
+}
+
+/** A page's three dates, in the order a reader asks about them. */
+function datesOf(page: GuideMeta | PostMeta): readonly { readonly label: string; readonly at: number }[] {
+	return [
+		{ label: "Published", at: page.date },
+		{ label: "Updated", at: page.lastUpdated },
+		{ label: "Edited", at: page.editedAt },
+	];
 }
 
 /**
@@ -48,7 +53,7 @@ function facts(page: GuideMeta | PostMeta): ArticleFacts {
  */
 export function ArticlePage({ page, sidebar }: ArticlePageProps): ReactElement {
 	const articleRef = useRef<HTMLElement>(null);
-	const { href, icon, date, dateLabel, tags } = facts(page);
+	const { href, icon, tags } = facts(page);
 	const hasSidebar = sidebar !== undefined;
 
 	return (
@@ -77,12 +82,14 @@ export function ArticlePage({ page, sidebar }: ArticlePageProps): ReactElement {
 									<dt className="sr-only">Author</dt>
 									<dd>{page.author}</dd>
 								</div>
-								<div className="flex gap-1">
-									<dt>{dateLabel}</dt>
-									<dd>
-										<time dateTime={new Date(date).toISOString()}>{formatEpochDate(date)}</time>
-									</dd>
-								</div>
+								{datesOf(page).map(({ label, at }) => (
+									<div key={label} className="flex gap-1">
+										<dt>{label}</dt>
+										<dd>
+											<time dateTime={new Date(at).toISOString()}>{formatEpochDate(at)}</time>
+										</dd>
+									</div>
+								))}
 								<div className="flex gap-1">
 									<dt className="sr-only">Reading time</dt>
 									<dd>{page.readingMinutes} min read</dd>
@@ -92,20 +99,22 @@ export function ArticlePage({ page, sidebar }: ArticlePageProps): ReactElement {
 									<dd>
 										<a href={page.editUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground">
 											<Pencil aria-hidden="true" className="size-3.5" />
-											Edit on GitHub
+											{page.editLabel}
 										</a>
 									</dd>
 								</div>
 							</dl>
-							{tags.length > 0 ? (
-								<ul aria-label="Tags" className="flex flex-wrap gap-1.5">
-									{tags.map((tag) => (
-										<li key={tag}>
-											<Badge variant="outline">{tag}</Badge>
-										</li>
-									))}
-								</ul>
-							) : null}
+							<ul aria-label="Category and tags" className="flex flex-wrap gap-1.5">
+								<li>
+									<span className="sr-only">Category: </span>
+									<Badge variant="secondary">{page.category}</Badge>
+								</li>
+								{tags.map((tag) => (
+									<li key={tag}>
+										<Badge variant="outline">{tag}</Badge>
+									</li>
+								))}
+							</ul>
 						</header>
 						{page.kind === "guide" && page.superseded ? (
 							<Alert variant="warning" role="note" className="mt-6">

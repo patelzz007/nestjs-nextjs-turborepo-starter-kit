@@ -3,8 +3,11 @@ title: "Email templates and pipeline"
 description: "How transactional email is rendered, sent, queued, logged and tracked; the template catalog; how to add a template."
 order: 46
 author: "Platform Team"
+category: "Email"
+date: 1791072000000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=1200&h=630&fit=crop"
+editedAt: 1792438386000
+coverImage: "/images/covers/technical/email/templates.webp"
 tags: ["email", "templates", "notifications"]
 ---
 

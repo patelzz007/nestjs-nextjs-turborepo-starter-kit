@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Use it for side tasks",
+		"do": {
+			"text": "Use a sheet for a task beside the screen: filters, an editor, details.",
+			"file": "sheet-do-1",
+			"export": "SheetDo1Example"
+		},
+		"dont": {
+			"text": "Don't use a sheet for a one-line confirmation: use an alert dialog.",
+			"file": "sheet-dont-1",
+			"export": "SheetDont1Example"
+		}
+	},
+	{
+		"title": "Leave a way out",
+		"do": {
+			"text": "Keep a visible way out: the corner X or a Cancel in the footer.",
+			"file": "sheet-do-2",
+			"export": "SheetDo2Example"
+		},
+		"dont": {
+			"text": "Don't remove both the corner X and the footer's Cancel.",
+			"file": "sheet-dont-2",
+			"export": "SheetDont2Example"
+		}
+	}
+]

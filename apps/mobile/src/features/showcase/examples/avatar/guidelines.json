@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name what a badge means",
+		"do": {
+			"text": "Give every badge a label (\"Online\", \"3 unread\"), so its meaning is not colour alone.",
+			"file": "avatar-do-1",
+			"export": "AvatarDo1Example"
+		},
+		"dont": {
+			"text": "Don't rely on a coloured dot: colour-blind readers and screen readers miss it.",
+			"file": "avatar-dont-1",
+			"export": "AvatarDont1Example"
+		}
+	},
+	{
+		"title": "Count the people you cannot show",
+		"do": {
+			"text": "End a long stack with a count of the others.",
+			"file": "avatar-do-2",
+			"export": "AvatarDo2Example"
+		},
+		"dont": {
+			"text": "Don't cram everyone into a stack: past a few the faces become slivers.",
+			"file": "avatar-dont-2",
+			"export": "AvatarDont2Example"
+		}
+	}
+]

@@ -1,10 +1,13 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (472 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (479 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/README.webp"
 tags: ["api", "reference", "generated"]
 ---
 
@@ -12,7 +15,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 472 operations, 227 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 479 operations, 227 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -31,6 +34,7 @@ Every endpoint of `apps/api` — 472 operations, 227 with a sample captured from
 | [Point of sale and integrations (machine-to-machine)](./pos.md) | 13 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill, plus the integration API (`/integration/*`: rewards, analytics, redemption history). Authenticated with a merchant API key, which names its own tenant. |
 | [Payments (Billplz, CHIP)](./payments.md) | 8 | A tenant asks for a payment through a configured gateway (an `Idempotency-Key` header makes a retry return the same payment), follows it and refunds it; the gateways' signed callbacks mark it paid. Amounts are in sen. |
 | [Webhooks (outgoing and received)](./webhooks.md) | 13 | A business's endpoints for signed event deliveries (create, update, switch on or off, rotate the secret, send a test), the delivery log and redelivery (owner-only, `merchant:manage_webhooks`), and the admin's log of every webhook the platform received. |
+| [Docs publishing](./docs-publishing.md) | 7 | The Notion webhook, what the docs sync reports, and the Operations console's Docs sync page: the setup, the run history, starting a sync and the webhook verification token. |
 | [Privacy: your own data](./privacy.md) | 7 | "Download my data": one ZIP of everything the platform holds about the signed-in person (a manifest and one JSON file per section), audited, once a day, never while impersonating. |
 | [Files and object storage](./files.md) | 11 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
 | [Email log, templates and delivery webhooks](./email.md) | 7 | The outbound email log, template previews and test sends, and the Resend delivery webhook. |
@@ -286,6 +290,13 @@ Every endpoint of `apps/api` — 472 operations, 227 with a sample captured from
 | POST | [`/api/v1/tenants/{tenantSlug}/webhooks/endpoints/{endpointId}/enable`](./webhooks.md#post-apiv1tenantstenantslugwebhooksendpointsendpointidenable) | Switch a webhook endpoint on (no body required) |
 | POST | [`/api/v1/tenants/{tenantSlug}/webhooks/endpoints/{endpointId}/rotate-secret`](./webhooks.md#post-apiv1tenantstenantslugwebhooksendpointsendpointidrotate-secret) | Replace a webhook endpoint's signing secret (the new one is answered once) |
 | POST | [`/api/v1/tenants/{tenantSlug}/webhooks/endpoints/{endpointId}/test`](./webhooks.md#post-apiv1tenantstenantslugwebhooksendpointsendpointidtest) | Send a webhook endpoint a test event (no body required) |
+| GET | [`/api/v1/admin/docs-publishing/overview`](./docs-publishing.md#get-apiv1admindocs-publishingoverview) | What is set up, and how the latest sync went |
+| GET | [`/api/v1/admin/docs-publishing/runs`](./docs-publishing.md#get-apiv1admindocs-publishingruns) | List docs sync runs (newest first) |
+| GET | [`/api/v1/admin/docs-publishing/runs/{id}`](./docs-publishing.md#get-apiv1admindocs-publishingrunsid) | Get one docs sync run with its held-back pages |
+| POST | [`/api/v1/admin/docs-publishing/sync`](./docs-publishing.md#post-apiv1admindocs-publishingsync) | Start a docs sync now |
+| POST | [`/api/v1/admin/docs-publishing/webhook-handshake/reveal`](./docs-publishing.md#post-apiv1admindocs-publishingwebhook-handshakereveal) | Show the waiting webhook verification token |
+| POST | [`/api/v1/docs-publishing/sync-runs`](./docs-publishing.md#post-apiv1docs-publishingsync-runs) | A docs sync's report (bearer: DOCS_SYNC_REPORT_TOKEN) |
+| POST | [`/api/v1/integrations/notion/webhook`](./docs-publishing.md#post-apiv1integrationsnotionwebhook) | Receive a Notion webhook event |
 | GET | [`/api/v1/admin/users/{userId}/erasure`](./privacy.md#get-apiv1adminusersuseriderasure) | Support: an account's open (or latest) erasure request |
 | POST | [`/api/v1/admin/users/{userId}/erasure`](./privacy.md#post-apiv1adminusersuseriderasure) | Support: erase an account for someone who asked another way, with a recorded reason (30-day grace; the person is signed out now) |
 | POST | [`/api/v1/admin/users/{userId}/erasure/cancel`](./privacy.md#post-apiv1adminusersuseriderasurecancel) | Support: cancel an account's erasure during its grace period |

@@ -156,6 +156,7 @@ const QuestionnaireChoices = React.forwardRef<HTMLDivElement, React.ComponentPro
 /** One answer: a full-card `<label>` around a native radio / checkbox, an indicator and its shortcut key. */
 type QuestionnaireChoiceProps = React.ComponentPropsWithoutRef<typeof QuestionnairePrimitive.Choice>;
 
+/** One answer: a radio, or a checkbox when the question allows several. Pickable with a letter or number shortcut. */
 const QuestionnaireChoice: React.ForwardRefExoticComponent<QuestionnaireChoiceProps & React.RefAttributes<HTMLLabelElement>> = React.forwardRef<
 	HTMLLabelElement,
 	QuestionnaireChoiceProps
@@ -226,6 +227,7 @@ const questionnaireInputVariants = cva(
 /** A free-text answer; counts as answered once it holds non-blank text. Validity comes from the item. */
 type QuestionnaireInputProps = React.ComponentPropsWithoutRef<typeof QuestionnairePrimitive.Input>;
 
+/** A write-in answer field, for "Other". */
 const QuestionnaireInput: React.ForwardRefExoticComponent<QuestionnaireInputProps & React.RefAttributes<HTMLInputElement>> = React.forwardRef<
 	HTMLInputElement,
 	QuestionnaireInputProps

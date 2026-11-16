@@ -67,7 +67,7 @@ export function AuthShell({ brandName, tagline, buildLines = [], compact = false
 					<View className="size-10 items-center justify-center rounded-xl bg-auth-brand-from">
 						<BrandMark size={COMPACT_MARK_SIZE} colorClassName="accent-auth-panel-foreground" />
 					</View>
-					<Text accessibilityRole="header" className="font-heading text-xl text-auth-panel-foreground">
+					<Text accessibilityRole="header" className="text-h3 font-heading text-auth-panel-foreground">
 						{brandName}
 					</Text>
 				</View>
@@ -83,14 +83,14 @@ export function AuthShell({ brandName, tagline, buildLines = [], compact = false
 							testID={testID === undefined ? undefined : `${testID}-status-dot`}
 						/>
 					</View>
-					<Text accessibilityRole="header" className="font-heading text-3xl text-auth-panel-foreground">
+					<Text accessibilityRole="header" className="text-h1 font-heading text-auth-panel-foreground">
 						{brandName}
 					</Text>
-					<Text className="max-w-xs text-center font-sans text-base text-auth-panel-muted">{tagline}</Text>
+					<Text className="text-body-lg max-w-xs text-center font-sans text-auth-panel-muted">{tagline}</Text>
 					{buildLines.length === 0 ? null : (
 						<View className="mt-2 items-center gap-0.5" testID={testID === undefined ? undefined : `${testID}-build`}>
 							{buildLines.map((line: string): React.JSX.Element => (
-								<Text key={line} className="text-center font-sans text-xs text-auth-panel-muted">
+								<Text key={line} className="text-caption text-center font-sans text-auth-panel-muted">
 									{line}
 								</Text>
 							))}

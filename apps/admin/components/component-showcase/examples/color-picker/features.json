@@ -1,0 +1,107 @@
+[
+	{
+		"id": "c-color-picker-1",
+		"label": "Inline Panel",
+		"description": "Inline color panel. Best for the default panel left open in a card, with opacity and 8 presets switched on through 2 root props.",
+		"file": "color-picker-1",
+		"export": "ColorPicker1Example"
+	},
+	{
+		"id": "c-color-picker-2",
+		"label": "Popover",
+		"description": "Popover picker. Best for a root with no children, so it draws its own trigger and popover, uncontrolled from a default value in a Field.",
+		"file": "color-picker-2",
+		"export": "ColorPicker2Example"
+	},
+	{
+		"id": "c-color-picker-3",
+		"label": "Color Input",
+		"description": "Color input. Best for typed color codes in an uncontrolled ColorPickerInput, whose swatch button opens the default popover.",
+		"file": "color-picker-3",
+		"export": "ColorPicker3Example"
+	},
+	{
+		"id": "c-color-picker-4",
+		"label": "Opacity",
+		"description": "Opacity. Best for a translucent scrim laid over a gradient banner and previewed live through an inline style.",
+		"file": "color-picker-4",
+		"export": "ColorPicker4Example"
+	},
+	{
+		"id": "c-color-picker-5",
+		"label": "Preset Swatches",
+		"description": "Preset swatches. Best for an issue label editor with 9 named preset chips, a custom color fallback and Badge ink chosen for contrast.",
+		"file": "color-picker-5",
+		"export": "ColorPicker5Example"
+	},
+	{
+		"id": "c-color-picker-6",
+		"label": "OKLCH Token",
+		"description": "OKLCH theme token. Best for a theme token editor in OKLCH that flags colors outside sRGB and prints the CSS line, its copy button taking the bare value.",
+		"file": "color-picker-6",
+		"export": "ColorPicker6Example"
+	},
+	{
+		"id": "c-color-picker-7",
+		"label": "Format Converter",
+		"description": "Format converter. Best for a custom readout built on useColorPicker and formatColor that moves beside the area once its card is wide enough.",
+		"file": "color-picker-7",
+		"export": "ColorPicker7Example"
+	},
+	{
+		"id": "c-color-picker-8",
+		"label": "Hue Wheel",
+		"description": "Hue wheel. Best for a ring layout for a brush, with the area filling the wheel's hole and the format menu cut to 3 entries.",
+		"file": "color-picker-8",
+		"export": "ColorPicker8Example"
+	},
+	{
+		"id": "c-color-picker-9",
+		"label": "Recent Colors",
+		"description": "Recent colors. Best for a hand composed popover whose history row dedupes picks and keeps the latest 8, newest first.",
+		"file": "color-picker-9",
+		"export": "ColorPicker9Example"
+	},
+	{
+		"id": "c-color-picker-10",
+		"label": "Text & Highlight",
+		"description": "Text and highlight colors. Best for a pair of ghost icon triggers whose underline bar mirrors the choice, each palette closing on a pick via controlled open state.",
+		"file": "color-picker-10",
+		"export": "ColorPicker10Example"
+	},
+	{
+		"id": "c-color-picker-11",
+		"label": "Channel Sliders",
+		"description": "Channel sliders. Best for channel by channel RGB mixing headed by a round preview chip and the live rgb string in monospace.",
+		"file": "color-picker-11",
+		"export": "ColorPicker11Example"
+	},
+	{
+		"id": "c-color-picker-12",
+		"label": "Design Inspector",
+		"description": "Design inspector. Best for a card of 3 independent, uncontrolled pickers whose triggers print the hex apart from its opacity percent.",
+		"file": "color-picker-12",
+		"export": "ColorPicker12Example"
+	},
+	{
+		"id": "c-color-picker-13",
+		"label": "Contrast Checker",
+		"description": "Contrast checker. Best for a swappable pair of default pickers scored by getContrastRatio against 3 WCAG thresholds for body and large text.",
+		"file": "color-picker-13",
+		"export": "ColorPicker13Example"
+	},
+	{
+		"id": "c-color-picker-14",
+		"label": "Brand Scale",
+		"description": "Brand scale. Best for one typed base color expanded into a palette of standalone ColorPickerSwatch chips, each named for screen readers.",
+		"file": "color-picker-14",
+		"export": "ColorPicker14Example"
+	},
+	{
+		"id": "c-color-picker-15",
+		"label": "Form Validation",
+		"description": "Form field with validation. Best for a plain HTML form read through FormData, where the picker posts under name and Field swaps its hint for the error.",
+		"file": "color-picker-15",
+		"export": "ColorPicker15Example"
+	}
+]

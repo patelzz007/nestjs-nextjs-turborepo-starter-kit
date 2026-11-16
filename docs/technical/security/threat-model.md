@@ -3,8 +3,11 @@ title: "Multi-Tenancy Threat Model"
 tags: ["security", "tenancy", "threat-model", "mobile"]
 description: "Abuse cases and mitigations for tenant-scoped multi-tenancy."
 author: "Backend Team"
+category: "Security"
+date: 1789257600000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/security/threat-model.webp"
 order: 1
 ---
 

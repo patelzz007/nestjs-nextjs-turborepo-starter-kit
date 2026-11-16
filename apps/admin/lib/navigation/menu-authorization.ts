@@ -53,6 +53,8 @@ export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization>
 	[ROUTES.operations.queues, { permissions: [PERMISSION.BACKGROUND_JOB.LIST] }],
 	// GET /admin/operations/status/incidents (LIST STATUS_INCIDENT)
 	[ROUTES.operations.statusIncidents, { permissions: [PERMISSION.STATUS_INCIDENT.LIST] }],
+	// GET /admin/docs-publishing/overview and /runs (LIST DOCS_SYNC)
+	[ROUTES.operations.docsSync, { permissions: [PERMISSION.DOCS_SYNC.LIST] }],
 	// GET /admin/broadcasts (LIST BROADCAST)
 	[ROUTES.emails.broadcasts, { permissions: [PERMISSION.BROADCAST.LIST] }],
 	// GET /github/account (READ GITHUB_PULL_REQUEST) · PUT + DELETE /github/account (UPDATE GITHUB_PULL_REQUEST)

@@ -3,8 +3,11 @@ title: "ADR 027: Fastify as the API's HTTP Adapter"
 tags: ["adr", "fastify", "nestjs", "http", "performance"]
 description: "The NestJS API runs on @nestjs/platform-fastify instead of the default Express adapter; Express and its middleware stack were removed."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1791183761000
+coverImage: "/images/covers/adr/027-fastify-http-adapter.webp"
 order: 27
 ---
 

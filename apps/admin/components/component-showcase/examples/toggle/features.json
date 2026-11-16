@@ -1,0 +1,100 @@
+[
+	{
+		"id": "c-toggle-1",
+		"label": "Basic",
+		"description": "Basic toggle.. Best for bold, italic and underline as 3 separate icon only toggles in the default variant, with bold pressed on load.",
+		"file": "toggle-1",
+		"export": "Toggle1Example"
+	},
+	{
+		"id": "c-toggle-2",
+		"label": "Outline",
+		"description": "Toggle buttons with outline variant.. Best for outline toggles that pair an icon with a text label, Italic and Bold, both off on load.",
+		"file": "toggle-2",
+		"export": "Toggle2Example"
+	},
+	{
+		"id": "c-toggle-3",
+		"label": "Text Sizes",
+		"description": "Toggle buttons in different sizes.. Best for text only outline toggles at the sm, default and lg sizes side by side, labelled Small, Default and Large.",
+		"file": "toggle-3",
+		"export": "Toggle3Example"
+	},
+	{
+		"id": "c-toggle-4",
+		"label": "Button Comparison",
+		"description": "Toggle with button and icon.. Best for an outline Button set beside an outline toggle in 2 rows, a text pair at sm and a bold icon pair, to compare them.",
+		"file": "toggle-4",
+		"export": "Toggle4Example"
+	},
+	{
+		"id": "c-toggle-5",
+		"label": "Disabled Text",
+		"description": "Disabled toggle.. Best for text only toggles locked by the disabled prop in both variants, default and outline, with no enabled control beside them.",
+		"file": "toggle-5",
+		"export": "Toggle5Example"
+	},
+	{
+		"id": "c-toggle-6",
+		"label": "Icon & Label",
+		"description": "Toggle with icon.. Best for a single outline bookmark toggle with an icon and a fixed Bookmark label, left uncontrolled.",
+		"file": "toggle-6",
+		"export": "Toggle6Example"
+	},
+	{
+		"id": "c-toggle-7",
+		"label": "Count Badge",
+		"description": "Toggle with notification count badge. Best for a bell in the default variant with a destructive count badge on its top right corner that hides while pressed.",
+		"file": "toggle-7",
+		"export": "Toggle7Example"
+	},
+	{
+		"id": "c-toggle-8",
+		"label": "Icon Sizes",
+		"description": "Toggle size variants showcase. Best for an icon only star toggle repeated at sm, default and lg, each row captioned in muted text.",
+		"file": "toggle-8",
+		"export": "Toggle8Example"
+	},
+	{
+		"id": "c-toggle-9",
+		"label": "Icon Swap",
+		"description": "Toggle with icon swap on press. Best for an icon only heart in the default variant that gains a solid fill while pressed, with no label or count.",
+		"file": "toggle-9",
+		"export": "Toggle9Example"
+	},
+	{
+		"id": "c-toggle-10",
+		"label": "Label Swap",
+		"description": "Toggle with text label that changes. Best for an outline bookmark that fills in and relabels itself from Bookmark to Bookmarked once pressed.",
+		"file": "toggle-10",
+		"export": "Toggle10Example"
+	},
+	{
+		"id": "c-toggle-11",
+		"label": "Reactions",
+		"description": "Social media reaction toggles. Best for like, retweet, share and bookmark outline toggles in a row, each count rising by 1 while pressed.",
+		"file": "toggle-11",
+		"export": "Toggle11Example"
+	},
+	{
+		"id": "c-toggle-12",
+		"label": "Tooltip",
+		"description": "Toggle with tooltip. Best for an icon only outline pin whose purpose, Pin to sidebar, appears in a tooltip on hover.",
+		"file": "toggle-12",
+		"export": "Toggle12Example"
+	},
+	{
+		"id": "c-toggle-13",
+		"label": "Disabled Icons",
+		"description": "Disabled toggle states. Best for formatting icons in 4 toggles, bold and italic enabled, underline and strikethrough disabled, each pair default then outline.",
+		"file": "toggle-13",
+		"export": "Toggle13Example"
+	},
+	{
+		"id": "c-toggle-14",
+		"label": "Mute Button",
+		"description": "Toggle as mute/unmute button. Best for a large outline speaker that swaps to a muted speaker icon and from Sound to Muted while pressed.",
+		"file": "toggle-14",
+		"export": "Toggle14Example"
+	}
+]

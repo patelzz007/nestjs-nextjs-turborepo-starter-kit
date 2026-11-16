@@ -3,8 +3,11 @@ title: "7. Referrals"
 description: "How a referral earns the referrer a reward when the referred customer redeems, and what is not built yet."
 order: 8
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1792604185000
+coverImage: "/images/covers/user-guide/07-referrals.webp"
 tags: ["user-guide", "referrals", "rewards"]
 ---
 

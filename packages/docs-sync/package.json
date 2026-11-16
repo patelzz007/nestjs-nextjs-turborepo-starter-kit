@@ -1,0 +1,37 @@
+{
+	"name": "@workspace/docs-sync",
+	"version": "0.0.0",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
+		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
+		"typecheck": "tsrs --noEmit",
+		"test": "vitest run --coverage"
+	},
+	"exports": {
+		"./*": "./src/*.ts"
+	},
+	"dependencies": {
+		"@workspace/docs-content": "workspace:*",
+		"@workspace/shared": "workspace:*",
+		"pele": "^1.13.0",
+		"remark-gfm": "^4.0.1",
+		"remark-parse": "^11.0.0",
+		"unified": "^11.0.5",
+		"yaml": "^2.9.1",
+		"zod": "4.6.7"
+	},
+	"devDependencies": {
+		"@types/mdast": "^4.0.4",
+		"@types/node": "^26.6.6",
+		"@workspace/oxlint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
+		"oxfmt": "0.78.0",
+		"oxlint": "1.93.0",
+		"oxlint-tsgolint": "7.0.2006",
+		"tsrs": "0.24.0-ts7.1.0-beta",
+		"typescript": "7.0.2",
+		"vitest": "^5.1.0"
+	}
+}

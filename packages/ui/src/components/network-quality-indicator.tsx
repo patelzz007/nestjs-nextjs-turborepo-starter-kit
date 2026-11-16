@@ -7,7 +7,8 @@ import { STATUS_TONE_BADGE_VARIANT, type StatusTone } from "@workspace/ui/compon
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
-import type { MeasuredNetworkQuality, NetworkQualityReading, NetworkStrength } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type MeasuredNetworkQuality, type NetworkQualityReading, type NetworkStrength } from "@workspace/shared";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { RotateCw, Signal, SignalHigh, SignalLow, SignalMedium, SignalZero, WifiOff, type LucideIcon } from "lucide-react";
 import * as React from "react";
 
@@ -146,7 +147,7 @@ function Metrics({ quality, labels }: { readonly quality: MeasuredNetworkQuality
 }
 
 function lastTestTime(reading: NetworkQualityReading): string | null {
-	return reading.status === "measured" || reading.status === "unreachable" ? new Date(reading.measuredAtMs).toLocaleTimeString() : null;
+	return reading.status === "measured" || reading.status === "unreachable" ? formatEpochMs(reading.measuredAtMs, "time", PLATFORM_DISPLAY_REGION) : null;
 }
 
 export const NetworkQualityIndicator = React.forwardRef<HTMLButtonElement, NetworkQualityIndicatorProps>(function NetworkQualityIndicator(

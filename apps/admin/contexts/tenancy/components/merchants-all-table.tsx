@@ -24,7 +24,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 import { pilotCityLabel } from "@/lib/format/pilot-city";
@@ -51,7 +51,7 @@ export interface MerchantsAllTableProps {
 export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { can } = useAuthorization();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const [urlState, updateUrlState] = useUrlState(MERCHANTS_TABLE_URL_STATE);
 	const isFiltered = urlState.search !== undefined || urlState.kybStatus !== undefined || urlState.status !== undefined;
 

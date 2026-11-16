@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Fit the width",
+		"do": {
+			"text": "Keep a few page numbers around the current one, and fold the rest into `PaginationEllipsis`.",
+			"file": "pagination-do-1",
+			"export": "PaginationDo1Example"
+		},
+		"dont": {
+			"text": "Don't line up a dozen page numbers that cannot fit or be hit.",
+			"file": "pagination-dont-1",
+			"export": "PaginationDont1Example"
+		}
+	},
+	{
+		"title": "Say where you are",
+		"do": {
+			"text": "Show the range or the page count with the arrows.",
+			"file": "pagination-do-2",
+			"export": "PaginationDo2Example"
+		},
+		"dont": {
+			"text": "Don't give only arrows with no hint of how far there is to go.",
+			"file": "pagination-dont-2",
+			"export": "PaginationDont2Example"
+		}
+	}
+]

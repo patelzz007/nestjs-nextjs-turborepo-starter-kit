@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import CircleAlertIcon from "lucide-react-native/icons/circle-alert";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { Alert, type AlertTone } from "../alert";
 import { Button } from "../button";
@@ -58,5 +58,20 @@ describe("Alert", () => {
 		const className = String(screen.getByRole("summary").props.className);
 		expect(className).toContain("px-6");
 		expect(className).not.toContain("px-4");
+	});
+});
+
+describe("Alert extras", () => {
+	it("draws the neutral and invert tones, a leading part, rich content and a close button", async () => {
+		const onDismiss = jest.fn();
+		await render(<Alert tone="invert" title="Go Pro" leading={<Text>avatar</Text>} content={<Text>Rich</Text>} onDismiss={onDismiss} variant="flush" testID="alert" />);
+		expect(screen.getByTestId("alert")).toHaveProp("className", expect.stringContaining("bg-invert"));
+		expect(screen.getByTestId("alert")).toHaveProp("className", expect.not.stringContaining("rounded-card"));
+		expect(screen.getByText("avatar")).toBeOnTheScreen();
+		expect(screen.getByText("Rich")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Dismiss" }));
+		expect(onDismiss).toHaveBeenCalled();
+		await render(<Alert tone="neutral" message="Plain notice" />);
+		expect(screen.getByText("Plain notice")).toBeOnTheScreen();
 	});
 });

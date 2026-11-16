@@ -1,0 +1,12 @@
+---
+description: Feature rules — pages, data, forms and tables
+globs: app/**,features/**,components/resource/**,lib/query/**,lib/form/**
+alwaysApply: false
+---
+
+You are editing a feature. Read `rules/03-web-nextjs.md` and `rules/06-tanstack-state-forms-tables.md` first.
+
+- Data goes through a resource (`lib/query/resource.ts`); never fetch inside a component.
+- Forms use `useAppForm` with a zod schema whose messages are the user-facing copy (`rules/05`, `rules/07`).
+- Statuses are declared once with `defineStatuses` (label + tone) and rendered with `StatusBadge`.
+- Pages are thin: `app/**/page.tsx` exports `metadata` and renders one feature component.

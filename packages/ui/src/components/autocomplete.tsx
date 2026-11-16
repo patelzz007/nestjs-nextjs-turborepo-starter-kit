@@ -42,6 +42,7 @@ const autocompleteInputVariants = cva(
 	"flex w-full rounded-md border border-input bg-transparent text-sm text-foreground shadow-xs transition-colors outline-none placeholder:text-muted-foreground read-only:cursor-not-allowed read-only:bg-muted/80 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
 	{
 		variants: {
+			/** Height of the input: `sm`, `default` or `lg`. */
 			size: {
 				sm: "h-8 px-2 [&~[data-slot=autocomplete-clear]]:end-1.5 [&~[data-slot=autocomplete-trigger]]:end-1.5",
 				default: "h-9 px-2.5 [&~[data-slot=autocomplete-clear]]:end-2 [&~[data-slot=autocomplete-trigger]]:end-2",
@@ -66,6 +67,7 @@ function AutocompleteValue(props: AutocompletePrimitive.Value.Props): React.Reac
 
 type AutocompleteTriggerProps = AutocompletePrimitive.Trigger.Props;
 
+/** A button that opens the list without typing. */
 const AutocompleteTrigger = React.forwardRef<HTMLButtonElement, AutocompleteTriggerProps>(function AutocompleteTrigger({ className, ...props }, ref): React.JSX.Element {
 	const labels = useUiKitLabels("autocomplete");
 	return (
@@ -85,6 +87,7 @@ const AutocompleteTrigger = React.forwardRef<HTMLButtonElement, AutocompleteTrig
 
 type AutocompleteClearProps = AutocompletePrimitive.Clear.Props;
 
+/** A button that empties the input. Hidden while it is empty. */
 const AutocompleteClear = React.forwardRef<HTMLButtonElement, AutocompleteClearProps>(function AutocompleteClear({ className, ...props }, ref): React.JSX.Element {
 	const labels = useUiKitLabels("autocomplete");
 	return (
@@ -112,6 +115,7 @@ type AutocompleteInputProps = Omit<AutocompletePrimitive.Input.Props, "size"> &
 		readonly loading?: boolean | undefined;
 	};
 
+/** The text field. Its text is the autocomplete's value; it keeps focus while the arrow keys move the highlight. */
 const AutocompleteInput = React.forwardRef<HTMLInputElement, AutocompleteInputProps>(function AutocompleteInput(
 	{ className, size = "default", showClear = false, showTrigger = false, loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,
@@ -135,6 +139,7 @@ const AutocompleteInput = React.forwardRef<HTMLInputElement, AutocompleteInputPr
 	);
 });
 
+/** A polite live region for "Searching…" and result counts, for async suggestions. */
 const AutocompleteStatus = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Status.Props>(function AutocompleteStatus({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<AutocompletePrimitive.Status
@@ -146,14 +151,17 @@ const AutocompleteStatus = React.forwardRef<HTMLDivElement, AutocompletePrimitiv
 	);
 });
 
+/** Moves the popup to the end of `body`, out of any clipping ancestor. Used by `AutocompleteContent`. */
 const AutocompletePortal = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Portal.Props>(function AutocompletePortal(props, ref): React.JSX.Element {
 	return <AutocompletePrimitive.Portal ref={ref} data-slot="autocomplete-portal" {...props} />;
 });
 
+/** A layer behind the open popup, for a modal-feeling search. Optional. */
 const AutocompleteBackdrop = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Backdrop.Props>(function AutocompleteBackdrop(props, ref): React.JSX.Element {
 	return <AutocompletePrimitive.Backdrop ref={ref} data-slot="autocomplete-backdrop" {...props} />;
 });
 
+/** Places the popup against the input. Used by `AutocompleteContent`. */
 const AutocompletePositioner = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Positioner.Props>(function AutocompletePositioner(
 	{ className, ...props },
 	ref,
@@ -166,6 +174,7 @@ interface AutocompleteListProps extends AutocompletePrimitive.List.Props {
 	readonly scrollAreaClassName?: string | undefined;
 }
 
+/** The `listbox` of suggestions; takes a render function for the filtered items. */
 const AutocompleteList = React.forwardRef<HTMLDivElement, AutocompleteListProps>(function AutocompleteList(
 	{ className, scrollAreaClassName, ...props },
 	ref,
@@ -195,10 +204,12 @@ function AutocompleteCollection(props: AutocompletePrimitive.Collection.Props): 
 	return <AutocompletePrimitive.Collection {...props} />;
 }
 
+/** Lays items out in a grid row, for a grid of suggestions. */
 const AutocompleteRow = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Row.Props>(function AutocompleteRow({ className, ...props }, ref): React.JSX.Element {
 	return <AutocompletePrimitive.Row ref={ref} data-slot="autocomplete-row" className={cn("flex items-center gap-2", className)} {...props} />;
 });
 
+/** One suggestion. Picking it fills the input with the item's text. */
 const AutocompleteItem = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Item.Props>(function AutocompleteItem({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<AutocompletePrimitive.Item
@@ -216,15 +227,21 @@ const AutocompleteItem = React.forwardRef<HTMLDivElement, AutocompletePrimitive.
 });
 
 interface AutocompleteContentProps extends AutocompletePrimitive.Popup.Props {
+	/** Where the popup lines up along the input: `start`, `center` or `end`. */
 	readonly align?: AutocompletePrimitive.Positioner.Props["align"];
+	/** Gap between the input and the popup, in pixels. */
 	readonly sideOffset?: AutocompletePrimitive.Positioner.Props["sideOffset"];
+	/** Shift along the aligned edge, in pixels. */
 	readonly alignOffset?: AutocompletePrimitive.Positioner.Props["alignOffset"];
+	/** Which side of the input the popup opens on. */
 	readonly side?: AutocompletePrimitive.Positioner.Props["side"];
+	/** Positions the popup against another element instead of the input. */
 	readonly anchor?: AutocompletePrimitive.Positioner.Props["anchor"];
 	/** Render a backdrop behind the popup. */
 	readonly showBackdrop?: boolean | undefined;
 }
 
+/** The popup: a portal, a positioner and the list's surface in one part. Positioned under the input by default. */
 const AutocompleteContent = React.forwardRef<HTMLDivElement, AutocompleteContentProps>(function AutocompleteContent(
 	{ className, children, showBackdrop = false, align = "start", sideOffset = DEFAULT_SIDE_OFFSET, alignOffset = 0, side = "bottom", anchor, ...props },
 	ref,
@@ -250,10 +267,12 @@ const AutocompleteContent = React.forwardRef<HTMLDivElement, AutocompleteContent
 	);
 });
 
+/** A labelled group of items; pass the group's `items` when `items` are grouped. */
 const AutocompleteGroup = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Group.Props>(function AutocompleteGroup(props, ref): React.JSX.Element {
 	return <AutocompletePrimitive.Group ref={ref} data-slot="autocomplete-group" {...props} />;
 });
 
+/** The visible name of a group. */
 const AutocompleteGroupLabel = React.forwardRef<HTMLDivElement, AutocompletePrimitive.GroupLabel.Props>(function AutocompleteGroupLabel(
 	{ className, ...props },
 	ref,
@@ -268,6 +287,7 @@ const AutocompleteGroupLabel = React.forwardRef<HTMLDivElement, AutocompletePrim
 	);
 });
 
+/** Shown in place of the list while no item matches. */
 const AutocompleteEmpty = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Empty.Props>(function AutocompleteEmpty({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<AutocompletePrimitive.Empty
@@ -279,10 +299,12 @@ const AutocompleteEmpty = React.forwardRef<HTMLDivElement, AutocompletePrimitive
 	);
 });
 
+/** An arrow on the popup pointing at the input. Optional. */
 const AutocompleteArrow = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Arrow.Props>(function AutocompleteArrow(props, ref): React.JSX.Element {
 	return <AutocompletePrimitive.Arrow ref={ref} data-slot="autocomplete-arrow" {...props} />;
 });
 
+/** A divider between groups of items. */
 const AutocompleteSeparator = React.forwardRef<HTMLDivElement, AutocompletePrimitive.Separator.Props>(function AutocompleteSeparator(
 	{ className, ...props },
 	ref,

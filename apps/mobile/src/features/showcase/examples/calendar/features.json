@@ -1,0 +1,212 @@
+[
+	{
+		"id": "c-calendar-1",
+		"label": "Basic",
+		"description": "Basic calendar. Best for the minimal single day picker on a card, with today picked on first render.",
+		"file": "calendar-1",
+		"export": "Calendar1Example"
+	},
+	{
+		"id": "c-calendar-2",
+		"label": "Range",
+		"description": "Range calendar. Best for a from and to span in one month, seeded as today through 5 days later.",
+		"file": "calendar-2",
+		"export": "Calendar2Example"
+	},
+	{
+		"id": "c-calendar-3",
+		"label": "Disabled Dates",
+		"description": "Disabled dates. Best for range picking that blocks past days, today, weekends and 2 booked spans, starting again from the tapped day when a range would cross one.",
+		"file": "calendar-3",
+		"export": "Calendar3Example"
+	},
+	{
+		"id": "c-calendar-4",
+		"label": "Multiple Days",
+		"description": "Multiple day selection. Best for separate days toggled on and off one by one, seeded with 4 dates around today.",
+		"file": "calendar-4",
+		"export": "Calendar4Example"
+	},
+	{
+		"id": "c-calendar-5",
+		"label": "Circular Days",
+		"description": "Round day marks. Best for the fully round mark on a single pick, set with `dayShape=\"circle\"` (the phone's default; `square` is the other shape).",
+		"file": "calendar-5",
+		"export": "Calendar5Example"
+	},
+	{
+		"id": "c-calendar-6",
+		"label": "Circular Range",
+		"description": "Round range ends. Best for a from and to span with round marks on both ends, the range counterpart of the round single pick.",
+		"file": "calendar-6",
+		"export": "Calendar6Example"
+	},
+	{
+		"id": "c-calendar-7",
+		"label": "Right Navigation",
+		"description": "Navigation at the end. Best for the month and year moved to the start of the header with both arrows grouped at the end, through `navigationLayout=\"start\"`.",
+		"file": "calendar-7",
+		"export": "Calendar7Example"
+	},
+	{
+		"id": "c-calendar-8",
+		"label": "Month Year Select",
+		"description": "Month and year lists. Best for far past days: tapping the month or the year in the header lists them to jump to, from July 1980 on.",
+		"file": "calendar-8",
+		"export": "Calendar8Example"
+	},
+	{
+		"id": "c-calendar-9",
+		"label": "Year Select",
+		"description": "Year list with the arrows. Best for a year chosen from the list behind the header's year, with the previous and next arrows kept for single steps.",
+		"file": "calendar-9",
+		"export": "Calendar9Example"
+	},
+	{
+		"id": "c-calendar-10",
+		"label": "Week Numbers",
+		"description": "Week numbers. Best for ISO week numbers in a leading column; screen readers hear each day's full date instead.",
+		"file": "calendar-10",
+		"export": "Calendar10Example"
+	},
+	{
+		"id": "c-calendar-11",
+		"label": "Current Month Button",
+		"description": "Current month button. Best for an outline button under the grid that brings the view back to this month without changing the pick.",
+		"file": "calendar-11",
+		"export": "Calendar11Example"
+	},
+	{
+		"id": "c-calendar-12",
+		"label": "Today Button",
+		"description": "Today button. Best for a button that picks today and jumps to it, with the calendar opening 4 weeks back.",
+		"file": "calendar-12",
+		"export": "Calendar12Example"
+	},
+	{
+		"id": "c-calendar-13",
+		"label": "Year View",
+		"description": "Year and month lists. Best for the header's year list, then its month list, spanning 10 years either side of today.",
+		"file": "calendar-13",
+		"export": "Calendar13Example"
+	},
+	{
+		"id": "c-calendar-14",
+		"label": "Time Slots",
+		"description": "Time slots. Best for half hour slots from 09:00 to 17:30 in a wrapping group under the grid, with taken slots and past days disabled.",
+		"file": "calendar-14",
+		"export": "Calendar14Example"
+	},
+	{
+		"id": "c-calendar-15",
+		"label": "Date Presets",
+		"description": "Date presets. Best for a scrolling row of Today, Yesterday, Last week, Last month and Last year shortcuts for one past day, with future days blocked.",
+		"file": "calendar-15",
+		"export": "Calendar15Example"
+	},
+	{
+		"id": "c-calendar-16",
+		"label": "Range Presets",
+		"description": "Range presets. Best for range shortcuts such as Last 7 days, Month to date and Last year that set both ends and jump the view there.",
+		"file": "calendar-16",
+		"export": "Calendar16Example"
+	},
+	{
+		"id": "c-calendar-17",
+		"label": "Pricing",
+		"description": "Calendar with pricing. Best for a price under every day from a seeded formula, green below $100, in taller cells; each price is read with its day.",
+		"file": "calendar-17",
+		"export": "Calendar17Example"
+	},
+	{
+		"id": "c-calendar-18",
+		"label": "Forward Presets",
+		"description": "Forward presets. Best for forward shortcuts Today, Tomorrow, 3 days, Week and 2 weeks as a row of buttons under the grid on a card.",
+		"file": "calendar-18",
+		"export": "Calendar18Example"
+	},
+	{
+		"id": "c-calendar-19",
+		"label": "Appointment",
+		"description": "Appointment calendar. Best for a titled booking card with 15 minute slots from 09:00 to 18:00, today and 2 more days booked, and a summary line by Confirm.",
+		"file": "calendar-19",
+		"export": "Calendar19Example"
+	},
+	{
+		"id": "c-calendar-20",
+		"label": "Two Months",
+		"description": "Two months. Best for a single day pick across 2 months stacked, the second under its own heading.",
+		"file": "calendar-20",
+		"export": "Calendar20Example"
+	},
+	{
+		"id": "c-calendar-21",
+		"label": "Two Month Range",
+		"description": "Two month range. Best for a range across 2 stacked months, preset from the 6th to the 18th of this month.",
+		"file": "calendar-21",
+		"export": "Calendar21Example"
+	},
+	{
+		"id": "c-calendar-22",
+		"label": "Event List",
+		"description": "Calendar with an event list. Best for a dot under each day with events and the picked day's events listed under the grid with colored bars, time spans and an Add event button.",
+		"file": "calendar-22",
+		"export": "Calendar22Example"
+	},
+	{
+		"id": "c-calendar-23",
+		"label": "Localized",
+		"description": "Localized calendar. Best for a language switch in the header that changes the day names, month names and the heading between English and Chinese.",
+		"file": "calendar-23",
+		"export": "Calendar23Example"
+	},
+	{
+		"id": "c-calendar-24",
+		"label": "Date Picker",
+		"description": "Date picker. Best for a field reading Pick a date that opens one month in a sheet and then shows the long formatted day.",
+		"file": "calendar-24",
+		"export": "Calendar24Example"
+	},
+	{
+		"id": "c-calendar-25",
+		"label": "Date Range Picker",
+		"description": "Date range picker. Best for a button reading Pick a date range that opens the range sheet and prints both ends once applied.",
+		"file": "calendar-25",
+		"export": "Calendar25Example"
+	},
+	{
+		"id": "c-calendar-26",
+		"label": "Picker Year View",
+		"description": "Date picker with year lists. Best for a date of birth: the year then month lists from the calendar's header, in the sheet the field opens.",
+		"file": "calendar-26",
+		"export": "Calendar26Example"
+	},
+	{
+		"id": "c-calendar-27",
+		"label": "Picker Time Slots",
+		"description": "Date and time slot picker. Best for the half hour slot group under the calendar in the sheet a field opens, with past days blocked.",
+		"file": "calendar-27",
+		"export": "Calendar27Example"
+	},
+	{
+		"id": "c-calendar-28",
+		"label": "Picker Presets",
+		"description": "Date picker with presets. Best for past day shortcuts from Today to Last year in a row in the sheet a field opens; a shortcut picks and closes.",
+		"file": "calendar-28",
+		"export": "Calendar28Example"
+	},
+	{
+		"id": "c-calendar-29",
+		"label": "Range Picker Presets",
+		"description": "Range picker with presets. Best for the 8 span shortcuts in the sheet a field opens, the field printing the chosen span and starting on the last 7 days.",
+		"file": "calendar-29",
+		"export": "Calendar29Example"
+	},
+	{
+		"id": "c-calendar-30",
+		"label": "Date Time Range",
+		"description": "Date and time range picker. Best for Start time and End time pickers with seconds under the range calendar in a sheet, starting on the 12th of this month.",
+		"file": "calendar-30",
+		"export": "Calendar30Example"
+	}
+]

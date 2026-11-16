@@ -26,6 +26,9 @@ export const TEST_API_SECRETS: TestEnv = {
 	// TEST-ONLY Resend webhook signing secret (base64 of "test-only-webhook-signing-key").
 	// e2e signs delivery webhooks with it (e2e/support/resend-webhook-signature.ts).
 	RESEND_WEBHOOK_SECRET: "whsec_dGVzdC1vbmx5LXdlYmhvb2stc2lnbmluZy1rZXk=",
+	// TEST-ONLY docs publishing credentials (e2e/docs-publishing.e2e-spec.ts).
+	NOTION_WEBHOOK_SECRET: "test-only-notion-verification-token-not-real",
+	DOCS_SYNC_REPORT_TOKEN: "test-only-docs-sync-report-token-not-for-real-use",
 };
 
 /** e2e only: webhook endpoints may be a local test receiver on loopback (ADR 082; refused in production). */

@@ -13,6 +13,7 @@
 //   3. secrets + switches          — always forced (test-only signing keys,
 //                                    no OTP step, fixed CORS, EMAIL_MODE=noop,
 //                                    loopback as the trusted proxy)
+//   4. outside-service credentials — always removed (the docs sync's GitHub dispatch)
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,6 +36,12 @@ for (const [name, value] of Object.entries(TEST_API_INFRASTRUCTURE)) {
 // EMAIL_TEST_TO is a developer's local redirect of every recipient to their own inbox: e2e asserts the
 // real recipients and sends nothing (EMAIL_MODE=noop), so a redirect in apps/api/.env never applies.
 delete process.env.EMAIL_TEST_TO;
+// The docs sync's GitHub dispatch credentials point at a real outside service: with them, every sync
+// request and Notion page event would start a real workflow run on the developer's repository. e2e
+// covers the unconfigured server (dispatch off, 503); the dispatch adapter is unit-tested against a fake.
+delete process.env.DOCS_SYNC_GITHUB_TOKEN;
+delete process.env.DOCS_SYNC_GITHUB_REPOSITORY;
+delete process.env.DOCS_SYNC_GITHUB_REF;
 // Multi-tenant mode has no fallback tenant (D12) and refuses to boot with one: a DEFAULT_TENANT_ID
 // from the fixtures or a single-mode apps/api/.env does not apply to a multi-tenant run.
 if (BooleanFlagEnvSchema.parse(process.env.TENANCY_ENABLED)) {

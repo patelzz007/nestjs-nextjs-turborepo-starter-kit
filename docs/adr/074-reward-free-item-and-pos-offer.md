@@ -3,8 +3,11 @@ title: "ADR 074: A reward's free item, and its offer in the till's answers"
 tags: ["adr", "rewards", "pos", "integration", "contracts"]
 description: "Free item and buy one, get one rewards name the item they give (a name for the receipt and the merchant's SKU for the POS), both required; the till's validate and checkout answers carry the reward's offer as a typed block per reward type, plus its description and terms."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793491200000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/adr/074-reward-free-item-and-pos-offer.webp"
 order: 74
 ---
 

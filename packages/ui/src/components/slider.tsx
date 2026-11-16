@@ -24,9 +24,11 @@ function resolveThumbCount(value: SliderPrimitive.Root.Props["value"], defaultVa
 
 type SliderProps = SliderPrimitive.Root.Props &
 	VariantProps<typeof sliderVariants> & {
+		/** Dims the slider while a change is being saved. */
 		readonly loading?: boolean;
 	};
 
+/** Picks a number, or a range, along a track, on Base UI's slider. One thumb per entry of an array value, one for a plain number, two (a range) when there is no value. */
 const Slider = React.forwardRef<HTMLDivElement, SliderProps>(function Slider(
 	{ className, defaultValue, value, min = DEFAULT_MIN, max = DEFAULT_MAX, variant, size, loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,

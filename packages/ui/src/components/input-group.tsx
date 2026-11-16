@@ -7,6 +7,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
+/** One border around a control and its addons. Focus and `aria-invalid` on the control style the whole group. */
 const InputGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function InputGroup({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -26,6 +27,7 @@ const inputGroupAddonVariants = cva(
 	"flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium text-muted-foreground select-none group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
+			/** Where the addon sits: `inline-start`, `inline-end`, `block-start` or `block-end`. */
 			align: {
 				"inline-start": "order-first ps-2 has-[>button]:-ms-1 has-[>kbd]:ms-(--input-group-kbd-nudge)",
 				"inline-end": "order-last pe-2 has-[>button]:-me-1 has-[>kbd]:me-(--input-group-kbd-nudge)",
@@ -39,6 +41,7 @@ const inputGroupAddonVariants = cva(
 	},
 );
 
+/** Holds icons, text or buttons beside (`inline-start`, `inline-end`) or above and below (`block-start`, `block-end`) the control. Clicking its padding focuses the input. */
 const InputGroupAddon = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>>(function InputGroupAddon(
 	{ className, align = "inline-start", onPointerDown, ...props },
 	ref,
@@ -72,6 +75,7 @@ const InputGroupAddon = React.forwardRef<HTMLDivElement, React.ComponentProps<"d
 
 const inputGroupButtonVariants = cva("flex items-center gap-2 text-sm shadow-none", {
 	variants: {
+		/** The button's size: `xs` by default, or an `icon-*` size for icon-only actions. */
 		size: {
 			xs: "h-6 gap-1 rounded-[calc(var(--radius)-5px)] px-1.5 [&>svg:not([class*='size-'])]:size-3.5",
 			sm: "",
@@ -84,16 +88,19 @@ const inputGroupButtonVariants = cva("flex items-center gap-2 text-sm shadow-non
 	},
 });
 
+/** A compact ghost button inside an addon. Defaults to `type="button"`, so it never submits the form by accident. */
 const InputGroupButton = React.forwardRef<
 	HTMLButtonElement,
 	Omit<React.ComponentProps<typeof Button>, "size" | "type"> &
 		VariantProps<typeof inputGroupButtonVariants> & {
+			/** The button's type; `button` by default, so it never submits the form by accident. */
 			type?: "button" | "submit" | "reset";
 		}
 >(function InputGroupButton({ className, type = "button", variant = "ghost", size = "xs", ...props }, ref): React.JSX.Element {
 	return <Button ref={ref} type={type} data-size={size} variant={variant} className={cn(inputGroupButtonVariants({ size }), className)} {...props} />;
 });
 
+/** Non-interactive text in an addon: a prefix such as `https://`, a unit such as `kg`, or a count. */
 const InputGroupText = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function InputGroupText({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<span
@@ -104,6 +111,7 @@ const InputGroupText = React.forwardRef<HTMLSpanElement, React.ComponentProps<"s
 	);
 });
 
+/** The group's single-line control: an `Input` without its own border. */
 const InputGroupInput = React.forwardRef<HTMLInputElement, InputProps>(function InputGroupInput({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<Input
@@ -115,6 +123,7 @@ const InputGroupInput = React.forwardRef<HTMLInputElement, InputProps>(function 
 	);
 });
 
+/** The group's multi-line control, for composers with a toolbar above or below the text. */
 const InputGroupTextarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(function InputGroupTextarea(
 	{ className, ...props },
 	ref,

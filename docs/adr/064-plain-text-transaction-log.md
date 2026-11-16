@@ -3,8 +3,11 @@ title: "ADR 064: Plain-text transaction log through BullMQ"
 tags: ["adr", "audit", "logging", "bullmq", "operations"]
 description: "Every audit row is also appended to a readable .txt file per day, handed off without waiting (BullMQ when Redis is set, an asynchronous append otherwise), with the AuditLog table staying the record of truth."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792972800000
 lastUpdated: 1793059200000
-coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/064-plain-text-transaction-log.webp"
 order: 64
 ---
 

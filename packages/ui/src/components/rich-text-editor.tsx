@@ -89,11 +89,15 @@ export function useRichTextEditor({ initialContent, onChange, placeholder, label
 }
 
 export interface RichTextEditorProps {
+	/** The editor from `useRichTextEditor`. */
 	readonly editor: Editor | null;
+	/** The toolbar, the content area and an optional footer. */
 	readonly children: React.ReactNode;
+	/** Makes the content read-only and disables the toolbar. */
 	readonly disabled?: boolean;
 	/** Marks the whole editor invalid (its border turns destructive). */
 	readonly invalid?: boolean;
+	/** Classes for the editor's frame. */
 	readonly className?: string;
 }
 
@@ -634,6 +638,7 @@ function Picture({ upload, accept }: RichTextPictureProps): React.JSX.Element {
 	);
 }
 
+/** A Tiptap editor with a toolbar built from kit controls. Compose `RichTextEditor.Toolbar`, its `ControlsGroup`s and controls, and `RichTextEditor.Content`. */
 export const RichTextEditor = Object.assign(RichTextEditorRoot, {
 	Toolbar,
 	ControlsGroup,

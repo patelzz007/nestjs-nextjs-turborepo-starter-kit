@@ -108,6 +108,7 @@ export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = 
 	EmailDeliveryEvent: LOG_REASON,
 	GithubWebhookDelivery: `${LOG_REASON} One row per GitHub webhook delivery, kept to ignore redeliveries.`,
 	ReceivedWebhook: `${LOG_REASON} One row per webhook a provider sent (ADR 081), updated as its delivery is claimed and answered.`,
+	DocsSyncRun: `${LOG_REASON} One row per docs sync (ADR 084), written from the sync's own report.`,
 	WebhookEvent: `${MESSAGING_REASON} The outgoing webhook outbox (ADR 082): one row per public event, written with the change it describes.`,
 	WebhookDelivery: `${LOG_REASON} The outgoing webhook delivery log (ADR 082): one row per event and endpoint, updated on every attempt.`,
 	AnalyticsEvent: "Telemetry projected from domain events by the analytics consumer; the domain writes behind each event are captured.",

@@ -715,6 +715,15 @@ export const apiRouter = {
 		detail: defineQuery(apiContract.receivedWebhooks.detail, { scope: ({ id }: { readonly id: string }): ApiQueryKey => ["received-webhooks", "detail", id] }),
 	},
 
+	// ── Docs publishing (Operations console, ADR 084) ─────────────────────────
+	docsPublishing: {
+		overview: defineQuery(apiContract.docsPublishing.overview, { scope: (): ApiQueryKey => ["docs-publishing", "overview"] }),
+		runs: defineQuery(apiContract.docsPublishing.runs, { scope: (): ApiQueryKey => ["docs-publishing", "runs"] }),
+		run: defineQuery(apiContract.docsPublishing.run, { scope: ({ id }: { readonly id: string }): ApiQueryKey => ["docs-publishing", "run", id] }),
+		startSync: defineMutation(apiContract.docsPublishing.startSync),
+		revealHandshake: defineMutation(apiContract.docsPublishing.revealHandshake),
+	},
+
 	// ── Email template preview procedures ─────────────────────────────────────
 	email: {
 		previewList: defineQuery(apiContract.email.previewList, { scope: (): ApiQueryKey => ["email", "preview-list"] }),

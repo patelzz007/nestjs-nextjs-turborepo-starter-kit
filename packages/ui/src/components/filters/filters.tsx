@@ -128,28 +128,39 @@ export interface FiltersProps {
 	readonly variant?: FilterVariant | undefined;
 	/** Where the advanced builder lives. `"inline"` renders the panel in place. */
 	readonly advancedMode?: FilterAdvancedMode | undefined;
+	/** Where the advanced builder's popover lines up with its trigger. */
 	readonly advancedAlign?: "start" | "center" | "end" | undefined;
 	/** Whether the advanced builder's rows can be REORDERED (drag and Alt+Arrow). */
 	readonly reorderable?: boolean | undefined;
+	/** The density of the WHOLE bar: the chips, both triggers, Clear, and every control in the advanced builder. See [the size ladder](#filters-size-ladder). `lg` was removed - the bar is a toolbar over a table, so its ceiling is the style's own default control height. */
 	readonly size?: FilterSize | undefined;
+	/** The bar is off: every control takes the native `disabled` attribute and leaves the tab order, the conditions stay readable, and every mutator refuses. See the note below. */
 	readonly disabled?: boolean | undefined;
+	/** The query can be read and navigated but not changed. Every mutator refuses, and every mutating control keeps its tab stop while announcing itself unavailable. See the note below. */
 	readonly readOnly?: boolean | undefined;
 	/** ONE VETO POINT for every change the bar makes. Return `false` to refuse. */
 	readonly onBeforeQueryChange?: ((query: FilterQuery, details: FilterChangeDetails) => boolean | undefined) | undefined;
 	/** Offers "Advanced editor" in every chip's menu; its presence IS the switch. */
 	readonly onConvertToAdvanced?: (() => void) | undefined;
+	/** Classes for every dropdown MENU the primitive draws - the chip kebab, the advanced row and group kebabs, and the panel's own menu. Merged after `FILTER_MENU_CLASS`, so a `w-*` here wins through tailwind-merge. */
 	readonly menuClassName?: string | undefined;
+	/** Classes for the field PICKER panel, in both chromes that mount it. Merged after `FILTER_FIELD_PICKER_CLASS`. */
 	readonly fieldPickerClassName?: string | undefined;
 	/** How a NESTED attribute path is shortened when too deep to read. */
 	readonly pathCollapse?: FilterPathCollapse | undefined;
+	/** How many path segments to draw before `pathCollapse` applies. */
 	readonly maxPathSegments?: number | undefined;
 	/** Replaces the default Add filter (or Advanced filter) button. */
 	readonly trigger?: React.ReactElement | undefined;
 	/** Renders a Clear button once the query holds anything. */
 	readonly showClear?: boolean | undefined;
+	/** Replaces the value display for every field. A field's own `renderValue` is the narrower form. */
 	readonly renderValue?: ((context: FilterValueDisplayContext) => React.ReactNode) | undefined;
+	/** Replaces a whole chip, ROVING WIRING INCLUDED: carry `data-slot="filter-chip"`, `data-rule-id` and the tab-stop `tabIndex` on your root, or the row's arrows, Home/End and Delete cannot reach it. The focus hooks below rebuild the rest. */
 	readonly renderChip?: ((rule: FilterRule) => React.ReactNode) | undefined;
+	/** Replaces the advanced builder's empty state. The default is a glyph plus `labels.builderEmpty` and `labels.builderEmptyHint`; return `null` for a genuinely blank panel. The context carries the labels, `readOnly`, the mode, and the footer's own `addFilter` and `addGroup` actions. */
 	readonly renderEmpty?: ((context: FilterEmptyStateContext) => React.ReactNode) | undefined;
+	/** Applied to the rendered chrome. */
 	readonly className?: string | undefined;
 	/** A consumer-composed chrome; replaces the default row or builder. */
 	readonly children?: React.ReactNode;
@@ -690,8 +701,11 @@ export const Filters = React.forwardRef<HTMLDivElement, FiltersProps>(function F
 /* -------------------------------------------------------------------------- */
 
 export interface FiltersRowProps {
+	/** Replaces the Add filter button. */
 	readonly trigger?: React.ReactElement | undefined;
+	/** Renders a Clear button once the query holds anything. */
 	readonly showClear?: boolean | undefined;
+	/** Applied to the row. */
 	readonly className?: string | undefined;
 }
 

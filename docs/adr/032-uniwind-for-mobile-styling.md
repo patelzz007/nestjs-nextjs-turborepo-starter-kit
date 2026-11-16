@@ -3,8 +3,11 @@ title: "ADR 032: Uniwind (Free) for Mobile Styling"
 tags: ["adr", "mobile", "ui", "styling"]
 description: "The Expo app styles with Uniwind's free tier on Tailwind v4 instead of NativeWind, so web and mobile share one Tailwind major version and one token CSS format, and the app still runs in Expo Go."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791417600000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1792871476000
+coverImage: "/images/covers/adr/032-uniwind-for-mobile-styling.webp"
 order: 32
 ---
 

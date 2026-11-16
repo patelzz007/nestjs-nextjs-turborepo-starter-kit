@@ -3,6 +3,7 @@
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
+/** The native `label`, with the kit's typography. Tie it to its control with `htmlFor`; it dims beside a disabled control. */
 const Label = React.forwardRef<HTMLLabelElement, React.ComponentProps<"label">>(function Label({ className, htmlFor, ...props }, ref): React.JSX.Element {
 	return (
 		<label

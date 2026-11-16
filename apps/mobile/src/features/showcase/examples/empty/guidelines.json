@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Offer a way forward",
+		"do": {
+			"text": "Say what is missing and give the one action that fills it.",
+			"file": "empty-do-1",
+			"export": "EmptyDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave a bare “No data.” with nothing to do next.",
+			"file": "empty-dont-1",
+			"export": "EmptyDont1Example"
+		}
+	},
+	{
+		"title": "Tell no results from nothing yet",
+		"do": {
+			"text": "After a search, say the search found nothing and offer to clear it.",
+			"file": "empty-do-2",
+			"export": "EmptyDo2Example"
+		},
+		"dont": {
+			"text": "Don't greet a search that found nothing with the first-run prompt.",
+			"file": "empty-dont-2",
+			"export": "EmptyDont2Example"
+		}
+	}
+]

@@ -1,0 +1,401 @@
+[
+	{
+		"id": "c-button-group-1",
+		"label": "Two Buttons",
+		"description": "Basic button group with two buttons. Best for the minimal join: 2 outline text buttons sharing one seam, with no icons, menus or handlers.",
+		"file": "button-group-1",
+		"export": "ButtonGroup1Example"
+	},
+	{
+		"id": "c-button-group-2",
+		"label": "Button & Input",
+		"description": "Button group with a button followed by an input. Best for an outline button joined to the start of a text field, the smallest control and field pair.",
+		"file": "button-group-2",
+		"export": "ButtonGroup2Example"
+	},
+	{
+		"id": "c-button-group-3",
+		"label": "Buttons & Badge",
+		"description": "Button group with buttons and badge. Best for mixed content in one strip: a file icon with a Draft badge, an Edit button with text and an icon only upload.",
+		"file": "button-group-3",
+		"export": "ButtonGroup3Example"
+	},
+	{
+		"id": "c-button-group-4",
+		"label": "Dropdown Menu",
+		"description": "Button group with a dropdown menu. Best for an Update action beside a chevron that opens a sheet of Production, Staging and Development deploy targets.",
+		"file": "button-group-4",
+		"export": "ButtonGroup4Example"
+	},
+	{
+		"id": "c-button-group-5",
+		"label": "Team Activity",
+		"description": "Team activity and collaboration group. Best for a team presence strip: a Team button, a 3 live readout, and invite and activity icon buttons.",
+		"file": "button-group-5",
+		"export": "ButtonGroup5Example"
+	},
+	{
+		"id": "c-button-group-6",
+		"label": "Icon Actions",
+		"description": "Button group using icons for visual actions. Best for icon only flip horizontal, flip vertical and rotate tools, with no text on any of them.",
+		"file": "button-group-6",
+		"export": "ButtonGroup6Example"
+	},
+	{
+		"id": "c-button-group-7",
+		"label": "Status Indicator",
+		"description": "Dropdown with a status indicator. Best for a deploy status strip: a branch menu with main checked, a Production cell, then redeploy and open icon buttons.",
+		"file": "button-group-7",
+		"export": "ButtonGroup7Example"
+	},
+	{
+		"id": "c-button-group-8",
+		"label": "Like Counter",
+		"description": "Button group styled as a like button with a counter. Best for a Like action with a heart icon fused to a 1.2K count styled as a matching outline cell.",
+		"file": "button-group-8",
+		"export": "ButtonGroup8Example"
+	},
+	{
+		"id": "c-button-group-9",
+		"label": "Nested Groups",
+		"description": "Nested button groups for complex action sets. Best for a message field joined to a Voice mode button, with the icon-only Send button set apart.",
+		"file": "button-group-9",
+		"export": "ButtonGroup9Example"
+	},
+	{
+		"id": "c-button-group-10",
+		"label": "Basic Pagination",
+		"description": "Button group used for standard pagination. Best for previous and Next text buttons with arrows around small screen numbers 1 to 3, none marked as current.",
+		"file": "button-group-10",
+		"export": "ButtonGroup10Example"
+	},
+	{
+		"id": "c-button-group-11",
+		"label": "Split Pagination",
+		"description": "Pagination split into screen numbers and navigation arrows. Best for icon only arrows hugging small screen numbers 1 to 3, with all 5 buttons nested in one inner group.",
+		"file": "button-group-11",
+		"export": "ButtonGroup11Example"
+	},
+	{
+		"id": "c-button-group-12",
+		"label": "Text Alignment",
+		"description": "Button group for editor text alignment controls. Best for left, center, right and justify alignment as small icon buttons, each named for screen readers.",
+		"file": "button-group-12",
+		"export": "ButtonGroup12Example"
+	},
+	{
+		"id": "c-button-group-13",
+		"label": "Vertical Orientation",
+		"description": "Vertical button group orientation. Best for a vertical pair of named add and subtract icon buttons stacked into one column.",
+		"file": "button-group-13",
+		"export": "ButtonGroup13Example"
+	},
+	{
+		"id": "c-button-group-14",
+		"label": "Vertical Tool Palette",
+		"description": "Nested vertical button group for complex tool palettes. Best for a vertical tool palette of search, copy and share icons, with delete held apart in its own group below.",
+		"file": "button-group-14",
+		"export": "ButtonGroup14Example"
+	},
+	{
+		"id": "c-button-group-15",
+		"label": "Star With Dropdown",
+		"description": "Star button group with a count and a menu. Best for a repository Star action with a 2.4k badge and a chevron menu from Watch and Fork down to Report.",
+		"file": "button-group-15",
+		"export": "ButtonGroup15Example"
+	},
+	{
+		"id": "c-button-group-16",
+		"label": "Search Filter Clear",
+		"description": "Search field with a scope menu and a clear button. Best for a record filter bar: a scope menu, a plain search field and an X button at the end.",
+		"file": "button-group-16",
+		"export": "ButtonGroup16Example"
+	},
+	{
+		"id": "c-button-group-17",
+		"label": "Conversation Menu",
+		"description": "Button group with a full action menu. Best for a Conversation button with a kebab menu of 6 thread actions above a destructive Delete conversation item.",
+		"file": "button-group-17",
+		"export": "ButtonGroup17Example"
+	},
+	{
+		"id": "c-button-group-18",
+		"label": "Git Split Button",
+		"description": "Split button for a git toolbar. Best for a filled Execute split with a play icon and a chevron menu to commit, commit and push, or commit and sync.",
+		"file": "button-group-18",
+		"export": "ButtonGroup18Example"
+	},
+	{
+		"id": "c-button-group-19",
+		"label": "Search With Menu",
+		"description": "Button group with dropdown menu and input group. Best for a search field with a leading magnifier icon and an icon only kebab menu of record scopes at its end.",
+		"file": "button-group-19",
+		"export": "ButtonGroup19Example"
+	},
+	{
+		"id": "c-button-group-20",
+		"label": "Search With Button",
+		"description": "Button group with input group and button. Best for a search field ending in a filled primary Search button that opens a menu of record scopes.",
+		"file": "button-group-20",
+		"export": "ButtonGroup20Example"
+	},
+	{
+		"id": "c-button-group-21",
+		"label": "File Name Menu",
+		"description": "Button group with dropdown menu and input group. Best for a file name field with a leading file icon and a plus menu to create a file, folder or workspace.",
+		"file": "button-group-21",
+		"export": "ButtonGroup21Example"
+	},
+	{
+		"id": "c-button-group-22",
+		"label": "Disabled Button",
+		"description": "Basic button group with disabled button. Best for files, Folder and Trash text buttons with icons, where the middle one is disabled and dimmed.",
+		"file": "button-group-22",
+		"export": "ButtonGroup22Example"
+	},
+	{
+		"id": "c-button-group-23",
+		"label": "Separated Buttons",
+		"description": "Solid buttons with separators. Best for filled Files, Folder and Media buttons joined into one control, split by faint separators.",
+		"file": "button-group-23",
+		"export": "ButtonGroup23Example"
+	},
+	{
+		"id": "c-button-group-24",
+		"label": "Dashboard Views",
+		"description": "View switcher for dashboard layouts. Best for grid, list and table view icons named for screen readers, with no current view tracked or shaded.",
+		"file": "button-group-24",
+		"export": "ButtonGroup24Example"
+	},
+	{
+		"id": "c-button-group-25",
+		"label": "Rating Scale",
+		"description": "Rating scale using numbered buttons. Best for a 1 to 10 likelihood scale with Not likely and Very likely end labels, the picked score filled.",
+		"file": "button-group-25",
+		"export": "ButtonGroup25Example"
+	},
+	{
+		"id": "c-button-group-26",
+		"label": "User Selection",
+		"description": "Button group with a member picker. Best for a member menu with an avatar and name on its trigger, joined to tag and settings icon buttons.",
+		"file": "button-group-26",
+		"export": "ButtonGroup26Example"
+	},
+	{
+		"id": "c-button-group-27",
+		"label": "Status Select",
+		"description": "Button group with a status picker. Best for a status menu preset to Completed, joined to a task search field.",
+		"file": "button-group-27",
+		"export": "ButtonGroup27Example"
+	},
+	{
+		"id": "c-button-group-28",
+		"label": "Volume Control",
+		"description": "Volume control with plus and minus. Best for a volume stepper moving in steps of 5 from 0 to 100, whose middle readout toggles mute on tap.",
+		"file": "button-group-28",
+		"export": "ButtonGroup28Example"
+	},
+	{
+		"id": "c-button-group-29",
+		"label": "Follower Count",
+		"description": "Button group with follower count. Best for an outline Follow action with a user plus icon and a muted 2.4k followers caption beside it.",
+		"file": "button-group-29",
+		"export": "ButtonGroup29Example"
+	},
+	{
+		"id": "c-button-group-30",
+		"label": "Active Count",
+		"description": "Active state button group with count. Best for a filled Star action whose 2.4k count sits in a text cell outlined in the primary color.",
+		"file": "button-group-30",
+		"export": "ButtonGroup30Example"
+	},
+	{
+		"id": "c-button-group-31",
+		"label": "Share Caption",
+		"description": "Horizontal button group with primary and secondary labels. Best for a filled Share action trailed by a 128 Shares caption on a transparent, tightly padded text cell.",
+		"file": "button-group-31",
+		"export": "ButtonGroup31Example"
+	},
+	{
+		"id": "c-button-group-32",
+		"label": "Sort & View",
+		"description": "Button group with dropdown menu and view toggle. Best for a sort icon menu, a grid or list pair and a filled Add New menu in one row, with only the view pair joined.",
+		"file": "button-group-32",
+		"export": "ButtonGroup32Example"
+	},
+	{
+		"id": "c-button-group-33",
+		"label": "Select Controls",
+		"description": "Joined menus for filters. Best for an environment menu beside a time range menu whose list splits into Recent and Observability Plus groups.",
+		"file": "button-group-33",
+		"export": "ButtonGroup33Example"
+	},
+	{
+		"id": "c-button-group-34",
+		"label": "Segmented Control",
+		"description": "Segmented control with a menu. Best for Routes, Paths and Bot name segments with icons, Paths picked first, ending in a chevron menu of more views.",
+		"file": "button-group-34",
+		"export": "ButtonGroup34Example"
+	},
+	{
+		"id": "c-button-group-35",
+		"label": "Numbered Pagination",
+		"description": "Pagination button group. Best for square screen buttons 1 to 5 between chevrons, with screen 3 filled to mark the current screen.",
+		"file": "button-group-35",
+		"export": "ButtonGroup35Example"
+	},
+	{
+		"id": "c-button-group-36",
+		"label": "View Switcher",
+		"description": "View switcher. Best for list, grid and table view icon buttons with the list view filled and named as current.",
+		"file": "button-group-36",
+		"export": "ButtonGroup36Example"
+	},
+	{
+		"id": "c-button-group-37",
+		"label": "Zoom Controls",
+		"description": "Zoom controls button group. Best for a zoom stepper of 10 percent steps between 10 and 200, the level shown in a fixed width text cell.",
+		"file": "button-group-37",
+		"export": "ButtonGroup37Example"
+	},
+	{
+		"id": "c-button-group-38",
+		"label": "Media Controls",
+		"description": "Media player controls button group. Best for skip back, play and skip forward transport icons, each named for screen readers, with no playback state.",
+		"file": "button-group-38",
+		"export": "ButtonGroup38Example"
+	},
+	{
+		"id": "c-button-group-39",
+		"label": "Split Button",
+		"description": "Split button with dropdown trigger. Best for a filled Save split with a faint separator and a chevron menu to publish, keep a draft or exit.",
+		"file": "button-group-39",
+		"export": "ButtonGroup39Example"
+	},
+	{
+		"id": "c-button-group-40",
+		"label": "Vertical List",
+		"description": "Vertical button group. Best for a vertical list of 4 left aligned text items with no icons, Dashboard shaded as current.",
+		"file": "button-group-40",
+		"export": "ButtonGroup40Example"
+	},
+	{
+		"id": "c-button-group-41",
+		"label": "Model Selector",
+		"description": "Model selector with tiers. Best for an AI model picker whose rows show each model's tier and context size under its name.",
+		"file": "button-group-41",
+		"export": "ButtonGroup41Example"
+	},
+	{
+		"id": "c-button-group-42",
+		"label": "Order Type",
+		"description": "Segmented order type selector. Best for a trading order type picker for Market, Limit, Stop and Stop limit, with the picked type's explanation below.",
+		"file": "button-group-42",
+		"export": "ButtonGroup42Example"
+	},
+	{
+		"id": "c-button-group-43",
+		"label": "Buy Sell Hold",
+		"description": "Buy, hold or sell. Best for stances that fill when picked and clear on a second tap, starting with none.",
+		"file": "button-group-43",
+		"export": "ButtonGroup43Example"
+	},
+	{
+		"id": "c-button-group-44",
+		"label": "Pipeline Stage",
+		"description": "Pipeline stage mover with a menu. Best for a CRM stage stepper whose arrows disable at the ends around a Jump to stage menu with a check.",
+		"file": "button-group-44",
+		"export": "ButtonGroup44Example"
+	},
+	{
+		"id": "c-button-group-45",
+		"label": "Environment Switcher",
+		"description": "Environment switcher with an indicator. Best for Dev, Staging and Production segments, where a pulsing Live badge appears only while Production is on.",
+		"file": "button-group-45",
+		"export": "ButtonGroup45Example"
+	},
+	{
+		"id": "c-button-group-46",
+		"label": "Time Interval",
+		"description": "Compact time interval selector. Best for compact time intervals from 1m to 1W plus Auto, on extra small buttons.",
+		"file": "button-group-46",
+		"export": "ButtonGroup46Example"
+	},
+	{
+		"id": "c-button-group-47",
+		"label": "Review Actions",
+		"description": "Review actions split button. Best for a filled Approve split whose chevron menu offers approve with conditions, request changes or a destructive Reject.",
+		"file": "button-group-47",
+		"export": "ButtonGroup47Example"
+	},
+	{
+		"id": "c-button-group-48",
+		"label": "Export Toolbar",
+		"description": "Toolbar with filter and export. Best for a Filter button beside an Export CSV split with a chevron for Excel, JSON and PDF.",
+		"file": "button-group-48",
+		"export": "ButtonGroup48Example"
+	},
+	{
+		"id": "c-button-group-49",
+		"label": "Vertical Nav",
+		"description": "Vertical navigation. Best for a vertical nav of 4 icon and text items where a tap moves the highlight and the current item is named so.",
+		"file": "button-group-49",
+		"export": "ButtonGroup49Example"
+	},
+	{
+		"id": "c-button-group-50",
+		"label": "Filter Sort More",
+		"description": "Toolbar filter sort and more. Best for small icon only Filter and Sort buttons, a default separator, then a More menu for link, share and export.",
+		"file": "button-group-50",
+		"export": "ButtonGroup50Example"
+	},
+	{
+		"id": "c-button-group-51",
+		"label": "Create Menu",
+		"description": "New button with create dropdown. Best for a small New button with a plus joined to a more menu that creates a customer, order or invoice.",
+		"file": "button-group-51",
+		"export": "ButtonGroup51Example"
+	},
+	{
+		"id": "c-button-group-52",
+		"label": "Dashboard Actions",
+		"description": "Refresh share and export dropdown. Best for dashboard header actions: an icon only refresh, a Share button and a More menu to edit or export CSV or PNG.",
+		"file": "button-group-52",
+		"export": "ButtonGroup52Example"
+	},
+	{
+		"id": "c-button-group-53",
+		"label": "Publish Controls",
+		"description": "Publish controls with a split button and overflow. Best for a publishing header row: 2 viewer avatars, a Preview button, a filled Publish split and a ghost More menu.",
+		"file": "button-group-53",
+		"export": "ButtonGroup53Example"
+	},
+	{
+		"id": "c-button-group-54",
+		"label": "Service Selectors",
+		"description": "API service environment and version selectors. Best for compact API service, environment and version menus joined in a row, the version set in monospace.",
+		"file": "button-group-54",
+		"export": "ButtonGroup54Example"
+	},
+	{
+		"id": "c-button-group-55",
+		"label": "Payout Release",
+		"description": "Payout release controls with amount context. Best for a payout row: a USD 12,480 amount cell joined to Hold, beside a filled Release split with Cancel payout.",
+		"file": "button-group-55",
+		"export": "ButtonGroup55Example"
+	},
+	{
+		"id": "c-button-group-56",
+		"label": "File Attachment",
+		"description": "Attachment chip with a download action. Best for a file chip: paperclip, file name and size on an extra small button, joined to an icon-only download.",
+		"file": "button-group-56",
+		"export": "ButtonGroup56Example"
+	},
+	{
+		"id": "c-button-group-57",
+		"label": "Agent Mode",
+		"description": "Agent mode selector with a credit cap menu. Best for Assist, Review and Auto agent modes, a separator and a credit cap menu from 2k credits to no cap.",
+		"file": "button-group-57",
+		"export": "ButtonGroup57Example"
+	}
+]

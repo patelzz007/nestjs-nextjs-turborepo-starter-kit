@@ -1,4 +1,4 @@
-import { COMPONENT_GALLERY_FEATURE } from "@/lib/feature-flags";
+import { SHOWCASE_FEATURE } from "@/lib/feature-flags";
 import { isFeatureEnabled } from "@/lib/server/feature-flag-settings";
 
 import DashboardGallery from "./dashboard-gallery";
@@ -7,7 +7,7 @@ import DashboardGallery from "./dashboard-gallery";
  * `/` — the admin panel landing page. Top: the real platform overview (sales
  * stat cards and the weekly sales chart from `GET /admin/analytics/sales`,
  * shown with `ANALYTICS.READ`). Below, where the deployment serves the developer
- * component gallery (`ADMIN_COMPONENT_GALLERY`, off in production by default): the
+ * component showcase (`ADMIN_SHOWCASE`, off in production by default): the
  * UI kit's gallery, headed as sample content — the heavy sections stay lazy-loaded
  * on the client (`ssr: false` in `dashboard-gallery.tsx`) so they never block first paint.
  *
@@ -17,5 +17,5 @@ import DashboardGallery from "./dashboard-gallery";
  * the generic fallback for the rest of the panel.
  */
 export default async function PanelHomePage(): Promise<React.JSX.Element> {
-	return <DashboardGallery showComponentGallery={await isFeatureEnabled(COMPONENT_GALLERY_FEATURE)} />;
+	return <DashboardGallery showShowcase={await isFeatureEnabled(SHOWCASE_FEATURE)} />;
 }

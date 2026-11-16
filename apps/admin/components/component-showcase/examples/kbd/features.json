@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-kbd-1",
+		"label": "Basic Keys",
+		"description": "Basic keyboard keys.. Best for loose single keys with no group, where a chord such as Ctrl + B sits as text inside one key.",
+		"file": "kbd-1",
+		"export": "Kbd1Example"
+	},
+	{
+		"id": "c-kbd-2",
+		"label": "Grouped Keys",
+		"description": "Keyboard keys grouped together.. Best for a 3 key chord, Ctrl Shift P, as separate caps in one group with a small gap and no plus signs.",
+		"file": "kbd-2",
+		"export": "Kbd2Example"
+	},
+	{
+		"id": "c-kbd-3",
+		"label": "Keys With Icons",
+		"description": "Keyboard keys combined with icons.. Best for keys that lead with an icon before a word, such as a left arrow before Left, grouped with a Voice Enabled key.",
+		"file": "kbd-3",
+		"export": "Kbd3Example"
+	},
+	{
+		"id": "c-kbd-4",
+		"label": "In Input",
+		"description": "Keyboard key within an input.. Best for a Space key hint at the leading edge of a search field, held in an input group addon.",
+		"file": "kbd-4",
+		"export": "Kbd4Example"
+	},
+	{
+		"id": "c-kbd-5",
+		"label": "In Tooltip",
+		"description": "Keyboard shortcut in a tooltip.. Best for a single key inside the hover hint of an icon only save button, set after the action name.",
+		"file": "kbd-5",
+		"export": "Kbd5Example"
+	},
+	{
+		"id": "c-kbd-6",
+		"label": "Shortcut List",
+		"description": "Keyboard shortcuts reference list. Best for a titled list of 5 commands from Search to Redo, each row ending in its Mac key chord.",
+		"file": "kbd-6",
+		"export": "Kbd6Example"
+	}
+]

@@ -9,7 +9,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import {
-	findKanbanItem,
 	Kanban,
 	KanbanBoard,
 	KanbanColumn,
@@ -18,8 +17,6 @@ import {
 	KanbanItem,
 	KanbanItemHandle,
 	KanbanOverlay,
-	moveKanbanItem,
-	reorderKanbanColumns,
 	type KanbanRootProps,
 	type KanbanValue,
 } from "../kanban";
@@ -101,44 +98,6 @@ async function flushTasks(): Promise<void> {
 afterEach((): void => {
 	cleanup();
 	vi.restoreAllMocks();
-});
-
-describe("Kanban move logic", () => {
-	it("finds an item's column and index", (): void => {
-		expect(findKanbanItem(BOARD, getCardId, "t2")).toEqual({ container: "todo", index: 1 });
-		expect(findKanbanItem(BOARD, getCardId, "missing")).toBeUndefined();
-	});
-
-	it("moves an item onto another column's item, taking its place", (): void => {
-		const next = moveKanbanItem(BOARD, getCardId, "t1", "d1");
-		expect(next === null ? null : idsByColumn(next)).toEqual({ todo: ["t2"], doing: ["t1", "d1"], done: [] });
-	});
-
-	it("appends an item dropped on a column's empty space", (): void => {
-		const next = moveKanbanItem(BOARD, getCardId, "t1", "done");
-		expect(next === null ? null : idsByColumn(next)).toEqual({ todo: ["t2"], doing: ["d1"], done: ["t1"] });
-	});
-
-	it("reorders within a column, and is a no-op on itself", (): void => {
-		const next = moveKanbanItem(BOARD, getCardId, "t1", "t2");
-		expect(next === null ? null : idsByColumn(next).todo).toEqual(["t2", "t1"]);
-		expect(moveKanbanItem(BOARD, getCardId, "t1", "t1")).toBeNull();
-		expect(moveKanbanItem(BOARD, getCardId, "missing", "t1")).toBeNull();
-	});
-
-	it("reorders columns and keeps their items", (): void => {
-		const next = reorderKanbanColumns(BOARD, "done", "todo");
-		expect(next === null ? null : Object.keys(next)).toEqual(["done", "todo", "doing"]);
-		expect(next?.todo).toBe(BOARD.todo);
-		expect(reorderKanbanColumns(BOARD, "todo", "todo")).toBeNull();
-	});
-
-	it("never mutates the input board", (): void => {
-		const before = idsByColumn(BOARD);
-		moveKanbanItem(BOARD, getCardId, "t1", "d1");
-		reorderKanbanColumns(BOARD, "done", "todo");
-		expect(idsByColumn(BOARD)).toEqual(before);
-	});
 });
 
 describe("Kanban", () => {

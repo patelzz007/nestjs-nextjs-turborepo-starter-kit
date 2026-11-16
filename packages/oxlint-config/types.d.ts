@@ -13,6 +13,13 @@ export interface RestrictedImportPattern {
 	readonly caseSensitive?: boolean;
 }
 
+/** One `workspace/restricted-imports` path (ESLint's `no-restricted-imports` `paths` entry): named imports of one module. */
+export interface RestrictedImportPath {
+	readonly name: string;
+	readonly importNames?: readonly string[];
+	readonly message: string;
+}
+
 /** One `no-restricted-globals` entry. */
 export interface RestrictedGlobal {
 	readonly name: string;

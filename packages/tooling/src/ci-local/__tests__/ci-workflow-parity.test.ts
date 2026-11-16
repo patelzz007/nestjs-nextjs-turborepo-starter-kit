@@ -30,6 +30,10 @@ const CI_ONLY = new Map([
 		"CI's `changes` job lets a documentation-only pull request skip the code jobs; ci:local always runs every job",
 	],
 	[
+		"node packages/tooling/src/docs-guard/cli.ts check --base <base>",
+		"The Docs guard reads a pull request's author, body and branch; there is no pull request locally. Its rules are unit-tested",
+	],
+	[
 		'echo "ANALYTICS_CONSUMER_DATABASE_URL=postgresql://analytics_consumer_app:${password}@localhost:5432/app_ci" >> "$GITHUB_ENV"',
 		"src/ci-local/cli.ts passes the consumer's login URL to the step directly",
 	],

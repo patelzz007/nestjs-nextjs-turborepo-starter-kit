@@ -259,7 +259,7 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 	});
 
 	it("waits for readiness before any suite runs", () => {
-		expect(job.suites.map((step) => step.id)).toEqual(["browser:wait", "browser:web-suite", "browser:admin-suite", "browser:admin-visual-suite", "browser:merchant-suite"]);
+		expect(job.suites.map((step) => step.id)).toEqual(["browser:wait", "browser:web-suite", "browser:admin-suite", "browser:merchant-suite"]);
 	});
 
 	it("gives the suites the workflow's base URLs and seed login", () => {

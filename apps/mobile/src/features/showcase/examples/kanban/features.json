@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-kanban-1",
+		"label": "Placeholder Overlay",
+		"description": "Kanban board with a drop outline. Best for task cards with priority, assignee and due date, dragged by a grip with the card or column they will land on outlined.",
+		"file": "kanban-1",
+		"export": "Kanban1Example"
+	},
+	{
+		"id": "c-kanban-2",
+		"label": "Dynamic Overlay",
+		"description": "Kanban board with movable columns. Best for task columns dragged by the grip in their header, the column following the finger while the cards move too.",
+		"file": "kanban-2",
+		"export": "Kanban2Example"
+	},
+	{
+		"id": "c-kanban-3",
+		"label": "Frame Columns",
+		"description": "Kanban board with status columns. Best for columns with a status icon and count over Frame label cards, where only the cards drag.",
+		"file": "kanban-3",
+		"export": "Kanban3Example"
+	},
+	{
+		"id": "c-kanban-4",
+		"label": "Stacked Frame",
+		"description": "Minimal kanban with stacked frame. Best for stacked Frame columns with a one line description each, over cards with a progress bar and assignee.",
+		"file": "kanban-4",
+		"export": "Kanban4Example"
+	},
+	{
+		"id": "c-kanban-5",
+		"label": "Feature Roadmap",
+		"description": "Feature roadmap kanban with progress. Best for a product roadmap of feature cards with description, progress bar and vote count across color coded stages.",
+		"file": "kanban-5",
+		"export": "Kanban5Example"
+	},
+	{
+		"id": "c-kanban-6",
+		"label": "Persisted Moves",
+		"description": "Kanban board persisted to a backend. Best for drops saved to a simulated API, with a promise toast and a rollback to the previous board on failure.",
+		"file": "kanban-6",
+		"export": "Kanban6Example"
+	}
+]

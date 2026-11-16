@@ -3,7 +3,7 @@
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PLATFORM_DISPLAY_REGION, type SupportAccessGrantDetail } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, SUPPORT_ACCESS_GRANT_LIFECYCLE, type SupportAccessGrantDetail } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
@@ -12,9 +12,9 @@ import * as React from "react";
 
 import { useActiveMembership } from "@/features/tenant-context/facade";
 
-/** The grants waiting for the owner's approval. */
+/** The grants waiting for the owner's approval: those the shared lifecycle table lets the owner approve. */
 export function pendingApprovals(grants: readonly SupportAccessGrantDetail[]): readonly SupportAccessGrantDetail[] {
-	return grants.filter((grant) => grant.status === "PENDING_TENANT_APPROVAL");
+	return grants.filter((grant) => SUPPORT_ACCESS_GRANT_LIFECYCLE.can("approve", grant.status));
 }
 
 interface ApprovalRowProps {

@@ -54,8 +54,8 @@ export function ComparisonBars({ items, currentName, previousName, color = "char
 						accessible
 						accessibilityLabel={`${item.label}: ${item.currentLabel}, ${previousName} ${item.previousLabel}, ${item.changeLabel}`}>
 						<View className="flex-row items-baseline gap-3">
-							<Text className="font-sans-medium flex-1 text-sm text-foreground">{item.label}</Text>
-							<Text className="font-sans text-xs text-muted-foreground">{item.changeLabel}</Text>
+							<Text className="font-sans-medium text-body flex-1 text-foreground">{item.label}</Text>
+							<Text className="text-caption font-sans text-muted-foreground">{item.changeLabel}</Text>
 						</View>
 						<ComparisonBar percent={top > 0 ? (item.current / top) * FULL_PERCENT : 0} valueLabel={item.currentLabel} fillClassName={CHART_COLOR_CLASSES[color].fill} />
 						<ComparisonBar
@@ -79,7 +79,7 @@ function LegendKey({ label, fillClassName }: LegendKeyProps): React.JSX.Element 
 	return (
 		<View className="flex-row items-center gap-1.5">
 			<View className={`size-2.5 rounded-full ${fillClassName}`} />
-			<Text className="font-sans text-sm text-muted-foreground">{label}</Text>
+			<Text className="text-body font-sans text-muted-foreground">{label}</Text>
 		</View>
 	);
 }
@@ -100,7 +100,7 @@ function ComparisonBar({ percent, valueLabel, fillClassName }: ComparisonBarProp
 				<View style={barStyle} className={`basis-0 rounded-full ${fillClassName}`} />
 				<View style={restStyle} className="basis-0" />
 			</View>
-			<Text className="w-24 text-right font-sans text-xs text-foreground" numberOfLines={1}>
+			<Text className="text-caption w-24 text-right font-sans text-foreground" numberOfLines={1}>
 				{valueLabel}
 			</Text>
 		</View>

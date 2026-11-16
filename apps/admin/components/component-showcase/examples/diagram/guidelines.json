@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name and summarise it",
+		"do": {
+			"text": "Give a diagram an `accTitle` and an `accDescr`, so a screen reader can tell what it shows.",
+			"file": "diagram-do-1",
+			"export": "DiagramDo1Example"
+		},
+		"dont": {
+			"text": "Don't rely on the drawing alone: a reader who cannot see it gets nothing.",
+			"file": "diagram-dont-1",
+			"export": "DiagramDont1Example"
+		}
+	},
+	{
+		"title": "Keep it small",
+		"do": {
+			"text": "Draw a few steps that fit the width; link to the full diagram elsewhere.",
+			"file": "diagram-do-2",
+			"export": "DiagramDo2Example"
+		},
+		"dont": {
+			"text": "Don't draw a sprawling chart: in a narrow column it shrinks to unreadable.",
+			"file": "diagram-dont-2",
+			"export": "DiagramDont2Example"
+		}
+	}
+]

@@ -139,7 +139,9 @@ import {
 
 export const ganttViewVariants = cva("flex min-h-0 flex-1 flex-col overflow-hidden", {
 	variants: {
+		/** The view's look. */
 		variant: { default: "", outline: "rounded-lg border" },
+		/** The view's size. */
 		size: { default: "", sm: "", lg: "" },
 		state: { default: "", loading: "" },
 	},
@@ -151,6 +153,7 @@ export interface GanttViewProps extends useRender.ComponentProps<"div">, Omit<Va
 	readonly interval?: number | undefined;
 }
 
+/** The tree pane and the timeline with its bars. */
 export const GanttView = React.forwardRef<HTMLDivElement, GanttViewProps>(function GanttView(
 	{ className, render, interval: intervalProp, variant, size, ...props },
 	ref,

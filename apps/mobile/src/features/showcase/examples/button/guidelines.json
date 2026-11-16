@@ -1,0 +1,50 @@
+[
+	{
+		"title": "One primary action per screen",
+		"do": {
+			"text": "Give the screen one `primary` button for the action it exists for, and make the alternatives `outline` or `secondary`.",
+			"file": "button-do-1",
+			"export": "ButtonDo1Example"
+		},
+		"dont": {
+			"text": "Don't set two solid buttons side by side: neither reads as the main action, and Cancel looks as safe to press as Save.",
+			"file": "button-dont-1",
+			"export": "ButtonDont1Example"
+		}
+	},
+	{
+		"title": "Say what the action does",
+		"do": {
+			"text": "Label a button with the verb and its object (\"Save changes\"), so it makes sense on its own and to a screen reader.",
+			"file": "button-do-2",
+			"export": "ButtonDo2Example"
+		},
+		"dont": {
+			"text": "Don't use a vague word (\"OK\", \"Click here\"): people have to read around the button to learn what it does.",
+			"file": "button-dont-2",
+			"export": "ButtonDont2Example"
+		}
+	},
+	{
+		"title": "Keep red for what cannot be undone",
+		"do": { "text": "Use `destructive` for an action that deletes or cannot be undone, with a glyph that says so.", "file": "button-do-3", "export": "ButtonDo3Example" },
+		"dont": {
+			"text": "Don't paint a safe action red: people learn to ignore the colour, and miss it when it matters.",
+			"file": "button-dont-3",
+			"export": "ButtonDont3Example"
+		}
+	},
+	{
+		"title": "Show the wait in the button",
+		"do": {
+			"text": "Pass `loading` while the action runs: the spinner sits in the button, presses are blocked and the wait is announced.",
+			"file": "button-do-4",
+			"export": "ButtonDo4Example"
+		},
+		"dont": {
+			"text": "Don't put a spinner beside a button that still takes presses: a second tap sends the action twice.",
+			"file": "button-dont-4",
+			"export": "ButtonDont4Example"
+		}
+	}
+]

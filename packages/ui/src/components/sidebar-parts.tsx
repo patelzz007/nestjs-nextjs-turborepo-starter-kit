@@ -21,8 +21,11 @@ import { useSidebar, useSidebarControls } from "./sidebar-context";
 const DEFAULT_SKELETON_TEXT_WIDTH_PERCENT = 70;
 
 export interface SidebarProps extends React.ComponentProps<"div"> {
+	/** The edge it sits on: `left` (navigation) or `right` (an inspector). */
 	readonly side?: "left" | "right";
+	/** `sidebar`, `floating` (a card) or `inset` (the content inset beside it). */
 	readonly variant?: "sidebar" | "floating" | "inset";
+	/** How it collapses: `offcanvas` (slides away), `icon` (a rail of icons) or `none`. */
 	readonly collapsible?: "offcanvas" | "icon" | "none";
 }
 
@@ -141,6 +144,7 @@ const SidebarRoot = React.forwardRef<HTMLDivElement, SidebarRootProps>(function 
 	);
 });
 
+/** The button that opens and closes the sidebar (as a sheet on mobile). */
 export const SidebarTrigger = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(function SidebarTrigger(
 	{ className, onClick, ...props },
 	ref,
@@ -173,6 +177,7 @@ export const SidebarTrigger = React.forwardRef<HTMLButtonElement, React.Componen
 	);
 });
 
+/** A thin strip on the sidebar's edge that toggles it when clicked. */
 export const SidebarRail = React.forwardRef<HTMLElement, React.ComponentProps<typeof Button>>(function SidebarRail({ className, ...props }, ref): React.JSX.Element {
 	const { toggleSidebar, labels } = useSidebarControls();
 
@@ -221,18 +226,22 @@ export const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProp
 	);
 });
 
+/** A search field styled for the sidebar. */
 export const SidebarInput = React.forwardRef<HTMLInputElement, React.ComponentProps<typeof Input>>(function SidebarInput({ className, ...props }, ref): React.JSX.Element {
 	return <Input ref={ref} data-slot="sidebar-input" data-sidebar="input" className={cn("h-8 w-full bg-background shadow-none", className)} {...props} />;
 });
 
+/** The top area, for the workspace switcher. */
 export const SidebarHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function SidebarHeader({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="sidebar-header" data-sidebar="header" className={cn("flex flex-col gap-2 p-2", className)} {...props} />;
 });
 
+/** The bottom area, for the account menu. */
 export const SidebarFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function SidebarFooter({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="sidebar-footer" data-sidebar="footer" className={cn("flex shrink-0 flex-col gap-2 p-2", className)} {...props} />;
 });
 
+/** A divider between groups. */
 export const SidebarSeparator = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof Separator>>(function SidebarSeparator(
 	{ className, ...props },
 	ref,
@@ -240,6 +249,7 @@ export const SidebarSeparator = React.forwardRef<HTMLDivElement, React.Component
 	return <Separator ref={ref} data-slot="sidebar-separator" data-sidebar="separator" className={cn("mx-2 w-auto bg-sidebar-border", className)} {...props} />;
 });
 
+/** The scrolling middle, holding the groups. */
 export const SidebarContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function SidebarContent({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -252,10 +262,12 @@ export const SidebarContent = React.forwardRef<HTMLDivElement, React.ComponentPr
 	);
 });
 
+/** A section of the sidebar. */
 export const SidebarGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function SidebarGroup({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="sidebar-group" data-sidebar="group" className={cn("relative flex w-full min-w-0 flex-col p-2", className)} {...props} />;
 });
 
+/** A group's heading; hidden on the icon rail. */
 export const SidebarGroupLabel = React.forwardRef<HTMLDivElement, useRender.ComponentProps<"div">>(function SidebarGroupLabel(
 	{ className, render, ...props },
 	ref,
@@ -280,6 +292,7 @@ export const SidebarGroupLabel = React.forwardRef<HTMLDivElement, useRender.Comp
 	});
 });
 
+/** A button at the end of a group's label, such as "Add project". */
 export const SidebarGroupAction = React.forwardRef<HTMLButtonElement, useRender.ComponentProps<"button">>(function SidebarGroupAction(
 	{ className, render, ...props },
 	ref,
@@ -304,6 +317,7 @@ export const SidebarGroupAction = React.forwardRef<HTMLButtonElement, useRender.
 	});
 });
 
+/** A group's content, under its label. */
 export const SidebarGroupContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function SidebarGroupContent(
 	{ className, ...props },
 	ref,
@@ -311,16 +325,20 @@ export const SidebarGroupContent = React.forwardRef<HTMLDivElement, React.Compon
 	return <div ref={ref} data-slot="sidebar-group-content" data-sidebar="group-content" className={cn("w-full text-sm", className)} {...props} />;
 });
 
+/** A list of menu items. */
 export const SidebarMenu = React.forwardRef<HTMLUListElement, React.ComponentProps<"ul">>(function SidebarMenu({ className, ...props }, ref): React.JSX.Element {
 	return <ul ref={ref} data-slot="sidebar-menu" data-sidebar="menu" className={cn("flex w-full min-w-0 flex-col gap-1", className)} {...props} />;
 });
 
+/** One entry of a `SidebarMenu`. */
 export const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(function SidebarMenuItem({ className, ...props }, ref): React.JSX.Element {
 	return <li ref={ref} data-slot="sidebar-menu-item" data-sidebar="menu-item" className={cn("group/menu-item relative", className)} {...props} />;
 });
 
 export type SidebarMenuButtonProps = useRender.ComponentProps<"button"> & {
+	/** Marks the current page: highlighted, with `aria-current`. */
 	isActive?: boolean;
+	/** Shown beside the item on the icon rail, where the label is hidden. */
 	tooltip?: React.ComponentProps<typeof TooltipContent>;
 } & VariantProps<typeof sidebarMenuButtonVariants>;
 
@@ -334,6 +352,7 @@ function SidebarMenuButtonTooltip(props: React.ComponentProps<typeof TooltipCont
 	return <TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile} {...props} />;
 }
 
+/** A menu item's link or button: icon and label, `isActive` for the current page, `tooltip` for the icon rail. */
 export const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonProps>(function SidebarMenuButton(
 	{ render, isActive = false, variant = "default", size = "default", tooltip, className, disabled, ...props },
 	ref,
@@ -371,9 +390,11 @@ export const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenu
 });
 
 export type SidebarMenuActionProps = useRender.ComponentProps<"button"> & {
+	/** Shows the action only while the item is hovered or focused. */
 	showOnHover?: boolean;
 };
 
+/** A button at the end of a menu item, such as its ⋯ menu. */
 export const SidebarMenuAction = React.forwardRef<HTMLButtonElement, SidebarMenuActionProps>(function SidebarMenuAction(
 	{ className, render, showOnHover = false, ...props },
 	ref,
@@ -405,6 +426,7 @@ export type SidebarMenuBadgeProps = React.ComponentProps<"div"> & {
 	itemId?: string;
 };
 
+/** A count or a status at the end of a menu item. */
 export const SidebarMenuBadge = React.forwardRef<HTMLDivElement, SidebarMenuBadgeProps>(function SidebarMenuBadge(
 	{ className, itemId, children, ...props },
 	ref,
@@ -432,11 +454,13 @@ export const SidebarMenuBadge = React.forwardRef<HTMLDivElement, SidebarMenuBadg
 });
 
 export type SidebarMenuSkeletonProps = React.ComponentProps<"div"> & {
+	/** Draws an icon placeholder before the text one. */
 	showIcon?: boolean;
 	/** Deterministic skeleton bar width (50–90). Avoids hydration mismatch from random widths. */
 	textWidthPercent?: number;
 };
 
+/** A placeholder row while the menu loads. */
 export const SidebarMenuSkeleton = React.forwardRef<HTMLDivElement, SidebarMenuSkeletonProps>(function SidebarMenuSkeleton(
 	{ className, showIcon = false, textWidthPercent = DEFAULT_SKELETON_TEXT_WIDTH_PERCENT, ...props },
 	ref,
@@ -456,6 +480,7 @@ export const SidebarMenuSkeleton = React.forwardRef<HTMLDivElement, SidebarMenuS
 	);
 });
 
+/** A nested list under a menu item. */
 export const SidebarMenuSub = React.forwardRef<HTMLUListElement, React.ComponentProps<"ul">>(function SidebarMenuSub({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<ul
@@ -471,15 +496,19 @@ export const SidebarMenuSub = React.forwardRef<HTMLUListElement, React.Component
 	);
 });
 
+/** One entry of a `SidebarMenuSub`. */
 export const SidebarMenuSubItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(function SidebarMenuSubItem({ className, ...props }, ref): React.JSX.Element {
 	return <li ref={ref} data-slot="sidebar-menu-sub-item" data-sidebar="menu-sub-item" className={cn("group/menu-sub-item relative", className)} {...props} />;
 });
 
 export type SidebarMenuSubButtonProps = useRender.ComponentProps<"a"> & {
+	/** Text size: `sm` or `md`. */
 	size?: "sm" | "md";
+	/** Marks the current page. */
 	isActive?: boolean;
 };
 
+/** A sub-item's link or button. */
 export const SidebarMenuSubButton = React.forwardRef<HTMLAnchorElement, SidebarMenuSubButtonProps>(function SidebarMenuSubButton(
 	{ render, size = "md", isActive = false, className, "aria-disabled": ariaDisabled, ...props },
 	ref,

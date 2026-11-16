@@ -14,6 +14,7 @@ import SearchScreen from "../../../app/(app)/search";
 // The whole module: the router reads `unstable_settings` (Settings first in its stack) from it, as in the app.
 import * as SettingsLayoutModule from "../../../app/(app)/settings/_layout";
 import * as ProfileLayoutModule from "../../../app/(app)/profile/_layout";
+import * as ShowcaseLayoutModule from "../../../app/(app)/showcase/_layout";
 
 /** Long enough for a tab switch's transition to have run its course. */
 const SWITCH_SETTLED_MS = 1000;
@@ -30,6 +31,8 @@ const SCREENS = {
 	"(app)/settings/devices": markerScreen("devices screen"),
 	"(app)/settings/appearance": markerScreen("appearance screen"),
 	"(app)/settings/app-lock": markerScreen("app-lock screen"),
+	"(app)/showcase/_layout": ShowcaseLayoutModule,
+	"(app)/showcase/index": markerScreen("showcase screen"),
 };
 
 async function renderSignedIn(url: string, overrides: TestRuntimeOverrides = {}): Promise<ReturnType<typeof createTestRuntime>> {
@@ -115,6 +118,17 @@ describe("app drawer (ADR 038)", () => {
 		await fireEvent.press(drawer.getByRole("button", { name: item }));
 
 		expect(await screen.findByText(target)).toBeOnTheScreen();
+	});
+
+	it("opens the showcase from the Developer section", async () => {
+		await renderSignedIn("/");
+		await screen.findByText("This is the starter shell");
+		const drawer = await openDrawer();
+
+		await fireEvent.press(await drawer.findByRole("button", { name: "Showcase" }));
+
+		expect(await screen.findByText("showcase screen")).toBeOnTheScreen();
+		expect(screen).toHavePathname("/showcase");
 	});
 
 	it("opens the profile from the account header", async () => {

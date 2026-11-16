@@ -372,6 +372,26 @@ export interface ApiConfig {
 	readonly payments: PaymentsConfig;
 	readonly webhooks: WebhooksConfig;
 	readonly inboundWebhooks: InboundWebhooksConfig;
+	readonly docsPublishing: DocsPublishingConfig;
+}
+
+/** Docs publishing (ADR 084). */
+export interface DocsPublishingConfig {
+	/** `NOTION_WEBHOOK_SECRET`: what Notion signs with; `null` until the webhook is verified. */
+	readonly notionWebhookSecret: string | null;
+	/** The workflow this server may start; `null` = it starts none, and the schedule still runs. */
+	readonly dispatch: DocsSyncDispatchConfig | null;
+	/** `DOCS_SYNC_REPORT_TOKEN`; `null` = sync reports are refused. */
+	readonly reportToken: string | null;
+	/** `DOCS_SYNC_RUN_RETENTION_DAYS`. */
+	readonly retentionDays: number;
+}
+
+export interface DocsSyncDispatchConfig {
+	readonly token: string;
+	/** `owner/name`. */
+	readonly repository: string;
+	readonly ref: string;
 }
 
 /** The received-webhook log (ADR 081). */

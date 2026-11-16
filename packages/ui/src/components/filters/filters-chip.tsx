@@ -311,11 +311,15 @@ function useAutoFocusTarget(): readonly [React.RefObject<HTMLDivElement | null>,
 }
 
 export interface FilterValuePopoverProps {
+	/** The rule being edited. */
 	readonly rule: FilterRule;
+	/** That rule's field, resolved. */
 	readonly field: FilterField;
+	/** The current operator. Decides which editor opens. */
 	readonly operator: FilterOperator | undefined;
 	/** The element that opens it, WITH its own children: a chip segment must be a direct child of its `ButtonGroup`. */
 	readonly trigger: React.ReactElement;
+	/** Applied to the popover content. */
 	readonly className?: string | undefined;
 }
 
@@ -365,9 +369,13 @@ export const FilterValuePopover = React.forwardRef<HTMLDivElement, FilterValuePo
 const OPERATOR_MENU_MAX_HEIGHT = 320;
 
 export interface FilterOperatorPopoverProps {
+	/** The rule whose operator is being chosen. */
 	readonly rule: FilterRule;
+	/** That rule's field, resolved. */
 	readonly field: FilterField;
+	/** The element that opens it, with its own children, rather than a wrapper of the popover's own. That is what lets one implementation serve both chromes: a chip segment has to be a DIRECT child of its `ButtonGroup` for the pill to fuse, while an advanced cell is a bordered box in a grid cell. */
 	readonly trigger: React.ReactElement;
+	/** Applied to the popover content. */
 	readonly className?: string | undefined;
 }
 
@@ -563,6 +571,7 @@ export const FilterMoveToMenuItems = React.forwardRef<HTMLDivElement, FilterMove
 });
 
 export interface FilterRuleMenuItemsProps {
+	/** The rule they act on. */
 	readonly ruleId: string;
 	/** Offer "Wrap in group" and "Move to". Off for the chip row, which cannot draw a group. */
 	readonly allowGrouping?: boolean | undefined;
@@ -621,8 +630,11 @@ const SEGMENT_BUTTON = <button type="button" />;
 const SEGMENT_CLASS = "cursor-default bg-background hover:bg-muted dark:bg-input/30";
 
 export interface FilterChipProps {
+	/** The rule to draw. */
 	readonly rule: FilterRule;
+	/** Position in the row, for the roving tabindex. */
 	readonly index: number;
+	/** Classes for the chip. */
 	readonly className?: string | undefined;
 }
 

@@ -43,6 +43,19 @@ export const RENAMED_ANCHORS: Readonly<Record<string, Readonly<Record<string, st
 	"/docs/technical/tooling/typescript": { "typescript-7-and-the-two-places-typescript-6-remains": "typescript-7-and-the-one-place-typescript-6-remains" },
 };
 
+/** The host of the stock photos the guides' covers were until 2026-11-13. */
+const REPLACED_COVER_PREFIX = "https://images.unsplash.com/";
+/** One of the docs' own covers (`docs/images/covers/`), as a page's absolute sharing image. */
+const OWN_COVER_PATTERN = /^https?:\/\/[^/]+\/images\/covers\/[\w/-]+\.webp$/u;
+
+/**
+ * Whether a page's sharing image changed only because its stock cover was replaced: 2026-11-13, every guide's
+ * Unsplash cover became one of the docs' own. Any other change to a sharing image is still a regression.
+ */
+export function isReplacedCover(before: string | null, after: string | null): boolean {
+	return before !== null && after !== null && before.startsWith(REPLACED_COVER_PREFIX) && OWN_COVER_PATTERN.test(after);
+}
+
 const ENTITIES: Readonly<Record<string, string>> = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&#x27;": "'", "&nbsp;": " " };
 
 export function decodeEntities(text: string): string {
@@ -93,7 +106,8 @@ export function compareWithBaseline(baseline: Baseline, pages: ReadonlyMap<strin
 		}
 		if (after.title !== before.title) problems.push(`${route}: title "${before.title}" → "${after.title}"`);
 		if (after.h1 !== before.h1) problems.push(`${route}: h1 "${before.h1}" → "${after.h1}"`);
-		if (after.ogImage !== before.ogImage) problems.push(`${route}: og:image ${String(before.ogImage)} → ${String(after.ogImage)}`);
+		if (after.ogImage !== before.ogImage && !isReplacedCover(before.ogImage, after.ogImage))
+			problems.push(`${route}: og:image ${String(before.ogImage)} → ${String(after.ogImage)}`);
 		if (canonicalPath(after.canonical) !== canonicalPath(before.canonical)) problems.push(`${route}: canonical ${String(before.canonical)} → ${String(after.canonical)}`);
 		if (isArticle(route)) {
 			const renamed = RENAMED_ANCHORS[route] ?? {};

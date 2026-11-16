@@ -55,7 +55,7 @@ export interface TrendChartProps {
 const PLOT_HEIGHT = 168;
 /** Gridline intervals: three keeps the labels clear of each other on a phone. */
 const TICK_INTERVALS = 3;
-/** Height of a tick label's row (one line of `text-xs`). */
+/** Height of a tick label's row (one line of `text-caption`). */
 const TICK_LABEL_HEIGHT = 16;
 /**
  * Room above the top gridline and under the bottom one: half a tick label, so
@@ -240,19 +240,19 @@ function Readout({ series, selected, bucketLabel, formatValue, hint }: ReadoutPr
 	if (selected === null || bucketLabel === null) {
 		return (
 			<View className="min-h-11 justify-center">
-				<Text className="font-sans text-sm text-muted-foreground">{hint}</Text>
+				<Text className="text-body font-sans text-muted-foreground">{hint}</Text>
 			</View>
 		);
 	}
 	return (
 		<View className="min-h-11 justify-center gap-0.5" importantForAccessibility="no-hide-descendants">
-			<Text className="font-sans-medium text-xs text-muted-foreground">{bucketLabel}</Text>
+			<Text className="font-sans-medium text-caption text-muted-foreground">{bucketLabel}</Text>
 			<View className="flex-row flex-wrap gap-x-4 gap-y-0.5">
 				{series.map((item: TrendSeries): React.JSX.Element => (
 					<View key={item.key} className="flex-row items-center gap-1.5">
 						{series.length > 1 ? <View className={`h-0.5 w-3 rounded-full ${CHART_COLOR_CLASSES[item.color].fill}`} /> : null}
-						<Text className="font-sans-semibold text-base text-foreground">{formatValue(item.values.at(selected) ?? 0)}</Text>
-						{series.length > 1 ? <Text className="font-sans text-sm text-muted-foreground">{item.label}</Text> : null}
+						<Text className="font-sans-semibold text-body-lg text-foreground">{formatValue(item.values.at(selected) ?? 0)}</Text>
+						{series.length > 1 ? <Text className="text-body font-sans text-muted-foreground">{item.label}</Text> : null}
 					</View>
 				))}
 			</View>
@@ -308,7 +308,7 @@ function TickLabels({ labels }: TickLabelsProps): React.JSX.Element {
 		<View style={styles.plot} className="justify-between" importantForAccessibility="no-hide-descendants">
 			{labels.map((label: string, position: number): React.JSX.Element => (
 				<View key={`${String(position)}-${label}`} style={styles.tickLabel} className="justify-center">
-					<Text className="text-right font-sans text-xs text-muted-foreground tabular-nums">{label}</Text>
+					<Text className="text-caption text-right font-sans text-muted-foreground tabular-nums">{label}</Text>
 				</View>
 			))}
 		</View>
@@ -337,7 +337,7 @@ function AxisLabels({ tickLabels }: AxisLabelsProps): React.JSX.Element {
 	return (
 		<View className="flex-row justify-between" importantForAccessibility="no-hide-descendants">
 			{shown.map((label: string, position: number): React.JSX.Element => (
-				<Text key={`${String(position)}-${label}`} className="font-sans text-xs text-muted-foreground">
+				<Text key={`${String(position)}-${label}`} className="text-caption font-sans text-muted-foreground">
 					{label}
 				</Text>
 			))}
@@ -356,7 +356,7 @@ function Legend({ series }: LegendProps): React.JSX.Element {
 			{series.map((item: TrendSeries): React.JSX.Element => (
 				<View key={item.key} className="flex-row items-center gap-1.5">
 					<View className={`h-0.5 w-3 rounded-full ${CHART_COLOR_CLASSES[item.color].fill}`} />
-					<Text className="font-sans text-sm text-muted-foreground">{item.label}</Text>
+					<Text className="text-body font-sans text-muted-foreground">{item.label}</Text>
 				</View>
 			))}
 		</View>

@@ -23,7 +23,7 @@ import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/co
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
@@ -86,7 +86,7 @@ function DeliveryIdCell({ deliveryId }: { readonly deliveryId: string | null }):
  */
 export default function ReceivedWebhooksView({ initialPage }: { readonly initialPage?: PrefetchedQuery<Envelope<ReceivedWebhookSummary[]>> | undefined }): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const [urlState, updateUrlState] = useUrlState(RECEIVED_WEBHOOKS_URL_STATE);
 	const isFiltered = isReceivedWebhooksFiltered(urlState);
 

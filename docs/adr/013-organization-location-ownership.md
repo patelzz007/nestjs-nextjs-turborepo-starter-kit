@@ -3,8 +3,11 @@ title: "ADR 013: Organization and Location Ownership"
 tags: ["adr", "tenancy", "organization", "location"]
 description: "Architecture decision record for organization-level membership with optional location scope."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1773000000000
 lastUpdated: 1773000000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1789288557000
+coverImage: "/images/covers/adr/013-organization-location-ownership.webp"
 order: 13
 ---
 

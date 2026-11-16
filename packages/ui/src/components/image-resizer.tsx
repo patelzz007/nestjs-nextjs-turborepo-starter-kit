@@ -117,9 +117,11 @@ export interface ImageResizerProps extends Omit<React.ComponentPropsWithoutRef<"
 	readonly onValueCommitted?: ((size: ImageSize) => void) | undefined;
 	/** The smallest width, in CSS pixels (default `DEFAULT_IMAGE_RESIZE_MIN_SIZE_PX`). */
 	readonly minWidth?: number | undefined;
+	/** The smallest height the image can be resized to, in pixels. */
 	readonly minHeight?: number | undefined;
 	/** The largest width, in CSS pixels — e.g. the width of the column the image sits in (default: none). */
 	readonly maxWidth?: number | undefined;
+	/** The largest height, in pixels. */
 	readonly maxHeight?: number | undefined;
 	/** Width ÷ height to keep while resizing (e.g. the image's natural ratio); omitted, the sides change independently. */
 	readonly aspectRatio?: number | undefined;
@@ -127,11 +129,15 @@ export interface ImageResizerProps extends Omit<React.ComponentPropsWithoutRef<"
 	readonly handles?: readonly ImageResizeHandle[] | undefined;
 	/** Pixels per arrow-key press, and per Shift + arrow-key press. */
 	readonly step?: number | undefined;
+	/** Pixels a handle moves per arrow key with Shift held. */
 	readonly largeStep?: number | undefined;
 	/** Shows the image at its size with no handles. */
 	readonly disabled?: boolean | undefined;
+	/** The frame around the image while it is resized: `outline` or `ghost`. */
 	readonly variant?: ImageResizerVariant | undefined;
+	/** The handles' size: `sm` or `md`. */
 	readonly size?: ImageResizerSize | undefined;
+	/** How the image fills its box: `cover`, `contain` or `fill`. */
 	readonly fit?: ImageResizerFit | undefined;
 	/** Shown in place of the image when it fails to load. */
 	readonly fallback?: React.ReactNode;

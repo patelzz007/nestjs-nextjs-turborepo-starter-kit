@@ -3,8 +3,11 @@ title: "Authorization simplification plan"
 tags: ["architecture", "authorization", "rbac", "rebac", "abac", "cedar", "plan"]
 description: "What made the authorization system feel complicated, measured in the code, and the phased plan to simplify it while keeping every behaviour the product uses. Phases 1, 2 and 4 are done; phase 3 was declined."
 author: "Platform Team"
+category: "Architecture"
+date: 1793145600000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793192519000
+coverImage: "/images/covers/architecture/authorization-simplification-plan.webp"
 ---
 
 # Authorization simplification plan

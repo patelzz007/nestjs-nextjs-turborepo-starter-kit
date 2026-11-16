@@ -3,8 +3,11 @@ title: "ADR 036: Floating Tab Bar, Reanimated and Lucide on Mobile"
 tags: ["adr", "mobile", "ui", "navigation", "motion"]
 description: "The Expo app's tabs use a custom floating tab bar driven by Reanimated springs, Lucide icons shared with the web, a solid token-coloured surface instead of blur, and a placeholder Search tab."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1791628566000
+coverImage: "/images/covers/adr/036-mobile-floating-tab-bar.webp"
 order: 36
 ---
 

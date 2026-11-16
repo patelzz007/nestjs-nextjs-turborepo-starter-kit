@@ -355,62 +355,12 @@
 			"halfYear": "Separuh tahun",
 			"year": "Tahun"
 		},
-		"months": [
-			"Januari",
-			"Februari",
-			"Mac",
-			"April",
-			"Mei",
-			"Jun",
-			"Julai",
-			"Ogos",
-			"September",
-			"Oktober",
-			"November",
-			"Disember"
-		],
-		"monthsShort": [
-			"Jan",
-			"Feb",
-			"Mac",
-			"Apr",
-			"Mei",
-			"Jun",
-			"Jul",
-			"Ogo",
-			"Sep",
-			"Okt",
-			"Nov",
-			"Dis"
-		],
-		"quarters": [
-			"S1",
-			"S2",
-			"S3",
-			"S4"
-		],
-		"halfYears": [
-			"SP1",
-			"SP2"
-		],
-		"weekdays": [
-			"Ahad",
-			"Isnin",
-			"Selasa",
-			"Rabu",
-			"Khamis",
-			"Jumaat",
-			"Sabtu"
-		],
-		"weekdaysShort": [
-			"Ah",
-			"Is",
-			"Se",
-			"Ra",
-			"Kh",
-			"Ju",
-			"Sa"
-		],
+		"months": ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"],
+		"monthsShort": ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"],
+		"quarters": ["S1", "S2", "S3", "S4"],
+		"halfYears": ["SP1", "SP2"],
+		"weekdays": ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"],
+		"weekdaysShort": ["Ah", "Is", "Se", "Ra", "Kh", "Ju", "Sa"],
 		"placeholder": "Pilih tarikh...",
 		"rangePlaceholder": "Pilih julat tarikh..."
 	},
@@ -435,14 +385,7 @@
 		"symbols": "Simbol",
 		"flags": "Bendera",
 		"skinTone": "Warna kulit",
-		"skinTones": [
-			"Lalai",
-			"Cerah",
-			"Sederhana cerah",
-			"Sederhana",
-			"Sederhana gelap",
-			"Gelap"
-		],
+		"skinTones": ["Lalai", "Cerah", "Sederhana cerah", "Sederhana", "Sederhana gelap", "Gelap"],
 		"empty": "Tiada emoji ditemui",
 		"emptyHint": "Cuba perkataan lain atau kod pendek",
 		"loading": "Memuatkan emoji",
@@ -598,6 +541,12 @@
 	},
 	"dialog": {
 		"close": "Tutup"
+	},
+	"diagram": {
+		"loading": "Memuatkan rajah…",
+		"zoomIn": "Zum masuk",
+		"zoomOut": "Zum keluar",
+		"resetZoom": "Tetapkan semula zum"
 	},
 	"kpiDirection": {
 		"up": "Naik",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { KybStatusSchema, type JsonObject, type KybStatus } from "@workspace/shared";
+import { kybAdminDecisionsFrom, KybStatusSchema, type JsonObject, type KybStatus } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Button } from "@workspace/ui/components/button";
 import { Check, ShieldCheck, X } from "lucide-react";
@@ -13,6 +13,15 @@ import { KybReviewFormSchema, toKybReviewFormValues, type KybReviewDecision } fr
 
 function kybStatusLabel(status: KybStatus): string {
 	return KYB_STATUS_LABELS[status];
+}
+
+/**
+ * The statuses the select offers: the current one (the form's starting value) and every decision the
+ * shared KYB table allows from it — never a status the API would refuse.
+ */
+export function kybStatusOptionsFrom(current: KybStatus): readonly KybStatus[] {
+	const decisions = kybAdminDecisionsFrom(current);
+	return KybStatusSchema.options.filter((status) => status === current || decisions.includes(status));
 }
 
 export interface KybReviewDecisionFormProps {
@@ -51,6 +60,9 @@ export function KybReviewDecisionForm({ kybStatus, kybFields, isSaving, onSubmit
 		submitAs(KybStatusSchema.enum.REJECTED);
 	}, [submitAs]);
 	const handleFormSubmit = useFormSubmitHandler(submit);
+	const decisions = kybAdminDecisionsFrom(kybStatus);
+	const canApprove = decisions.includes(KybStatusSchema.enum.APPROVED);
+	const canReject = decisions.includes(KybStatusSchema.enum.REJECTED);
 
 	return (
 		<Card>
@@ -60,6 +72,7 @@ export function KybReviewDecisionForm({ kybStatus, kybFields, isSaving, onSubmit
 			</CardHeader>
 			<CardContent className="min-w-0">
 				<form noValidate className="grid min-w-0 gap-6" onSubmit={handleFormSubmit}>
+					{decisions.length === 0 ? <p className="text-sm text-muted-foreground">This review is closed: it reopens when the merchant submits their details again.</p> : null}
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<form.Field name="registrationNo">
 							{(field) => (
@@ -106,7 +119,7 @@ export function KybReviewDecisionForm({ kybStatus, kybFields, isSaving, onSubmit
 									id="kyb-status"
 									label="KYB status"
 									value={field.state.value}
-									options={KybStatusSchema.options}
+									options={kybStatusOptionsFrom(kybStatus)}
 									labelOf={kybStatusLabel}
 									onChange={field.handleChange}
 									errors={field.state.meta.errors}
@@ -148,11 +161,11 @@ export function KybReviewDecisionForm({ kybStatus, kybFields, isSaving, onSubmit
 							{isSaving ? "Saving…" : "Save review"}
 						</Button>
 						<div className="flex flex-col gap-2 sm:flex-row">
-							<Button type="button" variant="outline" disabled={isSaving} onClick={handleReject}>
+							<Button type="button" variant="outline" disabled={isSaving || !canReject} onClick={handleReject}>
 								<X className="mr-2 size-4" aria-hidden="true" />
 								Reject
 							</Button>
-							<Button type="button" disabled={isSaving} onClick={handleApprove}>
+							<Button type="button" disabled={isSaving || !canApprove} onClick={handleApprove}>
 								<Check className="mr-2 size-4" aria-hidden="true" />
 								Approve
 							</Button>

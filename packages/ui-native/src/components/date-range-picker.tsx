@@ -66,7 +66,7 @@ export const dateRangeEndVariants = cva("flex-1 gap-0.5 rounded-xl border px-3 p
 });
 
 /** The line under the calendar: guidance, the day count, or why the range cannot be applied. */
-export const dateRangeStatusVariants = cva("font-sans text-sm", {
+export const dateRangeStatusVariants = cva("text-body font-sans", {
 	variants: {
 		state: { default: "text-muted-foreground", error: "text-destructive-foreground" },
 	},
@@ -155,7 +155,7 @@ const PickerSheet = React.memo(function PickerSheet({
 					onPress={onClose}
 					hitSlop={CLOSE_HIT_SLOP}
 					className="size-11 items-center justify-center rounded-full active:opacity-60">
-					<Icon icon={XIcon} size="md" colorClassName="accent-muted-foreground" />
+					<Icon icon={XIcon} size="md" colorClassName="accent-icon" />
 				</Pressable>
 			</View>
 			<View className="flex-row gap-2">
@@ -192,8 +192,8 @@ interface RangeEndProps {
 const RangeEnd = React.memo(function RangeEnd({ label, value, active }: RangeEndProps): React.JSX.Element {
 	return (
 		<View className={dateRangeEndVariants({ active })} accessible accessibilityLabel={`${label}: ${value ?? "not chosen"}`}>
-			<Text className="font-sans-medium text-xs text-muted-foreground">{label}</Text>
-			<Text className={`font-sans-semibold text-sm ${value === null ? "text-muted-foreground" : "text-foreground"}`}>{value ?? "—"}</Text>
+			<Text className="font-sans-medium text-caption text-muted-foreground">{label}</Text>
+			<Text className={`font-sans-semibold text-body ${value === null ? "text-muted-foreground" : "text-foreground"}`}>{value ?? "—"}</Text>
 		</View>
 	);
 });

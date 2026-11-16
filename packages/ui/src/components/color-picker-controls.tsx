@@ -139,9 +139,11 @@ const ALPHA_ARIA_SCALE = 100;
 const ARIA_VALUE_DIGITS = 3;
 
 export type ColorPickerSliderProps = Omit<React.ComponentProps<"div">, "children" | "ref"> & {
+	/** `"hue"`, `"saturation"`, `"brightness"`, `"lightness"`, `"chroma"`, `"red"`, `"green"`, `"blue"` or `"alpha"`. */
 	readonly channel: ColorPickerChannel;
 	/** The space the channel belongs to. Defaults to HSB for hue, saturation and brightness, HSL for lightness, OKLCH for chroma and RGB for red, green and blue. */
 	readonly colorSpace?: ColorPickerColorSpace | undefined;
+	/** Vertical tracks run bottom to top and default to the area's height. */
 	readonly orientation?: "horizontal" | "vertical" | undefined;
 };
 

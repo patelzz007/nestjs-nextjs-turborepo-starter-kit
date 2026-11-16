@@ -1,4 +1,5 @@
-// A vertical timeline, as GitHub draws a conversation: a line down the left
+// A timeline, as GitHub draws a conversation (or, with `orientation="horizontal"`,
+// phases side by side on a line that runs right): a line down the left
 // with each entry's node on it (an avatar, or a small icon disc), and the
 // entry beside it. Presentational and data-agnostic: the caller passes the
 // node and the content. As in ReUI's timeline, a connector runs from below
@@ -76,16 +77,57 @@ export interface TimelineRailItemProps {
 	readonly variant?: TimelineRailItemVariant;
 	/** The room below each entry: `sm` for dense lists. */
 	readonly size?: TimelineRailSize;
+	/** `vertical` (default): the line runs down the left. `horizontal`: entries side by side, the line running right from each node; place them in a row, each `flex-1`. */
+	readonly orientation?: TimelineRailOrientation;
+	/** Horizontal only: above the line (a date). */
+	readonly above?: React.ReactNode;
 	/** Extra classes for the row, merged last. */
 	readonly className?: string;
 	readonly testID?: string;
 }
 
+export type TimelineRailOrientation = "vertical" | "horizontal";
+
+/** The connector of a horizontal entry: from its node to the next entry's. */
+const timelineRailHorizontalConnectorVariants = cva("h-0.5 flex-1 rounded-full", {
+	variants: {
+		hidden: { true: "bg-transparent", false: "bg-border" },
+	},
+	defaultVariants: { hidden: false },
+});
+
 export const TimelineRailItem = React.memo(
 	React.forwardRef<ViewInstance, TimelineRailItemProps>(function TimelineRailItem(
-		{ node, children, isFirst = false, isLast = false, compact = false, align = "start", variant = "default", size = "md", className, testID },
+		{
+			node,
+			children,
+			isFirst = false,
+			isLast = false,
+			compact = false,
+			align = "start",
+			variant = "default",
+			size = "md",
+			orientation = "vertical",
+			above,
+			className,
+			testID,
+		},
 		ref,
 	): React.JSX.Element {
+		if (orientation === "horizontal") {
+			return (
+				<View ref={ref} className={cn("flex-1 gap-2", className)} testID={testID}>
+					{above ?? null}
+					<View className="flex-row items-center gap-1" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+						{node}
+						<View className={timelineRailHorizontalConnectorVariants({ hidden: isLast })} testID={testID === undefined ? undefined : `${testID}-connector`} />
+					</View>
+					<View testID={testID === undefined ? undefined : `${testID}-content`} className="pr-2">
+						{children}
+					</View>
+				</View>
+			);
+		}
 		return (
 			<View ref={ref} className={cn(timelineRailItemVariants({ variant, size }), className)} testID={testID}>
 				{/* Width of the node column: the node, then the connector down its middle to the next entry. */}

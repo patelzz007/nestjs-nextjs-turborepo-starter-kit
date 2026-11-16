@@ -1,0 +1,72 @@
+[
+	{
+		"id": "c-resizable-1",
+		"label": "Horizontal Layout",
+		"description": "Panels stacked top to bottom. Best for a header pane over a content pane, split 25 to 75, with a line dragged up and down.",
+		"file": "resizable-1",
+		"export": "Resizable1Example"
+	},
+	{
+		"id": "c-resizable-2",
+		"label": "Vertical Layout",
+		"description": "Panels side by side. Best for a sidebar beside a content pane, split 25 to 75, with a line dragged left and right.",
+		"file": "resizable-2",
+		"export": "Resizable2Example"
+	},
+	{
+		"id": "c-resizable-3",
+		"label": "Mixed Directions",
+		"description": "Mixed directions. Best for a side pane beside a column that splits again into top and bottom, 3 panes in 2 directions.",
+		"file": "resizable-3",
+		"export": "Resizable3Example"
+	},
+	{
+		"id": "c-resizable-4",
+		"label": "Nested Grips",
+		"description": "Nested grips. Best for equal halves where the right half splits 25 to 75 top and bottom, on grip handles.",
+		"file": "resizable-4",
+		"export": "Resizable4Example"
+	},
+	{
+		"id": "c-resizable-5",
+		"label": "Animated Pill",
+		"description": "Pill handle. Best for a short pill on a 30 to 70 split that lengthens and turns primary while dragged.",
+		"file": "resizable-5",
+		"export": "Resizable5Example"
+	},
+	{
+		"id": "c-resizable-6",
+		"label": "Spring Pill",
+		"description": "Pill handle on equal halves. Best for a pill that stretches and turns primary while dragged.",
+		"file": "resizable-6",
+		"export": "Resizable6Example"
+	},
+	{
+		"id": "c-resizable-7",
+		"label": "Capsule Expansion",
+		"description": "Pill handle top to bottom. Best for a pill on a horizontal divider that widens while dragged.",
+		"file": "resizable-7",
+		"export": "Resizable7Example"
+	},
+	{
+		"id": "c-resizable-8",
+		"label": "Nested Pills",
+		"description": "Nested pill handles. Best for navigation beside a toolbar over an editor, with a pill on each divider.",
+		"file": "resizable-8",
+		"export": "Resizable8Example"
+	},
+	{
+		"id": "c-resizable-9",
+		"label": "Three Panels",
+		"description": "Three panels. Best for files, editor and preview in one row split 25, 50 and 25, with 2 pill handles and a minimum size on every pane.",
+		"file": "resizable-9",
+		"export": "Resizable9Example"
+	},
+	{
+		"id": "c-resizable-10",
+		"label": "Size Tracking",
+		"description": "Size readouts. Best for live percentages in each pane, fed from the group's sizes into state as the divider moves.",
+		"file": "resizable-10",
+		"export": "Resizable10Example"
+	}
+]

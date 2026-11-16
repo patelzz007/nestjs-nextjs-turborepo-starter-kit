@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-icon-stack-1",
+		"label": "Isometric",
+		"description": "Isometric icon stack. Best for the minimal pattern: default size, neutral tone and one small layers glyph.",
+		"file": "icon-stack-1",
+		"export": "IconStack1Example"
+	},
+	{
+		"id": "c-icon-stack-2",
+		"label": "Sizes",
+		"description": "Icon stack sizes. Best for small, default and large stacks side by side with captions, the glyph growing with them.",
+		"file": "icon-stack-2",
+		"export": "IconStack2Example"
+	},
+	{
+		"id": "c-icon-stack-3",
+		"label": "Colors",
+		"description": "Icon stack colors. Best for neutral, primary, success and warning tones in a captioned row, set on the stack and the glyph separately.",
+		"file": "icon-stack-3",
+		"export": "IconStack3Example"
+	},
+	{
+		"id": "c-icon-stack-4",
+		"label": "Badge Overlay",
+		"description": "Icon badge stack. Best for a round bordered chip with a check mark in place of a bare glyph, on a larger primary stack.",
+		"file": "icon-stack-4",
+		"export": "IconStack4Example"
+	},
+	{
+		"id": "c-icon-stack-5",
+		"label": "Empty State",
+		"description": "Empty state illustration. Best for a first run workspace screen with the stack above a title, description and Invite team and Connect source buttons.",
+		"file": "icon-stack-5",
+		"export": "IconStack5Example"
+	},
+	{
+		"id": "c-icon-stack-6",
+		"label": "Item Media",
+		"description": "Item media stack. Best for the smallest stack in the set as the media of an outlined row with a title and description.",
+		"file": "icon-stack-6",
+		"export": "IconStack6Example"
+	}
+]

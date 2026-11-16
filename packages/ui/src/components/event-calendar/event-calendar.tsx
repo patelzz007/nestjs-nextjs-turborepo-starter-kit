@@ -301,6 +301,13 @@ export interface EventCalendarRenderMoreIndicatorProps {
 	readonly segments: readonly EventCalendarSegment[];
 }
 
+/** What `renderMoreContent` receives: the day, its OVERFLOW segments, and a way to dismiss the popover. */
+export interface EventCalendarRenderMoreContentProps {
+	readonly day: Date;
+	readonly segments: readonly EventCalendarSegment[];
+	readonly close: () => void;
+}
+
 export interface EventCalendarRenderDayColumnBackgroundProps {
 	readonly day: Date;
 	readonly boundsStartMin: number;
@@ -314,15 +321,20 @@ export type EventCalendarMorePopoverAlign = "start" | "center" | "end";
 
 /** View-layer configuration: display props and render overrides. */
 export interface EventCalendarViewConfig<TData extends EventCalendarEventData = EventCalendarEventData> {
+	/** Hour the time grids scroll to on mount. */
 	readonly scrollToHour: number;
+	/** Draws a line at the current time in time-grid views. */
 	readonly nowIndicator: boolean;
 	/** Grid interval in minutes for the time-based views (gutter slots and gridlines). */
 	readonly interval: number;
 	/** Event rows a month cell shows before rolling the rest into "+N more". */
 	readonly maxEventsPerCell: number;
+	/** Week-number gutter in the month view. */
 	readonly showWeekNumbers: boolean;
 	/** Single-key view shortcuts (labels.viewShortcuts) while focus is inside the calendar. */
 	readonly enableShortcuts: boolean;
+	/** Keep the default nav pinned to the top of the scrolling ancestor. */
+	readonly stickyNav: boolean;
 	/** Custom per-day classes on month cells, day columns and all-day cells. */
 	readonly dayClassName?: (day: Date) => string | undefined;
 	/** Extra classes for the CURRENT day. */
@@ -331,28 +343,45 @@ export interface EventCalendarViewConfig<TData extends EventCalendarEventData = 
 	readonly showDayAddButton: boolean;
 	/** Off-day (non-working day) marking; `true` = the weekend. */
 	readonly offDays?: boolean | EventCalendarOffDaysConfig;
+	/** Per-element class hooks; see below. */
 	readonly classNames?: EventCalendarClassNames;
 	/** Swap individual view implementations. */
 	readonly components?: Partial<Record<CalendarView, React.ComponentType>>;
+	/** Replaces the content of event chips. */
 	readonly renderEvent?: (props: EventCalendarRenderEventProps<TData>) => React.ReactNode;
+	/** Replaces the content of agenda rows. */
 	readonly renderAgendaEvent?: (props: EventCalendarRenderEventProps<TData>) => React.ReactNode;
 	/** Agenda-only expandable details below an event row. */
 	readonly renderAgendaEventDetails?: (occurrence: EventCalendarOccurrence<TData>) => React.ReactNode;
+	/** Replaces the content of month cells. */
 	readonly renderMonthCell?: (props: EventCalendarRenderMonthCellProps) => React.ReactNode;
+	/** Replaces the day headers. */
 	readonly renderDayHeader?: (props: EventCalendarRenderDayHeaderProps) => React.ReactNode;
+	/** Replaces the labels of the time gutter. */
 	readonly renderTimeGutterSlot?: (props: EventCalendarRenderTimeGutterSlotProps) => React.ReactNode;
+	/** Replaces the "+3 more" indicator in month cells. */
 	readonly renderMoreIndicator?: (props: EventCalendarRenderMoreIndicatorProps) => React.ReactNode;
+	/** Replaces the "+N more" popover body (the popover is then named by the formatted day). */
+	readonly renderMoreContent?: (props: EventCalendarRenderMoreContentProps) => React.ReactNode;
+	/** Draws a background in a day column, such as working hours. */
 	readonly renderDayColumnBackground?: (props: EventCalendarRenderDayColumnBackgroundProps) => React.ReactNode;
+	/** Replaces the current-time line. */
 	readonly renderNowIndicator?: (props: { readonly time: Date }) => React.ReactNode;
+	/** Replaces the empty agenda. */
 	readonly renderNoEvents?: () => React.ReactNode;
+	/** Replaces the resource column headers. */
 	readonly renderResourceHeader?: (props: { readonly resource: EventCalendarResource }) => React.ReactNode;
 	/** N-day presets offered by the view switcher when the "days" view is enabled. */
 	readonly dayCountPresets: readonly number[];
 	/** Timed events shorter than this render the compact single-row chip layout. */
 	readonly compactEventMinutes: number;
+	/** "+N more" popover alignment against its trigger. */
 	readonly morePopoverAlign: EventCalendarMorePopoverAlign;
+	/** Now-indicator refresh cadence in milliseconds. */
 	readonly nowIndicatorInterval: number;
+	/** Variant applied to all nav buttons. */
 	readonly navButtonVariant: EventCalendarNavButtonVariant;
+	/** Size applied to all nav buttons (icon buttons use the icon twin). */
 	readonly navButtonSize: EventCalendarNavButtonSize;
 }
 
@@ -363,6 +392,7 @@ export const DEFAULT_VIEW_CONFIG: EventCalendarViewConfig = {
 	maxEventsPerCell: 3,
 	showWeekNumbers: false,
 	enableShortcuts: true,
+	stickyNav: false,
 	showDayAddButton: false,
 	dayCountPresets: [5],
 	compactEventMinutes: 45,
@@ -373,22 +403,35 @@ export const DEFAULT_VIEW_CONFIG: EventCalendarViewConfig = {
 };
 
 export interface EventCalendarCallbacks<TData extends EventCalendarEventData = EventCalendarEventData> {
+	/** Fires when an event is clicked. */
 	readonly onEventClick?: (occurrence: EventCalendarOccurrence<TData>, event: React.MouseEvent<HTMLElement>) => void;
+	/** Fires when an event is double-clicked, typically to edit it. */
 	readonly onEventDoubleClick?: (occurrence: EventCalendarOccurrence<TData>, event: React.MouseEvent<HTMLElement>) => void;
 	/** Verdict on a drag / resize / keyboard move: `false` reverts, `true` accepts, an object accepts with an adjustment. */
 	readonly onEventUpdate?: (update: EventCalendarProposedUpdate<TData>) => EventCalendarUpdateResult;
+	/** Decides whether a dragged event may land on a slot. */
 	readonly canDropEvent?: (update: EventCalendarProposedUpdate<TData>) => boolean;
 	/** A move/resize was attempted on an event that cannot be dragged; fires once per gesture. */
 	readonly onDragBlocked?: (occurrence: EventCalendarOccurrence<TData>, info: EventCalendarDragBlockedInfo) => void;
+	/** Fires when an empty slot is clicked. */
 	readonly onSlotClick?: (slot: EventCalendarSlotInfo, event: React.SyntheticEvent<HTMLElement>) => void;
+	/** Fires when a range of slots is selected, to create an event. */
 	readonly onSelectSlot?: (slot: EventCalendarSlotDraft) => void;
+	/** Decides whether a slot can be selected. */
 	readonly canSelectSlot?: (slot: EventCalendarSlotDraft) => boolean;
+	/** Fires when the visible date range changes. */
 	readonly onRangeChange?: (info: EventCalendarRangeInfo) => void;
+	/** Fires when the view changes. */
 	readonly onViewChange?: (view: CalendarView) => void;
+	/** Fires when the anchor date changes. */
 	readonly onDateChange?: (date: Date) => void;
+	/** Fires when the number of days in an N-day view changes. */
 	readonly onDayCountChange?: (count: number) => void;
+	/** Fires when the selected events change. */
 	readonly onSelectionChange?: (selection: EventCalendarSelection) => void;
+	/** Fires when the enabled interactions change. */
 	readonly onInteractionsChange?: (interactions: EventCalendarInteractions) => void;
+	/** Fires when the view settings change. */
 	readonly onViewSettingsChange?: (viewSettings: EventCalendarViewSettings) => void;
 	/** The next events array after an accepted update. */
 	readonly onEventsChange?: (events: CalendarEvent<TData>[]) => void;
@@ -397,36 +440,57 @@ export interface EventCalendarCallbacks<TData extends EventCalendarEventData = E
 }
 
 export interface EventCalendarOptions<TData extends EventCalendarEventData = EventCalendarEventData> extends EventCalendarCallbacks<TData> {
+	/** The events, controlled; pair with `onEventsChange`. */
 	readonly events: readonly CalendarEvent<TData>[];
+	/** The view, controlled: month, week, day, N days, agenda or resources. */
 	readonly view: CalendarView;
+	/** The anchor date, controlled. */
 	readonly date: Date;
+	/** The number of days in an N-day view, controlled. */
 	readonly dayCount?: number;
+	/** The selected events, controlled. */
 	readonly selection?: EventCalendarSelection;
+	/** The enabled interactions, controlled. */
 	readonly interactions?: Partial<EventCalendarInteractions>;
+	/** Display settings for the views, controlled. */
 	readonly viewSettings?: EventCalendarViewSettings;
+	/** Dims the content area and disables pointer events. */
 	readonly loading?: boolean;
+	/** Enabled views; defaults to `["month", "week", "day", "days", "agenda"]`, plus `"resource"` when `resources` is non-empty. */
 	readonly views?: readonly CalendarView[];
 	/** IANA display zone; defaults to the host zone. */
 	readonly timeZone?: string;
+	/** date-fns locale for every formatted string. */
 	readonly locale?: Locale;
+	/** First day of the week (0 = Sunday). Defaults to the `locale`'s own first day when one is set, so a German or French calendar starts on Monday; an explicit value always wins. */
 	readonly weekStartsOn?: WeekStartsOn;
+	/** The first hour shown in time-grid views. */
 	readonly dayStartHour?: number;
+	/** The last hour shown in time-grid views. */
 	readonly dayEndHour?: number;
 	/** Length of a clicked/created timed slot, in minutes. */
 	readonly slotDuration?: number;
 	/** Drag/resize/keyboard granularity, in minutes. */
 	readonly snapDuration?: number;
+	/** Days covered by the agenda view window. */
 	readonly agendaDayCount?: number;
+	/** Month view always renders 6 weeks. */
 	readonly fixedWeeks?: boolean;
+	/** Show leading/trailing outside days in the month view. */
 	readonly showOutsideDays?: boolean;
+	/** Per-key overrides of labels, view names, formats, and formatter functions. */
 	readonly i18n?: EventCalendarI18nOverrides;
 	/** Bookable resources for the resource view. */
 	readonly resources?: readonly EventCalendarResource[];
+	/** Packing prominence resolver. */
 	readonly getEventPriority?: (event: CalendarEvent<TData>) => number;
+	/** Occurrence sort comparator (default: earlier start, then longer duration, then key). */
 	readonly eventOrder?: EventCalendarEventOrder<TData>;
+	/** Custom recurrence expansion per event (plug a full RRULE engine); return `null` for the built-in one. */
 	readonly getOccurrences?: EventCalendarGetOccurrences<TData>;
 	/** Weekday numbers (0 = Sunday) the "weekends" toggle hides. @default [0, 6] */
 	readonly weekendDays?: readonly number[];
+	/** Pointer-gesture tuning. */
 	readonly activation?: Partial<EventCalendarActivationConfig>;
 	/** The clock ("today", the now line). Omit to follow the system clock. */
 	readonly now?: Date;
@@ -434,10 +498,12 @@ export interface EventCalendarOptions<TData extends EventCalendarEventData = Eve
 
 export const eventCalendarVariants = cva("isolate flex min-h-0 min-w-0 flex-col bg-card text-card-foreground", {
 	variants: {
+		/** `default` (a bordered card) or `plain`. */
 		variant: {
 			default: "rounded-lg border border-border shadow-sm",
 			plain: "",
 		},
+		/** The type scale: `sm` or `md`. */
 		size: {
 			sm: "text-xs",
 			md: "text-sm",
@@ -457,8 +523,11 @@ type EventCalendarHostProps = Omit<React.ComponentPropsWithoutRef<"div">, "child
 
 export interface EventCalendarProps<TData extends EventCalendarEventData = EventCalendarEventData>
 	extends EventCalendarOptions<TData>, Partial<EventCalendarViewConfig<TData>>, EventCalendarVariantProps, EventCalendarHostProps {
+	/** Turns off every interaction. */
 	readonly disabled?: boolean;
+	/** Composed slots, typically `EventCalendarNav`, `EventCalendarToolbar`, and `EventCalendarContent`. */
 	readonly children?: React.ReactNode;
+	/** The calendar's root element. */
 	readonly ref?: React.Ref<HTMLDivElement>;
 }
 
@@ -550,6 +619,7 @@ interface GestureGuards {
 	pendingFocusEventId: string | null;
 }
 
+/** The calendar's root without its provider, for composing the state yourself. */
 const EventCalendarRoot = React.forwardRef<HTMLDivElement, EventCalendarRootProps>(function EventCalendarRoot(props, forwardedRef): React.JSX.Element {
 	const {
 		events,
@@ -603,6 +673,7 @@ const EventCalendarRoot = React.forwardRef<HTMLDivElement, EventCalendarRootProp
 		maxEventsPerCell = DEFAULT_VIEW_CONFIG.maxEventsPerCell,
 		showWeekNumbers = DEFAULT_VIEW_CONFIG.showWeekNumbers,
 		enableShortcuts = DEFAULT_VIEW_CONFIG.enableShortcuts,
+		stickyNav = DEFAULT_VIEW_CONFIG.stickyNav,
 		dayClassName,
 		todayClassName,
 		showDayAddButton = DEFAULT_VIEW_CONFIG.showDayAddButton,
@@ -616,6 +687,7 @@ const EventCalendarRoot = React.forwardRef<HTMLDivElement, EventCalendarRootProp
 		renderDayHeader,
 		renderTimeGutterSlot,
 		renderMoreIndicator,
+		renderMoreContent,
 		renderDayColumnBackground,
 		renderNowIndicator,
 		renderNoEvents,
@@ -803,7 +875,7 @@ const EventCalendarRoot = React.forwardRef<HTMLDivElement, EventCalendarRootProp
 					return false;
 				}
 				const adjusted = resolveAdjustment(update, result);
-				const remapped = remapSelectionKey(selection, update.occurrence.key, `${update.event.id}::${adjusted.start.toISOString()}`);
+				const remapped = remapSelectionKey(selection, update.occurrence.key, `${update.event.id}::${String(adjusted.start.getTime())}`);
 				if (remapped !== null) {
 					onSelectionChange?.(remapped);
 				}
@@ -872,6 +944,7 @@ const EventCalendarRoot = React.forwardRef<HTMLDivElement, EventCalendarRootProp
 			maxEventsPerCell,
 			showWeekNumbers,
 			enableShortcuts,
+			stickyNav,
 			showDayAddButton,
 			dayCountPresets,
 			compactEventMinutes,
@@ -891,6 +964,7 @@ const EventCalendarRoot = React.forwardRef<HTMLDivElement, EventCalendarRootProp
 			...(renderDayHeader === undefined ? {} : { renderDayHeader }),
 			...(renderTimeGutterSlot === undefined ? {} : { renderTimeGutterSlot }),
 			...(renderMoreIndicator === undefined ? {} : { renderMoreIndicator }),
+			...(renderMoreContent === undefined ? {} : { renderMoreContent }),
 			...(renderDayColumnBackground === undefined ? {} : { renderDayColumnBackground }),
 			...(renderNowIndicator === undefined ? {} : { renderNowIndicator }),
 			...(renderNoEvents === undefined ? {} : { renderNoEvents }),
@@ -903,6 +977,7 @@ const EventCalendarRoot = React.forwardRef<HTMLDivElement, EventCalendarRootProp
 			maxEventsPerCell,
 			showWeekNumbers,
 			enableShortcuts,
+			stickyNav,
 			showDayAddButton,
 			dayCountPresets,
 			compactEventMinutes,
@@ -922,6 +997,7 @@ const EventCalendarRoot = React.forwardRef<HTMLDivElement, EventCalendarRootProp
 			renderDayHeader,
 			renderTimeGutterSlot,
 			renderMoreIndicator,
+			renderMoreContent,
 			renderDayColumnBackground,
 			renderNowIndicator,
 			renderNoEvents,
@@ -1250,6 +1326,7 @@ export interface UseEventCalendarViewResult {
 	readonly setView: (view: CalendarView, options?: EventCalendarSetViewOptions) => void;
 }
 
+/** The view and its setter, inside an `EventCalendar`. */
 export function useEventCalendarView(): UseEventCalendarViewResult {
 	const { state, settings, api } = useEventCalendar();
 	return {
@@ -1275,6 +1352,7 @@ export interface UseEventCalendarNavigationResult {
 	readonly isToday: boolean;
 }
 
+/** Moving the calendar (today, previous, next, a date), inside an `EventCalendar`. */
 export function useEventCalendarNavigation(): UseEventCalendarNavigationResult {
 	const { state, settings, api } = useEventCalendar();
 	const nowMs = useEventCalendarNow();
@@ -1305,6 +1383,7 @@ export interface UseEventCalendarSelectionResult {
 	readonly clearSelection: EventCalendarApi["clearSelection"];
 }
 
+/** The selected events and their setter, inside an `EventCalendar`. */
 export function useEventCalendarSelection(): UseEventCalendarSelectionResult {
 	const { state, api } = useEventCalendar();
 	return { selection: state.selection, select: api.select, selectEvent: api.selectEvent, clearSelection: api.clearSelection };
@@ -1315,6 +1394,7 @@ export interface UseEventCalendarInteractionsResult {
 	readonly setInteractions: EventCalendarApi["setInteractions"];
 }
 
+/** The enabled interactions and their setter, inside an `EventCalendar`. */
 export function useEventCalendarInteractions(): UseEventCalendarInteractionsResult {
 	const { state, api } = useEventCalendar();
 	return { interactions: state.interactions, setInteractions: api.setInteractions };

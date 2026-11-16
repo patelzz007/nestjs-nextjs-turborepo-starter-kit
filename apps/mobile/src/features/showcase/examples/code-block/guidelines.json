@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Offer a copy button for code people run",
+		"do": {
+			"text": "Give commands and snippets meant to be pasted a copy button.",
+			"file": "code-block-do-1",
+			"export": "CodeBlockDo1Example"
+		},
+		"dont": {
+			"text": "Don't make people select code by hand on a phone: it is fiddly and error-prone.",
+			"file": "code-block-dont-1",
+			"export": "CodeBlockDont1Example"
+		}
+	},
+	{
+		"title": "Keep long lines intact",
+		"do": {
+			"text": "Let long lines scroll sideways so the code keeps its shape; wrap prose-like lines only.",
+			"file": "code-block-do-2",
+			"export": "CodeBlockDo2Example"
+		},
+		"dont": {
+			"text": "Don't wrap code by default: indentation and alignment break across lines.",
+			"file": "code-block-dont-2",
+			"export": "CodeBlockDont2Example"
+		}
+	}
+]

@@ -3,8 +3,11 @@ title: "ADR 053: The React Native UI Kit — packages/ui-native, the Web Kit's T
 tags: ["adr", "mobile", "ui", "architecture", "testing"]
 description: "Low-level React Native components move out of apps/mobile into a shared package, @workspace/ui-native, named like the web kit and held to one mechanical contract (forwardRef, memo, CVA variant/size/state, tokens only, its own test); both kits get a live Components gallery, and every front-end test now lives in a __tests__ folder."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1792108800000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/053-react-native-ui-kit.webp"
 order: 53
 ---
 

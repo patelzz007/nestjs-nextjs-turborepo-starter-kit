@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say the limit",
+		"do": {
+			"text": "Say how many days may be picked, in the description.",
+			"file": "multi-date-picker-do-1",
+			"export": "MultiDatePickerDo1Example"
+		},
+		"dont": {
+			"text": "Don't set `maxDates` silently: days just stop responding once it is reached.",
+			"file": "multi-date-picker-dont-1",
+			"export": "MultiDatePickerDont1Example"
+		}
+	},
+	{
+		"title": "Separate days, not a span",
+		"do": {
+			"text": "For a continuous span (a trip), pick its two ends with a range calendar.",
+			"file": "multi-date-picker-do-2",
+			"export": "MultiDatePickerDo2Example"
+		},
+		"dont": {
+			"text": "Don't make people click every day of a ten-day trip one by one.",
+			"file": "multi-date-picker-dont-2",
+			"export": "MultiDatePickerDont2Example"
+		}
+	}
+]

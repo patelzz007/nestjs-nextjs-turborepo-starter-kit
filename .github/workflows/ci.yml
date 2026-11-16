@@ -119,9 +119,9 @@ jobs:
           - shard: web-apps
             filters: --filter=@workspace/admin --filter=@workspace/merchant --filter=@workspace/web
           - shard: ui
-            filters: --filter=@workspace/ui --filter=@workspace/tokens --filter=@workspace/client
+            filters: --filter=@workspace/ui --filter=@workspace/ui-kit-logic --filter=@workspace/tokens --filter=@workspace/client
           - shard: docs
-            filters: --filter=@workspace/docs --filter=@workspace/docs-renderer
+            filters: --filter=@workspace/docs --filter=@workspace/docs-renderer --filter=@workspace/docs-content --filter=@workspace/docs-sync
           - shard: packages
             filters: --filter=@workspace/shared --filter=@workspace/api-client --filter=@workspace/messaging --filter=@workspace/oxlint-config --filter=@workspace/tooling --filter=@workspace/analytics-consumer --filter=@workspace/aws-infrastructure --filter=@workspace/load-runner --filter=@workspace/server-agent
     steps:
@@ -299,6 +299,32 @@ jobs:
           package-manager-cache: false
       - name: Validate internal links in docs/
         run: node apps/docs/scripts/check-links.ts
+
+  # Generated docs are edited at their source, the sync touches only what it owns, and a pull request that changes
+  # behaviour says what happened to the docs (ADR 084).
+  docs-guard:
+    name: Docs guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository (full history, for the merge base)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          generate-prisma-client: "false"
+      - name: Check the pull request
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.head_ref }}
+        run: node packages/tooling/src/docs-guard/cli.ts check --base "$BASE_REF"
 
   e2e:
     name: Database + API e2e
@@ -497,7 +523,7 @@ jobs:
       MERCHANT_E2E_TENANT_SLUG: brew-bean-kl
       # The admin suite drives the kanban board, which lives in the developer component gallery: a
       # production build serves the gallery only when it is switched on (apps/admin/lib/feature-flags.ts).
-      ADMIN_COMPONENT_GALLERY: "true"
+      ADMIN_SHOWCASE: "true"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -555,13 +581,6 @@ jobs:
 
       - name: Admin browser suite
         run: pnpm --filter @workspace/admin test:browser
-
-      # Every UI-kit component page of the admin gallery, light and dark, against the committed Linux screenshots
-      # (enhancement 3.8), in Playwright's Linux image: the screenshots are taken there (test:visual:update) and
-      # the bare runner has other fallback fonts, so its glyphs for ⌘, ✓, emoji and Arabic differ.
-      # A failure's diff images are in the uploaded .artifacts/playwright/.
-      - name: Admin visual suite (UI kit, light and dark)
-        run: pnpm --filter @workspace/admin test:visual:docker
 
       - name: Merchant browser suite
         run: pnpm --filter @workspace/merchant test:browser

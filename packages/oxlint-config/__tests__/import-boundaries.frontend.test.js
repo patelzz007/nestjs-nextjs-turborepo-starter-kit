@@ -45,6 +45,23 @@ describe("frontend context boundaries (§12.2)", () => {
 	});
 });
 
+describe("frontend router import", () => {
+	const configs = [frontendImportBoundaryConfig, ...frontendContextBoundaryConfigs];
+
+	it("rejects the bare App Router useRouter, in and outside a context", () => {
+		const bare = 'import { useRouter } from "next/navigation";';
+		expect(messages(configs, bare, "apps/admin/components/layout/command-palette.tsx").length).toBeGreaterThan(0);
+		expect(messages(configs, bare, "apps/web/contexts/rewards/components/detail/claim-flow.tsx").length).toBeGreaterThan(0);
+		expect(messages(configs, 'import { usePathname, useRouter } from "next/navigation";', "packages/client/src/lib/i18n/app-language-provider.tsx").length).toBeGreaterThan(0);
+	});
+
+	it("allows the rest of next/navigation and the progress router", () => {
+		const file = "apps/admin/components/layout/command-palette.tsx";
+		expect(messages(configs, 'import { usePathname, useSearchParams } from "next/navigation";', file)).toEqual([]);
+		expect(messages(configs, 'import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";', file)).toEqual([]);
+	});
+});
+
 describe("mobile import boundaries", () => {
 	const configs = [mobileImportBoundaryConfig, ...mobileContextBoundaryConfigs];
 

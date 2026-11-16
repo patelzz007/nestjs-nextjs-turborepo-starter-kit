@@ -1,0 +1,16 @@
+[
+	{
+		"id": "c-scrollspy-1",
+		"label": "Vertical Nav",
+		"description": "Basic scrollspy. Best for a vertical rail of 5 section buttons in a 150px column to the left of a 500px tall panel.",
+		"file": "scrollspy-1",
+		"export": "Scrollspy1Example"
+	},
+	{
+		"id": "c-scrollspy-2",
+		"label": "Horizontal Nav",
+		"description": "Basic scroll area. Best for a horizontal row of 5 section buttons above a full width 400px tall panel.",
+		"file": "scrollspy-2",
+		"export": "Scrollspy2Example"
+	}
+]

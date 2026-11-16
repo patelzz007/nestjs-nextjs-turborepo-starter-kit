@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-relative-time-1",
+		"label": "Overview",
+		"description": "Times shown as \"5 minutes ago\" or \"in 2 days\", with the exact time on hover, in the platform's region. Best for activity feeds and last updated stamps.",
+		"file": "relative-time-1",
+		"export": "RelativeTime1Example"
+	}
+]

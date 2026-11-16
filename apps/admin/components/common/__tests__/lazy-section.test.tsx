@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
+import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { LazySection } from "@/components/common/lazy-section";
+import { LazySection, scrollParentOf } from "@/components/common/lazy-section";
 
 type ObserverCallback = (entries: readonly Pick<IntersectionObserverEntry, "isIntersecting">[]) => void;
 
@@ -11,6 +12,13 @@ afterEach(() => {
 	cleanup();
 	vi.unstubAllGlobals();
 });
+
+/** A chunk that is still downloading: it never settles within the test. */
+const PENDING_CHUNK = new Promise<string>((): void => undefined);
+
+function StillLoading(): React.JSX.Element {
+	return <p>{React.use(PENDING_CHUNK)}</p>;
+}
 
 describe("LazySection", () => {
 	it("keeps the skeleton until the section nears the viewport, then mounts the content", () => {
@@ -62,6 +70,94 @@ describe("LazySection", () => {
 		expect(screen.queryByText("Section body")).toBeNull();
 		expect(screen.getByTestId("static-box").closest('[aria-hidden="true"]')).not.toBeNull();
 		expect(container.querySelector('[data-skeleton="section"]')).toBeNull();
+	});
+
+	it('animates the reveal by default and shows the content as is with reveal="instant"', () => {
+		vi.stubGlobal("IntersectionObserver", undefined);
+
+		render(
+			<>
+				<LazySection height="h-10">
+					<p>Animated body</p>
+				</LazySection>
+				<LazySection height="h-10" reveal="instant">
+					<p>Instant body</p>
+				</LazySection>
+			</>,
+		);
+
+		expect(screen.getByText("Animated body").parentElement?.classList.contains("animate-in")).toBe(true);
+		expect(screen.getByText("Instant body").parentElement?.classList.contains("animate-in")).toBe(false);
+	});
+
+	it("shows a still-loading section's own fallback when urgent, but keeps the placeholder in a transition", () => {
+		const callbacks: ObserverCallback[] = [];
+		vi.stubGlobal(
+			"IntersectionObserver",
+			vi.fn(function FakeObserver(callback: ObserverCallback) {
+				callbacks.push(callback);
+				return { observe: vi.fn(), disconnect: vi.fn() };
+			}),
+		);
+		render(
+			<>
+				<LazySection height="h-10" commit="urgent" placeholder={<div data-testid="urgent-placeholder" />}>
+					<React.Suspense fallback={<p>Urgent part loading</p>}>
+						<StillLoading />
+					</React.Suspense>
+				</LazySection>
+				<LazySection height="h-10" placeholder={<div data-testid="transition-placeholder" />}>
+					<React.Suspense fallback={<p>Transition part loading</p>}>
+						<StillLoading />
+					</React.Suspense>
+				</LazySection>
+			</>,
+		);
+
+		act(() => {
+			for (const callback of callbacks) {
+				callback([{ isIntersecting: true }]);
+			}
+		});
+
+		expect(screen.getByText("Urgent part loading")).toBeTruthy();
+		expect(screen.queryByTestId("urgent-placeholder")).toBeNull();
+		expect(screen.getByTestId("transition-placeholder")).toBeTruthy();
+		expect(screen.queryByText("Transition part loading")).toBeNull();
+	});
+
+	it("measures against the element it scrolls inside, so its margin holds inside a scrolling panel", () => {
+		const roots: (Element | Document | null | undefined)[] = [];
+		vi.stubGlobal(
+			"IntersectionObserver",
+			vi.fn(function RootRecordingObserver(_callback: ObserverCallback, options?: IntersectionObserverInit) {
+				roots.push(options?.root);
+				return { observe: vi.fn(), disconnect: vi.fn() };
+			}),
+		);
+		render(
+			<main data-testid="scroller" style={{ overflowY: "auto" }}>
+				<div>
+					<LazySection height="h-10">
+						<p>Section body</p>
+					</LazySection>
+				</div>
+			</main>,
+		);
+		expect(roots).toEqual([screen.getByTestId("scroller")]);
+	});
+
+	it("finds the nearest scrolling ancestor, or the document when there is none", () => {
+		const { container } = render(
+			<div style={{ overflowY: "scroll" }} data-testid="outer">
+				<div style={{ overflowY: "hidden" }}>
+					<span data-testid="leaf" />
+				</div>
+			</div>,
+		);
+		expect(scrollParentOf(screen.getByTestId("leaf"))).toBe(screen.getByTestId("outer"));
+		expect(scrollParentOf(screen.getByTestId("outer"))).toBeNull();
+		expect(container.childElementCount).toBe(1);
 	});
 
 	it("shows the content without an animation-frame workaround when IntersectionObserver is unavailable", () => {

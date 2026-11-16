@@ -130,10 +130,12 @@ export interface SettingsRoutes {
 }
 
 export interface ComponentsRoutes {
-	/** The UI kit's low-level component gallery — sample content only, no API calls. */
+	/** The UI kit's component showcase — every component as a card; sample content only, no API calls. */
 	readonly index: Route;
-	/** One component's page: its live demo and its worked examples (`/components/<slug>`). */
+	/** One component's page: every feature, live, with its code, and its overview (`/components/<slug>`). */
 	readonly component: RouteBuilder;
+	/** One component's docs: usage, anatomy, accessibility and its API reference (`/components/<slug>/docs`). */
+	readonly docs: RouteBuilder;
 }
 
 export interface KanbanRoutes {
@@ -169,6 +171,9 @@ export interface OperationsRoutes {
 	readonly statusIncidents: Route;
 	readonly statusIncident: RouteBuilder;
 	readonly newStatusIncident: Route;
+	/** Docs publishing (ADR 084): setup, run history, and one run's held-back pages. */
+	readonly docsSync: Route;
+	readonly docsSyncRun: RouteBuilder;
 	readonly loadTests: Route;
 	/** One load test: its timeline, steps and the servers' load. */
 	readonly loadTest: RouteBuilder;
@@ -219,6 +224,8 @@ function withQuery(base: string, name: string, value: string): Route {
 
 /** Trailing segment of every edit page (`/x/[id]/edit`). */
 const EDIT_SEGMENT = "edit";
+/** The segment under a showcase component that holds its docs. */
+const DOCS_SEGMENT = "docs";
 
 function crudRoutes(list: string): CrudRoutes {
 	return {
@@ -267,13 +274,14 @@ const CATALOG = "/catalog";
 const SETTINGS = "/settings";
 const ACCOUNT = "/account";
 const COMPONENTS = "/components";
-/** The board sits in the Components section (sidebar), beside the gallery, so its URL nests under it. */
+/** The board sits in the Components section (sidebar), beside the showcase, so its URL nests under it. */
 const KANBAN = `${COMPONENTS}/kanban-board`;
 const KANBAN_TASKS = `${KANBAN}/tasks`;
 const OPERATIONS = "/operations";
 const OPERATIONS_SERVERS = `${OPERATIONS}/servers`;
 const OPERATIONS_LOAD_TESTS = `${OPERATIONS}/load-tests`;
 const OPERATIONS_STATUS = `${OPERATIONS}/status`;
+const OPERATIONS_DOCS_SYNC = `${OPERATIONS}/docs-sync`;
 /** The two runs a comparison shows (`/operations/load-tests/compare?a=&b=`). */
 export const LOAD_TEST_COMPARE_PARAMS = { left: "a", right: "b" } satisfies Record<string, string>;
 
@@ -342,6 +350,7 @@ export const ROUTES: AdminRoutes = {
 	components: {
 		index: COMPONENTS,
 		component: (slug: string): Route => childPath(COMPONENTS, slug),
+		docs: (slug: string): Route => appRoute(`${childPath(COMPONENTS, slug)}/${DOCS_SEGMENT}`),
 	},
 	kanban: {
 		board: KANBAN,
@@ -360,6 +369,8 @@ export const ROUTES: AdminRoutes = {
 		statusIncidents: OPERATIONS_STATUS,
 		statusIncident: (id: string): Route => childPath(OPERATIONS_STATUS, id),
 		newStatusIncident: `${OPERATIONS_STATUS}/new`,
+		docsSync: OPERATIONS_DOCS_SYNC,
+		docsSyncRun: (id: string): Route => childPath(OPERATIONS_DOCS_SYNC, id),
 		loadTests: OPERATIONS_LOAD_TESTS,
 		loadTest: (id: string): Route => childPath(OPERATIONS_LOAD_TESTS, id),
 		compare: (left: string, right: string): Route =>

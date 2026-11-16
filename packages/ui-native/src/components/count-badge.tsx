@@ -35,7 +35,7 @@ export const countBadgeVariants = cva("items-center justify-center rounded-full 
 
 export const countBadgeLabelVariants = cva("font-sans-semibold text-center text-status-foreground", {
 	variants: {
-		size: { sm: "text-badge-sm", md: "text-xs" },
+		size: { sm: "text-overline", md: "text-caption" },
 	},
 	defaultVariants: { size: "md" },
 });

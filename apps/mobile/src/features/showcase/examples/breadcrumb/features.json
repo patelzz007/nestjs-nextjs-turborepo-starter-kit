@@ -1,0 +1,107 @@
+[
+	{
+		"id": "c-breadcrumb-1",
+		"label": "Basic",
+		"description": "Basic breadcrumb. Best for plain text levels split by the default chevron, with no icons, menus or custom styling.",
+		"file": "breadcrumb-1",
+		"export": "Breadcrumb1Example"
+	},
+	{
+		"id": "c-breadcrumb-2",
+		"label": "Dropdown Menu",
+		"description": "Breadcrumb with a menu of hidden levels. Best for middle levels folded into an ellipsis button that opens a menu of the hidden pages.",
+		"file": "breadcrumb-2",
+		"export": "Breadcrumb2Example"
+	},
+	{
+		"id": "c-breadcrumb-3",
+		"label": "Router Link",
+		"description": "Breadcrumb with router links. Best for levels whose press calls your router, the place to wire Expo Router's navigation.",
+		"file": "breadcrumb-3",
+		"export": "Breadcrumb3Example"
+	},
+	{
+		"id": "c-breadcrumb-4",
+		"label": "Slash Separator",
+		"description": "Breadcrumb with a custom slash separator. Best for slash characters between levels in place of the default chevron, on an otherwise plain trail.",
+		"file": "breadcrumb-4",
+		"export": "Breadcrumb4Example"
+	},
+	{
+		"id": "c-breadcrumb-5",
+		"label": "Item Icons",
+		"description": "Breadcrumb with icons for each item. Best for a leading icon on every level including the current screen, laid out beside each label.",
+		"file": "breadcrumb-5",
+		"export": "Breadcrumb5Example"
+	},
+	{
+		"id": "c-breadcrumb-6",
+		"label": "Static Ellipsis",
+		"description": "Breadcrumb with ellipsis for long paths. Best for a static ellipsis standing in for skipped middle levels, with no menu or link behind it.",
+		"file": "breadcrumb-6",
+		"export": "Breadcrumb6Example"
+	},
+	{
+		"id": "c-breadcrumb-7",
+		"label": "Avatars",
+		"description": "Breadcrumb items with avatars. Best for team and user levels led by small avatar images with initials fallbacks, ending on a plain current screen.",
+		"file": "breadcrumb-7",
+		"export": "Breadcrumb7Example"
+	},
+	{
+		"id": "c-breadcrumb-8",
+		"label": "Double Chevron",
+		"description": "Breadcrumb with double chevron separators. Best for double chevron icons passed into each separator in place of the single default one.",
+		"file": "breadcrumb-8",
+		"export": "Breadcrumb8Example"
+	},
+	{
+		"id": "c-breadcrumb-9",
+		"label": "In Card",
+		"description": "Breadcrumb on a card. Best for a trail on a padded card surface, opening with a home glyph and ending on a semibold current page.",
+		"file": "breadcrumb-9",
+		"export": "Breadcrumb9Example"
+	},
+	{
+		"id": "c-breadcrumb-10",
+		"label": "Pill In Frame",
+		"description": "Pill breadcrumb. Best for a trail in a tight rounded frame, with a home glyph and a semibold last level.",
+		"file": "breadcrumb-10",
+		"export": "Breadcrumb10Example"
+	},
+	{
+		"id": "c-breadcrumb-11",
+		"label": "Count Badge",
+		"description": "Breadcrumb items containing badge with count. Best for a rounded count badge inside a parent level, here a total of 3 beside the Inbox folder of a mail path.",
+		"file": "breadcrumb-11",
+		"export": "Breadcrumb11Example"
+	},
+	{
+		"id": "c-breadcrumb-12",
+		"label": "Home Icon Button",
+		"description": "Breadcrumb starting with a home button. Best for a square home icon button before the trail, its label kept for screen readers.",
+		"file": "breadcrumb-12",
+		"export": "Breadcrumb12Example"
+	},
+	{
+		"id": "c-breadcrumb-13",
+		"label": "Bar Separator",
+		"description": "Breadcrumb with a bar separator. Best for a short faded bar between levels in place of a character or icon.",
+		"file": "breadcrumb-13",
+		"export": "Breadcrumb13Example"
+	},
+	{
+		"id": "c-breadcrumb-14",
+		"label": "Button Style",
+		"description": "Button-style breadcrumb. Best for every level as a small button pairing an icon with its label, ghost for parent pages and filled for the current one.",
+		"file": "breadcrumb-14",
+		"export": "Breadcrumb14Example"
+	},
+	{
+		"id": "c-breadcrumb-15",
+		"label": "Project & Document",
+		"description": "Breadcrumb with project, user and document info. Best for two line levels pairing an avatar or tinted file tile with a name above a muted email or file name.",
+		"file": "breadcrumb-15",
+		"export": "Breadcrumb15Example"
+	}
+]

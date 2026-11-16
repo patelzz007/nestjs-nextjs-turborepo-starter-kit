@@ -4,8 +4,11 @@ tags: ["authorization", "nestjs", "kernel", "rbac", "acl", "abac", "audit"]
 description: "How the API decides allow or deny: the guard and @RequirePermission, the kernel's precedence, scopes, overrides, ACLs, ownership, policies, explain, audit, privilege-escalation protection, and the roles, permissions and caches behind it."
 order: 21
 author: "Platform Team"
+category: "Authorization"
+date: 1790726400000
 lastUpdated: 1790899200000
-coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/authorization/backend.webp"
 ---
 
 # Backend: the Authorization Kernel

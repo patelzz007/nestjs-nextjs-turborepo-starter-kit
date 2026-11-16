@@ -3,8 +3,11 @@ title: "ADR 050: The Auth Store Starts From the Session the Server Rendered For"
 tags: ["adr", "frontend", "auth", "ssr", "session"]
 description: "Each app's root layout asks the API for the request's session (/auth/me + /auth/permissions) and the client auth store starts from that answer, so nothing that depends on who is signed in pops in after the page loads."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791763200000
 lastUpdated: 1791763200000
-coverImage: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&h=630&fit=crop"
+editedAt: 1792438386000
+coverImage: "/images/covers/adr/050-server-rendered-session.webp"
 order: 50
 ---
 

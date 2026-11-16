@@ -4,8 +4,11 @@ tags: ["carousel", "image", "ui", "mobile", "docs", "embla"]
 description: "Carousel and ImageCarousel on every platform: Embla on the web and in the docs, a paging ScrollView in the native kit, the same controls everywhere, and carousel fences in the docs."
 order: 29
 author: "Platform Team"
+category: "Frontend"
+date: 1792108800000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/frontend/carousel.webp"
 ---
 
 # Carousels

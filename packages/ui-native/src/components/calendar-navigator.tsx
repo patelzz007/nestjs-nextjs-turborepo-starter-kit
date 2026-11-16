@@ -34,6 +34,9 @@ import { cn } from "../lib/cn";
 import { playSelectionFeedback } from "../lib/haptics";
 import { Icon, type LucideIcon } from "./icon";
 
+/** Where the header puts the month and year and the steps. */
+export type CalendarNavigatorLayout = "centered" | "start";
+
 /** What sits under the header: the shown month's days, its year's months, or the years. */
 export type CalendarView = "days" | "months" | "years";
 
@@ -49,6 +52,8 @@ export interface CalendarNavigatorProps {
 	readonly onMonthChange: (month: CalendarMonth) => void;
 	/** The shown month's day grid. */
 	readonly children: React.ReactNode;
+	/** `centered`: the month and year between the steps. `start`: the month and year at the start, both steps together at the end. Default `centered`. */
+	readonly layout?: CalendarNavigatorLayout | undefined;
 	/** Extra classes for the root view, merged last. */
 	readonly className?: string | undefined;
 	readonly testID?: string | undefined;
@@ -63,7 +68,7 @@ export const calendarChoiceVariants = cva("h-10 w-full items-center justify-cent
 });
 
 /** A month's or year's text in the lists: on the filled circle, choosable, or out of range. */
-export const calendarChoiceLabelVariants = cva("text-sm tabular-nums", {
+export const calendarChoiceLabelVariants = cva("text-body tabular-nums", {
 	variants: {
 		state: {
 			selected: "font-sans-semibold text-primary-foreground",
@@ -109,7 +114,7 @@ function navigatorFormatsOf(locale: string): NavigatorFormats {
 
 export const CalendarNavigator = React.memo(
 	React.forwardRef<ViewInstance, CalendarNavigatorProps>(function CalendarNavigator(
-		{ month, minMonth, maxMonth, locale, onMonthChange, children, className, testID },
+		{ month, minMonth, maxMonth, locale, onMonthChange, children, layout = "centered", className, testID },
 		ref,
 	): React.JSX.Element {
 		const [view, setView] = React.useState<CalendarView>("days");
@@ -149,14 +154,27 @@ export const CalendarNavigator = React.memo(
 
 		return (
 			<View ref={ref} className={cn("gap-2", className)} testID={testID}>
-				<View className="flex-row items-center justify-between">
-					<MonthStep icon={ChevronLeftIcon} label="Previous month" enabled={canGoBack} visible={view === "days"} onPress={showPrevious} />
-					<View className="flex-row items-center gap-1">
-						<ViewToggle text={monthName} label={`Month: ${monthName}`} hint="Shows the months to choose from" expanded={view === "months"} onPress={toggleMonths} />
-						<ViewToggle text={yearName} label={`Year: ${yearName}`} hint="Shows the years to choose from" expanded={view === "years"} onPress={toggleYears} />
+				{layout === "centered" ? (
+					<View className="flex-row items-center justify-between">
+						<MonthStep icon={ChevronLeftIcon} label="Previous month" enabled={canGoBack} visible={view === "days"} onPress={showPrevious} />
+						<View className="flex-row items-center gap-1">
+							<ViewToggle text={monthName} label={`Month: ${monthName}`} hint="Shows the months to choose from" expanded={view === "months"} onPress={toggleMonths} />
+							<ViewToggle text={yearName} label={`Year: ${yearName}`} hint="Shows the years to choose from" expanded={view === "years"} onPress={toggleYears} />
+						</View>
+						<MonthStep icon={ChevronRightIcon} label="Next month" enabled={canGoOn} visible={view === "days"} onPress={showNext} />
 					</View>
-					<MonthStep icon={ChevronRightIcon} label="Next month" enabled={canGoOn} visible={view === "days"} onPress={showNext} />
-				</View>
+				) : (
+					<View className="flex-row items-center justify-between">
+						<View className="flex-row items-center gap-1">
+							<ViewToggle text={monthName} label={`Month: ${monthName}`} hint="Shows the months to choose from" expanded={view === "months"} onPress={toggleMonths} />
+							<ViewToggle text={yearName} label={`Year: ${yearName}`} hint="Shows the years to choose from" expanded={view === "years"} onPress={toggleYears} />
+						</View>
+						<View className="flex-row items-center">
+							<MonthStep icon={ChevronLeftIcon} label="Previous month" enabled={canGoBack} visible={view === "days"} onPress={showPrevious} />
+							<MonthStep icon={ChevronRightIcon} label="Next month" enabled={canGoOn} visible={view === "days"} onPress={showNext} />
+						</View>
+					</View>
+				)}
 				{view === "days" ? children : null}
 				{view === "months" ? (
 					<MonthChooser month={month} minMonth={minMonth} maxMonth={maxMonth} formatShort={formats.short} formatLong={formats.long} onChoose={choose} />
@@ -213,8 +231,8 @@ const ViewToggle = React.memo(function ViewToggle({ text, label, hint, expanded,
 			accessibilityState={accessibilityState}
 			onPress={onPress}
 			className={calendarViewToggleVariants({ expanded })}>
-			<Text className="font-sans-semibold text-base text-foreground">{text}</Text>
-			<Icon icon={expanded ? ChevronUpIcon : ChevronDownIcon} size="sm" colorClassName="accent-muted-foreground" />
+			<Text className="font-sans-semibold text-body-lg text-foreground">{text}</Text>
+			<Icon icon={expanded ? ChevronUpIcon : ChevronDownIcon} size="sm" colorClassName="accent-icon" />
 		</Pressable>
 	);
 });

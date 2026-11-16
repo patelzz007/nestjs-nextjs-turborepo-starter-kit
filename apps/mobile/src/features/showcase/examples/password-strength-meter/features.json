@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-password-strength-meter-1",
+		"label": "Overview",
+		"description": "A password field scored as you type, with a segmented strength bar and its rules ticked off. Best for sign up and password change forms that explain why a password is weak.",
+		"file": "password-strength-meter-1",
+		"export": "PasswordStrengthMeter1Example"
+	}
+]

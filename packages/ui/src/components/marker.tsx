@@ -8,6 +8,7 @@ const markerVariants = cva(
 	"group/marker relative flex min-h-4 w-full items-center gap-2 text-start text-sm text-muted-foreground [&_svg:not([class*='size-'])]:size-4 [a]:underline [a]:underline-offset-3 [a]:hover:text-foreground",
 	{
 		variants: {
+			/** `default` (a line), `separator` (a labelled divider) or `border` (a ruled row). */
 			variant: {
 				default: "",
 				separator: "before:me-1 before:h-px before:min-w-0 before:flex-1 before:bg-border after:ms-1 after:h-px after:min-w-0 after:flex-1 after:bg-border",
@@ -22,6 +23,7 @@ const markerVariants = cva(
 
 type MarkerProps = useRender.ComponentProps<"div"> & VariantProps<typeof markerVariants>;
 
+/** One line of status — an icon and a short text — for logs, transcripts and summaries, or a labelled divider between phases. */
 const Marker = React.forwardRef<HTMLDivElement, MarkerProps>(function Marker({ className, variant = "default", render, ...props }, ref): React.ReactElement {
 	return useRender({
 		ref,
@@ -40,10 +42,12 @@ const Marker = React.forwardRef<HTMLDivElement, MarkerProps>(function Marker({ c
 	});
 });
 
+/** The line's icon, hidden from assistive technology. */
 const MarkerIcon = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function MarkerIcon({ className, ...props }, ref): React.JSX.Element {
 	return <span ref={ref} data-slot="marker-icon" aria-hidden="true" className={cn("size-4 shrink-0 [&_svg:not([class*='size-'])]:size-4", className)} {...props} />;
 });
 
+/** The line's text; it alone carries the meaning. */
 const MarkerContent = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function MarkerContent({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<span

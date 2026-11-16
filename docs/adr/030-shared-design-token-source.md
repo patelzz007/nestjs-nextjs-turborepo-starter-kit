@@ -3,8 +3,11 @@ title: "ADR 030: One Platform-Neutral Design Token Source"
 tags: ["adr", "ui", "design-tokens", "mobile"]
 description: "Design tokens move out of hand-written CSS into packages/tokens, a TypeScript source with no platform dependencies that generates the web CSS variables and the mobile theme."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791417600000
 lastUpdated: 1791417600000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/adr/030-shared-design-token-source.webp"
 order: 30
 ---
 

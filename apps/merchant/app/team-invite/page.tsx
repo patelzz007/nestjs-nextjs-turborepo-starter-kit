@@ -29,7 +29,8 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { Mail, MapPin, Shield, Users } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import { useQuery } from "@tanstack/react-query";
 import { Suspense, useCallback, useMemo, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
 
@@ -104,7 +105,7 @@ interface TeamInviteContentProps {
 }
 
 function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { api, isAuthenticated, isLoading: authLoading, user, login: authLogin } = useAuth();
 
 	// One id per page instance (the route remounts this component per token), so the key carries no token.

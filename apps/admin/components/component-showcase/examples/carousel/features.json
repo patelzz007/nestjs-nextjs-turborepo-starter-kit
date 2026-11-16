@@ -1,0 +1,79 @@
+[
+	{
+		"id": "c-carousel-1",
+		"label": "Basic",
+		"description": "Basic carousel with single item. Best for the minimal setup with no options: 5 square photos one per view, arrow buttons shown from the sm breakpoint up.",
+		"file": "carousel-1",
+		"export": "Carousel1Example"
+	},
+	{
+		"id": "c-carousel-2",
+		"label": "Vertical",
+		"description": "Vertical carousel orientation. Best for cards stacked in a fixed height column that scrolls up and down, 2 in view, with arrows above and below.",
+		"file": "carousel-2",
+		"export": "Carousel2Example"
+	},
+	{
+		"id": "c-carousel-3",
+		"label": "Multiple Items",
+		"description": "Carousel with multiple items visible. Best for a wide row holding 3 square photos in view at every screen width, aligned to the start.",
+		"file": "carousel-3",
+		"export": "Carousel3Example"
+	},
+	{
+		"id": "c-carousel-4",
+		"label": "Responsive Basis",
+		"description": "Carousel with responsive basis. Best for portrait photos whose count in view climbs from 1 on phones to 4 on large screens, across 8 slides.",
+		"file": "carousel-4",
+		"export": "Carousel4Example"
+	},
+	{
+		"id": "c-carousel-5",
+		"label": "Autoplay",
+		"description": "Carousel with autoplay plugin. Best for square photos that advance by themselves every 2 seconds through the Autoplay plugin, arrows kept.",
+		"file": "carousel-5",
+		"export": "Carousel5Example"
+	},
+	{
+		"id": "c-carousel-6",
+		"label": "Centered Alignment",
+		"description": "Carousel with centered slide alignment. Best for a looping row of 16:9 slides at 70 percent width, centered so both neighbors peek in at the edges.",
+		"file": "carousel-6",
+		"export": "Carousel6Example"
+	},
+	{
+		"id": "c-carousel-7",
+		"label": "Custom Spacing",
+		"description": "Carousel with custom spacing. Best for a pair of square photos in view with the slide gutter cut from the default 16px to 4px.",
+		"file": "carousel-7",
+		"export": "Carousel7Example"
+	},
+	{
+		"id": "c-carousel-8",
+		"label": "Image Overlays",
+		"description": "Carousel with images and overlays. Best for wide 16:9 slides with a title and caption set on a dark bottom fade, zooming the photo on hover.",
+		"file": "carousel-8",
+		"export": "Carousel8Example"
+	},
+	{
+		"id": "c-carousel-9",
+		"label": "Thumbnail Strip",
+		"description": "Carousel with thumbnail navigation. Best for a main slide above a free scrolling strip of 10 thumbnails that outlines the active one and jumps on click.",
+		"file": "carousel-9",
+		"export": "Carousel9Example"
+	},
+	{
+		"id": "c-carousel-10",
+		"label": "Overlay Thumbnails",
+		"description": "Carousel with overlay thumbnail navigation. Best for thumbnails set over the bottom of a 16:9 slide on a dark gradient, the active one outlined in white.",
+		"file": "carousel-10",
+		"export": "Carousel10Example"
+	},
+	{
+		"id": "c-carousel-11",
+		"label": "Dots Navigation",
+		"description": "Carousel with dots navigation and content overlays. Best for square captioned slides with a row of dots under them, the active dot stretched wider, and no arrow buttons.",
+		"file": "carousel-11",
+		"export": "Carousel11Example"
+	}
+]

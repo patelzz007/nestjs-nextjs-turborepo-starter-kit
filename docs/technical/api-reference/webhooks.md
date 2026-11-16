@@ -3,8 +3,11 @@ title: "API reference — Webhooks (outgoing and received)"
 description: "A business's endpoints for signed event deliveries (create, update, switch on or off, rotate the secret, send a test), the delivery log and redelivery (owner-only, `merchant:manage_webhooks`), and the admin's log of every webhook the platform received."
 order: 9
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/webhooks.webp"
 tags: ["api", "reference", "generated"]
 ---
 
@@ -647,7 +650,7 @@ Filter by provider, outcome or verification; search the delivery id, event or co
 | `data[].id` | string (uuid) | yes |  |
 | `data[].lastReceivedAt` | integer | yes |  |
 | `data[].outcome` | "PROCESSING" \| "RECORDED" \| "DUPLICATE" \| "IGNORED" \| "REJECTED" \| "FAILED" | yes |  |
-| `data[].provider` | "GITHUB" \| "RESEND" \| "BILLPLZ" \| "CHIP" \| "FAKE_PAYMENTS" \| "TWILIO" | yes |  |
+| `data[].provider` | "GITHUB" \| "RESEND" \| "BILLPLZ" \| "CHIP" \| "FAKE_PAYMENTS" \| "TWILIO" \| "NOTION" | yes |  |
 | `data[].providerDeliveryId` | string \| null | yes | length 1–255 |
 | `data[].receivedAt` | integer | yes |  |
 | `data[].verification` | "VALID" \| "INVALID" \| "MISSING" \| "NOT_CONFIGURED" | yes |  |
@@ -708,7 +711,7 @@ Includes the payload's SHA-256 and size, the kept headers and why it was refused
 | `data.outcome` | "PROCESSING" \| "RECORDED" \| "DUPLICATE" \| "IGNORED" \| "REJECTED" \| "FAILED" | yes |  |
 | `data.payloadBytes` | integer | yes |  |
 | `data.payloadSha256` | string | yes | exactly 64 characters |
-| `data.provider` | "GITHUB" \| "RESEND" \| "BILLPLZ" \| "CHIP" \| "FAKE_PAYMENTS" \| "TWILIO" | yes |  |
+| `data.provider` | "GITHUB" \| "RESEND" \| "BILLPLZ" \| "CHIP" \| "FAKE_PAYMENTS" \| "TWILIO" \| "NOTION" | yes |  |
 | `data.providerDeliveryId` | string \| null | yes | length 1–255 |
 | `data.receivedAt` | integer | yes |  |
 | `data.verification` | "VALID" \| "INVALID" \| "MISSING" \| "NOT_CONFIGURED" | yes |  |

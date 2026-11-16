@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import { readFileSync } from "node:fs";
 
-import { BaselineSchema, canonicalPath, compareWithBaseline, decodeEntities, RENAMED_ANCHORS, snapshotOf, type Baseline, type PageSnapshot } from "../baseline";
+import {
+	BaselineSchema,
+	canonicalPath,
+	compareWithBaseline,
+	decodeEntities,
+	isReplacedCover,
+	RENAMED_ANCHORS,
+	snapshotOf,
+	type Baseline,
+	type PageSnapshot,
+} from "../baseline";
 
 const PAGE = `<html><head><title>Messaging · Monorepo Docs</title><link rel="canonical" href="https://docs.example.com/docs/messaging"/><meta property="og:image" content="https://img.example/a.jpg?w=1&amp;q=2"/></head>
 <body><h1 class="title">Messaging <span>&amp; jobs</span></h1><h2 id="queues">Queues</h2><h3 class="x" id="retries">Retries</h3><h5 id="ignored">No</h5></body></html>`;
@@ -58,6 +68,22 @@ describe("compareWithBaseline", () => {
 			"/docs/gone: page missing",
 			"/feed.xml: file missing",
 		]);
+	});
+
+	it("should accept a stock cover replaced by one of the docs' own, and still report any other new sharing image", () => {
+		const stock: PageSnapshot = { ...SNAPSHOT, ogImage: "https://images.unsplash.com/photo-1?w=1200&h=630&fit=crop" };
+		const own = "https://docs.example.com/images/covers/technical/api-reference/README.webp";
+		const pages = new Map([
+			["/docs/a", { ...stock, ogImage: own }],
+			["/docs/b", { ...stock, ogImage: "https://docs.example.com/images/other.webp" }],
+			["/docs/c", { ...SNAPSHOT, ogImage: own }],
+		]);
+		expect(compareWithBaseline(baseline({ "/docs/a": stock, "/docs/b": stock, "/docs/c": SNAPSHOT }), pages, new Set())).toEqual([
+			`/docs/b: og:image ${String(stock.ogImage)} → https://docs.example.com/images/other.webp`,
+			`/docs/c: og:image https://img.example/a.jpg?w=1&q=2 → ${own}`,
+		]);
+		expect(isReplacedCover(null, own)).toBe(false);
+		expect(isReplacedCover(stock.ogImage, null)).toBe(false);
 	});
 
 	it("should skip the documented changes and only check anchors on guides and posts", () => {

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
-import { Combobox, type ComboboxOption } from "../combobox";
+import { Combobox, type ComboboxOption, MultiCombobox } from "../combobox";
 import { SHEET_MOTION } from "../../lib/motion";
 
 type Country = "fr" | "de" | "jp";
@@ -86,5 +86,16 @@ describe("Combobox", () => {
 
 		expect(ref.current).not.toBeNull();
 		expect(screen.getByRole("combobox")).toHaveProp("className", expect.stringContaining("min-h-11"));
+	});
+});
+
+describe("MultiCombobox", () => {
+	it("opens a focused search over checkbox rows and adds each ticked option", async () => {
+		const onChange = jest.fn();
+		await render(<MultiCombobox<Country> label="Country" options={OPTIONS} values={["fr"]} onChange={onChange} />);
+		await fireEvent.press(screen.getByRole("combobox", { name: "Country, France" }));
+		await fireEvent.changeText(screen.getByLabelText("Search country"), "jap");
+		await fireEvent.press(screen.getByRole("checkbox", { name: "Japan" }));
+		expect(onChange).toHaveBeenCalledWith(["fr", "jp"]);
 	});
 });

@@ -5,10 +5,15 @@
 // once it is let go (the web kit's `onValueChange` / `onValueCommitted`).
 // Screen readers hear an adjustable control: swiping up or down steps it.
 // The track's measured width and the drag in progress are display state.
+//
+// `marks` draws ticks along the track (with labels under the ones that have
+// them: "5 GB", "Jan"), `showValueBubble` rides the value above the thumb,
+// and `trackClassName` paints the track (a warm-to-cool tint). Several
+// thumbs on one track are `RangeSlider` (range-slider.tsx).
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { type AccessibilityActionEvent, type GestureResponderEvent, type LayoutChangeEvent, View, type ViewInstance } from "react-native";
+import { type AccessibilityActionEvent, type GestureResponderEvent, type LayoutChangeEvent, Text, View, type ViewInstance } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -115,6 +120,12 @@ export function sliderValueAt(x: number, trackWidth: number, thumbSize: number, 
 	return snapSliderValue(range.min + fraction * (range.max - range.min), range);
 }
 
+/** A point along the track: a tick, and a label under it when it has one. */
+export interface SliderMark {
+	readonly value: number;
+	readonly label?: string | undefined;
+}
+
 /** The actions screen readers offer (swipe up / down on iOS, volume keys on Android). */
 const ADJUSTABLE_ACTIONS: readonly { readonly name: string }[] = [{ name: "increment" }, { name: "decrement" }];
 
@@ -139,6 +150,12 @@ export interface SliderProps {
 	readonly loading?: boolean;
 	/** The caller's validation outcome. */
 	readonly invalid?: boolean;
+	/** Ticks along the track, labelled where they have a label. */
+	readonly marks?: readonly SliderMark[] | undefined;
+	/** Shows the value (formatted) in a bubble above the thumb. */
+	readonly showValueBubble?: boolean | undefined;
+	/** Classes for the track's background (a tint in place of the muted track). */
+	readonly trackClassName?: string | undefined;
 	/** Extra classes for the touch area, merged last. */
 	readonly className?: string;
 	readonly testID?: string;
@@ -166,6 +183,9 @@ export const Slider = React.memo(
 			disabled = false,
 			loading = false,
 			invalid = false,
+			marks,
+			showValueBubble = false,
+			trackClassName,
 			className,
 			testID,
 		},
@@ -265,12 +285,50 @@ export const Slider = React.memo(
 				className={cn(sliderVariants({ variant, size, state }), className)}>
 				{/* Touches land on the touch area itself, so `locationX` is always measured from the track's start. */}
 				<View pointerEvents="none" onLayout={measure} testID={testID === undefined ? undefined : `${testID}-rail`} className={sliderRailVariants({ size })}>
-					<View className={sliderTrackVariants({ size })}>
+					<View className={cn(sliderTrackVariants({ size }), trackClassName)}>
 						<StyledAnimatedView style={rangeStyle} className={sliderRangeVariants({ state })} />
 					</View>
 					<StyledAnimatedView style={thumbStyle} className={sliderThumbVariants({ size, state })} />
+					{showValueBubble ? (
+						<StyledAnimatedView style={thumbStyle} className="absolute bottom-full left-0 mb-1 items-center" testID={testID === undefined ? undefined : `${testID}-bubble`}>
+							<Text className="text-caption font-sans-medium rounded-md bg-foreground px-1.5 py-0.5 text-background tabular-nums">
+								{formatValue?.(value) ?? String(value)}
+							</Text>
+						</StyledAnimatedView>
+					) : null}
 				</View>
+				{marks === undefined || trackWidth === NO_WIDTH ? null : <SliderMarks marks={marks} min={min} max={max} trackWidth={trackWidth} thumbSize={thumbSize} />}
 			</View>
 		);
 	}),
 );
+
+interface SliderMarksProps {
+	readonly marks: readonly SliderMark[];
+	readonly min: number;
+	readonly max: number;
+	readonly trackWidth: number;
+	readonly thumbSize: number;
+}
+
+/** The width a mark's label is centred in, in points. */
+const MARK_LABEL_WIDTH = 48;
+
+/** The ticks under the track, each at its value, its label centred under it. Decorative: the value is read out. */
+const SliderMarks = React.memo(function SliderMarks({ marks, min, max, trackWidth, thumbSize }: SliderMarksProps): React.JSX.Element {
+	const travel = Math.max(trackWidth - thumbSize, NO_WIDTH);
+	const positioned = React.useMemo(
+		() => marks.map((mark: SliderMark) => ({ mark, style: { left: thumbSize / HALF + sliderFractionOf(mark.value, min, max) * travel - MARK_LABEL_WIDTH / HALF } })),
+		[marks, max, min, thumbSize, travel],
+	);
+	return (
+		<View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="h-6">
+			{positioned.map(({ mark, style }) => (
+				<View key={String(mark.value)} style={style} className="absolute top-0 w-12 items-center gap-0.5">
+					<View className="h-1.5 w-px bg-border" />
+					{mark.label === undefined ? null : <Text className="text-caption font-sans text-muted-foreground">{mark.label}</Text>}
+				</View>
+			))}
+		</View>
+	);
+});

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say what the document is before opening it",
+		"do": {
+			"text": "Name the document and its size, so people know what they will open.",
+			"file": "pdf-viewer-do-1",
+			"export": "PdfViewerDo1Example"
+		},
+		"dont": {
+			"text": "Don't offer a bare \"Open\": people cannot tell which file it is.",
+			"file": "pdf-viewer-dont-1",
+			"export": "PdfViewerDont1Example"
+		}
+	},
+	{
+		"title": "Offer another way in",
+		"do": {
+			"text": "Where the phone cannot draw a PDF, offer to open it in another app.",
+			"file": "pdf-viewer-do-2",
+			"export": "PdfViewerDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave a blank viewer when pages cannot be drawn.",
+			"file": "pdf-viewer-dont-2",
+			"export": "PdfViewerDont2Example"
+		}
+	}
+]

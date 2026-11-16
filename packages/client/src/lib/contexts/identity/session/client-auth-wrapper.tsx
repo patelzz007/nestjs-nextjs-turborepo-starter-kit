@@ -6,7 +6,8 @@
 "use client";
 
 import type { AuthClientType } from "@workspace/shared";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useProgressRouter } from "../../../navigation/use-progress-router";
 import { useCallback, useEffect, useRef, type JSX, type ReactNode } from "react";
 
 import { AuthProvider } from "../index";
@@ -54,7 +55,7 @@ export function ClientAuthWrapper({
 	serverSession,
 	requestHeaders,
 }: ClientAuthWrapperProps): JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const pathname = usePathname();
 	// Where a session exit is heading. Once that navigation has committed (the
 	// pathname arrived there), the route is refreshed so the server layouts —

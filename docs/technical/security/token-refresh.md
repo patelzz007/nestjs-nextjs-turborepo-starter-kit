@@ -4,8 +4,11 @@ tags: ["auth", "security", "tokens"]
 description: "How access-token rotation works across the Next.js server-side proxy and browser-side 401 recovery paths."
 order: 3
 author: "Platform Team"
+category: "Security"
+date: 1788220800000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793192519000
+coverImage: "/images/covers/technical/security/token-refresh.webp"
 ---
 
 # Token Refresh — Architecture & Request Flow

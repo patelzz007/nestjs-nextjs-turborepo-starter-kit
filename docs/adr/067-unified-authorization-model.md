@@ -3,8 +3,11 @@ title: "ADR 067: One authorization model — roles, grants, shares, ownership an
 tags: ["adr", "authorization", "rbac", "rebac", "acl", "rls", "multi-tenancy", "plan"]
 description: "The agreed redesign of authorization for the multi-tenant starter kit: one permission catalogue and one role model for the platform and every tenant, deny by default with exactly four allow paths (role, grant, share, ownership), store scoping and ownership enforced by RLS first, no rule engines, and the phased plan to build it."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793145600000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/067-unified-authorization-model.webp"
 order: 67
 ---
 

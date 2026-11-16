@@ -4,8 +4,11 @@ tags: ["api", "contracts", "openapi", "zod", "client"]
 description: "How every endpoint declares its response once in @workspace/shared, how the API documents and enforces it, how the typed client parses it, and how the committed OpenAPI artifact stays in sync."
 order: 16
 author: "Platform Team"
+category: "API"
+date: 1790899200000
 lastUpdated: 1791158400000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/api/response-contracts.webp"
 ---
 
 # Response Contracts — Documented, Enforced, Parsed

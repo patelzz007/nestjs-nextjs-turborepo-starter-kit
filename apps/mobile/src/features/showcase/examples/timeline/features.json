@@ -1,0 +1,86 @@
+[
+	{
+		"id": "c-timeline-1",
+		"label": "Basic",
+		"description": "Basic timeline. Best for the minimal composition: 3 entries, each a date, title and line of copy, with the first 2 marked done.",
+		"file": "timeline-1",
+		"export": "Timeline1Example"
+	},
+	{
+		"id": "c-timeline-2",
+		"label": "Roadmap",
+		"description": "Roadmap timeline. Best for dates in a right aligned column beside each title and line.",
+		"file": "timeline-2",
+		"export": "Timeline2Example"
+	},
+	{
+		"id": "c-timeline-3",
+		"label": "Order Status",
+		"description": "Order status timeline. Best for order stages where every step up to the current one fills its node with a check and later steps stay an empty ring.",
+		"file": "timeline-3",
+		"export": "Timeline3Example"
+	},
+	{
+		"id": "c-timeline-4",
+		"label": "Git Activity",
+		"description": "Timeline with git activity. Best for a distinct icon inside each filled node, such as fork, pull request and merge, with the relative time under the description.",
+		"file": "timeline-4",
+		"export": "Timeline4Example"
+	},
+	{
+		"id": "c-timeline-5",
+		"label": "Milestones",
+		"description": "Milestones on both sides. Best for entries that alternate either side of a centre line, each just a date and a title.",
+		"file": "timeline-5",
+		"export": "Timeline5Example"
+	},
+	{
+		"id": "c-timeline-6",
+		"label": "Pipeline Steps",
+		"description": "Pipeline steps. Best for build stages with a check, spinner or circle node, a status coloured duration badge and a collapsible card per step, open on load.",
+		"file": "timeline-6",
+		"export": "Timeline6Example"
+	},
+	{
+		"id": "c-timeline-7",
+		"label": "Roadmap Items",
+		"description": "Timeline with roadmap items. Best for newest first entries marked by small colored dots, each a tiny uppercase date over one line led by a muted verb.",
+		"file": "timeline-7",
+		"export": "Timeline7Example"
+	},
+	{
+		"id": "c-timeline-8",
+		"label": "Horizontal",
+		"description": "Horizontal timeline. Best for dots and a line running left to right, with 3 phases side by side under the line.",
+		"file": "timeline-8",
+		"export": "Timeline8Example"
+	},
+	{
+		"id": "c-timeline-9",
+		"label": "Leading Labels",
+		"description": "Horizontal timeline with dates above. Best for dates over the line and titles with copy under it, each phase a labelled tick.",
+		"file": "timeline-9",
+		"export": "Timeline9Example"
+	},
+	{
+		"id": "c-timeline-10",
+		"label": "Deployment Log",
+		"description": "Deployment log timeline. Best for deploy runs with a green check or red cross node and a status badge, over a mono commit hash, branch and duration row.",
+		"file": "timeline-10",
+		"export": "Timeline10Example"
+	},
+	{
+		"id": "c-timeline-11",
+		"label": "Avatar Activity",
+		"description": "Activity feed timeline with user avatars. Best for each event led by the actor's photo as its node, in one sentence that mutes the action between name and target.",
+		"file": "timeline-11",
+		"export": "Timeline11Example"
+	},
+	{
+		"id": "c-timeline-12",
+		"label": "Compact Milestones",
+		"description": "Compact horizontal milestones. Best for versions across a row with check, play or circle nodes by status and a Current badge on the version in progress.",
+		"file": "timeline-12",
+		"export": "Timeline12Example"
+	}
+]

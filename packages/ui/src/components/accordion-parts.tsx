@@ -28,6 +28,7 @@ export interface AccordionItemProps extends AccordionPrimitive.Item.Props {
 	readonly autofocusContent?: boolean;
 }
 
+/** One section, identified by its `value`: a trigger and its panel. */
 export const AccordionItem = forwardRef<HTMLDivElement, AccordionItemProps>(function AccordionItem(
 	{ className, children, value, id, disabled = false, lazy = false, autofocusContent = false, onOpenChange, ...props },
 	ref,
@@ -135,6 +136,7 @@ export interface AccordionTriggerProps extends AccordionPrimitive.Trigger.Props 
 	readonly highlight?: string;
 }
 
+/** The button that opens and closes its item's panel, with a chevron. */
 export const AccordionTrigger = forwardRef<HTMLButtonElement, AccordionTriggerProps>(function AccordionTrigger(
 	{ className, children, sticky = false, icon, shortcut, count, status = "none", highlight, ...props },
 	ref,

@@ -3,8 +3,11 @@ title: "ADR 044: Mobile Motion, Navigation Theme and the Launch Moment"
 tags: ["adr", "mobile", "ui", "motion", "navigation", "tokens"]
 description: "The navigators take their colours from the design tokens (no white flash in dark mode), tabs cross-fade on the tokens' emphasized curve, the menu button lives in the (app) layout, and the launch screen animates the brand mark."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791590400000
 lastUpdated: 1791590400000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/044-mobile-motion-and-navigation-theme.webp"
 order: 44
 ---
 

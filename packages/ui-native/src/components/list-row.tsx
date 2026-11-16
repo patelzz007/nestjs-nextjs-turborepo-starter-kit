@@ -31,13 +31,13 @@ export const listRowVariants = cva("flex-row items-center gap-3 active:opacity-7
 export const listRowLabelVariants = cva("font-sans", {
 	variants: {
 		variant: { default: "text-foreground", destructive: "text-destructive-foreground" },
-		size: { md: "text-base", sm: "text-sm" },
+		size: { md: "text-body-lg", sm: "text-body" },
 	},
 	defaultVariants: { variant: "default", size: "md" },
 });
 
-const LIST_ROW_SECONDARY_SIZE: Readonly<Record<ListRowSize, string>> = { md: "text-sm", sm: "text-xs" };
-const LIST_ROW_VALUE_SIZE: Readonly<Record<ListRowSize, string>> = { md: "text-base", sm: "text-sm" };
+const LIST_ROW_SECONDARY_SIZE: Readonly<Record<ListRowSize, string>> = { md: "text-body", sm: "text-caption" };
+const LIST_ROW_VALUE_SIZE: Readonly<Record<ListRowSize, string>> = { md: "text-body-lg", sm: "text-body" };
 
 /** The leading glyph's colour per variant (Uniwind `accent-*`). */
 const ICON_COLOR: Readonly<Record<ListRowVariant, string>> = {
@@ -119,11 +119,7 @@ export const ListRow = React.memo(
 					{detail}
 				</View>
 				{value === undefined ? null : <Text className={cn("font-sans text-muted-foreground", LIST_ROW_VALUE_SIZE[size])}>{value}</Text>}
-				{loading ? (
-					<ActivityIndicator size="small" colorClassName="accent-muted-foreground" />
-				) : (
-					<Icon icon={ChevronRightIcon} size="md" colorClassName="accent-muted-foreground" />
-				)}
+				{loading ? <ActivityIndicator size="small" colorClassName="accent-muted-foreground" /> : <Icon icon={ChevronRightIcon} size="md" colorClassName="accent-icon" />}
 			</Pressable>
 		);
 	}),

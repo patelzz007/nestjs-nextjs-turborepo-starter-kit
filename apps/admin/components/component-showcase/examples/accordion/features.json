@@ -1,0 +1,79 @@
+[
+	{
+		"id": "c-accordion-1",
+		"label": "Single Expand",
+		"description": "A basic single-expand accordion. Best for the minimal pattern: 3 questions with one answer open at a time and the first open on load.",
+		"file": "accordion-1",
+		"export": "Accordion1Example"
+	},
+	{
+		"id": "c-accordion-2",
+		"label": "Plus Minus Icons",
+		"description": "Accordion with plus/minus indicators. Best for feature summaries that can all stay open at once, each row ending in a plus that flips to a minus.",
+		"file": "accordion-2",
+		"export": "Accordion2Example"
+	},
+	{
+		"id": "c-accordion-3",
+		"label": "Bordered Rounded",
+		"description": "Accordion with borders and rounded corners. Best for each question boxed on its own with a gap between, holding long answers in muted text, one open at a time.",
+		"file": "accordion-3",
+		"export": "Accordion3Example"
+	},
+	{
+		"id": "c-accordion-4",
+		"label": "In Card",
+		"description": "Accordion embedded within a Card. Best for plan, billing and security questions under a titled Card header that can open together, the first ending in a View plans button.",
+		"file": "accordion-4",
+		"export": "Accordion4Example"
+	},
+	{
+		"id": "c-accordion-5",
+		"label": "Disabled Items",
+		"description": "Accordion with disabled items and highlighted state. Best for one outlined box whose open row takes a muted tint, with a locked middle row that cannot be opened.",
+		"file": "accordion-5",
+		"export": "Accordion5Example"
+	},
+	{
+		"id": "c-accordion-6",
+		"label": "Icons & Badges",
+		"description": "Advanced accordion with custom icons and badges. Best for spaced card rows led by an icon tile, one open at a time, with a New badge and the panel text indented under the label.",
+		"file": "accordion-6",
+		"export": "Accordion6Example"
+	},
+	{
+		"id": "c-accordion-7",
+		"label": "In Frame",
+		"description": "Accordion items integrated within Frame and FramePanel. Best for settings rows with icon tiles joined in a stacked Frame, where each panel opens without closing the others.",
+		"file": "accordion-7",
+		"export": "Accordion7Example"
+	},
+	{
+		"id": "c-accordion-8",
+		"label": "Nested",
+		"description": "Nested accordion example with bordered items. Best for a product details list where one section opens onto its own inner set of sub sections, both levels open on load.",
+		"file": "accordion-8",
+		"export": "Accordion8Example"
+	},
+	{
+		"id": "c-accordion-9",
+		"label": "User List",
+		"description": "User list accordion with avatars and role indicators. Best for team members shown by avatar, name and role badge, each opening to a summary of what they may access.",
+		"file": "accordion-9",
+		"export": "Accordion9Example"
+	},
+	{
+		"id": "c-accordion-10",
+		"label": "Rotating Arrow",
+		"description": "Accordion with rotating arrow indicator. Best for a chevron ahead of each question that turns to point down when open, with the answer indented under the text.",
+		"file": "accordion-10",
+		"export": "Accordion10Example"
+	},
+	{
+		"id": "c-accordion-11",
+		"label": "Setup Steps",
+		"description": "Accordion component for onboarding or setup steps with icons, badges, and QR codes. Best for a 3 step setup checklist with done, in progress and pending states, the open step holding an email field and QR code.",
+		"file": "accordion-11",
+		"export": "Accordion11Example"
+	}
+]

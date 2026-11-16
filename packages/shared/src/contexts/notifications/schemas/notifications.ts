@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MINUTES_PER_DAY } from "../../../lib/time";
+
 import { CLIENT_TYPE_QUERY_PARAM } from "../../../contracts/client-session";
 import { BaseResponseSchema, EpochMsSchema } from "../../../schemas/api/common";
 import { defineListQuery, listFilter } from "../../../schemas/api/list-query";
@@ -67,7 +69,7 @@ export type NotificationDeliveryReason = z.output<typeof NotificationDeliveryRea
 export const MARKETING_CONSENT_WORDING_VERSION = "2026-10-30";
 
 /** Minutes in a day: quiet hours are minutes after local midnight. */
-export const MINUTES_PER_DAY = 1_440;
+export { MINUTES_PER_DAY };
 const LAST_MINUTE_OF_DAY = MINUTES_PER_DAY - 1;
 export const MinuteOfDaySchema = z.number().int().min(0).max(LAST_MINUTE_OF_DAY);
 

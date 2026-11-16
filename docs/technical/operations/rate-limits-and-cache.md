@@ -3,8 +3,11 @@ title: "Rate limits and the cache"
 description: "How the API limits traffic (one limiter, three algorithms, fail modes, penalties, exemptions, tenant overrides, what a refused client sees) and how the distributed cache works, plus the admin screens that show and manage both."
 order: 9
 author: "Platform Team"
+category: "Operations"
+date: 1793491200000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/technical/operations/rate-limits-and-cache.webp"
 tags: ["operations", "rate-limiting", "cache", "redis", "admin"]
 ---
 

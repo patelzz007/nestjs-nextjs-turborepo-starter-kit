@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Group links that belong together",
+		"do": {
+			"text": "Put a few related links under one group, each with a line saying where it goes.",
+			"file": "navigation-menu-do-1",
+			"export": "NavigationMenuDo1Example"
+		},
+		"dont": {
+			"text": "Don't make 5 groups that each open a panel with one link.",
+			"file": "navigation-menu-dont-1",
+			"export": "NavigationMenuDont1Example"
+		}
+	},
+	{
+		"title": "Write descriptive links",
+		"do": {
+			"text": "Name each link for where it goes.",
+			"file": "navigation-menu-do-2",
+			"export": "NavigationMenuDo2Example"
+		},
+		"dont": {
+			"text": "Don't label links \"Click here\" or \"More\".",
+			"file": "navigation-menu-dont-2",
+			"export": "NavigationMenuDont2Example"
+		}
+	}
+]

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
-import { Pagination } from "../pagination";
+import { Pagination, paginationRange } from "../pagination";
 
 function germanPageLabel(page: number, pageCount: number): string {
 	return `Seite ${String(page)} von ${String(pageCount)}`;
@@ -72,7 +72,7 @@ describe("Pagination", () => {
 		const next = screen.getByRole("button", { name: "Next" });
 		expect(next).toHaveProp("className", expect.stringContaining("bg-transparent"));
 		expect(next).toHaveProp("className", expect.stringContaining("min-h-9"));
-		expect(screen.getByText("Page 2 of 3")).toHaveProp("className", expect.stringContaining("text-xs"));
+		expect(screen.getByText("Page 2 of 3")).toHaveProp("className", expect.stringContaining("text-caption"));
 	});
 
 	it("forwards its ref and merges className last", async () => {
@@ -83,5 +83,35 @@ describe("Pagination", () => {
 		const className = String(screen.getByTestId("pager").props.className);
 		expect(className).toContain("gap-1");
 		expect(className).not.toContain("gap-3");
+	});
+});
+
+describe("paginationRange", () => {
+	it("keeps the ends and the current page's neighbours, with an ellipsis for each gap", () => {
+		const options = { siblingCount: 1, boundaryCount: 1, showLastPage: true };
+		expect(paginationRange(1, 3, options)).toStrictEqual([1, 2, 3]);
+		expect(paginationRange(6, 12, options)).toStrictEqual([1, "ellipsis", 5, 6, 7, "ellipsis", 12]);
+		expect(paginationRange(3, 12, options)).toStrictEqual([1, 2, 3, 4, "ellipsis", 12]);
+		expect(paginationRange(2, 10, { ...options, showLastPage: false })).toStrictEqual([1, 2, 3, "ellipsis"]);
+	});
+});
+
+describe("Pagination numbers", () => {
+	it("shows page buttons, chevrons and the first and last jumps", async () => {
+		const onChange = jest.fn();
+		await render(<Pagination page={6} pageCount={12} onChange={onChange} pages="numbers" arrows="icons" showEdges variant="strip" pageShape="circle" filledCurrent />);
+		expect(screen.getByRole("button", { name: "Page 6" })).toBeSelected();
+		await fireEvent.press(screen.getByRole("button", { name: "Page 7" }));
+		expect(onChange).toHaveBeenLastCalledWith(7);
+		await fireEvent.press(screen.getByRole("button", { name: "Last page" }));
+		expect(onChange).toHaveBeenLastCalledWith(12);
+		await fireEvent.press(screen.getByRole("button", { name: "Previous" }));
+		expect(onChange).toHaveBeenLastCalledWith(5);
+	});
+
+	it("puts the page info first with the arrows grouped at the end", async () => {
+		await render(<Pagination page={1} pageCount={10} onChange={jest.fn()} infoPosition="start" arrows="icons" />);
+		expect(screen.getByText("Page 1 of 10")).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
 	});
 });

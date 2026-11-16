@@ -1,0 +1,149 @@
+[
+	{
+		"id": "c-cascader-1",
+		"label": "Attribute Picker",
+		"description": "Nested attribute picker that drills down level by level. Best for person, company and workspace fields with a type glyph per row, counts on branches and a field path capped at 3 parts.",
+		"file": "cascader-1",
+		"export": "Cascader1Example"
+	},
+	{
+		"id": "c-cascader-2",
+		"label": "Multi-Select Cap",
+		"description": "Multi-select permissions with a cap. Best for product area permissions like billing and deployments, capped at 5, with one disabled row and a clear X in the field and in the sheet's footer.",
+		"file": "cascader-2",
+		"export": "Cascader2Example"
+	},
+	{
+		"id": "c-cascader-3",
+		"label": "Deep Search",
+		"description": "Deep search across every level, each result with its path. Best for a source file tree whose search reaches files below the open folder, with folder paths telling repeated names like page.tsx apart.",
+		"file": "cascader-3",
+		"export": "Cascader3Example"
+	},
+	{
+		"id": "c-cascader-5",
+		"label": "Avatar Rows",
+		"description": "Rows with avatars and role badges. Best for an assignee picker by team, each member row with an avatar, an online or away dot and a seniority chip, the face repeated in the field.",
+		"file": "cascader-5",
+		"export": "Cascader5Example"
+	},
+	{
+		"id": "c-cascader-7",
+		"label": "Embedded Panel",
+		"description": "Embedded panel with no sheet. Best for a docs table of contents searched and drilled right on the screen inside a card, with the list height capped at 240 pt.",
+		"file": "cascader-7",
+		"export": "Cascader7Example"
+	},
+	{
+		"id": "c-cascader-8",
+		"label": "Flat Data",
+		"description": "Flat rows with a parent pointer. Best for region and department rows as a database returns them, unsorted with a parent id each, plus a footer button that resets the pick.",
+		"file": "cascader-8",
+		"export": "Cascader8Example"
+	},
+	{
+		"id": "c-cascader-9",
+		"label": "Controlled State",
+		"description": "Controlled path, value and search. Best for a restaurant menu where outside buttons drive the open level and the search text, and each pick reports its reason and full path.",
+		"file": "cascader-9",
+		"export": "Cascader9Example"
+	},
+	{
+		"id": "c-cascader-10",
+		"label": "Translated Labels",
+		"description": "Translated labels. Best for data and words both in German, down to plural forms like 1 Land and 2 Länder read to screen readers.",
+		"file": "cascader-10",
+		"export": "Cascader10Example"
+	},
+	{
+		"id": "c-cascader-11",
+		"label": "Two-Line Rows",
+		"description": "Two-line rows with descriptions and a disabled option. Best for data center locations from country to city, each row a tile plus a second line of counts or region codes, with China locked.",
+		"file": "cascader-11",
+		"export": "Cascader11Example"
+	},
+	{
+		"id": "c-cascader-12",
+		"label": "Native Form Field",
+		"description": "A field in a form. Best for a support topic field in a labelled form, required on submit and read back with the message.",
+		"file": "cascader-12",
+		"export": "Cascader12Example"
+	},
+	{
+		"id": "c-cascader-13",
+		"label": "Columns Mode",
+		"description": "Columns mode with columns that scroll on their own. Best for video, audio and article items grouped by library and collection, with a hued tile per library and a runtime chip on items.",
+		"file": "cascader-13",
+		"export": "Cascader13Example"
+	},
+	{
+		"id": "c-cascader-14",
+		"label": "Tree Mode",
+		"description": "Tree mode with branches that open in place. Best for a move to destination picker whose top level splits into Recently used and All spaces, reordering each time a folder is picked.",
+		"file": "cascader-14",
+		"export": "Cascader14Example"
+	},
+	{
+		"id": "c-cascader-15",
+		"label": "Async Loading",
+		"description": "Levels that load on demand. Best for repositories, releases and release assets fetched when opened, with a toned badge per row and a button that fails the next request to show Retry.",
+		"file": "cascader-15",
+		"export": "Cascader15Example"
+	},
+	{
+		"id": "c-cascader-16",
+		"label": "Virtualized List",
+		"description": "A virtualized level with thousands of rows. Best for nearly 3,000 generated sales markets with flags, a territory name and a reach badge toned by tier.",
+		"file": "cascader-16",
+		"export": "Cascader16Example"
+	},
+	{
+		"id": "c-cascader-17",
+		"label": "Removable Chips",
+		"description": "Removable chips drawn by the caller, named with their path. Best for a report builder that adds table columns several at a time, counting them in the field and listing each as a removable chip below.",
+		"file": "cascader-17",
+		"export": "Cascader17Example"
+	},
+	{
+		"id": "c-cascader-18",
+		"label": "Tree Multi-Select",
+		"description": "Cascading tree multi-select. Best for shipping zones by continent, region and country, where 1 tap takes a whole region and the field names the regions plus a country total.",
+		"file": "cascader-18",
+		"export": "Cascader18Example"
+	},
+	{
+		"id": "c-cascader-19",
+		"label": "Color Dots",
+		"description": "Colour dots through renderLabel. Best for workflow fields such as status, priority, severity and effort, each value marked by a coloured dot that the field repeats beside its group.",
+		"file": "cascader-19",
+		"export": "Cascader19Example"
+	},
+	{
+		"id": "c-cascader-20",
+		"label": "Inherited Colors",
+		"description": "Accounts with a colour inherited down each branch. Best for a chart of accounts where any level can be booked, each row with its ledger code and spend.",
+		"file": "cascader-20",
+		"export": "Cascader20Example"
+	},
+	{
+		"id": "c-cascader-21",
+		"label": "Global Search",
+		"description": "Global search from inside a level. Best for a store taxonomy preset to Headphones, with 2 Chargers rows under different branches told apart by their trail.",
+		"file": "cascader-21",
+		"export": "Cascader21Example"
+	},
+	{
+		"id": "c-cascader-4",
+		"label": "Footer Flyout",
+		"description": "A footer action that opens a second menu. Best for a property picker whose footer opens a menu of 7 app and data source logos in 2 named groups.",
+		"file": "cascader-4",
+		"export": "Cascader4Example"
+	},
+	{
+		"id": "c-cascader-6",
+		"label": "Path Formatting",
+		"description": "Path formatting and shortening. Best for a connected app tree with a switch between collapsed, full, tail, leaf and a custom two line field.",
+		"file": "cascader-6",
+		"export": "Cascader6Example"
+	}
+]

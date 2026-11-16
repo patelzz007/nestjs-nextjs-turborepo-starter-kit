@@ -171,6 +171,7 @@ export function filterControlSizes(state: { readonly size: FilterSize }): Filter
 
 const FilterActionsContext = React.createContext<FilterActionsContextValue | null>(null);
 
+/** The filter bar's actions (add, update, remove, move, negate rules and groups) for a custom part, inside `Filters`. */
 export function useFilterActions(): FilterActionsContextValue {
 	const context = React.useContext(FilterActionsContext);
 	if (context === null) {
@@ -201,6 +202,7 @@ export interface FilterStateContextValue {
 
 const FilterStateContext = React.createContext<FilterStateContextValue | null>(null);
 
+/** The filter bar's query and draft state for a custom part, inside `Filters`. */
 export function useFilterState(): FilterStateContextValue {
 	const context = React.useContext(FilterStateContext);
 	if (context === null) {
@@ -224,6 +226,7 @@ const NO_RENDER_OVERRIDES: FilterRenderContextValue = {};
 
 const FilterRenderContext = React.createContext<FilterRenderContextValue>(NO_RENDER_OVERRIDES);
 
+/** How the bar draws rules (fields, operators, editors, labels) for a custom part, inside `Filters`. */
 export function useFilterRender(): FilterRenderContextValue {
 	return React.useContext(FilterRenderContext);
 }

@@ -10,6 +10,8 @@ import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guar
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { geistMono } from "@workspace/ui/fonts/geist-mono";
 import { geistSans } from "@workspace/ui/fonts/geist-sans";
+import { jetBrainsMono } from "@workspace/ui/fonts/jetbrains-mono";
+import { AppNavigationProgress } from "@workspace/client/lib/navigation/navigation-progress";
 
 import { WebAuthorizationProvider } from "@/contexts/identity/components/web-authorization-provider";
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
@@ -49,26 +51,32 @@ export default async function RootLayout({
 	const language = await readRequestLanguage();
 
 	return (
-		<AppDocumentShell lang={language} htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="web-app">
+		<AppDocumentShell
+			lang={language}
+			htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable, jetBrainsMono.variable)}
+			bodyClassName="web-app">
 			<ReduxDevToolsGuard />
-			<AppLanguageProvider language={language}>
-				<UrlStateProvider>
-					<QueryProvider>
-						<WebClientAuthWrapper sessionActive={sessionActive} serverSession={serverSession}>
-							<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={serverSession?.permissions}>
-								<ThemeProvider {...nonceProps(nonce)}>
-									{/* Root, not the /dashboard shell: the public landing page renders the rewards catalog too. */}
-									<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
-										<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
-									</UiPreferencesStoreProvider>
-									<Toaster position="top-right" />
-									<ScrollToTop />
-								</ThemeProvider>
-							</WebAuthorizationProvider>
-						</WebClientAuthWrapper>
-					</QueryProvider>
-				</UrlStateProvider>
-			</AppLanguageProvider>
+			{/* The top progress bar while the app moves to another page (link clicks, back/forward, useProgressRouter). */}
+			<AppNavigationProgress>
+				<AppLanguageProvider language={language}>
+					<UrlStateProvider>
+						<QueryProvider>
+							<WebClientAuthWrapper sessionActive={sessionActive} serverSession={serverSession}>
+								<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={serverSession?.permissions}>
+									<ThemeProvider {...nonceProps(nonce)}>
+										{/* Root, not the /dashboard shell: the public landing page renders the rewards catalog too. */}
+										<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
+											<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+										</UiPreferencesStoreProvider>
+										<Toaster position="top-right" />
+										<ScrollToTop />
+									</ThemeProvider>
+								</WebAuthorizationProvider>
+							</WebClientAuthWrapper>
+						</QueryProvider>
+					</UrlStateProvider>
+				</AppLanguageProvider>
+			</AppNavigationProgress>
 		</AppDocumentShell>
 	);
 }

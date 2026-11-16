@@ -285,6 +285,7 @@ function CascaderVirtualRows({ estimateSize, overscan }: CascaderVirtualItemsPro
 /* -------------------------------------------------------------------------- */
 
 export interface CascaderVirtualColumnProps extends CascaderVirtualItemsProps {
+	/** The level this virtualised column draws. */
 	readonly column: CascaderColumn;
 }
 

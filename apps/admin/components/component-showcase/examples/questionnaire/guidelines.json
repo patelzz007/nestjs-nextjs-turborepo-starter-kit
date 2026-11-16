@@ -1,0 +1,28 @@
+[
+	{
+		"title": "One question at a time",
+		"do": {
+			"text": "Ask one clear question per step, with short choices.",
+			"file": "questionnaire-do-1",
+			"export": "QuestionnaireDo1Example"
+		},
+		"dont": {
+			"text": "Don't pack several questions into one with long combined answers.",
+			"file": "questionnaire-dont-1",
+			"export": "QuestionnaireDont1Example"
+		}
+	},
+	{
+		"title": "Let people skip what is optional",
+		"do": {
+			"text": "Mark optional questions (`required: false`) and say so: the Skip button appears on them.",
+			"file": "questionnaire-do-2",
+			"export": "QuestionnaireDo2Example"
+		},
+		"dont": {
+			"text": "Don't force an answer to a question that does not need one.",
+			"file": "questionnaire-dont-2",
+			"export": "QuestionnaireDont2Example"
+		}
+	}
+]

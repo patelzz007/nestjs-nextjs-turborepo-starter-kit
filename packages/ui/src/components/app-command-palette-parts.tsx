@@ -4,7 +4,8 @@ import { ChevronDown, ChevronRight, Clock, FileText, Pin, Search, SearchX, X, Za
 import * as React from "react";
 
 import { Button } from "@workspace/ui/components/button";
-import { CommandEmpty, CommandGroup, CommandInputPrimitive, CommandItem } from "@workspace/ui/components/command";
+import { CommandEmpty, CommandGroup, CommandItem } from "@workspace/ui/components/command";
+import * as CommandPrimitive from "@workspace/ui/components/command-primitive";
 import { highlightText } from "@workspace/ui/lib/core/highlight-text";
 import type { AppCommandPaletteLabels } from "@workspace/ui/lib/palette/labels";
 import type { ScopeType } from "@workspace/ui/lib/palette/search";
@@ -40,7 +41,7 @@ const FOOTER_KBD_CLASS =
 const FOOTER_HINT_CLASS = "flex items-center gap-1.5 text-(length:--text-overline) text-muted-foreground";
 
 const LIST_ITEM_CLASS =
-	"slide-in-from-bottom-0.5 flex animate-in items-center justify-between rounded-xl px-4 py-2.5 transition-all duration-75 fill-mode-both fade-in data-highlighted:bg-muted data-highlighted:text-foreground";
+	"slide-in-from-bottom-0.5 flex animate-in items-center justify-between rounded-xl px-4 py-2.5 transition-all duration-75 fill-mode-both fade-in data-selected:bg-muted data-selected:text-foreground";
 
 const CHIP_CLASS = "gap-1.5 rounded-lg border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground";
 
@@ -99,7 +100,7 @@ export const AppCommandPaletteSearchInput = React.forwardRef<HTMLDivElement, App
 					</Button>
 				) : null}
 
-				<CommandInputPrimitive
+				<CommandPrimitive.Input
 					ref={inputRef}
 					placeholder={placeholder}
 					value={searchText}
@@ -272,7 +273,8 @@ export interface AppCommandPaletteNavigationSectionProps {
 	readonly pinnedUrls: readonly string[];
 	readonly renderIcon: (iconName: string | undefined, className: string) => React.ReactNode;
 	readonly onToggleSection: (event: React.MouseEvent<HTMLButtonElement>) => void;
-	readonly onSelectItem: (value: string) => void;
+	/** Called with the chosen item's `id` (ids are unique; two items may share a URL). */
+	readonly onSelectItem: (itemId: string) => void;
 	readonly onTogglePin: (event: React.MouseEvent<HTMLButtonElement>) => void;
 	readonly labels: Pick<
 		AppCommandPaletteLabels,
@@ -316,7 +318,7 @@ export const AppCommandPaletteNavigationSection = React.forwardRef<HTMLDivElemen
 										const isPinned = pinnedUrls.includes(item.url);
 										const itemIcon = renderIcon(item.icon, "size-4");
 										return (
-											<CommandItem key={item.id} value={item.url} onSelect={onSelectItem} className={LIST_ITEM_CLASS}>
+											<CommandItem key={item.id} value={item.id} onSelect={onSelectItem} className={LIST_ITEM_CLASS}>
 												<div className="flex min-w-0 flex-1 items-center gap-3">
 													{itemIcon !== null ? (
 														<div className={cn("flex size-8 shrink-0 items-center justify-center rounded-xl transition-colors", getItemColor(item.title))}>{itemIcon}</div>
@@ -352,10 +354,7 @@ export const AppCommandPaletteNavigationSection = React.forwardRef<HTMLDivElemen
 														size="icon-xs"
 														data-url={item.url}
 														onClick={onTogglePin}
-														className={cn(
-															"size-5 opacity-0 transition-all group-hover/command-item:opacity-100 group-data-highlighted/command-item:opacity-100",
-															isPinned && "opacity-100",
-														)}
+														className={cn("size-5 opacity-0 transition-all group-hover/command-item:opacity-100 data-selected:opacity-100", isPinned && "opacity-100")}
 														aria-label={isPinned ? labels.unpinItemAriaLabel(item.title) : labels.pinItemAriaLabel(item.title)}>
 														<Pin className={cn("size-3 transition-colors", isPinned ? "text-primary" : "text-muted-foreground")} />
 													</Button>

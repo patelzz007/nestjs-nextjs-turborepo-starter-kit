@@ -1,0 +1,12 @@
+---
+description: UI kit rules — components, tokens, variants and accessibility
+globs: components/ui/**,lib/ui/**,styles/**,lib/tokens/**
+alwaysApply: false
+---
+
+You are editing the UI kit. Read `rules/07-ui-system.md` first.
+
+- Components stay data-agnostic, controlled, ref-forwarding and accessible (labels, keyboard, focus, `aria-*` only where needed).
+- Style with semantic tokens only; variants through CVA.
+- Theme values live in `lib/tokens` — run `pnpm tokens:generate`, never edit `styles/tokens/*.css` by hand.
+- Every change ships with a test in the folder's `__tests__/`.

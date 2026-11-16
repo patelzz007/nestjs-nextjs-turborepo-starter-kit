@@ -5,7 +5,7 @@
 //
 //   @custom-variant nord (…);   one per theme beyond light and dark
 //   @layer theme { :root { @variant light { … } @variant dark { … } @variant nord { … } } }
-//   @theme inline { --color-card: var(--card); … --radius-lg: 0.625rem; … }
+//   @theme inline { --color-card: var(--card); … --radius-lg: 0.625rem; … --text-h1: 28px; … }
 //
 // The web's variable names, with the mobile app's own values (ADR 079): `mobileThemeOverrides` re-maps any
 // themed role for the phone, and `mobileComponentColors` adds the colours of one component (the floating
@@ -13,16 +13,20 @@
 // LITERAL value for every variable (references resolved for that theme), so the
 // native runtime never has to follow a `var()` chain; the `@theme inline`
 // mapping gives the same utility names as the web (`bg-card`, `rounded-lg`).
+// The phone's own type scale and radii (mobile-typography.ts) add `text-<role>`
+// (size and line height in one utility: `text-h1`, `text-body`, `text-caption`)
+// and `rounded-<name>` (`rounded-button`, `rounded-card`, `rounded-card-lg`).
 // Web-chrome tokens (z-index layers, sidebar widths, switch geometry, easing,
-// the web font variables, shadows) are not part of it.
+// the web font variables, the web's chrome type sizes, shadows) are not part of it.
 
 import type { ColorTokenName, MobileThemeName, ThemeName, TokenSource } from "../schema";
 import {
 	MobileComponentColorNameSchema,
+	MobileRadiusNameSchema,
+	MobileTextRoleSchema,
 	RadiusNameSchema,
 	RadiusStepSchema,
 	SharedColorNameSchema,
-	TextSizeNameSchema,
 	MobileThemeNameSchema,
 	ThemeNameSchema,
 	ThemeRoleSchema,
@@ -73,7 +77,6 @@ function variantDeclarations(source: TokenSource, theme: MobileThemeName): reado
 		...SharedColorNameSchema.options.map((name) => declaration(name, literal(name))),
 		...MobileComponentColorNameSchema.options.map((name) => declaration(name, formatColorLiteral(resolveColorValue(source.mobileComponentColors[theme][name], lookups)))),
 		...RadiusNameSchema.options.map((name) => declaration(name, formatLength(source.radius[name]))),
-		...TextSizeNameSchema.options.map((name) => declaration(name, formatLength(source.typography.sizes[name]))),
 	];
 }
 
@@ -87,12 +90,18 @@ export function renderMobileStylesheet(source: TokenSource): string {
 		...colors.map((name) => declaration(`color-${name}`, formatVariableReference(name))),
 		...MobileComponentColorNameSchema.options.map((name) => declaration(`color-${name}`, formatVariableReference(name))),
 		...RadiusStepSchema.options.map((step) => declaration(`radius-${step}`, formatLength({ ...baseRadius, value: baseRadius.value * radiusScale[step] }))),
+		...MobileRadiusNameSchema.options.map((name) => declaration(`radius-${name}`, formatLength(source.mobileRadii[name]))),
+		...MobileTextRoleSchema.options.flatMap((role) => [
+			declaration(`text-${role}`, formatLength(source.mobileTypeScale[role].size)),
+			declaration(`text-${role}--line-height`, formatLength(source.mobileTypeScale[role].lineHeight)),
+		]),
 	]);
 
 	const header = generatedNotice([
 		"The mobile design tokens in Uniwind's theme format (ADR 032), imported by",
 		"apps/mobile's global.css: one @variant per theme, every value literal, plus the",
-		"@theme inline mapping that gives the web's utility names (bg-card, rounded-lg).",
+		"@theme inline mapping that gives the web's utility names (bg-card, rounded-lg)",
+		"and the phone's own type roles and radii (text-h1, rounded-card).",
 	]);
 	return printStylesheet(header, [
 		...customThemeVariants().map(statement),

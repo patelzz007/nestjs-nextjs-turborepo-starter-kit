@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Write commands as verbs",
+		"do": {
+			"text": "Label commands with what they do (\"New project\"), grouped, with shortcuts.",
+			"file": "command-do-1",
+			"export": "CommandDo1Example"
+		},
+		"dont": {
+			"text": "Don't use vague labels like \"Do it\" or \"Go\".",
+			"file": "command-dont-1",
+			"export": "CommandDont1Example"
+		}
+	},
+	{
+		"title": "Use it for many commands",
+		"do": {
+			"text": "Use a command list when there are many places and actions to search.",
+			"file": "command-do-2",
+			"export": "CommandDo2Example"
+		},
+		"dont": {
+			"text": "Don't use a command list for two links: show them as buttons.",
+			"file": "command-dont-2",
+			"export": "CommandDont2Example"
+		}
+	}
+]

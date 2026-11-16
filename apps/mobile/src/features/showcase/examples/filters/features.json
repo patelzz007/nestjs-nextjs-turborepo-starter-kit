@@ -1,0 +1,86 @@
+[
+	{
+		"id": "c-filters-1",
+		"label": "Full Filter Bar",
+		"description": "Everything in one filter bar. Best for nine fields on one bar: choices with colour dots, people with an exclusive Unassigned, a nested company, a number and a flag, with the query printed as JSON.",
+		"file": "filters-1",
+		"export": "Filters1Example"
+	},
+	{
+		"id": "c-filters-2",
+		"label": "Nested Attributes",
+		"description": "Nested attributes at workspace scale. Best for a 2,000 attribute branch across eight record types, searched at any depth, with synonyms such as zip for postcode and type icons on the leaves.",
+		"file": "filters-2",
+		"export": "Filters2Example"
+	},
+	{
+		"id": "c-filters-3",
+		"label": "Status Badges",
+		"description": "Status and priority colour dots. Best for picks named on the chip until a third folds them into a count, plus a chip that takes no value.",
+		"file": "filters-3",
+		"export": "Filters3Example"
+	},
+	{
+		"id": "c-filters-4",
+		"label": "Avatars & Paging",
+		"description": "Options fetched as you search, and a restored view. Best for a stored query of bare ids restored by a button, with contact names fetched for ids no search has loaded yet, and a Reset.",
+		"file": "filters-4",
+		"export": "Filters4Example"
+	},
+	{
+		"id": "c-filters-5",
+		"label": "Date Editors",
+		"description": "A date and a date range editor. Best for today or tomorrow kept as phrases (never stale) or a day picked on a calendar, and last 7 and 30 day presets for a range.",
+		"file": "filters-5",
+		"export": "Filters5Example"
+	},
+	{
+		"id": "c-filters-6",
+		"label": "Slider Editor",
+		"description": "Sliders as the value editor. Best for a health score span on a two-thumb track and a monthly spend ceiling on one thumb.",
+		"file": "filters-6",
+		"export": "Filters6Example"
+	},
+	{
+		"id": "c-filters-7",
+		"label": "Table Filtering",
+		"description": "Filtering a table. Best for a chip bar over a staff table whose rows narrow as each chip gets a value, with a count of the rows kept.",
+		"file": "filters-7",
+		"export": "Filters7Example"
+	},
+	{
+		"id": "c-filters-8",
+		"label": "Choice Controls",
+		"description": "Choice controls as editors. Best for kit controls as editors: segments for a priority, radios with descriptions for a channel, toggle chips for tags and a switch for a flag.",
+		"file": "filters-8",
+		"export": "Filters8Example"
+	},
+	{
+		"id": "c-filters-9",
+		"label": "Typed Inputs",
+		"description": "Typed values in kit inputs. Best for a weight with its unit, pasted keywords one per line, a 6 character code in boxes and a domain checked before it is applied.",
+		"file": "filters-9",
+		"export": "Filters9Example"
+	},
+	{
+		"id": "c-filters-10",
+		"label": "Popover Builder",
+		"description": "Nested groups in a sheet. Best for a card whose header button opens the builder in a bottom sheet, seeded with an OR group, with short operator words such as ≥.",
+		"file": "filters-10",
+		"export": "Filters10Example"
+	},
+	{
+		"id": "c-filters-11",
+		"label": "Inline Builder",
+		"description": "Nested groups inline. Best for the builder on the screen, a button that drops in a saved group and a live rule count.",
+		"file": "filters-11",
+		"export": "Filters11Example"
+	},
+	{
+		"id": "c-filters-12",
+		"label": "Controlled & Translated",
+		"description": "Controlled, sized and translated. Best for English, German and Japanese copy over one query, a small or medium size, read-only and disabled states and a log of change reasons.",
+		"file": "filters-12",
+		"export": "Filters12Example"
+	}
+]

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep the picture's shape",
+		"do": {
+			"text": "Lock the `aspectRatio`, so resizing never stretches the picture.",
+			"file": "image-resizer-do-1",
+			"export": "ImageResizerDo1Example"
+		},
+		"dont": {
+			"text": "Don't let free corners distort a photo.",
+			"file": "image-resizer-dont-1",
+			"export": "ImageResizerDont1Example"
+		}
+	},
+	{
+		"title": "Set limits",
+		"do": {
+			"text": "Give the picture a `minWidth` and a `maxWidth` that fit where it will be shown.",
+			"file": "image-resizer-do-2",
+			"export": "ImageResizerDo2Example"
+		},
+		"dont": {
+			"text": "Don't allow sizes the layout cannot hold: a picture wider than the page.",
+			"file": "image-resizer-dont-2",
+			"export": "ImageResizerDont2Example"
+		}
+	}
+]

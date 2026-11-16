@@ -18,6 +18,7 @@ export interface ImageCarouselImage {
 }
 
 export interface ImageCarouselProps {
+	/** The images, all of one shape, with their `alt` text. */
 	readonly images: readonly ImageCarouselImage[];
 	/** Width divided by height of every image frame. */
 	readonly ratio?: number | undefined;
@@ -31,6 +32,7 @@ export interface ImageCarouselProps {
 	readonly onSelectedIndexChange?: ((index: number) => void) | undefined;
 	/** Classes of the image frames (e.g. their corner radius). */
 	readonly frameClassName?: string | undefined;
+	/** Classes for the gallery. */
 	readonly className?: string | undefined;
 	/** Per-usage overrides of the `carousel` family's copy from `UiKitLabelsProvider`. */
 	readonly labels?: UiKitLabelsOverride<"carousel"> | undefined;

@@ -35,7 +35,9 @@ export interface DatePickerLabels {
 }
 
 export interface DatePickerProps extends VariantProps<typeof inputVariants> {
+	/** The trigger's id, for a `Label`'s `htmlFor`. */
 	readonly id?: string;
+	/** Submits the value with a native form under this name. */
 	readonly name?: string;
 	/** Controlled `yyyy-MM-dd` value. Pair with `onValueChange`. */
 	readonly value?: string;
@@ -43,14 +45,19 @@ export interface DatePickerProps extends VariantProps<typeof inputVariants> {
 	readonly defaultValue?: string;
 	/** Shown on the trigger while no date is selected — supplied by the caller (i18n). */
 	readonly placeholder?: string;
+	/** Disables the trigger. */
 	readonly disabled?: boolean;
+	/** Shows the trigger as busy and disables it. */
 	readonly loading?: boolean;
+	/** Classes for the trigger. */
 	readonly className?: string;
 	/** Styles the trigger as invalid. A button cannot carry `aria-invalid`, so link the error text with `ariaDescribedBy`. */
 	readonly ariaInvalid?: boolean | "true" | "false" | "grammar" | "spelling";
 	/** Id(s) of the element(s) describing the field — its hint and, when invalid, its error message. */
 	readonly ariaDescribedBy?: string;
+	/** The first day that can be picked, as `yyyy-MM-dd`. */
 	readonly fromDate?: string;
+	/** The last day that can be picked, as `yyyy-MM-dd`. */
 	readonly toDate?: string;
 	/** Formats the selected date for the trigger label (locale-aware callers pass their own). Defaults to date-fns `PPP`. */
 	readonly formatDate?: (date: Date) => string;
@@ -60,13 +67,17 @@ export interface DatePickerProps extends VariantProps<typeof inputVariants> {
 	readonly defaultOpen?: boolean;
 	/** Fired whenever the popover opens or closes (including after a date is picked). */
 	readonly onOpenChange?: (open: boolean) => void;
+	/** Fires with the picked day as `yyyy-MM-dd`. */
 	readonly onValueChange?: (value: string) => void;
+	/** Fires when the trigger loses focus, for a form library's touched state. */
 	readonly onBlur?: React.FocusEventHandler<HTMLButtonElement>;
+	/** Fires when the trigger takes focus. */
 	readonly onFocus?: React.FocusEventHandler<HTMLButtonElement>;
 	/** Per-usage copy, over the `datePicker` family (e.g. "Choose a start date"). */
 	readonly labels?: UiKitLabelsOverride<"datePicker">;
 }
 
+/** A single-date field: a trigger button that opens a calendar in a popover. Its value is a `yyyy-MM-dd` string. */
 const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function DatePicker(
 	{
 		id,

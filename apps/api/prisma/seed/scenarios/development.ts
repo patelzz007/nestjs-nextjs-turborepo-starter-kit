@@ -26,6 +26,7 @@ import { seedTenantReviewStates } from "../tenant-review-states";
 import { seedHttpAuditTrail } from "../http-audit";
 import { seedGithubAccountLinks } from "../github-account-links";
 import { seedGithubWebhooks } from "../github-webhooks";
+import { seedDocsPublishing } from "../docs-publishing";
 import { seedWebhooks } from "../webhooks";
 import { seedOwnProfileHistory } from "../own-profile";
 import { seedAnalyticsIngest } from "../analytics-ingest";
@@ -279,6 +280,10 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 			? `✅ ${String(webhooks.received)} received webhooks; ${String(webhooks.endpoints)} outgoing endpoints, ${String(webhooks.events)} events, ${String(webhooks.deliveries)} deliveries`
 			: `✅ ${String(webhooks.received)} received webhooks; ⚠️ outgoing webhooks skipped: WEBHOOK_SECRET_ENCRYPTION_KEYS is not set (run \`pnpm tools secrets:generate\`)`,
 	);
+
+	seedLog("Seeding docs sync runs (one of each outcome and trigger)...");
+	const docsSyncRuns = await seedDocsPublishing(Date.now());
+	seedLog(`✅ ${String(docsSyncRuns)} docs sync runs`);
 
 	seedLog("Seeding the operations console (servers, metric history, alerts, backups, load tests)...");
 	const developerUser = requireRow(

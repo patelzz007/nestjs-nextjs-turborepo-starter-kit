@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name fields the way people do",
+		"do": {
+			"text": "Label fields in plain words and give fixed lists their options, so a filter is a pick, not a guess.",
+			"file": "filters-do-1",
+			"export": "FiltersDo1Example"
+		},
+		"dont": {
+			"text": "Don't show column names or ask people to type a value the field already knows.",
+			"file": "filters-dont-1",
+			"export": "FiltersDont1Example"
+		}
+	},
+	{
+		"title": "Keep applied filters visible and undoable",
+		"do": {
+			"text": "Show each applied filter as a chip people can change or remove, with Clear all beside them.",
+			"file": "filters-do-2",
+			"export": "FiltersDo2Example"
+		},
+		"dont": {
+			"text": "Don't lock a filter on without a way out: people see fewer rows and can't tell why.",
+			"file": "filters-dont-2",
+			"export": "FiltersDont2Example"
+		}
+	}
+]

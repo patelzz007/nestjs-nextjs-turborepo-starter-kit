@@ -6,7 +6,7 @@ import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { ApiErrorCodes, type CreateSampleCategoryInput, type Envelope, type SampleCategory } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { CategoryForm } from "@/contexts/catalog/components/catalog/category-form";
@@ -39,7 +39,7 @@ function useInvalidateCategory(): (categoryId: string) => Promise<void> {
 /** `/catalog/categories/new` — `POST /sample-category`, then the new category's page. */
 export function CreateCategoryView(): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const invalidateCategory = useInvalidateCategory();
 	const createCategory = api.sampleCategory.create.useMutation({
 		onSuccess: async (response) => {
@@ -81,7 +81,7 @@ export interface EditCategoryViewProps {
 
 function EditCategoryForm({ category }: { readonly category: SampleCategory }): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const invalidateCategory = useInvalidateCategory();
 	const updateCategory = api.sampleCategory.update.useMutation({
 		onSuccess: async (response) => {

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep it short",
+		"do": {
+			"text": "Say what happened in a few words: the toast leaves on its own.",
+			"file": "sonner-do-1",
+			"export": "SonnerDo1Example"
+		},
+		"dont": {
+			"text": "Don't put a paragraph in a toast: no one can read it before it goes.",
+			"file": "sonner-dont-1",
+			"export": "SonnerDont1Example"
+		}
+	},
+	{
+		"title": "Make undo reachable",
+		"do": {
+			"text": "Offer Undo on a toast for an action that can be undone.",
+			"file": "sonner-do-2",
+			"export": "SonnerDo2Example"
+		},
+		"dont": {
+			"text": "Don't make a toast the only way to recover from a destructive action: use a confirmation dialog first.",
+			"file": "sonner-dont-2",
+			"export": "SonnerDont2Example"
+		}
+	}
+]

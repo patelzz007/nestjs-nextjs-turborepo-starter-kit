@@ -58,6 +58,13 @@ export const DEFAULT_EMAIL_TIMEOUT_MS = 10 * MS_PER_SECOND;
 /** Where the `mailpit` Docker service listens by default (`pnpm mailpit`): web inbox + HTTP API. */
 export const DEFAULT_MAILPIT_URL = "http://localhost:8025";
 export const DEFAULT_WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
+/** Days a docs sync run is kept when DOCS_SYNC_RUN_RETENTION_DAYS is unset (ADR 084): a quarter of sync history. */
+export const DEFAULT_DOCS_SYNC_RUN_RETENTION_DAYS = 90;
+/** The fewest days a docs sync run may be kept: long enough to investigate a failure a week later. */
+export const MIN_DOCS_SYNC_RUN_RETENTION_DAYS = 7;
+/** The shortest report token accepted: 32 characters, what `openssl rand -hex 16` gives at the least. */
+export const DOCS_SYNC_REPORT_TOKEN_MIN_LENGTH = 32;
+
 /** Days a received webhook is kept when INBOUND_WEBHOOK_RETENTION_DAYS is unset (ADR 081): a month of delivery history. */
 export const DEFAULT_INBOUND_WEBHOOK_RETENTION_DAYS = 30;
 /**

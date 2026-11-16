@@ -1,0 +1,37 @@
+[
+	{
+		"id": "c-sidebar-1",
+		"label": "Workspace Switcher",
+		"description": "Application shell with a workspace switcher. Best for an inset variant layout whose header dropdown switches the workspace named in the page breadcrumb, beside stat cards and a deploy list.",
+		"file": "sidebar-1",
+		"export": "Sidebar1Example"
+	},
+	{
+		"id": "c-sidebar-2",
+		"label": "Icon Rail",
+		"description": "Icon rail that collapses. Best for narrowing the nav to icons while the brand tile and account avatar stay in view, toggled by an edge strip or a header button.",
+		"file": "sidebar-2",
+		"export": "Sidebar2Example"
+	},
+	{
+		"id": "c-sidebar-3",
+		"label": "Docs Navigation",
+		"description": "Documentation nav with sub-menus. Best for an always open panel with no toggle where typing opens every section that still matches, with the current page trail open on load.",
+		"file": "sidebar-3",
+		"export": "Sidebar3Example"
+	},
+	{
+		"id": "c-sidebar-4",
+		"label": "Inspector Panel",
+		"description": "Right-hand inspector panel. Best for issue details beside the record: assignees with owner and remove actions, linked work, an activity feed and an Open in board button.",
+		"file": "sidebar-4",
+		"export": "Sidebar4Example"
+	},
+	{
+		"id": "c-sidebar-5",
+		"label": "Filter & Loading",
+		"description": "Filtering, loading and empty states. Best for a project list whose pinned rows survive any query, with a refresh spinner, a clear button in the search box and a plan usage footer.",
+		"file": "sidebar-5",
+		"export": "Sidebar5Example"
+	}
+]

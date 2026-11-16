@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { absoluteUrl, githubEditUrl, GITHUB_URL, HEADER_TABS, isExternalTab, isTabActive, normalizePathname, robotsTxt, type HeaderTab } from "../site";
+import { absoluteUrl, editLinkOf, githubEditUrl, GITHUB_URL, HEADER_TABS, isExternalTab, isTabActive, normalizePathname, robotsTxt, type HeaderTab } from "../site";
 
 const GUIDES: HeaderTab = { label: "Guides", href: "/", activePaths: ["/", "/docs"] };
 const EXTERNAL: HeaderTab = { label: "Admin", href: "https://admin.example.com", activePaths: [] };
@@ -39,6 +39,23 @@ describe("isTabActive", () => {
 
 	it("keeps internal tabs before outbound ones", () => {
 		expect(HEADER_TABS.map((tab) => isExternalTab(tab))).toEqual([false, false, false, true, true]);
+	});
+});
+
+describe("editLinkOf", () => {
+	it("sends a synced page to its writing tool, because a GitHub edit would be overwritten", () => {
+		expect(editLinkOf("docs", "a.md", { kind: "NOTION", id: "page-1", url: "https://www.notion.so/page-1" })).toEqual({
+			editUrl: "https://www.notion.so/page-1",
+			editLabel: "Edit in Notion",
+		});
+	});
+
+	it("keeps GitHub for a page no source owns", () => {
+		expect(editLinkOf("blog", "a.md", undefined)).toEqual({ editUrl: `${GITHUB_URL}/blob/main/docs/blog/a.md`, editLabel: "Edit on GitHub" });
+	});
+
+	it("falls back to GitHub for a tool with no web address", () => {
+		expect(editLinkOf("docs", "a.md", { kind: "NOTION", id: "page-1", url: null }).editLabel).toBe("Edit on GitHub");
 	});
 });
 

@@ -3,8 +3,11 @@ title: "Set up AWS S3 storage"
 description: "Step by step: deploy the CDK storage stack (or use your own buckets), the API IAM role and its trust policy (ECS, EC2, EKS), CORS, CloudFront public delivery, the exact apps/api/.env variables, local-development credentials, verification and troubleshooting."
 order: 41
 author: "Platform Team"
+category: "Storage"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/storage/aws-s3.webp"
 tags: ["storage", "s3", "aws", "cdk", "setup"]
 ---
 

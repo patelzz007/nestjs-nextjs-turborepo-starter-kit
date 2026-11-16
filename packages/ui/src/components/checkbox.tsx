@@ -10,6 +10,7 @@ import * as React from "react";
 
 type CheckboxProps = CheckboxPrimitive.Root.Props &
 	VariantProps<typeof checkboxVariants> & {
+		/** Disables the box and dims it while a change is being saved. */
 		readonly loading?: boolean;
 		/** Kept as it is by a policy ("Always on"): a tinted box with a lock, and it never changes. */
 		readonly locked?: boolean;

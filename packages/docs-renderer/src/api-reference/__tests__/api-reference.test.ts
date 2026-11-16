@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { extractEndpointAccess, extractRateLimitPolicies } from "../endpoint-access";
 import { ApiSamplesFileSchema, isCapturedSample, listEndpoints, OpenApiDocumentSchema, type Endpoint } from "../openapi";
 import { pageForTags, REFERENCE_PAGES } from "../pages";
-import { accessLines, contentTypeLine, endpointHeading, headingAnchor, renderApiReference } from "../render";
+import { accessLines, API_REFERENCE_FIRST_PUBLISHED, contentTypeLine, endpointHeading, headingAnchor, renderApiReference } from "../render";
 import { constraintNotes, resolveSchema, schemaRows, typeLabel } from "../schema-table";
 
 const CONTROLLER = `
@@ -240,7 +240,10 @@ describe("renderApiReference", () => {
 		expect(pos).toContain("| `data.saleId` | string (uuid) | yes |");
 		expect(pos).toContain("| 409 | `IDEMPOTENCY_KEY_REUSED` |");
 		expect(pos).toContain('"backupCode": "ABCD2345"');
-		expect(pos).toContain("lastUpdated: 1791072000000");
+		expect(pos).toContain('category: "API reference"');
+		expect(pos).toContain(`date: ${String(API_REFERENCE_FIRST_PUBLISHED)}`);
+		expect(pos).toContain(`lastUpdated: ${String(SAMPLES.capturedAt)}`);
+		expect(pos).toContain(`editedAt: ${String(SAMPLES.capturedAt)}`);
 		expect(files.get("access-control.md")).toContain("No captured sample: Needs a second SuperAdmin.");
 		expect(files.get("README.md")).toContain("[`/api/v1/admin/roles/{id}`](./access-control.md#patch-apiv1adminrolesid)");
 	});

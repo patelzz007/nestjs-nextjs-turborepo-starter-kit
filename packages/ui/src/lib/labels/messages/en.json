@@ -355,62 +355,12 @@
 			"halfYear": "Half-year",
 			"year": "Year"
 		},
-		"months": [
-			"January",
-			"February",
-			"March",
-			"April",
-			"May",
-			"June",
-			"July",
-			"August",
-			"September",
-			"October",
-			"November",
-			"December"
-		],
-		"monthsShort": [
-			"Jan",
-			"Feb",
-			"Mar",
-			"Apr",
-			"May",
-			"Jun",
-			"Jul",
-			"Aug",
-			"Sep",
-			"Oct",
-			"Nov",
-			"Dec"
-		],
-		"quarters": [
-			"Q1",
-			"Q2",
-			"Q3",
-			"Q4"
-		],
-		"halfYears": [
-			"H1",
-			"H2"
-		],
-		"weekdays": [
-			"Sunday",
-			"Monday",
-			"Tuesday",
-			"Wednesday",
-			"Thursday",
-			"Friday",
-			"Saturday"
-		],
-		"weekdaysShort": [
-			"Su",
-			"Mo",
-			"Tu",
-			"We",
-			"Th",
-			"Fr",
-			"Sa"
-		],
+		"months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+		"monthsShort": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+		"quarters": ["Q1", "Q2", "Q3", "Q4"],
+		"halfYears": ["H1", "H2"],
+		"weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+		"weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
 		"placeholder": "Select date...",
 		"rangePlaceholder": "Select date range..."
 	},
@@ -435,14 +385,7 @@
 		"symbols": "Symbols",
 		"flags": "Flags",
 		"skinTone": "Skin tone",
-		"skinTones": [
-			"Default",
-			"Light",
-			"Medium-light",
-			"Medium",
-			"Medium-dark",
-			"Dark"
-		],
+		"skinTones": ["Default", "Light", "Medium-light", "Medium", "Medium-dark", "Dark"],
 		"empty": "No emoji found",
 		"emptyHint": "Try another word or a shortcode",
 		"loading": "Loading emoji",
@@ -598,6 +541,12 @@
 	},
 	"dialog": {
 		"close": "Close"
+	},
+	"diagram": {
+		"loading": "Loading diagram…",
+		"zoomIn": "Zoom in",
+		"zoomOut": "Zoom out",
+		"resetZoom": "Reset zoom"
 	},
 	"kpiDirection": {
 		"up": "Up",

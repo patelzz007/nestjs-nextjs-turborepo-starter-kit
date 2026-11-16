@@ -2,6 +2,7 @@ import HouseIcon from "lucide-react-native/icons/house";
 import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
 
 import { PERMISSION, type CapabilitySlug, type SidebarMenuData, type SidebarMenuItem } from "@workspace/shared";
+import { ROUTES } from "../../../runtime/routes";
 import { APP_TABS } from "../app-tabs";
 import {
 	compileDrawerMenu,
@@ -25,7 +26,7 @@ const GITHUB_READ = PERMISSION.GITHUB_PULL_REQUEST.READ;
 const GITHUB_UPDATE = PERMISSION.GITHUB_PULL_REQUEST.UPDATE;
 const SERVERS = PERMISSION.SERVER_METRIC.LIST;
 
-const EVERYTHING: DrawerAccess = { capabilities: [GITHUB_READ, GITHUB_UPDATE, SERVERS], enabledFeatureFlags: ["developer-tools", "github-pull-requests"] };
+const EVERYTHING: DrawerAccess = { capabilities: [GITHUB_READ, GITHUB_UPDATE, SERVERS], enabledFeatureFlags: ["showcase", "github-pull-requests"] };
 
 function accessWith(capabilities: readonly CapabilitySlug[], enabledFeatureFlags: DrawerAccess["enabledFeatureFlags"] = []): DrawerAccess {
 	return { capabilities, enabledFeatureFlags };
@@ -71,7 +72,7 @@ describe("the drawer's menu (mobile-drawer-items.json)", () => {
 		const titles = outline(drawerGroupsFor(EVERYTHING)).slice(-3);
 
 		expect(titles).toStrictEqual([
-			["Developer", ["/settings/components"]],
+			["Developer", ["/showcase"]],
 			["GitHub", ["/profile/pull-requests", "/profile/github-account"]],
 			["Operations", ["/settings/servers"]],
 		]);
@@ -89,8 +90,8 @@ describe("the drawer's menu (mobile-drawer-items.json)", () => {
 		expect(titles).not.toContain("GitHub");
 	});
 
-	it("lists the gallery (Developer) only with the developer tools on", () => {
-		expect(outline(drawerGroupsFor(accessWith([], ["developer-tools"]))).map(([title]) => title)).toContain("Developer");
+	it("lists the showcase (Developer) only in a build that carries it", () => {
+		expect(outline(drawerGroupsFor(accessWith([], ["showcase"]))).map(([title]) => title)).toContain("Developer");
 		expect(outline(drawerGroupsFor(accessWith([]))).map(([title]) => title)).not.toContain("Developer");
 	});
 
@@ -131,10 +132,11 @@ function depthOf(node: DrawerNode | undefined): number {
 }
 
 describe("nesting", () => {
-	it("nests the shipped menu's Developer gallery the full six levels deep", () => {
+	it("lists the showcase straight under Developer, one level deep", () => {
 		const developer = drawerGroupsFor(EVERYTHING).find((group: DrawerGroup): boolean => group.heading?.section === "developer");
 
-		expect(depthOf(developer?.nodes.at(0))).toBe(MAX_DRAWER_DEPTH);
+		expect(depthOf(developer?.nodes.at(0))).toBe(1);
+		expect(developer?.nodes.at(0)).toMatchObject({ kind: "screen", route: ROUTES.showcase });
 	});
 
 	it(`folds branches up to ${String(MAX_DRAWER_DEPTH)} levels deep, the screen at the bottom`, () => {
@@ -198,9 +200,9 @@ describe("checks made when the menu loads", () => {
 });
 
 describe("enabledDrawerFeatureFlags", () => {
-	it("turns the developer tools on in a development build, and pull requests unless the server has them off", () => {
-		expect(enabledDrawerFeatureFlags({ developmentBuild: true, githubPullRequests: true })).toStrictEqual(["developer-tools", "github-pull-requests"]);
-		expect(enabledDrawerFeatureFlags({ developmentBuild: false, githubPullRequests: false })).toStrictEqual([]);
+	it("turns the showcase on in a build that carries it, and pull requests unless the server has them off", () => {
+		expect(enabledDrawerFeatureFlags({ showcase: true, githubPullRequests: true })).toStrictEqual(["showcase", "github-pull-requests"]);
+		expect(enabledDrawerFeatureFlags({ showcase: false, githubPullRequests: false })).toStrictEqual([]);
 	});
 });
 

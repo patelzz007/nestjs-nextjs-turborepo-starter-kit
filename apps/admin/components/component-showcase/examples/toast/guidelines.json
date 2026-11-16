@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep it short",
+		"do": {
+			"text": "Say what happened in a few words: the toast leaves on its own.",
+			"file": "toast-do-1",
+			"export": "ToastDo1Example"
+		},
+		"dont": {
+			"text": "Don't put a paragraph in a toast: no one can read it before it goes.",
+			"file": "toast-dont-1",
+			"export": "ToastDont1Example"
+		}
+	},
+	{
+		"title": "Make undo reachable",
+		"do": {
+			"text": "Offer Undo on a toast for an action that can be undone.",
+			"file": "toast-do-2",
+			"export": "ToastDo2Example"
+		},
+		"dont": {
+			"text": "Don't make a toast the only way to recover from a destructive action: confirm it first with an [Alert dialog](/components/alert-dialog).",
+			"file": "toast-dont-2",
+			"export": "ToastDont2Example"
+		}
+	}
+]

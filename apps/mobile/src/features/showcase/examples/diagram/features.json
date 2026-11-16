@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-diagram-1",
+		"label": "Overview",
+		"description": "A flowchart drawn from Mermaid text with a caption, fitted to the phone. Best for documenting a process, such as a release flow, without an image file.",
+		"file": "diagram-1",
+		"export": "Diagram1Example"
+	}
+]

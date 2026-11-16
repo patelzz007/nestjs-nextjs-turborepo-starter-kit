@@ -3,8 +3,11 @@ title: "Mobile app: design and delivery plan"
 description: "The agreed design for adding an Expo (React Native + Uniwind + TypeScript) app to the monorepo: the shared token and API-client packages it needs, the API changes for a mobile client type and device sessions, every screen, the app lock, testing, CI, and the five-piece delivery order."
 order: 1
 author: "Platform Team"
+category: "Mobile"
+date: 1791504000000
 lastUpdated: 1793404800000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1794485625193
+coverImage: "/images/covers/technical/mobile/mobile-app.webp"
 tags: ["mobile", "expo", "react-native", "uniwind", "design", "sessions", "auth"]
 ---
 
@@ -176,7 +179,7 @@ packages/
 ### Dependency direction
 
 ```mermaid
-flowchart LR
+flowchart TD
   shared["@workspace/shared<br/>(zod contracts)"]
   tokens["@workspace/tokens<br/>(token source)"]
   apiclient["@workspace/api-client<br/>(core + /react)"]

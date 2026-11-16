@@ -1,5 +1,7 @@
 // The floating tab bar: a compact pill that hovers above the bottom safe area
-// and hugs its tabs. The selected tab grows into a solid capsule (`primary`)
+// and hugs its tabs. 64 pt tall (the mobile visual spec, owner, 2026-11-15:
+// "64 dp + safe area"), its labels the spec's navigation role (`text-nav`,
+// 12 pt Geist Medium). The selected tab grows into a solid capsule (`primary`)
 // holding its icon and label; the others show only their icon. Every change
 // springs on the UI thread (Reanimated) without overshoot, and follows the OS
 // "Reduce Motion" setting (ADR 036).
@@ -36,8 +38,8 @@ const LABEL_MAX_FONT_SCALE = 1.3;
 /** Space between the bar and the bottom safe area, in points. */
 const BAR_BOTTOM_GAP = 12;
 
-/** Shared by the visible label and its measuring copy, so both lay out alike. */
-const LABEL_CLASSES = "font-sans-semibold text-sm text-tab-bar-active-foreground";
+/** Shared by the visible label and its measuring copy, so both lay out alike: the spec's navigation role. */
+const LABEL_CLASSES = "font-sans-medium text-nav text-tab-bar-active-foreground";
 
 export interface FloatingTabBarItem {
 	/** Stable identity of the tab (the route key). */
@@ -77,7 +79,7 @@ export function FloatingTabBar({ items, bottomInset, onHeightChange, testID }: F
 			<View
 				accessibilityRole="tablist"
 				{...(testID === undefined ? {} : { testID: `${testID}-tablist` })}
-				className="border-tab-bar-border bg-tab-bar w-full max-w-85 flex-row items-center justify-between rounded-full border p-1.5 shadow-lg">
+				className="border-tab-bar-border bg-tab-bar h-16 w-full max-w-85 flex-row items-center justify-between rounded-full border p-1.5 shadow-lg">
 				{items.map((item: FloatingTabBarItem): React.JSX.Element => (
 					<FloatingTab key={item.key} item={item} />
 				))}

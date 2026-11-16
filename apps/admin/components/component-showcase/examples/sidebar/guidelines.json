@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Group and label",
+		"do": {
+			"text": "Group items under short headings and add a search for long lists.",
+			"file": "sidebar-do-1",
+			"export": "SidebarDo1Example"
+		},
+		"dont": {
+			"text": "Don't list 18 unlabelled items in one long column.",
+			"file": "sidebar-dont-1",
+			"export": "SidebarDont1Example"
+		}
+	},
+	{
+		"title": "Keep a way back",
+		"do": {
+			"text": "When the sidebar collapses to icons, keep a `SidebarTrigger` that expands it again.",
+			"file": "sidebar-do-2",
+			"export": "SidebarDo2Example"
+		},
+		"dont": {
+			"text": "Don't collapse it to icons with no way to expand it.",
+			"file": "sidebar-dont-2",
+			"export": "SidebarDont2Example"
+		}
+	}
+]

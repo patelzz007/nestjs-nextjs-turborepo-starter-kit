@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Size it for the answer",
+		"do": {
+			"text": "Start it at a height that fits the answer you expect.",
+			"file": "textarea-do-1",
+			"export": "TextareaDo1Example"
+		},
+		"dont": {
+			"text": "Don't use a textarea for a one-word answer: an input says \"keep it short\".",
+			"file": "textarea-dont-1",
+			"export": "TextareaDont1Example"
+		}
+	},
+	{
+		"title": "Show the limit early",
+		"do": {
+			"text": "Show the count when there is a limit, so people are not cut off.",
+			"file": "textarea-do-2",
+			"export": "TextareaDo2Example"
+		},
+		"dont": {
+			"text": "Don't cut text off at a limit people cannot see.",
+			"file": "textarea-dont-2",
+			"export": "TextareaDont2Example"
+		}
+	}
+]

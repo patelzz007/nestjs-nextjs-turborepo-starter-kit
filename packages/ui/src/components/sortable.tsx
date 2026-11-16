@@ -233,21 +233,29 @@ export interface SortableMoveEvent {
 }
 
 export interface SortableRootProps<T> extends Omit<useRender.ComponentProps<"div">, "onDragStart" | "onDragEnd" | "children"> {
+	/** The array of items to sort. */
 	readonly value: T[];
+	/** Fired once, on drop, with the reordered array. This alone is enough to persist the whole array. */
 	readonly onValueChange: (value: T[]) => void;
 	/** The unique id of an item — the same string its `SortableItem value` carries. */
 	readonly getItemValue: (item: T) => string;
+	/** The `SortableItem`s, and optionally a `SortableOverlay`. */
 	readonly children: React.ReactNode;
 	/** Take over applying the move; `onValueChange` / `onValueCommit` are then not called. */
 	readonly onMove?: ((event: SortableMoveEvent) => void) | undefined;
 	/** Fired once per completed reorder, with the indexes and the value before it. */
 	readonly onValueCommit?: ((value: T[], meta: SortableCommitMeta<T>) => void) | undefined;
+	/** The sorting strategy and layout of the list. */
 	readonly strategy?: SortableStrategy | undefined;
+	/** Raw dnd-kit passthrough, fired when a drag starts. */
 	readonly onDragStart?: ((event: DragStartEvent) => void) | undefined;
+	/** Raw dnd-kit passthrough, fired before the reorder is applied (so `onValueChange` is the persistence seam, not this). */
 	readonly onDragEnd?: ((event: DragEndEvent) => void) | undefined;
+	/** Raw dnd-kit passthrough, fired when a drag is cancelled. */
 	readonly onDragCancel?: ((event: DragCancelEvent) => void) | undefined;
 	/** Replaces dnd-kit accessibility settings (announcements, instructions) built from `labels`. */
 	readonly accessibility?: DragAndDropAccessibility | undefined;
+	/** dnd-kit modifiers applied to the drag. */
 	readonly modifiers?: Modifiers | undefined;
 	/** Per-usage overrides of the `sortable` copy from `UiKitLabelsProvider`. */
 	readonly labels?: UiKitLabelsOverride<"sortable"> | undefined;
@@ -424,11 +432,13 @@ const sortableItemVariants = cva("", {
 export interface SortableItemProps extends useRender.ComponentProps<"div"> {
 	/** The item's unique id — what `getItemValue` returns for it. */
 	readonly value: string;
+	/** Stops this item from being dragged; it stays in place while the others move around it. */
 	readonly disabled?: boolean | undefined;
 }
 
 const OVERLAY_ITEM_CONTEXT: SortableItemContextValue = { listeners: undefined, isDragging: true, disabled: false };
 
+/** One reorderable item, identified by its `value`. Dragged by its `SortableItemHandle`. */
 const SortableItem = React.forwardRef<HTMLDivElement, SortableItemProps>(function SortableItem(
 	{ value, className, render, disabled = false, "aria-invalid": ariaInvalid, children, ...props },
 	ref,

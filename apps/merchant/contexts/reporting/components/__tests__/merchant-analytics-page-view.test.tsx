@@ -138,7 +138,7 @@ describe("MerchantAnalyticsPageView data", () => {
 		expect(lastInput()).toEqual({ tenantSlug: TEST_ORG_SLUG, from: DEFAULT_FROM, to: DEFAULT_TO, interval: "day", locationId: undefined });
 		// The range and the zone its days are cut in.
 		await waitFor((): void => {
-			expect(screen.getAllByRole("status").map((status) => spaced(status.textContent))).toContain("6 Sept – 5 Oct 2026 · Asia/Kuala_Lumpur");
+			expect(screen.getAllByRole("status").map((status) => spaced(status.textContent))).toContain("6 Sep – 5 Oct 2026 · Asia/Kuala_Lumpur");
 		});
 
 		const sales = within(screen.getByRole("group", { name: "Sales" }));

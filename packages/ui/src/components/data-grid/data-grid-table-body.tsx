@@ -200,8 +200,11 @@ export function lastColAttr<TData extends RowData>(column: DataGridColumn<TData>
 }
 
 export interface DataGridTableBodyRowSkeletonCellProps<TData extends RowData> {
+	/** The placeholder's content. */
 	readonly children?: React.ReactNode;
+	/** The column the placeholder stands in. */
 	readonly column: DataGridColumn<TData>;
+	/** The cell's `td`. */
 	readonly ref?: React.Ref<HTMLTableCellElement> | undefined;
 }
 
@@ -230,8 +233,11 @@ export function DataGridTableBodyRowSkeletonCell<TData extends RowData>({ childr
 // ── Body rows ──────────────────────────────────────────────────────────────
 
 export interface DataGridTableBodyRowProps<TData extends RowData> {
+	/** The row's cells. */
 	readonly children?: React.ReactNode;
+	/** The TanStack Table row instance. */
 	readonly row: DataGridRow<TData>;
+	/** Whether the row is the last pinned row, drawn with the boundary between pinned and scrolling rows. */
 	readonly pinnedBoundary?: DataGridTablePinnedBoundary | undefined;
 	/** A ref to the row node (the virtual variant measures rows through it). */
 	readonly rowRef?: React.Ref<HTMLTableRowElement> | undefined;
@@ -243,6 +249,7 @@ export interface DataGridTableBodyRowProps<TData extends RowData> {
 	readonly dndDragging?: boolean | undefined;
 	/** Absolute (virtualized) row index: `data-index`, and striping by index instead of `:nth-child`. */
 	readonly dataIndex?: number | undefined;
+	/** The row's `tr`. */
 	readonly ref?: React.Ref<HTMLTableRowElement> | undefined;
 }
 
@@ -327,6 +334,7 @@ export function DataGridTableBodyRow<TData extends RowData>({
 }
 
 export interface DataGridTableBodyRowExpandedProps<TData extends RowData> {
+	/** The TanStack Table row instance. */
 	readonly row: DataGridRow<TData>;
 }
 
@@ -348,7 +356,9 @@ export function DataGridTableBodyRowExpandded<TData extends RowData>({ row }: Da
 // ── Body cells ─────────────────────────────────────────────────────────────
 
 export interface DataGridTableBodyRowCellProps<TData extends RowData> {
+	/** The cell's content. */
 	readonly children?: React.ReactNode;
+	/** The TanStack cell this `td` draws. */
 	readonly cell: DataGridCell<TData>;
 	/** The drag-and-drop variant's sortable node ref. */
 	readonly dndRef?: React.Ref<HTMLTableCellElement> | undefined;
@@ -356,6 +366,7 @@ export interface DataGridTableBodyRowCellProps<TData extends RowData> {
 	readonly dndStyle?: React.CSSProperties | undefined;
 	/** Center-column index under column virtualization (`data-column-index`). */
 	readonly columnIndex?: number | undefined;
+	/** The cell's `td`. */
 	readonly ref?: React.Ref<HTMLTableCellElement> | undefined;
 }
 
@@ -502,8 +513,11 @@ export function DataGridTableBodyRowCell<TData extends RowData>(cellProps: DataG
 }
 
 export interface DataGridTableRenderedRowProps<TData extends RowData> {
+	/** The TanStack Table row instance. */
 	readonly row: DataGridRow<TData>;
+	/** Whether the row is the last pinned row. */
 	readonly pinnedBoundary?: DataGridTablePinnedBoundary | undefined;
+	/** The row's `tr`, for virtualisation measuring. */
 	readonly rowRef?: React.Ref<HTMLTableRowElement> | undefined;
 	/** Virtualized list index, rendered as `data-index` for measureElement. */
 	readonly rowIndex?: number | undefined;

@@ -14,6 +14,13 @@ afterEach((): void => {
 const BOUNDS = { width: 6000, height: 4000 };
 const WIDE = 16 / 9;
 const AREA: CropArea = { x: 1000, y: 1000, width: 3840, height: 2160 };
+/** CSSOM serializes a number with at most 6 significant digits (browsers and jsdom ≥ 31 alike). */
+const CSS_SERIALIZED_SIGNIFICANT_DIGITS = 6;
+
+/** `ratio` as the percentage an inline style reads back, e.g. `-1000 / 3840` → `"-26.0417%"`. */
+function cssPercent(ratio: number): string {
+	return `${String(Number((ratio * 100).toPrecision(CSS_SERIALIZED_SIGNIFICANT_DIGITS)))}%`;
+}
 
 function frame(): HTMLElement {
 	return screen.getByRole("img", { name: "Crop preview" });
@@ -49,9 +56,9 @@ describe("ImageCropper", () => {
 		renderCropper();
 
 		const image = frame().querySelector("img");
-		expect(image?.style.width).toBe(`${String((6000 / 3840) * 100)}%`);
-		expect(image?.style.left).toBe(`${String((-1000 / 3840) * 100)}%`);
-		expect(image?.style.top).toBe(`${String((-1000 / 2160) * 100)}%`);
+		expect(image?.style.width).toBe(cssPercent(6000 / 3840));
+		expect(image?.style.left).toBe(cssPercent(-1000 / 3840));
+		expect(image?.style.top).toBe(cssPercent(-1000 / 2160));
 	});
 
 	it("offers zoom and both position sliders when the photo has room each way", (): void => {
@@ -129,7 +136,7 @@ describe("ImageCropper", () => {
 		expect(backdrop?.getAttribute("src")).toBe("blob:photo");
 		const photo = frame().querySelector("img:not([data-slot])");
 		expect(photo).toBeInstanceOf(HTMLImageElement);
-		expect(photo instanceof HTMLImageElement ? photo.style.left : "").toBe(`${String((556 / 7112) * 100)}%`);
+		expect(photo instanceof HTMLImageElement ? photo.style.left : "").toBe(cssPercent(556 / 7112));
 		expect(querySlider("Left to right")).toBeNull();
 		expect(querySlider("Top to bottom")).toBeNull();
 	});

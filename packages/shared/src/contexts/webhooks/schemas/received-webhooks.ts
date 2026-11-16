@@ -15,7 +15,7 @@ import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/
 // ── Enums (mirror the Prisma enums) ─────────────────────────────────────────
 
 /** Who sent it. Mirrors the Prisma enum `ReceivedWebhookProvider`. */
-export const ReceivedWebhookProviderSchema = z.enum(["GITHUB", "RESEND", "BILLPLZ", "CHIP", "FAKE_PAYMENTS", "TWILIO"]);
+export const ReceivedWebhookProviderSchema = z.enum(["GITHUB", "RESEND", "BILLPLZ", "CHIP", "FAKE_PAYMENTS", "TWILIO", "NOTION"]);
 export type ReceivedWebhookProvider = z.output<typeof ReceivedWebhookProviderSchema>;
 
 /** What the signature check said. Mirrors the Prisma enum `ReceivedWebhookVerification`. */

@@ -23,6 +23,7 @@ function useDrawer(): DrawerContextProps {
 	return context;
 }
 
+/** A swipeable panel from an edge of the screen, on Base UI's drawer. `swipeDirection` picks the edge; it behaves like a modal dialog. */
 function Drawer({
 	modal = true,
 	showSwipeHandle = false,
@@ -30,6 +31,7 @@ function Drawer({
 	swipeDirection = "down",
 	...props
 }: DrawerPrimitive.Root.Props & {
+	/** Draws a grab handle on the drawer's edge. */
 	showSwipeHandle?: boolean;
 }): React.JSX.Element {
 	const hasSnapPoints = snapPoints != null && snapPoints.length > 0;
@@ -42,19 +44,23 @@ function Drawer({
 	);
 }
 
+/** The button that opens the drawer. Pass your `Button` through `render`. */
 const DrawerTrigger = React.forwardRef<HTMLButtonElement, DrawerPrimitive.Trigger.Props>(function DrawerTrigger({ ...props }, ref): React.JSX.Element {
 	return <DrawerPrimitive.Trigger ref={ref} data-slot="drawer-trigger" {...props} />;
 });
 
 // Portal renders no DOM of its own (a base-ui provider) — plain function like the Select Root.
+/** Moves the drawer to the end of `body`. Used by `DrawerContent`. */
 function DrawerPortal({ ...props }: DrawerPrimitive.Portal.Props): React.JSX.Element {
 	return <DrawerPrimitive.Portal data-slot="drawer-portal" {...props} />;
 }
 
+/** A button that closes the drawer. */
 const DrawerClose = React.forwardRef<HTMLButtonElement, DrawerPrimitive.Close.Props>(function DrawerClose({ ...props }, ref): React.JSX.Element {
 	return <DrawerPrimitive.Close ref={ref} data-slot="drawer-close" {...props} />;
 });
 
+/** The backdrop behind the drawer. Used by `DrawerContent`. */
 const DrawerOverlay = React.forwardRef<HTMLDivElement, DrawerPrimitive.Backdrop.Props>(function DrawerOverlay({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<DrawerPrimitive.Backdrop
@@ -69,6 +75,7 @@ const DrawerOverlay = React.forwardRef<HTMLDivElement, DrawerPrimitive.Backdrop.
 	);
 });
 
+/** The grab handle drawn on the drawer's edge when `showSwipeHandle` is set. */
 const DrawerSwipeHandle = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function DrawerSwipeHandle({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -84,6 +91,7 @@ const DrawerSwipeHandle = React.forwardRef<HTMLDivElement, React.ComponentProps<
 	);
 });
 
+/** The panel: a portal, the backdrop and the swipeable popup. */
 const DrawerContent = React.forwardRef<HTMLDivElement, DrawerPrimitive.Popup.Props>(function DrawerContent({ className, children, ...props }, ref): React.JSX.Element {
 	const { hasSnapPoints, modal, showSwipeHandle, swipeDirection } = useDrawer();
 	const swipeAxis = swipeDirection === "down" || swipeDirection === "up" ? "y" : "x";
@@ -140,6 +148,7 @@ const DrawerContent = React.forwardRef<HTMLDivElement, DrawerPrimitive.Popup.Pro
 	);
 });
 
+/** Groups the title and the description at the top. */
 const DrawerHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function DrawerHeader({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -151,14 +160,17 @@ const DrawerHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"
 	);
 });
 
+/** The row of actions at the bottom. */
 const DrawerFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function DrawerFooter({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} data-slot="drawer-footer" className={cn("mt-auto flex shrink-0 flex-col gap-2 p-4 pt-0", className)} {...props} />;
 });
 
+/** Names the drawer (`aria-labelledby`). */
 const DrawerTitle = React.forwardRef<HTMLHeadingElement, DrawerPrimitive.Title.Props>(function DrawerTitle({ className, ...props }, ref): React.JSX.Element {
 	return <DrawerPrimitive.Title ref={ref} data-slot="drawer-title" className={cn("font-heading font-medium text-foreground", className)} {...props} />;
 });
 
+/** Describes the drawer to assistive technology. */
 const DrawerDescription = React.forwardRef<HTMLParagraphElement, DrawerPrimitive.Description.Props>(function DrawerDescription(
 	{ className, ...props },
 	ref,

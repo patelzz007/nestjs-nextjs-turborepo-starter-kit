@@ -63,6 +63,7 @@ const CascaderNav = React.forwardRef<HTMLDivElement, CascaderNavProps>(function 
 /* -------------------------------------------------------------------------- */
 
 export interface CascaderBackProps extends Omit<useRender.ComponentProps<"button">, "children"> {
+	/** Custom content in place of the back arrow. */
 	readonly children?: React.ReactNode;
 }
 
@@ -98,6 +99,7 @@ const CascaderBack = React.forwardRef<HTMLButtonElement, CascaderBackProps>(func
 export interface CascaderBreadcrumbProps extends Omit<useRender.ComponentProps<"nav">, "children"> {
 	/** Maximum visible node segments before the middle collapses. */
 	readonly maxSegments?: number | undefined;
+	/** Where the trail is shortened. */
 	readonly collapse?: CascaderCollapse | undefined;
 	/** Clicking a segment navigates back to that level. Defaults to true. */
 	readonly interactive?: boolean | undefined;
@@ -433,11 +435,15 @@ const CascaderInput = React.forwardRef<HTMLInputElement, CascaderInputProps>(fun
 export interface CascaderValueProps extends Omit<useRender.ComponentProps<"span">, "children"> {
 	/** `path` shows the full trail, `leaf` only the node, `count` only a total. */
 	readonly display?: CascaderValueDisplay | undefined;
+	/** Visible path segments before collapsing. A limit equal to the path's own depth never collapses anything, so a three-segment path needs `2` to show the difference. */
 	readonly maxSegments?: number | undefined;
+	/** Where the path is shortened. */
 	readonly collapse?: CascaderCollapse | undefined;
+	/** Separator between segments. */
 	readonly separator?: React.ReactNode;
 	/** Renders the selected node's icon before the trail. */
 	readonly showIcon?: boolean | undefined;
+	/** Shown when nothing is selected. */
 	readonly placeholder?: React.ReactNode;
 	/** Replaces the whole rendering. Receives the resolved selection and path. */
 	readonly children?: ((selected: readonly CascaderNodeBase[], path: readonly CascaderNodeBase[]) => React.ReactNode) | undefined;

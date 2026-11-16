@@ -3,8 +3,11 @@ title: "ADR 068: Platform operations — server monitoring, database backups and
 tags: ["adr", "operations", "monitoring", "backups", "load-testing", "plan"]
 description: "A RunCloud-style operations console in the admin panel: a server agent and instance heartbeats with history in PostgreSQL, threshold alerts by email, pg_dump backups to object storage, and k6 load tests from a separate runner inside a dedicated Load Test tenant — and the two rule exceptions it needs."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793145600000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/068-platform-operations-console.webp"
 order: 68
 ---
 

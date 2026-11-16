@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import AtSignIcon from "lucide-react-native/icons/at-sign";
 import * as React from "react";
-import { Pressable, type TextInputInstance, type TextInstance } from "react-native";
+import { Pressable, Text, type TextInputInstance, type TextInstance } from "react-native";
 
 import { InputGroup, InputGroupText } from "../input-group";
 
@@ -71,8 +71,30 @@ describe("InputGroup", () => {
 
 		expect(ref.current).not.toBeNull();
 		const className = String(screen.getByText("kg").props.className);
-		expect(className).toContain("text-lg");
+		expect(className).toContain("text-h3");
 		expect(className).toContain("text-foreground");
 		expect(className).not.toContain("text-muted-foreground");
+	});
+
+	it("draws a custom leading element, and rows above and below the text inside one border", async () => {
+		await render(
+			<InputGroup
+				value=""
+				onChange={jest.fn()}
+				accessibilityLabel="Prompt"
+				leading={<Text>⌘</Text>}
+				header={<Text>Attachments</Text>}
+				footer={<Text>0/280</Text>}
+				invalid
+				className="mt-2"
+				testID="prompt"
+			/>,
+		);
+		expect(screen.getByText("⌘")).toBeOnTheScreen();
+		expect(screen.getByText("Attachments")).toBeOnTheScreen();
+		expect(screen.getByText("0/280")).toBeOnTheScreen();
+		const frame = screen.getByText("Attachments").parent?.parent;
+		expect(String(frame?.props.className)).toContain("border-destructive");
+		expect(String(frame?.props.className)).toContain("mt-2");
 	});
 });

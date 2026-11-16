@@ -62,6 +62,44 @@ _Avoid_: Credited, paid, converted
 A signup referral whose referee has not redeemed a reward yet.
 _Avoid_: Pending, open, waiting
 
+### Tiers
+
+**Tier**:
+A customer's standing across the whole platform, one of Bronze, Silver, Gold or Diamond, in that order. Every new customer starts at Bronze. It is earned by the number of counted redemptions inside the tier window; claims never earn it.
+_Avoid_: Level, rank, status, membership
+
+**Counted redemption**:
+A redemption that moves a customer toward a tier. A redemption at a store where the customer was a member at that moment is never counted, and only a limited number of redemptions from any one merchant count inside one tier window.
+_Avoid_: Tier point, qualifying activity
+
+**Tier history**:
+The record of every change to a customer's tier: from which tier, to which tier, why, and when.
+_Avoid_: Tier log, status changes
+
+**Tier window**:
+The rolling period, ending today, whose counted redemptions decide a customer's tier.
+_Avoid_: Season, qualification year
+
+**Minimum tier**:
+The lowest tier a consumer reward is open to. Customers at that tier or above may claim it. Bronze means open to every customer. A claim made while the customer was eligible stays redeemable, even after a demotion or a raised minimum tier.
+_Avoid_: Target tier, tier restriction, tier lock
+
+**Locked reward**:
+A reward a customer can see but not claim, because its minimum tier is above theirs.
+_Avoid_: Teaser, hidden reward, premium reward
+
+**Promotion**:
+A customer moving up one or more tiers, which happens on its own when their counted redemptions reach a higher tier.
+_Avoid_: Upgrade, level-up
+
+**Tier hold**:
+The period after a promotion during which the customer cannot be demoted below the tier they reached.
+_Avoid_: Grace period, protection, lock-in
+
+**Demotion**:
+A customer moving down, in one step, to the tier their counted redemptions earn once their tier hold has ended. A warning comes first.
+_Avoid_: Downgrade, relegation
+
 ## Context-owned terms
 
 **Tenant** (tenancy):
@@ -329,3 +367,69 @@ _Avoid_: Whitelist, allowlist, bypass
 **Penalty** (platform):
 A longer refusal given to a subject that keeps hitting a security policy, growing with each repeat.
 _Avoid_: Ban, lockout, block
+
+### Feature flags
+
+**Feature flag** (feature-flags):
+A named switch, declared in code, that platform staff set at runtime to decide who gets a piece of behaviour.
+_Avoid_: Gate, feature gate, toggle, switch
+
+**Rule** (feature-flags):
+One entry in a feature flag's ordered list: a set of conditions and the share of matching subjects it turns on. The first rule a subject matches decides.
+_Avoid_: Targeting, criteria, policy
+
+**Condition** (feature-flags):
+One check inside a rule, such as "tenant is one of these" or "app version at least 3.2".
+_Avoid_: Filter, predicate, clause
+
+**Flag group** (feature-flags):
+A named, reusable set of conditions or of listed subjects that many feature flags' rules can refer to.
+_Avoid_: Segment, audience, cohort, list
+
+**Flag override** (feature-flags):
+A platform-staff decision that forces one feature flag on or off for one user, tenant or location, ahead of every rule.
+_Avoid_: Override, tenant override, exception, pin
+
+**Exposure** (feature-flags):
+The record that one subject was given a feature flag's value, and which rule decided it.
+_Avoid_: Impression, check, evaluation log
+
+**Rollout unit** (feature-flags):
+The kind of subject a feature flag is decided per, and whose identity places it inside a percentage: a user, a tenant, a location, or an anonymous device.
+_Avoid_: Unit type, subject type, bucket key
+
+**Kill switch** (feature-flags):
+A feature flag's emergency off: while it is thrown, the flag is off for every subject, ahead of every flag override and rule.
+_Avoid_: Panic button, circuit breaker, disable
+
+**Dynamic config** (feature-flags):
+A named value, declared in code with the shape it must have, that rules choose between per subject. Never on or off; that is a feature flag.
+_Avoid_: Remote config, setting, parameter, flag value
+
+**Flag revision** (feature-flags):
+One saved, unchangeable version of a feature flag's or dynamic config's rules, with its author and reason. A change writes a new revision; earlier ones stay as history.
+_Avoid_: Version, snapshot, draft, edit
+
+**Scheduled rollout** (feature-flags):
+A rule whose share of subjects rises in planned steps at set times, such as 10%, then 50%, then everyone.
+_Avoid_: Ramp, gradual release, phased launch
+
+**Experiment** (feature-flags):
+A time-boxed test of a hypothesis that splits subjects between variants and compares their metrics.
+_Avoid_: A/B test, split test, trial
+
+**Variant** (feature-flags):
+One arm of an experiment: the dynamic config values its subjects are given.
+_Avoid_: Arm, bucket, treatment, group
+
+**Experiment metric** (feature-flags):
+A declared measure, calculated from platform events, that an experiment compares between its variants; one is primary, the rest are guardrails.
+_Avoid_: KPI, goal, success metric
+
+**Environment** (feature-flags):
+The role a deployment plays, such as development, staging or production. Each environment's deployment holds its own rules.
+_Avoid_: Stage, tier, project
+
+**Rule promotion** (feature-flags):
+Carrying a feature flag's or dynamic config's rules from one environment to another, reviewed as a difference before it is applied.
+_Avoid_: Promotion (a tier term), sync, copy, deploy, migration

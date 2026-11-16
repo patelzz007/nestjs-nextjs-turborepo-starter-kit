@@ -1,0 +1,58 @@
+[
+	{
+		"id": "c-gantt-1",
+		"label": "Settings Menu",
+		"description": "Gantt chart with settings menu and schedulable rows. Best for a Settings menu of display switches (today line, weekends, arrows, plans, rollups, week start) and 5 time zones, over empty rows the toolbar schedules one by one.",
+		"file": "gantt-1",
+		"export": "Gantt1Example"
+	},
+	{
+		"id": "c-gantt-2",
+		"label": "Drag Reorder",
+		"description": "Gantt chart with reorderable tree rows. Best for the leanest setup, where one callback gives every tree row a reorder menu and a single setState keeps the new order.",
+		"file": "gantt-2",
+		"export": "Gantt2Example"
+	},
+	{
+		"id": "c-gantt-3",
+		"label": "Quarter Roadmap",
+		"description": "Gantt chart with quarter roadmap and rollups. Best for multi month initiatives grouped by workstream, with a toolbar button that drops the next backlog item onto its empty row.",
+		"file": "gantt-3",
+		"export": "Gantt3Example"
+	},
+	{
+		"id": "c-gantt-4",
+		"label": "Capacity Board",
+		"description": "Gantt chart with weekly capacity board. Best for teammates grouped by squad with avatar row labels and shaded weekends, where added assignments stack into extra lanes.",
+		"file": "gantt-4",
+		"export": "Gantt4Example"
+	},
+	{
+		"id": "c-gantt-5",
+		"label": "Task Table",
+		"description": "Gantt chart with task details and progress. Best for a read only status report whose tree column shows each task's owner and status badge, with rows added from the toolbar.",
+		"file": "gantt-5",
+		"export": "Gantt5Example"
+	},
+	{
+		"id": "c-gantt-6",
+		"label": "Baseline Tracking",
+		"description": "Gantt chart with as-built baseline tracking. Best for frozen plan dates ghosted behind actual bars, showing early, late and on time work plus a planned band on a whole group.",
+		"file": "gantt-6",
+		"export": "Gantt6Example"
+	},
+	{
+		"id": "c-gantt-7",
+		"label": "Dependencies & Milestones",
+		"description": "Gantt chart with dependency arrows and milestones. Best for a rollout chain where QA waits on 2 build tracks and a zero length sign off gate opens the go live step.",
+		"file": "gantt-7",
+		"export": "Gantt7Example"
+	},
+	{
+		"id": "c-gantt-8",
+		"label": "Working Days",
+		"description": "Gantt chart with working-day adjustment. Best for moves that land on a weekend or a holiday and settle on the next working day, keeping each task's working-day length.",
+		"file": "gantt-8",
+		"export": "Gantt8Example"
+	}
+]

@@ -1,0 +1,100 @@
+[
+	{
+		"id": "c-data-table-1",
+		"label": "Overview",
+		"description": "A table of invoices with sortable columns, a search filter and pagination. Best for the smallest working DataTable: columns, rows and a filter.",
+		"file": "data-table-1",
+		"export": "DataTable1Example"
+	},
+	{
+		"id": "c-data-table-2",
+		"label": "Search & Filters",
+		"description": "A search across two columns with a debounce, and select filters for status and type. Best for narrowing a long list from the toolbar without a server.",
+		"file": "data-table-2",
+		"export": "DataTable2Example"
+	},
+	{
+		"id": "c-data-table-3",
+		"label": "Row Actions",
+		"description": "A ⋯ menu per row with view, edit, copy and a destructive delete, plus a tap that opens the row. Best for records a person acts on one at a time.",
+		"file": "data-table-3",
+		"export": "DataTable3Example"
+	},
+	{
+		"id": "c-data-table-4",
+		"label": "Bulk Selection",
+		"description": "Row checkboxes, select all across screens, a bulk action and a bulk delete that update the rows. Best for triage screens where many records change together.",
+		"file": "data-table-4",
+		"export": "DataTable4Example"
+	},
+	{
+		"id": "c-data-table-5",
+		"label": "Export",
+		"description": "Share the selected rows, or every row, as CSV or JSON with a chosen file name and columns. Best for handing a filtered list to a spreadsheet or another app.",
+		"file": "data-table-5",
+		"export": "DataTable5Example"
+	},
+	{
+		"id": "c-data-table-6",
+		"label": "Inline Editing",
+		"description": "Cells that edit in place, written back to the record by its id so a sorted or filtered view stays right. Best for quick corrections without a form.",
+		"file": "data-table-6",
+		"export": "DataTable6Example"
+	},
+	{
+		"id": "c-data-table-7",
+		"label": "Drag to Reorder",
+		"description": "Rows with a drag grip, re-anchored by id after the drop; a screen reader moves a row with the grip's actions. Best for a hand-ordered list such as a document outline.",
+		"file": "data-table-7",
+		"export": "DataTable7Example"
+	},
+	{
+		"id": "c-data-table-8",
+		"label": "Column Visibility & Pinning",
+		"description": "A columns menu to hide columns or pin them to the start, remembered through a persist key and a storage adapter. Best for wide tables where each reader wants their own view.",
+		"file": "data-table-8",
+		"export": "DataTable8Example"
+	},
+	{
+		"id": "c-data-table-9",
+		"label": "Pagination & Sorting",
+		"description": "Page size choices and a sort cycle that returns to the original order on the third tap. Best for long lists read page by page.",
+		"file": "data-table-9",
+		"export": "DataTable9Example"
+	},
+	{
+		"id": "c-data-table-10",
+		"label": "Mobile Cards",
+		"description": "The same rows drawn as cards, with the row actions on each card. Best for records read one at a time on a phone.",
+		"file": "data-table-10",
+		"export": "DataTable10Example"
+	},
+	{
+		"id": "c-data-table-11",
+		"label": "Loading, Empty & Error",
+		"description": "A switch that moves the table between skeleton rows, a dimmed refetch, an empty state and an error with a retry. Best for checking every state a fetched table goes through.",
+		"file": "data-table-11",
+		"export": "DataTable11Example"
+	},
+	{
+		"id": "c-data-table-12",
+		"label": "Virtualised Rows",
+		"description": "Two thousand rows in one scrolling body where only the rows in view are drawn. Best for large local datasets that should not be paged.",
+		"file": "data-table-12",
+		"export": "DataTable12Example"
+	},
+	{
+		"id": "c-data-table-13",
+		"label": "Server Mode",
+		"description": "Paging, sorting and filtering owned by the parent, which fetches each screen from a pretend server. Best for a table backed by an API that screens on the server.",
+		"file": "data-table-13",
+		"export": "DataTable13Example"
+	},
+	{
+		"id": "c-data-table-14",
+		"label": "Kitchen Sink",
+		"description": "Every feature at once: search, filters, actions, bulk actions, export, the columns menu, pinning, inline editing, reordering, and a switch to cards. Best for seeing how the features combine.",
+		"file": "data-table-14",
+		"export": "DataTable14Example"
+	}
+]

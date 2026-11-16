@@ -63,7 +63,7 @@ export function LanguageLogo({ original, path, monogram, tint, testID }: Languag
 			importantForAccessibility="no-hide-descendants"
 			accessibilityElementsHidden
 			testID={testID}>
-			{path === null ? <Text className="font-mono text-xs text-foreground">{monogram}</Text> : <ThemedGlyph path={path} colorClassName="accent-foreground" />}
+			{path === null ? <Text className="text-caption font-mono text-foreground">{monogram}</Text> : <ThemedGlyph path={path} colorClassName="accent-foreground" />}
 		</View>
 	);
 }

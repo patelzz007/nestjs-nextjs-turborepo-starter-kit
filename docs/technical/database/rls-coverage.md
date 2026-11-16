@@ -3,8 +3,11 @@ title: "RLS Coverage Matrix"
 tags: ["database", "rls", "tenancy", "security"]
 description: "Every tenant-scoped table: whether row-level security is enabled and forced, which commands a policy admits, and the automated test that proves its isolation."
 author: "Platform Team"
+category: "Database"
+date: 1792454400000
 lastUpdated: 1792627200000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/database/rls-coverage.webp"
 order: 2
 ---
 

@@ -60,12 +60,12 @@ function EditHistory({ nodeId, nowMs }: { readonly nodeId: string; readonly nowM
 				<View key={`${String(edit.editedAt)}-${String(index)}`} className="gap-2 border-b border-border pb-4">
 					<View className="flex-row items-center gap-2">
 						<Avatar name={loginOf(edit.editor)} imageUrl={edit.editor?.avatarUrl ?? null} size="sm" />
-						<Text className="flex-1 font-sans text-sm text-muted-foreground">
+						<Text className="text-body flex-1 font-sans text-muted-foreground">
 							{editEntryLabel(edit.editor, edit.editedAt, nowMs)}
 							{lastIsOriginal && index === edits.length - 1 ? " (original)" : ""}
 						</Text>
 					</View>
-					{edit.body === null ? <Text className="font-sans text-sm text-muted-foreground italic">{REMOVED_VERSION_MESSAGE}</Text> : <Markdown source={edit.body} />}
+					{edit.body === null ? <Text className="text-body font-sans text-muted-foreground italic">{REMOVED_VERSION_MESSAGE}</Text> : <Markdown source={edit.body} />}
 				</View>
 			))}
 		</ScrollView>

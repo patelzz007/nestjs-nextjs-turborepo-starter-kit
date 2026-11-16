@@ -86,7 +86,7 @@ const DiffRow = React.memo(function DiffRow({ line }: DiffRowProps): React.JSX.E
 		return (
 			<View accessible accessibilityLabel={lineLabel(line)} className={`flex-row ${style.row}`}>
 				<View className="w-20" />
-				<Text className={`py-1 pr-4 font-mono text-xs ${style.text}`}>{text}</Text>
+				<Text className={`text-caption py-1 pr-4 font-mono ${style.text}`}>{text}</Text>
 			</View>
 		);
 	}
@@ -94,8 +94,8 @@ const DiffRow = React.memo(function DiffRow({ line }: DiffRowProps): React.JSX.E
 		<View accessible accessibilityLabel={lineLabel(line)} className={`flex-row ${style.row}`}>
 			<Gutter value={line.oldNumber} />
 			<Gutter value={line.newNumber} />
-			<Text className={`w-5 text-center font-mono text-xs leading-5 ${style.marker}`}>{style.markerText}</Text>
-			<Text className={`pr-4 font-mono text-xs leading-5 ${style.text}`}>{text}</Text>
+			<Text className={`text-caption w-5 text-center font-mono leading-5 ${style.marker}`}>{style.markerText}</Text>
+			<Text className={`text-caption pr-4 font-mono leading-5 ${style.text}`}>{text}</Text>
 		</View>
 	);
 });
@@ -106,5 +106,5 @@ interface GutterProps {
 
 /** One line-number column; empty where the line does not exist on that side. */
 function Gutter({ value }: GutterProps): React.JSX.Element {
-	return <Text className="w-10 pr-2 text-right font-mono text-xs leading-5 text-muted-foreground">{value === null ? "" : String(value)}</Text>;
+	return <Text className="text-caption w-10 pr-2 text-right font-mono leading-5 text-muted-foreground">{value === null ? "" : String(value)}</Text>;
 }

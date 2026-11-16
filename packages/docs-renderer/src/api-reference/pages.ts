@@ -89,6 +89,14 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		tags: ["Tenant Webhooks", "Received webhooks"],
 	},
 	{
+		slug: "docs-publishing",
+		title: "Docs publishing",
+		description:
+			"The Notion webhook, what the docs sync reports, and the Operations console's Docs sync page: the setup, the run history, starting a sync and the webhook verification token.",
+		guide: { label: "Docs publishing runbook", href: "../operations/docs-publishing.md" },
+		tags: ["Docs publishing"],
+	},
+	{
 		slug: "privacy",
 		title: "Privacy: your own data",
 		description:

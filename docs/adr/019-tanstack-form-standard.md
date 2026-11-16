@@ -3,8 +3,11 @@ title: "ADR 019: TanStack Form Is the Form Standard"
 tags: ["adr", "frontend", "forms", "tanstack"]
 description: "New and migrated forms use @tanstack/react-form behind generic, data-agnostic Form primitives; react-hook-form and hand-rolled useState forms are migrated."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1790812800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1792604185000
+coverImage: "/images/covers/adr/019-tanstack-form-standard.webp"
 order: 19
 ---
 

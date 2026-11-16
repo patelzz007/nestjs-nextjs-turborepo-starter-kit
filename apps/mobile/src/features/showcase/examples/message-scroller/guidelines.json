@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Open where the reader left off",
+		"do": {
+			"text": "Open a chat at its newest message (or the last question), where people expect to continue.",
+			"file": "message-scroller-do-1",
+			"export": "MessageScrollerDo1Example"
+		},
+		"dont": {
+			"text": "Don't open a long chat at its first message: people scroll through everything to reply.",
+			"file": "message-scroller-dont-1",
+			"export": "MessageScrollerDont1Example"
+		}
+	},
+	{
+		"title": "Don't pull readers away",
+		"do": {
+			"text": "Follow new messages only while the reader is at the end; offer a jump back otherwise.",
+			"file": "message-scroller-do-2",
+			"export": "MessageScrollerDo2Example"
+		},
+		"dont": {
+			"text": "Don't snap to new messages while someone reads history: they lose their place.",
+			"file": "message-scroller-dont-2",
+			"export": "MessageScrollerDont2Example"
+		}
+	}
+]

@@ -3,8 +3,11 @@ title: "Authentication, MFA and privileged access"
 description: "Sessions and cookies, restricted vs full sessions, login verification, TOTP and backup codes, MFA recovery, token versions, impersonation and support access — how they work and what to keep in mind when changing them."
 order: 30
 author: "Platform Team"
+category: "Security"
+date: 1791072000000
 lastUpdated: 1792368000000
-coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/security/authentication.webp"
 tags: ["security", "auth", "mfa", "sessions", "impersonation", "mobile"]
 ---
 

@@ -66,7 +66,7 @@ const DASHBOARD_GUTTER = "px-4 lg:px-6";
 
 /**
  * `/`: the demo index, the platform-sales headline (KPIs + daily chart), the
- * component-gallery heading and the first gallery sections.
+ * showcase heading and the first showcase sections.
  */
 export function DashboardPageSkeleton(): React.JSX.Element {
 	return (

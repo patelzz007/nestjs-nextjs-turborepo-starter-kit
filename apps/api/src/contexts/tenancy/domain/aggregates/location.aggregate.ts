@@ -1,4 +1,4 @@
-import { LocationStatusSchema, type EpochMs, type LocationStatus, type PilotCity } from "@workspace/shared";
+import { LOCATION_LIFECYCLE, LocationStatusSchema, type EpochMs, type LocationEvent, type LocationStatus, type PilotCity } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import { LocationStatusConflictError, PrimaryLocationCloseRefusedError } from "../errors/tenants.errors";
@@ -202,12 +202,12 @@ export class Location extends AggregateRoot<TenantsDomainEvent> {
 			reviewedByUserId: userId,
 			reviewedAt: now,
 		});
-		this.transition("ACTIVE", now);
+		this.transition("completeOnboarding", now);
 	}
 
 	/** REJECTED → PENDING_APPROVAL with corrected details. */
 	public resubmit(details: LocationDetails, userId: string, now: EpochMs): void {
-		if (this.fields.status !== "REJECTED") {
+		if (!LOCATION_LIFECYCLE.can("resubmit", this.fields.status)) {
 			throw new LocationStatusConflictError(RESUBMIT_REQUIRES_REJECTED_MESSAGE);
 		}
 		Object.assign(this.fields, {
@@ -218,16 +218,17 @@ export class Location extends AggregateRoot<TenantsDomainEvent> {
 			reviewedByUserId: null,
 			reviewedAt: null,
 		});
-		this.transition("PENDING_APPROVAL", now);
+		this.transition("resubmit", now);
 	}
 
 	/** PENDING_APPROVAL → ACTIVE, or → REJECTED with the reviewer's reason. */
 	public review(approve: boolean, rejectionReason: string | null, reviewerUserId: string, now: EpochMs): void {
-		if (this.fields.status !== "PENDING_APPROVAL") {
+		const event: LocationEvent = approve ? "approve" : "reject";
+		if (!LOCATION_LIFECYCLE.can(event, this.fields.status)) {
 			throw new LocationStatusConflictError(REVIEW_REQUIRES_PENDING_MESSAGE);
 		}
 		Object.assign(this.fields, { rejectionReason: approve ? null : rejectionReason, reviewedByUserId: reviewerUserId, reviewedAt: now });
-		this.transition(approve ? "ACTIVE" : "REJECTED", now);
+		this.transition(event, now);
 	}
 
 	/** Close the store for good: INACTIVE and soft-deleted. The primary store cannot be closed. */
@@ -236,15 +237,17 @@ export class Location extends AggregateRoot<TenantsDomainEvent> {
 			throw new PrimaryLocationCloseRefusedError();
 		}
 		this.closure = { reason, closedByUserId, closedAt: now };
-		this.transition("INACTIVE", now);
+		this.transition("close", now);
 	}
 
 	public snapshot(): LocationSnapshot {
 		return { id: this.id, tenantId: this.tenantId, isPrimary: this.isPrimary, closure: this.closure, ...this.fields };
 	}
 
-	private transition(to: LocationStatus, now: EpochMs): void {
+	/** Makes one move of {@link LOCATION_LIFECYCLE} the caller has checked; records the change (or a closure). */
+	private transition(event: LocationEvent, now: EpochMs): void {
 		const from = this.fields.status;
+		const to = LOCATION_LIFECYCLE.targetOf(event);
 		this.fields.status = to;
 		if (from !== to || this.closure !== null) {
 			this.record(new LocationStatusChanged(now, this.tenantId, this.id, from, to));

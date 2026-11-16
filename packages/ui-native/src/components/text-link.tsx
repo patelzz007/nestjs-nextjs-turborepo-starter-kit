@@ -21,8 +21,8 @@ export const textLinkVariants = cva("font-sans-semibold", {
 			destructive: "text-destructive-foreground",
 		},
 		size: {
-			sm: "text-sm",
-			md: "text-base",
+			sm: "text-body",
+			md: "text-body-lg",
 		},
 		state: {
 			default: "",
@@ -37,8 +37,8 @@ export const textLinkVariants = cva("font-sans-semibold", {
 export const textLinkLeadInVariants = cva("font-sans text-muted-foreground", {
 	variants: {
 		size: {
-			sm: "text-sm",
-			md: "text-base",
+			sm: "text-body",
+			md: "text-body-lg",
 		},
 	},
 	defaultVariants: { size: "sm" },

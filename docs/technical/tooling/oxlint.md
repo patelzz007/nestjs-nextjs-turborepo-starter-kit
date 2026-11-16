@@ -4,8 +4,11 @@ tags: ["oxlint", "oxfmt", "linting", "formatting", "tooling", "import-boundaries
 description: "How Oxlint and Oxfmt are configured repo-wide, what replaced each ESLint and Prettier piece, and how to run them — globally (via Turborepo) and per project."
 order: 6
 author: "Platform Team"
+category: "Tooling"
+date: 1792886400000
 lastUpdated: 1792886400000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/tooling/oxlint.webp"
 ---
 
 # Oxlint & Oxfmt Setup & How To Run Them
@@ -63,9 +66,9 @@ Three tools do the work:
 
 | Tool | Job | Version |
 | --- | --- | --- |
-| `oxlint` | The linter (Rust). Runs the native rules and the ESLint-API **JS plugins** | 1.89.0 |
-| `oxlint-tsgolint` | Type-aware rules (`no-unsafe-*`, `no-floating-promises`, …) on TypeScript 7's checker | 7.0.2005 |
-| `oxfmt` | The formatter (Prettier-compatible output) | 0.74.0 |
+| `oxlint` | The linter (Rust). Runs the native rules and the ESLint-API **JS plugins** | 1.93.0 |
+| `oxlint-tsgolint` | Type-aware rules (`no-unsafe-*`, `no-floating-promises`, …) on TypeScript 7's checker | 7.0.2006 |
+| `oxfmt` | The formatter (Prettier-compatible output) | 0.78.0 |
 
 Each workspace's `lint` script is:
 

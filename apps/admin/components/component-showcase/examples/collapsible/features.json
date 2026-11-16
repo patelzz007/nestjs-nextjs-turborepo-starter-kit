@@ -1,0 +1,72 @@
+[
+	{
+		"id": "c-collapsible-1",
+		"label": "Basic",
+		"description": "Basic collapsible. Best for an order summary that keeps its status row in view and opens the shipping address and items from an icon button.",
+		"file": "collapsible-1",
+		"export": "Collapsible1Example"
+	},
+	{
+		"id": "c-collapsible-2",
+		"label": "Checkbox Settings",
+		"description": "Collapsible with checkbox settings. Best for a full-width outline button that opens a card of 3 notification channel checkboxes, starting open.",
+		"file": "collapsible-2",
+		"export": "Collapsible2Example"
+	},
+	{
+		"id": "c-collapsible-3",
+		"label": "Animated Card",
+		"description": "Collapsible animated card. Best for a single help question in a small card, where the whole question line opens its answer below.",
+		"file": "collapsible-3",
+		"export": "Collapsible3Example"
+	},
+	{
+		"id": "c-collapsible-4",
+		"label": "Bottom Trigger",
+		"description": "Collapsible card with bottom trigger. Best for a billing usage card with a progress bar whose round chevron button, centered on the bottom edge, opens a cost breakdown.",
+		"file": "collapsible-4",
+		"export": "Collapsible4Example"
+	},
+	{
+		"id": "c-collapsible-5",
+		"label": "Form Fields",
+		"description": "Collapsible form fields. Best for a price input with a sliders icon button beside it that reveals tax rate and discount fields, its open state held in React state.",
+		"file": "collapsible-5",
+		"export": "Collapsible5Example"
+	},
+	{
+		"id": "c-collapsible-6",
+		"label": "In Frame",
+		"description": "Collapsible frame. Best for a deployment status note in a stacked Frame, open on load, its whole header row toggling the release summary.",
+		"file": "collapsible-6",
+		"export": "Collapsible6Example"
+	},
+	{
+		"id": "c-collapsible-7",
+		"label": "Nested List",
+		"description": "Nested collapsible list with actions. Best for a list of 3 API keys under a toggling Frame header, each row's menu copying its key or deleting the row.",
+		"file": "collapsible-7",
+		"export": "Collapsible7Example"
+	},
+	{
+		"id": "c-collapsible-8",
+		"label": "User Profile",
+		"description": "Collapsible User profile. Best for a user handle with avatar that opens to last activity, an online since time and a country flag for location.",
+		"file": "collapsible-8",
+		"export": "Collapsible8Example"
+	},
+	{
+		"id": "c-collapsible-9",
+		"label": "Multi-Level Menu",
+		"description": "Multi-level collapsible menu. Best for a 3 level navigation menu of icon rows where folders open in place and the chosen leaf row stays highlighted.",
+		"file": "collapsible-9",
+		"export": "Collapsible9Example"
+	},
+	{
+		"id": "c-collapsible-10",
+		"label": "File Tree",
+		"description": "Tree view with file actions. Best for a code file explorer under Explorer and Outline tabs, file rows showing download and delete buttons on hover or selection.",
+		"file": "collapsible-10",
+		"export": "Collapsible10Example"
+	}
+]

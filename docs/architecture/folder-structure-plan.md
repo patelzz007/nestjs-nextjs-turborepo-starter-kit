@@ -2,8 +2,11 @@
 title: "Folder structure and type-safety plan"
 description: "The agreed plan (2026-11-05) to simplify the repository's folders, convert the tooling to typed, reusable TypeScript, generate the standard RLS policies, and tighten the types (branded IDs, enum-derived unions, keyed records, typed routes) without losing any behaviour. Most of it is done; the status table lists what is open."
 author: "Platform Team"
+category: "Architecture"
+date: 1793836800000
 lastUpdated: 1793865600000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/architecture/folder-structure-plan.webp"
 order: 9
 tags: ["architecture", "structure", "tooling", "rls", "typescript", "plan"]
 ---

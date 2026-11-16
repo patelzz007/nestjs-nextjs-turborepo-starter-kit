@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Never colour alone",
+		"do": {
+			"text": "Name two or more series in a legend, and give one a texture so it reads apart without colour.",
+			"file": "chart-do-1",
+			"export": "ChartDo1Example"
+		},
+		"dont": {
+			"text": "Don't rely on two close colours with no legend: colour-blind readers, and everyone else, have to guess.",
+			"file": "chart-dont-1",
+			"export": "ChartDont1Example"
+		}
+	},
+	{
+		"title": "Few categories on a phone",
+		"do": {
+			"text": "Show a dozen categories at most (months, quarters), so every bar can be tapped and labelled.",
+			"file": "chart-do-2",
+			"export": "ChartDo2Example"
+		},
+		"dont": {
+			"text": "Don't squeeze a hundred bars into a phone's width: group them by month, or use a line.",
+			"file": "chart-dont-2",
+			"export": "ChartDont2Example"
+		}
+	}
+]

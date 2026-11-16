@@ -79,7 +79,7 @@ describe("PlatformSalesCards", () => {
 			within(table)
 				.getAllByRole("row")
 				.map((row) => spaced(row.textContent)),
-		).toEqual(["PeriodSales", "Tue, 1 Sept 2026RM 4,000.00", "Wed, 2 Sept 2026(partial)RM 6,000.00"]);
+		).toEqual(["PeriodSales", "Tue, 1 Sep 2026RM 4,000.00", "Wed, 2 Sep 2026(partial)RM 6,000.00"]);
 		expect(dashboardQuery).toHaveBeenCalledTimes(1);
 	});
 

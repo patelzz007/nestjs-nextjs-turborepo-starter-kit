@@ -3,8 +3,11 @@ title: "1. Platform setup"
 description: "First run of a new environment: database, seed data, the first SuperAdmin sign-in and what to configure before inviting merchants."
 order: 2
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1794485004159
+coverImage: "/images/covers/user-guide/01-platform-setup.webp"
 tags: ["user-guide", "setup", "admin"]
 ---
 
@@ -13,7 +16,7 @@ tags: ["user-guide", "setup", "admin"]
 Done once per environment by an engineer together with the first SuperAdmin.
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[Engineer: install + configure<br/>apps/api/.env] --> B[pnpm setup:db<br/>migrate, RLS, seed]
     B --> C[pnpm dev<br/>web, admin, merchant, api]
     C --> D[SuperAdmin signs in<br/>to the admin panel]

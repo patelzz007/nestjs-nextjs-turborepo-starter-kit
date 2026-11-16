@@ -145,6 +145,7 @@ function useEmojiPicker(): EmojiPickerApi {
 export type EmojiPickerValueProps = Omit<React.ComponentProps<"span">, "children"> & {
 	/** Defaults to the picker's value. */
 	readonly value?: string | null | undefined;
+	/** Shown while there is no value. */
 	readonly placeholder?: React.ReactNode;
 };
 

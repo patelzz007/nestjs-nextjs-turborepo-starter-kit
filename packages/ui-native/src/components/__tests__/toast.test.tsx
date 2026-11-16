@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { AccessibilityInfo, type ViewInstance } from "react-native";
+import CheckIcon from "lucide-react-native/icons/check";
+import { AccessibilityInfo, Text, type ViewInstance } from "react-native";
 import { getAnimatedStyle } from "react-native-reanimated";
 import { z } from "zod";
 
@@ -133,5 +134,29 @@ describe("Toast", () => {
 		expect(className).toContain("mx-4");
 		expect(className).toContain("rounded-lg");
 		expect(className).not.toContain("rounded-xl");
+	});
+
+	it("shows a title, a leading view and actions, on the inverted look with a close button and no countdown", async () => {
+		const onDismiss = jest.fn();
+		await render(
+			toast({ title: "Saved", leading: <Text>avatar</Text>, actions: <Text>Undo</Text>, look: "invert", closeButton: true, durationMs: null, edge: "bottom", onDismiss }),
+		);
+
+		expect(screen.getByText("Saved")).toBeOnTheScreen();
+		expect(screen.getByText("avatar", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.getByText("Undo")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Dismiss" }));
+		expect(onDismiss).toHaveBeenCalled();
+	});
+
+	it("leads with a spinner while loading, the caller's icon over the tone's, and nothing for the default tone", async () => {
+		const { rerender } = await render(toast({ tone: "loading" }));
+		expect(screen.getByTestId("toast")).toBeOnTheScreen();
+		await rerender(toast({ tone: "loading", look: "invert" }));
+		await rerender(toast({ tone: "default", icon: CheckIcon }));
+		await rerender(toast({ tone: "default", icon: CheckIcon, look: "invert" }));
+		await rerender(toast({ tone: "info", icon: CheckIcon }));
+		await rerender(toast({ tone: "default" }));
+		expect(screen.getByText("Profile saved.")).toBeOnTheScreen();
 	});
 });

@@ -3,8 +3,11 @@ title: "Saved views on admin lists"
 description: "Named filters staff keep on an admin list (users, audit log): stored as the list's URL query, your own or shared with the other staff, and how a list offers them."
 order: 8
 author: "Platform Team"
+category: "Engineering"
+date: 1793750400000
 lastUpdated: 1793750400000
-coverImage: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/saved-views.webp"
 tags: ["guide", "admin", "development"]
 ---
 

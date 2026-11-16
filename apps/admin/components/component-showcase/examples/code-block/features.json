@@ -1,0 +1,191 @@
+[
+	{
+		"id": "c-code-block-1",
+		"label": "Basic",
+		"description": "Basic code block. Best for a static TypeScript snippet with line numbers, the resolved language label and a header copy button.",
+		"file": "code-block-1",
+		"export": "CodeBlock1Example"
+	},
+	{
+		"id": "c-code-block-2",
+		"label": "Pinned Copy",
+		"description": "Pinned copy button. Best for a headerless snippet whose outlined copy button floats over the code, with both axes scrolled by a capped Scroll Area.",
+		"file": "code-block-2",
+		"export": "CodeBlock2Example"
+	},
+	{
+		"id": "c-code-block-3",
+		"label": "Streaming Agent",
+		"description": "Streaming agent response. Best for a route handler typed out 3 characters per tick, with a Generating badge, a Replay button and a ScrollArea that follows the caret.",
+		"file": "code-block-3",
+		"export": "CodeBlock3Example"
+	},
+	{
+		"id": "c-code-block-4",
+		"label": "AI Chat",
+		"description": "AI chat with code fences. Best for a 2 turn Frame transcript with avatars, where the streamed reply splits into prose paragraphs and a fenced snippet with copy.",
+		"file": "code-block-4",
+		"export": "CodeBlock4Example"
+	},
+	{
+		"id": "c-code-block-5",
+		"label": "Diff Summary",
+		"description": "Diff with change summary. Best for removed and added lines of a single file marked by number through the diff prop, under a header holding only filename and copy.",
+		"file": "code-block-5",
+		"export": "CodeBlock5Example"
+	},
+	{
+		"id": "c-code-block-6",
+		"label": "Transformer Diff",
+		"description": "Diff via shiki transformers. Best for a hand written shiki transformer that tags lines 2 and 3 as removed and added, hoisted to module scope so renders skip re-tokenizing.",
+		"file": "code-block-6",
+		"export": "CodeBlock6Example"
+	},
+	{
+		"id": "c-code-block-7",
+		"label": "Highlights",
+		"description": "Highlighted lines and words. Best for a connection config with lines 2 to 4 tinted from a range string and 2 identifiers marked wherever they appear.",
+		"file": "code-block-7",
+		"export": "CodeBlock7Example"
+	},
+	{
+		"id": "c-code-block-8",
+		"label": "Focus Walkthrough",
+		"description": "Focus walkthrough. Best for a 3 step tour of a checkout function, chosen with pressed buttons in the header, with a step counter and the other lines dimmed.",
+		"file": "code-block-8",
+		"export": "CodeBlock8Example"
+	},
+	{
+		"id": "c-code-block-9",
+		"label": "Terminal Output",
+		"description": "Terminal output. Best for build output with highlighting turned off so shiki never loads, under a Terminal header with wrap and copy controls.",
+		"file": "code-block-9",
+		"export": "CodeBlock9Example"
+	},
+	{
+		"id": "c-code-block-10",
+		"label": "Long File",
+		"description": "Long file with expand. Best for a generated file excerpt numbered from 120 and held near 8 rows by a ScrollArea that reads expanded state until Show more.",
+		"file": "code-block-10",
+		"export": "CodeBlock10Example"
+	},
+	{
+		"id": "c-code-block-11",
+		"label": "Diagnostics & Actions",
+		"description": "Line actions and diagnostics. Best for a function with an error line and a warning line, tallied in header badges, where a Fix line button appears on hover over either.",
+		"file": "code-block-11",
+		"export": "CodeBlock11Example"
+	},
+	{
+		"id": "c-code-block-12",
+		"label": "Line Selection",
+		"description": "Line selection. Best for controlled click and shift click line picking that feeds a selected count badge, an Ask about button and a Clear button.",
+		"file": "code-block-12",
+		"export": "CodeBlock12Example"
+	},
+	{
+		"id": "c-code-block-13",
+		"label": "Search In File",
+		"description": "Search in file. Best for a header search field that marks each case sensitive match, a badge counting matches in the source, and a floating copy button.",
+		"file": "code-block-13",
+		"export": "CodeBlock13Example"
+	},
+	{
+		"id": "c-code-block-14",
+		"label": "File Tabs",
+		"description": "File tabs in a dense frame. Best for snippets in tsx, Python, SQL and bash behind file tabs in a dense Frame header, each a ghost block with floating copy.",
+		"file": "code-block-14",
+		"export": "CodeBlock14Example"
+	},
+	{
+		"id": "c-code-block-15",
+		"label": "Pre-Highlighted Lines",
+		"description": "Pre-highlighted lines. Best for hand built tokens that color 4 Python keywords in light and dark, passed as lines so the client loads no highlighter.",
+		"file": "code-block-15",
+		"export": "CodeBlock15Example"
+	},
+	{
+		"id": "c-code-block-16",
+		"label": "Before & After",
+		"description": "Before and after. Best for a loop refactored into a reduce, as 2 ghost blocks with Before and After headers in separate panels of one Frame.",
+		"file": "code-block-16",
+		"export": "CodeBlock16Example"
+	},
+	{
+		"id": "c-code-block-17",
+		"label": "Soft Wrap",
+		"description": "Soft wrap. Best for a single line CSP string that starts wrapped, with wrap state lifted to the page so a badge reads Wrapped or Scrolling.",
+		"file": "code-block-17",
+		"export": "CodeBlock17Example"
+	},
+	{
+		"id": "c-code-block-18",
+		"label": "Unified Patch",
+		"description": "Unified patch review. Best for a 2 file patch split into one block per file, each with plus and minus count badges and a download named after that file.",
+		"file": "code-block-18",
+		"export": "CodeBlock18Example"
+	},
+	{
+		"id": "c-code-block-19",
+		"label": "Design Token Theme",
+		"description": "Design-token theme. Best for a rose, violet, emerald, sky and amber palette set as class variables on the block, stepping to lighter shades in dark mode.",
+		"file": "code-block-19",
+		"export": "CodeBlock19Example"
+	},
+	{
+		"id": "c-code-block-20",
+		"label": "Always Dark",
+		"description": "Always-dark block. Best for a dark scoped hero snippet behind 3 window dots, carrying a highlight, a word mark, a diff pair and all 3 diagnostic levels.",
+		"file": "code-block-20",
+		"export": "CodeBlock20Example"
+	},
+	{
+		"id": "c-code-block-21",
+		"label": "Dark Terminal",
+		"description": "Dark terminal. Best for a forced dark vitest log assembled span by span with light and dark hex colors, pass and fail marks and a summary row.",
+		"file": "code-block-21",
+		"export": "CodeBlock21Example"
+	},
+	{
+		"id": "c-code-block-22",
+		"label": "Accept & Reject",
+		"description": "Patch review actions. Best for an agent fix in a ghost block inside a Card, with Reject and Accept in the footer that flip to a status line and Undo.",
+		"file": "code-block-22",
+		"export": "CodeBlock22Example"
+	},
+	{
+		"id": "c-code-block-23",
+		"label": "Code Folding",
+		"description": "Nested code folding. Best for a sync function with 5 indentation regions, opening with its inner branch folded, plus Fold all and Unfold all in the header.",
+		"file": "code-block-23",
+		"export": "CodeBlock23Example"
+	},
+	{
+		"id": "c-code-block-24",
+		"label": "Fix With AI",
+		"description": "Fix with AI on the failing line. Best for a reduce missing its initial value flagged on line 3, where a Fix with AI button on that line swaps in patched source with Undo.",
+		"file": "code-block-24",
+		"export": "CodeBlock24Example"
+	},
+	{
+		"id": "c-code-block-25",
+		"label": "Reference Lines",
+		"description": "Reference lines in chat. Best for a gutter plus button that adds the hovered line or the whole selection to a Card composer, where pressing a chip highlights its line.",
+		"file": "code-block-25",
+		"export": "CodeBlock25Example"
+	},
+	{
+		"id": "c-code-block-26",
+		"label": "External Scroll",
+		"description": "Framed by an external ScrollArea. Best for a Card with 3 changed files that size to their content, scrolled together by one fixed height ScrollArea, each with count badges.",
+		"file": "code-block-26",
+		"export": "CodeBlock26Example"
+	},
+	{
+		"id": "c-code-block-27",
+		"label": "ANSI Terminal",
+		"description": "ANSI terminal output. Best for vitest stdout with raw SGR escapes turned into colored tokens by ansiToLines, forced dark, with escape free text for copy.",
+		"file": "code-block-27",
+		"export": "CodeBlock27Example"
+	}
+]

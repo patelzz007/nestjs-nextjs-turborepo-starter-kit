@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Name what moves",
+		"do": {
+			"text": "Give each item a `label`: its handle and the announcements read it.",
+			"file": "sortable-do-1",
+			"export": "SortableDo1Example"
+		},
+		"dont": {
+			"text": "Don't leave items unlabelled: screen readers hear only their ids.",
+			"file": "sortable-dont-1",
+			"export": "SortableDont1Example"
+		}
+	},
+	{
+		"title": "Keep the grip thumb-sized",
+		"do": {
+			"text": "Keep the handle at its 44 pt touch area.",
+			"file": "sortable-do-2",
+			"export": "SortableDo2Example"
+		},
+		"dont": {
+			"text": "Don't shrink the handle below a thumb's reach.",
+			"file": "sortable-dont-2",
+			"export": "SortableDont2Example"
+		}
+	}
+]

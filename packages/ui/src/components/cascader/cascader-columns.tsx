@@ -90,11 +90,13 @@ const PANEL_CLASS = `flex w-(--cascader-column-width) shrink-0 flex-col overscro
 const COLUMN_LOADING_ICON = <LoaderCircleIcon aria-hidden className="size-3.5 motion-safe:animate-spin" />;
 
 export interface CascaderColumnPanelProps {
+	/** The level this panel draws. */
 	readonly column: CascaderColumn;
 	/** Replaces the panel's rows; the empty state still wins on an empty column. */
 	readonly children?: React.ReactNode;
 	/** Containing block for the windowed column's absolutely positioned rows. */
 	readonly virtualized?: boolean | undefined;
+	/** Classes for the column. */
 	readonly className?: string | undefined;
 }
 

@@ -3,8 +3,11 @@ title: "Architecture decision records"
 description: "One line per decision with its status. ADRs are history: superseded ones stay, marked and linked forward."
 order: 1
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791072000000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793996101213
+coverImage: "/images/covers/adr/README.webp"
 tags: ["adr", "architecture", "decisions"]
 ---
 
@@ -98,6 +101,9 @@ Never delete an accepted ADR: mark it superseded and link the replacement.
 | [080](./080-passkeys.md) | Passkeys (WebAuthn) on every app: the second step of a password sign-in or a passwordless sign-in; discoverable credentials with user verification, single-use hashed challenges, a counter that only moves forward, the password again to add one, an email per change, removed by MFA recovery; native apps linked through the web app's `/.well-known/` files | Accepted and built (2026-11-05) |
 | [081](./081-inbound-webhook-receiver.md) | One receiver for every inbound webhook: verify with the provider's keyed scheme, claim its delivery id once, hand it to the owning context, record the outcome in one admin-readable log (bodies never stored) | Accepted (2026-11-04); GitHub and payments built, Resend and Twilio next |
 | [083](./083-generated-standard-rls-policies.md) | Generated standard RLS policies: one per-table list, one spelling per rule, one-offs stay hand-written SQL |
+| [084](./084-docs-sync-sources.md) | Docs written in a tool and synced through reviewed pull requests: Notion first, one port for Obsidian and Inkdrop |
+| [085](./085-customer-tiers.md) | Customer tiers: platform-wide Bronze/Silver/Gold/Diamond earned by counted redemptions in a rolling window, capped per merchant, with a tier hold; rewards may name a minimum tier | Proposed (2026-11-13) |
+| [086](./086-feature-flag-revisions.md) | Feature flag revisions: a flag's or dynamic config's rules are saved as unchangeable revisions, never edited in place, so history, diffs, approvals, exposures and rule promotion share one exact rule set | Proposed (2026-11-13) |
 | [082](./082-outgoing-webhooks.md) | Outgoing webhooks for integrators: owner-only `merchant:manage_webhooks`, a versioned event catalog written in the producing transaction, one signed delivery per endpoint over the SSRF-guarded client, back-off retries for about three hours, sealed rotating secrets, auto-disable with an owner notice | Accepted and built (2026-11-05) |
 | [RabbitMQ](./rabbitmq-placeholder.md)                     | RabbitMQ as infrastructure placeholder only                                                                                                                                                                                                                              | Accepted                                                                                                                                   |
 

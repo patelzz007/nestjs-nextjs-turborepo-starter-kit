@@ -1,0 +1,16 @@
+[
+	{
+		"id": "c-rich-text-view-1",
+		"label": "Broadcast Body",
+		"description": "A saved rich text document rendered read only: headings, lists, links and marks. Best for showing what an editor wrote, such as a broadcast body.",
+		"file": "rich-text-view-1",
+		"export": "RichTextView1Example"
+	},
+	{
+		"id": "c-rich-text-view-2",
+		"label": "Table, Code And Button",
+		"description": "A read-only document with a table that scrolls sideways, a code block that copies and a button showing its real domain. Best for structured content such as opening hours.",
+		"file": "rich-text-view-2",
+		"export": "RichTextView2Example"
+	}
+]

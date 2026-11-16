@@ -26,17 +26,21 @@ const avatarVariants = cva(
 type AvatarSize = NonNullable<VariantProps<typeof avatarVariants>["size"]>;
 
 type AvatarProps = AvatarPrimitive.Root.Props & {
+	/** The avatar's size: `sm`, `default` or `lg`. */
 	size?: AvatarSize;
 };
 
+/** A person's picture on Base UI's avatar: an image with a fallback (initials or an icon) while it loads or if it fails. */
 const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(function Avatar({ className, size = "default", ...props }, ref): React.JSX.Element {
 	return <AvatarPrimitive.Root ref={ref} data-slot="avatar" data-size={size} className={cn(avatarVariants({ size }), className)} {...props} />;
 });
 
+/** The picture. Give it an `alt` unless the name is shown beside it. */
 const AvatarImage = React.forwardRef<HTMLImageElement, AvatarPrimitive.Image.Props>(function AvatarImage({ className, ...props }, ref): React.JSX.Element {
 	return <AvatarPrimitive.Image ref={ref} data-slot="avatar-image" className={cn("aspect-square size-full rounded-full object-cover", className)} {...props} />;
 });
 
+/** Shown while the image loads, if it fails, or when there is none: initials or an icon. */
 const AvatarFallback = React.forwardRef<HTMLSpanElement, AvatarPrimitive.Fallback.Props>(function AvatarFallback({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<AvatarPrimitive.Fallback
@@ -48,6 +52,7 @@ const AvatarFallback = React.forwardRef<HTMLSpanElement, AvatarPrimitive.Fallbac
 	);
 });
 
+/** A dot or a mark pinned to the avatar's corner, such as presence or verification. */
 const AvatarBadge = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function AvatarBadge({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<span
@@ -65,6 +70,7 @@ const AvatarBadge = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span
 	);
 });
 
+/** Overlaps several avatars into a stack. */
 const AvatarGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function AvatarGroup({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -76,6 +82,7 @@ const AvatarGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">
 	);
 });
 
+/** The "+5" at the end of a group, for the people not shown. */
 const AvatarGroupCount = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function AvatarGroupCount({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div

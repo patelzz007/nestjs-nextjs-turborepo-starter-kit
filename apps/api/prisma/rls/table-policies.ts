@@ -184,6 +184,7 @@ export const TABLE_POLICIES: Readonly<Record<string, readonly TablePolicy[]>> = 
 	ProductImage: [{ name: "product_images_catalog", rule: "system" }],
 	PushDevice: [{ name: "push_device_own", rule: "ownerOrSystem", column: "userId" }],
 	ReceivedWebhook: [{ name: "received_webhook_bypass", rule: "system" }],
+	DocsSyncRun: [{ name: "docs_sync_run_bypass", rule: "system" }],
 	RefreshToken: [{ name: "refresh_tokens_own", rule: "ownerOrSystem", column: "userId" }],
 	Region: [{ name: "regions_read", rule: "readableByAll" }],
 	ResourceAcl: [],

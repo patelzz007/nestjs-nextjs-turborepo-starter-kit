@@ -18,7 +18,9 @@ export interface UserAvatarProps {
 	 * beside the avatar (a decorative picture is not read twice).
 	 */
 	readonly alt?: string | undefined;
+	/** Classes for the avatar, including its size (`size-10`). */
 	readonly className?: string | undefined;
+	/** Classes for the initials fallback. */
 	readonly fallbackClassName?: string | undefined;
 }
 

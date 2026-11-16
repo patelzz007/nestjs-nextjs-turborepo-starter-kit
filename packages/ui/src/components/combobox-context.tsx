@@ -93,6 +93,7 @@ export function extractStringChild(children: React.ReactNode): string | undefine
 	return parsed.success ? parsed.data : undefined;
 }
 
+/** A ref for the element the popup should line up with (the chips field in multiple mode). */
 export function useComboboxAnchor(): React.RefObject<HTMLDivElement | null> {
 	return React.useRef<HTMLDivElement | null>(null);
 }

@@ -88,6 +88,7 @@ export interface CascaderStateContextValue {
 
 const CascaderStateContext = React.createContext<CascaderStateContextValue | null>(null);
 
+/** The cascader's state (value, path, query, open) for a custom part, inside a `Cascader`. */
 export function useCascaderState(): CascaderStateContextValue {
 	const context = React.useContext(CascaderStateContext);
 	if (context === null) {
@@ -189,6 +190,7 @@ export interface CascaderActionsContextValue {
 
 const CascaderActionsContext = React.createContext<CascaderActionsContextValue | null>(null);
 
+/** The cascader's actions (open a branch, go back, select, clear) for a custom part, inside a `Cascader`. */
 export function useCascaderActions(): CascaderActionsContextValue {
 	const context = React.useContext(CascaderActionsContext);
 	if (context === null) {
@@ -218,6 +220,7 @@ const NO_RENDER_PROPS: CascaderRenderContextValue = { renderItem: undefined, ren
 
 const CascaderRenderContext = React.createContext<CascaderRenderContextValue>(NO_RENDER_PROPS);
 
+/** How the cascader draws rows (the mode, the item renderer, labels), for a custom part, inside a `Cascader`. */
 export function useCascaderRender(): CascaderRenderContextValue {
 	return React.useContext(CascaderRenderContext);
 }
@@ -246,6 +249,7 @@ export interface CascaderHighlightStore {
 /** No row highlighted. */
 export const CASCADER_NO_HIGHLIGHT: CascaderHighlight = { index: -1, value: null };
 
+/** A store for the highlighted row, so moving the highlight re-renders only the rows it leaves and enters. */
 export function createCascaderHighlightStore(): CascaderHighlightStore {
 	let snapshot: CascaderHighlight = CASCADER_NO_HIGHLIGHT;
 	const listeners = new Set<() => void>();

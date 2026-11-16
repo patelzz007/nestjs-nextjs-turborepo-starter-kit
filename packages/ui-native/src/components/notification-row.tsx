@@ -21,7 +21,7 @@ import { Icon, type LucideIcon } from "./icon";
 import { iconTileGlyphVariants, iconTileVariants, type IconTileTone } from "./icon-tile";
 import { RelativeTime, SHORT_RELATIVE_TIME_LABELS, formatRelativeTime } from "./relative-time";
 
-export const notificationRowVariants = cva("rounded-2xl", {
+export const notificationRowVariants = cva("rounded-card", {
 	variants: {
 		/** An unread notice is lifted onto the card's surface, so the new ones stand out of a long list at a glance without tinting the page. */
 		unread: { true: "bg-card", false: "" },
@@ -29,7 +29,7 @@ export const notificationRowVariants = cva("rounded-2xl", {
 	defaultVariants: { unread: false },
 });
 
-export const notificationRowMessageVariants = cva("font-sans text-sm leading-snug", {
+export const notificationRowMessageVariants = cva("text-body font-sans leading-snug", {
 	variants: {
 		unread: { true: "text-foreground", false: "text-muted-foreground" },
 	},

@@ -30,6 +30,9 @@ export interface AppShellProps {
 	readonly children: React.ReactNode;
 }
 
+/** How far a bottom toast floats above the home indicator. */
+const TOAST_BOTTOM_GAP = 16;
+
 export function AppShell({ children }: AppShellProps): React.JSX.Element {
 	// The drawer's store lives as long as the shell: signing out unmounts it, so the drawer starts closed next time.
 	// A tapped push reports itself opened and opens the inbox (ADR 070).
@@ -45,6 +48,8 @@ export function AppShell({ children }: AppShellProps): React.JSX.Element {
 	// Toasts drop in just under the header's controls (the pinned row), right below the bell — not under
 	// the subtitle line, which is gone once the header collapses and would leave a gap above the toast.
 	const toastTop = pageHeaderControlsBottom(insets.top);
+	// A bottom toast floats this far above the home indicator.
+	const toastBottom = insets.bottom + TOAST_BOTTOM_GAP;
 	// The header's scroll link (src/lib/page-header-scroll.tsx): the focused page's scroll position and how far the header collapses over it.
 	const scrollY = useSharedValue(0);
 	const collapseDistance = useSharedValue(0);
@@ -66,7 +71,7 @@ export function AppShell({ children }: AppShellProps): React.JSX.Element {
 									<View className="flex-1">
 										{children}
 										<AppHeader scroll={headerScroll} onHeightChange={setHeaderHeight} onCollapseDistanceChange={reportCollapseDistance} />
-										<ToastHost top={toastTop} />
+										<ToastHost top={toastTop} bottom={toastBottom} />
 										<ProfileLanguageSync />
 									</View>
 								</PageHeaderScrollProvider>

@@ -32,14 +32,14 @@ export const detailItemVariants = cva("", {
 
 export const detailLabelVariants = cva("font-sans text-muted-foreground", {
 	variants: {
-		size: { md: "text-sm", sm: "text-xs" },
+		size: { md: "text-body", sm: "text-caption" },
 	},
 	defaultVariants: { size: "md" },
 });
 
 export const detailValueVariants = cva("shrink font-sans text-foreground", {
 	variants: {
-		size: { md: "text-sm", sm: "text-xs" },
+		size: { md: "text-body", sm: "text-caption" },
 	},
 	defaultVariants: { size: "md" },
 });

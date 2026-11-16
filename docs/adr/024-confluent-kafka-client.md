@@ -3,8 +3,11 @@ title: "ADR 024: Confluent Kafka Client (librdkafka) Instead of kafkajs"
 tags: ["adr", "kafka", "messaging", "analytics-consumer", "security"]
 description: "Both Kafka clients (the API producer and the analytics consumer) use @confluentinc/kafka-javascript through its KafkaJS-compatible API; kafkajs and its local patch are gone. Topics are provisioned explicitly, TLS/SASL is configurable, publishing never fakes success."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791000000000
 lastUpdated: 1791000000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792438386000
+coverImage: "/images/covers/adr/024-confluent-kafka-client.webp"
 order: 24
 ---
 

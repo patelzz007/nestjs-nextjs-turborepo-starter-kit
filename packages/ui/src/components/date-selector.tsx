@@ -739,7 +739,9 @@ export interface DateSelectorProps extends Omit<React.HTMLAttributes<HTMLDivElem
 	readonly allowRange?: boolean | undefined;
 	/** The period tabs to offer, in the standard order. */
 	readonly periodTypes?: readonly DateSelectorPeriodType[] | undefined;
+	/** The initial period type. */
 	readonly defaultPeriodType?: DateSelectorPeriodType | undefined;
+	/** The initial filter operator. */
 	readonly defaultFilterType?: DateSelectorFilterType | undefined;
 	/** Locks the filter operator; the filter tabs are disabled. */
 	readonly presetMode?: DateSelectorFilterType | undefined;
@@ -749,7 +751,9 @@ export interface DateSelectorProps extends Omit<React.HTMLAttributes<HTMLDivElem
 	readonly showTwoMonths?: boolean | undefined;
 	/** A heading beside the filter tabs; also the selector's accessible name. */
 	readonly label?: string | undefined;
+	/** The number of years to show in the year/month/quarter list. */
 	readonly yearRange?: number | undefined;
+	/** The reference year for the year selection list. */
 	readonly baseYear?: number | undefined;
 	/** First year of the period / year lists. Defaults to eleven years before `maxYear`. */
 	readonly minYear?: number | undefined;
@@ -763,8 +767,11 @@ export interface DateSelectorProps extends Omit<React.HTMLAttributes<HTMLDivElem
 	readonly dayDateFormat?: string | undefined;
 	/** Extra date-fns patterns accepted when a day is typed. */
 	readonly dayDateFormats?: readonly string[] | undefined;
+	/** The first day of the week in the day grid: 0 is Sunday, 1 is Monday. */
 	readonly weekStartsOn?: WeekStartsOn | undefined;
+	/** Disables every control. */
 	readonly disabled?: boolean | undefined;
+	/** Shows the selector as busy. */
 	readonly loading?: boolean | undefined;
 }
 

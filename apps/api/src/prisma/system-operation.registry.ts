@@ -896,6 +896,14 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		"Read the received-webhook log for the admin viewer (bypass-only ReceivedWebhook, ADR 081) — only after the AUDIT_LOG permission check",
 		tables("ReceivedWebhook"),
 	),
+	"docs_publishing.record": runtime(
+		"Record a docs sync run the sync reported, authenticated by its own token (bypass-only DocsSyncRun, ADR 084); also prunes rows past the retention",
+		tables("DocsSyncRun"),
+	),
+	"docs_publishing.read": runtime(
+		"Read the docs sync runs for the Operations console (bypass-only DocsSyncRun, ADR 084), only after the DOCS_SYNC permission check",
+		tables("DocsSyncRun"),
+	),
 	"webhooks.outbound.sweep": routinePoller(
 		"Outgoing webhooks (ADR 082), every few seconds: fan new events out to the subscribed active endpoints of their tenant (one delivery each) and claim the deliveries that are due",
 		tables("WebhookEvent", "WebhookEndpoint", "WebhookDelivery"),

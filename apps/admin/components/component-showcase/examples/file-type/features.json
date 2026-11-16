@@ -1,0 +1,107 @@
+[
+	{
+		"id": "c-file-type-1",
+		"label": "Common Formats",
+		"description": "Common formats. Best for a 5 column grid of 10 everyday formats in the default outline at 40px, uncaptioned because each icon names itself.",
+		"file": "file-type-1",
+		"export": "FileType1Example"
+	},
+	{
+		"id": "c-file-type-2",
+		"label": "Variants",
+		"description": "Outline, solid, light and mono. Best for one row per variant over the same 5 types, PDF, DOCX, XLSX, JPG and ZIP, so only the paint changes between rows.",
+		"file": "file-type-2",
+		"export": "FileType2Example"
+	},
+	{
+		"id": "c-file-type-3",
+		"label": "Sizes",
+		"description": "Sizes. Best for a PDF at each size preset from mini to xl, captioned with the prop value and its pixel box, bottoms aligned.",
+		"file": "file-type-3",
+		"export": "FileType3Example"
+	},
+	{
+		"id": "c-file-type-4",
+		"label": "Family Glyphs",
+		"description": "Family glyphs. Best for all 13 family types from the exported category list, captioned by name, with the blank empty page placed last.",
+		"file": "file-type-4",
+		"export": "FileType4Example"
+	},
+	{
+		"id": "c-file-type-5",
+		"label": "All Formats",
+		"description": "All formats. Best for the full extension table split into 11 family rows with counts, painted in whichever of 4 variant tabs is active.",
+		"file": "file-type-5",
+		"export": "FileType5Example"
+	},
+	{
+		"id": "c-file-type-7",
+		"label": "Attachment List",
+		"description": "Attachment list. Best for static rows pairing a light page with the name, size and a dated time element, ending in a ghost download button.",
+		"file": "file-type-7",
+		"export": "FileType7Example"
+	},
+	{
+		"id": "c-file-type-8",
+		"label": "Upload Queue",
+		"description": "Upload queue. Best for a live count of uploaded and failed items above rows that swap a named bar for a size line, with retry and cancel.",
+		"file": "file-type-8",
+		"export": "FileType8Example"
+	},
+	{
+		"id": "c-file-type-9",
+		"label": "Resolve From Name",
+		"description": "Resolve from a file name. Best for sample chips under one input with a clear button, the result in all 4 variants and a live Type and Family readout.",
+		"file": "file-type-9",
+		"export": "FileType9Example"
+	},
+	{
+		"id": "c-file-type-10",
+		"label": "Custom Labels",
+		"description": "Custom labels. Best for a revision history newest first, rows tagged SIGNED or V1 to V3, under a large blank page carrying a CA-1042 code.",
+		"file": "file-type-10",
+		"export": "FileType10Example"
+	},
+	{
+		"id": "c-file-type-11",
+		"label": "Custom Colors",
+		"description": "Custom colors and unknown types. Best for the same 4 CAD and 3D formats twice, on the default neutral page and then recolored teal, indigo, orange and rose.",
+		"file": "file-type-11",
+		"export": "FileType11Example"
+	},
+	{
+		"id": "c-file-type-12",
+		"label": "Format Picker",
+		"description": "Export format picker. Best for a preselected PDF choice among 5, a button labeled with the picked extension, and a status line naming the result.",
+		"file": "file-type-12",
+		"export": "FileType12Example"
+	},
+	{
+		"id": "c-file-type-13",
+		"label": "Locked & Starred",
+		"description": "Locked, linked and starred. Best for pairs of outline and solid pages for 6 states, from verified and hidden to uploading, captioned with state and format.",
+		"file": "file-type-13",
+		"export": "FileType13Example"
+	},
+	{
+		"id": "c-file-type-14",
+		"label": "Restyled Labels",
+		"description": "Restyled labels. Best for each badge recipe printed beside its class string, from a pill and an inverted band to a DRAFT tag in amber.",
+		"file": "file-type-14",
+		"export": "FileType14Example"
+	},
+	{
+		"id": "c-file-type-15",
+		"label": "Dotfiles & Build Names",
+		"description": "Dotfiles and build names. Best for a 2 column list of 12 repository entries, dotfiles and extensionless build scripts among them, each icon read from the name.",
+		"file": "file-type-15",
+		"export": "FileType15Example"
+	},
+	{
+		"id": "c-file-type-6",
+		"label": "File Browser",
+		"description": "Data grid file browser. Best for folders sorted ahead of files, a Type column filled from each family, and item counts in place of sizes for folders.",
+		"file": "file-type-6",
+		"export": "FileType6Example"
+	}
+]

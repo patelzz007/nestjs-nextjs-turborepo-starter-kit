@@ -2,8 +2,11 @@
 title: "Tooling reference"
 description: "Every tool in packages/tooling, who runs it, the settings it reads, and the config files that keep their own format."
 author: "Platform Team"
+category: "Tooling"
+date: 1793923200000
 lastUpdated: 1793923200000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793997234024
+coverImage: "/images/covers/technical/tooling/tools.webp"
 order: 20
 tags: ["tooling"]
 ---
@@ -24,6 +27,8 @@ Tools that only fit this starter's architecture are in `src/starter/`. This repo
 | `ci-changes/cli.ts` | Decides whether a pull request touches anything but documentation. | GitHub CI | — |
 | `ci-local/cli.ts` | Runs CI's jobs on this machine. | You | `folders`, `workspaces`, `ports`, `artifacts` |
 | `dependency-exceptions/cli.ts` | Checks dated dependency exceptions. | GitHub CI | — |
+| `docs-guard/cli.ts` | Keeps hand edits out of generated docs, and decides whether a docs sync may merge by itself. | GitHub CI | — |
+| `deploy/docs-gate-cli.ts` | Receives, checks and activates a docs release on the server. | Deploy | `folders`, `ports` |
 | `deploy/gate-cli.ts` | Gates a deploy on the previous release. | Deploy | `deploy` |
 | `deploy/release-cli.ts` | Activates a release on the server. | Deploy | `deploy` |
 | `dev-timing/cli.ts` | Measures how fast `pnpm dev` comes up. | You | `ports`, `workspaces`, `artifacts` |

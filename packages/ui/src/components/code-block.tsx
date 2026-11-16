@@ -11,6 +11,8 @@ import {
 	highlightCode,
 	markdownCodeProps,
 	markdownFences,
+	DEFAULT_CODE_BLOCK_THEMES,
+	isDarkCodeSurface,
 	parseUnifiedDiff,
 	resolveCodeBlockLanguage,
 	toPlainLines,
@@ -75,17 +77,29 @@ export { type CodeBlockContentProps } from "./code-block-surface";
 /* -------------------------------------------------------------------------- */
 
 export type CodeBlockProps = {
+	/** The source to render. */
 	code?: string | undefined;
+	/** Grammar to use. Unknown values render as plain text. */
 	language?: string | undefined;
+	/** Pre-highlighted lines. Skips the client highlighter entirely. */
 	lines?: CodeBlockLine[] | undefined;
+	/** Theme pair. */
 	themes?: CodeBlockThemes | undefined;
+	/** `false` renders plain text and never loads shiki. */
 	highlight?: boolean | undefined;
+	/** Renders the gutter as a CSS counter. */
 	showLineNumbers?: boolean | undefined;
+	/** First displayed line number. */
 	startLine?: number | undefined;
+	/** Soft wrap, controlled. */
 	wrap?: boolean | undefined;
+	/** Soft wrap, uncontrolled. */
 	defaultWrap?: boolean | undefined;
+	/** Fired when wrap changes. */
 	onWrapChange?: ((wrap: boolean) => void) | undefined;
+	/** Collapses taller content. */
 	maxLines?: number | undefined;
+	/** `ghost` removes the border and background; padding stays. */
 	variant?: "default" | "ghost" | undefined;
 	/** Accessible name of the code region. Defaults to `labels.languageCode(language)` / `labels.code`. */
 	label?: string | undefined;
@@ -95,22 +109,35 @@ export type CodeBlockProps = {
 	 * stable (a module constant or a memo) - it reaches every memoised row.
 	 */
 	labels?: UiKitLabelsOverride<"codeBlock"> | undefined;
+	/** Source lines to mark, as `[2,3]` or `"2-4,7"`. */
 	highlightedLines?: CodeBlockLineSpec | undefined;
+	/** Words to mark. */
 	highlightedWords?: CodeBlockWordSpec[] | undefined;
+	/** Lines to keep sharp; the rest dim. */
 	focusedLines?: CodeBlockLineSpec | undefined;
+	/** Diff lines. */
 	diff?: CodeBlockDiffSpec | undefined;
+	/** Diagnostic lines. */
 	lineLevels?: CodeBlockLevelSpec | undefined;
+	/** Passed to shiki. Line classes become line state. */
 	transformers?: CodeBlockTransformer[] | undefined;
+	/** Caret, stick-to-bottom, `aria-busy`. */
 	streaming?: boolean | undefined;
+	/** Enables line selection. */
 	selectable?: boolean | undefined;
+	/** Selected lines, controlled. */
 	selectedLines?: number[] | undefined;
+	/** Selected lines, uncontrolled. */
 	defaultSelectedLines?: number[] | undefined;
+	/** Fired on selection change. */
 	onSelectedLinesChange?: ((lines: number[]) => void) | undefined;
 	/** Screen-reader text announced when a stream finishes, for localisation. Overrides `labels.complete`. */
 	completeAnnouncement?: string | undefined;
 	/** Collapsed state under `maxLines`, controlled. */
 	expanded?: boolean | undefined;
+	/** Collapsed state, uncontrolled. */
 	defaultExpanded?: boolean | undefined;
+	/** Fired when the expand control toggles. */
 	onExpandedChange?: ((expanded: boolean) => void) | undefined;
 	/** Detects fold regions from indentation and renders a toggle per region. */
 	foldable?: boolean | undefined;
@@ -124,7 +151,9 @@ export type CodeBlockProps = {
 	folded?: number[] | undefined;
 	/** Folded regions by their start line, uncontrolled. */
 	defaultFolded?: number[] | undefined;
+	/** Fired when a region folds or unfolds. */
 	onFoldedChange?: ((folded: number[]) => void) | undefined;
+	/** Rendered on the active line. */
 	children?: React.ReactNode | undefined;
 } & Omit<React.ComponentPropsWithoutRef<"div">, "children" | "onSelect">;
 
@@ -537,6 +566,8 @@ const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(function Code
 		builtInSurfaceRendered: !hasContent,
 	};
 
+	const darkSurface = isDarkCodeSurface(themes ?? DEFAULT_CODE_BLOCK_THEMES);
+
 	return (
 		<CodeBlockConfigContext.Provider value={configValue}>
 			<CodeBlockDocumentContext.Provider value={documentValue}>
@@ -550,10 +581,14 @@ const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(function Code
 						data-foldable={foldable ? true : undefined}
 						data-gutter-channel={gutterChannel ? true : undefined}
 						data-has-header={hasHeader ? true : undefined}
+						data-surface={darkSurface ? "dark" : undefined}
 						className={cn(
 							ROOT_BASE_CLASS,
 							ROOT_RADIUS_CLASS,
 							ROOT_TOKEN_CLASS,
+							// A dark theme (One Dark Pro by default) scopes the dark design tokens onto the block, so its
+							// surface, chrome and token colours stay legible inside the light app theme too.
+							darkSurface ? "dark" : undefined,
 							variant === "default" ? ROOT_SURFACE_CLASS : undefined,
 							variant === "ghost" ? ROOT_GHOST_CLASS : undefined,
 							className,

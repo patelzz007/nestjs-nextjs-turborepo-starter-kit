@@ -26,9 +26,11 @@ export const STATUS_TONE_BADGE_VARIANT: Readonly<Record<StatusTone, BadgeVariant
 };
 
 export interface StatusBadgeProps extends Omit<BadgeProps, "variant"> {
+	/** The status's meaning: `success`, `warning`, `danger`, `info`, `neutral` or `muted`. */
 	readonly tone: StatusTone;
 }
 
+/** A `Badge` driven by a semantic `tone`, so a status looks the same everywhere. Map each domain status to a tone once. */
 export const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(function StatusBadge({ tone, ...props }, ref): React.ReactElement {
 	return <Badge ref={ref} data-tone={tone} variant={STATUS_TONE_BADGE_VARIANT[tone]} {...props} />;
 });

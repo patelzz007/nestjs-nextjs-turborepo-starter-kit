@@ -1,0 +1,65 @@
+[
+	{
+		"id": "c-tabs-1",
+		"label": "Basic",
+		"description": "Basic tabs.. Best for the smallest setup: 2 triggers on a muted track switching between an account card and a password card.",
+		"file": "tabs-1",
+		"export": "Tabs1Example"
+	},
+	{
+		"id": "c-tabs-2",
+		"label": "Line Variant",
+		"description": "Tabs with line variant.. Best for an underlined row stretched full width over 3 cards for account, password and preference forms.",
+		"file": "tabs-2",
+		"export": "Tabs2Example"
+	},
+	{
+		"id": "c-tabs-3",
+		"label": "Vertical",
+		"description": "Tabs with vertical orientation.. Best for a muted column of 3 triggers on the left, with the matching form card opening to its right.",
+		"file": "tabs-3",
+		"export": "Tabs3Example"
+	},
+	{
+		"id": "c-tabs-4",
+		"label": "Vertical Line",
+		"description": "Tabs with vertical orientation and line variant.. Best for a transparent left column where a thin bar on its right edge marks the active section, beside wider cards.",
+		"file": "tabs-4",
+		"export": "Tabs4Example"
+	},
+	{
+		"id": "c-tabs-5",
+		"label": "Icons",
+		"description": "Tabs with icons.. Best for user, lock and gear icons ahead of each label on a muted track sized to its content, over 3 form cards.",
+		"file": "tabs-5",
+		"export": "Tabs5Example"
+	},
+	{
+		"id": "c-tabs-6",
+		"label": "Full Width Icons",
+		"description": "Tabs with icons. Best for a full width muted track of Overview, Analytics and Settings with icons, over 1 line placeholder cards.",
+		"file": "tabs-6",
+		"export": "Tabs6Example"
+	},
+	{
+		"id": "c-tabs-7",
+		"label": "Badge Counts",
+		"description": "Tabs with badge counts. Best for mail folders on an underlined row, with tinted count badges on Inbox, Drafts and Spam and none on Sent.",
+		"file": "tabs-7",
+		"export": "Tabs7Example"
+	},
+	{
+		"id": "c-tabs-8",
+		"label": "Side List Icons",
+		"description": "Tabs with icons and line variant. Best for a side list of Projects, Tasks, Team and Reports, each led by an icon, 2 ending in a right aligned count badge.",
+		"file": "tabs-8",
+		"export": "Tabs8Example"
+	},
+	{
+		"id": "c-tabs-9",
+		"label": "Segmented Control",
+		"description": "Segmented control tabs. Best for a controlled Daily to Yearly switch kept in React state, each panel showing one large visitor total.",
+		"file": "tabs-9",
+		"export": "Tabs9Example"
+	}
+]

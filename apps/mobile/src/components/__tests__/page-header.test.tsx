@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
+import { Text } from "react-native";
 
 import type * as Reanimated from "react-native-reanimated";
 import { makeMutable } from "react-native-reanimated";
@@ -74,6 +75,15 @@ describe("PageHeader", () => {
 		expect(actions.onMenu).toHaveBeenCalledTimes(1);
 		expect(actions.onNotifications).toHaveBeenCalledTimes(1);
 		expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+	});
+
+	it("shows a breadcrumb in the subtitle's place, on the same one line, so the header is as tall on every page", async () => {
+		const actions = handlers();
+		await render(header(actions, { breadcrumb: <Text>Settings › Security</Text> }));
+
+		expect(screen.getByText("Settings › Security")).toBeOnTheScreen();
+		expect(screen.queryByText("Your account at a glance")).toBeNull();
+		expect(String(screen.getByTestId("header-subtitle-text").props.className).split(" ")).toContain("h-6");
 	});
 
 	it("opens the command palette from the search button, left of the notifications button", async () => {
@@ -175,7 +185,7 @@ describe("PageHeader", () => {
 		await render(header(handlers()));
 
 		const titleClasses = String(screen.getByTestId("header-title").props.className).split(" ");
-		expect(titleClasses).toEqual(expect.arrayContaining(["font-sans-bold", "text-2xl", "text-center"]));
+		expect(titleClasses).toEqual(expect.arrayContaining(["font-sans-bold", "text-h2", "text-center"]));
 		expect(screen.getByTestId("header-subtitle")).toHaveProp("className", expect.stringContaining("text-center"));
 	});
 

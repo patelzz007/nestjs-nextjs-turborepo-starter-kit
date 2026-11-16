@@ -689,8 +689,13 @@ export const EventCalendarMoreIndicator = React.forwardRef<HTMLButtonElement, Ev
 	const stopPropagation = React.useCallback((event: React.SyntheticEvent): void => {
 		event.stopPropagation();
 	}, []);
+	const close = React.useCallback((): void => {
+		setOpen(false);
+	}, []);
 
 	const custom = viewConfig.renderMoreIndicator?.({ day, count, segments });
+	const dayHeading = format(toZoned(day, timeZone), i18n.formats.moreDayHeader, locale === undefined ? {} : { locale });
+	const hasCustomContent = viewConfig.renderMoreContent !== undefined;
 	return (
 		<Popover open={open ? !isDragging : false} onOpenChange={handleOpenChange}>
 			<PopoverTrigger
@@ -708,20 +713,28 @@ export const EventCalendarMoreIndicator = React.forwardRef<HTMLButtonElement, Ev
 			<PopoverContent
 				data-slot="event-calendar-more-popover"
 				align={viewConfig.morePopoverAlign}
-				aria-labelledby={headerId}
+				// A dialog needs a name: the built-in body labels it with its day header; a custom body has none, so the same day is the label.
+				aria-labelledby={hasCustomContent ? undefined : headerId}
+				aria-label={hasCustomContent ? dayHeading : undefined}
 				className={cn("w-64 gap-1 p-2 text-xs", viewConfig.classNames?.morePopover)}
 				onClick={stopPropagation}
 				onPointerDown={stopPropagation}>
-				<div id={headerId} className={cn("px-1 py-1 font-medium text-muted-foreground", viewConfig.classNames?.morePopoverHeader)}>
-					{format(toZoned(day, timeZone), i18n.formats.moreDayHeader, locale === undefined ? {} : { locale })}
-				</div>
-				<ScrollArea className="min-h-0 **:data-[slot=scroll-area-viewport]:max-h-(--ec-more-max-height,16rem)">
-					<div className="flex flex-col gap-1 py-1 ps-1 pe-3">
-						{segments.map((segment: EventCalendarSegment): React.JSX.Element => (
-							<EventCalendarEvent key={segment.occurrence.key} segment={segment} />
-						))}
-					</div>
-				</ScrollArea>
+				{viewConfig.renderMoreContent === undefined ? (
+					<>
+						<div id={headerId} className={cn("px-1 py-1 font-medium text-muted-foreground", viewConfig.classNames?.morePopoverHeader)}>
+							{dayHeading}
+						</div>
+						<ScrollArea className="min-h-0 **:data-[slot=scroll-area-viewport]:max-h-(--ec-more-max-height,16rem)">
+							<div className="flex flex-col gap-1 py-1 ps-1 pe-3">
+								{segments.map((segment: EventCalendarSegment): React.JSX.Element => (
+									<EventCalendarEvent key={segment.occurrence.key} segment={segment} />
+								))}
+							</div>
+						</ScrollArea>
+					</>
+				) : (
+					viewConfig.renderMoreContent({ day, segments, close })
+				)}
 			</PopoverContent>
 		</Popover>
 	);

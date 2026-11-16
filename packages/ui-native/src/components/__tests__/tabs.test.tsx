@@ -80,8 +80,8 @@ describe("Tabs", () => {
 	});
 
 	it.each([
-		["md", "text-sm"],
-		["sm", "text-xs"],
+		["md", "text-body"],
+		["sm", "text-caption"],
 	] satisfies [TabsProps["size"], string][])("has a %s size", async (size, label) => {
 		await render(tabs({ size }));
 		expect(screen.getByText("Overview")).toHaveProp("className", expect.stringContaining(label));

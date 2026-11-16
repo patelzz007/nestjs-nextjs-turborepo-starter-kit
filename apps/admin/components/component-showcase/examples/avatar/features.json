@@ -1,0 +1,247 @@
+[
+	{
+		"id": "c-avatar-1",
+		"label": "Basic",
+		"description": "Basic avatar. Best for the minimal markup: 1 photo at the default size with 2 letter initials kept as the fallback.",
+		"file": "avatar-1",
+		"export": "Avatar1Example"
+	},
+	{
+		"id": "c-avatar-2",
+		"label": "Fallbacks",
+		"description": "Avatar with fallback. Best for photo free placeholders: 2 letter initials and a user icon, both on the muted fallback fill.",
+		"file": "avatar-2",
+		"export": "Avatar2Example"
+	},
+	{
+		"id": "c-avatar-3",
+		"label": "Sizes",
+		"description": "Avatars with different sizes. Best for the 3 built-in steps of the size prop, sm, default and lg, shown side by side on 1 photo.",
+		"file": "avatar-3",
+		"export": "Avatar3Example"
+	},
+	{
+		"id": "c-avatar-4",
+		"label": "Border Radius",
+		"description": "Avatars with different border radiuses. Best for square and soft cornered photos with md, lg and xl radius set next to the default circle.",
+		"file": "avatar-4",
+		"export": "Avatar4Example"
+	},
+	{
+		"id": "c-avatar-5",
+		"label": "Custom Sizes",
+		"description": "Avatars with custom sizes. Best for free sizing through className at 16, 32, 48 and 64 pixels, beyond the 3 presets of the size prop.",
+		"file": "avatar-5",
+		"export": "Avatar5Example"
+	},
+	{
+		"id": "c-avatar-6",
+		"label": "Status Dots",
+		"description": "Avatar with an online status badge. Best for plain presence dots in the default bottom right spot, colored primary, green, yellow and destructive.",
+		"file": "avatar-6",
+		"export": "Avatar6Example"
+	},
+	{
+		"id": "c-avatar-7",
+		"label": "Badge Icons",
+		"description": "Avatar with badge icon. Best for corner badges holding a plus, check, star or shield icon on primary, success, warning and info fills.",
+		"file": "avatar-7",
+		"export": "Avatar7Example"
+	},
+	{
+		"id": "c-avatar-8",
+		"label": "Round Badge Corners",
+		"description": "Avatar with different badge positions. Best for round photos with the dot moved to each of the 4 corners, sitting on the edge of the circle.",
+		"file": "avatar-8",
+		"export": "Avatar8Example"
+	},
+	{
+		"id": "c-avatar-9",
+		"label": "Square Badge Corners",
+		"description": "Avatar with different badge positions. Best for square photos with the dot pushed 4 pixels past each of the 4 corners.",
+		"file": "avatar-9",
+		"export": "Avatar9Example"
+	},
+	{
+		"id": "c-avatar-10",
+		"label": "Avatar Group",
+		"description": "Basic avatar group. Best for a stack of 3 overlapping photos with a background ring and no count chip at the end.",
+		"file": "avatar-10",
+		"export": "Avatar10Example"
+	},
+	{
+		"id": "c-avatar-11",
+		"label": "Group With Count",
+		"description": "Avatar group with numerical count. Best for a 3 photo stack closed by a muted chip from the group count part that reads +3.",
+		"file": "avatar-11",
+		"export": "Avatar11Example"
+	},
+	{
+		"id": "c-avatar-12",
+		"label": "Plus Chip Group",
+		"description": "Avatar group with an icon count. Best for a 3 photo stack ending in a round plus chip in place of a number.",
+		"file": "avatar-12",
+		"export": "Avatar12Example"
+	},
+	{
+		"id": "c-avatar-13",
+		"label": "Border Rings",
+		"description": "Avatar with a distinct border ring. Best for offset outer rings in 4 colors, primary, destructive, violet and yellow, around each photo.",
+		"file": "avatar-13",
+		"export": "Avatar13Example"
+	},
+	{
+		"id": "c-avatar-14",
+		"label": "Soft Fallbacks",
+		"description": "Avatar with light background color fallback. Best for initials on soft tinted fills with a matching border, including dark mode shades for green and fuchsia.",
+		"file": "avatar-14",
+		"export": "Avatar14Example"
+	},
+	{
+		"id": "c-avatar-15",
+		"label": "Solid Fallbacks",
+		"description": "Avatar with a solid background color fallback. Best for initials in white or primary foreground text on full strength primary, destructive, green and blue fills.",
+		"file": "avatar-15",
+		"export": "Avatar15Example"
+	},
+	{
+		"id": "c-avatar-16",
+		"label": "User Details",
+		"description": "Avatar with user details and badge. Best for a name line with a small Pro badge and a job title stacked beside the photo.",
+		"file": "avatar-16",
+		"export": "Avatar16Example"
+	},
+	{
+		"id": "c-avatar-17",
+		"label": "Grayscale",
+		"description": "Avatar with grayscale image filter. Best for a single photo turned black and white by the grayscale class on the image only.",
+		"file": "avatar-17",
+		"export": "Avatar17Example"
+	},
+	{
+		"id": "c-avatar-18",
+		"label": "Group Presence",
+		"description": "Avatar group with online status on one. Best for a 3 person stack where only the first photo carries a success colored presence dot.",
+		"file": "avatar-18",
+		"export": "Avatar18Example"
+	},
+	{
+		"id": "c-avatar-19",
+		"label": "Outline Button",
+		"description": "Avatar inside small outline button. Best for a 20 pixel photo next to an @ handle inside a small outline button.",
+		"file": "avatar-19",
+		"export": "Avatar19Example"
+	},
+	{
+		"id": "c-avatar-20",
+		"label": "Social Proof Pill",
+		"description": "Avatar social proof with text label. Best for a bordered pill with 4 small stacked photos and a bold 100K+ figure in its caption.",
+		"file": "avatar-20",
+		"export": "Avatar20Example"
+	},
+	{
+		"id": "c-avatar-21",
+		"label": "Compact Social Proof",
+		"description": "Compact social proof with initials. Best for a Frame panel holding 4 developer photos and a Joined by 500+ developers caption.",
+		"file": "avatar-21",
+		"export": "Avatar21Example"
+	},
+	{
+		"id": "c-avatar-22",
+		"label": "Lift Tooltips",
+		"description": "Avatar group with hover tooltips and lift effect. Best for a hand built overlap where the hovered photo rises 4 pixels with a shadow and a name tooltip.",
+		"file": "avatar-22",
+		"export": "Avatar22Example"
+	},
+	{
+		"id": "c-avatar-23",
+		"label": "Hover Fan",
+		"description": "Avatar group with hover effect. Best for a stack that fans apart on hover, each photo sliding by its index and the hovered one growing 10 percent.",
+		"file": "avatar-23",
+		"export": "Avatar23Example"
+	},
+	{
+		"id": "c-avatar-24",
+		"label": "Fan With Tooltips",
+		"description": "Avatar group with hover effect and tooltips. Best for the fan out hover stack with a name tooltip on each photo, the Avatar itself rendered as the trigger.",
+		"file": "avatar-24",
+		"export": "Avatar24Example"
+	},
+	{
+		"id": "c-avatar-25",
+		"label": "Bordered Count Pill",
+		"description": "Avatar group with numerical count. Best for a bordered pill of 4 small photos split by background borders, with a plain +3 text tally.",
+		"file": "avatar-25",
+		"export": "Avatar25Example"
+	},
+	{
+		"id": "c-avatar-26",
+		"label": "Pill Outline Button",
+		"description": "Pilled small outline button with avatar. Best for a pill shaped outline button whose 24 pixel photo hugs its left edge inside a background border.",
+		"file": "avatar-26",
+		"export": "Avatar26Example"
+	},
+	{
+		"id": "c-avatar-27",
+		"label": "Pill Primary Button",
+		"description": "Pilled small button with avatar. Best for a solid primary pill button with a thin primary border around the 24 pixel photo at its left.",
+		"file": "avatar-27",
+		"export": "Avatar27Example"
+	},
+	{
+		"id": "c-avatar-28",
+		"label": "Empty State",
+		"description": "Avatar inside an empty state example. Best for a no collaborators prompt with 3 grayscale photos, an add person chip and invite copy below.",
+		"file": "avatar-28",
+		"export": "Avatar28Example"
+	},
+	{
+		"id": "c-avatar-29",
+		"label": "Group Add Button",
+		"description": "Avatar group with icon count and button. Best for a 3 photo stack with a +5 chip beside a round add user button that shows a tooltip.",
+		"file": "avatar-29",
+		"export": "Avatar29Example"
+	},
+	{
+		"id": "c-avatar-30",
+		"label": "Loading State",
+		"description": "Avatar with loading state demonstration. Best for a spinner over a 60 percent background veil on the photo, switched on and off by a demo timer.",
+		"file": "avatar-30",
+		"export": "Avatar30Example"
+	},
+	{
+		"id": "c-avatar-31",
+		"label": "Custom Badge",
+		"description": "Avatar with custom badge. Best for a blue verified rosette drawn as inline SVG, placed at a different corner on each of 4 large photos.",
+		"file": "avatar-31",
+		"export": "Avatar31Example"
+	},
+	{
+		"id": "c-avatar-32",
+		"label": "Pulsing Ring",
+		"description": "Avatar with ring animation. Best for a photo and green offset ring pulsing together, with a green dot drawn as a plain span past the bottom right.",
+		"file": "avatar-32",
+		"export": "Avatar32Example"
+	},
+	{
+		"id": "c-avatar-33",
+		"label": "Gradient Ring",
+		"description": "Avatar with gradient animated ring. Best for a story style ring: a blurred yellow to violet gradient spinning behind the photo, brighter on hover.",
+		"file": "avatar-33",
+		"export": "Avatar33Example"
+	},
+	{
+		"id": "c-avatar-34",
+		"label": "Multiple Badges",
+		"description": "Avatar with multiple badges. Best for a presence dot at the bottom right and a red count of 3 at the top right of one photo.",
+		"file": "avatar-34",
+		"export": "Avatar34Example"
+	},
+	{
+		"id": "c-avatar-35",
+		"label": "Dropdown Menu",
+		"description": "Compact avatar dropdown menu. Best for a pill trigger with photo, name and up down chevron that opens Profile, Settings, Teams, Invite and Log out.",
+		"file": "avatar-35",
+		"export": "Avatar35Example"
+	}
+]

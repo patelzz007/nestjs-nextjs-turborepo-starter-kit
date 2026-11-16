@@ -2,7 +2,7 @@
 
 import { useTenantSlug } from "@/contexts/tenancy/lib/tenant/use-tenant-slug";
 import { tenantRoutes } from "@/lib/routes";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -15,7 +15,7 @@ import { appRoute } from "@workspace/client/lib/navigation/app-route";
  * `TenantBootstrap` records it as the last opened tenant.
  */
 export function useSwitchTenant(): (tenantSlug: string) => void {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const currentTenantSlug = useTenantSlug();
 
 	return React.useCallback(

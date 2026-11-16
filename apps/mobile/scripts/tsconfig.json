@@ -1,0 +1,19 @@
+{
+	"extends": "@workspace/typescript-config/base.json",
+	"compilerOptions": {
+		// The app's Node scripts (the showcase generator's entry) run on Node directly (type stripping), unlike the
+		// app's own code, which the app's tsconfig checks for React Native: Node types here, none of React Native's.
+		"allowImportingTsExtensions": true,
+		// A workspace package's TypeScript source (its `development` export), never a stale build of it.
+		"customConditions": ["development"],
+		"declaration": false,
+		"declarationMap": false,
+		"erasableSyntaxOnly": true,
+		"lib": ["esnext"],
+		"noEmit": true,
+		"target": "ESNext",
+		"types": ["node"],
+		"verbatimModuleSyntax": true
+	},
+	"include": ["*.ts"]
+}

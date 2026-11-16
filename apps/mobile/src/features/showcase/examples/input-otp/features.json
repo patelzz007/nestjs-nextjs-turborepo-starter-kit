@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-input-otp-1",
+		"label": "Basic",
+		"description": "Basic OTP input. Best for the minimal markup: 6 slots split 3 and 3 by one separator, accepting any character.",
+		"file": "input-otp-1",
+		"export": "InputOtp1Example"
+	},
+	{
+		"id": "c-input-otp-2",
+		"label": "Digits Only",
+		"description": "OTP input with numeric digits. Best for one unbroken row of 6 slots that refuses anything but digits.",
+		"file": "input-otp-2",
+		"export": "InputOtp2Example"
+	},
+	{
+		"id": "c-input-otp-3",
+		"label": "Multiple Separators",
+		"description": "OTP input with multiple separators. Best for a controlled value prefilled with 123456, shown as 3 pairs between 2 separators.",
+		"file": "input-otp-3",
+		"export": "InputOtp3Example"
+	},
+	{
+		"id": "c-input-otp-4",
+		"label": "Letters & Numbers",
+		"description": "OTP input with letters and numbers. Best for a 6 character code that takes letters and digits but refuses symbols, with a hint between label and slots.",
+		"file": "input-otp-4",
+		"export": "InputOtp4Example"
+	},
+	{
+		"id": "c-input-otp-5",
+		"label": "PIN Code",
+		"description": "OTP input for PIN codes. Best for a 4 slot PIN in one group, digits only, with a short hint above the slots.",
+		"file": "input-otp-5",
+		"export": "InputOtp5Example"
+	},
+	{
+		"id": "c-input-otp-6",
+		"label": "Verification Card",
+		"description": "OTP input verification code. Best for a login check Card naming the email the code went to, with wider slots, a Resend Code button and a full width Verify.",
+		"file": "input-otp-6",
+		"export": "InputOtp6Example"
+	}
+]

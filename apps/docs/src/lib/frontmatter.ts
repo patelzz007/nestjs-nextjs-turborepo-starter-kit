@@ -1,21 +1,38 @@
+import { SyncedFromSchema } from "@workspace/docs-content/front-matter";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 /**
- * Front matter of the repo-root `docs/` guides and `docs/blog/` posts — the schemas the Astro content
- * collections used, unchanged, so a field that is missing or misspelt still fails the build.
+ * Front matter of the repo-root `docs/` guides and `docs/blog/` posts, so a field that is missing or misspelt
+ * still fails the build.
  *
- * `author`, `lastUpdated` (epoch ms) and `coverImage` are required on guides so no page ships undated or
- * without its cover; a post's cover is optional.
+ * Every page has an author, a category and three dates (epoch ms), so no page ships unfiled or undated:
+ *
+ * | Field | Meaning | Set by |
+ * |---|---|---|
+ * | `date` | First published | The writer, once |
+ * | `lastUpdated` | Last changed in a way a reader should know about | The writer |
+ * | `editedAt` | Last edited at all | The docs sync (the writing tool's edit time), or the last commit for a page no tool owns yet |
+ *
+ * A cover is optional on guides: a missing cover must never block a fix (plan §6). `source` marks a file the docs
+ * sync generated (ADR 084).
  */
+const PageFrontmatterFields = {
+	title: z.string().min(1),
+	author: z.string().min(1),
+	category: z.string().min(1),
+	date: z.number().int(),
+	lastUpdated: z.number().int(),
+	editedAt: z.number().int(),
+	source: SyncedFromSchema.optional(),
+};
+
 export const GuideFrontmatterSchema = z
 	.object({
-		title: z.string().min(1),
+		...PageFrontmatterFields,
 		description: z.string().optional(),
 		order: z.number().int().min(1).optional(),
-		author: z.string().min(1),
-		lastUpdated: z.number().int(),
-		coverImage: z.string().min(1),
+		coverImage: z.string().min(1).optional(),
 		tags: z.array(z.string()).default([]),
 	})
 	.strict();
@@ -23,11 +40,8 @@ export type GuideFrontmatter = z.output<typeof GuideFrontmatterSchema>;
 
 export const PostFrontmatterSchema = z
 	.object({
-		title: z.string().min(1),
+		...PageFrontmatterFields,
 		description: z.string().min(1),
-		author: z.string().min(1),
-		date: z.number().int(),
-		category: z.string().min(1),
 		status: z.string().optional(),
 		coverImage: z.string().optional(),
 	})

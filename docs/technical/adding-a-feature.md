@@ -3,8 +3,11 @@ title: "Adding a feature"
 description: "The end-to-end checklist for a new feature — contract, database, RLS, policy, repository, service, controller, client, UI, seed, tests, docs — using the sample category module as the template."
 order: 5
 author: "Platform Team"
+category: "Engineering"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&h=630&fit=crop"
+editedAt: 1794485004159
+coverImage: "/images/covers/technical/adding-a-feature.webp"
 tags: ["guide", "development", "workflow"]
 ---
 
@@ -19,7 +22,7 @@ The live template in this repo is the **sample category** module: contract
 `apps/api/src/contexts/catalog/`, admin pages `apps/admin/app/(panel)/catalog/categories/`.
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[1 Contract<br/>packages/shared] --> B[2 Schema + migration<br/>+ RLS + seed]
     B --> C[3 Permissions<br/>+ policies]
     C --> D[4 Repository → Service<br/>→ Controller]

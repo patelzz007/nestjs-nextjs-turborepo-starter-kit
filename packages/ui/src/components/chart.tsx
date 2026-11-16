@@ -52,11 +52,14 @@ function useChart(): ChartContextProps {
 	return context;
 }
 
+/** Wraps a Recharts chart: sizes it (`aspect-video` by default) and exposes each `config` entry's colour as `--color-<key>`, per theme. */
 const ChartContainer = React.forwardRef<
 	HTMLDivElement,
 	React.ComponentProps<"div"> & {
+		/** Each series' label, icon and colour (one colour, or per theme). */
 		config: ChartConfig;
 		children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
+		/** The size used before the container is measured, so the first render is not empty. */
 		initialDimension?: {
 			width: number;
 			height: number;
@@ -129,7 +132,9 @@ function ChartSizeHold({ children }: ChartSizeHoldProps): React.JSX.Element {
 }
 
 interface ChartStyleProps {
+	/** The chart's id the generated colour variables are scoped to. */
 	readonly id: string;
+	/** The config the colour variables are generated from. */
 	readonly config: ChartConfig;
 }
 
@@ -171,6 +176,7 @@ const ChartStyle = React.forwardRef<HTMLStyleElement, ChartStyleProps>(function 
 	return <style ref={ref} dangerouslySetInnerHTML={innerHtml} />;
 });
 
+/** Recharts' tooltip; pass `ChartTooltipContent` as its `content`. */
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
 function formatTooltipNumber(value: number, valueFormatter: ((value: number) => string) | undefined): string {
@@ -179,15 +185,21 @@ function formatTooltipNumber(value: number, valueFormatter: ((value: number) => 
 
 type ChartTooltipContentProps = React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
 	React.ComponentProps<"div"> & {
+		/** Leaves out the tooltip's heading (the x value). */
 		hideLabel?: boolean;
+		/** Leaves out the colour indicator. */
 		hideIndicator?: boolean;
+		/** The indicator's shape: `dot`, `line` or `dashed`. */
 		indicator?: "line" | "dot" | "dashed";
+		/** The data key to read each item's name from, in place of the series key. */
 		nameKey?: string;
+		/** The data key to read the heading from. */
 		labelKey?: string;
 		/** Renders numeric values (e.g. money in minor units); defaults to `toLocaleString()`. */
 		valueFormatter?: (value: number) => string;
 	} & Omit<RechartsPrimitive.DefaultTooltipContentProps<TooltipValueType, TooltipNameType>, "accessibilityLayer">;
 
+/** The kit's tooltip: each series' label from the config, with a colour indicator. */
 const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltipContentProps>(function ChartTooltipContent(
 	{
 		active,
@@ -302,14 +314,19 @@ function TooltipIndicator({ color, indicator, nestLabel }: TooltipIndicatorProps
 	);
 }
 
+/** Recharts' legend; pass `ChartLegendContent` as its `content`. */
 const ChartLegend = RechartsPrimitive.Legend;
 
 type ChartLegendContentProps = React.ComponentProps<"div"> & {
+	/** Leaves out the series icons. */
 	hideIcon?: boolean;
+	/** The data key to read each item's name from. */
 	nameKey?: string;
+	/** Whether the legend sits `top` or `bottom` (sets its spacing). */
 	position?: "top" | "bottom";
 } & RechartsPrimitive.DefaultLegendContentProps;
 
+/** The kit's legend: each series' label and colour from the config. */
 const ChartLegendContent = React.forwardRef<HTMLDivElement, ChartLegendContentProps>(function ChartLegendContent(
 	{ className, hideIcon = false, payload, position = "bottom", nameKey },
 	ref,

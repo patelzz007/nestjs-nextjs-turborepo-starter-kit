@@ -46,8 +46,9 @@ export const MOBILE_DRAWER_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorizati
 
 /** The switches an item can wait on besides its capabilities (`featureFlag` in the JSON). */
 export const DrawerFeatureFlagSchema = z.enum([
-	// The UI kit gallery: a developer tool, listed in development builds only (its route redirects in a store build).
-	"developer-tools",
+	// The component showcase: a developer tool, listed in a build that carries it (development, or a release built
+	// with EXPO_PUBLIC_SHOWCASE=true — lib/env.ts); its routes redirect in any other build.
+	"showcase",
 	// GitHub pull requests (ADR 052): on unless the server has them off.
 	"github-pull-requests",
 ]);
@@ -181,17 +182,17 @@ export function drawerGroupsFor(access: DrawerAccess, menu: CompiledSidebarMenuD
 		.map(resolveGroup);
 }
 
-/** What turns the flags on: whether this is a development build (`__DEV__`), and whether the server has pull requests on. */
+/** What turns the flags on: whether this build carries the showcase (the env's `showcase`), and whether the server has pull requests on. */
 export interface DrawerFeatureSwitches {
-	readonly developmentBuild: boolean;
+	readonly showcase: boolean;
 	readonly githubPullRequests: boolean;
 }
 
-/** The flags that are on: the developer tools in a development build, pull requests unless the server has them off. */
-export function enabledDrawerFeatureFlags({ developmentBuild, githubPullRequests }: DrawerFeatureSwitches): readonly DrawerFeatureFlag[] {
+/** The flags that are on: the showcase in a build that carries it, pull requests unless the server has them off. */
+export function enabledDrawerFeatureFlags({ showcase, githubPullRequests }: DrawerFeatureSwitches): readonly DrawerFeatureFlag[] {
 	const flags: DrawerFeatureFlag[] = [];
-	if (developmentBuild) {
-		flags.push("developer-tools");
+	if (showcase) {
+		flags.push("showcase");
 	}
 	if (githubPullRequests) {
 		flags.push("github-pull-requests");

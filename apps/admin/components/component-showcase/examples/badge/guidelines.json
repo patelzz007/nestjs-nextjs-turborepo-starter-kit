@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Match the tone to the meaning",
+		"do": {
+			"text": "Use green for good states and red for problems.",
+			"file": "badge-do-1",
+			"export": "BadgeDo1Example"
+		},
+		"dont": {
+			"text": "Don't paint Paid red and Overdue green.",
+			"file": "badge-dont-1",
+			"export": "BadgeDont1Example"
+		}
+	},
+	{
+		"title": "Keep it to a word or two",
+		"do": {
+			"text": "Use a badge for one or two words.",
+			"file": "badge-do-2",
+			"export": "BadgeDo2Example"
+		},
+		"dont": {
+			"text": "Don't put a sentence in a badge: use an alert or plain text.",
+			"file": "badge-dont-2",
+			"export": "BadgeDont2Example"
+		}
+	}
+]

@@ -80,6 +80,8 @@ export const REVIEWED_FULL_UNIQUES: Readonly<Record<string, FullUniqueReason>> =
 	"NotificationDelivery.notificationId,channel,pushDeviceId": "NATURAL_KEY_KEPT",
 	// Enhancement 5.7: a provider's delivery id stays taken, so a replay is refused even after the record is deleted.
 	"ReceivedWebhook.provider,providerDeliveryId": "NATURAL_KEY_KEPT",
+	// ADR 084: a sync's own id, so a repeated report replaces its row.
+	"DocsSyncRun.runId": "NATURAL_KEY_KEPT",
 	"WebhookEndpoint.tenantId,id": "TENANT_SCOPED_ID",
 	"WebhookEvent.tenantId,id": "TENANT_SCOPED_ID",
 	// One delivery per endpoint per event, whatever became of it: the retry worker's idempotency key.

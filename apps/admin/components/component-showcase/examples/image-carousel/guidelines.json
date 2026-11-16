@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Show where the reader is",
+		"do": {
+			"text": "Use `ImageCarousel`: it shows a counter and a dot per photo, so people know how many there are.",
+			"file": "image-carousel-do-1",
+			"export": "ImageCarouselDo1Example"
+		},
+		"dont": {
+			"text": "Don't hide the count: people stop swiping, not knowing more follow.",
+			"file": "image-carousel-dont-1",
+			"export": "ImageCarouselDont1Example"
+		}
+	},
+	{
+		"title": "Describe each photo",
+		"do": {
+			"text": "Give each photo its own `alt`: the carousel reads it as the slide changes.",
+			"file": "image-carousel-do-2",
+			"export": "ImageCarouselDo2Example"
+		},
+		"dont": {
+			"text": "Don't reuse one caption for every photo: they all sound the same.",
+			"file": "image-carousel-dont-2",
+			"export": "ImageCarouselDont2Example"
+		}
+	}
+]

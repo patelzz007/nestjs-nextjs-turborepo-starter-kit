@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Label the choice positively",
+		"do": {
+			"text": "Say what checking turns on (\"Email me updates\").",
+			"file": "checkbox-do-1",
+			"export": "CheckboxDo1Example"
+		},
+		"dont": {
+			"text": "Don't use a negative label: people have to work out what unchecking a \"Don't\" means.",
+			"file": "checkbox-dont-1",
+			"export": "CheckboxDont1Example"
+		}
+	},
+	{
+		"title": "Use a switch for instant settings",
+		"do": {
+			"text": "Use a checkbox for a choice saved with the form.",
+			"file": "checkbox-do-2",
+			"export": "CheckboxDo2Example"
+		},
+		"dont": {
+			"text": "Don't use a checkbox for a setting that applies at once: people look for a Save that is not there. Use a [Switch](/components/switch).",
+			"file": "checkbox-dont-2",
+			"export": "CheckboxDont2Example"
+		}
+	}
+]

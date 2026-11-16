@@ -196,6 +196,12 @@
 							"labelKey": "platform.operations.status-page",
 							"url": "/operations/status",
 							"icon": "Radar"
+						},
+						{
+							"title": "Docs sync",
+							"labelKey": "platform.operations.docs-sync",
+							"url": "/operations/docs-sync",
+							"icon": "BookOpen"
 						}
 					]
 				},
@@ -230,11 +236,11 @@
 					"labelKey": "platform.components",
 					"url": "/components",
 					"icon": "Blocks",
-					"featureFlag": "component-gallery",
+					"featureFlag": "showcase",
 					"children": [
 						{
-							"title": "Gallery",
-							"labelKey": "platform.components.gallery",
+							"title": "Showcase",
+							"labelKey": "platform.components.showcase",
 							"url": "/components",
 							"icon": "LayoutGrid"
 						},

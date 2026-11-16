@@ -3,8 +3,11 @@ title: "6. POS pairing and checkout"
 description: "Pair a till with the merchant portal, then validate a customer's QR or backup code before payment and record the bill after payment."
 order: 7
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1793491200000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/user-guide/06-pos-checkout.webp"
 tags: ["user-guide", "pos", "checkout", "terminals"]
 ---
 

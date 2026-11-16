@@ -3,7 +3,14 @@
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { Can } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION, TENANT_LIFECYCLE_TEXT_MAX_LENGTH, type CapabilitySlug, type TenantLifecycleResponse, type TenantSuspensionAppealResponse } from "@workspace/shared";
+import {
+	PERMISSION,
+	TENANT_LIFECYCLE,
+	TENANT_LIFECYCLE_TEXT_MAX_LENGTH,
+	type CapabilitySlug,
+	type TenantLifecycleResponse,
+	type TenantSuspensionAppealResponse,
+} from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -21,23 +28,23 @@ import { useSuperAdminStatus } from "@/lib/session/super-admin";
 /** What a platform admin may do to the tenant in its current state. */
 export type MerchantLifecycleAction = "suspend" | "reinstate" | null;
 
-/** Suspension starts from ACTIVE or RESTRICTED; reinstatement from SUSPENDED (the API enforces the same table). */
+/** The suspension move the shared lifecycle table allows from `state` — the same table the API enforces. */
 export function lifecycleActionFor(state: TenantLifecycleResponse["lifecycleState"]): MerchantLifecycleAction {
-	if (state === "ACTIVE" || state === "RESTRICTED") {
+	if (TENANT_LIFECYCLE.can("suspend", state)) {
 		return "suspend";
 	}
-	return state === "SUSPENDED" ? "reinstate" : null;
+	return TENANT_LIFECYCLE.can("reinstate", state) ? "reinstate" : null;
 }
 
 /** What a super admin may do about a ban in the tenant's current state. */
 export type MerchantBanAction = "ban" | "unban" | null;
 
-/** A live tenant (active, restricted or suspended) can be banned; a banned one can have its ban lifted (the API enforces the same table). */
+/** The ban move the shared lifecycle table allows from `state` — the same table the API enforces. */
 export function banActionFor(state: TenantLifecycleResponse["lifecycleState"]): MerchantBanAction {
-	if (state === "ACTIVE" || state === "RESTRICTED" || state === "SUSPENDED") {
+	if (TENANT_LIFECYCLE.can("ban", state)) {
 		return "ban";
 	}
-	return state === "BANNED" ? "unban" : null;
+	return TENANT_LIFECYCLE.can("unban", state) ? "unban" : null;
 }
 
 const BAN_COPY: Readonly<Record<Exclude<MerchantBanAction, null>, { readonly label: string; readonly field: string; readonly success: string }>> = {

@@ -56,8 +56,8 @@ export function LanguageBreakdown({ title, languages, testID }: LanguageBreakdow
 							tint={language.tint}
 							testID={`language-logo-${language.name}`}
 						/>
-						<Text className="font-sans-medium flex-1 text-sm text-foreground">{language.name}</Text>
-						<Text className="font-sans text-sm text-muted-foreground">{language.percentLabel}</Text>
+						<Text className="font-sans-medium text-body flex-1 text-foreground">{language.name}</Text>
+						<Text className="text-body font-sans text-muted-foreground">{language.percentLabel}</Text>
 					</View>
 				))}
 			</View>

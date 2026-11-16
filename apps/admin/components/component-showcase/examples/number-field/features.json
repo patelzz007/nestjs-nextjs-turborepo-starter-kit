@@ -1,0 +1,44 @@
+[
+	{
+		"id": "c-number-field-1",
+		"label": "Default Size",
+		"description": "Basic number field. Best for the default size with minus at the start, plus at the end and the value centered between them.",
+		"file": "number-field-1",
+		"export": "NumberField1Example"
+	},
+	{
+		"id": "c-number-field-2",
+		"label": "Small Size",
+		"description": "Basic number field. Best for the sm size, a 28px tall group with tighter input padding for dense rows and toolbars.",
+		"file": "number-field-2",
+		"export": "NumberField2Example"
+	},
+	{
+		"id": "c-number-field-3",
+		"label": "Large Size",
+		"description": "Basic number field. Best for the lg size, a 36px tall group with wider buttons and roomier vertical input padding.",
+		"file": "number-field-3",
+		"export": "NumberField3Example"
+	},
+	{
+		"id": "c-number-field-4",
+		"label": "Buttons on Right",
+		"description": "Number field with buttons on right. Best for the value aligned left with minus and plus grouped side by side at the end of the field.",
+		"file": "number-field-4",
+		"export": "NumberField4Example"
+	},
+	{
+		"id": "c-number-field-5",
+		"label": "Spinner Buttons",
+		"description": "Number field with spinner buttons. Best for up and down chevrons stacked in a small bordered box at the end, with the value aligned to the start.",
+		"file": "number-field-5",
+		"export": "NumberField5Example"
+	},
+	{
+		"id": "c-number-field-6",
+		"label": "Form Validation",
+		"description": "Number field in form. Best for a React Hook Form Controller binding the amount, with zod bounds, an error message and Cancel and Submit buttons.",
+		"file": "number-field-6",
+		"export": "NumberField6Example"
+	}
+]

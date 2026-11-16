@@ -1,0 +1,233 @@
+[
+	{
+		"id": "c-select-1",
+		"label": "Basic",
+		"description": "A basic select component with a list of options. Best for the minimal pattern: 5 fruits in a dropdown below the trigger, led by a prompt row that clears the pick.",
+		"file": "select-1",
+		"export": "Select1Example"
+	},
+	{
+		"id": "c-select-2",
+		"label": "Icons",
+		"description": "Select with icons and placeholder state. Best for app sections such as Dashboard and Security led by muted icons, with a scan icon beside the prompt before any pick.",
+		"file": "select-2",
+		"export": "Select2Example"
+	},
+	{
+		"id": "c-select-3",
+		"label": "Grouped Labels",
+		"description": "Select component with grouped options and labels. Best for fruits and vegetables in 2 labeled groups of 3 split by a rule, the prompt kept out of the open list.",
+		"file": "select-3",
+		"export": "Select3Example"
+	},
+	{
+		"id": "c-select-4",
+		"label": "Large List",
+		"description": "Select component with a large list of options. Best for a 100 row generated list that opens over the trigger and scrolls within the space left in the viewport.",
+		"file": "select-4",
+		"export": "Select4Example"
+	},
+	{
+		"id": "c-select-5",
+		"label": "Small Trigger",
+		"description": "Select component with small trigger size. Best for the sm trigger size on a 3 fruit list, a shorter control for dense forms and toolbars.",
+		"file": "select-5",
+		"export": "Select5Example"
+	},
+	{
+		"id": "c-select-6",
+		"label": "Plan Picker",
+		"description": "Select component with a subscription plan style. Best for a plan picker whose trigger grows to show the chosen plan's name and one line description, built from Item parts.",
+		"file": "select-6",
+		"export": "Select6Example"
+	},
+	{
+		"id": "c-select-7",
+		"label": "Disabled Item",
+		"description": "Select component with item alignment disabled. Best for a fruit list where Grapes is shown faded and cannot be picked while the other rows stay open to choice.",
+		"file": "select-7",
+		"export": "Select7Example"
+	},
+	{
+		"id": "c-select-8",
+		"label": "Field With Label",
+		"description": "Select component within a Field with label and description. Best for a Favorite Fruit label tied to the trigger by id, with a one sentence hint under the control.",
+		"file": "select-8",
+		"export": "Select8Example"
+	},
+	{
+		"id": "c-select-9",
+		"label": "Invalid",
+		"description": "Select component in an invalid state. Best for an error state set on both the Field and the trigger, with a message printed below the control.",
+		"file": "select-9",
+		"export": "Select9Example"
+	},
+	{
+		"id": "c-select-10",
+		"label": "Disabled",
+		"description": "Select component in a disabled state. Best for the entire control switched off and faded, so its list of fruits cannot be opened at all.",
+		"file": "select-10",
+		"export": "Select10Example"
+	},
+	{
+		"id": "c-select-11",
+		"label": "In Dialog",
+		"description": "Select component inside a Dialog. Best for a full width fruit picker inside a modal with a title and description, opened from a button.",
+		"file": "select-11",
+		"export": "Select11Example"
+	},
+	{
+		"id": "c-select-12",
+		"label": "Multiple Selection",
+		"description": "Select component with multiple selection. Best for several fruits checked in one open list, the trigger reading the single name or a count such as 3 fruits selected.",
+		"file": "select-12",
+		"export": "Select12Example"
+	},
+	{
+		"id": "c-select-13",
+		"label": "Inline With Input",
+		"description": "Select component inline with Input. Best for a narrow status filter of All, Active and Inactive beside a search box in one toolbar row.",
+		"file": "select-13",
+		"export": "Select13Example"
+	},
+	{
+		"id": "c-select-14",
+		"label": "With Button",
+		"description": "Select component with Button side by side. Best for a picker that stretches across a row ending in a Submit button, as a quick one field form.",
+		"file": "select-14",
+		"export": "Select14Example"
+	},
+	{
+		"id": "c-select-15",
+		"label": "Item Aligned",
+		"description": "Select component with item alignment enabled. Best for a list laid over the trigger so the current fruit sits exactly where the trigger text was.",
+		"file": "select-15",
+		"export": "Select15Example"
+	},
+	{
+		"id": "c-select-16",
+		"label": "Access Levels",
+		"description": "Select with custom access level descriptions. Best for permission levels from Full access to No access, each with a short line on what it allows, the trigger keeping the name only.",
+		"file": "select-16",
+		"export": "Select16Example"
+	},
+	{
+		"id": "c-select-17",
+		"label": "Status Bullets",
+		"description": "Select with colored bullets for status. Best for statuses such as In Progress and Rejected marked by small colored dots in the rows and the trigger.",
+		"file": "select-17",
+		"export": "Select17Example"
+	},
+	{
+		"id": "c-select-18",
+		"label": "User Avatars",
+		"description": "Select with user avatars. Best for a people picker of 10 users with photo avatars under a heading, the trigger repeating a smaller avatar.",
+		"file": "select-18",
+		"export": "Select18Example"
+	},
+	{
+		"id": "c-select-19",
+		"label": "Status Badges",
+		"description": "Select with status badges. Best for a Status: prefix in the trigger ahead of an outlined colored badge, with each row drawn as its own badge.",
+		"file": "select-19",
+		"export": "Select19Example"
+	},
+	{
+		"id": "c-select-20",
+		"label": "Left Indicator",
+		"description": "Select with indicator on the left side. Best for the check mark moved to the left edge of each row, with the row padding flipped to make room.",
+		"file": "select-20",
+		"export": "Select20Example"
+	},
+	{
+		"id": "c-select-21",
+		"label": "Clear Button",
+		"description": "Select with clear button. Best for an X in the trigger that empties a controlled framework pick, taking the chevron's place once a value is set.",
+		"file": "select-21",
+		"export": "Select21Example"
+	},
+	{
+		"id": "c-select-22",
+		"label": "Custom Chevrons",
+		"description": "Select with custom chevrons up down icon. Best for an up and down chevron pair in place of the stock arrow, swapped for a clearing X when a fruit is chosen.",
+		"file": "select-22",
+		"export": "Select22Example"
+	},
+	{
+		"id": "c-select-23",
+		"label": "Overlapping Dots",
+		"description": "Multi-select with overlapping dots. Best for statuses such as Ready, Building and Error, several picked at once and summed up as overlapping dots and a count badge.",
+		"file": "select-23",
+		"export": "Select23Example"
+	},
+	{
+		"id": "c-select-24",
+		"label": "Grouped Separators",
+		"description": "Select with grouped options and separators. Best for frontend and backend tech under 2 headings with a divider, from React and Vue to Node.js and Go.",
+		"file": "select-24",
+		"export": "Select24Example"
+	},
+	{
+		"id": "c-select-25",
+		"label": "Country Flags",
+		"description": "Country picker select with flag emojis. Best for countries led by their flag emoji in the rows and the trigger, with United States chosen on load.",
+		"file": "select-25",
+		"export": "Select25Example"
+	},
+	{
+		"id": "c-select-26",
+		"label": "Status Filter",
+		"description": "Status filter select with colored dots. Best for a filter that starts on an All Status row with no dot, above 4 states that each carry one.",
+		"file": "select-26",
+		"export": "Select26Example"
+	},
+	{
+		"id": "c-select-27",
+		"label": "Option Descriptions",
+		"description": "Select with description text per option. Best for startup, Business and Enterprise tiers with a muted subtitle under each, the trigger keeping the tier name alone.",
+		"file": "select-27",
+		"export": "Select27Example"
+	},
+	{
+		"id": "c-select-28",
+		"label": "Timezone Offsets",
+		"description": "Timezone select with UTC offsets. Best for timezone codes grouped by Americas, Europe and Asia, each row trailed by its UTC offset in muted text.",
+		"file": "select-28",
+		"export": "Select28Example"
+	},
+	{
+		"id": "c-select-29",
+		"label": "Team Assignment",
+		"description": "Select with avatar items for team member assignment. Best for an Assign to list of 4 teammates with photos, the first of them chosen on load.",
+		"file": "select-29",
+		"export": "Select29Example"
+	},
+	{
+		"id": "c-select-30",
+		"label": "Priority Badges",
+		"description": "Priority select with colored badges. Best for priority levels from No Priority to Urgent as small outline, solid and light badges in the rows and the trigger.",
+		"file": "select-30",
+		"export": "Select30Example"
+	},
+	{
+		"id": "c-select-31",
+		"label": "Font Preview",
+		"description": "Font family select with preview. Best for each font option set in its own typeface, Inter, Mono and Serif, in the rows and the trigger.",
+		"file": "select-31",
+		"export": "Select31Example"
+	},
+	{
+		"id": "c-select-32",
+		"label": "Category Icons",
+		"description": "Select with icon-labeled categories. Best for file types such as Documents, Images and Archives led by an icon, which stays beside the name in the trigger.",
+		"file": "select-32",
+		"export": "Select32Example"
+	},
+	{
+		"id": "c-select-33",
+		"label": "Size Scale",
+		"description": "Size variant select with small trigger. Best for a 4 step size scale from Small to Extra Large behind the compact sm trigger.",
+		"file": "select-33",
+		"export": "Select33Example"
+	}
+]

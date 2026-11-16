@@ -3,8 +3,11 @@ title: "ADR 073: Broadcasts and tenant customers — person-written notification
 tags: ["adr", "notifications", "broadcasts", "consent", "rich-text", "plan"]
 description: "A tenant customer link created by claims; broadcasts written by tenant owners and managers to their tenant customers and by platform staff to users, in-app, by email and by push; a Tiptap-based rich-text editor (editorcn) stored as validated JSON and rendered per channel; per-recipient scheduling, weekly limits, link checks, four-eyes approval, results, recipient reports and automatic pauses."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793404800000
 lastUpdated: 1793404800000
-coverImage: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/adr/073-broadcasts-and-tenant-customers.webp"
 order: 73
 ---
 

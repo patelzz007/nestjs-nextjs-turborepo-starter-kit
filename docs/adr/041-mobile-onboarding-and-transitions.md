@@ -3,8 +3,11 @@ title: "ADR 041: Mobile Onboarding and Screen Transitions"
 tags: ["adr", "mobile", "ui", "navigation", "motion"]
 description: "A first-launch walkthrough, built from React Native and Reanimated only, shown once per device by the root guard; and one named set of native screen transitions for every navigator."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791504000000
 lastUpdated: 1791504000000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/041-mobile-onboarding-and-transitions.webp"
 order: 41
 ---
 

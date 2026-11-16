@@ -3,8 +3,11 @@ title: "ADR 075: Platform deploys — pm2 on a Droplet, triggered by GitHub Acti
 tags: ["adr", "deployment", "operations", "digitalocean", "ci-cd"]
 description: "The API, web, admin and merchant apps run under pm2 on a DigitalOcean Droplet with data services in Docker; after CI passes on main, GitHub Actions sends one line over SSH to a forced-command gate that builds the commit into its own release, migrates with the migration login, switches atomically, health-checks and rolls back."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&h=630"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/075-platform-deploys.webp"
 order: 75
 ---
 

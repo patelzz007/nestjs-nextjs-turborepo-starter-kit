@@ -1,0 +1,114 @@
+[
+	{
+		"id": "c-tooltip-1",
+		"label": "Basic",
+		"description": "Basic tooltip. Best for the bare minimum: an outline button and a single line hint, Add to library, shown above it while held.",
+		"file": "tooltip-1",
+		"export": "Tooltip1Example"
+	},
+	{
+		"id": "c-tooltip-2",
+		"label": "Placements",
+		"description": "Tooltips above and below. Best for the 2 sides a phone tooltip opens on, one button each.",
+		"file": "tooltip-2",
+		"export": "Tooltip2Example"
+	},
+	{
+		"id": "c-tooltip-3",
+		"label": "Icon Trigger",
+		"description": "Tooltip on an icon button. Best for a ghost info button with no visible text, named for screen readers, holding a line of help copy.",
+		"file": "tooltip-3",
+		"export": "Tooltip3Example"
+	},
+	{
+		"id": "c-tooltip-4",
+		"label": "Keyboard Shortcut",
+		"description": "Tooltip with a keyboard shortcut. Best for a small save icon button whose hint pairs the action with its key caps, for a hardware keyboard.",
+		"file": "tooltip-4",
+		"export": "Tooltip4Example"
+	},
+	{
+		"id": "c-tooltip-5",
+		"label": "Bell With Count",
+		"description": "Tooltip on a bell with a count. Best for an icon button with a count badge whose bubble lists 3 recent notifications under a heading.",
+		"file": "tooltip-5",
+		"export": "Tooltip5Example"
+	},
+	{
+		"id": "c-tooltip-6",
+		"label": "Status Badges",
+		"description": "Tooltip with status badges. Best for a System status button whose bubble lists 3 services with Operational or Degraded badges and an updated time.",
+		"file": "tooltip-6",
+		"export": "Tooltip6Example"
+	},
+	{
+		"id": "c-tooltip-7",
+		"label": "Verified Domain",
+		"description": "Tooltip on an inline icon. Best for a check mark after a verified domain, revealing a Verified heading and a one line explanation.",
+		"file": "tooltip-7",
+		"export": "Tooltip7Example"
+	},
+	{
+		"id": "c-tooltip-8",
+		"label": "Toolbar Actions",
+		"description": "Toolbar with tooltips. Best for bold, italic, underline and image buttons in one toolbar, each named for screen readers and explained while held.",
+		"file": "tooltip-8",
+		"export": "Tooltip8Example"
+	},
+	{
+		"id": "c-tooltip-9",
+		"label": "Warning",
+		"description": "Tooltip with a warning. Best for a warning icon button whose bubble warns, behind a matching glyph, that the action cannot be undone.",
+		"file": "tooltip-9",
+		"export": "Tooltip9Example"
+	},
+	{
+		"id": "c-tooltip-10",
+		"label": "Upgrade Prompt",
+		"description": "Upgrade prompt. Best for a lock icon button whose long press opens a Pro tagged pitch with an Upgrade to Pro button; a card, since a tooltip cannot hold a button.",
+		"file": "tooltip-10",
+		"export": "Tooltip10Example"
+	},
+	{
+		"id": "c-tooltip-11",
+		"label": "Avatar Role Badge",
+		"description": "Tooltip with an avatar and role. Best for an avatar whose bubble repeats it beside the person's name, an Admin badge and an email.",
+		"file": "tooltip-11",
+		"export": "Tooltip11Example"
+	},
+	{
+		"id": "c-tooltip-12",
+		"label": "Disabled Button",
+		"description": "Tooltip on a disabled button. Best for a disabled Delete project button wrapped by the tooltip, so the reason it is locked still shows while held.",
+		"file": "tooltip-12",
+		"export": "Tooltip12Example"
+	},
+	{
+		"id": "c-tooltip-13",
+		"label": "Online Status",
+		"description": "Tooltip with online status. Best for an avatar with a green presence dot whose bubble repeats it beside the name and Online now.",
+		"file": "tooltip-13",
+		"export": "Tooltip13Example"
+	},
+	{
+		"id": "c-tooltip-14",
+		"label": "File Info",
+		"description": "Tooltip with file details. Best for a muted file name in text whose bubble shows its size, upload age and PDF and Verified tags beside a document glyph.",
+		"file": "tooltip-14",
+		"export": "Tooltip14Example"
+	},
+	{
+		"id": "c-tooltip-15",
+		"label": "Label Badges",
+		"description": "Tooltip with label badges. Best for a compact 3 labels count with a tag glyph whose bubble shows the 3 coloured labels under a heading.",
+		"file": "tooltip-15",
+		"export": "Tooltip15Example"
+	},
+	{
+		"id": "c-tooltip-16",
+		"label": "Unread Bell",
+		"description": "Notification preview with a link. Best for a bell with an unread dot whose long press opens the unread count above a View all link; a card, since a tooltip cannot hold a link.",
+		"file": "tooltip-16",
+		"export": "Tooltip16Example"
+	}
+]

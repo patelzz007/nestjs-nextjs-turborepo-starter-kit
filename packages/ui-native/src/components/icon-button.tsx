@@ -10,20 +10,28 @@ import { ActivityIndicator, type GestureResponderEvent, type NativeSyntheticEven
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
-import { Icon, type LucideIcon } from "./icon";
+import { Icon, type IconSize, type LucideIcon } from "./icon";
 
-export const iconButtonVariants = cva("items-center justify-center active:opacity-80", {
+export const iconButtonVariants = cva("items-center justify-center", {
 	variants: {
-		/** `secondary`: the outlined look of a secondary button (the default). `primary`: filled. `ghost`: the glyph alone. */
+		/**
+		 * `secondary`: the outlined look of a secondary button (the default). `primary`: filled. `ghost`: the glyph alone.
+		 * Pressed, the solid one darkens (`primary-pressed`) and the others take the selected fill.
+		 */
 		variant: {
-			secondary: "border border-border bg-card",
-			primary: "border border-primary bg-primary",
-			ghost: "border border-transparent bg-transparent",
+			secondary: "active:bg-surface-selected border border-border bg-card",
+			primary: "active:border-primary-pressed active:bg-primary-pressed border border-primary bg-primary",
+			ghost: "active:bg-surface-selected border border-transparent bg-transparent",
 		},
-		/** `md`: 44 pt. `sm`: 36 pt beside dense content; its touch area still reaches 44 pt. */
+		/**
+		 * `md`: 44 × 44 pt (the mobile visual spec). `lg`: 56 pt, a media control's main button. `sm`: 36 pt beside dense
+		 * content and `xs`: 28 pt on a chip or a toast; the touch area of both still reaches 44 pt.
+		 */
 		size: {
-			md: "size-11 rounded-lg",
+			lg: "rounded-button size-14",
+			md: "rounded-button size-11",
 			sm: "size-9 rounded-md",
+			xs: "size-7 rounded-md",
 		},
 		state: {
 			default: "",
@@ -48,36 +56,66 @@ const CONTENT_COLOR: Readonly<Record<IconButtonVariant, string>> = {
 
 /** Extra touch area of a compact button: 36 pt plus 4 pt each side is the 44 pt minimum (rules/04). */
 const SMALL_HIT_SLOP = 4;
+/** And of the smallest: 28 pt plus 8 pt each side. */
+const EXTRA_SMALL_HIT_SLOP = 8;
+
+/** The glyph's size per button size. */
+const GLYPH_SIZE: Readonly<Record<IconButtonSize, IconSize>> = { lg: "lg", md: "md", sm: "sm", xs: "sm" };
+
+const HIT_SLOP: Readonly<Record<IconButtonSize, number | undefined>> = { lg: undefined, md: undefined, sm: SMALL_HIT_SLOP, xs: EXTRA_SMALL_HIT_SLOP };
 
 export interface IconButtonProps {
 	readonly icon: LucideIcon;
 	/** The accessible name — what the button does ("Add a picture"). */
 	readonly label: string;
 	readonly onPress: (event: GestureResponderEvent) => void;
-	readonly onFocus?: (event: NativeSyntheticEvent<TargetedEvent>) => void;
-	readonly onBlur?: (event: NativeSyntheticEvent<TargetedEvent>) => void;
-	readonly variant?: IconButtonVariant;
-	readonly size?: IconButtonSize;
+	readonly onFocus?: ((event: NativeSyntheticEvent<TargetedEvent>) => void) | undefined;
+	readonly onBlur?: ((event: NativeSyntheticEvent<TargetedEvent>) => void) | undefined;
+	readonly variant?: IconButtonVariant | undefined;
+	readonly size?: IconButtonSize | undefined;
 	/** Work is in flight: a spinner in place of the glyph, and presses are blocked. */
-	readonly loading?: boolean;
-	readonly disabled?: boolean;
+	readonly loading?: boolean | undefined;
+	readonly disabled?: boolean | undefined;
 	/** The caller's validation outcome for the action (rare). */
-	readonly invalid?: boolean;
-	readonly accessibilityHint?: string;
+	readonly invalid?: boolean | undefined;
+	/** A long press (a tooltip explaining the control hands it its own). */
+	readonly onLongPress?: (() => void) | undefined;
+	/** The finger lifted (a tooltip hides its bubble). */
+	readonly onPressOut?: (() => void) | undefined;
+	readonly accessibilityHint?: string | undefined;
+	/** The glyph's colour (an `accent-*` token) in place of the variant's: a brand's or a category's tone. */
+	readonly glyphClassName?: string | undefined;
 	/** Extra classes for the button, merged last (layout: `self-end`). */
-	readonly className?: string;
-	readonly testID?: string;
+	readonly className?: string | undefined;
+	readonly testID?: string | undefined;
 }
 
 export const IconButton = React.memo(
 	React.forwardRef<ViewInstance, IconButtonProps>(function IconButton(
-		{ icon, label, onPress, onFocus, onBlur, variant = "secondary", size = "md", loading = false, disabled = false, invalid = false, accessibilityHint, className, testID },
+		{
+			icon,
+			label,
+			onPress,
+			onLongPress,
+			onPressOut,
+			onFocus,
+			onBlur,
+			variant = "secondary",
+			size = "md",
+			loading = false,
+			disabled = false,
+			invalid = false,
+			accessibilityHint,
+			glyphClassName,
+			className,
+			testID,
+		},
 		ref,
 	): React.JSX.Element {
 		const state = resolveControlState({ disabled, loading, invalid });
 		const isInactive = isInactiveState(state);
 		const accessibilityState = React.useMemo(() => ({ disabled: isInactive, busy: loading }), [isInactive, loading]);
-		const contentColor = CONTENT_COLOR[variant];
+		const contentColor = glyphClassName ?? CONTENT_COLOR[variant];
 		return (
 			<Pressable
 				ref={ref}
@@ -89,10 +127,12 @@ export const IconButton = React.memo(
 				onPress={onPress}
 				onFocus={onFocus}
 				onBlur={onBlur}
+				onLongPress={onLongPress}
+				onPressOut={onPressOut}
 				testID={testID}
-				hitSlop={size === "sm" ? SMALL_HIT_SLOP : undefined}
+				hitSlop={HIT_SLOP[size]}
 				className={cn(iconButtonVariants({ variant, size, state }), className)}>
-				{loading ? <ActivityIndicator size="small" colorClassName={contentColor} /> : <Icon icon={icon} size={size === "sm" ? "sm" : "md"} colorClassName={contentColor} />}
+				{loading ? <ActivityIndicator size="small" colorClassName={contentColor} /> : <Icon icon={icon} size={GLYPH_SIZE[size]} colorClassName={contentColor} />}
 			</Pressable>
 		);
 	}),

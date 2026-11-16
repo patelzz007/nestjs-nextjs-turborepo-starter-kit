@@ -16,7 +16,7 @@
 // (`scrollIndicatorInsets` is iOS-only).
 
 import * as React from "react";
-import { RefreshControl, View } from "react-native";
+import { RefreshControl, View, type ScrollViewInstance } from "react-native";
 import Animated from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
@@ -44,6 +44,10 @@ export interface ScreenProps {
 	 * so there is never a scroll view inside a scroll view. Default `true`.
 	 */
 	readonly scrollable?: boolean;
+	/** Drawn above the content and pinned to the top while it scrolls (a search field); scrolling screens only. */
+	readonly stickyHeader?: React.ReactNode;
+	/** The scroll view, for a screen that scrolls to a part of itself (a linked section); scrolling screens only. */
+	readonly scrollRef?: React.Ref<ScrollViewInstance>;
 	readonly testID?: string;
 }
 
@@ -60,7 +64,15 @@ const StyledScrollView = withUniwind(Animated.ScrollView);
 /** How often the scroll view reports its position, in ms: once a frame, so the header follows finger for finger. */
 const SCROLL_EVENT_THROTTLE_MS = 16;
 
-export function Screen({ title, description, children, refreshing = false, onRefresh, scrollable = true, testID }: ScreenProps): React.JSX.Element {
+/**
+ * The sticky header is the scroll view's first child, or its second under the page header: after the spacer that keeps
+ * the content below it. That room is a spacer, not the content's top padding: Android pins a sticky header by its
+ * position inside that padding, so it stuck at the scroll view's top edge at once — over the header's subtitle and trail.
+ */
+const STICKY_FIRST_CHILD: readonly number[] = [0];
+const STICKY_AFTER_SPACER: readonly number[] = [1];
+
+export function Screen({ title, description, children, refreshing = false, onRefresh, scrollable = true, stickyHeader, scrollRef, testID }: ScreenProps): React.JSX.Element {
 	// Inside the tabs, the floating tab bar covers the bottom of the screen: the content ends above it.
 	const barClearance = useTabBarClearance();
 	// While the keyboard is up it covers the tab bar: the room kept for the bar would only be empty space above the keyboard.
@@ -80,10 +92,7 @@ export function Screen({ title, description, children, refreshing = false, onRef
 	const scrollTop = headerClearance === null ? 0 : pageHeaderControlsBottom(insets.top);
 	const scrollPaddingTop = headerClearance === null ? 0 : Math.max(headerClearance - scrollTop, 0);
 	const scrollFrameStyle = React.useMemo((): { readonly marginTop: number } => ({ marginTop: scrollTop }), [scrollTop]);
-	const scrollContentStyle = React.useMemo(
-		(): { readonly paddingTop: number } | undefined => (headerClearance === null ? undefined : { paddingTop: scrollPaddingTop }),
-		[headerClearance, scrollPaddingTop],
-	);
+	const headerSpacerStyle = React.useMemo((): { readonly height: number } => ({ height: scrollPaddingTop }), [scrollPaddingTop]);
 	const scrollIndicatorInsets = React.useMemo(
 		(): { readonly top: number; readonly bottom: number } => ({ top: scrollPaddingTop, bottom: tabBarClearance }),
 		[scrollPaddingTop, tabBarClearance],
@@ -118,6 +127,8 @@ export function Screen({ title, description, children, refreshing = false, onRef
 				<KeyboardAvoidingView className="flex-1">
 					{scrollable ? (
 						<StyledScrollView
+							ref={scrollRef}
+							stickyHeaderIndices={stickyHeader === undefined ? undefined : hasHeader ? STICKY_AFTER_SPACER : STICKY_FIRST_CHILD}
 							onScroll={onScroll}
 							style={scrollFrameStyle}
 							scrollEventThrottle={SCROLL_EVENT_THROTTLE_MS}
@@ -125,7 +136,6 @@ export function Screen({ title, description, children, refreshing = false, onRef
 							keyboardShouldPersistTaps="handled"
 							scrollIndicatorInsets={scrollIndicatorInsets}
 							contentContainerClassName={hasHeader ? "grow" : "grow gap-6 px-5 py-6"}
-							contentContainerStyle={scrollContentStyle}
 							refreshControl={
 								onRefresh === undefined ? undefined : (
 									<RefreshControl
@@ -136,6 +146,13 @@ export function Screen({ title, description, children, refreshing = false, onRef
 									/>
 								)
 							}>
+							{/* The room the page header's collapsing lines take: scrolled away as the header collapses. */}
+							{hasHeader ? <View style={headerSpacerStyle} testID={testID === undefined ? undefined : `${testID}-header-spacer`} /> : null}
+							{stickyHeader === undefined ? null : (
+								<View className="bg-background px-5 py-3" testID={testID === undefined ? undefined : `${testID}-sticky-header`}>
+									{stickyHeader}
+								</View>
+							)}
 							{page}
 						</StyledScrollView>
 					) : (

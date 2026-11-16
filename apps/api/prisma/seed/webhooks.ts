@@ -67,6 +67,18 @@ const RECEIVED: readonly SeedReceived[] = [
 		duplicates: 0,
 	},
 	{
+		key: "notion-page-edit",
+		provider: "NOTION",
+		providerDeliveryId: "0194f3a0-5d00-7a01-8c00-000000000001",
+		eventType: "page.content_updated",
+		verification: "VALID",
+		outcome: "RECORDED",
+		httpStatus: 200,
+		minutesAgo: 10,
+		errorSummary: null,
+		duplicates: 0,
+	},
+	{
 		key: "github-ping",
 		provider: "GITHUB",
 		providerDeliveryId: "0b1c2d3e-ping",

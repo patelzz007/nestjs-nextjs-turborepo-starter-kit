@@ -32,10 +32,12 @@ type ToggleGroupStyle = React.CSSProperties & Readonly<Record<"--gap", number>>;
 
 type ToggleGroupProps = ToggleGroupPrimitive.Props &
 	Omit<VariantProps<typeof toggleVariants>, "state"> & {
+		/** Gap between items in Tailwind spacing steps; `0` joins them into one segmented control. */
 		readonly spacing?: number;
 		readonly orientation?: ToggleGroupOrientation;
 	};
 
+/** A set of `ToggleGroupItem`s holding one value — an array of the pressed items' values, at most one unless `multiple`. Arrow keys move between items; `spacing={0}` joins them into a segmented control. */
 const ToggleGroup = React.forwardRef<HTMLDivElement, ToggleGroupProps>(function ToggleGroup(
 	{ className, variant, size, spacing = DEFAULT_TOGGLE_GROUP_SPACING, orientation = "horizontal", children, ...props },
 	ref,
@@ -68,6 +70,7 @@ type ToggleGroupItemProps = TogglePrimitive.Props &
 		readonly loading?: boolean;
 	};
 
+/** One option of a `ToggleGroup`, identified by its `value`. Takes the group's `variant` and `size` unless it sets its own. */
 const ToggleGroupItem = React.forwardRef<HTMLButtonElement, ToggleGroupItemProps>(function ToggleGroupItem(
 	{ className, children, variant = "default", size = "default", loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,

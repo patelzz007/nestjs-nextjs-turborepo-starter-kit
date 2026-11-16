@@ -3,8 +3,11 @@ title: "Local email with Mailpit"
 description: "How local development delivers every email into a native Mailpit inbox (EMAIL_PROVIDER=mailpit), how to read codes and links from it — including from an AI agent with pnpm mail:latest — and how to switch to Resend locally."
 order: 44
 author: "Platform Team"
+category: "Email"
+date: 1792108800000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=1200&h=630&fit=crop"
+editedAt: 1793192519000
+coverImage: "/images/covers/technical/email/mailpit-local-inbox.webp"
 tags: ["email", "mailpit", "local-development", "ai-agents"]
 ---
 

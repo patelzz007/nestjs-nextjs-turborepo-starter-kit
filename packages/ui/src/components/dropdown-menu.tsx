@@ -43,24 +43,29 @@ function buildDropdownMenuIndicatorItemClasses(state: MenuItemActiveState, highl
 
 /** The highlight option every item takes: `solid` (default) inverts the row; `soft` only washes it, for rows with their own emphasis. */
 export interface DropdownMenuHighlightProps {
+	/** How the highlighted row looks: `solid` inverts it, `soft` only washes it, for rows with their own emphasis. */
 	readonly highlight?: MenuItemHighlight | undefined;
 }
 
 // Root/Portal render no DOM element of their own (base-ui providers), so like
 // the Select Root they intentionally stay plain functions — the ref lives on
 // the parts that render DOM (Trigger/Content/Item/…).
+/** A menu of actions and choices opened from a trigger, on Base UI's menu. */
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props): React.JSX.Element {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
 
+/** Moves the menu to the end of `body`. Used by `DropdownMenuContent`. */
 function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props): React.JSX.Element {
 	return <MenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />;
 }
 
+/** The button that opens the menu. Pass your `Button` through `render`. */
 const DropdownMenuTrigger = React.forwardRef<HTMLButtonElement, MenuPrimitive.Trigger.Props>(function DropdownMenuTrigger({ ...props }, ref): React.JSX.Element {
 	return <MenuPrimitive.Trigger ref={ref} data-slot="dropdown-menu-trigger" {...props} />;
 });
 
+/** The menu's popup: a portal, a positioner and the list. `side` and `align` place it. */
 const DropdownMenuContent = React.forwardRef<
 	HTMLDivElement,
 	MenuPrimitive.Popup.Props & Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">
@@ -82,13 +87,16 @@ const DropdownMenuContent = React.forwardRef<
 	);
 });
 
+/** Groups related items; a `DropdownMenuLabel` must sit inside one. */
 const DropdownMenuGroup = React.forwardRef<HTMLDivElement, MenuPrimitive.Group.Props>(function DropdownMenuGroup({ ...props }, ref): React.JSX.Element {
 	return <MenuPrimitive.Group ref={ref} data-slot="dropdown-menu-group" {...props} />;
 });
 
+/** A heading for a group of items. Must sit inside a `DropdownMenuGroup` or `DropdownMenuRadioGroup`. */
 const DropdownMenuLabel = React.forwardRef<
 	HTMLDivElement,
 	MenuPrimitive.GroupLabel.Props & {
+		/** Indents the label to line up with items that have an icon. */
 		inset?: boolean;
 	}
 >(function DropdownMenuLabel({ className, inset, ...props }, ref): React.JSX.Element {
@@ -103,11 +111,14 @@ const DropdownMenuLabel = React.forwardRef<
 	);
 });
 
+/** An action. Run it from `onClick`; `variant="destructive"` marks it as dangerous. */
 const DropdownMenuItem = React.forwardRef<
 	HTMLElement,
 	MenuPrimitive.Item.Props &
 		DropdownMenuHighlightProps & {
+			/** Indents the item to line up with items that have an icon. */
 			inset?: boolean;
+			/** `destructive` colours the item and its icon red. */
 			variant?: "default" | "destructive";
 		}
 >(function DropdownMenuItem({ className, inset, variant = "default", highlight = "solid", ...props }, ref): React.JSX.Element {
@@ -129,13 +140,16 @@ const DropdownMenuItem = React.forwardRef<
 });
 
 // SubmenuRoot renders no DOM of its own — plain function, ref on the parts.
+/** A nested menu: a `DropdownMenuSubTrigger` and a `DropdownMenuSubContent`. */
 function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props): React.JSX.Element {
 	return <MenuPrimitive.SubmenuRoot data-slot="dropdown-menu-sub" {...props} />;
 }
 
+/** The item that opens a submenu, with an arrow. */
 const DropdownMenuSubTrigger = React.forwardRef<
 	HTMLElement,
 	MenuPrimitive.SubmenuTrigger.Props & {
+		/** Indents the item to line up with items that have an icon. */
 		inset?: boolean;
 	}
 >(function DropdownMenuSubTrigger({ className, inset, children, ...props }, ref): React.JSX.Element {
@@ -157,6 +171,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
 	);
 });
 
+/** The submenu's popup, opened to the side. */
 const DropdownMenuSubContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof DropdownMenuContent>>(function DropdownMenuSubContent(
 	{ align = "start", alignOffset = DROPDOWN_MENU_SUB_ALIGN_OFFSET, side = "inline-end", sideOffset = 0, className, ...props },
 	ref,
@@ -178,10 +193,12 @@ const DropdownMenuSubContent = React.forwardRef<HTMLDivElement, React.ComponentP
 	);
 });
 
+/** An on/off item with a tick. Controlled with `checked` / `onCheckedChange`. */
 const DropdownMenuCheckboxItem = React.forwardRef<
 	HTMLElement,
 	MenuPrimitive.CheckboxItem.Props &
 		DropdownMenuHighlightProps & {
+			/** Indents the item to line up with items that have an icon. */
 			inset?: boolean;
 		}
 >(function DropdownMenuCheckboxItem({ highlight = "solid", className, children, checked, inset, ...props }, ref): React.JSX.Element {
@@ -209,14 +226,17 @@ const DropdownMenuCheckboxItem = React.forwardRef<
 	);
 });
 
+/** A set of `DropdownMenuRadioItem`s holding one value. */
 const DropdownMenuRadioGroup = React.forwardRef<HTMLDivElement, MenuPrimitive.RadioGroup.Props>(function DropdownMenuRadioGroup({ ...props }, ref): React.JSX.Element {
 	return <MenuPrimitive.RadioGroup ref={ref} data-slot="dropdown-menu-radio-group" {...props} />;
 });
 
+/** One choice of a `DropdownMenuRadioGroup`, marked with a dot when chosen. */
 const DropdownMenuRadioItem = React.forwardRef<
 	HTMLElement,
 	MenuPrimitive.RadioItem.Props &
 		DropdownMenuHighlightProps & {
+			/** Indents the item to line up with items that have an icon. */
 			inset?: boolean;
 		}
 >(function DropdownMenuRadioItem({ highlight = "solid", className, children, inset, ...props }, ref): React.JSX.Element {
@@ -237,10 +257,12 @@ const DropdownMenuRadioItem = React.forwardRef<
 	);
 });
 
+/** A divider between groups of items. */
 const DropdownMenuSeparator = React.forwardRef<HTMLDivElement, MenuPrimitive.Separator.Props>(function DropdownMenuSeparator({ className, ...props }, ref): React.JSX.Element {
 	return <MenuPrimitive.Separator ref={ref} data-slot="dropdown-menu-separator" className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />;
 });
 
+/** A key hint at the end of an item. Bind the key yourself. */
 const DropdownMenuShortcut = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function DropdownMenuShortcut({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<span

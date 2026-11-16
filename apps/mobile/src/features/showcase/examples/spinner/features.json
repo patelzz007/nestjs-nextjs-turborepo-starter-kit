@@ -1,0 +1,86 @@
+[
+	{
+		"id": "c-spinner-1",
+		"label": "Basic",
+		"description": "Basic spinner. Best for the bare default at its small native size, with no props and no text beside it.",
+		"file": "spinner-1",
+		"export": "Spinner1Example"
+	},
+	{
+		"id": "c-spinner-2",
+		"label": "In Buttons",
+		"description": "Spinners in buttons. Best for leading spinners in a live primary, a disabled outline and a square icon only button with its own label.",
+		"file": "spinner-2",
+		"export": "Spinner2Example"
+	},
+	{
+		"id": "c-spinner-3",
+		"label": "In Badges",
+		"description": "Spinners in badges. Best for status labels in primary, secondary and outline plus light destructive, success and info tints, each led by a spinner.",
+		"file": "spinner-3",
+		"export": "Spinner3Example"
+	},
+	{
+		"id": "c-spinner-4",
+		"label": "In Input Group",
+		"description": "Spinner in input group. Best for a search field under a Searching label, its spinner shown in a leading addon before the typed text.",
+		"file": "spinner-4",
+		"export": "Spinner4Example"
+	},
+	{
+		"id": "c-spinner-5",
+		"label": "In Empty State",
+		"description": "Spinner in empty state. Best for a centered loading view with the spinner in a muted tile, a Loading projects heading and a Cancel action.",
+		"file": "spinner-5",
+		"export": "Spinner5Example"
+	},
+	{
+		"id": "c-spinner-6",
+		"label": "Pending Buttons",
+		"description": "Button loading states. Best for disabled default, outline and secondary buttons, each pairing a spinner with a pending word like Saving.",
+		"file": "spinner-6",
+		"export": "Spinner6Example"
+	},
+	{
+		"id": "c-spinner-7",
+		"label": "Overlay With Caption",
+		"description": "Overlay loading spinner. Best for a translucent cover with a Refreshing data caption laid over a monthly report card's figures.",
+		"file": "spinner-7",
+		"export": "Spinner7Example"
+	},
+	{
+		"id": "c-spinner-8",
+		"label": "Full Page",
+		"description": "Full screen loading state. Best for a standalone card with a faded spinner above a setup message and a smaller muted hint.",
+		"file": "spinner-8",
+		"export": "Spinner8Example"
+	},
+	{
+		"id": "c-spinner-9",
+		"label": "Inline Text",
+		"description": "Inline loading text with spinner. Best for stacked status lines with 14px spinners, 2 tinted by the success and warning tokens for connected and reconnecting.",
+		"file": "spinner-9",
+		"export": "Spinner9Example"
+	},
+	{
+		"id": "c-spinner-10",
+		"label": "Loading Dots",
+		"description": "Animated loading dots. Best for a row of 3 dots that bounce on staggered delays in the primary colour, with no icon.",
+		"file": "spinner-10",
+		"export": "Spinner10Example"
+	},
+	{
+		"id": "c-spinner-11",
+		"label": "Card Overlay",
+		"description": "Spinner overlay on card. Best for a translucent cover holding only a spinner, inside the card it hides, with no caption.",
+		"file": "spinner-11",
+		"export": "Spinner11Example"
+	},
+	{
+		"id": "c-spinner-12",
+		"label": "Color Variants",
+		"description": "Spinner colour variants. Best for a row of 5 small spinners tinted blue, green, red, yellow and violet through accent colour classes.",
+		"file": "spinner-12",
+		"export": "Spinner12Example"
+	}
+]

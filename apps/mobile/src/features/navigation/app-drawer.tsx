@@ -178,8 +178,8 @@ function AppDrawerPanel(): React.JSX.Element {
 						<DrawerRow icon={LogOutIcon} label={labels.drawer.signOut} tone="destructive" onPress={signOut.ask} testID="app-drawer-sign-out" />
 					</DrawerSection>
 					<View className="gap-0.5 px-6 pt-4 pb-6" testID="app-drawer-build">
-						<Text className="font-sans text-xs text-muted-foreground">{buildInfo.summary}</Text>
-						{buildInfo.moment === null ? null : <Text className="font-sans text-xs text-muted-foreground">{buildInfo.moment.line}</Text>}
+						<Text className="text-caption font-sans text-muted-foreground">{buildInfo.summary}</Text>
+						{buildInfo.moment === null ? null : <Text className="text-caption font-sans text-muted-foreground">{buildInfo.moment.line}</Text>}
 					</View>
 				</View>
 			</ScrollView>

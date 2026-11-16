@@ -230,7 +230,7 @@ export const QrScanFromGalleryButton = React.memo(
 			<View ref={ref} className="gap-2">
 				<Button label={text.scanFromGallery} variant="outline" icon={ImagesIcon} onPress={scan} loading={busy} {...(testID === undefined ? {} : { testID })} />
 				{message === null ? null : (
-					<Text accessibilityLiveRegion="polite" className="text-center font-sans text-sm text-muted-foreground">
+					<Text accessibilityLiveRegion="polite" className="text-body text-center font-sans text-muted-foreground">
 						{message}
 					</Text>
 				)}
@@ -483,7 +483,7 @@ const CameraScannerSurface = React.forwardRef<ViewInstance, CameraScannerSurface
 			<View className="absolute inset-0" style={barsStyle} pointerEvents="box-none">
 				<View className="flex-row items-center justify-between px-4 py-2">
 					<CloseButton label={labels.close} onPress={onClose} />
-					<Text accessibilityRole="header" className="font-sans-semibold text-lg text-scrim-foreground">
+					<Text accessibilityRole="header" className="font-sans-semibold text-h3 text-scrim-foreground">
 						{labels.title}
 					</Text>
 					<View className={HEADER_SPACER_CLASS} />
@@ -673,7 +673,7 @@ function StatusLine({ layout, text, tone }: { readonly layout: ViewfinderLayout;
 			<View className="max-w-80 flex-row items-center gap-2 rounded-full px-4 py-2" testID="qr-scanner-status">
 				<View className="absolute inset-0 rounded-full bg-scrim opacity-50" />
 				{tone === "success" ? <View className="size-2 rounded-full bg-success" /> : null}
-				<Text accessibilityLiveRegion="polite" accessibilityRole="text" className="font-sans-medium shrink text-center text-sm text-scrim-foreground">
+				<Text accessibilityLiveRegion="polite" accessibilityRole="text" className="font-sans-medium text-body shrink text-center text-scrim-foreground">
 					{text}
 				</Text>
 			</View>
@@ -704,16 +704,16 @@ function PermissionPanel({ permissionKnown, canAskAgain, labels, galleryMessage,
 				<Icon icon={CameraIcon} size="2xl" colorClassName="accent-scrim-foreground" />
 			</View>
 			<View className="gap-2">
-				<Text accessibilityRole="header" className="text-center font-heading text-2xl text-scrim-foreground">
+				<Text accessibilityRole="header" className="text-h2 text-center font-heading text-scrim-foreground">
 					{labels.permissionTitle}
 				</Text>
-				<Text className="text-center font-sans text-base text-scrim-foreground opacity-80">
+				<Text className="text-body-lg text-center font-sans text-scrim-foreground opacity-80">
 					{canAskAgain ? labels.permissionDescription : labels.permissionBlockedDescription}
 				</Text>
 			</View>
 			{canAskAgain ? <Button label={labels.allowCamera} onPress={onAllow} /> : <Button label={labels.openSettings} onPress={onOpenSettings} />}
 			{galleryMessage === null ? null : (
-				<Text accessibilityLiveRegion="polite" className="text-center font-sans text-sm text-scrim-foreground">
+				<Text accessibilityLiveRegion="polite" className="text-body text-center font-sans text-scrim-foreground">
 					{galleryMessage}
 				</Text>
 			)}
@@ -774,7 +774,7 @@ function DockButton({ icon, caption, accessibilityLabel, onPress, busy, selected
 					<Icon icon={icon} size="lg" colorClassName={selected ? "accent-scrim" : "accent-scrim-foreground"} />
 				)}
 			</View>
-			<Text className="font-sans-medium text-xs text-scrim-foreground">{caption}</Text>
+			<Text className="font-sans-medium text-caption text-scrim-foreground">{caption}</Text>
 		</Pressable>
 	);
 }

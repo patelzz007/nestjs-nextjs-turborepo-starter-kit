@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Set sensible minimums",
+		"do": {
+			"text": "Give every panel a `minSize`, so none can be dragged out of use.",
+			"file": "resizable-do-1",
+			"export": "ResizableDo1Example"
+		},
+		"dont": {
+			"text": "Don't let a panel shrink to a sliver nobody can read or grab.",
+			"file": "resizable-dont-1",
+			"export": "ResizableDont1Example"
+		}
+	},
+	{
+		"title": "Show the handle",
+		"do": {
+			"text": "Use a visible handle (`withHandle` draws a grip), so people know they can drag.",
+			"file": "resizable-do-2",
+			"export": "ResizableDo2Example"
+		},
+		"dont": {
+			"text": "Don't hide the divider: an unframed split looks fixed.",
+			"file": "resizable-dont-2",
+			"export": "ResizableDont2Example"
+		}
+	}
+]

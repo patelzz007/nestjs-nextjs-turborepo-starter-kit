@@ -7,21 +7,32 @@
 //   action (`children`).
 // - ErrorState: the failure, announced as an alert, and a retry.
 
-import { cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Alert } from "./alert";
 import { Button } from "./button";
-import { IconTile } from "./icon-tile";
+import { IconTile, type IconTileTone } from "./icon-tile";
 import { type LucideIcon } from "./icon";
 import { Spinner } from "./spinner";
 import { MutedText } from "./text";
 
 export const loadingStateVariants = cva("items-center gap-3 py-8");
-export const emptyStateVariants = cva("gap-3 rounded-2xl bg-muted px-5 py-6");
+export const emptyStateVariants = cva("gap-3 px-5 py-6", {
+	variants: {
+		/** `muted` (default): a filled panel. `outline`: a bordered card. `dashed`: a dashed drop area. `plain`: no surface. */
+		variant: { muted: "rounded-card bg-muted", outline: "rounded-card border border-border bg-card", dashed: "rounded-card border-2 border-dashed border-input", plain: "" },
+		align: { start: "", center: "items-center" },
+	},
+	defaultVariants: { variant: "muted", align: "start" },
+});
 export const errorStateVariants = cva("gap-3");
+
+type EmptyStateVariantProps = VariantProps<typeof emptyStateVariants>;
+export type EmptyStateVariant = NonNullable<EmptyStateVariantProps["variant"]>;
+export type EmptyStateAlign = NonNullable<EmptyStateVariantProps["align"]>;
 
 export interface LoadingStateProps {
 	/** Announced to screen readers ("Loading your devices…"). */
@@ -46,8 +57,15 @@ export interface EmptyStateProps {
 	readonly message: string;
 	/** A short heading above the message ("No devices"). */
 	readonly title?: string;
-	/** A glyph for what is missing, in a neutral tile; decorative. */
+	/** A glyph for what is missing, in a tile; decorative. */
 	readonly icon?: LucideIcon;
+	/** The glyph tile's tint. Default `neutral`. */
+	readonly iconTone?: IconTileTone | undefined;
+	/** A drawing in place of the glyph (cards, a chat, a calendar). Decorative. */
+	readonly illustration?: React.ReactNode | undefined;
+	readonly variant?: EmptyStateVariant | undefined;
+	/** Lines up the content at the start (default) or the centre. */
+	readonly align?: EmptyStateAlign | undefined;
 	/** The way forward (a "Create" button). */
 	readonly children?: React.ReactNode;
 	/** Extra classes for the container, merged last. */
@@ -56,12 +74,17 @@ export interface EmptyStateProps {
 }
 
 export const EmptyState = React.memo(
-	React.forwardRef<ViewInstance, EmptyStateProps>(function EmptyState({ message, title, icon, children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, EmptyStateProps>(function EmptyState(
+		{ message, title, icon, iconTone = "neutral", illustration, variant = "muted", align = "start", children, className, testID },
+		ref,
+	): React.JSX.Element {
+		const centred = align === "center" ? "text-center" : undefined;
 		return (
-			<View ref={ref} testID={testID} className={cn(emptyStateVariants(), className)}>
-				{icon === undefined ? null : <IconTile icon={icon} />}
-				{title === undefined ? null : <Text className="font-sans-semibold text-base text-foreground">{title}</Text>}
-				<MutedText>{message}</MutedText>
+			<View ref={ref} testID={testID} className={cn(emptyStateVariants({ variant, align }), className)}>
+				{illustration === undefined ? null : <View importantForAccessibility="no-hide-descendants">{illustration}</View>}
+				{icon === undefined || illustration !== undefined ? null : <IconTile icon={icon} tone={iconTone} />}
+				{title === undefined ? null : <Text className={cn("font-sans-semibold text-body-lg text-foreground", centred)}>{title}</Text>}
+				<MutedText className={cn(centred)}>{message}</MutedText>
 				{children}
 			</View>
 		);

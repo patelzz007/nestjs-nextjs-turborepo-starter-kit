@@ -75,4 +75,11 @@ describe("IconButton", () => {
 		expect(onFocus).toHaveBeenCalledTimes(1);
 		expect(onBlur).toHaveBeenCalledTimes(1);
 	});
+
+	it("has an extra small size whose touch area still reaches 44 pt, and a large one", async () => {
+		await render(<IconButton icon={ImagePlusIcon} label="Add" size="xs" onPress={jest.fn()} testID="xs" />);
+		expect(screen.getByTestId("xs")).toHaveProp("hitSlop", 8);
+		await render(<IconButton icon={ImagePlusIcon} label="Play" size="lg" onPress={jest.fn()} testID="lg" />);
+		expect(String(screen.getByTestId("lg").props.className)).toContain("size-14");
+	});
 });

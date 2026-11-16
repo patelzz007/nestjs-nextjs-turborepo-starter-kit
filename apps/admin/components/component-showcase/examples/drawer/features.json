@@ -1,0 +1,37 @@
+[
+	{
+		"id": "c-drawer-1",
+		"label": "Scrollable Content",
+		"description": "A basic drawer with scrollable content. Best for the default bottom panel, capped at 80vh, that a downward swipe dismisses.",
+		"file": "drawer-1",
+		"export": "Drawer1Example"
+	},
+	{
+		"id": "c-drawer-2",
+		"label": "Right Side",
+		"description": "A drawer that opens from the right side. Best for a panel docked to the right edge that the user swipes right to dismiss.",
+		"file": "drawer-2",
+		"export": "Drawer2Example"
+	},
+	{
+		"id": "c-drawer-3",
+		"label": "Left Side",
+		"description": "A drawer that opens from the left side. Best for a panel docked to the left edge, closed by a swipe toward the left.",
+		"file": "drawer-3",
+		"export": "Drawer3Example"
+	},
+	{
+		"id": "c-drawer-4",
+		"label": "Top Side",
+		"description": "A drawer that opens from the top side. Best for a drawer that drops from the top edge, capped at 80vh, and closes with an upward swipe.",
+		"file": "drawer-4",
+		"export": "Drawer4Example"
+	},
+	{
+		"id": "c-drawer-5",
+		"label": "All Sides",
+		"description": "Drawers opening from different sides. Best for a row of 4 triggers, one drawer per edge, for comparing the directions side by side.",
+		"file": "drawer-5",
+		"export": "Drawer5Example"
+	}
+]

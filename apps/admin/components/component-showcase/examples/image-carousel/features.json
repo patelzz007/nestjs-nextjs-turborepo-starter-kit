@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-image-carousel-1",
+		"label": "Overview",
+		"description": "A swipeable gallery with arrows, dots and the selected slide reported back. Best for product or listing photos.",
+		"file": "image-carousel-1",
+		"export": "ImageCarousel1Example"
+	}
+]

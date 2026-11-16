@@ -1,5 +1,5 @@
-// Runtime feature flags (enhancement 5.6): the component gallery set ON (what a development build defaults to
-// anyway), merchant invites back on DEFAULT, and the gallery's earlier 50% rollout kept as a removed row.
+// Runtime feature flags (enhancement 5.6): the component showcase set ON (what a development build defaults to
+// anyway), merchant invites back on DEFAULT, and the showcase's earlier 50% rollout kept as a removed row.
 // Per-store settings (enhancement 5.11): till redemption on for every Jonker Street Kitchen branch, but off at
 // its Bukit Katil branch (a branch decides over its merchant), and an earlier Bukit Katil setting kept removed.
 
@@ -17,11 +17,13 @@ export async function seedFeatureFlags(now: number): Promise<number> {
 	const developer = await prisma.user.findFirstOrThrow({ where: { email: "developer@example.com", isDeleted: false }, select: { id: true } });
 	const rows: Prisma.FeatureFlagSettingUncheckedCreateInput[] = [
 		{
+			// Ids stay derived from the flag's original key (`component-gallery`), so a database the rename
+			// migration moved to `showcase` is re-seeded in place rather than given a second live row.
 			id: deterministicUuid(NAMESPACE, "component-gallery:rollout"),
-			key: "component-gallery",
+			key: "showcase",
 			mode: "PERCENTAGE",
 			percentage: 50,
-			reason: "Trying the gallery with half of the staff first",
+			reason: "Trying the showcase with half of the staff first",
 			createdBy: developer.id,
 			updatedBy: developer.id,
 			createdAt: BigInt(now - 14 * DAY_MS),
@@ -32,10 +34,10 @@ export async function seedFeatureFlags(now: number): Promise<number> {
 		},
 		{
 			id: deterministicUuid(NAMESPACE, "component-gallery"),
-			key: "component-gallery",
+			key: "showcase",
 			mode: "ON",
 			percentage: null,
-			reason: "Everyone on staff uses the gallery now",
+			reason: "Everyone on staff uses the showcase now",
 			createdBy: superAdmin.id,
 			updatedBy: superAdmin.id,
 			createdAt: BigInt(now - 7 * DAY_MS),

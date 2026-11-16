@@ -63,6 +63,15 @@ export const FRONTEND_RESTRICTED_IMPORT_PATTERNS = [
 	},
 ];
 
+/** Named imports browser code may not take, because the frontend wraps them (Next apps, packages/client). */
+export const FRONTEND_RESTRICTED_IMPORT_PATHS = [
+	{
+		name: "next/navigation",
+		importNames: ["useRouter"],
+		message: "Use `useProgressRouter` from `@workspace/client/lib/navigation/use-progress-router`: it starts the top progress bar before `push`/`replace`.",
+	},
+];
+
 /** Frontend-only workspaces a Node backend must never pull in. */
 const FRONTEND_ONLY_WORKSPACES = ["api-client", "client", "ui"];
 
@@ -284,6 +293,7 @@ export const DDD_CONTEXTS = [
 	"catalog",
 	"reference-data",
 	"audit",
+	"docs-publishing",
 	"integrations-github",
 	"kanban",
 	"operations",
@@ -398,7 +408,10 @@ export const apiArchitectureBoundaryConfigs = [
 export const frontendImportBoundaryConfig = {
 	files: LINTED_SOURCE_FILES,
 	rules: {
-		"workspace/restricted-imports": ["error", { patterns: [...UNIVERSAL_RESTRICTED_IMPORT_PATTERNS, ...FRONTEND_RESTRICTED_IMPORT_PATTERNS] }],
+		"workspace/restricted-imports": [
+			"error",
+			{ patterns: [...UNIVERSAL_RESTRICTED_IMPORT_PATTERNS, ...FRONTEND_RESTRICTED_IMPORT_PATTERNS], paths: FRONTEND_RESTRICTED_IMPORT_PATHS },
+		],
 		"workspace/no-server-import-in-client-component": "error",
 	},
 };
@@ -433,7 +446,10 @@ export const frontendContextBoundaryConfigs = DDD_CONTEXTS.map((contextName) => 
 	rules: {
 		"workspace/restricted-imports": [
 			"error",
-			{ patterns: [...UNIVERSAL_RESTRICTED_IMPORT_PATTERNS, ...FRONTEND_RESTRICTED_IMPORT_PATTERNS, ...frontendCrossContextPatterns(contextName)] },
+			{
+				patterns: [...UNIVERSAL_RESTRICTED_IMPORT_PATTERNS, ...FRONTEND_RESTRICTED_IMPORT_PATTERNS, ...frontendCrossContextPatterns(contextName)],
+				paths: FRONTEND_RESTRICTED_IMPORT_PATHS,
+			},
 		],
 	},
 }));

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Apply at once",
+		"do": {
+			"text": "Use a switch for a setting that takes effect immediately.",
+			"file": "switch-do-1",
+			"export": "SwitchDo1Example"
+		},
+		"dont": {
+			"text": "Don't put switches in a form with a Save button: it is unclear whether they applied.",
+			"file": "switch-dont-1",
+			"export": "SwitchDont1Example"
+		}
+	},
+	{
+		"title": "Label the setting, not the state",
+		"do": {
+			"text": "Name the setting (\"Notifications\"); the switch shows whether it is on.",
+			"file": "switch-do-2",
+			"export": "SwitchDo2Example"
+		},
+		"dont": {
+			"text": "Don't put the state in the label (\"Notifications on\"): it contradicts the switch when off.",
+			"file": "switch-dont-2",
+			"export": "SwitchDont2Example"
+		}
+	}
+]

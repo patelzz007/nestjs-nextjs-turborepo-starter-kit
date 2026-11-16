@@ -3,8 +3,11 @@ title: "ADR 015: Transactional Outbox and Consumer Inbox"
 tags: ["adr", "messaging", "kafka", "outbox", "inbox", "idempotency", "rls"]
 description: "Architecture decision record for writing platform events in the same database transaction as the domain change, publishing them at-least-once with a stable event id, and deduplicating them in a consumer inbox."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1790812800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/015-transactional-outbox-and-inbox.webp"
 order: 15
 ---
 

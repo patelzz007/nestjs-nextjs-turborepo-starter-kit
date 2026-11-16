@@ -3,8 +3,11 @@ title: "10. Account and security"
 description: "Profile and avatar, password, email verification, two-factor authentication, MFA recovery, sessions, impersonation and support access."
 order: 11
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1792540800000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1792604185000
+coverImage: "/images/covers/user-guide/10-account-and-security.webp"
 tags: ["user-guide", "security", "mfa", "impersonation", "support-access"]
 ---
 

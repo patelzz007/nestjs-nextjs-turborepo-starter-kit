@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Open on the view the job needs",
+		"do": {
+			"text": "Book and compare times on a day or a week: the time grid shows the free stretches.",
+			"file": "event-calendar-do-1",
+			"export": "EventCalendarDo1Example"
+		},
+		"dont": {
+			"text": "Don't make people book from a month: its days hide their hours.",
+			"file": "event-calendar-dont-1",
+			"export": "EventCalendarDont1Example"
+		}
+	},
+	{
+		"title": "Name every colour",
+		"do": {
+			"text": "When a colour means something (a status, a track), show a legend that says what.",
+			"file": "event-calendar-do-2",
+			"export": "EventCalendarDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave colours unexplained: the meaning is lost, and lost entirely to colour-blind readers.",
+			"file": "event-calendar-dont-2",
+			"export": "EventCalendarDont2Example"
+		}
+	}
+]

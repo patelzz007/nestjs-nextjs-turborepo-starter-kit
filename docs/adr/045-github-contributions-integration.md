@@ -3,8 +3,11 @@ title: "ADR 045: GitHub Contributions — Server Token, Repository Allowlist, In
 tags: ["adr", "api", "integration", "github", "resilience"]
 description: "The API reads a configured list of GitHub repositories with one read-only token, refuses any other repository, and serves answers from a per-instance cache that stands in for GitHub when it fails."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1791590400000
 lastUpdated: 1791590400000
-coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=1200&h=630&fit=crop"
+editedAt: 1791800777000
+coverImage: "/images/covers/adr/045-github-contributions-integration.webp"
 order: 45
 ---
 

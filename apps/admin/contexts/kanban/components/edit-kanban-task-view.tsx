@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { toastMessage } from "@workspace/ui/components/toast";
 import { ArrowLeft, CalendarDays } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { OptionSelectField, TextField, useFormSubmitHandler } from "@/components/common/form-fields";
@@ -57,7 +57,7 @@ function selectIsSubmitting(state: { readonly isSubmitting: boolean }): boolean 
 
 function EditKanbanTaskForm({ task }: { readonly task: KanbanTaskDetail }): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const people = useKanbanPeople();
 	const typeDisplay = KANBAN_TYPE_DISPLAY[task.type];

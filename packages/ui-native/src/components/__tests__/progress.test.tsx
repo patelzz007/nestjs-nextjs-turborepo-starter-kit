@@ -4,7 +4,7 @@ import type { ViewInstance } from "react-native";
 import { getAnimatedStyle } from "react-native-reanimated";
 
 import { PAGE_CHANGE_MS } from "../../lib/motion";
-import { Progress, progressFractionOf, type ProgressVariant } from "../progress";
+import { Progress, progressFractionOf, progressPercentOf, type ProgressVariant } from "../progress";
 
 /** One animation frame at 60 Hz, so a timing that ends exactly on a boundary has settled. */
 const FRAME_MS = 16;
@@ -99,5 +99,31 @@ describe("Progress", () => {
 		const className = String(screen.getByRole("progressbar").props.className);
 		expect(className).toContain("bg-card");
 		expect(className).not.toContain("bg-muted");
+	});
+});
+
+describe("Progress colours", () => {
+	it("takes the info tone, the xl size, and a fill of the caller's", async () => {
+		await render(<Progress value={40} accessibilityLabel="Storage" variant="info" size="xl" indicatorClassName="bg-tone-violet" testID="bar" />);
+		expect(screen.getByTestId("bar")).toHaveProp("className", expect.stringContaining("h-3"));
+		expect(screen.getByTestId("bar-indicator")).toHaveProp("className", expect.stringContaining("bg-tone-violet"));
+	});
+
+	it("shows its label and value over the bar for sighted readers, leaving the bar to announce them", async () => {
+		await render(<Progress value={56} label="Upload progress" showValue accessibilityLabel="Upload progress" />);
+		expect(screen.getByText("Upload progress", { includeHiddenElements: true })).toBeTruthy();
+		expect(screen.getByText("56%", { includeHiddenElements: true })).toBeTruthy();
+		expect(screen.queryByText("56%")).toBeNull();
+		expect(screen.getByRole("progressbar", { name: "Upload progress" })).toBeOnTheScreen();
+	});
+
+	it("shows the value as words when it has them", async () => {
+		await render(<Progress value={3} max={5} showValue valueText="3 of 5 files" accessibilityLabel="Files" />);
+		expect(screen.getByText("3 of 5 files", { includeHiddenElements: true })).toBeTruthy();
+	});
+
+	it("rounds the percent done", () => {
+		expect(progressPercentOf(0.555)).toBe("56%");
+		expect(progressPercentOf(1)).toBe("100%");
 	});
 });

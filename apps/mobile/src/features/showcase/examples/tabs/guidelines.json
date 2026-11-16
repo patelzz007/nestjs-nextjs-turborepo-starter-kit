@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep tabs few",
+		"do": {
+			"text": "Use 2 to 4 tabs with short labels that fit the width.",
+			"file": "tabs-do-1",
+			"export": "TabsDo1Example"
+		},
+		"dont": {
+			"text": "Don't squeeze 7 tabs into a phone's width.",
+			"file": "tabs-dont-1",
+			"export": "TabsDont1Example"
+		}
+	},
+	{
+		"title": "Switch views, not steps",
+		"do": {
+			"text": "Use tabs (or a segmented control) for views of the same thing.",
+			"file": "tabs-do-2",
+			"export": "TabsDo2Example"
+		},
+		"dont": {
+			"text": "Don't use tabs for steps that must be done in order: use a stepper.",
+			"file": "tabs-dont-2",
+			"export": "TabsDont2Example"
+		}
+	}
+]

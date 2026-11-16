@@ -1,0 +1,51 @@
+[
+	{
+		"id": "c-message-1",
+		"label": "Two-Sided Chat",
+		"description": "Two-sided conversation. Best for the bare pattern with no avatars or metadata, where a muted or default bubble repeats which side spoke.",
+		"file": "message-1",
+		"export": "Message1Example"
+	},
+	{
+		"id": "c-message-2",
+		"label": "Avatars",
+		"description": "Avatars on both sides. Best for photo avatars for both people, a green presence badge with a screen reader Online label and a long turn that wraps.",
+		"file": "message-2",
+		"export": "Message2Example"
+	},
+	{
+		"id": "c-message-3",
+		"label": "Sender & Status",
+		"description": "Sender name and delivery status. Best for a name and time header split by a decorative dot, a Read receipt under the outgoing turn and an Edited footer.",
+		"file": "message-3",
+		"export": "Message3Example"
+	},
+	{
+		"id": "c-message-4",
+		"label": "Reply Actions",
+		"description": "Reply actions in the footer. Best for regenerate cycling 2 stored drafts and clearing the vote, a Copy that flips to a check, and pressed thumb toggles.",
+		"file": "message-4",
+		"export": "Message4Example"
+	},
+	{
+		"id": "c-message-5",
+		"label": "Shared Files",
+		"description": "Files shared in a thread. Best for an outgoing image tile above its caption and an incoming CSV card under its text, with a named download button.",
+		"file": "message-5",
+		"export": "Message5Example"
+	},
+	{
+		"id": "c-message-6",
+		"label": "Consecutive Messages",
+		"description": "Consecutive messages from one sender. Best for the name on the first row and the portrait on the last, with empty avatar slots holding the run on one spine.",
+		"file": "message-6",
+		"export": "Message6Example"
+	},
+	{
+		"id": "c-message-7",
+		"label": "Streaming Reply",
+		"description": "Streaming reply with a pending state. Best for a spinner line, then text revealed 4 characters at a time behind a caret, and the full answer at once under reduced motion.",
+		"file": "message-7",
+		"export": "Message7Example"
+	}
+]

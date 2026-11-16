@@ -3,8 +3,11 @@ title: "Service Levels and Capacity"
 tags: ["operations", "slo", "capacity", "reliability"]
 description: "What 'working' means for each surface (objectives, error budgets, burn-rate alerts), and how big a server to start with, with how to measure your own numbers."
 author: "Platform Team"
+category: "Operations"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793891735000
+coverImage: "/images/covers/technical/operations/slos-and-capacity.webp"
 order: 3
 ---
 

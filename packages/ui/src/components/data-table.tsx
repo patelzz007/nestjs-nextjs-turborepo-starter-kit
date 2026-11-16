@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
 import {
+	filterFn_equalsStringSensitive,
 	flexRender,
 	useTable,
 	Subscribe,
@@ -48,7 +49,7 @@ import { useMediaQuery } from "@workspace/ui/hooks/use-media-query";
 import { assertDataTableFiltersMatchColumns, assertUniqueDataTableColumnIds, DATA_TABLE_UTILITY_COLUMN_ID } from "@workspace/ui/lib/data-table/column-ids";
 import { DESKTOP_MEDIA_QUERY } from "@workspace/ui/hooks/use-mobile";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { resolveDataTableCheckboxConfig, type DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
+import { resolveDataTableCheckboxConfig, type DataTableBulkSelectionContext, type ResolvedDataTableCheckboxConfig } from "@workspace/ui/lib/data-table/checkbox";
 import { formatDataTableLabel } from "@workspace/ui/lib/data-table/labels";
 import {
 	DataTableCellScalarSchema,
@@ -92,6 +93,9 @@ const DEFAULT_ROW_HEIGHT = 72;
 /** Rows rendered above/below the visible band while virtualizing. */
 const VIRTUAL_OVERSCAN = 6;
 
+/** What every column filters by unless it says otherwise: the exact option value (see the table options). */
+const SELECT_FILTER_COLUMN_DEFAULTS = { filterFn: filterFn_equalsStringSensitive };
+
 /** Default page-size options when `pageSizeOptions` is not provided. */
 const DEFAULT_PAGE_SIZE_OPTIONS: readonly number[] = [5, 10, 20, 50, 100];
 
@@ -123,6 +127,7 @@ const DataTableShell = React.forwardRef<HTMLDivElement, DataTableShellProps>(fun
 
 // ── Filter / Action Types ──────────────────────────────────────────────────
 
+/** A complete records table on TanStack Table: search, filters, sorting, pagination (client or server), row and bulk actions, export, column visibility and pinning, inline editing, drag-to-reorder, mobile cards, virtualised rows and loading, empty and error states, each switched on by a prop. */
 export function DataTable<TData extends RowData>({
 	ref,
 	// Core
@@ -227,7 +232,7 @@ export function DataTable<TData extends RowData>({
 	const deleteSelectedIcon = useMemo((): React.JSX.Element => <Trash2 className="h-4 w-4" />, []);
 
 	const resolvedCheckbox = useMemo(
-		(): ReturnType<typeof resolveDataTableCheckboxConfig<TData>> =>
+		(): ResolvedDataTableCheckboxConfig<TData> =>
 			resolveDataTableCheckboxConfig({
 				checkbox,
 				labels,
@@ -521,6 +526,10 @@ export function DataTable<TData extends RowData>({
 			features: dataTableFeatures,
 			data,
 			columns,
+			// A select filter keeps the rows whose value IS the chosen option. TanStack's "auto" filter would pick a
+			// substring match for text ("SUCCESS" keeping "PARTIAL_SUCCESS"), and v9 resolves "auto" only through
+			// registered filterFns, so without this the filters filtered nothing. A column may set its own.
+			defaultColumn: SELECT_FILTER_COLUMN_DEFAULTS,
 			getRowId: resolvedGetRowId,
 			state: {
 				sorting: controlledSorting ?? sorting,

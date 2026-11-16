@@ -4,8 +4,11 @@ tags: ["api", "errors", "nestjs", "contracts", "observability"]
 description: "How the API turns every thrown value — AppError, Nest HttpException, Prisma errors, framework errors, bugs — into one stable, client-safe error envelope, and how clients read it."
 order: 14
 author: "Platform Team"
+category: "API"
+date: 1790899200000
 lastUpdated: 1791417600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/api/errors.webp"
 ---
 
 # Error Model — One Envelope for Every Failure

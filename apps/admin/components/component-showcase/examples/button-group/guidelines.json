@@ -1,0 +1,41 @@
+[
+	{
+		"title": "Join actions on the same thing",
+		"do": {
+			"text": "Join actions that work on one object — a save and its menu, a stepper's minus and plus.",
+			"file": "button-group-do-1",
+			"export": "ButtonGroupDo1Example"
+		},
+		"dont": {
+			"text": "Don't join actions that do unrelated things: people read a joined control as one choice.",
+			"file": "button-group-dont-1",
+			"export": "ButtonGroupDont1Example"
+		}
+	},
+	{
+		"title": "Name icon-only buttons",
+		"do": {
+			"text": "Give every icon-only child an `aria-label` that says what it does, so a screen reader names each one.",
+			"file": "button-group-do-2",
+			"export": "ButtonGroupDo2Example"
+		},
+		"dont": {
+			"text": "Don't rely on the glyphs alone: \"Button, button\" tells a screen reader nothing.",
+			"file": "button-group-dont-2",
+			"export": "ButtonGroupDont2Example"
+		}
+	},
+	{
+		"title": "Keep the group short",
+		"do": {
+			"text": "Keep a joined row to a few buttons that fit the width they are given.",
+			"file": "button-group-do-3",
+			"export": "ButtonGroupDo3Example"
+		},
+		"dont": {
+			"text": "Don't squeeze many buttons into one row: their labels truncate and their targets crowd each other.",
+			"file": "button-group-dont-3",
+			"export": "ButtonGroupDont3Example"
+		}
+	}
+]

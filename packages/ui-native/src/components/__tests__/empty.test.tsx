@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import InboxIcon from "lucide-react-native/icons/inbox";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { Button } from "../button";
 import { EmptyState, ErrorState, LoadingState } from "../empty";
@@ -80,5 +80,15 @@ describe("ErrorState", () => {
 		const ref = React.createRef<ViewInstance>();
 		await render(<ErrorState ref={ref} message="Failed" retryLabel="Retry" onRetry={jest.fn()} />);
 		expect(ref.current).not.toBeNull();
+	});
+});
+
+describe("EmptyState looks", () => {
+	it("draws the dashed and centred look, a tinted tile, or an illustration in place of the glyph", async () => {
+		await render(<EmptyState message="Drop files here" title="Upload" icon={InboxIcon} iconTone="blue" variant="dashed" align="center" testID="empty" />);
+		expect(screen.getByTestId("empty")).toHaveProp("className", expect.stringContaining("border-dashed"));
+		expect(screen.getByTestId("empty")).toHaveProp("className", expect.stringContaining("items-center"));
+		await render(<EmptyState message="No messages" illustration={<Text>drawing</Text>} variant="plain" />);
+		expect(screen.getByText("drawing", { includeHiddenElements: true })).toBeOnTheScreen();
 	});
 });

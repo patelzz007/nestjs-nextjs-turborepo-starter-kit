@@ -34,7 +34,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Rocket } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { toastMutationError } from "@/lib/api/mutation-error";
@@ -401,7 +401,7 @@ function runColumns(selected: readonly string[], onToggle: (runId: string) => vo
 
 export function LoadTestsView(): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { isSuperAdmin } = useSuperAdminStatus();
 	const overview = api.operations.loadTests.useQuery(undefined, {
 		staleTime: ACTIVE_REFRESH_MS,

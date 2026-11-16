@@ -2,7 +2,7 @@
 
 import { Button } from "@workspace/ui/components/button";
 import { AlertTriangle } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "../../../navigation/use-progress-router";
 import * as React from "react";
 
 import { useImpersonation } from "../session/use-impersonation";
@@ -21,7 +21,7 @@ export interface ImpersonationBannerBarProps {
  * from wherever it reads its session.
  */
 export function ImpersonationBannerBar({ message, links }: ImpersonationBannerBarProps): React.JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const handleIdentityChanged = React.useCallback((): void => {
 		router.refresh();
 	}, [router]);

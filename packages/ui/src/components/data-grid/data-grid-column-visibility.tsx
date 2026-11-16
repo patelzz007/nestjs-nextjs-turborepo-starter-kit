@@ -20,6 +20,7 @@ import * as React from "react";
 export type DataGridColumnVisibilityTrigger = NonNullable<React.ComponentProps<typeof DropdownMenuTrigger>["render"]>;
 
 export interface DataGridColumnVisibilityItemProps<TData extends RowData> {
+	/** The column this menu item shows or hides. */
 	readonly column: DataGridColumn<TData>;
 }
 

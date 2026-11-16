@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import BoldIcon from "lucide-react-native/icons/letter-b";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { Toggle, toggleContentColorOf } from "../toggle";
 
@@ -20,7 +20,7 @@ describe("Toggle", () => {
 
 		await rerender(<Toggle label="Bold" pressed onChange={onChange} />);
 		expect(screen.getByRole("togglebutton")).toHaveProp("accessibilityState", expect.objectContaining(PRESSED));
-		expect(screen.getByRole("togglebutton")).toHaveProp("className", expect.stringContaining("bg-secondary"));
+		expect(screen.getByRole("togglebutton")).toHaveProp("className", expect.stringContaining("bg-surface-selected"));
 		await fireEvent.press(screen.getByRole("togglebutton"));
 		expect(onChange).toHaveBeenLastCalledWith(false);
 	});
@@ -66,7 +66,7 @@ describe("Toggle", () => {
 		const className = String(screen.getByRole("togglebutton").props.className);
 		expect(className).toContain("rounded-full");
 		expect(className).toContain("bg-primary");
-		expect(className).not.toContain("bg-secondary");
+		expect(className).not.toContain("bg-surface-selected");
 		expect(toggleContentColorOf(true, "pill")).toBe("accent-primary-foreground");
 		expect(toggleContentColorOf(true)).toBe("accent-secondary-foreground");
 		expect(toggleContentColorOf(false, "pill")).toBe("accent-foreground");
@@ -86,5 +86,11 @@ describe("Toggle", () => {
 		await fireEvent(toggle, "blur");
 		expect(onFocus).toHaveBeenCalledTimes(1);
 		expect(onBlur).toHaveBeenCalledTimes(1);
+	});
+
+	it("swaps its glyph and label while pressed, and is named by what it shows", async () => {
+		await render(<Toggle label="Bookmark" pressedLabel="Bookmarked" icon={BoldIcon} pressedIcon={BoldIcon} pressed onChange={jest.fn()} trailing={<Text>12</Text>} />);
+		expect(screen.getByRole("togglebutton", { name: "Bookmarked" })).toBeOnTheScreen();
+		expect(screen.getByText("12")).toBeOnTheScreen();
 	});
 });

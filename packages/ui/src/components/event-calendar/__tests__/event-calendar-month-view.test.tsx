@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { EventCalendarRenderMoreContentProps } from "@workspace/ui/components/event-calendar/event-calendar";
 import { EventCalendarMonthView } from "../event-calendar-month-view";
 import { CalendarHarness, ResizeObserverStub, testRect } from "@workspace/ui/testing/event-calendar-test-harness";
 import type { EventCalendarOccurrence, EventCalendarProposedUpdate, EventCalendarSlotDraft, EventCalendarSlotInfo, EventCalendarUpdateResult } from "../event-calendar-types";
@@ -84,6 +85,27 @@ describe("EventCalendarMonthView", () => {
 		const popover = screen.getByRole("dialog", { name: "Monday, March 16" });
 		expect(within(popover).getByRole("button", { name: /Standup/ })).toBeTruthy();
 		expect(within(popover).getByRole("button", { name: /Design review/ })).toBeTruthy();
+	});
+
+	it("renders renderMoreContent as the popover body, names it by the day, and closes through `close`", (): void => {
+		function renderMoreContent({ segments, close }: EventCalendarRenderMoreContentProps): React.ReactNode {
+			return (
+				<button type="button" onClick={close}>
+					{`Hidden: ${String(segments.length)}`}
+				</button>
+			);
+		}
+		render(
+			<CalendarHarness maxEventsPerCell={1} renderMoreContent={renderMoreContent}>
+				<EventCalendarMonthView />
+			</CalendarHarness>,
+		);
+		fireEvent.click(screen.getByText("+2 more"));
+		const popover = screen.getByRole("dialog", { name: "Monday, March 16" });
+		expect(popover.getAttribute("aria-labelledby")).toBeNull();
+		expect(within(popover).queryByRole("button", { name: /Standup/ })).toBeNull();
+		fireEvent.click(within(popover).getByRole("button", { name: "Hidden: 2" }));
+		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
 	it("lets onMoreClick suppress the popover with preventDefault", (): void => {

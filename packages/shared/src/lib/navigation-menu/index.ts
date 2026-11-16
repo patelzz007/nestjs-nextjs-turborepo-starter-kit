@@ -2,10 +2,13 @@
 // (nested items, any depth, each with an optional capability requirement), the compiler that gives
 // each item a stable id, and the recursive filter that keeps only what the session's capabilities
 // allow (structural parents, `cascade`, feature flags). Framework-free, so React, React Native and the
-// tests share one implementation; the API still checks every request.
+// tests share one implementation; the API still checks every request. The breadcrumb trail of a page is
+// resolved from the same menu (menu-trail.ts), so the web and the phone read the same path.
 
 export * from "./permission-check";
 export * from "./sidebar-menu-schema";
 export * from "./sidebar-menu-compile";
 export * from "./filter-sidebar-menu-by-capabilities";
 export * from "./apply-menu-authorization";
+export * from "./breadcrumb-tree";
+export * from "./menu-trail";

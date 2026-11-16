@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
 import { KeyboardAvoidingView } from "@workspace/ui-native/components/keyboard-avoiding-view";
+import { FieldSurfaceProvider } from "@workspace/ui-native/lib/field-surface";
 
 /** react-native-safe-area-context's view, with Uniwind's `className` (see screen.tsx). */
 const StyledSafeAreaView = withUniwind(SafeAreaView);
@@ -30,12 +31,15 @@ export function AuthPage({ title, description, children, footer, testID }: AuthP
 			<KeyboardAvoidingView className="flex-1">
 				<ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="grow gap-6 px-6 pt-7 pb-6">
 					<View className="gap-2">
-						<Text accessibilityRole="header" className="font-heading text-3xl text-foreground">
+						<Text accessibilityRole="header" className="text-h1 font-heading text-foreground">
 							{title}
 						</Text>
-						{description === undefined ? null : <Text className="font-sans text-base text-muted-foreground">{description}</Text>}
+						{description === undefined ? null : <Text className="text-body-lg font-sans text-muted-foreground">{description}</Text>}
 					</View>
-					<View className="gap-4">{children}</View>
+					{/* The sheet is the card colour, so its fields take the card's fill. */}
+					<View className="gap-4">
+						<FieldSurfaceProvider surface="card">{children}</FieldSurfaceProvider>
+					</View>
 					{footer === undefined ? null : <View className="mt-auto items-center pt-4">{footer}</View>}
 				</ScrollView>
 			</KeyboardAvoidingView>

@@ -1,8 +1,9 @@
 // ============================================
 // Home (§10.7) — the starter shell's placeholder dashboard
 // ============================================
-// Shows who is signed in, and "Discover": a carousel of cards pointing to parts of the app worth a
-// first look (features/home-highlights). Products replace this screen with their own.
+// Greets who is signed in for the time of day ("Good morning, …", features/home) above their email, and
+// "Discover": a carousel of cards pointing to parts of the app worth a first look (features/home-highlights).
+// Products replace this screen with their own.
 
 import InfoIcon from "lucide-react-native/icons/info";
 import * as React from "react";
@@ -18,6 +19,7 @@ import { ErrorState } from "@workspace/ui-native/components/empty";
 import { BodyText, MutedText, Subheading } from "@workspace/ui-native/components/text";
 import { backupCodesNotice } from "../../contexts/identity";
 import { HomeHighlights } from "../../features/home-highlights/home-highlights";
+import { greetingOf } from "../../features/home/greeting";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 
@@ -27,6 +29,8 @@ export default function HomeScreen(): React.JSX.Element {
 	const profile = api.auth.profile.useQuery(undefined);
 	const twoFactorEnabled = me.data?.data.twoFactorEnabled === true;
 	const remaining = api.auth.twoFactorBackupCodesRemaining.useQuery(undefined, { enabled: twoFactorEnabled });
+	// The time the screen opened: the greeting follows the part of the day it opened in.
+	const [openedAt] = React.useState((): Date => new Date());
 
 	const refetch = React.useCallback((): void => {
 		void me.refetch();
@@ -45,7 +49,7 @@ export default function HomeScreen(): React.JSX.Element {
 					<View className="flex-row items-center gap-4">
 						<Avatar name={user.fullName} imageUrl={profile.data?.data.avatar?.url ?? null} />
 						<View className="flex-1 gap-0.5">
-							<Subheading>{user.fullName}</Subheading>
+							<Subheading>{greetingOf(user.fullName, openedAt)}</Subheading>
 							<MutedText>{user.email}</MutedText>
 						</View>
 					</View>

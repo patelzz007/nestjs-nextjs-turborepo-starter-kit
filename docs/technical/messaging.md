@@ -3,8 +3,11 @@ title: "Messaging Infrastructure"
 tags: ["infrastructure", "messaging", "kafka", "bullmq", "redis", "outbox", "inbox", "idempotency"]
 description: "Operational reference for Redis, BullMQ, Kafka, queues, the transactional outbox, and the consumer inbox."
 author: "Backend Team"
+category: "Engineering"
+date: 1791072000000
 lastUpdated: 1792972800000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/messaging.webp"
 ---
 
 # Messaging infrastructure

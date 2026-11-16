@@ -11,6 +11,7 @@ const NAVIGATION_MENU_SIDE_OFFSET = 8;
 
 // Every part renders DOM (the root is a `<nav>`, or a `<div>` when nested), so
 // every part forwards its ref.
+/** Site navigation: a bar of links and triggers that open panels of links, on Base UI's navigation menu. */
 const NavigationMenu = React.forwardRef<HTMLElement, NavigationMenuPrimitive.Root.Props & Pick<NavigationMenuPrimitive.Positioner.Props, "align">>(function NavigationMenu(
 	{ align = "start", className, children, ...props },
 	ref,
@@ -27,6 +28,7 @@ const NavigationMenu = React.forwardRef<HTMLElement, NavigationMenuPrimitive.Roo
 	);
 });
 
+/** The bar's list of items. */
 const NavigationMenuList = React.forwardRef<HTMLUListElement, NavigationMenuPrimitive.List.Props>(function NavigationMenuList(
 	{ className, ...props },
 	ref,
@@ -41,6 +43,7 @@ const NavigationMenuList = React.forwardRef<HTMLUListElement, NavigationMenuPrim
 	);
 });
 
+/** One entry of the bar: a trigger with its content, or a plain link. */
 const NavigationMenuItem = React.forwardRef<HTMLLIElement, NavigationMenuPrimitive.Item.Props>(function NavigationMenuItem({ className, ...props }, ref): React.JSX.Element {
 	return <NavigationMenuPrimitive.Item ref={ref} data-slot="navigation-menu-item" className={cn("relative", className)} {...props} />;
 });
@@ -49,6 +52,7 @@ const navigationMenuTriggerStyle = cva(
 	"group/navigation-menu-trigger inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all outline-none hover:bg-muted focus:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-popup-open:bg-muted/50 data-popup-open:hover:bg-muted data-open:bg-muted/50 data-open:hover:bg-muted data-open:focus:bg-muted",
 );
 
+/** Opens its item's panel on hover or click, with a chevron. */
 const NavigationMenuTrigger = React.forwardRef<HTMLButtonElement, NavigationMenuPrimitive.Trigger.Props>(function NavigationMenuTrigger(
 	{ className, children, ...props },
 	ref,
@@ -64,6 +68,7 @@ const NavigationMenuTrigger = React.forwardRef<HTMLButtonElement, NavigationMenu
 	);
 });
 
+/** A trigger's panel of links. */
 const NavigationMenuContent = React.forwardRef<HTMLDivElement, NavigationMenuPrimitive.Content.Props>(function NavigationMenuContent(
 	{ className, ...props },
 	ref,
@@ -81,6 +86,7 @@ const NavigationMenuContent = React.forwardRef<HTMLDivElement, NavigationMenuPri
 	);
 });
 
+/** Places the open panel under the bar. */
 const NavigationMenuPositioner = React.forwardRef<HTMLDivElement, NavigationMenuPrimitive.Positioner.Props>(function NavigationMenuPositioner(
 	{ className, side = "bottom", sideOffset = NAVIGATION_MENU_SIDE_OFFSET, align = "start", alignOffset = 0, ...props },
 	ref,
@@ -106,6 +112,7 @@ const NavigationMenuPositioner = React.forwardRef<HTMLDivElement, NavigationMenu
 	);
 });
 
+/** A link. Pass your router's link through `render`. */
 const NavigationMenuLink = React.forwardRef<HTMLAnchorElement, NavigationMenuPrimitive.Link.Props>(function NavigationMenuLink(
 	{ className, ...props },
 	ref,
@@ -123,6 +130,7 @@ const NavigationMenuLink = React.forwardRef<HTMLAnchorElement, NavigationMenuPri
 	);
 });
 
+/** A marker following the hovered or focused trigger. */
 const NavigationMenuIndicator = React.forwardRef<HTMLSpanElement, NavigationMenuPrimitive.Icon.Props>(function NavigationMenuIndicator(
 	{ className, ...props },
 	ref,

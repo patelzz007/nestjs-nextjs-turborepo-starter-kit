@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import * as React from "react";
 import { stubResizeObserverForCalendarDropdowns } from "@workspace/ui/testing/calendar-dropdowns";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { format } from "date-fns";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DateSelector, type DateSelectorLabels, type DateSelectorValue } from "../date-selector";
@@ -31,7 +32,7 @@ afterEach((): void => {
 const MARCH_14: DateSelectorValue = { period: "day", operator: "is", startDate: new Date(2026, 2, 14) };
 
 function dayButton(container: HTMLElement, date: Date): HTMLButtonElement {
-	const button = container.querySelector<HTMLButtonElement>(`button[data-day="${date.toLocaleDateString()}"]`);
+	const button = container.querySelector<HTMLButtonElement>(`button[data-day="${format(date, "yyyy-MM-dd")}"]`);
 	if (button === null) {
 		throw new Error(`No day button for ${date.toDateString()}`);
 	}

@@ -271,12 +271,16 @@ describe("Carousel peek", () => {
 
 describe("carouselSlideMetrics", () => {
 	it("is the whole width per slide without a peek, stepping a page plus any gap", () => {
-		expect(carouselSlideMetrics(PAGE_WIDTH, 0, 0)).toEqual({ slideWidth: PAGE_WIDTH, interval: PAGE_WIDTH });
-		expect(carouselSlideMetrics(PAGE_WIDTH, 0, GAP)).toEqual({ slideWidth: PAGE_WIDTH, interval: PAGE_WIDTH + GAP });
+		expect(carouselSlideMetrics(PAGE_WIDTH, 0, 0)).toEqual({ slideWidth: PAGE_WIDTH, interval: PAGE_WIDTH, inset: 0 });
+		expect(carouselSlideMetrics(PAGE_WIDTH, 0, GAP)).toEqual({ slideWidth: PAGE_WIDTH, interval: PAGE_WIDTH + GAP, inset: 0 });
 	});
 
 	it("leaves room for the peek and the gap, and steps a slide plus a gap", () => {
-		expect(carouselSlideMetrics(PAGE_WIDTH, PEEK, DEFAULT_CAROUSEL_GAP)).toEqual({ slideWidth: PAGE_WIDTH - PEEK - DEFAULT_CAROUSEL_GAP, interval: PAGE_WIDTH - PEEK });
+		expect(carouselSlideMetrics(PAGE_WIDTH, PEEK, DEFAULT_CAROUSEL_GAP)).toEqual({
+			slideWidth: PAGE_WIDTH - PEEK - DEFAULT_CAROUSEL_GAP,
+			interval: PAGE_WIDTH - PEEK,
+			inset: 0,
+		});
 	});
 
 	it("never goes below zero before the carousel is measured", () => {
@@ -522,5 +526,43 @@ describe("Carousel loop (round, both ways)", () => {
 		);
 
 		expect(screen.getByTestId("carousel-pager")).toHaveProp("scrollEventThrottle", 16);
+	});
+});
+
+describe("Carousel orientation, slides per view and centring", () => {
+	it("works out slide sizes for several in view and for a centred peek", () => {
+		expect(carouselSlideMetrics(PAGE_WIDTH, 0, 12, 3)).toEqual({ slideWidth: (PAGE_WIDTH - 24) / 3, interval: (PAGE_WIDTH - 24) / 3 + 12, inset: 0 });
+		expect(carouselSlideMetrics(PAGE_WIDTH, 30, 10, 1, "center")).toEqual({ slideWidth: PAGE_WIDTH - 80, interval: PAGE_WIDTH - 70, inset: 40 });
+	});
+
+	it("shows several slides at once, stepping one at a time and stopping where the last ones fill the end", async () => {
+		await render(<OwnedCarousel perView={2} gap={0} showControls />);
+		await layOut();
+		const pager = screen.getByTestId("carousel-pager");
+		expect(pager).toHaveProp("snapToInterval", PAGE_WIDTH / 2);
+		expect(screen.getAllByRole("button", { name: /^Slide/u })).toHaveLength(2);
+		await fireEvent.press(screen.getByTestId("carousel-next"));
+		expect(screen.getByText("Showing 1")).toBeOnTheScreen();
+		expect(screen.getByTestId("carousel-next")).toBeDisabled();
+		await fireEvent(pager, "momentumScrollEnd", { nativeEvent: { contentOffset: { x: PAGE_WIDTH * 2, y: 0 } } });
+		expect(screen.getByText("Showing 1")).toBeOnTheScreen();
+	});
+
+	it("centres the shown slide with both neighbours peeking", async () => {
+		await render(<OwnedCarousel peek={30} gap={10} align="center" />);
+		await layOut();
+		expect(screen.getByTestId("carousel-pager")).toHaveProp("contentContainerStyle", { gap: 10, paddingHorizontal: 40 });
+	});
+
+	it("stacks slides in a column measured by its own height, scrolling up and down", async () => {
+		await render(<OwnedCarousel orientation="vertical" peek={40} />);
+		const pager = screen.getByTestId("carousel-pager");
+		expect(pager).toHaveProp("horizontal", false);
+		await fireEvent(pager, "layout", { nativeEvent: { layout: { width: 200, height: PAGE_WIDTH, x: 0, y: 0 } } });
+		await fireEvent(pager, "momentumScrollEnd", { nativeEvent: { contentOffset: { x: 0, y: PAGE_WIDTH - 40 } } });
+		expect(screen.getByText("Showing 1")).toBeOnTheScreen();
+		await fireEvent(pager, "scroll", { nativeEvent: { contentOffset: { x: 0, y: 10 } } });
+		await fireEvent(pager, "layout", { nativeEvent: { layout: { width: 200, height: PAGE_WIDTH, x: 0, y: 0 } } });
+		expect(screen.getByTestId("carousel-pager")).toHaveProp("contentContainerStyle", { gap: DEFAULT_CAROUSEL_GAP });
 	});
 });

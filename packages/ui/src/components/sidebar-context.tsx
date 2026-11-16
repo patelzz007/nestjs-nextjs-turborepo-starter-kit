@@ -62,19 +62,27 @@ export function useSidebarControls(): SidebarControls {
 	return controls;
 }
 
+/** Holds the sidebar's state — open, collapsed to an icon rail, or a sheet on mobile — persisted in a cookie by default, and toggled with ⌘B / Ctrl B. */
 export const SidebarProvider = React.forwardRef<
 	HTMLDivElement,
 	React.ComponentProps<"div"> & {
+		/** Whether the sidebar starts open when nothing is stored. */
 		defaultOpen?: boolean | undefined;
+		/** Whether the sidebar is open, controlled. */
 		open?: boolean | undefined;
+		/** Fires when the sidebar opens or closes on desktop. */
 		onOpenChange?: ((open: boolean) => void) | undefined;
 		/** Controlled open state of the mobile sheet; omit to let the provider own it. */
 		openMobile?: boolean | undefined;
+		/** Fires when the mobile sheet opens or closes. */
 		onOpenMobileChange?: ((open: boolean) => void) | undefined;
 		/** Per-usage overrides of the `sidebar` family's copy (toggle, mobile sheet title/description) from `UiKitLabelsProvider`. */
 		labels?: UiKitLabelsOverride<"sidebar"> | undefined;
+		/** Where the open state is kept; a cookie by default, so the server renders it as people left it. */
 		storage?: SidebarStorageAdapter | undefined;
+		/** The key that toggles the sidebar with ⌘ or Ctrl; `b` by default. */
 		keyboardShortcut?: string | undefined;
+		/** Counts or statuses shown on menu items, by item key. */
 		badges?: Readonly<Record<string, string | number>> | undefined;
 	}
 >(function SidebarProvider(

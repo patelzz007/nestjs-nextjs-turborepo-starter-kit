@@ -41,7 +41,7 @@ import {
 	type Modifiers,
 	type UniqueIdentifier,
 } from "@dnd-kit/core";
-import { arrayMove, rectSortingStrategy, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { rectSortingStrategy, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
 	createDragAndDropAccessibility,
@@ -58,92 +58,19 @@ import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider"
 import { cn } from "@workspace/ui/lib/core/utils";
 import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { findKanbanItem, moveKanbanItem, reorderKanbanColumns, type KanbanItemLocation, type KanbanValue } from "@workspace/ui-kit-logic";
 import * as React from "react";
 import { createPortal } from "react-dom";
 
-/** The `kanban` family of `UiKitLabels`. */
-export type KanbanLabels = DragAndDropLabels;
-
-/** Columns in board order, each holding its items in order. */
-export type KanbanValue<T> = Record<string, T[]>;
-
-/* -------------------------------------------------------------------------- */
-/*                                 Move logic                                 */
-/* -------------------------------------------------------------------------- */
-
-export interface KanbanItemLocation {
-	readonly container: string;
-	readonly index: number;
-}
+// The move rules (findKanbanItem, moveKanbanItem, reorderKanbanColumns) live in @workspace/ui-kit-logic
+// (kanban), which the mobile kit's Kanban uses too; this module re-exports them.
+export { findKanbanItem, moveKanbanItem, reorderKanbanColumns, type KanbanItemLocation, type KanbanValue };
 
 /** Index of a list position that does not exist, as `findIndex` reports it. */
 const NOT_FOUND = -1;
 
-/** The column holding item `id`, and its index there, or `undefined` for an unknown id. */
-export function findKanbanItem<T>(columns: KanbanValue<T>, getItemValue: (item: T) => string, id: UniqueIdentifier): KanbanItemLocation | undefined {
-	for (const [container, items] of Object.entries(columns)) {
-		const index = items.findIndex((item) => getItemValue(item) === id);
-		if (index !== NOT_FOUND) {
-			return { container, index };
-		}
-	}
-	return undefined;
-}
-
-function hasColumn<T>(columns: KanbanValue<T>, id: UniqueIdentifier): boolean {
-	return Object.keys(columns).some((key) => key === id);
-}
-
-/**
- * The board after moving item `activeId` onto `overId` — another item (it
- * takes that item's place) or a column (it goes to the end) — or `null` when
- * nothing moves. Pure, so the move rule is testable without a drag.
- */
-export function moveKanbanItem<T>(columns: KanbanValue<T>, getItemValue: (item: T) => string, activeId: UniqueIdentifier, overId: UniqueIdentifier): KanbanValue<T> | null {
-	const from = findKanbanItem(columns, getItemValue, activeId);
-	if (from === undefined) {
-		return null;
-	}
-	const overIsColumn = hasColumn(columns, overId);
-	const target = overIsColumn ? String(overId) : findKanbanItem(columns, getItemValue, overId)?.container;
-	if (target === undefined) {
-		return null;
-	}
-	const sourceItems = columns[from.container] ?? [];
-	const targetItems = columns[target] ?? [];
-
-	if (from.container === target) {
-		const overIndex = overIsColumn ? targetItems.length - 1 : targetItems.findIndex((item) => getItemValue(item) === overId);
-		if (overIndex === NOT_FOUND || overIndex === from.index) {
-			return null;
-		}
-		return { ...columns, [target]: arrayMove(targetItems, from.index, overIndex) };
-	}
-
-	const overIndex = overIsColumn ? targetItems.length : targetItems.findIndex((item) => getItemValue(item) === overId);
-	const moved = sourceItems.at(from.index);
-	if (moved === undefined || overIndex === NOT_FOUND) {
-		return null;
-	}
-	const nextSource = sourceItems.filter((_item, index) => index !== from.index);
-	const nextTarget = [...targetItems.slice(0, overIndex), moved, ...targetItems.slice(overIndex)];
-	return { ...columns, [from.container]: nextSource, [target]: nextTarget };
-}
-
-/** The board with column `activeId` moved to column `overId`'s place, or `null` when nothing moves. */
-export function reorderKanbanColumns<T>(columns: KanbanValue<T>, activeId: UniqueIdentifier, overId: UniqueIdentifier): KanbanValue<T> | null {
-	const keys = Object.keys(columns);
-	const activeIndex = keys.findIndex((key) => key === activeId);
-	const overIndex = keys.findIndex((key) => key === overId);
-	if (activeIndex === NOT_FOUND || overIndex === NOT_FOUND || activeIndex === overIndex) {
-		return null;
-	}
-	const next: KanbanValue<T> = {};
-	for (const key of arrayMove(keys, activeIndex, overIndex)) {
-		next[key] = columns[key] ?? [];
-	}
-	return next;
-}
+/** The `kanban` family of `UiKitLabels`. */
+export type KanbanLabels = DragAndDropLabels;
 
 /* -------------------------------------------------------------------------- */
 /*                                   Context                                  */
@@ -212,10 +139,13 @@ export interface KanbanCommitMeta<T> {
 }
 
 export interface KanbanRootProps<T> extends Omit<useRender.ComponentProps<"div">, "children" | "onDragStart" | "onDragEnd"> {
+	/** The current state of columns and their items. */
 	readonly value: KanbanValue<T>;
+	/** Fired when items move within or between columns. In the default mode it also fires during the drag to render the live preview, so avoid persisting from here directly. */
 	readonly onValueChange: (value: KanbanValue<T>) => void;
 	/** The unique id of an item (unique across every column) — what its `KanbanItem value` carries. */
 	readonly getItemValue: (item: T) => string;
+	/** The `KanbanBoard`, and optionally a `KanbanOverlay`. */
 	readonly children: React.ReactNode;
 	/** Take over applying item moves (no live preview); column reorders still apply. */
 	readonly onMove?: ((event: KanbanMoveEvent) => void) | undefined;
@@ -223,11 +153,15 @@ export interface KanbanRootProps<T> extends Omit<useRender.ComponentProps<"div">
 	readonly onValueCommit?: ((value: KanbanValue<T>, meta: KanbanCommitMeta<T>) => void) | undefined;
 	/** Undo the live-preview moves when a drag is cancelled (Escape). */
 	readonly restoreOnCancel?: boolean | undefined;
+	/** Raw dnd-kit passthrough, fired when a drag starts. */
 	readonly onDragStart?: ((event: DragStartEvent) => void) | undefined;
+	/** Raw dnd-kit passthrough, fired after internal cleanup and before the final `onValueChange`/`onMove` call. In the default mode, `onValueChange` has already fired during dragOver. */
 	readonly onDragEnd?: ((event: DragEndEvent) => void) | undefined;
+	/** Raw dnd-kit passthrough, fired when a drag is cancelled. */
 	readonly onDragCancel?: ((event: DragCancelEvent) => void) | undefined;
 	/** Replaces dnd-kit accessibility settings (announcements, instructions) built from `labels`. */
 	readonly accessibility?: DragAndDropAccessibility | undefined;
+	/** dnd-kit modifiers applied to the drag. */
 	readonly modifiers?: Modifiers | undefined;
 	/** Per-usage overrides of the `kanban` copy from `UiKitLabelsProvider`. */
 	readonly labels?: UiKitLabelsOverride<"kanban"> | undefined;
@@ -563,6 +497,7 @@ export interface KanbanColumnProps extends useRender.ComponentProps<"div"> {
 	readonly locked?: boolean | undefined;
 }
 
+/** One column of the board, identified by its `value`. Moved by its `KanbanColumnHandle`. */
 const KanbanColumn = React.forwardRef<HTMLDivElement, KanbanColumnProps>(function KanbanColumn(
 	{ value, className, render, disabled = false, locked = false, "aria-invalid": ariaInvalid, children, ...props },
 	ref,
@@ -654,6 +589,7 @@ export interface KanbanItemProps extends useRender.ComponentProps<"div"> {
 	readonly locked?: boolean | undefined;
 }
 
+/** One card, identified by its `value`. Moved by its `KanbanItemHandle`. */
 const KanbanItem = React.forwardRef<HTMLDivElement, KanbanItemProps>(function KanbanItem(
 	{ value, className, render, disabled = false, locked = false, "aria-invalid": ariaInvalid, children, ...props },
 	ref,

@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep menus few",
+		"do": {
+			"text": "Use 2 to 4 menus with familiar names.",
+			"file": "menubar-do-1",
+			"export": "MenubarDo1Example"
+		},
+		"dont": {
+			"text": "Don't line up 7 menus across a narrow width: they overflow or wrap.",
+			"file": "menubar-dont-1",
+			"export": "MenubarDont1Example"
+		}
+	},
+	{
+		"title": "Put destructive items last",
+		"do": {
+			"text": "Group a destructive item last, apart from the rest.",
+			"file": "menubar-do-2",
+			"export": "MenubarDo2Example"
+		},
+		"dont": {
+			"text": "Don't put Sign out first, where a slip triggers it.",
+			"file": "menubar-dont-2",
+			"export": "MenubarDont2Example"
+		}
+	}
+]

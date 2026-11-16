@@ -3,8 +3,11 @@ title: "Multi-tenancy plan"
 description: "The approved decisions and ordered tasks for making RewardHub multi-tenant while the same codebase keeps a single-tenant mode."
 tags: ["architecture", "tenancy", "rls", "security", "migration"]
 author: "Platform Team"
+category: "Architecture"
+date: 1792368000000
 lastUpdated: 1792627200000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/architecture/multi-tenancy-plan.webp"
 order: 4
 ---
 

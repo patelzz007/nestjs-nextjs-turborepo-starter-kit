@@ -3,8 +3,11 @@ title: "Documentation"
 description: "Where to start: the user guide for people operating the platform, the technical documentation for engineers, the generated API reference and the architecture decisions."
 order: 1
 author: "Platform Team"
+category: "Overview"
+date: 1788220800000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/README.webp"
 tags: ["overview", "documentation"]
 ---
 

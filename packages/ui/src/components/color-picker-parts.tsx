@@ -32,6 +32,7 @@ const colorPickerSwatchVariants = cva(
 	"relative inline-flex size-4 shrink-0 forced-color-adjust-none after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:inset-ring after:inset-ring-foreground/10",
 	{
 		variants: {
+			/** `square` follows each style's radius. */
 			shape: {
 				square: "rounded-sm",
 				circle: "rounded-full",
@@ -73,6 +74,7 @@ const ColorPickerSwatch = React.forwardRef<HTMLSpanElement, ColorPickerSwatchPro
 /* -------------------------------- Value -------------------------------- */
 
 export type ColorPickerValueProps = Omit<React.ComponentProps<"span">, "children" | "ref"> & {
+	/** Shown while there is no value. */
 	readonly placeholder?: React.ReactNode;
 };
 
@@ -102,6 +104,7 @@ const colorPickerTriggerVariants = cva("font-normal tracking-normal normal-case 
 });
 
 export type ColorPickerTriggerProps = Omit<React.ComponentProps<typeof Button>, "ref" | "placeholder"> & {
+	/** Shown while there is no value. */
 	readonly placeholder?: React.ReactNode;
 };
 

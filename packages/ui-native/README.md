@@ -43,7 +43,13 @@ which the kit's own React Native lint rules forbid.
    Form `field` or a React Hook Form `Controller` with no adapter. A component never runs
    validation. It renders the message it is given.
 6. **Design tokens only.** Colours, radii, spacing and type come from token utilities
-   (`bg-card`, `text-muted-foreground`, `rounded-lg`, `accent-primary` for icon colours). No
+   (`bg-card`, `text-muted-foreground`, `rounded-card`, `accent-primary` for icon colours). Text
+   sizes are the mobile type roles only (`text-display`, `text-h1` … `text-h4`, `text-body-lg`,
+   `text-body`, `text-label`, `text-caption`, `text-button`, `text-nav`, `text-overline`: each sets
+   the size and the line height of one row of the mobile visual spec), never Tailwind's
+   `text-sm` / `text-lg` steps; `packages/tooling/src/starter/mobile-type-scale` fails the build on
+   one. `cn()` knows the roles and the named radii, so a caller's `text-h3` replaces a component's
+   `text-h4` without dropping its colour. No
    arbitrary values (`w-[13px]`, `bg-[#fff]`), no hex or rgb colours, no `style={{ … }}` object
    literals. An animated style from Reanimated (`style={animatedStyle}`) is the one exception.
    Fonts use the family utilities (`font-sans`, `font-sans-semibold`, …), never
@@ -76,7 +82,17 @@ which the kit's own React Native lint rules forbid.
     - `className` merging;
     - each variant it adds.
 
-`Button` (`src/components/button.tsx`) is the reference implementation: copy its shape.
+`Button` (`src/components/button.tsx`) is the reference implementation: copy its shape. It also
+carries the mobile visual spec's button: 48 pt tall, 20 pt side padding, 10 pt corners
+(`rounded-button`), a 15 pt semibold label (`text-button`) and an 18 pt glyph 8 pt from it. Solid
+buttons darken while pressed (`active:bg-primary-pressed`); a disabled solid button takes the
+`disabled` fill; secondary buttons sit on the soft surface (`bg-secondary`); destructive buttons
+stay solid red.
+
+Fields (`Input` and what builds on it, `SelectField`, `CalendarField`, `InputOTP`) have no fill of
+their own: they take the surface they sit on (`src/lib/field-surface.ts`). `Card` and `ListGroup`
+declare `card`, `Dialog` and `BottomSheet` declare `popover`, and anywhere else is the page. An app's
+own card-coloured box that holds fields wraps them in `<FieldSurfaceProvider surface="card">`.
 
 ## Web ↔ native map
 

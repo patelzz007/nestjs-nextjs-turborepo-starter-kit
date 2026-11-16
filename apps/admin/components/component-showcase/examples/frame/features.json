@@ -1,0 +1,135 @@
+[
+	{
+		"id": "c-frame-1",
+		"label": "Basic",
+		"description": "Basic frame. Best for the full anatomy in placeholder copy, a title bar over one panel and a footer line, at full container width.",
+		"file": "frame-1",
+		"export": "Frame1Example"
+	},
+	{
+		"id": "c-frame-2",
+		"label": "Separated Panels",
+		"description": "Frame with separated panels. Best for two panels under one title bar, each keeping its own rounded border with a small gap between them.",
+		"file": "frame-2",
+		"export": "Frame2Example"
+	},
+	{
+		"id": "c-frame-3",
+		"label": "Stacked Panels",
+		"description": "Frame with stacked panels. Best for two placeholder panels under a title bar, fused into one column where a single border marks the seam.",
+		"file": "frame-3",
+		"export": "Frame3Example"
+	},
+	{
+		"id": "c-frame-4",
+		"label": "Stacked Dense",
+		"description": "Frame with stacked panels and dense style. Best for two fused panels pulled flush onto the outer border, with no inset padding left around them.",
+		"file": "frame-4",
+		"export": "Frame4Example"
+	},
+	{
+		"id": "c-frame-5",
+		"label": "Collapsible Panels",
+		"description": "Frame with collapsible panels. Best for one run step whose chevron title bar opens and closes its instructions panel, open on load.",
+		"file": "frame-5",
+		"export": "Frame5Example"
+	},
+	{
+		"id": "c-frame-6",
+		"label": "Ghost Variant",
+		"description": "Frame with ghost variant. Best for a shell with no outer border, where only the muted fill and the bordered panel inside mark its edge.",
+		"file": "frame-6",
+		"export": "Frame6Example"
+	},
+	{
+		"id": "c-frame-7",
+		"label": "Dense Layout",
+		"description": "Frame with dense layout. Best for one panel flush with the outer border under a title bar, shown as a warehouse stock check in a narrow column.",
+		"file": "frame-7",
+		"export": "Frame7Example"
+	},
+	{
+		"id": "c-frame-8",
+		"label": "Stacked Rows",
+		"description": "Frame with stacked panels. Best for three service rows for auth, database and storage, fused into one column under a server logs title bar.",
+		"file": "frame-8",
+		"export": "Frame8Example"
+	},
+	{
+		"id": "c-frame-9",
+		"label": "Extra Small Spacing",
+		"description": "Frame with extra small spacing. Best for the tightest padding preset, 8px panel sides and the thinnest title and footer bars, in a 320px wide column.",
+		"file": "frame-9",
+		"export": "Frame9Example"
+	},
+	{
+		"id": "c-frame-10",
+		"label": "Small Spacing",
+		"description": "Frame with small spacing. Best for the small padding preset, 12px panel sides, on a database health widget with a status footer.",
+		"file": "frame-10",
+		"export": "Frame10Example"
+	},
+	{
+		"id": "c-frame-11",
+		"label": "Default Spacing",
+		"description": "Frame with default spacing. Best for the padding a Frame gets with no preset passed, 16px panel sides, around account security and a last login footer.",
+		"file": "frame-11",
+		"export": "Frame11Example"
+	},
+	{
+		"id": "c-frame-12",
+		"label": "Large Spacing",
+		"description": "Frame with large spacing. Best for the roomiest padding preset, 20px panel sides and the tallest bars, for a sparse analytics summary.",
+		"file": "frame-12",
+		"export": "Frame12Example"
+	},
+	{
+		"id": "c-frame-13",
+		"label": "Small Radius",
+		"description": "Frame with small border radius. Best for corners pinned to the small radius token, the smallest override here, on a network diagnostics panel.",
+		"file": "frame-13",
+		"export": "Frame13Example"
+	},
+	{
+		"id": "c-frame-14",
+		"label": "Medium Radius",
+		"description": "Frame with medium border radius. Best for corners pinned to the medium radius token, a step rounder than small, on a media storage panel.",
+		"file": "frame-14",
+		"export": "Frame14Example"
+	},
+	{
+		"id": "c-frame-15",
+		"label": "Large Radius",
+		"description": "Frame with large border radius. Best for corners pinned to the large radius token on a team panel showing members online.",
+		"file": "frame-15",
+		"export": "Frame15Example"
+	},
+	{
+		"id": "c-frame-16",
+		"label": "Default Radius",
+		"description": "Frame with the default border radius. Best for no radius override, so the corner follows the theme and matches a Card beside it.",
+		"file": "frame-16",
+		"export": "Frame16Example"
+	},
+	{
+		"id": "c-frame-17",
+		"label": "Extra Large Radius",
+		"description": "Frame with extra large border radius. Best for the roundest override in the set, the 2xl radius token, softening a creative portfolio gallery panel.",
+		"file": "frame-17",
+		"export": "Frame17Example"
+	},
+	{
+		"id": "c-frame-18",
+		"label": "Content-Only Panels",
+		"description": "Frame with content-only panels. Best for two panels with no title bar or footer, kept apart by a small gap, as account and team summaries.",
+		"file": "frame-18",
+		"export": "Frame18Example"
+	},
+	{
+		"id": "c-frame-19",
+		"label": "Stacked Content-Only",
+		"description": "Frame with stacked content-only panels. Best for two summary panels with no title bar or footer, joined by one shared border into a single block.",
+		"file": "frame-19",
+		"export": "Frame19Example"
+	}
+]

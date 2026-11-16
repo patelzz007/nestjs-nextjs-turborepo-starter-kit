@@ -3,8 +3,11 @@ title: "5. Customer claims (QR and backup code)"
 description: "How a customer finds a reward, accepts the terms, claims it with a one-time code and shows the QR code or backup code at the counter."
 order: 6
 author: "Product & Platform Team"
+category: "User guide"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
+editedAt: 1793617407000
+coverImage: "/images/covers/user-guide/05-customer-claims.webp"
 tags: ["user-guide", "customer", "claims", "qr"]
 ---
 

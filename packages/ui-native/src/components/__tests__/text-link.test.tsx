@@ -38,7 +38,7 @@ describe("TextLink", () => {
 
 		expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveProp("hitSlop", 8);
 		expect(textLinkVariants({ variant: "muted" })).toContain("text-muted-foreground");
-		expect(textLinkVariants({ size: "md" })).toContain("text-base");
+		expect(textLinkVariants({ size: "md" })).toContain("text-body-lg");
 	});
 
 	it("reports focus and blur", async () => {

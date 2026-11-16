@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Hide only what is optional",
+		"do": {
+			"text": "Use an accordion for answers people look up one at a time.",
+			"file": "accordion-do-1",
+			"export": "AccordionDo1Example"
+		},
+		"dont": {
+			"text": "Don't hide something everyone must read (terms to accept) inside a closed section.",
+			"file": "accordion-dont-1",
+			"export": "AccordionDont1Example"
+		}
+	},
+	{
+		"title": "Write clear headings",
+		"do": {
+			"text": "Write each heading as the question or the topic it opens.",
+			"file": "accordion-do-2",
+			"export": "AccordionDo2Example"
+		},
+		"dont": {
+			"text": "Don't use vague headings like \"More\" or \"Details\".",
+			"file": "accordion-dont-2",
+			"export": "AccordionDont2Example"
+		}
+	}
+]

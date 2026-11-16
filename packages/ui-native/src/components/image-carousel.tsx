@@ -127,7 +127,7 @@ export const ImageCarousel = React.memo(
 								accessibilityElementsHidden
 								importantForAccessibility="no-hide-descendants"
 								className="absolute top-3 right-3 rounded-full bg-background/80 px-2.5 py-1">
-								<Text className="font-sans-medium text-xs text-foreground">{`${String(imageIndex + POSITION_OFFSET)} / ${String(total)}`}</Text>
+								<Text className="font-sans-medium text-caption text-foreground">{`${String(imageIndex + POSITION_OFFSET)} / ${String(total)}`}</Text>
 							</View>
 						) : null}
 					</View>

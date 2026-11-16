@@ -90,12 +90,12 @@ describe("RelativeTime", () => {
 
 	it("has variants and sizes, forwards its ref and merges className last", async () => {
 		const ref = React.createRef<TextInstance>();
-		await render(<RelativeTime ref={ref} value={NOW} now={NOW} locale="en" variant="default" size="xs" className="text-sm" testID="time" />);
+		await render(<RelativeTime ref={ref} value={NOW} now={NOW} locale="en" variant="default" size="xs" className="text-body" testID="time" />);
 
 		expect(ref.current).not.toBeNull();
 		const className = String(screen.getByTestId("time").props.className);
 		expect(className).toContain("text-foreground");
-		expect(className).toContain("text-sm");
-		expect(className).not.toContain("text-xs");
+		expect(className).toContain("text-body");
+		expect(className).not.toContain("text-caption");
 	});
 });

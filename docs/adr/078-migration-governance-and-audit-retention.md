@@ -3,8 +3,11 @@ title: "ADR 078: Migration governance and audit-record retention"
 tags: ["adr", "database", "migrations", "audit", "retention", "security"]
 description: "Prisma-generated migrations are the default, not an absolute rule: reviewed hand-written SQL is allowed for PostgreSQL features Prisma can't express. Audit tables stay ordinary, append-only tables; a privileged, batched, legal-hold-aware retention process removes records past the ten-year retention; partitioning comes later, when volume justifies it."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793664000000
 lastUpdated: 1793664000000
-coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=1200&h=630"
+editedAt: 1793976836000
+coverImage: "/images/covers/adr/078-migration-governance-and-audit-retention.webp"
 order: 78
 ---
 

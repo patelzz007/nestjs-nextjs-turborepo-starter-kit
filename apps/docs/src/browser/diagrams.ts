@@ -1,4 +1,7 @@
+import { flowchartRoles, type DiagramRole } from "@workspace/docs-content/diagram-roles";
 import type { FlowchartModel, Mounted, RenderResult } from "pele/lazy";
+
+import { DIAGRAM_LAYOUT_OPTIONS } from "@/lib/diagram-layout";
 
 /**
  * Renders the guides' diagrams (```mermaid fences, emitted by `remarkDiagrams`
@@ -22,53 +25,20 @@ import type { FlowchartModel, Mounted, RenderResult } from "pele/lazy";
  * visible if rendering fails (`data-error`).
  */
 
-/** What a flowchart node is for, as global.css colours it. */
-export type DiagramRole = "entry" | "step" | "store" | "decision" | "outcome" | "person";
-
-/**
- * Pele only re-orients a too-wide flowchart when its container is narrower
- * than `directionBreakpoint` (640 px by default, a phone). The reading column is
- * wider than that, so wide diagrams were scaled down instead; with no
- * breakpoint, any diagram that does not fit is re-oriented when that helps.
- */
-const ADAPT_DIRECTION_AT_ANY_WIDTH = Number.POSITIVE_INFINITY;
-
 /** The participant hues global.css defines (`[data-hue="1"]` … `[data-hue="6"]`), reused in order. */
 export const PARTICIPANT_HUE_COUNT = 6;
 
-const SHAPE_ROLES: Readonly<Record<string, DiagramRole>> = {
+/** The roles the drawn shapes mean (Pele's `pele-shape-*` classes; a double circle is `pele-shape-dbl`). */
+export const SHAPE_ROLES: Readonly<Record<string, DiagramRole>> = {
 	"pele-shape-cyl": "store",
 	"pele-shape-diam": "decision",
 	"pele-shape-circle": "person",
-	"pele-shape-dblcircle": "person",
+	"pele-shape-dbl": "person",
 };
 
-/**
- * The role of every flowchart node, from its shape and its edges: a cylinder is
- * a store, a diamond a decision, a circle a person; otherwise a node nothing
- * points to is an entry point, one that points to nothing an outcome, and the
- * rest are steps. Nodes the author styled are left out.
- */
-export function flowchartRoles(model: FlowchartModel, shapeOf: (id: string) => string | undefined): Map<string, DiagramRole> {
-	const incoming = new Set(model.edges.map((edge) => edge.end));
-	const outgoing = new Set(model.edges.map((edge) => edge.start));
-	const roles = new Map<string, DiagramRole>();
-	for (const node of model.nodes.values()) {
-		if (node.classes.length > 0 || node.styles.length > 0) {
-			continue;
-		}
-		const shapeRole = SHAPE_ROLES[shapeOf(node.id) ?? ""];
-		if (shapeRole !== undefined) {
-			roles.set(node.id, shapeRole);
-		} else if (!incoming.has(node.id) && outgoing.has(node.id)) {
-			roles.set(node.id, "entry");
-		} else if (incoming.has(node.id) && !outgoing.has(node.id)) {
-			roles.set(node.id, "outcome");
-		} else {
-			roles.set(node.id, "step");
-		}
-	}
-	return roles;
+/** The role of every flowchart node (`flowchartRoles`, shared with Notion), with each shape read from the drawing. */
+export function drawnFlowchartRoles(model: FlowchartModel, shapeOf: (id: string) => string | undefined): Map<string, DiagramRole> {
+	return flowchartRoles({ nodes: model.nodes.values(), edges: model.edges }, (id) => SHAPE_ROLES[shapeOf(id) ?? ""]);
 }
 
 /** The `pele-shape-*` class of a rendered node. */
@@ -91,7 +61,7 @@ function nodesById(canvas: HTMLElement, selector: string): Map<string, Element[]
 function decorate(canvas: HTMLElement, result: RenderResult, flowchart: FlowchartModel | undefined): void {
 	if (result.type === "flowchart" && flowchart !== undefined) {
 		const nodes = nodesById(canvas, ".pele-node");
-		const roles = flowchartRoles(flowchart, (id) => {
+		const roles = drawnFlowchartRoles(flowchart, (id) => {
 			const [first] = nodes.get(id) ?? [];
 			return first === undefined ? undefined : shapeClass(first);
 		});
@@ -130,9 +100,9 @@ async function renderFigure(figure: HTMLElement, source: string): Promise<Mounte
 		figure.append(canvas);
 		const mounted = mount(canvas, source, {
 			// A flowchart too wide for the column is laid out the other way round (when that is narrower) instead
-			// of being shrunk until its labels are unreadable — at any column width, not just phone widths.
-			autoDirection: true,
-			directionBreakpoint: ADAPT_DIRECTION_AT_ANY_WIDTH,
+			// of being shrunk until its labels are unreadable, at any column width. The docs check holds the
+			// written direction to this (src/lib/diagram-layout.ts).
+			...DIAGRAM_LAYOUT_OPTIONS,
 			zoom: "auto",
 			onRender: (result: RenderResult): void => {
 				decorate(canvas, result, flowchart);

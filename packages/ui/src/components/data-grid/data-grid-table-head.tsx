@@ -94,7 +94,9 @@ export function ariaSortOf<TData extends RowData>(column: DataGridColumn<TData>)
 }
 
 export interface DataGridTableHeadRowCellProps<TData extends RowData> {
+	/** The header cell's content. */
 	readonly children?: React.ReactNode;
+	/** CSS classes for the `<thead>` element. */
 	readonly header: DataGridHeader<TData>;
 	/** Headers this cell spans through `meta.headerColSpan`; they render none. */
 	readonly coveredHeaders?: readonly DataGridHeader<TData>[] | undefined;
@@ -102,6 +104,7 @@ export interface DataGridTableHeadRowCellProps<TData extends RowData> {
 	readonly dndRef?: React.Ref<HTMLTableCellElement> | undefined;
 	/** The drag-and-drop variant's transform style. */
 	readonly dndStyle?: React.CSSProperties | undefined;
+	/** The header cell's `th`. */
 	readonly ref?: React.Ref<HTMLTableCellElement> | undefined;
 }
 
@@ -242,6 +245,7 @@ export function selectIsResizingColumn(resizing: { readonly isResizingColumn: fa
 }
 
 export interface DataGridTableHeadRowCellResizeProps<TData extends RowData> {
+	/** CSS classes for the `<thead>` element. */
 	readonly header: DataGridHeader<TData>;
 }
 

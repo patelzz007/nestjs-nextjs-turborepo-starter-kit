@@ -1,10 +1,13 @@
 ---
 title: "API reference — Files and object storage"
 description: "Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback."
-order: 11
+order: 12
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/files.webp"
 tags: ["api", "reference", "generated"]
 ---
 

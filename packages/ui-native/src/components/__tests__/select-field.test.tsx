@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
-import { filterSelectOptions, SelectField, type SelectOption } from "../select-field";
+import { filterSelectOptions, MultiSelectField, SelectField, selectListRowsOf, type SelectOption, toggleSelectValue } from "../select-field";
 import { SHEET_MOTION } from "../../lib/motion";
 
 type Fruit = "apple" | "banana" | "cherry";
@@ -175,5 +175,102 @@ describe("filterSelectOptions", () => {
 
 	it("keeps every option for an empty query", () => {
 		expect(filterSelectOptions(OPTIONS, " ")).toBe(OPTIONS);
+	});
+});
+
+const GROUPED: readonly SelectOption<Fruit>[] = [
+	{ value: "banana", label: "Banana", group: "Yellow" },
+	{ value: "apple", label: "Apple", group: "Red", trailing: <Text>Crisp</Text> },
+	{ value: "cherry", label: "Cherry", group: "Red", leading: <Text>●</Text> },
+];
+
+describe("selectListRowsOf", () => {
+	it("keeps each group's options together under its heading, the groups in the order they first appear", () => {
+		const rows = selectListRowsOf(GROUPED, true);
+		expect(rows.map((row) => row.key)).toEqual(["group:Yellow", "banana", "group:Red", "apple", "cherry"]);
+		expect(rows.flatMap((row) => (row.kind === "heading" ? [row.separated] : []))).toEqual([false, true]);
+	});
+
+	it("lists options without a group first, with no heading", () => {
+		expect(selectListRowsOf(OPTIONS, false).map((row) => row.kind)).toEqual(["option", "option", "option"]);
+	});
+});
+
+describe("toggleSelectValue", () => {
+	it("adds a value at the end, or takes it out", () => {
+		expect(toggleSelectValue(["apple"], "banana")).toEqual(["apple", "banana"]);
+		expect(toggleSelectValue(["apple", "banana"], "apple")).toEqual(["banana"]);
+	});
+});
+
+describe("SelectField extras", () => {
+	it("lists grouped options under headings, with their leading and trailing parts and the tick at the start", async () => {
+		await render(field({ options: GROUPED, value: "cherry", indicatorPosition: "start", groupSeparators: true }));
+		expect(screen.getByText("●")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("combobox"));
+		expect(screen.getByRole("header", { name: "Red" })).toBeOnTheScreen();
+		expect(screen.getByText("Crisp", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.getByRole("radio", { name: "Cherry" })).toBeChecked();
+	});
+
+	it("shows a prefix and the caller's drawing of the value, and clears it from its own button", async () => {
+		const onClear = jest.fn();
+		await render(field({ prefix: "Status:", renderValue: (option) => <Text>{`[${option.label}]`}</Text>, onClear, testID: "fruit" }));
+		expect(screen.getByText("Status:")).toBeOnTheScreen();
+		expect(screen.getByText("[Apple]")).toBeOnTheScreen();
+		expect(screen.getByRole("combobox", { name: "Fruit, Apple" })).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Clear fruit" }));
+		expect(onClear).toHaveBeenCalledTimes(1);
+	});
+
+	it("has no clear button while nothing is chosen, and a ghost variant without a fill", async () => {
+		await render(field({ value: null, onClear: jest.fn(), variant: "ghost" }));
+		expect(screen.queryByRole("button", { name: "Clear fruit" })).toBeNull();
+		expect(screen.getByRole("combobox")).toHaveProp("className", expect.stringContaining("bg-transparent"));
+	});
+
+	it("tints the first match and picks it with the keyboard's Return key", async () => {
+		const onChange = jest.fn();
+		await render(field({ value: null, onChange, searchable: true, autoHighlight: true }));
+		await fireEvent.press(screen.getByRole("combobox"));
+		const search = screen.getByLabelText("Search fruit");
+		await fireEvent.changeText(search, "rr");
+		await fireEvent(search, "submitEditing");
+		expect(onChange).toHaveBeenCalledWith("cherry");
+	});
+});
+
+/** Draws a multiple select's value as a count. */
+function countFruit(chosen: readonly SelectOption<Fruit>[]): React.JSX.Element {
+	return <Text>{`${String(chosen.length)} fruit`}</Text>;
+}
+
+describe("MultiSelectField", () => {
+	it("ticks several options in a sheet that stays open, and lists them as removable chips", async () => {
+		const onChange = jest.fn();
+		await render(<MultiSelectField<Fruit> label="Fruit" options={OPTIONS} values={["apple", "cherry"]} onChange={onChange} />);
+		expect(screen.getByRole("combobox", { name: "Fruit, Apple, Cherry" })).toBeOnTheScreen();
+		expect(screen.getByText("2 selected")).toBeOnTheScreen();
+
+		await fireEvent.press(screen.getByRole("button", { name: "Remove Apple" }));
+		expect(onChange).toHaveBeenLastCalledWith(["cherry"]);
+
+		await fireEvent.press(screen.getByRole("combobox"));
+		expect(screen.getByRole("checkbox", { name: "Cherry" })).toBeChecked();
+		await fireEvent.press(screen.getByRole("checkbox", { name: "Banana" }));
+		expect(onChange).toHaveBeenLastCalledWith(["apple", "cherry", "banana"]);
+		expect(screen.getByRole("checkbox", { name: "Banana" })).toBeOnTheScreen();
+	});
+
+	it("draws static chips without remove buttons, a summary line, or the caller's drawing", async () => {
+		await render(<MultiSelectField<Fruit> label="Fruit" options={OPTIONS} values={["apple"]} onChange={jest.fn()} chips="static" />);
+		expect(screen.getByText("Apple")).toBeOnTheScreen();
+		expect(screen.queryByRole("button", { name: "Remove Apple" })).toBeNull();
+
+		await render(<MultiSelectField<Fruit> label="Fruit" options={OPTIONS} values={["apple", "banana"]} onChange={jest.fn()} chips="none" />);
+		expect(screen.getByText("Apple, Banana")).toBeOnTheScreen();
+
+		await render(<MultiSelectField<Fruit> label="Fruit" options={OPTIONS} values={["banana"]} onChange={jest.fn()} renderValues={countFruit} />);
+		expect(screen.getByText("1 fruit")).toBeOnTheScreen();
 	});
 });

@@ -222,4 +222,5 @@ export * from "../contexts/referrals/root-exports";
 export * from "../contexts/reporting/root-exports";
 export * from "../contexts/rewards/root-exports";
 export * from "../contexts/tenancy/root-exports";
+export * from "../contexts/docs-publishing/root-exports";
 export * from "../contexts/webhooks/root-exports";

@@ -100,7 +100,7 @@ function LinkedAccount({ status, nowMs }: { readonly status: Extract<GithubAccou
 		<Card>
 			<View className="flex-row items-center gap-3">
 				<Avatar name={status.login} imageUrl={status.avatarUrl} size="md" />
-				<Text className="font-sans-semibold flex-1 text-base text-foreground">{status.login}</Text>
+				<Text className="font-sans-semibold text-body-lg flex-1 text-foreground">{status.login}</Text>
 			</View>
 			{status.health === "rejected" ? <Alert tone="error" message={accountSummary(status, nowMs)} /> : <MutedText>{accountSummary(status, nowMs)}</MutedText>}
 			<Button label="Remove token" variant="destructive" onPress={ask} accessibilityHint="Forgets your GitHub token on the server" />
@@ -156,7 +156,7 @@ function LinkTokenForm({ replacing }: { readonly replacing: boolean }): React.JS
 		<Card title={replacing ? "Replace the token" : "Link a token"} description="A fine-grained personal access token, for the repositories you want here, with:">
 			<View className="gap-1">
 				{REQUIRED_TOKEN_PERMISSIONS.map((permission: string): React.JSX.Element => (
-					<Text key={permission} className="font-sans text-sm text-foreground">
+					<Text key={permission} className="text-body font-sans text-foreground">
 						{`• ${permission}`}
 					</Text>
 				))}

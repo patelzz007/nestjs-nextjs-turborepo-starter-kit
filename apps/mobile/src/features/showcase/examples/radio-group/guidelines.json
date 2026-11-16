@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Few options, all visible",
+		"do": {
+			"text": "Use radios for a few options people should compare.",
+			"file": "radio-group-do-1",
+			"export": "RadioGroupDo1Example"
+		},
+		"dont": {
+			"text": "Don't use radios for a long list: it pushes the form down the screen.",
+			"file": "radio-group-dont-1",
+			"export": "RadioGroupDont1Example"
+		}
+	},
+	{
+		"title": "Pick a sensible default",
+		"do": {
+			"text": "Preselect the option most people want.",
+			"file": "radio-group-do-2",
+			"export": "RadioGroupDo2Example"
+		},
+		"dont": {
+			"text": "Don't preselect the costly option to nudge people.",
+			"file": "radio-group-dont-2",
+			"export": "RadioGroupDont2Example"
+		}
+	}
+]

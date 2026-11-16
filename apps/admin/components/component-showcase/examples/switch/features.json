@@ -1,0 +1,100 @@
+[
+	{
+		"id": "c-switch-1",
+		"label": "Basic",
+		"description": "Basic switch.. Best for the minimal row: one switch, off on load, left of its Airplane Mode label in a horizontal Field.",
+		"file": "switch-1",
+		"export": "Switch1Example"
+	},
+	{
+		"id": "c-switch-2",
+		"label": "With Description",
+		"description": "Switch with description.. Best for a title over a supporting sentence with the control at the right, the whole row one clickable label.",
+		"file": "switch-2",
+		"export": "Switch2Example"
+	},
+	{
+		"id": "c-switch-3",
+		"label": "Disabled",
+		"description": "Disabled switch.. Best for locked rows in both states, one off and one on, that stay readable but cannot be flipped.",
+		"file": "switch-3",
+		"export": "Switch3Example"
+	},
+	{
+		"id": "c-switch-4",
+		"label": "Sizes",
+		"description": "Switch in different sizes.. Best for the sm and default sizes stacked for comparison, to match the control to dense or regular rows.",
+		"file": "switch-4",
+		"export": "Switch4Example"
+	},
+	{
+		"id": "c-switch-5",
+		"label": "Switch Group",
+		"description": "Switch group. Best for a headed stack of email, SMS and push channels, each control left of its label and 2 on at load.",
+		"file": "switch-5",
+		"export": "Switch5Example"
+	},
+	{
+		"id": "c-switch-6",
+		"label": "Card Separators",
+		"description": "Switch list in card with separators. Best for a card holding 3 channel rows split by separators, each name at the left and its toggle at the right edge.",
+		"file": "switch-6",
+		"export": "Switch6Example"
+	},
+	{
+		"id": "c-switch-7",
+		"label": "Card With Icons",
+		"description": "Switch list in card with icons. Best for rows that lead with a dimmed bell, mail or phone icon before each channel name, in a divided card.",
+		"file": "switch-7",
+		"export": "Switch7Example"
+	},
+	{
+		"id": "c-switch-8",
+		"label": "In Frame",
+		"description": "Switch in frame. Best for privacy rows in a Frame panel below a header titled Privacy Settings, 2 of the 3 on at load.",
+		"file": "switch-8",
+		"export": "Switch8Example"
+	},
+	{
+		"id": "c-switch-9",
+		"label": "Tooltip Info",
+		"description": "Switch with tooltip info. Best for a sign in security option whose label is followed by a help icon that explains it in a tooltip.",
+		"file": "switch-9",
+		"export": "Switch9Example"
+	},
+	{
+		"id": "c-switch-10",
+		"label": "With Badges",
+		"description": "Switch with badges. Best for preview feature rows tagged with New and Beta pills after the label, such as an AI copilot.",
+		"file": "switch-10",
+		"export": "Switch10Example"
+	},
+	{
+		"id": "c-switch-11",
+		"label": "Colored",
+		"description": "Colored switches. Best for custom on colors set per control through a data-checked class, here blue, green and yellow.",
+		"file": "switch-11",
+		"export": "Switch11Example"
+	},
+	{
+		"id": "c-switch-12",
+		"label": "Destructive Confirm",
+		"description": "Destructive switch with confirmation text. Best for a data wiping option with red title text, an irreversible warning below it and a red track when on.",
+		"file": "switch-12",
+		"export": "Switch12Example"
+	},
+	{
+		"id": "c-switch-13",
+		"label": "Compact Table",
+		"description": "Compact settings table with switches. Best for editor preferences mapped from an array into dense rows, each with a short hint and a small toggle.",
+		"file": "switch-13",
+		"export": "Switch13Example"
+	},
+	{
+		"id": "c-switch-14",
+		"label": "Card Grid",
+		"description": "Switch with descriptions in card grid. Best for a 2 column grid of service tiles, each with a bordered icon box, a brief description and a small toggle.",
+		"file": "switch-14",
+		"export": "Switch14Example"
+	}
+]

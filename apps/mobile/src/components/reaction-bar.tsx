@@ -76,7 +76,7 @@ export function ReactionBar<TKey extends string>({ reactions, choices, onToggle,
 					onPress={open}
 					hitSlop={6}
 					className="h-8 min-w-8 items-center justify-center rounded-full border border-border bg-card px-2 active:opacity-70">
-					<Icon icon={FaceSmilePlusIcon} size="sm" colorClassName="accent-muted-foreground" />
+					<Icon icon={FaceSmilePlusIcon} size="sm" colorClassName="accent-icon" />
 				</Pressable>
 			)}
 			{onToggle === undefined ? null : (
@@ -117,8 +117,8 @@ function ReactionPill<TKey extends string>({ reaction, choice, onToggle }: React
 			onPress={toggle}
 			hitSlop={6}
 			className={`h-8 flex-row items-center gap-1.5 rounded-full border px-2.5 active:opacity-70 ${reaction.mine ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
-			<Text className="text-sm">{choice.emoji}</Text>
-			<Text className={`font-sans-medium text-sm ${reaction.mine ? "text-link" : "text-muted-foreground"}`}>{String(reaction.count)}</Text>
+			<Text className="text-body">{choice.emoji}</Text>
+			<Text className={`font-sans-medium text-body ${reaction.mine ? "text-link" : "text-muted-foreground"}`}>{String(reaction.count)}</Text>
 		</Pressable>
 	);
 }
@@ -142,7 +142,7 @@ function PickerEmoji<TKey extends string>({ choice, mine, onPick }: PickerEmojiP
 				accessibilityState={{ checked: mine }}
 				onPress={pick}
 				className={`size-12 items-center justify-center rounded-xl border active:opacity-70 ${mine ? "border-primary bg-primary/10" : "border-transparent"}`}>
-				<Text className="text-2xl">{choice.emoji}</Text>
+				<Text className="text-h2">{choice.emoji}</Text>
 			</Pressable>
 		</View>
 	);

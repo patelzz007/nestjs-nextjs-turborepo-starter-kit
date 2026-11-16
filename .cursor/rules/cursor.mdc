@@ -1,0 +1,12 @@
+---
+description: Project rules for every file — the router into rules/ and the completion gate
+globs:
+alwaysApply: true
+---
+
+Before changing code in this repository:
+
+1. Follow `AGENTS.md` (the router). It says which document under `rules/` to load for the task.
+2. `rules/00-non-negotiables.md` applies to every task.
+3. Reuse the established patterns: `ResourceListPage` for lists, `createDemoResource` / `createResource` for data, `useAppForm` for forms, `lib/routes.ts` for URLs, `config/sidebar-menu.json` for the menu.
+4. A task is done only when `pnpm format`, `pnpm lint`, `pnpm typecheck` and `pnpm test` pass after your last edit (`pnpm test:e2e` too for route or flow changes). Never add suppression comments or relax `tooling/oxlint/`.

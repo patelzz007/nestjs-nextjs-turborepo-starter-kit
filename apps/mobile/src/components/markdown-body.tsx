@@ -36,15 +36,15 @@ MarkdownImageLoaderContext.displayName = "MarkdownImageLoader";
 
 /** Text size and weight of each heading level (h1 largest). */
 const HEADING_CLASSES: readonly string[] = [
-	"font-heading text-2xl",
-	"font-heading text-xl",
-	"font-heading text-lg",
-	"font-sans-semibold text-base",
-	"font-sans-semibold text-sm",
-	"font-sans-semibold text-sm text-muted-foreground",
+	"font-heading text-h2",
+	"font-heading text-h3",
+	"font-heading text-h4",
+	"font-sans-semibold text-body-lg",
+	"font-sans-semibold text-body",
+	"font-sans-semibold text-body text-muted-foreground",
 ];
 
-const BODY_TEXT = "font-sans text-base leading-6 text-foreground";
+const BODY_TEXT = "font-sans text-body-lg text-foreground";
 
 function openLink(href: string): void {
 	const safe = openableHref(href);
@@ -92,7 +92,7 @@ function InlineNode({ node }: { readonly node: MarkdownInline }): React.JSX.Elem
 				</Text>
 			);
 		case "code":
-			return <Text className="rounded bg-muted font-mono text-sm text-foreground">{` ${node.text} `}</Text>;
+			return <Text className="text-body rounded bg-muted font-mono text-foreground">{` ${node.text} `}</Text>;
 		case "link":
 			return <LinkText href={node.href}>{node.children}</LinkText>;
 		case "image":
@@ -155,7 +155,7 @@ function Block({ block }: { readonly block: MarkdownBlock }): React.JSX.Element 
 		case "code":
 			return (
 				<ScrollView horizontal showsHorizontalScrollIndicator className="rounded-md bg-muted" contentContainerClassName="px-3 py-2.5">
-					<Text selectable accessibilityLabel={block.language === null ? "Code" : `${block.language} code`} className="font-mono text-sm leading-5 text-foreground">
+					<Text selectable accessibilityLabel={block.language === null ? "Code" : `${block.language} code`} className="text-body font-mono text-foreground">
 						{block.text}
 					</Text>
 				</ScrollView>
@@ -251,7 +251,7 @@ function TableRow({ cells, isHeader }: TableRowProps): React.JSX.Element {
 		<View className={`flex-row border-b border-border ${isHeader ? "bg-muted" : ""}`}>
 			{cells.map((cell: readonly MarkdownInline[], index: number): React.JSX.Element => (
 				<View key={`cell-${String(index)}`} className="min-w-24 border-r border-border px-3 py-2">
-					<Text selectable accessibilityLabel={plainTextOf(cell)} className={`font-sans text-sm text-foreground ${isHeader ? "font-sans-semibold" : ""}`}>
+					<Text selectable accessibilityLabel={plainTextOf(cell)} className={`text-body font-sans text-foreground ${isHeader ? "font-sans-semibold" : ""}`}>
 						<Inline>{cell}</Inline>
 					</Text>
 				</View>
@@ -273,7 +273,7 @@ export interface MarkdownProps {
 export function MarkdownBody({ source, emptyMessage, images = LOAD_FROM_ITSELF, testID }: MarkdownProps): React.JSX.Element {
 	const blocks = React.useMemo(() => parseMarkdown(source), [source]);
 	if (blocks.length === 0) {
-		return <Text className="font-sans text-sm text-muted-foreground italic">{emptyMessage ?? "No description provided."}</Text>;
+		return <Text className="text-body font-sans text-muted-foreground italic">{emptyMessage ?? "No description provided."}</Text>;
 	}
 	return (
 		<MarkdownImageLoaderContext.Provider value={images}>

@@ -3,8 +3,11 @@ title: "Runbook: Separate Database Credentials"
 tags: ["operations", "database", "rls", "security", "runbook"]
 description: "Run migrations and the API with separate database logins, so the runtime can never bypass row-level security."
 author: "Platform Team"
+category: "Operations"
+date: 1792454400000
 lastUpdated: 1792627200000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793192519000
+coverImage: "/images/covers/technical/operations/separate-database-credentials.webp"
 order: 8
 ---
 

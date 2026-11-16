@@ -22,7 +22,7 @@ import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { format } from "date-fns";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 
 import { BROADCAST_STATUS_TONES } from "@/contexts/notifications/components/broadcasts-admin-view";
@@ -49,7 +49,7 @@ function today(): string {
 /** After a save: refresh the list, keep the broadcast's own answer, and show its page. */
 function useAfterSave(): (response: { readonly data: BroadcastResponse }) => void {
 	const queryClient = useQueryClient();
-	const router = useRouter();
+	const router = useProgressRouter();
 	return React.useCallback(
 		(response: { readonly data: BroadcastResponse }): void => {
 			const defs = apiRouter.notificationsAdmin;

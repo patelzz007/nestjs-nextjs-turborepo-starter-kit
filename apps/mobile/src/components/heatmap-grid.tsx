@@ -86,11 +86,11 @@ export function HeatmapGrid({
 		<View className="gap-3" accessibilityLabel={title} testID={testID}>
 			<View className="min-h-11 justify-center" importantForAccessibility="no-hide-descendants">
 				{picked === null ? (
-					<Text className="font-sans text-sm text-muted-foreground">{hint}</Text>
+					<Text className="text-body font-sans text-muted-foreground">{hint}</Text>
 				) : (
 					<>
-						<Text className="font-sans-medium text-xs text-muted-foreground">{`${picked.row.fullLabel} · ${picked.column.fullLabel}`}</Text>
-						<Text className="font-sans-semibold text-base text-foreground">{formatValue(picked.value)}</Text>
+						<Text className="font-sans-medium text-caption text-muted-foreground">{`${picked.row.fullLabel} · ${picked.column.fullLabel}`}</Text>
+						<Text className="font-sans-semibold text-body-lg text-foreground">{formatValue(picked.value)}</Text>
 					</>
 				)}
 			</View>
@@ -98,14 +98,14 @@ export function HeatmapGrid({
 				<View className="flex-row gap-1" importantForAccessibility="no-hide-descendants">
 					<View className="w-20" />
 					{columns.map((column: HeatmapLabel): React.JSX.Element => (
-						<Text key={column.key} className="flex-1 text-center font-sans text-xs text-muted-foreground" numberOfLines={1}>
+						<Text key={column.key} className="text-caption flex-1 text-center font-sans text-muted-foreground" numberOfLines={1}>
 							{column.label}
 						</Text>
 					))}
 				</View>
 				{rows.map((row: HeatmapLabel): React.JSX.Element => (
 					<View key={row.key} className="flex-row items-center gap-1">
-						<Text className="w-20 font-sans text-xs text-muted-foreground" importantForAccessibility="no" numberOfLines={1}>
+						<Text className="text-caption w-20 font-sans text-muted-foreground" importantForAccessibility="no" numberOfLines={1}>
 							{row.label}
 						</Text>
 						{cells
@@ -128,11 +128,11 @@ export function HeatmapGrid({
 				))}
 			</View>
 			<View className="flex-row items-center justify-end gap-1" importantForAccessibility="no-hide-descendants">
-				<Text className="mr-1 font-sans text-xs text-muted-foreground">{lowLabel}</Text>
+				<Text className="text-caption mr-1 font-sans text-muted-foreground">{lowLabel}</Text>
 				{KEY_LEVELS.map((level: number): React.JSX.Element => (
 					<View key={level} className={`size-3 rounded-sm ${rampClassOf(color, level)}`} />
 				))}
-				<Text className="ml-1 font-sans text-xs text-muted-foreground">{highLabel}</Text>
+				<Text className="text-caption ml-1 font-sans text-muted-foreground">{highLabel}</Text>
 			</View>
 		</View>
 	);

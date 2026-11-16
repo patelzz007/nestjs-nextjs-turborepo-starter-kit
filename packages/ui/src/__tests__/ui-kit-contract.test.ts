@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const UI_SRC = join(import.meta.dirname, "..");
+/** @workspace/ui-kit-logic's source: the kit's platform-free rules moved there, and are held to the same boundary contract. */
+const KIT_LOGIC_SRC = join(UI_SRC, "..", "..", "ui-kit-logic", "src");
 
 function readComponentSource(relativePath: string): string {
 	return readFileSync(join(UI_SRC, relativePath), "utf8");
@@ -267,11 +269,31 @@ describe("UI kit boundary types (rules 1–3)", () => {
 		"components/filters/filters-lib.tsx",
 		"components/event-calendar/event-calendar-types.tsx",
 		"components/event-calendar/event-calendar-recurrence.tsx",
+		// Moved to @workspace/ui-kit-logic (the web and native kits share them); the files above re-export them.
+		"kit-logic:data-table/prefs.ts",
+		"kit-logic:data-table/labels.ts",
+		"kit-logic:data-table/storage.ts",
+		"kit-logic:data-table/export-text.ts",
+		"kit-logic:event-calendar/event-calendar-types.ts",
+		"kit-logic:event-calendar/event-calendar-recurrence.ts",
+		"kit-logic:gantt/gantt-types.ts",
 	];
+
+	/** The code without its comments: prose that says "unknown ids are ignored" names no type. */
+	function stripComments(source: string): string {
+		return source.replace(/\/\*[\s\S]*?\*\//gu, "").replace(/(^|[^:"'`])\/\/.*$/gmu, "$1");
+	}
+
+	function readBoundarySource(path: string): string {
+		if (path.startsWith("kit-logic:")) {
+			return stripComments(readFileSync(join(KIT_LOGIC_SRC, path.slice("kit-logic:".length)), "utf8"));
+		}
+		return stripComments(path.startsWith("lib/") ? readLibSource(path) : readComponentSource(path));
+	}
 
 	it("does not use unknown, never, or assumeType in boundary modules", (): void => {
 		for (const path of boundarySources) {
-			const source = path.startsWith("lib/") ? readLibSource(path) : readComponentSource(path);
+			const source = readBoundarySource(path);
 			expect(source.includes("assumeType"), `${path} must not use assumeType`).toBe(false);
 			expect(/\bunknown\b/.test(source), `${path} must not use unknown type`).toBe(false);
 			expect(/:\s*never\b/.test(source), `${path} must not use never type`).toBe(false);
@@ -334,7 +356,8 @@ describe("UI kit filters contract (rules 9, 20, 28)", () => {
 	});
 
 	it("parses serialized queries through the zod schema", (): void => {
-		const source = readComponentSource("components/filters/filters-query.tsx");
+		// The query rules moved to @workspace/ui-kit-logic (shared with the native kit); the web module re-exports them.
+		const source = readFileSync(join(KIT_LOGIC_SRC, "filters/filters-query.ts"), "utf8");
 		expect(source.includes("FilterQuerySchema.safeParse(JSON.parse(serialized))"), "parseFilterQuery must validate with FilterQuerySchema").toBe(true);
 	});
 });

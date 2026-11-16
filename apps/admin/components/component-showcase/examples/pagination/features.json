@@ -1,0 +1,107 @@
+[
+	{
+		"id": "c-pagination-1",
+		"label": "Basic",
+		"description": "Basic pagination.. Best for the stock pattern: labeled Previous and Next around 3 page links, with page 2 outlined as current.",
+		"file": "pagination-1",
+		"export": "Pagination1Example"
+	},
+	{
+		"id": "c-pagination-2",
+		"label": "No Labels",
+		"description": "Pagination without labels.. Best for chevron only arrows with aria labels and no Previous or Next text, around 3 numbers with page 2 current.",
+		"file": "pagination-2",
+		"export": "Pagination2Example"
+	},
+	{
+		"id": "c-pagination-3",
+		"label": "Hover Border",
+		"description": "Pagination with hover effect.. Best for labeled Previous and Next around 3 pages whose idle numbers draw a border on hover, like the outlined current page.",
+		"file": "pagination-3",
+		"export": "Pagination3Example"
+	},
+	{
+		"id": "c-pagination-4",
+		"label": "Circle Buttons",
+		"description": "Pagination with circle buttons.. Best for fully round page buttons and pill shaped Previous and Next, with page 2 outlined as current.",
+		"file": "pagination-4",
+		"export": "Pagination4Example"
+	},
+	{
+		"id": "c-pagination-5",
+		"label": "Compact Go-To",
+		"description": "Pagination with go-to-page input. Best for a 320px row fitting chevrons, pages 1 to 3 and an ellipsis beside a small Go to page number field.",
+		"file": "pagination-5",
+		"export": "Pagination5Example"
+	},
+	{
+		"id": "c-pagination-6",
+		"label": "In Card",
+		"description": "Numbered pagination in card. Best for a padded Card holding round chevrons, pages 1 to 3, an ellipsis, then 10 to 12, with page 1 filled in primary.",
+		"file": "pagination-6",
+		"export": "Pagination6Example"
+	},
+	{
+		"id": "c-pagination-7",
+		"label": "Arrow Links",
+		"description": "Pagination with arrows buttons. Best for two text links with straight arrow icons pushed to opposite ends of a narrow row, and no page numbers at all.",
+		"file": "pagination-7",
+		"export": "Pagination7Example"
+	},
+	{
+		"id": "c-pagination-8",
+		"label": "Centered Page Info",
+		"description": "Pagination with page info on center. Best for chevron arrows at both ends of a 320px row with a centered Page 1 of 10 count between them.",
+		"file": "pagination-8",
+		"export": "Pagination8Example"
+	},
+	{
+		"id": "c-pagination-9",
+		"label": "Left Page Info",
+		"description": "Pagination with page info on left. Best for a Page 1 of 10 count on the left, with labeled Previous and Next grouped together on the right.",
+		"file": "pagination-9",
+		"export": "Pagination9Example"
+	},
+	{
+		"id": "c-pagination-10",
+		"label": "Trailing Ellipsis",
+		"description": "Pagination with ellipsis indicator. Best for labeled arrows around pages 1 to 4 and a trailing ellipsis, with no last page link after it.",
+		"file": "pagination-10",
+		"export": "Pagination10Example"
+	},
+	{
+		"id": "c-pagination-11",
+		"label": "Outline Strip",
+		"description": "Pagination with outline style buttons. Best for one bordered strip of joined square cells split by dividers, with a muted fill on the current page.",
+		"file": "pagination-11",
+		"export": "Pagination11Example"
+	},
+	{
+		"id": "c-pagination-12",
+		"label": "Rows Per Page",
+		"description": "Rows per page select with range info and first/prev/next/last icons. Best for a footer with no page numbers: a rows per page select on the left, and a 1-25 of 100 range with 4 jump icons on the right.",
+		"file": "pagination-12",
+		"export": "Pagination12Example"
+	},
+	{
+		"id": "c-pagination-13",
+		"label": "Page Select",
+		"description": "Pagination with page select dropdown and first/last navigation. Best for a Page 1 to Page 10 dropdown flanked by first, previous, next and last icon links, with no numbered links.",
+		"file": "pagination-13",
+		"export": "Pagination13Example"
+	},
+	{
+		"id": "c-pagination-14",
+		"label": "Full Width Go-To",
+		"description": "Numbered pagination with go-to-page input. Best for chevrons and pages 1 to 4 on the left of a full width row, with the page number field at the far right.",
+		"file": "pagination-14",
+		"export": "Pagination14Example"
+	},
+	{
+		"id": "c-pagination-15",
+		"label": "Info & Per-Page",
+		"description": "Pagination with page info, numbered pages, ellipsis, and per-page select. Best for a 3 part footer: a Page 1 of 10 count, labeled arrows around pages 1 to 4 and a per page select.",
+		"file": "pagination-15",
+		"export": "Pagination15Example"
+	}
+]

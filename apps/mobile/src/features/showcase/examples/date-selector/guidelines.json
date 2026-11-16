@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Offer the periods that make sense",
+		"do": {
+			"text": "For monthly invoices, offer months, quarters and years.",
+			"file": "date-selector-do-1",
+			"export": "DateSelectorDo1Example"
+		},
+		"dont": {
+			"text": "Don't make people pick a day for data that is only kept by month.",
+			"file": "date-selector-dont-1",
+			"export": "DateSelectorDont1Example"
+		}
+	},
+	{
+		"title": "Filter, don't fill in",
+		"do": {
+			"text": "For one date in a form (a birthday), use a date field.",
+			"file": "date-selector-do-2",
+			"export": "DateSelectorDo2Example"
+		},
+		"dont": {
+			"text": "Don't use a filter with Before, After and Between for a value that is simply one day.",
+			"file": "date-selector-dont-2",
+			"export": "DateSelectorDont2Example"
+		}
+	}
+]

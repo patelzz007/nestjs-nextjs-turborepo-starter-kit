@@ -110,6 +110,10 @@ export type {
 export type { KybStatus, KybDocumentScanStatus, MerchantBusinessCategory, MerchantMemberRole, MerchantTenantStatus, PilotCity, DisplayRegion } from "./schemas/tenant-enums";
 export { MerchantErrorCodeSchema, MerchantErrorCodes, TenantAccessErrorCodeSchema, type MerchantErrorCode, type TenantAccessErrorCode } from "./schemas/merchant-error-codes";
 export { TenancyModeSchema, TenantIdSchema, type TenancyMode, type TenantId } from "./schemas/tenancy-mode";
+export { TENANT_LIFECYCLE, type TenantLifecycleEvent } from "./schemas/tenant-lifecycle-machine";
+export { SUPPORT_ACCESS_GRANT_LIFECYCLE, type SupportAccessGrantEvent } from "./schemas/support-access-grant-machine";
+export { LOCATION_LIFECYCLE, type LocationEvent } from "./schemas/location-machine";
+export { KYB_REVIEW, kybAdminDecisionFor, kybAdminDecisionsFrom, type KybAdminDecisionEvent, type KybReviewEvent } from "./schemas/kyb-review-machine";
 export {
 	AdminTenantAppealParamSchema,
 	AdminTenantAppealRejectSchema,

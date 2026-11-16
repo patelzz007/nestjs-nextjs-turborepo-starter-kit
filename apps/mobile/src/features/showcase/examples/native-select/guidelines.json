@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep it short",
+		"do": {
+			"text": "Use it for a handful of plain options.",
+			"file": "native-select-do-1",
+			"export": "NativeSelectDo1Example"
+		},
+		"dont": {
+			"text": "Don't use it for 200 countries: an action sheet cannot be searched.",
+			"file": "native-select-dont-1",
+			"export": "NativeSelectDont1Example"
+		}
+	},
+	{
+		"title": "Say what is picked",
+		"do": {
+			"text": "Show a placeholder while nothing is picked.",
+			"file": "native-select-do-2",
+			"export": "NativeSelectDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave an empty field with no hint of what it wants.",
+			"file": "native-select-dont-2",
+			"export": "NativeSelectDont2Example"
+		}
+	}
+]

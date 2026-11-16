@@ -1,5 +1,5 @@
 import { buildPosPairingQrPayload, RedemptionCheckoutSchema, type RedemptionCheckoutInput } from "@workspace/shared";
-import { act, fireEvent, screen, waitFor } from "expo-router/testing-library";
+import { act, fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 import { z } from "zod";
 
 import { dynamic, fail, ok, stubApi, UNREACHABLE, type StubAnswer } from "../../../../../test/api-stub";
@@ -13,6 +13,15 @@ import TillScreen from "../../../../app/(app)/settings/till";
 import { pairedTerminalOf, savePairedTerminal } from "../../../../contexts/pos";
 import { checkoutRetryDelayMs, MAX_QUEUED_CHECKOUTS, parseCheckoutQueue, serializeCheckoutQueue, type QueuedCheckout } from "../../../../contexts/pos/checkout-queue";
 import { SECURE_STORE_ENTRIES } from "../../../../lib/secure-store";
+
+/** A JSON block's gutter starts with these line numbers, in order, each on its own line (never read out). */
+function expectNumberedLines(gutterTestId: string, numbers: readonly string[]): void {
+	const gutter = screen.getByTestId(gutterTestId, { includeHiddenElements: true });
+	expect(gutter).toHaveTextContent(new RegExp(`^${numbers.join("")}`, "u"));
+	for (const number of numbers) {
+		expect(within(gutter).getByText(number, { includeHiddenElements: true })).toBeTruthy();
+	}
+}
 
 const PAIRED = {
 	apiKey: "mk_live_till_key",
@@ -248,7 +257,7 @@ describe("Till — redeeming", () => {
 		expect(body).toHaveTextContent(/"currency": "MYR"/u);
 		expect(body).toHaveTextContent(/"idempotencyKey": "[0-9a-f-]{36}"/u);
 		expect(screen.getByTestId("till-checkout-exchange-response-body")).toHaveTextContent(/"sku": "BEV-FLATWHITE-8OZ"/u);
-		expect(screen.getByTestId("till-checkout-exchange-request-body-line-numbers", { includeHiddenElements: true })).toHaveTextContent(/^1\s2\s3\s4\s5\s6/u);
+		expectNumberedLines("till-checkout-exchange-request-body-line-numbers", ["1", "2", "3", "4", "5", "6"]);
 	});
 
 	it("offers Google's scanner and the app's own camera, disabling Google's on a phone without Play services", async () => {
@@ -275,7 +284,8 @@ describe("Till — redeeming", () => {
 		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
 		await scan(TOKEN);
 
-		expect(await screen.findByTestId("till-exchange-request-body-line-numbers", { includeHiddenElements: true })).toHaveTextContent("1\n2\n3");
+		await screen.findByTestId("till-exchange-request-body-line-numbers", { includeHiddenElements: true });
+		expectNumberedLines("till-exchange-request-body-line-numbers", ["1", "2", "3"]);
 	});
 
 	it("shows the API's error answer in the response body", async () => {

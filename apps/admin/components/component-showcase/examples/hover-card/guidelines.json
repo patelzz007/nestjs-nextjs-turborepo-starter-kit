@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Preview, don't act",
+		"do": {
+			"text": "Use a hover card to preview a person or a link that a click opens fully.",
+			"file": "hover-card-do-1",
+			"export": "HoverCardDo1Example"
+		},
+		"dont": {
+			"text": "Don't hide actions such as Delete in a hover card: it closes as the pointer leaves, and touch screens may never show it.",
+			"file": "hover-card-dont-1",
+			"export": "HoverCardDont1Example"
+		}
+	},
+	{
+		"title": "Keep the click meaningful",
+		"do": {
+			"text": "Give the trigger its own click action (open the profile); hovering only previews.",
+			"file": "hover-card-do-2",
+			"export": "HoverCardDo2Example"
+		},
+		"dont": {
+			"text": "Don't make the preview the only way to reach the content.",
+			"file": "hover-card-dont-2",
+			"export": "HoverCardDont2Example"
+		}
+	}
+]

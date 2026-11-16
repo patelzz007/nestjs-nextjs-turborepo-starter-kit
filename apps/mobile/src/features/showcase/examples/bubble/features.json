@@ -1,0 +1,51 @@
+[
+	{
+		"id": "c-bubble-1",
+		"label": "Sender Alignment",
+		"description": "Support thread with sender alignment. Best for a Card with an avatar and name header over a thread mapped from data, each turn announcing its sender to screen readers.",
+		"file": "bubble-1",
+		"export": "Bubble1Example"
+	},
+	{
+		"id": "c-bubble-2",
+		"label": "All Variants",
+		"description": "Bubble variants in a release thread. Best for one turn per variant, from a secondary status update and a destructive failure notice to the full width ghost answer.",
+		"file": "bubble-2",
+		"export": "Bubble2Example"
+	},
+	{
+		"id": "c-bubble-3",
+		"label": "Grouped Messages",
+		"description": "Grouped consecutive messages. Best for sender entries holding an array of lines, a wider thread gap than group gap, and a delivered time under the last turn.",
+		"file": "bubble-3",
+		"export": "Bubble3Example"
+	},
+	{
+		"id": "c-bubble-4",
+		"label": "Reactions",
+		"description": "Message reactions and a reaction button. Best for emoji pills hanging off the bubble edge, each named for screen readers, and a button that adds yours.",
+		"file": "bubble-4",
+		"export": "Bubble4Example"
+	},
+	{
+		"id": "c-bubble-5",
+		"label": "Show More",
+		"description": "Long reply with show more. Best for a lead line kept visible and the rest opened on request, the button's chevron turning with it.",
+		"file": "bubble-5",
+		"export": "Bubble5Example"
+	},
+	{
+		"id": "c-bubble-6",
+		"label": "Quick Replies",
+		"description": "Quick reply bubbles. Best for choices that swap for the echoed pick and a reply written for that option, with a way to start over.",
+		"file": "bubble-6",
+		"export": "Bubble6Example"
+	},
+	{
+		"id": "c-bubble-7",
+		"label": "Formatted Answer",
+		"description": "Assistant answer with formatted content. Best for an answer across the row as real elements (a heading, a list, code), with no markdown parser.",
+		"file": "bubble-7",
+		"export": "Bubble7Example"
+	}
+]

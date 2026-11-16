@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say what the file is",
+		"do": {
+			"text": "Give the type and size in the description, so people know what they are opening.",
+			"file": "attachment-do-1",
+			"export": "AttachmentDo1Example"
+		},
+		"dont": {
+			"text": "Don't show a bare name: a 40 MB video and a 4 KB note look the same.",
+			"file": "attachment-dont-1",
+			"export": "AttachmentDont1Example"
+		}
+	},
+	{
+		"title": "Offer a way forward when an upload fails",
+		"do": {
+			"text": "Mark a failed file (`state=\"error\"`) and put Retry on it.",
+			"file": "attachment-do-2",
+			"export": "AttachmentDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave a failed file looking done: people send messages missing it.",
+			"file": "attachment-dont-2",
+			"export": "AttachmentDont2Example"
+		}
+	}
+]

@@ -3,7 +3,7 @@
 import { PERMISSION, type AdminUserDetail, type CapabilitySlug } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "../../../navigation/use-progress-router";
 import { UserRoundSearch } from "lucide-react";
 import * as React from "react";
 
@@ -54,7 +54,7 @@ export function ImpersonateUserPanel({ isImpersonating, labels = IMPERSONATE_USE
 /** The user list itself, rendered only once the gate passed (so it never queries the users for anyone else). */
 function ImpersonateUserList({ currentUserId, labels }: { readonly currentUserId: string; readonly labels: ImpersonateUserPanelLabels }): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 
 	const [search, setSearch] = React.useState<string>("");
 	const [cursor, setCursor] = React.useState<string | null>(null);

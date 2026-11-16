@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { Checkbox } from "../checkbox";
 import { ICON_SIZES, ICON_STROKE_WIDTHS } from "../icon";
@@ -141,5 +141,41 @@ describe("Checkbox", () => {
 		await fireEvent(screen.getByRole("checkbox"), "blur");
 		expect(onFocus).toHaveBeenCalledTimes(1);
 		expect(onBlur).toHaveBeenCalledTimes(1);
+	});
+
+	it("draws extras around the label, the box at the end, a round coloured box, and strikes a done label", async () => {
+		await render(
+			<Checkbox
+				label="Buy milk"
+				checked
+				onChange={jest.fn()}
+				shape="round"
+				tone="green"
+				controlPosition="end"
+				strikeWhenChecked
+				leading={<Text>icon</Text>}
+				trailing={<Text>New</Text>}
+				testID="row"
+			/>,
+		);
+		expect(screen.getByText("icon")).toBeOnTheScreen();
+		expect(screen.getByText("New")).toBeOnTheScreen();
+		expect(screen.getByText("Buy milk")).toHaveProp("className", expect.stringContaining("line-through"));
+		const box = screen.getByTestId("checkbox-tick", { includeHiddenElements: true });
+		expect(box).toBeOnTheScreen();
+		const children = screen.getByTestId("row").children;
+		expect(children.length).toBeGreaterThan(2);
+	});
+
+	it("draws only the box with its label hidden, still named by the label", async () => {
+		const onChange = jest.fn();
+		await render(<Checkbox label="Select Acme Coffee" labelHidden checked={false} onChange={onChange} leading={<Text>icon</Text>} controlPosition="end" />);
+
+		const checkbox = screen.getByRole("checkbox", { name: "Select Acme Coffee" });
+		expect(screen.queryByText("Select Acme Coffee")).toBeNull();
+		expect(screen.queryByText("icon")).toBeNull();
+		expect(checkbox).toHaveProp("className", expect.stringContaining("min-w-11"));
+		await fireEvent.press(checkbox);
+		expect(onChange).toHaveBeenCalledWith(true);
 	});
 });

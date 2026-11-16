@@ -3,8 +3,11 @@ title: "Object storage — overview"
 description: "How uploads work (ticket → direct upload → verify → scan → promote), file statuses and categories, the provider choice (local, S3, Firebase), the malware scanner and the local driver."
 order: 40
 author: "Platform Team"
+category: "Storage"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/storage/overview.webp"
 tags: ["storage", "files", "uploads", "s3", "firebase"]
 ---
 

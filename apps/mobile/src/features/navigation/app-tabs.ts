@@ -31,6 +31,14 @@ export const APP_TABS: readonly AppTab[] = [
 	{ name: "settings", icon: SettingsIcon, route: ROUTES.settings },
 ];
 
+/**
+ * The other route folders directly inside src/app/(app): screens of the tab navigator with no tab of their own
+ * (the tab bar shows only {@link APP_TABS}). Each must still be declared as a tab screen: expo-router's tab
+ * navigator does not focus a route it was not given (a push only preloads it, and the person stays where they
+ * were), so a folder missing here can never be opened. `showcase` is the component showcase (features/showcase).
+ */
+export const APP_UNTABBED_SCREENS: readonly string[] = ["showcase"];
+
 const APP_TABS_BY_NAME: ReadonlyMap<string, AppTab> = new Map(APP_TABS.map((tab: AppTab): [string, AppTab] => [tab.name, tab]));
 
 /** The tab a navigator route belongs to; `undefined` for a route that is not a tab. */

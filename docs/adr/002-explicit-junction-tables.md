@@ -3,8 +3,11 @@ title: "ADR 002: Explicit Junction Tables for RBAC Relationships"
 tags: ["adr", "database", "prisma", "rbac"]
 description: "Architecture decision record for using explicit junction tables instead of Prisma implicit many-to-many."
 author: "Backend Team"
+category: "Architecture decisions"
+date: 1756003200000
 lastUpdated: 1756003200000
-coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=1200&h=630&fit=crop"
+editedAt: 1788266614000
+coverImage: "/images/covers/adr/002-explicit-junction-tables.webp"
 order: 2
 ---
 

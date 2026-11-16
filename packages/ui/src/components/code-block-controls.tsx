@@ -36,11 +36,14 @@ export const CodeBlockHeader = React.forwardRef<HTMLDivElement, React.ComponentP
 	);
 });
 
+/** The file name or a title in the header. */
 export const CodeBlockTitle = React.forwardRef<HTMLDivElement, React.ComponentPropsWithoutRef<"div">>(function CodeBlockTitle(
 	{ className, ...props },
 	ref,
 ): React.JSX.Element {
-	return <div ref={ref} data-slot="code-block-title" className={cn("min-w-0 truncate font-mono text-xs text-muted-foreground", className)} {...props} />;
+	return (
+		<div ref={ref} data-slot="code-block-title" className={cn("min-w-0 truncate font-(family-name:--code-block-font) text-xs text-muted-foreground", className)} {...props} />
+	);
 });
 
 /**
@@ -63,7 +66,7 @@ export const CodeBlockLanguage = React.forwardRef<HTMLSpanElement, React.Compone
 			data-slot="code-block-language"
 			data-unsupported={!resolvedLanguage ? true : undefined}
 			className={cn(
-				"inline-flex shrink-0 items-center rounded-md border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[0.6875rem] leading-none text-muted-foreground uppercase",
+				"inline-flex shrink-0 items-center rounded-md border border-border bg-muted/60 px-1.5 py-0.5 font-(family-name:--code-block-font) text-[0.6875rem] leading-none text-muted-foreground uppercase",
 				className,
 			)}
 			{...props}>
@@ -96,8 +99,11 @@ export type CodeBlockButtonClickEvent = Parameters<NonNullable<CodeBlockButtonPr
 export type CodeBlockControlPosition = "auto" | "pinned" | "inline";
 
 export type CodeBlockCopyButtonProps = {
+	/** Text to copy. Notation comments are stripped. */
 	value?: string;
+	/** How long the copied state lasts. `0` keeps it. */
 	timeout?: number;
+	/** Fired after a successful copy. */
 	onCopy?: (value: string) => void;
 	/** The clipboard's rejection, normalised to an `Error` (original on `cause`). */
 	onCopyError?: (error: Error) => void;
@@ -105,6 +111,7 @@ export type CodeBlockCopyButtonProps = {
 	labels?: { copy?: string; copied?: string };
 	/** `pinned` floats over the surface; `inline` sits in a header. */
 	position?: CodeBlockControlPosition;
+	/** Skips the hover reveal when pinned. */
 	alwaysVisible?: boolean;
 } & Omit<CodeBlockButtonProps, "value" | "onCopy">;
 
@@ -239,6 +246,7 @@ export const CodeBlockCopyButton = React.forwardRef<HTMLElement, CodeBlockCopyBu
 /*                              Wrap and expand                                */
 /* -------------------------------------------------------------------------- */
 
+/** A button that turns soft wrap on and off. */
 export const CodeBlockWrapToggle = React.forwardRef<HTMLElement, CodeBlockButtonProps>(function CodeBlockWrapToggle(
 	{ className, children, variant = "ghost", size = "sm", onClick, ...props },
 	ref,
@@ -322,6 +330,7 @@ export const CodeBlockExpandButton = React.forwardRef<HTMLElement, CodeBlockButt
 /* -------------------------------------------------------------------------- */
 
 export interface CodeBlockLineActionsProps {
+	/** Rendered on the active line. */
 	children: CodeBlockLineActionsRender;
 	/**
 	 * `end` floats the group over the end of the active row. `gutter` puts it in
@@ -373,9 +382,11 @@ export type CodeBlockDownloadButtonProps = {
 	value?: string;
 	/** Defaults to `code.<ext>` from the block's language. */
 	filename?: string;
+	/** Fired after the save starts. */
 	onDownload?: (filename: string) => void;
 	/** `pinned` floats over the surface; `inline` sits in a header. */
 	position?: CodeBlockControlPosition;
+	/** Skips the hover reveal when pinned. */
 	alwaysVisible?: boolean;
 	/** Accessible name, for localisation. Overrides the root's `labels.download`. */
 	label?: string;

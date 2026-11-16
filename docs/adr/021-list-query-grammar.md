@@ -3,8 +3,11 @@ title: "ADR 021: One List-Query Grammar (Sort Whitelist, Filter AST, Keyset Curs
 tags: ["adr", "api", "contracts", "pagination", "prisma"]
 description: "Every paginated endpoint declares pagination, sort, filter and search once with defineListQuery; the API parses bracket filters into a typed AST and translates it to Prisma column by column, always with an id tie-breaker."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1790812800000
 lastUpdated: 1790812800000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1791121913000
+coverImage: "/images/covers/adr/021-list-query-grammar.webp"
 order: 21
 ---
 

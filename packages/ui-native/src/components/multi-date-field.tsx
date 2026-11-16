@@ -146,7 +146,7 @@ const MultiDateSheet = React.memo(function MultiDateSheet({
 			<CalendarNavigator month={month} minMonth={minMonth} maxMonth={maxMonth} locale={locale} onMonthChange={setMonth}>
 				<CalendarMonthGrid month={month} today={today} minDate={minDate} maxDate={maxDate} locale={locale} roleOf={roleOf} onPick={toggle} isUnavailable={isUnavailable} />
 			</CalendarNavigator>
-			<Text accessibilityLiveRegion="polite" className="font-sans text-sm text-muted-foreground">
+			<Text accessibilityLiveRegion="polite" className="text-body font-sans text-muted-foreground">
 				{isFull ? `${status}. Remove one to pick another.` : status}
 			</Text>
 			<View className="flex-row items-center justify-between gap-2">
@@ -180,8 +180,8 @@ const PickedDayChip = React.memo(function PickedDayChip({ day, text, onRemove }:
 			onPress={remove}
 			hitSlop={CHIP_HIT_SLOP}
 			className="h-9 flex-row items-center gap-1 rounded-full bg-primary/10 ps-3 pe-2 active:opacity-70">
-			<Text className="font-sans-medium text-sm text-foreground tabular-nums">{text}</Text>
-			<Icon icon={XIcon} size="sm" colorClassName="accent-muted-foreground" />
+			<Text className="font-sans-medium text-body text-foreground tabular-nums">{text}</Text>
+			<Icon icon={XIcon} size="sm" colorClassName="accent-icon" />
 		</Pressable>
 	);
 });

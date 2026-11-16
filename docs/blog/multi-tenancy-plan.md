@@ -3,6 +3,8 @@ title: "Multi-tenancy plan"
 description: "The approved decisions and ordered tasks for making RewardHub multi-tenant while the same codebase keeps a single-tenant mode."
 author: "Acme Inc."
 date: 1786924800000
+lastUpdated: 1786924800000
+editedAt: 1793976836000
 category: "Architecture"
 ---
 

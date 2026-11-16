@@ -3,8 +3,11 @@ title: "API reference — Platform administration (merchants, rewards review, an
 description: "What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales."
 order: 4
 author: "Generated from the OpenAPI export"
+category: "API reference"
+date: 1791072000000
 lastUpdated: 1793145600000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793145600000
+coverImage: "/images/covers/technical/api-reference/platform-admin.webp"
 tags: ["api", "reference", "generated"]
 ---
 

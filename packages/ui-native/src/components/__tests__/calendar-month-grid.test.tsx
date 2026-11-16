@@ -1,7 +1,7 @@
 import type { LocalDate } from "@workspace/shared";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { ViewInstance } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import type { CalendarMonth, RangeDayRole } from "../../lib/calendar";
 import { CalendarMonthGrid } from "../calendar-month-grid";
@@ -76,5 +76,23 @@ describe("CalendarMonthGrid", () => {
 		expect(className).toContain("gap-1");
 		expect(className).toContain("px-2");
 		expect(className).not.toContain("gap-2");
+	});
+});
+
+function priceOf(day: LocalDate): React.JSX.Element {
+	return <Text>{day.endsWith("05") ? "$80" : "$120"}</Text>;
+}
+
+function describePrice(day: LocalDate): string {
+	return day.endsWith("05") ? "$80" : "$120";
+}
+
+describe("CalendarMonthGrid extras", () => {
+	it("draws a footer under each day, names it, squares the mark and numbers the weeks", async () => {
+		await renderGrid({ renderDayFooter: priceOf, describeDay: describePrice, dayShape: "square", cellSize: "lg", showWeekNumbers: true });
+		expect(screen.getByLabelText(/5 October 2026, start, \$80$/)).toBeOnTheScreen();
+		expect(screen.getAllByText("$120", { includeHiddenElements: true }).length).toBeGreaterThan(1);
+		expect(screen.getByText("40", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.getByTestId("day-2026-10-05")).toHaveProp("className", expect.stringContaining("h-16"));
 	});
 });

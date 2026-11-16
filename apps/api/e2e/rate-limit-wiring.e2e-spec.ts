@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { API_VERSION_PREFIX, apiPath } from "@workspace/shared";
-import { afterAll, beforeAll, describe, expect, it, vi, type MockInstance } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import { ThrottlerStorage } from "@nestjs/throttler";
 
@@ -57,6 +57,9 @@ const GITHUB_WEBHOOK_URL = apiPath("/github/webhook");
 const PROTECTED_URL = `${API_VERSION_PREFIX}/auth/me`;
 const UNAUTHORIZED = 401;
 const TOO_MANY_REQUESTS = 429;
+/** The longest a flood may take: the largest here took about 6 s on a busy machine. */
+const FLOOD_MARGIN_MS = 20_000;
+const HOOK_TIMEOUT_SLACK_MS = 5_000;
 
 describe("Rate-limit wiring (e2e)", () => {
 	let app: NestFastifyApplication;
@@ -84,6 +87,22 @@ describe("Rate-limit wiring (e2e)", () => {
 	afterAll(async () => {
 		await app.close();
 	});
+
+	/**
+	 * Each flood must fit inside one limiter window. The sliding window blends two clock-aligned windows
+	 * (`used = previous × share of this window left + current`), so a flood crossing a boundary counts for
+	 * less than its size and, correctly, is not refused at limit + 1. That made these tests fail whenever they
+	 * happened to span a minute. Waiting for a fresh window keeps the exact assertion and removes the luck.
+	 */
+	beforeEach(async () => {
+		const windowMs: number = getApiConfig().rateLimits.throttleTtlMs;
+		const leftInWindow: number = windowMs - (Date.now() % windowMs);
+		if (leftInWindow < FLOOD_MARGIN_MS) {
+			await new Promise((resolve) => {
+				setTimeout(resolve, leftInWindow);
+			});
+		}
+	}, FLOOD_MARGIN_MS + HOOK_TIMEOUT_SLACK_MS);
 
 	async function badLogin(clientIp: string): Promise<InjectResponse> {
 		return app.inject({

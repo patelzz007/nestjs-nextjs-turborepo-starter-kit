@@ -15,8 +15,11 @@ const tableContainerVariants = cva("relative w-full overflow-x-auto", {
 
 const tableVariants = cva("w-full caption-bottom text-sm", {
 	variants: {
+		/** The table's look; one treatment today. */
 		variant: { default: "" },
+		/** Text size: `default` or `sm`. */
 		size: { default: "", sm: "text-xs" },
+		/** `loading` or `disabled` dims the table. */
 		state: { default: "", loading: "", disabled: "", error: "" },
 	},
 	defaultVariants: { variant: "default", size: "default", state: "default" },
@@ -24,6 +27,7 @@ const tableVariants = cva("w-full caption-bottom text-sm", {
 
 type TableProps = React.ComponentProps<"table"> & VariantProps<typeof tableVariants>;
 
+/** The native `table` with the kit's typography, in a horizontally scrolling wrapper. `className` lands on the `table`. */
 const Table = React.forwardRef<HTMLTableElement, TableProps>(function Table({ className, variant, size, state, ...props }, ref): React.JSX.Element {
 	return (
 		<div data-slot="table-container" className={cn(tableContainerVariants({ variant, size, state }))}>
@@ -32,18 +36,22 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(function Table({ cl
 	);
 });
 
+/** The `thead`. */
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.ComponentProps<"thead">>(function TableHeader({ className, ...props }, ref): React.JSX.Element {
 	return <thead ref={ref} data-slot="table-header" className={cn("[&_tr]:border-b", className)} {...props} />;
 });
 
+/** The `tbody`. */
 const TableBody = React.forwardRef<HTMLTableSectionElement, React.ComponentProps<"tbody">>(function TableBody({ className, ...props }, ref): React.JSX.Element {
 	return <tbody ref={ref} data-slot="table-body" className={cn("[&_tr:last-child]:border-0", className)} {...props} />;
 });
 
+/** The `tfoot`, for totals. */
 const TableFooter = React.forwardRef<HTMLTableSectionElement, React.ComponentProps<"tfoot">>(function TableFooter({ className, ...props }, ref): React.JSX.Element {
 	return <tfoot ref={ref} data-slot="table-footer" className={cn("border-t bg-muted/50 font-medium [&>tr]:last:border-b-0", className)} {...props} />;
 });
 
+/** A row (`tr`). */
 const TableRow = React.forwardRef<HTMLTableRowElement, React.ComponentProps<"tr">>(function TableRow({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<tr
@@ -55,6 +63,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.ComponentProps<"tr"
 	);
 });
 
+/** A header cell (`th`). */
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ComponentProps<"th">>(function TableHead({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<th
@@ -66,10 +75,12 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ComponentProps<"t
 	);
 });
 
+/** A data cell (`td`); does not wrap unless given `whitespace-normal`. */
 const TableCell = React.forwardRef<HTMLTableCellElement, React.ComponentProps<"td">>(function TableCell({ className, ...props }, ref): React.JSX.Element {
 	return <td ref={ref} data-slot="table-cell" className={cn("p-2 align-middle whitespace-nowrap has-[[role=checkbox]]:pe-0", className)} {...props} />;
 });
 
+/** Describes the table (`caption`). */
 const TableCaption = React.forwardRef<HTMLTableCaptionElement, React.ComponentProps<"caption">>(function TableCaption({ className, ...props }, ref): React.JSX.Element {
 	return <caption ref={ref} data-slot="table-caption" className={cn("mt-4 text-sm text-muted-foreground", className)} {...props} />;
 });

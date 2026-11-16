@@ -89,7 +89,7 @@ export function GanttZoomButton({ label, isEnabled, onClick, edge, children }: G
 						aria-label={label}
 						aria-disabled={isEnabled ? undefined : true}
 						className={cn(
-							"size-5! text-muted-foreground hover:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent",
+							"size-6! text-muted-foreground hover:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent",
 							edge === "top" ? "rounded-b-none" : "rounded-t-none border-t",
 						)}
 						onClick={onClick}

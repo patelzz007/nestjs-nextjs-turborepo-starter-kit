@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Say what it opens",
+		"do": {
+			"text": "Name the code for screen readers by what scanning it does.",
+			"file": "qr-code-do-1",
+			"export": "QrCodeDo1Example"
+		},
+		"dont": {
+			"text": "Don't call it \"QR code\": nobody knows where it leads.",
+			"file": "qr-code-dont-1",
+			"export": "QrCodeDont1Example"
+		}
+	},
+	{
+		"title": "Encode short values",
+		"do": {
+			"text": "Encode a short link; the code stays simple and scans from a distance.",
+			"file": "qr-code-do-2",
+			"export": "QrCodeDo2Example"
+		},
+		"dont": {
+			"text": "Don't pack long text into a code: it grows dense and scans badly.",
+			"file": "qr-code-dont-2",
+			"export": "QrCodeDont2Example"
+		}
+	}
+]

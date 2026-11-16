@@ -6,7 +6,7 @@ import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPalet
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
 import { Gift, SunMoon } from "lucide-react";
 import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 import { BRAND_NAME } from "@workspace/tokens";
@@ -18,7 +18,7 @@ export interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }: CommandPaletteProps): React.JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { toggleTheme } = useThemeToggle();
 	const canAccessPath = useCanAccessWebPath();
 	// Same route table as the guard and the sidebar: never offer a page the session cannot open.

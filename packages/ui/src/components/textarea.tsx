@@ -6,9 +6,11 @@ import * as React from "react";
 
 type TextareaProps = React.ComponentProps<"textarea"> &
 	VariantProps<typeof textareaVariants> & {
+		/** Styles the field as busy. It does not disable it; set `disabled` too if typing should stop. */
 		readonly loading?: boolean;
 	};
 
+/** The kit's multi-line field, a native `textarea` that grows with its content (`field-sizing: content`); cap it with `max-h-*`. */
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
 	{ className, variant, size, loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,

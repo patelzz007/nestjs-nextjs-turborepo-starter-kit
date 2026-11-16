@@ -23,7 +23,7 @@ import { StatusBadge } from "@workspace/ui/components/status-badge";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { KeyRound, Pencil, Power, PowerOff, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -95,7 +95,7 @@ function EndpointFacts({ endpoint }: { readonly endpoint: WebhookEndpointSummary
 
 function WebhookEndpointDetailContent({ tenantSlug, endpointId }: WebhookEndpointDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
+	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const routes = tenantRoutes(tenantSlug).webhooks;
 	const invalidateAll = useInvalidateWebhooks(tenantSlug);

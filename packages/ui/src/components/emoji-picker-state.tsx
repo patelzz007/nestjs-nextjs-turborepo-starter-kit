@@ -199,7 +199,9 @@ interface EmojiPickerMultipleProps {
 	/** Picks toggle in and out of a list of values, and the picker stays open. */
 	readonly multiple: true;
 	readonly value?: readonly string[] | undefined;
+	/** Initial value when uncontrolled, and what a form reset restores. */
 	readonly defaultValue?: readonly string[] | undefined;
+	/** Fires with the new value or list. */
 	readonly onValueChange?: ((value: string[]) => void) | undefined;
 	/** The most values a person can pick; cells refuse further picks at the cap. */
 	readonly max?: number | undefined;
@@ -208,8 +210,11 @@ interface EmojiPickerMultipleProps {
 export interface EmojiPickerCommonProps extends Pick<React.AriaAttributes, "aria-label" | "aria-labelledby" | "aria-describedby"> {
 	/** Fires on every pick, with the toned value and the emoji. The insert-into-text hook. */
 	readonly onEmojiSelect?: ((selection: EmojiPickerSelection) => void) | undefined;
+	/** Whether the popover is open, controlled. */
 	readonly open?: boolean | undefined;
+	/** Whether the popover starts open, uncontrolled. */
 	readonly defaultOpen?: boolean | undefined;
+	/** Fires when the popover opens or closes. */
 	readonly onOpenChange?: ((open: boolean) => void) | undefined;
 	/** Closes the popover after a pick. Defaults to true, false with `multiple`. Shift+click keeps it open either way. */
 	readonly closeOnSelect?: boolean | undefined;
@@ -227,7 +232,9 @@ export interface EmojiPickerCommonProps extends Pick<React.AriaAttributes, "aria
 	readonly categories?: readonly string[] | undefined;
 	/** Drops emoji. Pass a stable function; it runs per emoji. */
 	readonly filter?: ((emoji: EmojiPickerEmoji) => boolean) | undefined;
+	/** Image emoji: `{ id, label, src, tags?, shortcodes?, category? }`. */
 	readonly customEmojis?: readonly EmojiPickerCustomEmoji[] | undefined;
+	/** Tabs for custom emoji: `{ id, label, icon? }`. */
 	readonly customCategories?: readonly EmojiPickerCustomCategory[] | undefined;
 	/** Orders the recent section by use count, or by last use. */
 	readonly recentMode?: "frequent" | "recent" | undefined;
@@ -235,29 +242,39 @@ export interface EmojiPickerCommonProps extends Pick<React.AriaAttributes, "aria
 	readonly recentLimit?: number | undefined;
 	/** Controlled recent list, for syncing it to an account. */
 	readonly recent?: readonly EmojiPickerRecentEntry[] | undefined;
+	/** Recent emoji to start with when none are stored. */
 	readonly defaultRecent?: readonly EmojiPickerRecentEntry[] | undefined;
+	/** Fires after each pick with the updated list. */
 	readonly onRecentChange?: ((recent: EmojiPickerRecentEntry[]) => void) | undefined;
 	/** localStorage key for the recent list; `null` keeps it in memory. */
 	readonly recentStorageKey?: string | null | undefined;
+	/** The skin tone, controlled: 0 is the default yellow, 1 to 5 run from light to dark. */
 	readonly skinTone?: EmojiPickerSkinTone | undefined;
+	/** The skin tone to start with when none is stored. */
 	readonly defaultSkinTone?: EmojiPickerSkinTone | undefined;
+	/** Fires when the tone changes. */
 	readonly onSkinToneChange?: ((tone: EmojiPickerSkinTone) => void) | undefined;
 	/** localStorage key for the skin tone; `null` keeps it in memory. */
 	readonly skinToneStorageKey?: string | null | undefined;
 	/** Controlled search text. */
 	readonly query?: string | undefined;
+	/** Fires as the search text changes. */
 	readonly onQueryChange?: ((query: string) => void) | undefined;
+	/** 16, 20 or 26px glyphs in 26, 30 or 38px cells. */
 	readonly size?: EmojiPickerSize | undefined;
 	/** Cells per row. `"auto"` fills the panel's width. */
 	readonly columns?: number | "auto" | undefined;
 	/** Draws an emoji: an image set, a sprite, a brand font. */
 	readonly renderEmoji?: ((emoji: EmojiPickerEmoji, value: string) => React.ReactNode) | undefined;
+	/** Disables the trigger and the picker. */
 	readonly disabled?: boolean | undefined;
 	/** Styles the trigger and panel as invalid and sets `aria-invalid` on the trigger. */
 	readonly invalid?: boolean | undefined;
 	/** Submits the value with a native form; multiple values are comma-joined. */
 	readonly name?: string | undefined;
+	/** The id of the form the hidden value input belongs to. */
 	readonly form?: string | undefined;
+	/** Marks the hidden value input as required for a native form. */
 	readonly required?: boolean | undefined;
 	/** The hidden form field, for form libraries that focus a field on error. */
 	readonly inputRef?: React.Ref<HTMLInputElement> | undefined;
@@ -271,6 +288,7 @@ export interface EmojiPickerCommonProps extends Pick<React.AriaAttributes, "aria
 	readonly onFocus?: React.FocusEventHandler<HTMLButtonElement> | undefined;
 	/** Without children, lands on the default trigger. */
 	readonly onBlur?: React.FocusEventHandler<HTMLButtonElement> | undefined;
+	/** The picker's parts: a trigger and content, or a panel for an inline picker. */
 	readonly children?: React.ReactNode;
 }
 

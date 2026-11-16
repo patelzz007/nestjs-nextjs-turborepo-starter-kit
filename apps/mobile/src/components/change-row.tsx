@@ -35,10 +35,10 @@ export function ChangeRow({ title, meta, additions, deletions, changeSummary, le
 				</View>
 			)}
 			<View className="flex-1 gap-0.5">
-				<Text className="font-sans-medium text-base text-foreground" numberOfLines={2}>
+				<Text className="font-sans-medium text-body-lg text-foreground" numberOfLines={2}>
 					{title}
 				</Text>
-				<Text className="font-sans text-sm text-muted-foreground" numberOfLines={1}>
+				<Text className="text-body font-sans text-muted-foreground" numberOfLines={1}>
 					{meta}
 				</Text>
 			</View>

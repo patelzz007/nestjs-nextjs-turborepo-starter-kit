@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep it shallow and labelled",
+		"do": {
+			"text": "Give rows names that say what they are, two or three levels deep.",
+			"file": "tree-do-1",
+			"export": "TreeDo1Example"
+		},
+		"dont": {
+			"text": "Don't nest 5 levels of rows all called \"Item\".",
+			"file": "tree-dont-1",
+			"export": "TreeDont1Example"
+		}
+	},
+	{
+		"title": "Say what the tree is for",
+		"do": {
+			"text": "Name the tree (\"Role permissions\") with a heading and `aria-label`.",
+			"file": "tree-do-2",
+			"export": "TreeDo2Example"
+		},
+		"dont": {
+			"text": "Don't show a bare tree with no hint of what the rows are for.",
+			"file": "tree-dont-2",
+			"export": "TreeDont2Example"
+		}
+	}
+]

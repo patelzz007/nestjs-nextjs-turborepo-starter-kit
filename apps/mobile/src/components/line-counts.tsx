@@ -21,8 +21,8 @@ export function LineCounts({ additions, deletions, direction = "row", testID }: 
 			accessibilityElementsHidden
 			testID={testID}
 			className={direction === "row" ? "flex-row items-center gap-2" : "items-end gap-0.5"}>
-			<Text className="font-mono text-sm text-success-foreground">+{additions}</Text>
-			<Text className="font-mono text-sm text-destructive-foreground">−{deletions}</Text>
+			<Text className="text-body font-mono text-success-foreground">+{additions}</Text>
+			<Text className="text-body font-mono text-destructive-foreground">−{deletions}</Text>
 		</View>
 	);
 }

@@ -4,7 +4,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { APP_LINKS } from "@workspace/shared";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "../../../navigation/use-progress-router";
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 
 import type { ApiRouter } from "../../../api/endpoints";
@@ -66,7 +66,7 @@ const SESSION_UNAVAILABLE_MESSAGE = "Your email is verified, but we could not re
 
 export function VerifyEmailView({ token, settingsHref, loginHref = APP_LINKS.auth.login, successRedirectHref }: VerifyEmailViewProps): JSX.Element {
 	const [state, setState] = useState<ViewState>({ status: "verifying" });
-	const router = useRouter();
+	const router = useProgressRouter();
 	const { api } = useAuth();
 	const sessionCommands = useAuthCommands();
 	const redirectTarget = successRedirectHref ?? settingsHref;

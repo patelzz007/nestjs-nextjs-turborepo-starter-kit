@@ -3,8 +3,11 @@ title: "ADR 065: Nord as a third theme"
 tags: ["adr", "design-tokens", "theming", "accessibility", "mobile", "docs"]
 description: "Light, dark and Nord on every surface (web, admin, merchant, docs, mobile), from the one token source: Nord is its own dark theme class, the dark variant covers it, and every pairing is held to WCAG AA by the same contrast tests."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793059200000
 lastUpdated: 1793059200000
-coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
+editedAt: 1793891735000
+coverImage: "/images/covers/adr/065-nord-theme.webp"
 order: 65
 ---
 

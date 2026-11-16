@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Colour by meaning, not direction",
+		"do": {
+			"text": "Say a rise in refunds is bad news (`sentiment: \"negative\"`).",
+			"file": "kpi-stat-card-do-1",
+			"export": "KpiStatCardDo1Example"
+		},
+		"dont": {
+			"text": "Don't paint every rise green because the number went up.",
+			"file": "kpi-stat-card-dont-1",
+			"export": "KpiStatCardDont1Example"
+		}
+	},
+	{
+		"title": "Say when there is nothing to compare",
+		"do": {
+			"text": "Use `status: \"noPrevious\"` when the last period had no data.",
+			"file": "kpi-stat-card-do-2",
+			"export": "KpiStatCardDo2Example"
+		},
+		"dont": {
+			"text": "Don't show a percentage against nothing.",
+			"file": "kpi-stat-card-dont-2",
+			"export": "KpiStatCardDont2Example"
+		}
+	}
+]

@@ -4,11 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import { buildTimeline, createContentStore, sectionWords, type ContentSources } from "../content";
 
 function guide(title: string, body: string, extra = ""): string {
-	return `---\ntitle: "${title}"\nauthor: "Platform Team"\nlastUpdated: 1793145600000\ncoverImage: "/images/cover.png"\n${extra}---\n${body}`;
+	return `---\ntitle: "${title}"\nauthor: "Platform Team"\ncategory: "Engineering"\ndate: 1790035200000\nlastUpdated: 1793145600000\neditedAt: 1793232000000\ncoverImage: "/images/cover.png"\n${extra}---\n${body}`;
 }
 
 function post(title: string, date: number): string {
-	return `---\ntitle: "${title}"\ndescription: "About ${title}"\nauthor: "Backend Team"\ndate: ${String(date)}\ncategory: "Engineering"\n---\nPost body words here.`;
+	return `---\ntitle: "${title}"\ndescription: "About ${title}"\nauthor: "Backend Team"\ndate: ${String(date)}\nlastUpdated: ${String(date)}\neditedAt: ${String(date)}\ncategory: "Engineering"\n---\nPost body words here.`;
 }
 
 const OVERVIEW_BODY = "# Overview\n\nIntro text.\n\n## First part\n\none two three\n\n### Detail\n\nfour five\n\n## Second part\n\n```ts\nnot counted\n```\nsix\n";

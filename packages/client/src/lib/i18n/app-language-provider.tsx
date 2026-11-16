@@ -2,7 +2,7 @@
 
 import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-provider";
 import type { UiKitLanguage } from "@workspace/ui/lib/labels/language-packs";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "../navigation/use-progress-router";
 import * as React from "react";
 
 import { LANGUAGE_COOKIE } from "./ui-kit-language";
@@ -53,7 +53,7 @@ export interface AppLanguageProviderProps {
  * part of the app hears each choice (`useAppLanguageChoices`) to save it on the person's profile (5.2).
  */
 export function AppLanguageProvider({ language, children }: AppLanguageProviderProps): React.JSX.Element {
-	const router = useRouter();
+	const router = useProgressRouter();
 	const [listeners] = React.useState((): Set<LanguageChosenListener> => new Set<LanguageChosenListener>());
 	const apply = React.useCallback(
 		(next: UiKitLanguage): void => {

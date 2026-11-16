@@ -10,7 +10,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Gift, LayoutDashboard, LogIn, Ticket } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import * as React from "react";
 import { landingSectionPath, LANDING_SECTION_IDS, loginPath, ROUTES } from "@/lib/routes";
 
@@ -28,7 +28,7 @@ export function LandingAuthActions(): React.JSX.Element {
 	// True while the server saw a session cookie and the client has no verdict yet.
 	const { isAuthenticated: mayBeSignedIn } = useWebSession();
 	const { logout } = useAuthCommands();
-	const router = useRouter();
+	const router = useProgressRouter();
 
 	const handleLogout = React.useCallback((): void => {
 		void logout();

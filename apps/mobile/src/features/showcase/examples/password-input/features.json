@@ -1,0 +1,9 @@
+[
+	{
+		"id": "c-password-input-1",
+		"label": "Overview",
+		"description": "A password field with a show and hide toggle whose visibility you control. Best for sign in and account forms.",
+		"file": "password-input-1",
+		"export": "PasswordInput1Example"
+	}
+]

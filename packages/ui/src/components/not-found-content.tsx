@@ -43,7 +43,9 @@ export const NotFoundContent = React.forwardRef<HTMLDivElement, NotFoundContentP
 ): React.JSX.Element {
 	return (
 		<div ref={ref} className={cn(notFoundContentVariants({ variant, size, state }), className)}>
-			<p className="font-mono text-6xl font-semibold tracking-tight text-muted-foreground/25">{code}</p>
+			<p aria-hidden="true" className="font-mono text-6xl font-semibold tracking-tight text-muted-foreground">
+				{code}
+			</p>
 			<div className="space-y-1.5">
 				<h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
 				<p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">{message}</p>

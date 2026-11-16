@@ -257,22 +257,35 @@ export interface CascaderBaseProps<TData = undefined> {
 	readonly actions?: readonly CascaderActionItem[] | undefined;
 	/** Parent/child cascading. Multi-select only, and it needs committable branches. A commit sweeps the KNOWN subtree. */
 	readonly cascade?: boolean | undefined;
+	/** Panel layout, row ARIA and arrow keys; the items, the selection and the search model are the same in all three. `"drill"` replaces the list one level at a time, the smallest popup and the only one that stays legible at a phone width. See [columns mode](#columns-mode) and [tree mode](#tree-mode). */
 	readonly mode?: CascaderMode | undefined;
 	/** How a branch opens from the pointer in columns mode's ACTIVE column. Neither value ever commits. */
 	readonly expandTrigger?: CascaderExpandTrigger | undefined;
+	/** Controlled navigation path, deepest last. */
 	readonly path?: readonly string[] | undefined;
+	/** Uncontrolled initial path. */
 	readonly defaultPath?: readonly string[] | undefined;
+	/** Fires on every level change. `details.reason` is a `CascaderPathChangeReason` - `"drill"`, `"back"`, `"breadcrumb"`, `"reveal"`, or `"external"` for a `setPath` from outside the primitive's own flows - so a controller can tell the user's drill from its own jump without diffing paths. The second argument is optional at the consumer: an existing `(path) => void` keeps compiling. */
 	readonly onPathChange?: ((path: readonly string[], details: CascaderPathChangeDetails) => void) | undefined;
+	/** Controlled expansion. Tree mode only. */
 	readonly expanded?: readonly string[] | undefined;
+	/** Uncontrolled initial expansion. */
 	readonly defaultExpanded?: readonly string[] | undefined;
+	/** Fires when a branch expands or collapses. */
 	readonly onExpandedChange?: ((expanded: readonly string[]) => void) | undefined;
+	/** Controlled open state. */
 	readonly open?: boolean | undefined;
+	/** Uncontrolled initial open state. */
 	readonly defaultOpen?: boolean | undefined;
+	/** Fires when the popup opens or closes. `details.reason` forwards Base UI's own reason string (`"escape-key"`, `"outside-press"`, ...); the close a leaf commit performs reports `"item-press"`. */
 	readonly onOpenChange?: ((open: boolean, details: CascaderOpenChangeDetails) => void) | undefined;
 	/** Whether a SINGLE-SELECT leaf commit closes the popup. Defaults to true. Ignored under `multiple`, which never closes. */
 	readonly closeOnSelect?: boolean | undefined;
+	/** Controlled search query. */
 	readonly inputValue?: string | undefined;
+	/** Uncontrolled initial search query. */
 	readonly defaultInputValue?: string | undefined;
+	/** Fires as the query changes. */
 	readonly onInputValueChange?: ((value: string) => void) | undefined;
 	/** `"level"` (default) filters the level on screen, `"deep"` also searches below it, `"global"` searches the whole tree. */
 	readonly searchScope?: CascaderSearchScope | undefined;
@@ -280,11 +293,15 @@ export interface CascaderBaseProps<TData = undefined> {
 	readonly filter?: ((node: CascaderNode<TData>, normalizedQuery: string) => boolean) | undefined;
 	/** On open, navigate to the level holding the selection. Default true. */
 	readonly revealSelected?: boolean | undefined;
+	/** Upper CAP on each level's height, not a fixed height: the panel takes `min(var(--available-height, 100vh), var(--cascader-max-height, 24rem))`, and `--available-height` is the distance from the trigger to the edge of the viewport that the positioner publishes. So a panel opened 200px above the fold is 200px tall and a panel with the whole window under it stops at `24rem`, with nothing to configure. Do not reach for it by default. Three cases genuinely want one: an `inline` panel, which has no positioner and therefore no `--available-height`; a windowed list, where the scrollport height is what the virtualizer divides into rows; and columns mode, where panes side by side have to agree on a height or the popup grows and shrinks as you move between them. */
 	readonly maxHeight?: number | string | undefined;
 	/** Window the rendered rows. `undefined` decides per level from `virtualizeThreshold`. Needs `CascaderVirtualItems` / `CascaderVirtualColumn`. */
 	readonly virtualize?: boolean | undefined;
+	/** Row count at which windowing turns itself on. */
 	readonly virtualizeThreshold?: number | undefined;
+	/** Row height used before a row has been measured. A starting point, not a contract: every row is measured after it mounts, since rows are two lines tall with a `description`, three in deep and global search, and each style sets its own row height. */
 	readonly estimateRowSize?: number | undefined;
+	/** Rows rendered beyond each edge of the viewport. */
 	readonly overscan?: number | undefined;
 	/** Per-usage overrides of the `cascader` copy from `UiKitLabelsProvider`. Keep it a module constant. */
 	readonly labels?: UiKitLabelsOverride<"cascader"> | undefined;
@@ -292,6 +309,7 @@ export interface CascaderBaseProps<TData = undefined> {
 	readonly renderItem?: ((node: CascaderNode<TData>, state: CascaderItemState<CascaderNode<TData>>) => React.ReactNode) | undefined;
 	/** Replaces only the label block; icon, count, chevron and check stay. */
 	readonly renderLabel?: ((node: CascaderNode<TData>, state: CascaderItemState<CascaderNode<TData>>) => React.ReactNode) | undefined;
+	/** Disables the whole control. Unset it reaches Base UI as `undefined`, which reads as false. */
 	readonly disabled?: boolean | undefined;
 	/** The trigger's loading state, while the caller resolves something the cascader cannot see. */
 	readonly loading?: boolean | undefined;
@@ -299,9 +317,13 @@ export interface CascaderBaseProps<TData = undefined> {
 	readonly size?: CascaderSize | undefined;
 	/** Native form field name. Submits the selected value(s). */
 	readonly name?: string | undefined;
+	/** Id of the form the hidden input belongs to. */
 	readonly form?: string | undefined;
+	/** Id of the control, for a `<label htmlFor>`. */
 	readonly id?: string | undefined;
+	/** Marks the field required for native validation. Omitting it is not the same as passing `false`: omitted, the key is not spread onto Base UI's hidden input at all, so a `Field` wrapper's own value survives. */
 	readonly required?: boolean | undefined;
+	/** The value can be read and submitted, but not changed. Spread conditionally, on the same terms as `required`. */
 	readonly readOnly?: boolean | undefined;
 	/** Marks the field invalid: `aria-invalid` and `data-invalid` on the trigger, the chips and the input. No validation of its own. */
 	readonly invalid?: boolean | undefined;
@@ -309,6 +331,7 @@ export interface CascaderBaseProps<TData = undefined> {
 	readonly inputRef?: React.Ref<HTMLInputElement> | undefined;
 	/** Renders without a floating popup, for an embedded `CascaderPanel`. */
 	readonly inline?: boolean | undefined;
+	/** The trigger, content and panel parts. */
 	readonly children?: React.ReactNode;
 }
 
@@ -324,9 +347,12 @@ export interface CascaderSingleProps<TData = undefined> extends CascaderBaseProp
 
 /** Multi-select props. Enables checkbox rows and chip display. */
 export interface CascaderMultipleProps<TData = undefined> extends CascaderBaseProps<TData> {
+	/** Checkbox rows; the popup stays open while picking. A literal union, not a `boolean`: it is optional `false` on the single arm and a REQUIRED `true` on the multi one, so a `boolean` held in a variable cannot be spread in and the union will not resolve. */
 	readonly multiple: true;
 	readonly value?: readonly string[] | undefined;
+	/** Uncontrolled initial selection. */
 	readonly defaultValue?: readonly string[] | undefined;
+	/** Fires with the new value — a node's `value`, or an array of them in multiple mode — and details of the change. */
 	readonly onValueChange?: ((value: readonly string[], details: CascaderChangeDetails<TData>) => void) | undefined;
 	/** Cap on selections. Further picks are refused, the existing ones survive. */
 	readonly max?: number | undefined;

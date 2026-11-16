@@ -191,6 +191,8 @@ export const SystemOperationNameSchema = z.enum([
 	// ── Inbound webhooks (ADR 081) ─────────────────────────────────────────
 	"webhooks.inbound.record",
 	"webhooks.inbound.read",
+	"docs_publishing.record",
+	"docs_publishing.read",
 	// ── Outgoing webhooks for integrators (ADR 082) ─────────────────────────
 	"webhooks.outbound.sweep",
 	"webhooks.outbound.deliver",

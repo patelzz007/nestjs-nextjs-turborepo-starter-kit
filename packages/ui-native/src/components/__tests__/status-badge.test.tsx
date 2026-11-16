@@ -12,6 +12,7 @@ const TONE_CASES: readonly (readonly [StatusBadgeTone, string, string, string])[
 	["success", "bg-success-soft", "border-transparent", "border-success"],
 	["warning", "bg-warning-soft", "border-transparent", "border-warning"],
 	["destructive", "bg-destructive-soft", "border-transparent", "border-destructive"],
+	["muted", "bg-transparent", "border-border", "border-muted-foreground"],
 ];
 
 /** The utility classes on an element, one by one. */

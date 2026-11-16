@@ -3,8 +3,11 @@ title: "Building installable apps: APK, AAB and iOS"
 description: "A step-by-step guide for newcomers (and the AI agent they hand it to): how to turn the Expo app into an Android APK or AAB and an iOS build, including a test APK that talks to the API on your Mac over Wi-Fi, what to check first, how signing works, and what to do when it fails. The same file lives in the starter kit and in the Expo boilerplate."
 order: 2
 author: "Platform Team"
+category: "Mobile"
+date: 1793232000000
 lastUpdated: 1793318400000
-coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/mobile/building-installable-apps.webp"
 tags: ["mobile", "expo", "android", "ios", "build", "release", "eas", "apk"]
 ---
 

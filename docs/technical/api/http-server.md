@@ -3,8 +3,11 @@ title: "HTTP server (Fastify)"
 description: "How the API's Fastify layer is configured: adapter options, plugins, hooks, middleware timing, raw bodies, SSE, query strings, compiled validation, serialization and e2e tests — with the traps that are specific to Fastify."
 order: 46
 author: "Platform Team"
+category: "API"
+date: 1791072000000
 lastUpdated: 1791072000000
-coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/api/http-server.webp"
 tags: ["api", "fastify", "nestjs", "http", "performance"]
 ---
 

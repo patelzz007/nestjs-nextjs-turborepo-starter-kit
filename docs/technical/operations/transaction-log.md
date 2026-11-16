@@ -3,8 +3,11 @@ title: "Transaction log (.txt)"
 description: "A plain-text copy of every audit row: one readable entry per request, failure and system command, in a .txt file per day (in the server's time zone), written through BullMQ off the request path."
 order: 53
 author: "Platform Team"
+category: "Operations"
+date: 1792972800000
 lastUpdated: 1793059200000
-coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=1200&h=630&fit=crop"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/operations/transaction-log.webp"
 tags: ["operations", "logging", "audit", "bullmq"]
 ---
 

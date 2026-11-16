@@ -146,52 +146,11 @@
 			"color": "amber",
 			"items": [
 				{
-					"title": "UI kit",
-					"labelKey": "ui-kit",
-					"url": "",
+					"title": "Showcase",
+					"labelKey": "showcase",
+					"url": "/showcase",
 					"icon": "Blocks",
-					"children": [
-						{
-							"title": "Gallery",
-							"labelKey": "gallery",
-							"url": "",
-							"icon": "Blocks",
-							"children": [
-								{
-									"title": "Examples",
-									"labelKey": "examples",
-									"url": "",
-									"icon": "Blocks",
-									"children": [
-										{
-											"title": "Screens",
-											"labelKey": "screens",
-											"url": "",
-											"icon": "Blocks",
-											"children": [
-												{
-													"title": "Sections",
-													"labelKey": "sections",
-													"url": "",
-													"icon": "Blocks",
-													"children": [
-														{
-															"title": "Components",
-															"labelKey": "components",
-															"url": "/settings/components",
-															"icon": "Blocks",
-															"featureFlag": "developer-tools"
-														}
-													]
-												}
-											]
-										}
-									]
-								}
-							]
-						}
-					],
-					"featureFlag": "developer-tools"
+					"featureFlag": "showcase"
 				}
 			]
 		},

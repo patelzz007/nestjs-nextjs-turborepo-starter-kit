@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { format } from "date-fns";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
@@ -18,7 +19,7 @@ afterEach((): void => {
 
 /** The day button react-day-picker renders for a local calendar date. */
 function dayButton(year: number, monthIndex: number, day: number): HTMLButtonElement {
-	const button = document.querySelector<HTMLButtonElement>(`button[data-day="${new Date(year, monthIndex, day).toLocaleDateString()}"]`);
+	const button = document.querySelector<HTMLButtonElement>(`button[data-day="${format(new Date(year, monthIndex, day), "yyyy-MM-dd")}"]`);
 	if (button === null) {
 		throw new Error(`No day button for ${String(year)}-${String(monthIndex + 1)}-${String(day)}`);
 	}

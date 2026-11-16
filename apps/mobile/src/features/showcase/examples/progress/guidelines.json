@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Use it for a known amount of work",
+		"do": {
+			"text": "Use a progress bar when you know how much is left: files, steps, bytes.",
+			"file": "progress-do-1",
+			"export": "ProgressDo1Example"
+		},
+		"dont": {
+			"text": "Don't spin a spinner for work you can measure: show how far along it is.",
+			"file": "progress-dont-1",
+			"export": "ProgressDont1Example"
+		}
+	},
+	{
+		"title": "Match the colour to the outcome",
+		"do": {
+			"text": "Fill a finished bar in the success colour.",
+			"file": "progress-do-2",
+			"export": "ProgressDo2Example"
+		},
+		"dont": {
+			"text": "Don't fill a finished, successful bar in the destructive colour.",
+			"file": "progress-dont-2",
+			"export": "ProgressDont2Example"
+		}
+	}
+]

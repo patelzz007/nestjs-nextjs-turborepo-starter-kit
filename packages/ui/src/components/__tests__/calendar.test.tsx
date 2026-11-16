@@ -8,6 +8,7 @@ import {
 	openCalendarDropdown,
 	stubResizeObserverForCalendarDropdowns,
 } from "@workspace/ui/testing/calendar-dropdowns";
+import { format } from "date-fns";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Calendar } from "../calendar";
@@ -61,7 +62,7 @@ describe("Calendar", () => {
 		chooseCalendarDropdownOption("Choose the Month", "Jan");
 		chooseCalendarDropdownOption("Choose the Year", "1990");
 
-		expect(container.querySelector(`button[data-day="${new Date(1990, 0, 15).toLocaleDateString()}"]`)).not.toBeNull();
+		expect(container.querySelector(`button[data-day="${format(new Date(1990, 0, 15), "yyyy-MM-dd")}"]`)).not.toBeNull();
 	});
 
 	it("lets clicks through the nav bar that lies over the caption, so the dropdowns stay clickable", (): void => {
@@ -95,7 +96,7 @@ describe("Calendar", () => {
 			wrapper: UiKitTestProviders,
 		});
 		chooseCalendarDropdownOption("Choose the Year", "2024");
-		expect(container.querySelector(`button[data-day="${new Date(2024, 2, 15).toLocaleDateString()}"]`)).not.toBeNull();
+		expect(container.querySelector(`button[data-day="${format(new Date(2024, 2, 15), "yyyy-MM-dd")}"]`)).not.toBeNull();
 	});
 
 	it("shows a plain caption, without dropdowns, when the caller asks for the label layout", (): void => {

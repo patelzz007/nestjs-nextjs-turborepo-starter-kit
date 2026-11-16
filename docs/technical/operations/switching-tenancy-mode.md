@@ -3,8 +3,11 @@ title: "Runbook: Switching Single ↔ Multi-Tenant"
 tags: ["operations", "tenancy", "runbook"]
 description: "How to move a deployment between single-tenant and multi-tenant mode, and what changes for clients."
 author: "Platform Team"
+category: "Operations"
+date: 1792454400000
 lastUpdated: 1792627200000
-coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792532799000
+coverImage: "/images/covers/technical/operations/switching-tenancy-mode.webp"
 order: 5
 ---
 

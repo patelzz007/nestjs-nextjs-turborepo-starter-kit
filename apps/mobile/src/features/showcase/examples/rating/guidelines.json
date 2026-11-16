@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Show the number too",
+		"do": {
+			"text": "Show the average's number beside the stars.",
+			"file": "rating-do-1",
+			"export": "RatingDo1Example"
+		},
+		"dont": {
+			"text": "Don't rely on star fill alone to tell 4.3 from 4.5.",
+			"file": "rating-dont-1",
+			"export": "RatingDont1Example"
+		}
+	},
+	{
+		"title": "Make picking obvious",
+		"do": {
+			"text": "Make a pickable rating large enough to tap.",
+			"file": "rating-do-2",
+			"export": "RatingDo2Example"
+		},
+		"dont": {
+			"text": "Don't ask for a rating with small stars that are hard to hit.",
+			"file": "rating-dont-2",
+			"export": "RatingDont2Example"
+		}
+	}
+]

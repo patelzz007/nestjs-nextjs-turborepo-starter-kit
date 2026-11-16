@@ -15,9 +15,13 @@ type CarouselOptions = EmblaOptionsType;
 type CarouselPlugin = EmblaPluginType[];
 
 interface CarouselProps {
+	/** Embla options, such as `loop` and `align`. */
 	readonly opts?: CarouselOptions | undefined;
+	/** Embla plugins, such as autoplay. */
 	readonly plugins?: CarouselPlugin | undefined;
+	/** `horizontal` or `vertical`. */
 	readonly orientation?: "horizontal" | "vertical" | undefined;
+	/** Receives the Embla API once the carousel is ready. */
 	readonly setApi?: ((api: CarouselApi) => void) | undefined;
 	/** Per-usage overrides of the `carousel` family's copy (role descriptions, arrow buttons) from `UiKitLabelsProvider`. */
 	readonly labels?: UiKitLabelsOverride<"carousel"> | undefined;
@@ -37,6 +41,7 @@ interface CarouselContextProps {
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null);
 
+/** The carousel's Embla API and scroll state, inside a `Carousel`: for dots, counters and thumbnail strips. */
 function useCarousel(): CarouselContextProps {
 	const context = React.useContext(CarouselContext);
 
@@ -47,6 +52,7 @@ function useCarousel(): CarouselContextProps {
 	return context;
 }
 
+/** A swipeable track of slides on Embla, with previous and next buttons and arrow-key support. */
 const Carousel = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & CarouselProps>(function Carousel(
 	{ orientation = "horizontal", opts, setApi, plugins, labels: labelsOverride, className, children, onKeyDownCapture, ...props },
 	ref,
@@ -142,6 +148,7 @@ const CarouselContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"d
 	);
 });
 
+/** One slide. Its `basis` decides how many show at once. */
 const CarouselItem = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function CarouselItem({ className, ...props }, ref): React.JSX.Element {
 	const { orientation, labels } = useCarousel();
 
@@ -162,6 +169,7 @@ interface CarouselArrowProps extends React.ComponentProps<typeof Button> {
 	readonly label?: string;
 }
 
+/** The button that moves to the previous slide; disabled at the start unless looping. */
 const CarouselPrevious = React.forwardRef<HTMLElement, CarouselArrowProps>(function CarouselPrevious(
 	{ className, variant = "outline", size = "icon-sm", label, onClick, ...props },
 	ref,
@@ -195,6 +203,7 @@ const CarouselPrevious = React.forwardRef<HTMLElement, CarouselArrowProps>(funct
 	);
 });
 
+/** The button that moves to the next slide; disabled at the end unless looping. */
 const CarouselNext = React.forwardRef<HTMLElement, CarouselArrowProps>(function CarouselNext(
 	{ className, variant = "outline", size = "icon-sm", label, onClick, ...props },
 	ref,

@@ -12,7 +12,7 @@ const KUALA_LUMPUR: DisplayRegion = { locale: "en-MY", timeZone: "Asia/Kuala_Lum
 const MINUTE_MS = 60_000;
 /** 15 Nov 2026 12:00 UTC (8:00 pm in Kuala Lumpur). */
 const SEEN_AT = Date.UTC(2026, 10, 15, 12);
-const ABSOLUTE_LABEL = "15 Nov 2026, 8:00 pm";
+const ABSOLUTE_LABEL = "15 Nov 2026, 20:00";
 
 beforeEach(() => {
 	vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
@@ -30,7 +30,7 @@ describe("RelativeTime", () => {
 
 		expect(html).toContain(ABSOLUTE_LABEL);
 		expect(html).not.toContain("ago");
-		expect(html).toContain('dateTime="2026-11-15T12:00:00.000Z"');
+		expect(html).toContain('dateTime="2026-11-15T12:00:00Z"');
 	});
 
 	it("hydrates the server HTML without a mismatch, then switches to the relative wording", () => {

@@ -2,8 +2,11 @@
 title: "Reward claim holds"
 description: "How the last unit of a reward is held for a customer while they enter their claim code, and given back when they don't finish."
 author: "Platform Team"
+category: "API"
+date: 1793923200000
 lastUpdated: 1793923200000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1793976836000
+coverImage: "/images/covers/technical/api/reward-claim-holds.webp"
 order: 30
 tags: ["rewards", "claims", "concurrency"]
 ---

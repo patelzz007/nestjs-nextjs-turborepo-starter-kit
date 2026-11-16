@@ -7,7 +7,7 @@ import { EpochMsSchema } from "../../../schemas/api/common";
 // it on or off for the deployment, or on for a stable percentage of people, from the admin console; every
 // change is audited. Leaving a flag on DEFAULT keeps the old behaviour exactly.
 
-export const FeatureFlagKeySchema = z.enum(["component-gallery", "merchant-invites", "till-redemption"]);
+export const FeatureFlagKeySchema = z.enum(["showcase", "merchant-invites", "till-redemption"]);
 export type FeatureFlagKey = z.output<typeof FeatureFlagKeySchema>;
 
 /**
@@ -34,10 +34,10 @@ export interface FeatureFlagDefinition {
 
 /** What each flag is, where its default comes from (shown beside it in the console), and where it is decided. */
 export const FEATURE_FLAG_REGISTRY: Readonly<Record<FeatureFlagKey, FeatureFlagDefinition>> = {
-	"component-gallery": {
-		title: "Component gallery",
-		description: "The developer gallery and kanban board under Components in the admin console.",
-		defaultFrom: "ADMIN_COMPONENT_GALLERY, otherwise on in every build except production",
+	showcase: {
+		title: "Component showcase",
+		description: "The developer component showcase and kanban board under Components in the admin console.",
+		defaultFrom: "ADMIN_SHOWCASE, otherwise on in every build except production",
 		scope: "platform",
 	},
 	"merchant-invites": {

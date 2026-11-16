@@ -3,8 +3,11 @@ title: "ADR 023: Client State as NgRx-Style Zustand Feature Stores"
 tags: ["adr", "frontend", "state", "zustand", "tanstack-query", "nextjs"]
 description: "Shared browser state lives in per-feature Zustand stores built like NgRx — named actions, a pure reducer, effects, selectors and a facade — created per provider mount, never at module scope; server data stays in TanStack Query and shareable state in the URL."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1790899200000
 lastUpdated: 1792972800000
-coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
+editedAt: 1793030952000
+coverImage: "/images/covers/adr/023-client-state-feature-stores.webp"
 order: 23
 ---
 

@@ -1,0 +1,51 @@
+[
+	{
+		"id": "c-tree-1",
+		"label": "Basic",
+		"description": "Basic tree. Best for the bare pattern with nothing added: chevron toggles and text only rows over a CRM outline of leads and accounts.",
+		"file": "tree-1",
+		"export": "Tree1Example"
+	},
+	{
+		"id": "c-tree-2",
+		"label": "Indent Lines",
+		"description": "Tree with guide lines. Best for thin vertical guide lines at each indent step behind plain text rows.",
+		"file": "tree-2",
+		"export": "Tree2Example"
+	},
+	{
+		"id": "c-tree-3",
+		"label": "Folder File Icons",
+		"description": "Tree with folder and file glyphs. Best for guide lines with a folder glyph that turns into an open folder on expand and a file glyph on every leaf.",
+		"file": "tree-3",
+		"export": "Tree3Example"
+	},
+	{
+		"id": "c-tree-4",
+		"label": "Plus Minus Toggles",
+		"description": "Tree with plus and minus toggles. Best for plus and minus marks on folders in place of chevrons, over guide lines and open or closed folder glyphs.",
+		"file": "tree-4",
+		"export": "Tree4Example"
+	},
+	{
+		"id": "c-tree-5",
+		"label": "File Explorer",
+		"description": "File explorer tree with type icons. Best for a code project outline with a colored glyph per file type: amber folders, blue code files, purple stylesheets and yellow JSON.",
+		"file": "tree-5",
+		"export": "Tree5Example"
+	},
+	{
+		"id": "c-tree-6",
+		"label": "Org Chart",
+		"description": "Org chart tree with avatars. Best for people rows with an avatar, name and job title under their manager, nested at a wider 32 pt step.",
+		"file": "tree-6",
+		"export": "Tree6Example"
+	},
+	{
+		"id": "c-tree-7",
+		"label": "Permissions",
+		"description": "Permissions tree with checkboxes. Best for role access grouped by area with a checkbox on each row, cascading to the area, plus and minus toggles and 5 grants on load.",
+		"file": "tree-7",
+		"export": "Tree7Example"
+	}
+]

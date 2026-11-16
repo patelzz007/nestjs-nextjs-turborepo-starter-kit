@@ -229,6 +229,7 @@ export const DOC_ICONS: Readonly<Record<string, IconName>> = {
 	"technical/api-reference/pos": "scanLine",
 	"technical/api-reference/payments": "creditCard",
 	"technical/api-reference/webhooks": "webhook",
+	"technical/api-reference/docs-publishing": "fileCode",
 	"technical/api-reference/privacy": "fingerprint",
 	"technical/api-reference/files": "hardDrive",
 	"technical/api-reference/email": "mail",

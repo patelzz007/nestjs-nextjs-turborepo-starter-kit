@@ -46,7 +46,7 @@ export const timelineEntryVariants = cva("flex-1 gap-1", {
 	defaultVariants: { size: "md" },
 });
 
-const TITLE_SIZE: Readonly<Record<TimelineSize, string>> = { md: "text-sm", sm: "text-xs" };
+const TITLE_SIZE: Readonly<Record<TimelineSize, string>> = { md: "text-body", sm: "text-caption" };
 
 type TimelineVariantProps = VariantProps<typeof timelineVariants>;
 export type TimelineVariant = NonNullable<TimelineVariantProps["variant"]>;
@@ -100,7 +100,7 @@ const TimelineEntry = React.memo(function TimelineEntry({ item, isLast, variant,
 					</Text>
 					<Text className={cn("font-sans-semibold text-foreground", TITLE_SIZE[size])}>{item.value}</Text>
 				</View>
-				<Text className="font-sans text-xs text-muted-foreground">{item.detail}</Text>
+				<Text className="text-caption font-sans text-muted-foreground">{item.detail}</Text>
 				{item.badge === undefined ? null : <Badge label={item.badge.label} tone={item.badge.tone} />}
 			</View>
 		</View>

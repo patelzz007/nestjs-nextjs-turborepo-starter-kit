@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Mirror the real layout",
+		"do": {
+			"text": "Shape the bones like the content that replaces them: a circle for a face, short bars for lines.",
+			"file": "skeleton-do-1",
+			"export": "SkeletonDo1Example"
+		},
+		"dont": {
+			"text": "Don't stand one big block in for a whole layout: the page still jumps when the content arrives.",
+			"file": "skeleton-dont-1",
+			"export": "SkeletonDont1Example"
+		}
+	},
+	{
+		"title": "Say what is loading",
+		"do": {
+			"text": "Wrap the bones in an element with `role=\"status\"` and an `aria-label` that names what is loading.",
+			"file": "skeleton-do-2",
+			"export": "SkeletonDo2Example"
+		},
+		"dont": {
+			"text": "Don't leave bones bare: screen readers hear nothing at all.",
+			"file": "skeleton-dont-2",
+			"export": "SkeletonDont2Example"
+		}
+	}
+]

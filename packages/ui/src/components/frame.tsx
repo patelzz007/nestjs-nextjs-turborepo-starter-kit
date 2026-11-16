@@ -31,6 +31,7 @@ const frameVariants = cva(
 	],
 	{
 		variants: {
+			/** The visual style of the frame container. */
 			variant: {
 				default: "border border-(--frame-border-color) bg-clip-padding",
 				inverse: "border border-(--frame-border-color) bg-background bg-clip-padding [--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)]",
@@ -39,6 +40,7 @@ const frameVariants = cva(
 			// Bars read as chrome, not a second content block: their py is about half
 			// the body's, while px stays level with the body so header, content and
 			// footer left-align.
+			/** The internal padding of the frame and margin between panels. */
 			spacing: {
 				xs: "[--frame-panel-footer-px-base:--spacing(2)] [--frame-panel-footer-py-base:--spacing(0.5)] [--frame-panel-header-px-base:--spacing(2)] [--frame-panel-header-py-base:--spacing(0.5)] [--frame-panel-px-base:--spacing(2)] [--frame-panel-py-base:--spacing(2)]",
 				sm: "[--frame-panel-footer-px-base:--spacing(3)] [--frame-panel-footer-py-base:--spacing(1.5)] [--frame-panel-header-px-base:--spacing(3)] [--frame-panel-header-py-base:--spacing(1.5)] [--frame-panel-px-base:--spacing(3)] [--frame-panel-py-base:--spacing(3.5)]",
@@ -46,6 +48,7 @@ const frameVariants = cva(
 					"[--frame-panel-footer-px-base:--spacing(4)] [--frame-panel-footer-py-base:--spacing(2)] [--frame-panel-header-px-base:--spacing(4)] [--frame-panel-header-py-base:--spacing(2)] [--frame-panel-px-base:--spacing(4)] [--frame-panel-py-base:--spacing(4)]",
 				lg: "[--frame-panel-footer-px-base:--spacing(5)] [--frame-panel-footer-py-base:--spacing(2.5)] [--frame-panel-header-px-base:--spacing(5)] [--frame-panel-header-py-base:--spacing(2.5)] [--frame-panel-px-base:--spacing(5)] [--frame-panel-py-base:--spacing(5)]",
 			},
+			/** If true, removes margins between panels and connects them vertically with shared borders. */
 			stacked: {
 				true: [
 					"gap-0 *:has-[+[data-slot=frame-panel]]:rounded-b-none",
@@ -59,6 +62,7 @@ const frameVariants = cva(
 					"data-[spacing=lg]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-2",
 				],
 			},
+			/** If true, removes padding on the panel. */
 			dense: {
 				// Parent selectors, not CSS vars: these are positional. Panels are
 				// pulled flush (-mx-px), so corners align with the frame's own radius.
@@ -77,6 +81,7 @@ const frameVariants = cva(
 
 type FrameProps = React.ComponentProps<"div"> & VariantProps<typeof frameVariants>;
 
+/** A muted container of `FramePanel`s, with an optional header and footer. `stacked` joins panels into one column; `dense` sets them flush; `spacing` and `--frame-radius` scale it. */
 const Frame = React.forwardRef<HTMLDivElement, FrameProps>(function Frame({ className, variant, spacing, stacked, dense, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} className={cn(frameVariants({ variant, spacing, stacked, dense }), className)} data-slot="frame" data-spacing={spacing ?? undefined} {...props} />;
 });
@@ -86,6 +91,7 @@ interface FramePanelProps extends React.ComponentProps<"div"> {
 	readonly fit?: boolean | undefined;
 }
 
+/** One bordered panel inside the frame. Grows into spare height unless `fit`. */
 const FramePanel = React.forwardRef<HTMLDivElement, FramePanelProps>(function FramePanel({ className, fit = false, ...props }, ref): React.JSX.Element {
 	return (
 		<div
@@ -104,6 +110,7 @@ const FramePanel = React.forwardRef<HTMLDivElement, FramePanelProps>(function Fr
 	);
 });
 
+/** The frame's title bar. */
 const FrameHeader = React.forwardRef<HTMLElement, React.ComponentProps<"header">>(function FrameHeader({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<header
@@ -115,14 +122,17 @@ const FrameHeader = React.forwardRef<HTMLElement, React.ComponentProps<"header">
 	);
 });
 
+/** The frame's title. */
 const FrameTitle = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function FrameTitle({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} className={cn("text-sm font-semibold", className)} data-slot="frame-panel-title" {...props} />;
 });
 
+/** A line under the frame's title. */
 const FrameDescription = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function FrameDescription({ className, ...props }, ref): React.JSX.Element {
 	return <div ref={ref} className={cn("text-sm text-muted-foreground", className)} data-slot="frame-panel-description" {...props} />;
 });
 
+/** A line under the panels. */
 const FrameFooter = React.forwardRef<HTMLElement, React.ComponentProps<"footer">>(function FrameFooter({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<footer

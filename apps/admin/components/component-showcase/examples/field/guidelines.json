@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Show the label, always",
+		"do": {
+			"text": "Give every field a visible label above it, so it stays when the field is filled.",
+			"file": "field-do-1",
+			"export": "FieldDo1Example"
+		},
+		"dont": {
+			"text": "Don't use the placeholder as the label: it disappears as soon as people type.",
+			"file": "field-dont-1",
+			"export": "FieldDont1Example"
+		}
+	},
+	{
+		"title": "Say how to fix an error",
+		"do": {
+			"text": "Write the error as what to do (\"Enter a valid email address\").",
+			"file": "field-do-2",
+			"export": "FieldDo2Example"
+		},
+		"dont": {
+			"text": "Don't write a vague error (\"Invalid\"): it says something is wrong, not what.",
+			"file": "field-dont-2",
+			"export": "FieldDont2Example"
+		}
+	}
+]

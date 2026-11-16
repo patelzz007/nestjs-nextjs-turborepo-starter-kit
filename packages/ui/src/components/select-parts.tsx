@@ -40,10 +40,15 @@ export interface SelectValueProps {
  * required `items` list. It cannot read it from the `SelectItem` children —
  * those are only mounted while the popup is open.
  */
-export const SelectValue = React.forwardRef<HTMLSpanElement, SelectValueProps & { readonly className?: string; readonly children?: React.ReactNode }>(function SelectValue(
-	{ className, formatValue, placeholder, children },
-	ref,
-): React.JSX.Element {
+export const SelectValue = React.forwardRef<
+	HTMLSpanElement,
+	SelectValueProps & {
+		/** Classes for the value's text. */
+		readonly className?: string;
+		/** Custom content in place of the chosen option's label. */
+		readonly children?: React.ReactNode;
+	}
+>(function SelectValue({ className, formatValue, placeholder, children }, ref): React.JSX.Element {
 	return (
 		<SelectPrimitive.Value ref={ref} data-slot="select-value" placeholder={placeholder} className={cn("flex min-w-0 flex-1 items-center gap-1.5 text-start", className)}>
 			{formatValue !== undefined
@@ -67,6 +72,7 @@ export interface SelectTriggerProps extends SelectPrimitive.Trigger.Props {
 	readonly fullWidth?: boolean;
 }
 
+/** The button that opens the list and shows the value (through `SelectValue` or `SelectChips`). Name it with a label or `aria-label`. */
 export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(function SelectTrigger(
 	{ className, children, size: sizeProp, fullWidth = true, disabled, ...props },
 	ref,
@@ -111,6 +117,7 @@ export interface SelectClearProps {
 	readonly ariaLabel?: string;
 	/** Fired when the clear affordance is activated. The smart component owns the outcome (rule 9/10). */
 	readonly onClear: () => void;
+	/** Classes for the clear button. */
 	readonly className?: string;
 }
 
@@ -153,6 +160,7 @@ export interface SelectChipsProps extends React.ComponentPropsWithoutRef<"div"> 
 	readonly overflowLabel?: string;
 }
 
+/** The chosen values as removable chips inside the trigger, for `multiple`. */
 export const SelectChips = React.forwardRef<HTMLDivElement, SelectChipsProps>(function SelectChips(
 	{ className, children, maxChips, overflowLabel, ...props },
 	ref,
@@ -177,6 +185,7 @@ export interface SelectChipProps {
 	readonly removeLabel?: string;
 	/** Fired with the chip's `value` when the remove affordance is activated (rule 9/10). */
 	readonly onRemove: (value: string) => void;
+	/** Classes for the chip. */
 	readonly className?: string;
 }
 
@@ -230,6 +239,7 @@ export interface SelectClearAllProps {
 	readonly ariaLabel?: string;
 	/** Fired when every selection is cleared. The smart component owns the outcome (rule 9/10). */
 	readonly onClearAll: () => void;
+	/** Classes for the clear-all button. */
 	readonly className?: string;
 }
 
@@ -266,6 +276,7 @@ export interface SelectContentProps
 	readonly loadingLabel?: string;
 }
 
+/** The popup: a portal, a positioner and the list in one part. `alignItemWithTrigger={false}` opens it below the trigger instead of over it. */
 export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(function SelectContent(
 	{ className, children, side = "bottom", sideOffset = 4, align = "center", alignOffset = 0, alignItemWithTrigger = false, loadingLabel, ...props },
 	ref,
@@ -302,10 +313,12 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
 
 // ── Group / Label ───────────────────────────────────────────────────────────
 
+/** A labelled group of options. */
 export const SelectGroup = React.forwardRef<HTMLDivElement, SelectPrimitive.Group.Props>(function SelectGroup({ className, ...props }, ref): React.JSX.Element {
 	return <SelectPrimitive.Group ref={ref} data-slot="select-group" className={cn("scroll-my-1 p-1", className)} {...props} />;
 });
 
+/** The visible name of a `SelectGroup`. */
 export const SelectLabel = React.forwardRef<HTMLDivElement, SelectPrimitive.GroupLabel.Props>(function SelectLabel({ className, ...props }, ref): React.JSX.Element {
 	return <SelectPrimitive.GroupLabel ref={ref} data-slot="select-label" className={cn("px-2 py-1.5 text-xs text-muted-foreground", className)} {...props} />;
 });
@@ -360,12 +373,14 @@ export const SelectItem = React.memo(
 
 // ── Separator ───────────────────────────────────────────────────────────────
 
+/** A divider between groups of options. */
 export const SelectSeparator = React.forwardRef<HTMLDivElement, SelectPrimitive.Separator.Props>(function SelectSeparator({ className, ...props }, ref): React.JSX.Element {
 	return <SelectPrimitive.Separator ref={ref} data-slot="select-separator" className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />;
 });
 
 // ── Scroll buttons (improvement 15) ─────────────────────────────────────────
 
+/** Scrolls a long list up while hovered. */
 export const SelectScrollUpButton = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof SelectPrimitive.ScrollUpArrow>>(function SelectScrollUpButton(
 	{ className, ...props },
 	ref,
@@ -381,6 +396,7 @@ export const SelectScrollUpButton = React.forwardRef<HTMLDivElement, React.Compo
 	);
 });
 
+/** Scrolls a long list down while hovered. */
 export const SelectScrollDownButton = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof SelectPrimitive.ScrollDownArrow>>(function SelectScrollDownButton(
 	{ className, ...props },
 	ref,
@@ -398,6 +414,7 @@ export const SelectScrollDownButton = React.forwardRef<HTMLDivElement, React.Com
 
 // ── Arrow (feature 13) ──────────────────────────────────────────────────────
 
+/** An arrow on the popup pointing at the trigger. Optional. */
 export const SelectArrow = React.forwardRef<HTMLDivElement, SelectPrimitive.Arrow.Props>(function SelectArrow({ className, ...props }, ref): React.JSX.Element {
 	return <SelectPrimitive.Arrow ref={ref} data-slot="select-arrow" className={cn("fill-popover", className)} {...props} />;
 });
@@ -413,6 +430,7 @@ export interface SelectEmptyProps extends React.ComponentPropsWithoutRef<"div"> 
 	readonly onAction?: () => void;
 }
 
+/** Shown in the popup while there are no options. */
 export const SelectEmpty = React.forwardRef<HTMLDivElement, SelectEmptyProps>(function SelectEmpty(
 	{ className, text, actionLabel, onAction, ...props },
 	ref,

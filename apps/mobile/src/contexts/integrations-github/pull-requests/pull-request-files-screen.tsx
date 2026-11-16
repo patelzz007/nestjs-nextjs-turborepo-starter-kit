@@ -268,7 +268,7 @@ function ThreadCard({
 	const flags = [thread.isOutdated ? "Outdated" : null, thread.isResolved ? "Resolved" : null].filter((flag: string | null): flag is string => flag !== null);
 	return (
 		<View className="gap-2" testID={`thread-${thread.id}`}>
-			{flags.length === 0 ? null : <Text className="font-sans-medium text-xs text-muted-foreground">{flags.join(" · ")}</Text>}
+			{flags.length === 0 ? null : <Text className="font-sans-medium text-caption text-muted-foreground">{flags.join(" · ")}</Text>}
 			{thread.comments.map((comment: GithubReviewComment): React.JSX.Element => (
 				<CommentCard key={comment.id} comment={comment} action={commentedLabel(comment.createdAt, nowMs)} onShowEdits={onShowEdits} />
 			))}

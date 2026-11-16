@@ -4,8 +4,11 @@ tags: ["date-picker", "calendar", "ui", "mobile", "forms"]
 description: "Single-day, several-day and range pickers on web and mobile, all with a calendar whose month and year are jumpable: what each picker is for, how month/year jumping and multi-day picking behave, and the mobile building blocks."
 order: 25
 author: "Platform Team"
+category: "Frontend"
+date: 1792022400000
 lastUpdated: 1792108800000
-coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80"
+editedAt: 1792156710000
+coverImage: "/images/covers/technical/frontend/date-pickers.webp"
 ---
 
 # Date pickers (web and mobile)

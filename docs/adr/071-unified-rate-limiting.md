@@ -3,8 +3,11 @@ title: "ADR 071: Unified rate limiting — one atomic limiter, named policies, p
 tags: ["adr", "rate-limiting", "security", "redis", "plan"]
 description: "Replace four separate limiters with one RateLimiter port: atomic Redis scripts for sliding-window, token-bucket and concurrency limits; named policies over address, principal, tenant, API key and hashed destination; explicit fail modes; growing penalties on security policies; audited exemptions; tenant overrides; RateLimit headers for signed-in callers; one client behaviour on 429; and a Rate limits page in the admin panel."
 author: "Platform Team"
+category: "Architecture decisions"
+date: 1793404800000
 lastUpdated: 1793404800000
-coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=1200&h=630&fit=crop"
+editedAt: 1793629066000
+coverImage: "/images/covers/adr/071-unified-rate-limiting.webp"
 order: 71
 ---
 
