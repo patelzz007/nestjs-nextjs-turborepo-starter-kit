@@ -24,7 +24,7 @@
   <a href="https://kafka.apache.org"><img src="https://img.shields.io/badge/Kafka-4-231F20?logo=apachekafka&logoColor=white" alt="Kafka 4" /></a>
   <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" /></a>
   <a href="https://turborepo.com"><img src="https://img.shields.io/badge/Turborepo-2-FF1E56?logo=turborepo&logoColor=white" alt="Turborepo 2" /></a>
-  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node-24.22.1-339933?logo=node.js&logoColor=white" alt="Node 24.22.1" /></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node-26.13.1-339933?logo=node.js&logoColor=white" alt="Node 26.13.1" /></a>
   <a href="https://pnpm.io"><img src="https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white" alt="pnpm 12" /></a>
 </p>
 
@@ -723,7 +723,7 @@ same inbox. Run every command from the repository root.
 
 | Tool | Version | How to get it | Check |
 | --- | --- | --- | --- |
-| Node.js | 24.22.1 | Install [nvm](https://github.com/nvm-sh/nvm); step 2 installs the right Node | `nvm -v` |
+| Node.js | 26.13.1 | Install [nvm](https://github.com/nvm-sh/nvm); step 2 installs the right Node | `nvm -v` |
 | pnpm | 12 | Comes with Node through `corepack enable` in step 2 | Step 2 |
 | Docker | Any recent | Docker Desktop, OrbStack or Colima. Keep it running | `docker compose version` |
 | PostgreSQL | 18 | macOS: `brew install postgresql@18`, add its `bin` folder to your `PATH` (Homebrew prints how), then `brew services start postgresql@18` | `pg_isready -h 127.0.0.1 -p 5432` |
@@ -734,7 +734,7 @@ same inbox. Run every command from the repository root.
 ```bash
 git clone <your-repository-url>
 cd nestjs-nextjs-turborepo-starter-kit
-nvm install         # reads .nvmrc and switches to Node 24.22.1
+nvm install         # reads .nvmrc and switches to Node 26.13.1
 corepack enable     # turns on the pinned pnpm
 pnpm setup          # installs every package and builds the shared contract
 ```

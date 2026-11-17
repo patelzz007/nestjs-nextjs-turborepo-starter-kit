@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "24.22.1"
+  NODE_VERSION: "26.13.1"
   # Throwaway service-container database; nothing here is a real credential.
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
   # The load-test queue (the API and the load runner) and the run's traffic key live in Redis.

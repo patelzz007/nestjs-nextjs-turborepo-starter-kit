@@ -29,7 +29,7 @@ defaults:
     shell: bash
 
 env:
-  NODE_VERSION: "24.22.1"
+  NODE_VERSION: "26.13.1"
 
 jobs:
   deploy:

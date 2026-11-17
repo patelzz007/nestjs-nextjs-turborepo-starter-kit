@@ -2,7 +2,7 @@
 // intl-text.ts — deterministic whitespace in Intl output
 // ============================================
 // `Intl` formatters take their spacing from the runtime's ICU/CLDR data, and
-// different versions disagree: Node 24 (ICU 78) writes a date range as
+// different versions disagree: Node 26 (ICU 78) writes a date range as
 // "6 Sept<U+2009>–<U+2009>5 Oct 2026" and a time as "10:00<U+202F>AM", while a
 // browser on other locale data may use U+0020 or U+00A0 in the same places.
 // Text rendered on the server and hydrated in the browser must be identical

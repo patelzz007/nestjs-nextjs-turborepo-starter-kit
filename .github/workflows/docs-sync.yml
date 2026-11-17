@@ -41,7 +41,7 @@ defaults:
     shell: bash
 
 env:
-  NODE_VERSION: "24.22.1"
+  NODE_VERSION: "26.13.1"
   SYNC_BRANCH: docs-sync/main
   # How long a webhook run waits, so edits made together join it.
   COLLAPSE_WINDOW_SECONDS: "30"

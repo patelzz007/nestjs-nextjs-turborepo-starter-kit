@@ -709,7 +709,7 @@ repository's.
 {
 	"cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
 	"build": {
-		"base": { "node": "24.22.1", "pnpm": "12.16.1", "env": { "EAS_PROJECT_ID": "<id>" } },
+		"base": { "node": "26.13.1", "pnpm": "12.16.1", "env": { "EAS_PROJECT_ID": "<id>" } },
 		"development": { "extends": "base", "environment": "development", "developmentClient": true, "distribution": "internal", "channel": "development", "env": { "EXPO_PUBLIC_ALLOW_LAN_HTTP_API": "true", "EXPO_PUBLIC_SHOW_DEMO_ACCOUNT": "true" } },
 		"preview": {
 			"extends": "base",

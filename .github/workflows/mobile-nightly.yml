@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "24.22.1"
+  NODE_VERSION: "26.13.1"
   # Throwaway service-container database; nothing here is a real credential.
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
   REDIS_URL: redis://localhost:6379

@@ -108,7 +108,7 @@ bash /root/setup-droplet.sh starter-kit /root/id_ed25519.pub
 ```
 
 It installs security updates (and keeps them automatic), the firewall, a 4 GB swap file, Docker, nginx,
-certbot, Node.js 24.22.1 (checksum-verified) with pnpm and pm2, creates the **`platform`** user (your key,
+certbot, Node.js 26.13.1 (checksum-verified) with pnpm and pm2, creates the **`platform`** user (your key,
 no password, in the `docker` group), lays out `/srv/starter-kit`, makes the Redis TLS certificate
 authority, registers pm2 to start on boot, and finally turns SSH to keys-only with no root login.
 

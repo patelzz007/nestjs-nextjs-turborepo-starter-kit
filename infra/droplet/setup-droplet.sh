@@ -19,7 +19,7 @@ set -euo pipefail
 
 SLUG="${1:?usage: setup-droplet.sh <slug> <ssh-public-key-file>}"
 KEY_FILE="${2:?usage: setup-droplet.sh <slug> <ssh-public-key-file>}"
-NODE_VERSION="${NODE_VERSION:-24.22.1}"
+NODE_VERSION="${NODE_VERSION:-26.13.1}"
 PM2_VERSION="${PM2_VERSION:-6}"
 APP_USER="platform"
 ROOT="/srv/${SLUG}"

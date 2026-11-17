@@ -14,7 +14,7 @@
 # PostgreSQL project's own apt repository; the load runner carries k6.
 # ============================================================================
 
-ARG NODE_VERSION=24.22.1
+ARG NODE_VERSION=26.13.1
 
 FROM node:${NODE_VERSION}-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm

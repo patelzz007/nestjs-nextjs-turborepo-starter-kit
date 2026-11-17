@@ -27,10 +27,10 @@ defaults:
 
 env:
   # The exact Node.js release CI runs: the same as .nvmrc (developers' `nvm use`) and
-  # the floor in engines.node. 24.22.0+ carries the V8 garbage-collector fix the test
-  # suites need (docs/technical/operations/ci.md → "Toolchain versions"). Bump all
-  # three together; ci-local-plan.test.mjs fails while they disagree.
-  NODE_VERSION: "24.22.1"
+  # the floor in engines.node: Node 26 LTS (docs/technical/operations/ci.md →
+  # "Toolchain versions"). Bump them together; ci-local-plan.test.ts fails while
+  # they disagree.
+  NODE_VERSION: "26.13.1"
   TURBO_TELEMETRY_DISABLED: "1"
   TURBO_UI: "false"
   # No Turborepo cache is carried between runs: every job runs its tasks for real,

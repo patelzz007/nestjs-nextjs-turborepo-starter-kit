@@ -38,7 +38,7 @@ minimumReleaseAge: 1440
 
 # `engines.node` in the root package.json (the release in .nvmrc and CI) is a
 # requirement, not advice: an install on an older Node stops here instead of
-# running test suites on a Node with the garbage-collector crash fixed in 24.22.0
+# running code and test suites on a release CI never runs
 # (docs/technical/operations/ci.md → "Toolchain versions").
 engineStrict: true
 

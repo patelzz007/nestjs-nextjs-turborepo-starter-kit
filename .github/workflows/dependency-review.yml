@@ -25,7 +25,7 @@ defaults:
 
 env:
   # The same Node.js release as ci.yml and .nvmrc.
-  NODE_VERSION: "24.22.1"
+  NODE_VERSION: "26.13.1"
 
 jobs:
   due-exceptions:

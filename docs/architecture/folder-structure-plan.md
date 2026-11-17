@@ -121,7 +121,7 @@ its seed data. The package depends only on `zod` and Node.
 
 | Change | Detail |
 |---|---|
-| TypeScript, no build step | Every script becomes `.ts`, run by Node 24 directly (`process.features.typescript` is `strip`), so hooks and CI still work before an install. Erasable syntax only (no `enum`, `namespace` or parameter properties) |
+| TypeScript, no build step | Every script becomes `.ts`, run by Node 26 directly (`process.features.typescript` is `strip`), so hooks and CI still work before an install. Erasable syntax only (no `enum`, `namespace` or parameter properties) |
 | Typechecked | `packages/tooling/tsconfig.json` and a `typecheck` script, in the gate like every other package, under the same rules (explicit return types, no `any`, no casts) |
 | One layout | `packages/tooling/src/<tool>/`: the engine, `cli.ts` and `__tests__/`, replacing the `scripts/` + `scripts/lib/` + `src/` mix. The `pnpm` commands stay the same |
 | Engines vs settings | Engines contain no app names, ports or paths. This repo's values live in one typed `tooling.config.ts` at the root (zod-checked when a tool starts): apps and their folders, workspace names, ports, the jobs `ci:local` runs, deploy targets, the `budgets/` paths, the `.artifacts/` folders. `project.json` stays as it is and is read by the settings file |

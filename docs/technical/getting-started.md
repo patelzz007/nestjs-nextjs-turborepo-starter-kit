@@ -20,7 +20,7 @@ you move on. Commands run from the repository root unless a step says otherwise.
 
 | Tool | Version | Install | Check |
 | --- | --- | --- | --- |
-| Node.js | 24.22.1 (`.nvmrc`) | `nvm install && nvm use` | `node -v` prints `v24.22.1` |
+| Node.js | 26.13.1 (`.nvmrc`) | `nvm install && nvm use` | `node -v` prints `v26.13.1` |
 | pnpm | 12 (pinned in `packageManager`) | `corepack enable` | `pnpm -v` prints `12.x` |
 | Docker | any recent | Docker Desktop, OrbStack or Colima (runs Redis, Kafka, RabbitMQ, Bull Board and the Mailpit email inbox) | `docker compose version` |
 | PostgreSQL | 18 | native, **or** Docker — step 2 decides | step 2 |

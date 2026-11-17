@@ -31,7 +31,7 @@ Read the [storage overview](./overview.md) first. Offline or without an AWS acco
 - A region (examples use `ap-southeast-1`, the API's default `AWS_REGION`).
 - The browser origins of your apps (for CORS), e.g. `https://app.example.com,https://admin.example.com,https://merchant.example.com`.
 - Where the API runs: ECS/Fargate, EC2 or EKS — this decides who may assume the API role.
-- Node.js 24.22.1 (`.nvmrc`) and `pnpm install` done at the repository root.
+- Node.js 26.13.1 (`.nvmrc`) and `pnpm install` done at the repository root.
 
 ### Install and sign in to the AWS CLI (v2)
 
