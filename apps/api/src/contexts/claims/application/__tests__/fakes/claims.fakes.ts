@@ -1,6 +1,8 @@
-import { epochMs, type EmailSendResult, type EpochMs, type JsonObject, type RewardBackupCode, type RewardClaimResponse } from "@workspace/shared";
+import { epochMs, type CustomerTier, type EmailSendResult, type EpochMs, type JsonObject, type RewardBackupCode, type RewardClaimResponse } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
+import { reachesMinimumTier, type CustomerTierAccess } from "../../../../../platform/domain/customer-tier-access";
+import { FakeCustomerTierAccess } from "../../../../../platform/application/__tests__/fake-customer-tier-access";
 import type { Clock } from "../../../../../platform/application/clock.port";
 import { TransactionalEventCollector } from "../../../../../platform/application/events/transactional-event-collector";
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
@@ -488,17 +490,28 @@ export class InMemoryInventory implements RewardInventoryPort, RewardRedemptionF
 	public redemptions = 0;
 	public heldUnitsClaimed = 0;
 	public facts: ClaimableRewardFacts;
+	/** The reward's minimum tier (ADR 085); a customer below it is refused like the aggregate refuses them. */
+	public minimumTier: CustomerTier = "BRONZE";
+	/** The tier access each check was made with. */
+	public readonly tierAccessSeen: CustomerTierAccess[] = [];
 
 	public constructor(quantity: number, overrides: Partial<ClaimableRewardFacts> = {}) {
 		this.remaining = quantity;
 		this.facts = { rewardId: "reward-1", tenantId: "org-1", title: "Free latte", expiryDate: epochMs(NOW + 30 * 86_400_000), maxClaimsPerUser: null, ...overrides };
 	}
 
-	public assertClaimable(_rewardId?: string, _now?: EpochMs, _customerUserId?: string, holdsUnit = false): Promise<ClaimableRewardFacts> {
+	public assertClaimable(_rewardId: string, _now: EpochMs, _customerUserId: string, tierAccess: CustomerTierAccess, holdsUnit = false): Promise<ClaimableRewardFacts> {
+		this.tierAccessSeen.push(tierAccess);
+		if (!reachesMinimumTier(tierAccess, this.minimumTier)) {
+			return Promise.reject(new Error("REWARD_TIER_LOCKED"));
+		}
 		return holdsUnit || this.remaining > 0 ? Promise.resolve(this.facts) : Promise.reject(new Error("REWARD_OUT_OF_STOCK"));
 	}
 
-	public holdUnit(): Promise<void> {
+	public holdUnit(_rewardId: string, _now: EpochMs, _customerUserId: string, tierAccess: CustomerTierAccess): Promise<void> {
+		if (!reachesMinimumTier(tierAccess, this.minimumTier)) {
+			return Promise.reject(new Error("REWARD_TIER_LOCKED"));
+		}
 		if (this.remaining <= 0) {
 			return Promise.reject(new Error("REWARD_OUT_OF_STOCK"));
 		}
@@ -512,7 +525,10 @@ export class InMemoryInventory implements RewardInventoryPort, RewardRedemptionF
 		return Promise.resolve();
 	}
 
-	public reserve(): Promise<ClaimableRewardFacts> {
+	public reserve(_rewardId: string, _now: EpochMs, _customerUserId: string, tierAccess: CustomerTierAccess): Promise<ClaimableRewardFacts> {
+		if (!reachesMinimumTier(tierAccess, this.minimumTier)) {
+			return Promise.reject(new Error("REWARD_TIER_LOCKED"));
+		}
 		if (this.remaining <= 0) {
 			return Promise.reject(new Error("REWARD_OUT_OF_STOCK"));
 		}
@@ -760,6 +776,8 @@ export class InMemoryCustomerStanding implements CustomerStandingPort {
 
 export class InMemoryClaimsStore {
 	public readonly clock = new FixedClock();
+	/** Customers' tiers (ADR 085): off unless a test turns them on. */
+	public readonly tiers = new FakeCustomerTierAccess();
 	public readonly claims = new InMemoryClaims();
 	public readonly otpChallenges = new InMemoryOtpChallenges();
 	public readonly holds = new InMemoryClaimHolds();

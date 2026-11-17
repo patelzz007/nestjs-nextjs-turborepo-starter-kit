@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Gift, LogIn, Ticket, UserCog, Users, type LucideIcon } from "lucide-react";
+import { Award, BarChart3, Bell, Gift, LogIn, Ticket, UserCog, Users, type LucideIcon } from "lucide-react";
 
 import { ROUTES } from "@/lib/routes";
 
@@ -48,6 +48,15 @@ export const WEB_NAV_ITEMS: readonly WebNavItem[] = [
 		description: "Your signup code and friends who joined",
 		icon: Users,
 		keywords: ["referral", "invite", "friends", "code", "signup"],
+	},
+	{
+		id: "tier",
+		title: "My tier",
+		url: ROUTES.dashboard.tier,
+		section: "Rewards",
+		description: "Your Bronze, Silver, Gold or Diamond tier and what's next",
+		icon: Award,
+		keywords: ["tier", "bronze", "silver", "gold", "diamond", "level", "status", "progress"],
 	},
 	{
 		id: "notifications",

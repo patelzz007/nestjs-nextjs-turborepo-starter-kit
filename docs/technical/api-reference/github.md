@@ -1,7 +1,7 @@
 ---
 title: "API reference — GitHub contributions"
 description: "Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with."
-order: 16
+order: 17
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

@@ -10,6 +10,7 @@ export * from "./contexts/payments/index";
 export * from "./contexts/privacy/index";
 export * from "./contexts/saved-views/index";
 export * from "./contexts/feature-flags/index";
+export * from "./contexts/tiers/index";
 export { buildMerchantSubmittedKybFields } from "./lib/merchant-kyb";
 export { assertNever } from "./lib/assert-never";
 export { defineStateMachine, StateMachine, StateMachineDefinitionError } from "./lib/state-machine";

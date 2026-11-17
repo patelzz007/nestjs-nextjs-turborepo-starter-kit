@@ -152,6 +152,12 @@ CREATE TYPE "RewardRedemptionMethod" AS ENUM ('SCAN', 'MANUAL');
 CREATE TYPE "TenantApiKeyScope" AS ENUM ('POS', 'INTEGRATION');
 
 -- CreateEnum
+CREATE TYPE "CustomerTier" AS ENUM ('BRONZE', 'SILVER', 'GOLD', 'DIAMOND');
+
+-- CreateEnum
+CREATE TYPE "CustomerTierChangeReason" AS ENUM ('PROMOTION', 'DEMOTION');
+
+-- CreateEnum
 CREATE TYPE "KanbanBoardKind" AS ENUM ('PLANNING', 'EXECUTION');
 
 -- CreateEnum
@@ -1369,6 +1375,7 @@ CREATE TABLE "Reward" (
     "parentConsumerRewardId" TEXT,
     "locationScopeType" "LocationScopeType" NOT NULL DEFAULT 'ALL_LOCATIONS',
     "audienceType" "RewardAudienceType" NOT NULL DEFAULT 'EVERYONE',
+    "minimumTier" "CustomerTier" NOT NULL DEFAULT 'BRONZE',
     "submittedForReviewAt" BIGINT,
     "autoPublishAt" BIGINT,
     "reviewedAt" BIGINT,
@@ -1682,6 +1689,7 @@ CREATE TABLE "RewardRedemption" (
     "redemptionMethod" "RewardRedemptionMethod" NOT NULL,
     "saleId" TEXT NOT NULL,
     "redeemedAt" BIGINT NOT NULL,
+    "customerTier" "CustomerTier" NOT NULL,
 
     CONSTRAINT "RewardRedemption_pkey" PRIMARY KEY ("id")
 );
@@ -1708,6 +1716,72 @@ CREATE TABLE "RewardSale" (
     "paidAt" BIGINT NOT NULL,
 
     CONSTRAINT "RewardSale_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CustomerTierStanding" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "userId" TEXT NOT NULL,
+    "tier" "CustomerTier" NOT NULL DEFAULT 'BRONZE',
+    "countedRedemptions" INTEGER NOT NULL DEFAULT 0,
+    "promotedAt" BIGINT,
+    "holdUntil" BIGINT,
+    "demotionWarningTier" "CustomerTier",
+    "demotionDueAt" BIGINT,
+    "demotionWarnedAt" BIGINT,
+    "evaluatedAt" BIGINT NOT NULL,
+
+    CONSTRAINT "CustomerTierStanding_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CustomerTierChange" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "userId" TEXT NOT NULL,
+    "fromTier" "CustomerTier" NOT NULL,
+    "toTier" "CustomerTier" NOT NULL,
+    "reason" "CustomerTierChangeReason" NOT NULL,
+    "countedRedemptions" INTEGER NOT NULL,
+    "occurredAt" BIGINT NOT NULL,
+
+    CONSTRAINT "CustomerTierChange_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CustomerTierSettings" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "key" VARCHAR(20) NOT NULL,
+    "silverThreshold" INTEGER NOT NULL,
+    "goldThreshold" INTEGER NOT NULL,
+    "diamondThreshold" INTEGER NOT NULL,
+    "windowDays" INTEGER NOT NULL,
+    "perMerchantCap" INTEGER NOT NULL,
+    "holdDays" INTEGER NOT NULL,
+    "warningDays" INTEGER NOT NULL,
+    "reason" VARCHAR(500) NOT NULL,
+
+    CONSTRAINT "CustomerTierSettings_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -4042,6 +4116,21 @@ CREATE INDEX "RewardSale_paidAt_idx" ON "RewardSale"("paidAt");
 CREATE UNIQUE INDEX "RewardSale_tenantId_idempotencyKey_key" ON "RewardSale"("tenantId", "idempotencyKey");
 
 -- CreateIndex
+CREATE INDEX "CustomerTierStanding_tier_idx" ON "CustomerTierStanding"("tier");
+
+-- CreateIndex
+CREATE INDEX "CustomerTierStanding_demotionDueAt_idx" ON "CustomerTierStanding"("demotionDueAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CustomerTierStanding_userId_key" ON "CustomerTierStanding"("userId") WHERE ("isDeleted" = false);
+
+-- CreateIndex
+CREATE INDEX "CustomerTierChange_userId_occurredAt_idx" ON "CustomerTierChange"("userId", "occurredAt" DESC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CustomerTierSettings_key_key" ON "CustomerTierSettings"("key");
+
+-- CreateIndex
 CREATE INDEX "ProductImage_productId_idx" ON "ProductImage"("productId");
 
 -- CreateIndex
@@ -4922,6 +5011,12 @@ ALTER TABLE "RewardSale" ADD CONSTRAINT "RewardSale_userId_fkey" FOREIGN KEY ("u
 
 -- AddForeignKey
 ALTER TABLE "RewardSale" ADD CONSTRAINT "RewardSale_tenantId_apiKeyId_fkey" FOREIGN KEY ("tenantId", "apiKeyId") REFERENCES "TenantApiKey"("tenantId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CustomerTierStanding" ADD CONSTRAINT "CustomerTierStanding_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CustomerTierChange" ADD CONSTRAINT "CustomerTierChange_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProductImage" ADD CONSTRAINT "ProductImage_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;

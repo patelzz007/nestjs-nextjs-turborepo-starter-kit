@@ -65,6 +65,8 @@ export const WEB_ROUTE_ACCESS: readonly WebRouteAccessRule[] = [
 	{ pattern: ROUTES.dashboard.activity, audience: "signed-in" },
 	// GET /auth/signup-referrals/* — any session (own code and referees only)
 	{ pattern: ROUTES.dashboard.referrals, audience: "signed-in", breadcrumbLabel: "Referrals" },
+	// GET /tiers/me — any session (own tier only; 404 while tiers are off, ADR 085)
+	{ pattern: ROUTES.dashboard.tier, audience: "signed-in", breadcrumbLabel: "My tier" },
 	// GET /auth/me, password and MFA endpoints — any session (restricted sessions included)
 	{ pattern: ROUTES.dashboard.account, audience: "signed-in" },
 	// GET /notifications?surface=CUSTOMER, /notifications/stream — any session (own inbox only)

@@ -120,6 +120,7 @@ export class PrismaRewardRepository implements RewardRepository {
 				referralPoolRemaining: snapshot.referralPoolRemaining,
 				locationScopeType: snapshot.locationScope.type,
 				audienceType: snapshot.audience.type,
+				minimumTier: snapshot.audience.minimumTier,
 				updatedAt: snapshot.updatedAt,
 			},
 			select: { id: true },
@@ -380,5 +381,6 @@ function definitionColumns(snapshot: RewardSnapshot): Prisma.RewardUpdateManyMut
 		referralPoolTotal: snapshot.referralPoolTotal,
 		referralPoolRemaining: snapshot.referralPoolRemaining,
 		audienceType: snapshot.audience.type,
+		minimumTier: snapshot.audience.minimumTier,
 	};
 }

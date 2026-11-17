@@ -1,4 +1,4 @@
-import type { EpochMs, RewardRedemptionMethodSchema, SaleCurrency } from "@workspace/shared";
+import type { CustomerTier, EpochMs, RewardRedemptionMethodSchema, SaleCurrency } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import {
@@ -39,6 +39,8 @@ export interface NewSale {
 	/** Fingerprint of the bill and its codes (a retried key must carry the same one to be replayed). */
 	readonly requestHash: string;
 	readonly presented: readonly PresentedClaim[];
+	/** The customer's tier at this moment (ADR 085), recorded on every redemption of the sale. */
+	readonly customerTier: CustomerTier;
 }
 
 export interface SaleLine {
@@ -56,6 +58,8 @@ export interface RewardSaleState {
 	readonly idempotencyKey: string;
 	readonly requestHash: string;
 	readonly paidAt: EpochMs;
+	/** The customer's tier when they paid (ADR 085). */
+	readonly customerTier: CustomerTier;
 	/** Sorted by claim id: the stable lock order that keeps overlapping checkouts from deadlocking. */
 	readonly lines: readonly SaleLine[];
 }
@@ -106,6 +110,7 @@ export class RewardSale extends AggregateRoot<PosEvent> {
 			idempotencyKey: sale.idempotencyKey,
 			requestHash: sale.requestHash,
 			paidAt: now,
+			customerTier: sale.customerTier,
 			lines,
 		});
 		created.record(

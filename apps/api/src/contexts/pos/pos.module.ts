@@ -27,7 +27,16 @@ import { RevokeApiKeyHandler } from "./application/commands/revoke-api-key/revok
 import { ValidateRedemptionCodesHandler } from "./application/commands/validate-redemption-codes/validate-redemption-codes.handler";
 import type { PosScope } from "./application/pos-scope";
 import type { ApiKeyReadPort, RedemptionReadPort, TerminalReadPort } from "./application/ports/pos-read.port";
-import { API_KEY_READS, CHECKOUT_FINGERPRINT, POS_CREDENTIALS, POS_ID_GENERATOR, POS_UNIT_OF_WORK, REDEMPTION_READS, TERMINAL_READS } from "./application/ports/pos.tokens";
+import {
+	API_KEY_READS,
+	CHECKOUT_FINGERPRINT,
+	CUSTOMER_TIER_SNAPSHOT_FACTORY,
+	POS_CREDENTIALS,
+	POS_ID_GENERATOR,
+	POS_UNIT_OF_WORK,
+	REDEMPTION_READS,
+	TERMINAL_READS,
+} from "./application/ports/pos.tokens";
 import { GetPosSettingsHandler } from "./application/queries/get-pos-settings/get-pos-settings.handler";
 import { GetTerminalSummaryHandler } from "./application/queries/get-terminal-summary/get-terminal-summary.handler";
 import { GetTerminalHandler } from "./application/queries/get-terminal/get-terminal.handler";
@@ -38,7 +47,7 @@ import { RedemptionCodeResolver } from "./application/services/redemption-code-r
 import { Sha256CheckoutFingerprint } from "./infrastructure/adapters/checkout-fingerprint.adapter";
 import { PosCredentialsAdapter } from "./infrastructure/adapters/pos-credentials.adapter";
 import { UuidPosIdGenerator } from "./infrastructure/adapters/uuid-pos-id.generator";
-import { PosScopeFactory } from "./infrastructure/persistence/pos-scope.factory";
+import { PosScopeFactory, type CustomerTierSnapshotFactory } from "./infrastructure/persistence/pos-scope.factory";
 import { PrismaApiKeyReadRepository, PrismaRedemptionReadRepository, PrismaTerminalReadRepository } from "./infrastructure/persistence/prisma-pos.read-repositories";
 import { PosRegistrations } from "./infrastructure/pos-registrations";
 import { MerchantApiKeyGuard } from "../../platform/presentation/http/security/guards/merchant-api-key.guard";
@@ -76,13 +85,14 @@ import { FeatureFlagTillRedemptionGate } from "./infrastructure/feature-flags/fe
 		},
 		{
 			provide: POS_UNIT_OF_WORK,
-			inject: [TenantTransactionService, RewardCodeHasher, TransactionalEventDispatcher, AFTER_COMMIT_PUBLISHER],
+			inject: [TenantTransactionService, RewardCodeHasher, CUSTOMER_TIER_SNAPSHOT_FACTORY, TransactionalEventDispatcher, AFTER_COMMIT_PUBLISHER],
 			useFactory: (
 				transactions: TenantTransactionService,
 				codeHasher: RewardCodeHasher,
+				tierSnapshots: CustomerTierSnapshotFactory,
 				dispatcher: TransactionalEventDispatcher<Prisma.TransactionClient>,
 				publisher: AfterCommitPublisher,
-			): UnitOfWork<PosScope> => new PrismaUnitOfWork(transactions, new PosScopeFactory(codeHasher), dispatcher, publisher),
+			): UnitOfWork<PosScope> => new PrismaUnitOfWork(transactions, new PosScopeFactory(codeHasher, tierSnapshots), dispatcher, publisher),
 		},
 		{
 			provide: TERMINAL_READS,

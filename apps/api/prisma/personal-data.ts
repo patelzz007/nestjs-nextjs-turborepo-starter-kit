@@ -83,6 +83,9 @@ export const PERSONAL_DATA_CLASSES: Readonly<Record<string, PersonalDataDecision
 	RewardNotification: { class: "ERASE", reason: OWN_SETTING },
 	RewardReferral: { class: "ANONYMISE", reason: `${OTHERS_RECORD}; the referee's IP cleared` },
 	RewardRedemption: { class: "MERCHANT_RECORD", reason: "Part of the merchant's sale record (Income Tax Act 1967 s.82)" },
+	// ── Customer tiers (ADR 085) ─────────────────────────────────────────────
+	CustomerTierStanding: { class: "ERASE", reason: "The person's own tier, of no use once the account is gone (the redemption keeps its tier snapshot)" },
+	CustomerTierChange: { class: "ERASE", reason: "The person's own tier history, shown only to them and to staff on their page" },
 	RewardSale: { class: "MERCHANT_RECORD", reason: "The merchant's sale record (Income Tax Act 1967 s.82)" },
 	SignupReferralCode: { class: "ERASE", reason: "The person's own invite code" },
 	SignupReferral: { class: "ANONYMISE", reason: OTHERS_RECORD },

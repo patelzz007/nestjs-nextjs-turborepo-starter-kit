@@ -1,3 +1,4 @@
+import type { MerchantRewardFormValues } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { RewardEditorFormSchema, rewardEditorErrors, toRewardEditorInput, toRewardFormCandidate, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
@@ -23,6 +24,7 @@ function input(overrides: Partial<RewardEditorInput> = {}): RewardEditorInput {
 		locationIds: [],
 		audienceType: "EVERYONE",
 		audienceCustomerIds: [],
+		minimumTier: "BRONZE",
 		...overrides,
 	};
 }
@@ -43,6 +45,11 @@ describe("toRewardFormCandidate", () => {
 
 		expect(chosen).toMatchObject({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [IMAGE_ID] });
 		expect(flippedBack).toMatchObject({ audienceType: "EVERYONE", audienceCustomerIds: [] });
+	});
+
+	it("sends the minimum tier only with a reward for everyone: chosen customers claim at any tier (ADR 085)", () => {
+		expect(toRewardFormCandidate(input({ minimumTier: "GOLD" })).minimumTier).toBe("GOLD");
+		expect(toRewardFormCandidate(input({ minimumTier: "GOLD", audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [IMAGE_ID] })).minimumTier).toBe("BRONZE");
 	});
 
 	it("asks for a customer when the reward is for chosen customers and none is picked", () => {
@@ -72,6 +79,7 @@ describe("toRewardFormCandidate", () => {
 			maxClaimsPerUser: 1,
 			audienceType: "EVERYONE",
 			audienceCustomerIds: [],
+			minimumTier: "BRONZE",
 		};
 		const candidate = toRewardFormCandidate(editing);
 
@@ -111,5 +119,21 @@ describe("toRewardEditorInput", () => {
 		expect(editorInput.quantityTotal).toBe("100");
 		expect(toRewardEditorInput(RewardEditorFormSchema.parse(input())).minPurchase).toBe("");
 		expect(toRewardEditorInput(RewardEditorFormSchema.parse(input())).termsConditions).toBe("");
+	});
+
+	it("keeps a saved minimum tier, and starts a reward without one at Bronze", () => {
+		expect(toRewardEditorInput(RewardEditorFormSchema.parse(input({ minimumTier: "DIAMOND" }))).minimumTier).toBe("DIAMOND");
+		const withoutTier: MerchantRewardFormValues = {
+			rewardType: "DISCOUNT",
+			title: "20% off nasi lemak",
+			description: "Any nasi lemak set.",
+			imageFileIds: [IMAGE_ID],
+			rewardValue: 20,
+			startDate: "2026-11-01",
+			expiryDate: "2026-11-30",
+			quantityTotal: 100,
+			maxClaimsPerUser: 1,
+		};
+		expect(toRewardEditorInput(withoutTier).minimumTier).toBe("BRONZE");
 	});
 });

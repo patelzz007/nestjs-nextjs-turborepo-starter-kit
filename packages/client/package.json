@@ -132,6 +132,8 @@
 		"./lib/contexts/identity/session/use-impersonation": "./src/lib/contexts/identity/session/use-impersonation.tsx",
 		"./lib/contexts/identity/session/session-check-notice": "./src/lib/contexts/identity/session/session-check-notice.tsx",
 		"./lib/contexts/rewards/reward-offer": "./src/lib/contexts/rewards/reward-offer.ts",
+		"./lib/contexts/tiers": "./src/lib/contexts/tiers/index.ts",
+		"./lib/contexts/reporting": "./src/lib/contexts/reporting/index.ts",
 		"./lib/contexts/tenancy/kyb/document-preview-dialog": "./src/lib/contexts/tenancy/kyb/document-preview-dialog.tsx",
 		"./lib/contexts/tenancy/kyb/document-preview-dialog.client-only": "./src/lib/contexts/tenancy/kyb/document-preview-dialog.client-only.tsx",
 		"./lib/contexts/tenancy/kyb/document-utils": "./src/lib/contexts/tenancy/kyb/document-utils.ts",

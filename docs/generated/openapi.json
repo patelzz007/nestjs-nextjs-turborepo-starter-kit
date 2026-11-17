@@ -12985,7 +12985,8 @@
                                 "enum": [
                                   "showcase",
                                   "merchant-invites",
-                                  "till-redemption"
+                                  "till-redemption",
+                                  "customer-tiers"
                                 ],
                                 "type": "string"
                               },
@@ -13146,7 +13147,8 @@
                                 "enum": [
                                   "showcase",
                                   "merchant-invites",
-                                  "till-redemption"
+                                  "till-redemption",
+                                  "customer-tiers"
                                 ],
                                 "type": "string"
                               },
@@ -13414,7 +13416,8 @@
               "enum": [
                 "showcase",
                 "merchant-invites",
-                "till-redemption"
+                "till-redemption",
+                "customer-tiers"
               ],
               "type": "string"
             }
@@ -13476,7 +13479,8 @@
                           "enum": [
                             "showcase",
                             "merchant-invites",
-                            "till-redemption"
+                            "till-redemption",
+                            "customer-tiers"
                           ],
                           "type": "string"
                         },
@@ -50086,6 +50090,15 @@
                             ],
                             "type": "string"
                           },
+                          "minimumTier": {
+                            "enum": [
+                              "BRONZE",
+                              "SILVER",
+                              "GOLD",
+                              "DIAMOND"
+                            ],
+                            "type": "string"
+                          },
                           "quantityRemaining": {
                             "maximum": 9007199254740991,
                             "minimum": -9007199254740991,
@@ -50268,7 +50281,8 @@
                           "rules",
                           "locationScopeType",
                           "locationIds",
-                          "audienceType"
+                          "audienceType",
+                          "minimumTier"
                         ],
                         "type": "object"
                       },
@@ -50574,6 +50588,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -50756,7 +50779,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -51014,6 +51038,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -51196,7 +51229,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -51669,6 +51703,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -51851,7 +51894,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -54300,6 +54344,485 @@
         ]
       }
     },
+    "/api/v1/admin/tiers/distribution": {
+      "get": {
+        "operationId": "AdminTiersController_distribution",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "counts": {
+                          "additionalProperties": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "required": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "object"
+                        },
+                        "total": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "counts",
+                        "total"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Customers per tier"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "How many customers stand at each tier (everyone who has claimed at a store; without a higher standing, Bronze)",
+        "tags": [
+          "Tiers"
+        ]
+      }
+    },
+    "/api/v1/admin/tiers/settings": {
+      "get": {
+        "operationId": "AdminTiersController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "diamondThreshold": {
+                          "maximum": 10000,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "goldThreshold": {
+                          "maximum": 10000,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "holdDays": {
+                          "maximum": 365,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "perMerchantCap": {
+                          "maximum": 10000,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "reason": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "silverThreshold": {
+                          "maximum": 10000,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "updatedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "updatedByName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "warningDays": {
+                          "maximum": 90,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "windowDays": {
+                          "maximum": 1095,
+                          "minimum": 30,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "silverThreshold",
+                        "goldThreshold",
+                        "diamondThreshold",
+                        "windowDays",
+                        "perMerchantCap",
+                        "holdDays",
+                        "warningDays",
+                        "reason",
+                        "updatedAt",
+                        "updatedByName"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The tier rules"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "The tier rules in force: thresholds, tier window, per-merchant cap, tier hold and warning days, and who last changed them",
+        "tags": [
+          "Tiers"
+        ]
+      },
+      "put": {
+        "operationId": "AdminTiersController_update",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "diamondThreshold": {
+                    "maximum": 10000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "goldThreshold": {
+                    "maximum": 10000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "holdDays": {
+                    "maximum": 365,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "perMerchantCap": {
+                    "maximum": 10000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "maxLength": 500,
+                    "minLength": 10,
+                    "type": "string"
+                  },
+                  "silverThreshold": {
+                    "maximum": 10000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "warningDays": {
+                    "maximum": 90,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "windowDays": {
+                    "maximum": 1095,
+                    "minimum": 30,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "silverThreshold",
+                  "goldThreshold",
+                  "diamondThreshold",
+                  "windowDays",
+                  "perMerchantCap",
+                  "holdDays",
+                  "warningDays",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "diamondThreshold": {
+                          "maximum": 10000,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "goldThreshold": {
+                          "maximum": 10000,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "holdDays": {
+                          "maximum": 365,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "perMerchantCap": {
+                          "maximum": 10000,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "reason": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "silverThreshold": {
+                          "maximum": 10000,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "updatedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "updatedByName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "warningDays": {
+                          "maximum": 90,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "windowDays": {
+                          "maximum": 1095,
+                          "minimum": 30,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "silverThreshold",
+                        "goldThreshold",
+                        "diamondThreshold",
+                        "windowDays",
+                        "perMerchantCap",
+                        "holdDays",
+                        "warningDays",
+                        "reason",
+                        "updatedAt",
+                        "updatedByName"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The new tier rules"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Change the tier rules, with a reason; the next nightly review applies them (a warning always comes first)",
+        "tags": [
+          "Tiers"
+        ]
+      }
+    },
     "/api/v1/admin/users/{userId}/erasure": {
       "get": {
         "operationId": "AdminAccountErasureController_status",
@@ -54805,6 +55328,228 @@
         "summary": "Support: cancel an account's erasure during its grace period",
         "tags": [
           "Privacy"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{userId}/tier": {
+      "get": {
+        "operationId": "AdminUserTierController_tier",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "countedRedemptions": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "demotionWarning": {
+                          "nullable": true,
+                          "properties": {
+                            "dueAt": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "redemptionsToKeep": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "toTier": {
+                              "enum": [
+                                "BRONZE",
+                                "SILVER",
+                                "GOLD",
+                                "DIAMOND"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "toTier",
+                            "dueAt",
+                            "redemptionsToKeep"
+                          ],
+                          "type": "object"
+                        },
+                        "evaluatedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "history": {
+                          "items": {
+                            "properties": {
+                              "countedRedemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "fromTier": {
+                                "enum": [
+                                  "BRONZE",
+                                  "SILVER",
+                                  "GOLD",
+                                  "DIAMOND"
+                                ],
+                                "type": "string"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "occurredAt": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "reason": {
+                                "enum": [
+                                  "PROMOTION",
+                                  "DEMOTION"
+                                ],
+                                "type": "string"
+                              },
+                              "toTier": {
+                                "enum": [
+                                  "BRONZE",
+                                  "SILVER",
+                                  "GOLD",
+                                  "DIAMOND"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "fromTier",
+                              "toTier",
+                              "reason",
+                              "countedRedemptions",
+                              "occurredAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "holdUntil": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "tier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "tier",
+                        "countedRedemptions",
+                        "holdUntil",
+                        "demotionWarning",
+                        "evaluatedAt",
+                        "history"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The customer's tier"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "A customer's tier, tier hold, pending demotion warning and tier history",
+        "tags": [
+          "Tiers"
         ]
       }
     },
@@ -90610,6 +91355,32 @@
                   "properties": {
                     "data": {
                       "properties": {
+                        "byCustomerTier": {
+                          "items": {
+                            "properties": {
+                              "redemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "tier": {
+                                "enum": [
+                                  "BRONZE",
+                                  "SILVER",
+                                  "GOLD",
+                                  "DIAMOND"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tier",
+                              "redemptions"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
                         "byRedemptionMethod": {
                           "items": {
                             "properties": {
@@ -91033,7 +91804,8 @@
                         "series",
                         "byStore",
                         "byReward",
-                        "byRedemptionMethod"
+                        "byRedemptionMethod",
+                        "byCustomerTier"
                       ],
                       "type": "object"
                     },
@@ -91957,6 +92729,15 @@
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
                         },
+                        "customerTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "invalidReason": {
                           "enum": [
                             "ALREADY_REDEEMED",
@@ -92157,7 +92938,8 @@
                         "claimExpiresAt",
                         "valid",
                         "invalidReason",
-                        "minSpendMinor"
+                        "minSpendMinor",
+                        "customerTier"
                       ],
                       "type": "object"
                     },
@@ -92501,6 +93283,15 @@
                             ],
                             "type": "string"
                           },
+                          "minimumTier": {
+                            "enum": [
+                              "BRONZE",
+                              "SILVER",
+                              "GOLD",
+                              "DIAMOND"
+                            ],
+                            "type": "string"
+                          },
                           "quantityRemaining": {
                             "maximum": 9007199254740991,
                             "minimum": -9007199254740991,
@@ -92683,7 +93474,8 @@
                           "rules",
                           "locationScopeType",
                           "locationIds",
-                          "audienceType"
+                          "audienceType",
+                          "minimumTier"
                         ],
                         "type": "object"
                       },
@@ -92914,6 +93706,16 @@
                     "enum": [
                       "ALL_LOCATIONS",
                       "SELECTED"
+                    ],
+                    "type": "string"
+                  },
+                  "minimumTier": {
+                    "default": "BRONZE",
+                    "enum": [
+                      "BRONZE",
+                      "SILVER",
+                      "GOLD",
+                      "DIAMOND"
                     ],
                     "type": "string"
                   },
@@ -93154,6 +93956,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -93336,7 +94147,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -93710,6 +94522,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -93892,7 +94713,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -94048,6 +94870,15 @@
                     "maxItems": 10,
                     "minItems": 1,
                     "type": "array"
+                  },
+                  "minimumTier": {
+                    "enum": [
+                      "BRONZE",
+                      "SILVER",
+                      "GOLD",
+                      "DIAMOND"
+                    ],
+                    "type": "string"
                   },
                   "quantityTotal": {
                     "maximum": 9007199254740991,
@@ -94273,6 +95104,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -94455,7 +95295,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -94713,6 +95554,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -94895,7 +95745,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -103945,6 +104796,25 @@
               "minLength": 1,
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "includeLocked",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "enum": [
+                    "true",
+                    "false"
+                  ],
+                  "type": "string"
+                }
+              ]
+            }
           }
         ],
         "responses": {
@@ -104098,6 +104968,15 @@
                             "enum": [
                               "ALL_LOCATIONS",
                               "SELECTED"
+                            ],
+                            "type": "string"
+                          },
+                          "minimumTier": {
+                            "enum": [
+                              "BRONZE",
+                              "SILVER",
+                              "GOLD",
+                              "DIAMOND"
                             ],
                             "type": "string"
                           },
@@ -104283,7 +105162,8 @@
                           "rules",
                           "locationScopeType",
                           "locationIds",
-                          "audienceType"
+                          "audienceType",
+                          "minimumTier"
                         ],
                         "type": "object"
                       },
@@ -104587,6 +105467,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -104769,7 +105658,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -114650,6 +115540,32 @@
                   "properties": {
                     "data": {
                       "properties": {
+                        "byCustomerTier": {
+                          "items": {
+                            "properties": {
+                              "redemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "tier": {
+                                "enum": [
+                                  "BRONZE",
+                                  "SILVER",
+                                  "GOLD",
+                                  "DIAMOND"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tier",
+                              "redemptions"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
                         "byRedemptionMethod": {
                           "items": {
                             "properties": {
@@ -115073,7 +115989,8 @@
                         "series",
                         "byStore",
                         "byReward",
-                        "byRedemptionMethod"
+                        "byRedemptionMethod",
+                        "byCustomerTier"
                       ],
                       "type": "object"
                     },
@@ -127438,6 +128355,15 @@
                             ],
                             "type": "string"
                           },
+                          "minimumTier": {
+                            "enum": [
+                              "BRONZE",
+                              "SILVER",
+                              "GOLD",
+                              "DIAMOND"
+                            ],
+                            "type": "string"
+                          },
                           "quantityRemaining": {
                             "maximum": 9007199254740991,
                             "minimum": -9007199254740991,
@@ -127620,7 +128546,8 @@
                           "rules",
                           "locationScopeType",
                           "locationIds",
-                          "audienceType"
+                          "audienceType",
+                          "minimumTier"
                         ],
                         "type": "object"
                       },
@@ -127875,6 +128802,16 @@
                     ],
                     "type": "string"
                   },
+                  "minimumTier": {
+                    "default": "BRONZE",
+                    "enum": [
+                      "BRONZE",
+                      "SILVER",
+                      "GOLD",
+                      "DIAMOND"
+                    ],
+                    "type": "string"
+                  },
                   "quantityTotal": {
                     "maximum": 9007199254740991,
                     "minimum": 1,
@@ -128112,6 +129049,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -128294,7 +129240,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -128520,6 +129467,16 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "tier": {
+                            "enum": [
+                              "BRONZE",
+                              "SILVER",
+                              "GOLD",
+                              "DIAMOND"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "userId": {
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -128531,7 +129488,8 @@
                           "fullName",
                           "maskedEmail",
                           "lastClaimedAt",
-                          "claimCount"
+                          "claimCount",
+                          "tier"
                         ],
                         "type": "object"
                       },
@@ -129003,6 +129961,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -129185,7 +130152,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -129361,6 +130329,15 @@
                     "maxItems": 10,
                     "minItems": 1,
                     "type": "array"
+                  },
+                  "minimumTier": {
+                    "enum": [
+                      "BRONZE",
+                      "SILVER",
+                      "GOLD",
+                      "DIAMOND"
+                    ],
+                    "type": "string"
                   },
                   "quantityTotal": {
                     "maximum": 9007199254740991,
@@ -129586,6 +130563,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -129768,7 +130754,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -129918,6 +130905,16 @@
                                 "nullable": true,
                                 "type": "string"
                               },
+                              "tier": {
+                                "enum": [
+                                  "BRONZE",
+                                  "SILVER",
+                                  "GOLD",
+                                  "DIAMOND"
+                                ],
+                                "nullable": true,
+                                "type": "string"
+                              },
                               "userId": {
                                 "format": "uuid",
                                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -129929,7 +130926,8 @@
                               "fullName",
                               "maskedEmail",
                               "lastClaimedAt",
-                              "claimCount"
+                              "claimCount",
+                              "tier"
                             ],
                             "type": "object"
                           },
@@ -130014,6 +131012,491 @@
           }
         ],
         "summary": "Who the reward is for: everyone, or the customers it was given to (404 outside the caller's stores)",
+        "tags": [
+          "Tenant Rewards"
+        ]
+      }
+    },
+    "/api/v1/tenants/{tenantSlug}/rewards/{rewardId}/minimum-tier": {
+      "put": {
+        "operationId": "TenantRewardsController_setMinimumTier",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenantSlug",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 2,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "in": "path",
+            "name": "rewardId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "minimumTier": {
+                    "enum": [
+                      "BRONZE",
+                      "SILVER",
+                      "GOLD",
+                      "DIAMOND"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "minimumTier"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "audienceType": {
+                          "enum": [
+                            "EVERYONE",
+                            "SELECTED_CUSTOMERS"
+                          ],
+                          "type": "string"
+                        },
+                        "category": {
+                          "type": "string"
+                        },
+                        "claimCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "description": "Epoch milliseconds when the record was created",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "deletedAt": {
+                          "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "expiryDate": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "freeItem": {
+                          "nullable": true,
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "sku": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "sku"
+                          ],
+                          "type": "object"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
+                        },
+                        "isDeleted": {
+                          "description": "Soft-delete flag — false means the record is active",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "locationIds": {
+                          "items": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "locationNames": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "locationScopeType": {
+                          "enum": [
+                            "ALL_LOCATIONS",
+                            "SELECTED"
+                          ],
+                          "type": "string"
+                        },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
+                        "quantityRemaining": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "quantityReserved": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "quantityTotal": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "redemptionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "referralPoolRemaining": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "referralPoolTotal": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "referralsEnabled": {
+                          "type": "boolean"
+                        },
+                        "referrerRewardId": {
+                          "format": "uuid",
+                          "nullable": true,
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "rewardKind": {
+                          "enum": [
+                            "CONSUMER",
+                            "REFERRER"
+                          ],
+                          "type": "string"
+                        },
+                        "rewardType": {
+                          "enum": [
+                            "DISCOUNT",
+                            "FREE_ITEM",
+                            "CASHBACK",
+                            "POINTS",
+                            "BOGO"
+                          ],
+                          "type": "string"
+                        },
+                        "rewardValue": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "rules": {
+                          "nullable": true,
+                          "properties": {
+                            "maxUsePerUser": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "minSpendMyr": {
+                              "minimum": 0,
+                              "type": "number"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "shareUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
+                        "startDate": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "status": {
+                          "enum": [
+                            "DRAFT",
+                            "PENDING_REVIEW",
+                            "PUBLISHED",
+                            "EXPIRED",
+                            "DISABLED"
+                          ],
+                          "type": "string"
+                        },
+                        "tenantId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "tenantLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "tenantLogoUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "tenantName": {
+                          "type": "string"
+                        },
+                        "termsConditions": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "Epoch milliseconds when the record was last updated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "createdAt",
+                        "updatedAt",
+                        "isDeleted",
+                        "deletedAt",
+                        "id",
+                        "tenantId",
+                        "tenantLogoUrl",
+                        "tenantLogoSources",
+                        "title",
+                        "description",
+                        "rewardType",
+                        "rewardValue",
+                        "freeItem",
+                        "termsConditions",
+                        "rewardKind",
+                        "category",
+                        "images",
+                        "quantityTotal",
+                        "quantityRemaining",
+                        "quantityReserved",
+                        "startDate",
+                        "expiryDate",
+                        "status",
+                        "claimCount",
+                        "redemptionCount",
+                        "referralsEnabled",
+                        "referralPoolTotal",
+                        "referralPoolRemaining",
+                        "referrerRewardId",
+                        "rules",
+                        "locationScopeType",
+                        "locationIds",
+                        "audienceType",
+                        "minimumTier"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The reward with its new minimum tier"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Set the lowest customer tier that may claim a reward (a draft, one in review or a published one; no new review; claims already made stand)",
         "tags": [
           "Tenant Rewards"
         ]
@@ -130217,6 +131700,15 @@
                           ],
                           "type": "string"
                         },
+                        "minimumTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
                         "quantityRemaining": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -130399,7 +131891,8 @@
                         "rules",
                         "locationScopeType",
                         "locationIds",
-                        "audienceType"
+                        "audienceType",
+                        "minimumTier"
                       ],
                       "type": "object"
                     },
@@ -135332,6 +136825,461 @@
         "summary": "Send a webhook endpoint a test event (no body required)",
         "tags": [
           "Tenant Webhooks"
+        ]
+      }
+    },
+    "/api/v1/tiers/availability": {
+      "get": {
+        "operationId": "TiersController_availability",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "properties": {
+                            "enabled": {
+                              "enum": [
+                                false
+                              ],
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "enabled"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
+                            "enabled": {
+                              "enum": [
+                                true
+                              ],
+                              "type": "boolean"
+                            },
+                            "viewerTier": {
+                              "enum": [
+                                "BRONZE",
+                                "SILVER",
+                                "GOLD",
+                                "DIAMOND"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "enabled",
+                            "viewerTier"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Whether tiers are on, and the caller's tier"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {},
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Whether customer tiers are on (the customer-tiers flag) and, while they are, the caller's tier — Bronze when signed out",
+        "tags": [
+          "Tiers"
+        ]
+      }
+    },
+    "/api/v1/tiers/me": {
+      "get": {
+        "operationId": "TiersController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "countedRedemptions": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "demotionWarning": {
+                          "nullable": true,
+                          "properties": {
+                            "dueAt": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "redemptionsToKeep": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "toTier": {
+                              "enum": [
+                                "BRONZE",
+                                "SILVER",
+                                "GOLD",
+                                "DIAMOND"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "toTier",
+                            "dueAt",
+                            "redemptionsToKeep"
+                          ],
+                          "type": "object"
+                        },
+                        "history": {
+                          "items": {
+                            "properties": {
+                              "countedRedemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "fromTier": {
+                                "enum": [
+                                  "BRONZE",
+                                  "SILVER",
+                                  "GOLD",
+                                  "DIAMOND"
+                                ],
+                                "type": "string"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "occurredAt": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "reason": {
+                                "enum": [
+                                  "PROMOTION",
+                                  "DEMOTION"
+                                ],
+                                "type": "string"
+                              },
+                              "toTier": {
+                                "enum": [
+                                  "BRONZE",
+                                  "SILVER",
+                                  "GOLD",
+                                  "DIAMOND"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "fromTier",
+                              "toTier",
+                              "reason",
+                              "countedRedemptions",
+                              "occurredAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "holdUntil": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "merchants": {
+                          "items": {
+                            "properties": {
+                              "counted": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "remainingUnderCap": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "tenantId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "tenantName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tenantId",
+                              "tenantName",
+                              "counted",
+                              "remainingUnderCap"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nextTier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "redemptionsToNextTier": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "rules": {
+                          "properties": {
+                            "diamondThreshold": {
+                              "maximum": 10000,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "goldThreshold": {
+                              "maximum": 10000,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "holdDays": {
+                              "maximum": 365,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "perMerchantCap": {
+                              "maximum": 10000,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "silverThreshold": {
+                              "maximum": 10000,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "warningDays": {
+                              "maximum": 90,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "windowDays": {
+                              "maximum": 1095,
+                              "minimum": 30,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "silverThreshold",
+                            "goldThreshold",
+                            "diamondThreshold",
+                            "windowDays",
+                            "perMerchantCap",
+                            "holdDays",
+                            "warningDays"
+                          ],
+                          "type": "object"
+                        },
+                        "tier": {
+                          "enum": [
+                            "BRONZE",
+                            "SILVER",
+                            "GOLD",
+                            "DIAMOND"
+                          ],
+                          "type": "string"
+                        },
+                        "upcomingDropOffs": {
+                          "items": {
+                            "properties": {
+                              "count": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "on": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "on",
+                              "count"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "tier",
+                        "countedRedemptions",
+                        "nextTier",
+                        "redemptionsToNextTier",
+                        "holdUntil",
+                        "demotionWarning",
+                        "merchants",
+                        "upcomingDropOffs",
+                        "history",
+                        "rules"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The customer's tier page"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "The signed-in customer's tier: progress to the next, the counted redemptions per merchant, the tier hold, a pending demotion warning, what leaves the window soon, and the tier history",
+        "tags": [
+          "Tiers"
         ]
       }
     },

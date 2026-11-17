@@ -40,6 +40,8 @@ export interface WebAppLinks {
 	readonly account: string;
 	/** The customer inbox (ADR 070). */
 	readonly notifications: string;
+	/** The customer's tier page (ADR 085): tier notices link here. */
+	readonly tier: string;
 	/** A reward's signed-in page, where it is claimed. */
 	readonly reward: (rewardId: string) => string;
 	/** The unsubscribe page an email's footer links (`?token=`; no sign-in needed). */
@@ -99,6 +101,7 @@ export const APP_LINKS: AppLinks = {
 		wallet: "/dashboard/wallet",
 		account: "/dashboard/account",
 		notifications: "/dashboard/notifications",
+		tier: "/dashboard/tier",
 		reward: (rewardId: string): string => `/dashboard/rewards/${encodeURIComponent(rewardId)}`,
 		unsubscribe: "/unsubscribe",
 		status: "/status",

@@ -78,7 +78,7 @@ describe("PrismaRewardReadRepository", () => {
 	// The merchants' display read is a transaction (a pooled connection) of its own: opened while a reward read
 	// still held its connection, concurrent requests used up the pool and the reads expired (GET /rewards → 500).
 	it.each([
-		["the marketplace", (reader: PrismaRewardReadRepository): Promise<object> => reader.listMarketplace(ACTOR, PAGE_QUERY)],
+		["the marketplace", (reader: PrismaRewardReadRepository): Promise<object> => reader.listMarketplace(ACTOR, PAGE_QUERY, { kind: "off" })],
 		["the admin review queue", (reader: PrismaRewardReadRepository): Promise<object> => reader.listPendingReview(ACTOR, PAGE_QUERY)],
 		["one published reward", (reader: PrismaRewardReadRepository): Promise<object | null> => reader.findPublished(ACTOR, "reward-1")],
 		["one reward under review", (reader: PrismaRewardReadRepository): Promise<object | null> => reader.findConsumerForReview(ACTOR, "reward-1")],

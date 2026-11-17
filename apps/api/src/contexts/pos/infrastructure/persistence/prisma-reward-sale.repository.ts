@@ -78,6 +78,7 @@ export class PrismaRewardSaleRepository implements RewardSaleRepository {
 				redemptionMethod: line.method,
 				saleId: state.id,
 				redeemedAt: state.paidAt,
+				customerTier: state.customerTier,
 			})),
 		});
 		const stored = await this.db.rewardSale.findUniqueOrThrow({ where: { id: state.id }, select: STORED_SALE_SELECT });

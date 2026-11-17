@@ -1,7 +1,7 @@
 ---
 title: "API reference — Files and object storage"
 description: "Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback."
-order: 12
+order: 13
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

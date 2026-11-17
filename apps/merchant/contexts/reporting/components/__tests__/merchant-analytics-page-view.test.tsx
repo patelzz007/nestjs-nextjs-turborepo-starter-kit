@@ -32,11 +32,16 @@ const mocks = vi.hoisted(() => ({
 	download: vi.fn(),
 	saveDownloadedFile: vi.fn(),
 	refetch: vi.fn(),
+	tiersAvailability: vi.fn((): object => ({ data: { data: { enabled: true, viewerTier: "BRONZE" } } })),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
-		api: { tenants: { analyticsDashboard: { useQuery: mocks.dashboardQuery }, context: { useQuery: mocks.contextQuery } }, download: mocks.download },
+		api: {
+			tenants: { analyticsDashboard: { useQuery: mocks.dashboardQuery }, context: { useQuery: mocks.contextQuery } },
+			tiers: { availability: { useQuery: mocks.tiersAvailability } },
+			download: mocks.download,
+		},
 	}),
 }));
 
@@ -95,6 +100,7 @@ beforeAll(async (): Promise<void> => {
 
 beforeEach((): void => {
 	window.history.replaceState(null, "", `/t/${TEST_ORG_SLUG}/analytics`);
+	mocks.tiersAvailability.mockReturnValue({ data: { data: { enabled: true, viewerTier: "BRONZE" } } });
 	vi.stubGlobal("matchMedia", (query: string): Pick<MediaQueryList, "matches" | "media" | "addEventListener" | "removeEventListener"> => ({
 		matches: true,
 		media: query,
@@ -130,6 +136,17 @@ describe("MerchantAnalyticsPageView authorization", () => {
 	});
 });
 
+describe("MerchantAnalyticsPageView customer tiers", () => {
+	it("leaves the tier breakdown out while tiers are off", () => {
+		mocks.tiersAvailability.mockReturnValue({ data: { data: { enabled: false } } });
+		mocks.dashboardQuery.mockReturnValue(ready());
+		renderView();
+
+		expect(screen.getByRole("list", { name: "Redemptions by method" })).toBeTruthy();
+		expect(screen.queryByRole("list", { name: "Redemptions by customer tier" })).toBeNull();
+	});
+});
+
 describe("MerchantAnalyticsPageView data", () => {
 	it("queries the last 30 days in the merchant's own days and shows KPIs, charts and breakdowns", async () => {
 		mocks.dashboardQuery.mockReturnValue(ready());
@@ -157,6 +174,12 @@ describe("MerchantAnalyticsPageView data", () => {
 				.getAllByRole("listitem")
 				.map((item) => item.textContent),
 		).toEqual(["QR code scan1280%", "Backup code320%"]);
+		// Each customer's tier when they redeemed (ADR 085), shown while tiers are on.
+		expect(
+			within(screen.getByRole("list", { name: "Redemptions by customer tier" }))
+				.getAllByRole("listitem")
+				.map((item) => item.textContent),
+		).toEqual(["Bronze1066.7%", "Silver426.7%", "Gold16.7%", "Diamond00%"]);
 	});
 
 	it("narrows the query and the export to the store picked in the store selector", async () => {

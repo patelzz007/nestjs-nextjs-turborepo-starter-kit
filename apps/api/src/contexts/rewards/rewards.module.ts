@@ -26,6 +26,7 @@ import { AutoPublishDueRewardsHandler } from "./application/commands/auto-publis
 import { CreateRewardHandler } from "./application/commands/create-reward/create-reward.handler";
 import { RejectRewardHandler } from "./application/commands/reject-reward/reject-reward.handler";
 import { ReviseRewardHandler } from "./application/commands/revise-reward/revise-reward.handler";
+import { SetRewardMinimumTierHandler } from "./application/commands/set-reward-minimum-tier/set-reward-minimum-tier.handler";
 import { SubmitRewardForReviewHandler } from "./application/commands/submit-reward-for-review/submit-reward-for-review.handler";
 import { RecordRewardReviewAuditHandler } from "./application/event-handlers/in-transaction/record-reward-review-audit.in-transaction-handler";
 import type { LegalAcceptanceReadPort, RewardImageDeliveryPort, RewardReadPort } from "./application/ports/reward-read.port";
@@ -75,6 +76,7 @@ const rewardsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [R
 const COMMAND_HANDLERS: readonly Provider[] = [
 	CreateRewardHandler,
 	ReviseRewardHandler,
+	SetRewardMinimumTierHandler,
 	SubmitRewardForReviewHandler,
 	ApproveRewardHandler,
 	RejectRewardHandler,

@@ -30,6 +30,7 @@ import { tenantPaymentsRoutes } from "./contexts/payments/routes";
 import { adminPrivacyRoutes, privacyRoutes } from "./contexts/privacy/routes";
 import { savedViewsRoutes } from "./contexts/saved-views/routes";
 import { featureFlagsRoutes } from "./contexts/feature-flags/routes";
+import { tiersRoutes } from "./contexts/tiers/routes";
 import { githubPicturesRoutes, githubPullRequestsRoutes, githubRoutes } from "./contexts/integrations-github/routes";
 import { geoRoutes } from "./contexts/reference-data/routes";
 import { integrationRewardsRoutes, legalRoutes, tenantRewardsRoutes, rewardsAdminRewardRoutes, rewardsRoutes } from "./contexts/rewards/routes";
@@ -67,6 +68,7 @@ export const apiRoutes = {
 	adminPrivacy: adminPrivacyRoutes,
 	savedViews: savedViewsRoutes,
 	featureFlags: featureFlagsRoutes,
+	tiers: tiersRoutes,
 	admin: adminRbacRoutes,
 	auditLogs: auditLogsRoutes,
 	auditTrail: auditTrailRoutes,

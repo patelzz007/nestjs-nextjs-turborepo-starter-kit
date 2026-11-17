@@ -77,6 +77,7 @@ export function buildRewardRow(overrides: Partial<RewardRow> = {}): RewardRow {
 		parentConsumerRewardId: null,
 		locationScopeType: "ALL_LOCATIONS",
 		audienceType: "EVERYONE",
+		minimumTier: "BRONZE",
 		submittedForReviewAt: null,
 		autoPublishAt: null,
 		reviewedAt: null,

@@ -14,7 +14,9 @@ import { RewardMerchantAvatar } from "@/components/dashboard/shared/merchant-ava
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { formatRewardOffer, rewardTypeLabel } from "@workspace/client/lib/contexts/rewards/reward-offer";
-import type { Envelope, RewardResponse } from "@workspace/shared";
+import type { Envelope, RewardResponse, TierAvailability } from "@workspace/shared";
+import { hasTierMark, isRewardLockedFor, LockedRewardPanel, viewerTierOf } from "@/contexts/tiers";
+import { TierBadge } from "@workspace/client/lib/contexts/tiers";
 import { getRewardClaimBlockReason, rewardClaimBlockMessage, epochMs, PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { isRewardJustForViewer, JUST_FOR_YOU_LABEL } from "@/contexts/rewards/lib/reward-audience";
@@ -35,6 +37,12 @@ export interface RewardDetailViewProps {
 	readonly initialReward?: Envelope<RewardResponse> | undefined;
 	/** Where "More from this merchant" links — the public page keeps visitors on public pages. */
 	readonly detailPathPrefix?: string;
+	/**
+	 * Whether tiers are on and the viewer's tier, read by the server page. A reward above the viewer's tier shows how
+	 * to unlock it in place of the claim flow (ADR 085); `undefined` — the read failed — is treated as off, and the
+	 * API still refuses a locked claim.
+	 */
+	readonly tierAvailability?: TierAvailability | undefined;
 }
 
 const DAY_MS = 86_400_000;
@@ -63,8 +71,9 @@ function describeTimeLeft(expiryMs: number, nowMs: number): string | null {
  * works, the fine print, and the merchant's other offers. Claiming needs an
  * account but no permission — guests see a sign-in prompt in place of the flow.
  */
-export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = ROUTE_PREFIXES.dashboardRewards }: RewardDetailViewProps): React.JSX.Element {
+export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = ROUTE_PREFIXES.dashboardRewards, tierAvailability }: RewardDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const viewerTier = viewerTierOf(tierAvailability);
 
 	const rewardQuery = api.rewards.detail.useQuery({ rewardId }, { ...initialDataOption(initialReward), refetchInterval: REFRESH_INTERVAL_MS });
 	const reward = rewardQuery.data?.data;
@@ -117,6 +126,8 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 	}
 
 	const isSoldOut = reward.quantityRemaining <= 0;
+	// A unit already held stays claimable: the hold was taken while the customer's tier reached the reward.
+	const isLocked = isRewardLockedFor(reward, viewerTier) && !holdingUnit;
 	const isExpired = claimBlockReason === "expired";
 	const isLowStock = !isSoldOut && reward.quantityTotal > 0 && reward.quantityRemaining / reward.quantityTotal <= LOW_STOCK_SHARE;
 	const timeLeft = isExpired ? null : describeTimeLeft(reward.expiryDate, nowMs);
@@ -153,6 +164,7 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 							</Badge>
 							{typeLabel === offer ? null : <Badge variant="outline">{typeLabel}</Badge>}
 							{isRewardJustForViewer(reward) ? <Badge variant="primary-light">{JUST_FOR_YOU_LABEL}</Badge> : null}
+							{hasTierMark(reward, viewerTier) ? <TierBadge tier={reward.minimumTier} locked={isLocked} /> : null}
 							{isSoldOut ? <Badge variant="destructive-light">Sold out</Badge> : null}
 							{isExpired ? <Badge variant="destructive-light">Expired</Badge> : null}
 							{isLowStock ? <Badge className="border-transparent bg-tone-yellow-soft text-tone-yellow">Almost gone</Badge> : null}
@@ -196,6 +208,8 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 										Browse other offers
 									</Link>
 								</div>
+							) : isLocked && viewerTier !== null ? (
+								<LockedRewardPanel minimumTier={reward.minimumTier} viewerTier={viewerTier} returnTo={withReferralToken(pathname, referralToken)} />
 							) : (
 								<AccessGate
 									feature="this reward"
@@ -206,7 +220,7 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 								</AccessGate>
 							)}
 						</div>
-						{reward.referralsEnabled && canClaim ? (
+						{reward.referralsEnabled && canClaim && !isLocked ? (
 							<div className="mt-4 border-t border-border pt-4">
 								<RewardReferralShare rewardId={reward.id} rewardTitle={reward.title} />
 							</div>

@@ -1,7 +1,7 @@
 import { analyticsFormatters } from "@workspace/client/lib/contexts/reporting/analytics-presentation";
 import { describe, expect, it } from "vitest";
 
-import { NO_STORE_LABEL, reportTimeZone, toRedemptionMethodSegments, toRewardItems, toStoreItems } from "@/contexts/reporting/lib/merchant-analytics";
+import { NO_STORE_LABEL, reportTimeZone, toCustomerTierSegments, toRedemptionMethodSegments, toRewardItems, toStoreItems } from "@/contexts/reporting/lib/merchant-analytics";
 import { buildMerchantDashboard } from "@/testing/analytics-dashboard";
 import { tenantContextFixture } from "@/testing/tenant-context";
 
@@ -36,6 +36,25 @@ describe("toRewardItems", () => {
 		expect(toRewardItems(buildMerchantDashboard(), FORMATTERS).map((item) => [item.label, item.valueLabel, item.detail])).toEqual([
 			["Free refill", "12 claims", "10 redemptions · 83.3% redeemed"],
 			["Pastry deal", "8 claims", "5 redemptions · 62.5% redeemed"],
+		]);
+	});
+});
+
+describe("toCustomerTierSegments", () => {
+	it("names each tier, keeps its fixed colour and states its share, zero tiers included", () => {
+		const dashboard = buildMerchantDashboard({
+			byCustomerTier: [
+				{ tier: "BRONZE", redemptions: 9 },
+				{ tier: "SILVER", redemptions: 3 },
+				{ tier: "GOLD", redemptions: 3 },
+				{ tier: "DIAMOND", redemptions: 0 },
+			],
+		});
+		expect(toCustomerTierSegments(dashboard, FORMATTERS)).toEqual([
+			{ key: "BRONZE", label: "Bronze", color: "chart-1", value: 9, valueLabel: "9", shareLabel: "60%" },
+			{ key: "SILVER", label: "Silver", color: "chart-2", value: 3, valueLabel: "3", shareLabel: "20%" },
+			{ key: "GOLD", label: "Gold", color: "chart-3", value: 3, valueLabel: "3", shareLabel: "20%" },
+			{ key: "DIAMOND", label: "Diamond", color: "chart-4", value: 0, valueLabel: "0", shareLabel: "0%" },
 		]);
 	});
 });

@@ -32,6 +32,7 @@ flowchart TD
   referenceData[reference-data]
   audit[audit]
   github[integrations-github]
+  tiers[tiers]
 
   identity --> authorization
   identity --> tenants
@@ -59,6 +60,8 @@ flowchart TD
   rewards --> audit
   claims --> audit
   pos --> audit
+  tiers --> pos
+  tiers --> notifications
 ```
 
 | Context             | Owns                                                                                                                                                                                                                     | Talks to                                                                                                                                                                                                                                                                                                           |
@@ -83,6 +86,8 @@ flowchart TD
 | saved-views         | Named filters staff keep on admin lists (enhancement 5.10), stored as the list's URL query; shared ones reach the other staff | None: imports no context; registers its part of account erasure with the platform `PersonalDataErasureRegistry` |
 | feature-flags       | Runtime feature flags (enhancements 5.6, 5.11): each declared flag's setting (default, on, off, a stable percentage), a store flag's per-merchant and per-branch settings, each changed with a reason; the apps evaluate them, and the API answers a store flag for a store (`STORE_FEATURE_FLAGS`) | None: imports no context; pos asks it through its own `TillRedemptionGate` port |
 
+| tiers               | A customer's tier (ADR 085): the standing, the tier history, the tier rules, the evaluation after a redemption and the nightly review | pos (reacts to `SaleCheckedOut` after the commit; implements pos's `CUSTOMER_TIER_SNAPSHOT_FACTORY`), notifications (promotion, warning and demotion notices in the evaluation's transaction), feature-flags (`customer-tiers`); provides the platform's `CUSTOMER_TIER_ACCESS` that rewards, claims and a merchant's customer list read, so none of them imports tiers |
+
 `rewards/runtime` is gone: claims, pos and referrals each own their part. The live state and the remaining work are in `ddd-cqrs-handoff.md` §0.
 
 ## Wiring rules
@@ -97,4 +102,5 @@ flowchart TD
 - **Public APIs.** A `public-api.ts` exports only leaf Nest modules, meaning modules that depend on platform alone. Composition modules that wire other contexts are mounted only by `app.module.ts`. Identity and authorization are `@Global` and reach each other through tokens. This keeps the module graph acyclic without `forwardRef`.
 - **Pos.** `PosAccessModule` (global leaf) provides `API_KEY_VERIFICATION` and `TILL_RESOLVER` (platform ports the security kit's `ApiKeyAuthGuard` and `MerchantApiKeyGuard` use) and tenants' `API_KEY_CAPABILITIES` and `STORE_CLOSURE_FACTORY`. The checkout is one unit of work: claims' `ClaimRedemptionPort` (claims locked first, in claim-id order), rewards' inventory (every line reward and its referrer child locked in one id-ordered pass by `lockForCheckout` before any write) / facts / audit, referrals' `ReferralCreditPort` (with rewards' inventory as its bonus stock) and tenants' POS policy, all on the checkout's transaction and under the till key's `api_key` RLS principal.
 - **Referrer credit.** Referrals credits the referral and records `ReferrerCredited`; claims issues the credit claim and inbox notice in the same transaction (mechanism 1) and requests the email after the commit as a system operation, with a BullMQ sweeper for the backlog. Claims holds the email because it can reach the referrer's address through identity; referrals cannot (identity already depends on referrals). `SignupReferralSucceeded`'s notice is delivered after the commit by claims too (it owns the inbox and reads the referee's name through identity), claiming it through referrals' `SignupSuccessNoticesPort`, as a system operation: the till's key may neither read the referee's name nor write the referrer's inbox. Both follow-ups are durable without being in the checkout transaction: the owed state commits with the credit and a sweeper retries it (plan §7.4 said "during checkout"; the deviation is recorded in `ddd-cqrs-handoff.md` §0.9).
+- **Tiers (ADR 085).** `TiersAccessModule` (global leaf) provides the platform port `CUSTOMER_TIER_ACCESS` (whether tiers are on, and customers' tiers) and pos's `CUSTOMER_TIER_SNAPSHOT_FACTORY` (the tier written on each redemption inside the checkout). Rewards, claims and pos therefore never import tiers, and tiers can react to pos's `SaleCheckedOut` without a cycle or `forwardRef`.
 - **Referrals stays a leaf.** Identity depends on referrals, so referrals imports no context. What it needs from others arrives inverted: its code-job audit writer by token from rewards (`SIGNUP_REFERRAL_AUDIT_FACTORY`), and its bonus stock wired in by pos; its follow-ups are delivered by claims.

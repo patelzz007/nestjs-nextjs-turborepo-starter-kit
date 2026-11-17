@@ -1,5 +1,6 @@
 import { epochMs, type EpochMs } from "@workspace/shared";
 
+import type { CustomerTierAccess } from "../../../../platform/domain/customer-tier-access";
 import type { NewRewardDefinition, RewardRowState, RewardState } from "../aggregates/reward.state";
 import { RewardAudience } from "../value-objects/reward-audience.value-object";
 import { RewardLocationScope } from "../value-objects/reward-location-scope.value-object";
@@ -7,6 +8,9 @@ import { RewardRulesValue } from "../value-objects/reward-rules.value-object";
 
 /** A fixed instant every domain test measures from. */
 export const NOW: EpochMs = epochMs(1_792_195_200_000);
+
+/** Tiers off (ADR 085): every reward is open to every customer, so a test about something else need not think of tiers. */
+export const TIERS_OFF: CustomerTierAccess = { kind: "off" };
 
 export const REWARD_ID = "7a2b3c4d-5e6f-4a1b-8c9d-0e1f2a3b4c5d";
 export const REFERRER_ID = "11111111-1111-4111-8111-111111111111";

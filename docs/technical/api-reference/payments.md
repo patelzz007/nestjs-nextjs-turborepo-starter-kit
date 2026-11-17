@@ -1,7 +1,7 @@
 ---
 title: "API reference — Payments (Billplz, CHIP)"
 description: "A tenant asks for a payment through a configured gateway (an `Idempotency-Key` header makes a retry return the same payment), follows it and refunds it; the gateways' signed callbacks mark it paid. Amounts are in sen."
-order: 8
+order: 9
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

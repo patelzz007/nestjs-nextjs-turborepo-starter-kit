@@ -26,6 +26,12 @@ export const MERCHANT_DASHBOARD_FIXTURE: MerchantAnalyticsDashboard = {
 		{ method: "SCAN", redemptions: 0 },
 		{ method: "MANUAL", redemptions: 0 },
 	],
+	byCustomerTier: [
+		{ tier: "BRONZE", redemptions: 0 },
+		{ tier: "SILVER", redemptions: 0 },
+		{ tier: "GOLD", redemptions: 0 },
+		{ tier: "DIAMOND", redemptions: 0 },
+	],
 };
 
 export const ADMIN_DASHBOARD_FIXTURE: AdminAnalyticsDashboard = {

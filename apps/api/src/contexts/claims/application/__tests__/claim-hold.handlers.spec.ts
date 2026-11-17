@@ -31,13 +31,15 @@ beforeEach(() => {
 });
 
 function requestOtp(userId: string = USER): Promise<RequestClaimOtpResponse> {
-	return new RequestClaimOtpHandler(store.uow, codes, new SequentialIds(`hold-${String(store.holds.rows.size)}`), store.clock).execute(
+	return new RequestClaimOtpHandler(store.uow, codes, new SequentialIds(`hold-${String(store.holds.rows.size)}`), store.clock, store.tiers).execute(
 		new RequestClaimOtpCommand(customer(userId), { rewardId: REWARD, phone: NEW_PHONE }),
 	);
 }
 
 function claim(): ReturnType<ClaimRewardHandler["execute"]> {
-	return new ClaimRewardHandler(store.uow, codes, new SequentialIds("claim"), store.clock).execute(new ClaimRewardCommand(customer(USER), { rewardId: REWARD, phone: PHONE }));
+	return new ClaimRewardHandler(store.uow, codes, new SequentialIds("claim"), store.clock, store.tiers).execute(
+		new ClaimRewardCommand(customer(USER), { rewardId: REWARD, phone: PHONE }),
+	);
 }
 
 function expireHolds(): ReturnType<ExpireOverdueClaimHoldsHandler["execute"]> {

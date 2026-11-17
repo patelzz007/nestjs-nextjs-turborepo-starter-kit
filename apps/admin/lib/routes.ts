@@ -127,6 +127,8 @@ export interface SettingsRoutes {
 	readonly access: Route;
 	/** Runtime feature flags (enhancement 5.6). */
 	readonly featureFlags: Route;
+	/** The customer tier rules (ADR 085). */
+	readonly tiers: Route;
 }
 
 export interface ComponentsRoutes {
@@ -346,6 +348,7 @@ export const ROUTES: AdminRoutes = {
 		index: SETTINGS,
 		access: `${SETTINGS}/access`,
 		featureFlags: `${SETTINGS}/feature-flags`,
+		tiers: `${SETTINGS}/tiers`,
 	},
 	components: {
 		index: COMPONENTS,

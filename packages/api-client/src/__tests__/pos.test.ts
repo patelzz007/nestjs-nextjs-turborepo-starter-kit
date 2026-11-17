@@ -28,6 +28,7 @@ const PREVIEW = {
 	valid: true,
 	invalidReason: null,
 	minSpendMinor: null,
+	customerTier: "BRONZE",
 };
 
 /** The mobile app's own context: a signed-in person on the token transport. */

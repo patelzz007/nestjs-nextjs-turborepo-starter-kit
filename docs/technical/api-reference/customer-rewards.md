@@ -39,6 +39,7 @@ Browse published consumer rewards (signed in: also the rewards given to you; nev
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, expiryDate, title. Default: -createdAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city, tenantId |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
+| `includeLocked` | query | boolean \| "true" \| "false" | no |  |
 
 **Response 200 OK** (`application/json`) — Paginated marketplace rewards
 
@@ -68,6 +69,7 @@ Browse published consumer rewards (signed in: also the rewards given to you; nev
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationNames` | string[] | no |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data[].minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data[].quantityReserved` | integer | yes | min -9007199254740991 |
 | `data[].quantityTotal` | integer | yes | min -9007199254740991 |
@@ -306,6 +308,7 @@ Get published reward detail (a reward given to chosen customers is 404 for every
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |

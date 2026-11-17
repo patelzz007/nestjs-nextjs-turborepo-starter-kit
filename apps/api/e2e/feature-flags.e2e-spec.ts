@@ -80,6 +80,7 @@ describe("Runtime feature flags (e2e)", () => {
 			["showcase", "ON"],
 			["merchant-invites", "DEFAULT"],
 			["till-redemption", "DEFAULT"],
+			["customer-tiers", "DEFAULT"],
 		]);
 		expect(list.flags.at(0)).toMatchObject({ title: "Component showcase", reason: "Everyone on staff uses the showcase now" });
 		expect(list.flags.at(0)?.updatedByName).toMatch(/.+/u);
@@ -89,6 +90,7 @@ describe("Runtime feature flags (e2e)", () => {
 			{ key: "showcase", mode: "ON", percentage: null },
 			{ key: "merchant-invites", mode: "DEFAULT", percentage: null },
 			{ key: "till-redemption", mode: "DEFAULT", percentage: null },
+			{ key: "customer-tiers", mode: "DEFAULT", percentage: null },
 		]);
 	});
 

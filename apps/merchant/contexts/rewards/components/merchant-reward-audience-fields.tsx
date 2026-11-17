@@ -5,7 +5,8 @@ import { toRewardCustomerOption } from "@/contexts/rewards/lib/reward-audience";
 import type { RewardEditorState } from "@/contexts/rewards/lib/reward-editor-form";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { REWARD_MAX_AUDIENCE_CUSTOMERS, RewardAudienceTypeSchema, type RewardAudienceType } from "@workspace/shared";
+import { MinimumTierSelect, useTiersEnabled } from "@workspace/client/lib/contexts/tiers";
+import { REWARD_MAX_AUDIENCE_CUSTOMERS, RewardAudienceTypeSchema, type CustomerTier, type RewardAudienceType } from "@workspace/shared";
 import { Label } from "@workspace/ui/components/label";
 import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";
 import { useDebouncedValue } from "@workspace/ui/hooks/use-debounced-value";
@@ -40,7 +41,8 @@ export interface MerchantRewardAudienceFieldsProps {
 /**
  * The editor's "Who can claim" body: everyone, or a hand-picked set of the tenant's own customers
  * (searched by name or email; only masked emails are ever shown). The shared schema decides what is
- * valid: at least one customer when the reward is for chosen customers.
+ * valid: at least one customer when the reward is for chosen customers. While tiers are on, a reward
+ * for everyone also takes a minimum tier (ADR 085); chosen customers claim at any tier.
  */
 export function MerchantRewardAudienceFields({ editor, tenantSlug, initialCustomers, disabled = false }: MerchantRewardAudienceFieldsProps): React.JSX.Element {
 	const { values, errors, setField } = editor;
@@ -68,6 +70,14 @@ export function MerchantRewardAudienceFields({ editor, tenantSlug, initialCustom
 		},
 		[audienceCustomerIds, setField],
 	);
+	const tiersEnabled = useTiersEnabled();
+	const handleMinimumTierChange = React.useCallback(
+		(tier: CustomerTier): void => {
+			setField("minimumTier", tier);
+		},
+		[setField],
+	);
+
 	const handleRemove = React.useCallback(
 		(userId: string): void => {
 			setField(
@@ -109,6 +119,16 @@ export function MerchantRewardAudienceFields({ editor, tenantSlug, initialCustom
 					disabled={disabled}
 					errorMessage={errors.audienceCustomerIds}
 				/>
+			) : null}
+			{audienceType === "EVERYONE" && tiersEnabled ? (
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="minimumTier">Minimum tier</Label>
+					<MinimumTierSelect id="minimumTier" value={values.minimumTier} onValueChange={handleMinimumTierChange} disabled={disabled} describedById="minimumTier-hint" />
+					<p id="minimumTier-hint" className="text-xs text-muted-foreground">
+						Customers below it see the reward locked, with how many more redemptions unlock it.
+					</p>
+					{errors.minimumTier === undefined ? null : <p className="text-xs text-destructive">{errors.minimumTier}</p>}
+				</div>
 			) : null}
 		</div>
 	);

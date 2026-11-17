@@ -40,6 +40,12 @@ const MERCHANT: MerchantAnalyticsDashboard = {
 		{ method: "SCAN", redemptions: 1 },
 		{ method: "MANUAL", redemptions: 1 },
 	],
+	byCustomerTier: [
+		{ tier: "BRONZE", redemptions: 1 },
+		{ tier: "SILVER", redemptions: 0 },
+		{ tier: "GOLD", redemptions: 1 },
+		{ tier: "DIAMOND", redemptions: 0 },
+	],
 };
 
 describe("buildMerchantReport", () => {
@@ -48,8 +54,30 @@ describe("buildMerchantReport", () => {
 	it("carries the dashboard's numbers unchanged — KPIs, chart series and every table", () => {
 		expect(report.kpis.find((kpi) => kpi.label === "Sales")?.comparison).toEqual(MERCHANT.totals.salesMinor);
 		expect(report.charts.map((chart) => chart.series.map((series) => series.points.map((point) => point.value)))).toEqual([[[5_000]], [[4], [2]]]);
-		expect(report.tables.map((table) => table.key)).toEqual(["series", "stores", "rewards", "redemptionMethods"]);
-		expect(reportRowCounts(report)).toEqual({ series: 1, stores: 2, rewards: 1, redemptionMethods: 2 });
+		expect(report.tables.map((table) => table.key)).toEqual(["series", "stores", "rewards", "redemptionMethods", "customerTiers"]);
+		expect(reportRowCounts(report)).toEqual({ series: 1, stores: 2, rewards: 1, redemptionMethods: 2, customerTiers: 4 });
+	});
+
+	it("lists redemptions by customer tier with each tier named for people (ADR 085)", () => {
+		const tiers = report.tables.find((table) => table.key === "customerTiers");
+		expect(tiers?.rows).toEqual([
+			[
+				{ kind: "text", value: "Bronze" },
+				{ kind: "count", value: 1 },
+			],
+			[
+				{ kind: "text", value: "Silver" },
+				{ kind: "count", value: 0 },
+			],
+			[
+				{ kind: "text", value: "Gold" },
+				{ kind: "count", value: 1 },
+			],
+			[
+				{ kind: "text", value: "Diamond" },
+				{ kind: "count", value: 0 },
+			],
+		]);
 	});
 
 	it("names the subject and labels unknown stores and methods for people", () => {

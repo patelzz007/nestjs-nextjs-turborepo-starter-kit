@@ -26,6 +26,7 @@ const COMPLETE_DRAFT: RewardEditorInput = {
 	locationIds: [],
 	audienceType: "EVERYONE",
 	audienceCustomerIds: [],
+	minimumTier: "BRONZE",
 };
 
 const ALL_STORES = { label: "All stores", fullLabel: "All stores" };

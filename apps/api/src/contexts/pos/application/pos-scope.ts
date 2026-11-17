@@ -1,4 +1,5 @@
 import type { TransactionalEventCollector } from "../../../platform/application/events/transactional-event-collector";
+import type { CustomerTierSnapshotPort } from "../../../platform/application/ports/customer-tier-snapshot.port";
 import type { ClaimRedemptionPort } from "../../claims/public-api";
 import type { ReferralCreditPort } from "../../referrals/public-api";
 import type { CustomerStandingPort, MerchantPosSettingsPort } from "../../tenancy/public-api";
@@ -25,5 +26,7 @@ export interface PosScope {
 	readonly rewardAudit: RewardAuditPort;
 	/** Referrals' referrer credit and signup-referral success stamp. */
 	readonly referrals: ReferralCreditPort;
+	/** The customer's tier at this moment, recorded on the redemptions (ADR 085; provided by tiers). */
+	readonly tierSnapshot: CustomerTierSnapshotPort;
 	readonly events: TransactionalEventCollector;
 }

@@ -450,5 +450,6 @@ function redemption(
 		redemptionMethod: "SCAN",
 		saleId,
 		redeemedAt: EPOCH,
+		customerTier: "BRONZE",
 	};
 }

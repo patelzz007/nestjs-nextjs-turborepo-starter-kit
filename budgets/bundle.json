@@ -14,11 +14,12 @@
 		"/dashboard/activity": 743424,
 		"/dashboard/referrals": 558080,
 		"/dashboard/rewards/[rewardId]": 575488,
+		"/dashboard/tier": 571392,
 		"/dashboard/wallet": 567296,
 		"/dashboard/wallet/[claimId]": 565248,
 		"/hello": 475136,
 		"/rewards/[rewardId]": 527360,
-		"/dashboard/notifications": 540672,
+		"/dashboard/notifications": 548864,
 		"/dashboard/notifications/settings": 536576,
 		"/unsubscribe": 436224,
 		"/status": 444416
@@ -96,6 +97,7 @@
 		"/operations/status/[id]": 588800,
 		"/operations/status/new": 586752,
 		"/settings/feature-flags": 573440,
+		"/settings/tiers": 611328,
 		"/webhooks/received": 632832,
 		"/webhooks/received/[id]": 578560
 	},

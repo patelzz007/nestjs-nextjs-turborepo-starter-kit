@@ -1,7 +1,7 @@
 ---
 title: "API reference — Geography reference data"
 description: "Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export."
-order: 15
+order: 16
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

@@ -262,11 +262,60 @@ export interface AnalyticsHistoryPlan {
 	readonly claims: readonly PlannedClaim[];
 }
 
+/**
+ * Two customers whose year is scripted instead of random, so the customer tiers (ADR 085, customer-tiers.ts) show a
+ * pending demotion warning and a demotion that really follow from their redemptions: one came often a year ago and is
+ * about to lose Silver (their redemptions leave the 12-month window within the warning period), the other came even
+ * earlier and has already been demoted. Neither is in the random history's customer pool.
+ */
+export interface TierCast {
+	readonly lapsingUserId: string;
+	readonly lapsedUserId: string;
+}
+
+/** The scripted cast's daily bills at Brew & Bean KL, by days ago (one bill a day, the morning-brew refill). */
+const TIER_CAST_DAYS: Readonly<Record<keyof TierCast, { readonly firstDaysAgo: number; readonly lastDaysAgo: number }>> = {
+	// 12 bills, 356 → 345 days ago: Silver at the 10th; the first three leave the window in 9–11 days.
+	lapsingUserId: { firstDaysAgo: 356, lastDaysAgo: 345 },
+	// 11 bills, 375 → 365 days ago: Silver at the 10th; warned when they began to leave, demoted a week or so ago.
+	lapsedUserId: { firstDaysAgo: 375, lastDaysAgo: 365 },
+};
+const TIER_CAST_STORE_KEY = "kl";
+const TIER_CAST_REWARD_KEY = "kl-morning-brew";
+/** The cast's bill: a coffee and a pastry. */
+const TIER_CAST_BILL_MINOR = 1_850;
+/** The cast claims each refill the hour before paying, at 09:00 local. */
+const TIER_CAST_PAY_HOUR = 10;
+
 export interface AnalyticsHistoryPlanInput {
 	readonly random: SeededRandom;
 	readonly nowMs: number;
 	/** Consumer user ids; each "joins" on a different day, so new and returning customers both show. */
 	readonly customerIds: readonly string[];
+	/** The scripted tier cast, or null when the scenario has none. */
+	readonly tierCast: TierCast | null;
+}
+
+/** The scripted tier cast's claims and bills (see {@link TierCast}). */
+function tierCastClaims(tierCast: TierCast, nowMs: number): PlannedClaim[] {
+	const claims: PlannedClaim[] = [];
+	for (const role of ["lapsingUserId", "lapsedUserId"] satisfies readonly (keyof TierCast)[]) {
+		const { firstDaysAgo, lastDaysAgo } = TIER_CAST_DAYS[role];
+		for (let daysAgo = firstDaysAgo; daysAgo >= lastDaysAgo; daysAgo -= 1) {
+			const paidAt = localMidnight(nowMs, daysAgo) + TIER_CAST_PAY_HOUR * MINUTES_PER_HOUR * MINUTE_MS;
+			const claimedAt = paidAt - MINUTES_PER_HOUR * MINUTE_MS;
+			claims.push({
+				key: `tier-cast:${role}:${String(daysAgo)}`,
+				rewardKey: TIER_CAST_REWARD_KEY,
+				userId: tierCast[role],
+				status: "REDEEMED",
+				claimedAt,
+				claimExpiresAt: claimedAt + CLAIM_WINDOW_MS,
+				checkout: { storeKey: TIER_CAST_STORE_KEY, paidAt, billTotalMinor: TIER_CAST_BILL_MINOR, redemptionMethod: "SCAN" },
+			});
+		}
+	}
+	return claims;
 }
 
 /** When a history reward runs, in epoch ms. */
@@ -311,7 +360,9 @@ function billCount(random: SeededRandom, expected: number): number {
  * Customers join one after another across the year and keep coming back.
  */
 export function buildAnalyticsHistoryPlan(input: AnalyticsHistoryPlanInput): AnalyticsHistoryPlan {
-	const { random, nowMs, customerIds } = input;
+	const { random, nowMs, tierCast } = input;
+	const cast = tierCast === null ? [] : [tierCast.lapsingUserId, tierCast.lapsedUserId];
+	const customerIds = input.customerIds.filter((userId) => !cast.includes(userId));
 	const joinDayAgo = new Map(
 		customerIds.map((userId, index) => [userId, Math.round(ANALYTICS_HISTORY_DAYS - (index * ANALYTICS_HISTORY_DAYS) / Math.max(1, customerIds.length))]),
 	);
@@ -372,7 +423,7 @@ export function buildAnalyticsHistoryPlan(input: AnalyticsHistoryPlanInput): Ana
 			}
 		}
 	}
-	return { claims };
+	return { claims: tierCast === null ? claims : [...claims, ...tierCastClaims(tierCast, nowMs)] };
 }
 
 /** A planned row names a store the history does not define — a bug in this file. */
@@ -512,6 +563,8 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 		redemptionMethod: checkout.redemptionMethod,
 		saleId: deterministicUuid("reward-seed-history-sale", claim.key),
 		redeemedAt: checkout.paidAt,
+		// Bronze until customer-tiers.ts replays every customer's history and records the tier each redemption had.
+		customerTier: "BRONZE",
 		createdAt: checkout.paidAt,
 		updatedAt: checkout.paidAt,
 	}));

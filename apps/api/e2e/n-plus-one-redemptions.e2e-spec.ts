@@ -71,8 +71,8 @@ describe("merchant redemption history has no N+1 (e2e)", () => {
 				[saleId, TENANT_SEED_IDS.klTenant, TENANT_SEED_IDS.klLocation, customerId, `${marker}-${saleId}`.slice(0, 64), marker.padEnd(64, "0"), redeemedAt],
 			);
 			await query(
-				`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
-				 VALUES ($1, $2, $3, $4, $5, 'KL-REGISTER-01', 'SCAN', $6, $7)`,
+				`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt", "customerTier")
+				 VALUES ($1, $2, $3, $4, $5, 'KL-REGISTER-01', 'SCAN', $6, $7, 'BRONZE')`,
 				[randomUUID(), claimId, TENANT_SEED_IDS.klTenant, TENANT_SEED_IDS.klLocation, customerId, saleId, redeemedAt],
 			);
 		}

@@ -11,5 +11,8 @@ export { PosDomainErrorCodeSchema, type PosDomainErrorCode } from "./domain/erro
 export { PosAccessModule } from "./infrastructure/pos-access.module";
 export { API_KEY_PREFIX_LENGTH } from "./domain/value-objects/api-key-format.value-object";
 export { POS_CODE_LOCKOUT_MS, POS_CODE_MAX_FAILURES } from "./domain/policies/code-lockout.policy";
-// The event other contexts may react to (outgoing webhooks, ADR 082).
+// The event other contexts may react to (outgoing webhooks, ADR 082; customer tiers, ADR 085).
 export { SaleCheckedOut } from "./domain/events/pos.events";
+// The customer's tier at a redemption: pos consumes it by token, the tiers context provides it (ADR 085).
+export { CUSTOMER_TIER_SNAPSHOT_FACTORY } from "./application/ports/pos.tokens";
+export type { CustomerTierSnapshotFactory } from "./infrastructure/persistence/pos-scope.factory";

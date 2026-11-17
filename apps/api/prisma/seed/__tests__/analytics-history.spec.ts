@@ -9,7 +9,7 @@ const CUSTOMERS = Array.from({ length: 24 }, (_unused, index) => `customer-${Str
 const SEED = 42;
 
 function plan(seed: number = SEED): AnalyticsHistoryPlan {
-	return buildAnalyticsHistoryPlan({ random: SeededRandom.derive(seed, "analytics-history"), nowMs: NOW, customerIds: CUSTOMERS });
+	return buildAnalyticsHistoryPlan({ random: SeededRandom.derive(seed, "analytics-history"), nowMs: NOW, customerIds: CUSTOMERS, tierCast: null });
 }
 
 describe("buildAnalyticsHistoryPlan", () => {
@@ -69,5 +69,42 @@ describe("buildAnalyticsHistoryPlan", () => {
 		const firstMonths = new Set([...firstBill.values()].map((paidAt) => new Date(paidAt).toISOString().slice(0, "YYYY-MM".length)));
 		expect(firstBill.size).toBe(CUSTOMERS.length);
 		expect(firstMonths.size).toBeGreaterThanOrEqual(6);
+	});
+});
+
+describe("the scripted tier cast (ADR 085)", () => {
+	const [lapsing, lapsed] = CUSTOMERS;
+	const cast = buildAnalyticsHistoryPlan({
+		random: SeededRandom.derive(SEED, "analytics-history"),
+		nowMs: NOW,
+		customerIds: CUSTOMERS,
+		tierCast: { lapsingUserId: lapsing ?? "", lapsedUserId: lapsed ?? "" },
+	});
+	const billsOf = (userId: string | undefined): readonly number[] =>
+		cast.claims.flatMap((claim) => (claim.userId === userId && claim.checkout !== null ? [claim.checkout.paidAt] : [])).sort((left, right) => left - right);
+
+	it("gives each cast member only their scripted daily bills, none from the random history", () => {
+		expect(billsOf(lapsing)).toHaveLength(12);
+		expect(billsOf(lapsed)).toHaveLength(11);
+		expect(cast.claims.filter((claim) => claim.userId === lapsing && claim.status === "EXPIRED")).toEqual([]);
+	});
+
+	it("places them a year back: the lapsing customer's first bill leaves the 12-month window in under two weeks", () => {
+		const [first] = billsOf(lapsing);
+		expect(first).toBeDefined();
+		expect((first ?? 0) + 365 * DAY_MS - NOW).toBeLessThan(14 * DAY_MS);
+		expect((first ?? 0) + 365 * DAY_MS - NOW).toBeGreaterThan(0);
+		const [lapsedFirst] = billsOf(lapsed);
+		expect((lapsedFirst ?? 0) + 365 * DAY_MS).toBeLessThan(NOW);
+	});
+
+	it("redeems inside the claim window, while the morning-brew reward runs", () => {
+		const reward = HISTORY_REWARDS.find((entry) => entry.key === "kl-morning-brew");
+		expect(reward).toBeDefined();
+		const window = reward === undefined ? { startMs: 0, endMs: 0 } : rewardWindow(reward, NOW);
+		for (const claim of cast.claims.filter((entry) => entry.userId === lapsing || entry.userId === lapsed)) {
+			expect(claim.claimedAt).toBeGreaterThanOrEqual(window.startMs);
+			expect(claim.checkout?.paidAt ?? 0).toBeLessThanOrEqual(claim.claimExpiresAt);
+		}
 	});
 });

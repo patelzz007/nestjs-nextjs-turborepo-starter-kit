@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (479 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (486 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 category: "API reference"
@@ -15,7 +15,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 479 operations, 227 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 486 operations, 227 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -29,8 +29,9 @@ Every endpoint of `apps/api` — 479 operations, 227 with a sample captured from
 | [Auth, sessions and account security](./auth-and-sessions.md) | 58 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
 | [Roles, permissions and audit](./access-control.md) | 33 | Platform RBAC administration, authorization decisions, the capability catalog and the HTTP audit log. |
 | [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 25 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
-| [Merchant tenants (portal API)](./merchant-tenants.md) | 74 | Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
+| [Merchant tenants (portal API)](./merchant-tenants.md) | 75 | Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
 | [Customer rewards and claims](./customer-rewards.md) | 13 | The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code and spending analytics. |
+| [Customer tiers](./customer-tiers.md) | 6 | Bronze, Silver, Gold and Diamond, earned by redemptions: whether tiers are on and the caller's tier, a customer's own progress and history, and the admin's tier rules (changed with a reason), a customer's standing and the tier distribution. |
 | [Point of sale and integrations (machine-to-machine)](./pos.md) | 13 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill, plus the integration API (`/integration/*`: rewards, analytics, redemption history). Authenticated with a merchant API key, which names its own tenant. |
 | [Payments (Billplz, CHIP)](./payments.md) | 8 | A tenant asks for a payment through a configured gateway (an `Idempotency-Key` header makes a retry return the same payment), follows it and refunds it; the gateways' signed callbacks mark it paid. Amounts are in sen. |
 | [Webhooks (outgoing and received)](./webhooks.md) | 13 | A business's endpoints for signed event deliveries (create, update, switch on or off, rotate the secret, send a test), the delivery log and redelivery (owner-only, `merchant:manage_webhooks`), and the admin's log of every webhook the platform received. |
@@ -220,6 +221,7 @@ Every endpoint of `apps/api` — 479 operations, 227 with a sample captured from
 | GET | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardsrewardid) | Read one tenant reward (404 when not offered at any of the caller's stores) |
 | PATCH | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}`](./merchant-tenants.md#patch-apiv1tenantstenantslugrewardsrewardid) | Update a draft or pending reward |
 | GET | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}/audience`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardsrewardidaudience) | Who the reward is for: everyone, or the customers it was given to (404 outside the caller's stores) |
+| PUT | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}/minimum-tier`](./merchant-tenants.md#put-apiv1tenantstenantslugrewardsrewardidminimum-tier) | Set the lowest customer tier that may claim a reward (a draft, one in review or a published one; no new review; claims already made stand) |
 | POST | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}/publish`](./merchant-tenants.md#post-apiv1tenantstenantslugrewardsrewardidpublish) | Submit reward for moderation review (no body required) |
 | GET | [`/api/v1/tenants/{tenantSlug}/rewards/customers`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardscustomers) | The tenant's customers, to give a reward to (name and masked email; people who manage rewards) |
 | GET | [`/api/v1/tenants/{tenantSlug}/rewards/summary`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardssummary) | Tenant reward figures: the count in each status and the units still claimable, over every reward in the store scope |
@@ -256,6 +258,12 @@ Every endpoint of `apps/api` — 479 operations, 227 with a sample captured from
 | POST | [`/api/v1/referrals/rewards/{rewardId}/links`](./customer-rewards.md#post-apiv1referralsrewardsrewardidlinks) | Mint a share link for a reward |
 | GET | [`/api/v1/rewards`](./customer-rewards.md#get-apiv1rewards) | Browse published consumer rewards (signed in: also the rewards given to you; never cached by a shared cache) |
 | GET | [`/api/v1/rewards/{rewardId}`](./customer-rewards.md#get-apiv1rewardsrewardid) | Get published reward detail (a reward given to chosen customers is 404 for everyone else) |
+| GET | [`/api/v1/admin/tiers/distribution`](./customer-tiers.md#get-apiv1admintiersdistribution) | How many customers stand at each tier (everyone who has claimed at a store; without a higher standing, Bronze) |
+| GET | [`/api/v1/admin/tiers/settings`](./customer-tiers.md#get-apiv1admintierssettings) | The tier rules in force: thresholds, tier window, per-merchant cap, tier hold and warning days, and who last changed them |
+| PUT | [`/api/v1/admin/tiers/settings`](./customer-tiers.md#put-apiv1admintierssettings) | Change the tier rules, with a reason; the next nightly review applies them (a warning always comes first) |
+| GET | [`/api/v1/admin/users/{userId}/tier`](./customer-tiers.md#get-apiv1adminusersuseridtier) | A customer's tier, tier hold, pending demotion warning and tier history |
+| GET | [`/api/v1/tiers/availability`](./customer-tiers.md#get-apiv1tiersavailability) | Whether customer tiers are on (the customer-tiers flag) and, while they are, the caller's tier — Bronze when signed out |
+| GET | [`/api/v1/tiers/me`](./customer-tiers.md#get-apiv1tiersme) | The signed-in customer's tier: progress to the next, the counted redemptions per merchant, the tier hold, a pending demotion warning, what leaves the window soon, and the tier history |
 | GET | [`/api/v1/integration/analytics`](./pos.md#get-apiv1integrationanalytics) | The API key's tenant reward performance analytics |
 | GET | [`/api/v1/integration/analytics/dashboard`](./pos.md#get-apiv1integrationanalyticsdashboard) | The API key's tenant analytics dashboard |
 | GET | [`/api/v1/integration/analytics/export`](./pos.md#get-apiv1integrationanalyticsexport) | Download the API key's tenant analytics report (csv \| xlsx \| pdf) |

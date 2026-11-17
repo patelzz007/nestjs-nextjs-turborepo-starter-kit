@@ -50,6 +50,8 @@ export const tenantRewardsRoutes = {
 	get: "/tenants/:tenantSlug/rewards/:rewardId",
 	update: "/tenants/:tenantSlug/rewards/:rewardId",
 	publish: "/tenants/:tenantSlug/rewards/:rewardId/publish",
+	/** The lowest tier that may claim it, changeable while published too (ADR 085). */
+	minimumTier: "/tenants/:tenantSlug/rewards/:rewardId/minimum-tier",
 	/** Who the reward is for (the customers it was given to). */
 	audience: "/tenants/:tenantSlug/rewards/:rewardId/audience",
 	/** The tenant's customers, to give a reward to. */

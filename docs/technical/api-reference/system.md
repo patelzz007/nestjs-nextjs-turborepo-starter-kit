@@ -1,7 +1,7 @@
 ---
 title: "API reference — System: health and version"
 description: "Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest."
-order: 23
+order: 24
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

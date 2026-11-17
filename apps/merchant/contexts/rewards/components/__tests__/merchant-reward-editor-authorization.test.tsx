@@ -25,6 +25,8 @@ const { rewardQuery, rewardsMutation } = vi.hoisted(() => ({
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
+			// Tiers off (ADR 085): no minimum tier row.
+			tiers: { availability: { useQuery: (): object => ({ data: { data: { enabled: false } } }) } },
 			tenants: {
 				rewards: {
 					get: { useQuery: rewardQuery },

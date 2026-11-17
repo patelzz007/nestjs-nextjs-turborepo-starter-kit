@@ -47,7 +47,7 @@ beforeEach(() => {
 });
 
 function claim(phone: string = PHONE, otp?: string, actor: ActorContext = customer(USER)): ReturnType<ClaimRewardHandler["execute"]> {
-	return new ClaimRewardHandler(store.uow, codes, new SequentialIds("claim"), store.clock).execute(
+	return new ClaimRewardHandler(store.uow, codes, new SequentialIds("claim"), store.clock, store.tiers).execute(
 		new ClaimRewardCommand(actor, { rewardId: REWARD, phone, ...(otp === undefined ? {} : { otp }) }),
 	);
 }
@@ -70,6 +70,30 @@ describe("ClaimRewardHandler", () => {
 		store.legal.accepted.add("ghost");
 		await expect(claim(PHONE, undefined, customer("ghost"))).rejects.toBeInstanceOf(ClaimantNotFoundError);
 		expect(store.inventory.remaining).toBe(10);
+	});
+
+	it("refuses a customer below the reward's minimum tier, taking nothing (ADR 085)", async () => {
+		store.tiers.enabled = true;
+		store.tiers.tiers.set(USER, "SILVER");
+		store.inventory.minimumTier = "GOLD";
+
+		await expect(claim()).rejects.toThrow("REWARD_TIER_LOCKED");
+
+		expect(store.inventory).toMatchObject({ remaining: 10, reserved: 0 });
+		expect(store.claims.rows.size).toBe(0);
+		expect(store.tiers.askedFor).toEqual([USER]);
+	});
+
+	it("claims a reward at the customer's tier, and any reward while tiers are off", async () => {
+		store.inventory.minimumTier = "GOLD";
+		await claim();
+		expect(store.inventory.tierAccessSeen.at(0)).toEqual({ kind: "off" });
+
+		store.tiers.enabled = true;
+		store.tiers.tiers.set(USER, "DIAMOND");
+		await claim();
+		expect(store.inventory.tierAccessSeen.at(-1)).toEqual({ kind: "on", tier: "DIAMOND" });
+		expect(store.inventory).toMatchObject({ remaining: 8, reserved: 2 });
 	});
 
 	it("refuses a customer the merchant banned, without reserving a unit", async () => {
@@ -105,7 +129,7 @@ describe("ClaimRewardHandler", () => {
 		await expect(claim(otherPhone)).rejects.toBeInstanceOf(OtpRequiredError);
 		await expect(claim(otherPhone, "111111")).rejects.toBeInstanceOf(OtpMissingError);
 
-		await new RequestClaimOtpHandler(store.uow, codes, new SequentialIds("otp"), store.clock).execute(
+		await new RequestClaimOtpHandler(store.uow, codes, new SequentialIds("otp"), store.clock, store.tiers).execute(
 			new RequestClaimOtpCommand(customer(USER), { rewardId: REWARD, phone: otherPhone }),
 		);
 		await expect(claim(otherPhone, "111111")).rejects.toBeInstanceOf(OtpInvalidError);
@@ -116,7 +140,7 @@ describe("ClaimRewardHandler", () => {
 
 	it("claims with the right OTP and records the phone as verified", async () => {
 		const otherPhone = "+60999000111";
-		await new RequestClaimOtpHandler(store.uow, codes, new SequentialIds("otp"), store.clock).execute(
+		await new RequestClaimOtpHandler(store.uow, codes, new SequentialIds("otp"), store.clock, store.tiers).execute(
 			new RequestClaimOtpCommand(customer(USER), { rewardId: REWARD, phone: otherPhone }),
 		);
 
@@ -148,7 +172,7 @@ describe("ClaimRewardHandler", () => {
 describe("RequestClaimOtpHandler", () => {
 	it("stores the challenge and requests the OTP email in the same unit of work", async () => {
 		await expect(
-			new RequestClaimOtpHandler(store.uow, codes, new SequentialIds("otp"), store.clock).execute(
+			new RequestClaimOtpHandler(store.uow, codes, new SequentialIds("otp"), store.clock, store.tiers).execute(
 				new RequestClaimOtpCommand(customer(USER), { rewardId: REWARD, phone: PHONE }),
 			),
 		).resolves.toEqual({ ok: true, holdExpiresAt: NOW + CLAIM_HOLD_TTL_MS });

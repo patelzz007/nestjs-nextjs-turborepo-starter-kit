@@ -17,6 +17,7 @@ import type {
 	MerchantBucketSalesRow,
 	MerchantSalesRow,
 	RedemptionMethodRow,
+	CustomerTierRow,
 	RewardBreakdownRow,
 	StoreBreakdownRow,
 } from "../../ports/analytics-breakdown.port";
@@ -114,6 +115,7 @@ export class InMemoryAnalyticsBreakdowns implements AnalyticsBreakdownReadPort {
 	public stores: StoreBreakdownRow[] = [];
 	public rewards: RewardBreakdownRow[] = [];
 	public methods: RedemptionMethodRow[] = [];
+	public tiers: CustomerTierRow[] = [];
 	public merchants: MerchantSalesRow[] = [];
 	public categories: CategorySalesRow[] = [];
 	public cities: CitySalesRow[] = [];
@@ -135,6 +137,11 @@ export class InMemoryAnalyticsBreakdowns implements AnalyticsBreakdownReadPort {
 	public byRedemptionMethod(): Promise<RedemptionMethodRow[]> {
 		this.calls += 1;
 		return Promise.resolve(this.methods);
+	}
+
+	public byCustomerTier(): Promise<CustomerTierRow[]> {
+		this.calls += 1;
+		return Promise.resolve(this.tiers);
 	}
 
 	public byMerchant(): Promise<MerchantSalesRow[]> {

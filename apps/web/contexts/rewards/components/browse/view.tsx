@@ -1,14 +1,24 @@
 "use client";
 
 import { DashboardCatalog } from "@/contexts/rewards/components/browse/catalog";
-import { DashboardFilters, type DashboardCityOption } from "@/contexts/rewards/components/browse/filters";
+import { DashboardFilters, type DashboardCityOption, type LockedRewardsFilter } from "@/contexts/rewards/components/browse/filters";
+import { viewerTierOf } from "@/contexts/tiers";
 import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor } from "@workspace/client/lib/api/envelope";
 import { toListSearch } from "@workspace/client/lib/api/list-query";
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PILOT_CITY_LABELS, PilotCitySchema, RewardCategorySchema, type Envelope, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
+import {
+	PILOT_CITY_LABELS,
+	PilotCitySchema,
+	RewardCategorySchema,
+	type Envelope,
+	type PilotCity,
+	type RewardCategory,
+	type RewardResponse,
+	type TierAvailability,
+} from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { AlertTriangle, Gift, MapPin, Search, Sparkles } from "lucide-react";
@@ -40,6 +50,12 @@ export interface DashboardBrowseViewProps {
 	readonly initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>> | undefined;
 	readonly variant?: "landing" | "dashboard";
 	readonly detailPathPrefix?: string;
+	/**
+	 * Whether tiers are on and the viewer's tier (`GET /tiers/availability`, read by the server page with the catalog).
+	 * While they are on, locked rewards are listed after the claimable ones and marked (ADR 085); `undefined` — the read
+	 * failed — is treated as off.
+	 */
+	readonly tierAvailability?: TierAvailability | undefined;
 }
 
 /**
@@ -48,14 +64,21 @@ export interface DashboardBrowseViewProps {
  * shareable, refresh-safe and back/forward-aware. The only local state is the
  * search box's unsubmitted text; the grid/list layout is a `ui-preferences` preference.
  */
-export function DashboardBrowseView({ initialPage, variant = "dashboard", detailPathPrefix = ROUTE_PREFIXES.dashboardRewards }: DashboardBrowseViewProps): React.JSX.Element {
+export function DashboardBrowseView({
+	initialPage,
+	variant = "dashboard",
+	detailPathPrefix = ROUTE_PREFIXES.dashboardRewards,
+	tierAvailability,
+}: DashboardBrowseViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const [urlState, updateUrlState] = useUrlState(REWARDS_BROWSE_URL_STATE);
 	const [searchDraft, setSearchDraft] = useSubmittedUrlDraft(urlState.search);
+	const viewerTier = viewerTierOf(tierAvailability);
+	const tiersOn = viewerTier !== null;
 
 	const stateKey: string = REWARDS_BROWSE_URL_STATE.serialize(urlState);
 	const prefetchedPage = prefetchedDataFor(initialPage, stateKey);
-	const rewardsQuery = api.rewards.list.useQuery(toRewardsBrowseListQuery(urlState), initialDataOption(prefetchedPage));
+	const rewardsQuery = api.rewards.list.useQuery(toRewardsBrowseListQuery(urlState, tiersOn), initialDataOption(prefetchedPage));
 
 	const rewards = rewardsQuery.data?.data ?? [];
 	const hasNext = readPaginatedHasNext(rewardsQuery.data?.meta);
@@ -81,8 +104,21 @@ export function DashboardBrowseView({ initialPage, variant = "dashboard", detail
 		[updateUrlState],
 	);
 
+	const handleHideLockedChange = React.useCallback(
+		(hideLocked: boolean): void => {
+			// Hiding is the only non-default value, so showing them again leaves the key out of the URL.
+			updateUrlState({ hideLocked: hideLocked ? true : undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+		},
+		[updateUrlState],
+	);
+
+	const lockedFilter = React.useMemo(
+		(): LockedRewardsFilter | undefined => (tiersOn ? { hideLocked: urlState.hideLocked === true, onHideLockedChange: handleHideLockedChange } : undefined),
+		[handleHideLockedChange, tiersOn, urlState.hideLocked],
+	);
+
 	const handleClearFilters = React.useCallback((): void => {
-		updateUrlState({ search: undefined, city: undefined, category: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+		updateUrlState({ search: undefined, city: undefined, category: undefined, hideLocked: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
 	}, [updateUrlState]);
 
 	const handleNext = React.useCallback((): void => {
@@ -96,7 +132,7 @@ export function DashboardBrowseView({ initialPage, variant = "dashboard", detail
 		updateUrlState(listPagePatch(urlState, urlState.page - 1, null));
 	}, [updateUrlState, urlState]);
 
-	const hasActiveFilters = urlState.search !== undefined || urlState.city !== undefined || urlState.category !== undefined;
+	const hasActiveFilters = urlState.search !== undefined || urlState.city !== undefined || urlState.category !== undefined || urlState.hideLocked === true;
 	const isLoading = rewardsQuery.isLoading;
 	// A failed fetch with nothing to show is an error, never "everything is sold out".
 	const showError = rewardsQuery.isError && rewardsQuery.data === undefined;
@@ -177,6 +213,7 @@ export function DashboardBrowseView({ initialPage, variant = "dashboard", detail
 				onCategoryChange={handleCategoryChange}
 				onClearFilters={handleClearFilters}
 				hasActiveFilters={hasActiveFilters}
+				lockedFilter={lockedFilter}
 			/>
 
 			{showError ? (
@@ -217,6 +254,7 @@ export function DashboardBrowseView({ initialPage, variant = "dashboard", detail
 					onNext={handleNext}
 					onPrevious={handlePrevious}
 					detailPathPrefix={detailPathPrefix}
+					viewerTier={viewerTier}
 				/>
 			)}
 		</div>

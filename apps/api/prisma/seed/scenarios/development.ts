@@ -10,6 +10,7 @@ import { seedCustomerBans } from "../customer-bans";
 import { seedAccountErasures } from "../account-erasures";
 import { seedSavedViews } from "../saved-views";
 import { seedFeatureFlags } from "../feature-flags";
+import { seedCustomerTiers } from "../customer-tiers";
 import { seedAuditRetention } from "../audit-retention";
 import { seedPayments } from "../payments";
 import { seedAttachmentNotices } from "../notification-attachments";
@@ -62,6 +63,14 @@ const DEVELOPMENT_ACCOUNT_SECURITY_CAST: AccountSecurityCastEmails = {
 
 /** Seed accounts that never shop as customers (platform staff); every other seeded user may appear in the analytics history. */
 const NON_CUSTOMER_SEED_EMAILS: readonly string[] = ["superadmin@example.com", "admin@example.com", "manager@example.com"];
+
+/**
+ * The extra customers whose year is scripted for the customer tiers (analytics-history.ts `TierCast`): two active ones
+ * (extra users 0–16 are active). A missing one fails the seed at `requireRow`.
+ */
+const TIER_CAST_EXTRA_USER_POSITION: { readonly lapsing: number; readonly lapsed: number } = { lapsing: 14, lapsed: 15 };
+const TIER_CAST_LAPSING_EMAIL: string = EXTRA_SEED_USER_EMAILS.at(TIER_CAST_EXTRA_USER_POSITION.lapsing) ?? "";
+const TIER_CAST_LAPSED_EMAIL: string = EXTRA_SEED_USER_EMAILS.at(TIER_CAST_EXTRA_USER_POSITION.lapsed) ?? "";
 
 /**
  * `development` scenario (the default): reference data plus the full demo
@@ -176,6 +185,17 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 		random: SeededRandom.derive(options.seed, "analytics-history"),
 		nowMs: Date.now(),
 		customerIds: allUsers.filter((user) => !NON_CUSTOMER_SEED_EMAILS.includes(user.email)).map((user) => user.id),
+		// Two of the extra customers live a scripted year, so the tiers show a pending warning and a demotion (ADR 085).
+		tierCast: {
+			lapsingUserId: requireRow(
+				allUsers.find((user) => user.email === TIER_CAST_LAPSING_EMAIL),
+				TIER_CAST_LAPSING_EMAIL,
+			).id,
+			lapsedUserId: requireRow(
+				allUsers.find((user) => user.email === TIER_CAST_LAPSED_EMAIL),
+				TIER_CAST_LAPSED_EMAIL,
+			).id,
+		},
 		createdByUserId: REWARD_SEED_IDS.mlkOwnerUser,
 	});
 	seedLog(`✅ Analytics history: ${String(history.rewards)} campaign rewards, ${String(history.claims)} claims, ${String(history.sales)} paid bills`);
@@ -195,6 +215,11 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog(`✅ ${String(await seedSavedViews(Date.now()))} saved views`);
 	seedLog("Seeding feature flag settings...");
 	seedLog(`✅ ${String(await seedFeatureFlags(Date.now()))} feature flag settings`);
+	seedLog("Seeding customer tiers (the rules; every customer's tier and history replayed from their redemptions)...");
+	const tiers = await seedCustomerTiers(Date.now());
+	seedLog(
+		`✅ Tiers: ${String(tiers.customers)} customers (${String(tiers.byTier.BRONZE)} Bronze, ${String(tiers.byTier.SILVER)} Silver, ${String(tiers.byTier.GOLD)} Gold, ${String(tiers.byTier.DIAMOND)} Diamond — Diamond needs a third merchant), ${String(tiers.changes)} tier changes, ${String(tiers.warnings)} pending warnings, ${String(tiers.lockedRewards)} rewards for a minimum tier`,
+	);
 	const alignedAccounts = await alignCustomerAccountAges(
 		options.seed,
 		allUsers.map((user) => user.id),

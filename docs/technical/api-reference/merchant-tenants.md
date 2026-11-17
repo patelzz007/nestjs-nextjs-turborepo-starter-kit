@@ -2688,6 +2688,7 @@ List tenant rewards
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationNames` | string[] | no |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data[].minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data[].quantityReserved` | integer | yes | min -9007199254740991 |
 | `data[].quantityTotal` | integer | yes | min -9007199254740991 |
@@ -2894,6 +2895,7 @@ Create a draft reward
 | `imageFileIds` | string (uuid)[] | yes | 1–10 items |
 | `locationIds` | string (uuid)[] | no | default `[]` |
 | `locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | no | default `"ALL_LOCATIONS"` |
+| `minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | no | default `"BRONZE"` |
 | `quantityTotal` | integer | yes | min 1 |
 | `referralPoolTotal` | integer | no | min 1 |
 | `referralsEnabled` | boolean | no | default `false` |
@@ -2935,6 +2937,7 @@ Create a draft reward
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -3112,6 +3115,7 @@ Read one tenant reward (404 when not offered at any of the caller's stores)
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -3248,6 +3252,7 @@ Update a draft or pending reward
 | `freeItem.name` | string | yes | length 1–200 |
 | `freeItem.sku` | string | yes | length 1–64; pattern `^[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?$` |
 | `imageFileIds` | string (uuid)[] | no | 1–10 items |
+| `minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | no |  |
 | `quantityTotal` | integer | no | min 1 |
 | `referralPoolTotal` | integer | no | min 1 |
 | `referralsEnabled` | boolean | no |  |
@@ -3288,6 +3293,7 @@ Update a draft or pending reward
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -3429,7 +3435,98 @@ Who the reward is for: everyone, or the customers it was given to (404 outside t
 | `data.customers[].fullName` | string | yes |  |
 | `data.customers[].lastClaimedAt` | integer | yes |  |
 | `data.customers[].maskedEmail` | string \| null | yes |  |
+| `data.customers[].tier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" \| null | yes |  |
 | `data.customers[].userId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### PUT /api/v1/tenants/{tenantSlug}/rewards/{rewardId}/minimum-tier
+
+Set the lowest customer tier that may claim a reward (a draft, one in review or a published one; no new review; claims already made stand)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantRewardsController_setMinimumTier` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `rewardId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
+
+**Response 200 OK** (`application/json`) — The reward with its new minimum tier
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
+| `data.category` | string | yes |  |
+| `data.claimCount` | integer | yes | min -9007199254740991 |
+| `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.description` | string | yes |  |
+| `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
+| `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.locationIds` | string (uuid)[] | yes |  |
+| `data.locationNames` | string[] | no |  |
+| `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
+| `data.quantityRemaining` | integer | yes | min -9007199254740991 |
+| `data.quantityReserved` | integer | yes | min -9007199254740991 |
+| `data.quantityTotal` | integer | yes | min -9007199254740991 |
+| `data.redemptionCount` | integer | yes | min -9007199254740991 |
+| `data.referralPoolRemaining` | integer \| null | yes | min -9007199254740991 |
+| `data.referralPoolTotal` | integer \| null | yes | min -9007199254740991 |
+| `data.referralsEnabled` | boolean | yes |  |
+| `data.referrerRewardId` | string (uuid) \| null | yes |  |
+| `data.rewardKind` | "CONSUMER" \| "REFERRER" | yes |  |
+| `data.rewardType` | "DISCOUNT" \| "FREE_ITEM" \| "CASHBACK" \| "POINTS" \| "BOGO" | yes |  |
+| `data.rewardValue` | integer | yes |  |
+| `data.rules` | object \| null | yes |  |
+| `data.rules.maxUsePerUser` | integer | no |  |
+| `data.rules.minSpendMyr` | number | no | range 0–∞ |
+| `data.shareUrl` | string (uri) | no |  |
+| `data.startDate` | integer \| null | yes |  |
+| `data.status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+| `data.tenantLogoSources` | object[] | yes |  |
+| `data.tenantLogoSources[].url` | string (uri) | yes |  |
+| `data.tenantLogoSources[].width` | integer | yes |  |
+| `data.tenantLogoUrl` | string (uri) \| null | yes |  |
+| `data.tenantName` | string | no |  |
+| `data.termsConditions` | string \| null | yes |  |
+| `data.title` | string | yes |  |
+| `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -3491,6 +3588,7 @@ _No fields._
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -3634,6 +3732,7 @@ The tenant's customers, to give a reward to (name and masked email; people who m
 | `data[].fullName` | string | yes |  |
 | `data[].lastClaimedAt` | integer | yes |  |
 | `data[].maskedEmail` | string \| null | yes |  |
+| `data[].tier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" \| null | yes |  |
 | `data[].userId` | string (uuid) | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
@@ -5847,6 +5946,9 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.byCustomerTier` | object[] | yes |  |
+| `data.byCustomerTier[].redemptions` | integer | yes |  |
+| `data.byCustomerTier[].tier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.byRedemptionMethod` | object[] | yes |  |
 | `data.byRedemptionMethod[].method` | "SCAN" \| "MANUAL" | yes |  |
 | `data.byRedemptionMethod[].redemptions` | integer | yes |  |

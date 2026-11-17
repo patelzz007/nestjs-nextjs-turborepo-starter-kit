@@ -1,4 +1,4 @@
-import { rewardTypeGivesFreeItem, type RewardType } from "@workspace/shared";
+import { rewardTypeGivesFreeItem, type CustomerTier, type RewardType } from "@workspace/shared";
 
 import { DomainErrorCodeSchema } from "../../../../platform/domain/errors/error-codes";
 
@@ -24,6 +24,9 @@ export const RewardsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"REWARD_LOCATION_INVALID",
 	"REWARD_AUDIENCE_INVALID",
 	"REWARD_AUDIENCE_REFERRALS",
+	"REWARD_MINIMUM_TIER_INVALID",
+	"REWARD_MINIMUM_TIER_UNAVAILABLE",
+	"REWARD_TIER_LOCKED",
 	"REWARD_FREE_ITEM_INVALID",
 	"TENANT_LOCATION_FORBIDDEN",
 	"REWARD_EXPIRED",
@@ -161,6 +164,47 @@ export class RewardAudienceReferralsError extends DomainError {
 
 	public constructor() {
 		super("A reward for chosen customers cannot have referrals — give it to everyone, or turn referrals off");
+	}
+}
+
+/** Why a reward cannot carry a minimum tier above Bronze (ADR 085). */
+export type RewardMinimumTierConflict = "chosen_customers" | "referrals";
+
+/**
+ * A minimum tier above Bronze narrows a reward for everyone, without referrals (ADR 085): chosen customers were picked
+ * by name already, and a referred newcomer starts at Bronze, so could never claim the reward they were referred to.
+ */
+export class RewardMinimumTierInvalidError extends DomainError {
+	public readonly code = "REWARD_MINIMUM_TIER_INVALID";
+
+	public constructor(public readonly conflict: RewardMinimumTierConflict) {
+		super(
+			conflict === "referrals"
+				? "A reward for a minimum tier cannot have referrals — turn referrals off, or open it to every tier"
+				: "A reward for chosen customers is open to them at any tier — give it to everyone to set a minimum tier",
+			{ conflict },
+		);
+	}
+}
+
+/** Tiers are off for this deployment, so a reward cannot be given a minimum tier above Bronze. */
+export class RewardMinimumTierUnavailableError extends DomainError {
+	public readonly code = "REWARD_MINIMUM_TIER_UNAVAILABLE";
+
+	public constructor() {
+		super("Customer tiers are not available, so a reward is open to every customer");
+	}
+}
+
+/** The customer is below the reward's minimum tier (ADR 085): they can see it, locked, but not claim it. */
+export class RewardTierLockedError extends DomainError {
+	public readonly code = "REWARD_TIER_LOCKED";
+
+	public constructor(
+		public readonly rewardId: string,
+		public readonly minimumTier: CustomerTier,
+	) {
+		super("This reward is for a higher tier", { rewardId, minimumTier });
 	}
 }
 

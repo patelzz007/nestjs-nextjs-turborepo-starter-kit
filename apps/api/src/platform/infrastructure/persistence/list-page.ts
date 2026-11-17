@@ -22,6 +22,9 @@
 // is `rowsBefore > 0` and `page` is the 1-based offset page this slice starts
 // on. This costs two COUNTs per keyset page (offset pages need one); the
 // contract forces it — see docs/technical/api/list-queries.md.
+//
+// `fetchSegmentedPage` is the grouped variant: offset pages over one group of
+// rows, then the next (each in the list order). It has no keyset.
 
 import { buildOffsetPaginationMeta, type OffsetPaginationMeta, type PaginatedServiceResult } from "@workspace/shared";
 
@@ -64,6 +67,70 @@ export async function fetchListPage<TWhere, TOrderBy, TRow>(request: ListPageReq
 		return fetchKeysetPage(request.cursor, request.limit, spec);
 	}
 	return fetchOffsetPage(request, spec);
+}
+
+/** One group of a segmented list: its full `where` and how many rows match it. */
+interface CountedSegment<TWhere> {
+	readonly where: TWhere;
+	readonly count: number;
+}
+
+/**
+ * An offset page over a list read in groups: every row of the first segment (in the list order), then every row of the
+ * next — e.g. the rewards a customer can claim before the ones their tier locks (ADR 085). Each segment narrows
+ * `spec.where`; together they must cover it without overlap. Offset pages only: a cursor cannot say which segment it is in,
+ * so one is refused and none is handed out. Counts are exact (`countCap` is not applied).
+ */
+export async function fetchSegmentedPage<TWhere, TOrderBy, TRow>(
+	request: ListPageRequest,
+	spec: ListPageSpec<TWhere, TOrderBy, TRow>,
+	segments: readonly TWhere[],
+): Promise<RepositoryListResult<TRow>> {
+	if (request.cursor !== undefined) {
+		throw new CursorPaginationUnsupportedError();
+	}
+	const counted: readonly CountedSegment<TWhere>[] = await countSegments(spec, segments);
+	const total: number = counted.reduce((sum: number, segment: CountedSegment<TWhere>): number => sum + segment.count, 0);
+	const offsetMeta: OffsetPaginationMeta = buildOffsetPaginationMeta(total, request.page, request.limit);
+	const rows: TRow[] = await readSegments(spec, counted, (offsetMeta.page - 1) * request.limit, request.limit);
+	return {
+		items: rows,
+		total,
+		page: offsetMeta.page,
+		totalPages: offsetMeta.totalPages,
+		nextCursor: null,
+		hasNext: offsetMeta.hasNext,
+		hasPrevious: offsetMeta.hasPrevious,
+	};
+}
+
+/** Each segment's full `where` and count — one after the other, as the spec may run on a one-query-at-a-time transaction client. */
+async function countSegments<TWhere, TOrderBy, TRow>(spec: ListPageSpec<TWhere, TOrderBy, TRow>, segments: readonly TWhere[]): Promise<CountedSegment<TWhere>[]> {
+	const [segment, ...rest] = segments;
+	if (segment === undefined) {
+		return [];
+	}
+	const where: TWhere = spec.and(spec.where, segment);
+	const head: CountedSegment<TWhere> = { where, count: await spec.count(where) };
+	return [head, ...(await countSegments(spec, rest))];
+}
+
+/** `take` rows starting `skip` rows into the segments laid end to end, reading only the segments the window touches. */
+async function readSegments<TWhere, TOrderBy, TRow>(
+	spec: ListPageSpec<TWhere, TOrderBy, TRow>,
+	segments: readonly CountedSegment<TWhere>[],
+	skip: number,
+	take: number,
+): Promise<TRow[]> {
+	const [segment, ...rest] = segments;
+	if (segment === undefined || take <= 0) {
+		return [];
+	}
+	if (skip >= segment.count) {
+		return readSegments(spec, rest, skip - segment.count, take);
+	}
+	const rows: TRow[] = await spec.findMany({ where: segment.where, orderBy: spec.order.orderBy, skip, take });
+	return [...rows, ...(await readSegments(spec, rest, 0, take - rows.length))];
 }
 
 /** A count, possibly stopped at the spec's cap. */

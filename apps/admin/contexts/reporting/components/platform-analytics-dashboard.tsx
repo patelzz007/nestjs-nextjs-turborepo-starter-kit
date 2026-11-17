@@ -38,6 +38,7 @@ import { RankedBarList } from "@workspace/ui/components/ranked-bar-list";
 import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
 import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { TierDistributionPanel } from "@/contexts/tiers";
 import dynamic from "next/dynamic";
 import * as React from "react";
 
@@ -116,6 +117,8 @@ export function PlatformAnalyticsDashboard({ nowMs, initialDashboard }: Platform
 				className={cn("space-y-6 transition-opacity motion-reduce:transition-none", dashboardQuery.isPlaceholderData && "opacity-60")}>
 				<PlatformAnalyticsSections dashboard={dashboard} status={status} />
 			</div>
+			{/* A snapshot of today, not the range above: where every customer stands (ADR 085). */}
+			<TierDistributionPanel />
 		</div>
 	);
 }

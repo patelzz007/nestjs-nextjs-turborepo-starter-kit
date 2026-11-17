@@ -14,12 +14,18 @@ interface CustomersQueryState {
 	readonly isError: boolean;
 }
 
-const { customersQuery } = vi.hoisted(() => ({
+const { customersQuery, tiersState } = vi.hoisted(() => ({
 	customersQuery: vi.fn<(input: object) => CustomersQueryState>(),
+	tiersState: { enabled: false },
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
-	useAuth: (): object => ({ api: { tenants: { rewards: { customers: { useQuery: customersQuery } } } } }),
+	useAuth: (): object => ({
+		api: {
+			tenants: { rewards: { customers: { useQuery: customersQuery } } },
+			tiers: { availability: { useQuery: (): object => ({ data: { data: tiersState.enabled ? { enabled: true, viewerTier: "BRONZE" } : { enabled: false } } }) } },
+		},
+	}),
 }));
 
 const ALICE: RewardCustomer = {
@@ -28,6 +34,7 @@ const ALICE: RewardCustomer = {
 	maskedEmail: "a•••@example.com",
 	lastClaimedAt: epochMs(Date.UTC(2026, 9, 1)),
 	claimCount: 2,
+	tier: null,
 };
 
 const DEFAULTS: RewardEditorInput = {
@@ -46,6 +53,7 @@ const DEFAULTS: RewardEditorInput = {
 	maxClaimsPerUser: 1,
 	audienceType: "EVERYONE",
 	audienceCustomerIds: [],
+	minimumTier: "BRONZE",
 };
 
 function ignoreSave(): void {
@@ -58,6 +66,7 @@ function Harness(): React.JSX.Element {
 		<>
 			<MerchantRewardAudienceFields editor={editor} tenantSlug="sunrise-cafe" initialCustomers={[]} />
 			<output aria-label="Audience">{`${editor.values.audienceType}:${editor.values.audienceCustomerIds.join(",")}`}</output>
+			<output aria-label="Minimum tier">{editor.values.minimumTier}</output>
 		</>
 	);
 }
@@ -65,6 +74,7 @@ function Harness(): React.JSX.Element {
 afterEach((): void => {
 	cleanup();
 	customersQuery.mockReset();
+	tiersState.enabled = false;
 });
 
 describe("MerchantRewardAudienceFields", () => {
@@ -87,5 +97,27 @@ describe("MerchantRewardAudienceFields", () => {
 		});
 		expect(screen.getByLabelText("Audience").textContent).toBe(`SELECTED_CUSTOMERS:${ALICE.userId}`);
 		expect(screen.getByRole("button", { name: "Remove Alice Johnson" })).toBeTruthy();
+	});
+
+	it("offers no minimum tier while tiers are off", (): void => {
+		render(<Harness />, { wrapper: UiKitTestProviders });
+		expect(screen.queryByLabelText("Minimum tier", { selector: "button,[role=combobox]" })).toBeNull();
+	});
+
+	it("takes a minimum tier for a reward for everyone while tiers are on, and hides it for chosen customers (ADR 085)", async (): Promise<void> => {
+		tiersState.enabled = true;
+		customersQuery.mockReturnValue({ data: { data: [] }, isPending: false, isError: false });
+		render(<Harness />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByRole("combobox"));
+		const silver = await screen.findByRole("option", { name: "Silver and above" });
+		fireEvent.pointerDown(silver, { pointerType: "mouse" });
+		fireEvent.click(silver);
+		expect(screen.getByLabelText("Minimum tier", { selector: "output" }).textContent).toBe("SILVER");
+
+		act((): void => {
+			fireEvent.click(screen.getByRole("radio", { name: /Chosen customers/u }));
+		});
+		expect(screen.queryByRole("combobox")).toBeNull();
 	});
 });

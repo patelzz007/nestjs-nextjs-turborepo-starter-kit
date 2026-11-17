@@ -1,6 +1,7 @@
 import {
 	epochMs,
 	PosPairingCodeSchema,
+	type CustomerTier,
 	type EpochMs,
 	type MerchantTerminalSummary,
 	type PosPairingCode,
@@ -10,6 +11,7 @@ import {
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { TransactionalEventCollector } from "../../../../../platform/application/events/transactional-event-collector";
+import type { CustomerTierSnapshotPort } from "../../../../../platform/application/ports/customer-tier-snapshot.port";
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { ClaimNoLongerRedeemableError, type ClaimRedemptionLookup, type ClaimRedemptionPort } from "../../../../claims/public-api";
@@ -304,6 +306,15 @@ export class RecordingAudit implements RewardAuditPort {
  * in `pendingReferrals` has a PENDING referral for its referee, credited once; `pendingSignupReferral`
  * is the referee's not-yet-successful signup referral.
  */
+/** Customers' stored tiers (ADR 085): Bronze unless a test gives a customer another. */
+export class InMemoryTierSnapshot implements CustomerTierSnapshotPort {
+	public readonly tiers = new Map<string, CustomerTier>();
+
+	public tierOf(customerUserId: string): Promise<CustomerTier> {
+		return Promise.resolve(this.tiers.get(customerUserId) ?? "BRONZE");
+	}
+}
+
 export class RecordingReferralCredit implements ReferralCreditPort {
 	public readonly credited: { readonly rewardId: string; readonly refereeUserId: string }[] = [];
 	public readonly stamped: string[] = [];
@@ -332,6 +343,8 @@ export class InMemorySales implements RewardSaleRepository {
 	public concurrentWinner: StoredSale | null = null;
 	/** Sales the caller's principal cannot read (another store's, for a store-limited key): the unique index still sees them. */
 	public readonly hiddenFromReplay = new Set<string>();
+	/** The customer tier each sale's redemptions recorded (ADR 085), by sale id. */
+	public readonly customerTiers = new Map<string, CustomerTier>();
 	/** Sales other transactions committed: this unit of work's rollback never touches them. */
 	private readonly committedElsewhere = new Map<string, StoredSale>();
 	private redemptionCounter = 0;
@@ -365,6 +378,7 @@ export class InMemorySales implements RewardSaleRepository {
 			}),
 		};
 		this.rows.set(key, stored);
+		this.customerTiers.set(state.id, state.customerTier);
 		return Promise.resolve(stored);
 	}
 }
@@ -665,6 +679,7 @@ export class InMemoryPosStore {
 	public readonly claims = new InMemoryClaimRedemption(this.rewards);
 	public readonly audit = new RecordingAudit();
 	public readonly referrals = new RecordingReferralCredit();
+	public readonly tierSnapshot = new InMemoryTierSnapshot();
 	public readonly events = new TransactionalEventCollector();
 	public readonly uow: InMemoryPosUnitOfWork;
 
@@ -686,6 +701,7 @@ export class InMemoryPosStore {
 			rewardFacts: this.rewards,
 			rewardAudit: this.audit,
 			referrals: this.referrals,
+			tierSnapshot: this.tierSnapshot,
 			events: this.events,
 		};
 	}

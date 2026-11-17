@@ -10,7 +10,7 @@ import { expectSingleLoadingStatus } from "@/testing/skeleton";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { GUEST_SESSION_STATE, signedInSession } from "@/testing/session";
 import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL, rewardImageFixture, type RewardFixtureOverrides } from "@/testing/reward";
-import type { RewardResponse } from "@workspace/shared";
+import { DEFAULT_TIER_RULES, type MyTier, type RewardResponse, type TierAvailability } from "@workspace/shared";
 
 interface CheckoutStub {
 	readonly hasAcceptedLegal: boolean;
@@ -27,7 +27,9 @@ const REWARD_ID = "00000000-0000-4000-8000-000000000001";
 const DAY_MS = 86_400_000;
 const SECOND_IMAGE_URL = "https://cdn.example.com/rewards/free-coffee/counter.webp";
 
-const { rewardUseQuery, legalStatusUseQuery, rewardListUseQuery, searchParamsHolder, recordAttribution, createLink, routerReplace } = vi.hoisted(() => ({
+const { rewardUseQuery, legalStatusUseQuery, rewardListUseQuery, searchParamsHolder, recordAttribution, createLink, routerReplace, tierMeUseQuery } = vi.hoisted(() => ({
+	tierMeUseQuery:
+		vi.fn<(input: undefined, options: { readonly enabled: boolean }) => { readonly data: { readonly data: Pick<MyTier, "countedRedemptions" | "rules"> } | undefined }>(),
 	searchParamsHolder: { current: new URLSearchParams() },
 	recordAttribution: vi.fn<(input: { readonly attributionToken: string }) => void>(),
 	createLink: vi.fn<(input: { readonly rewardId: string }) => void>(),
@@ -51,6 +53,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 				readonly recordAttribution: { readonly useMutation: () => { readonly mutate: typeof recordAttribution } };
 				readonly createLink: { readonly useMutation: () => { readonly mutate: typeof createLink; readonly isPending: boolean } };
 			};
+			readonly tiers: { readonly me: { readonly useQuery: typeof tierMeUseQuery } };
 		};
 	} => ({
 		api: {
@@ -61,6 +64,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 				recordAttribution: { useMutation: (): { readonly mutate: typeof recordAttribution } => ({ mutate: recordAttribution }) },
 				createLink: { useMutation: (): { readonly mutate: typeof createLink; readonly isPending: boolean } => ({ mutate: createLink, isPending: false }) },
 			},
+			tiers: { me: { useQuery: tierMeUseQuery } },
 		},
 	}),
 }));
@@ -82,10 +86,10 @@ function buildReward(overrides: RewardFixtureOverrides = {}): RewardResponse {
 	});
 }
 
-function renderView(session: WebSessionState): void {
+function renderView(session: WebSessionState, tierAvailability?: TierAvailability): void {
 	render(
 		<WebSessionTestProvider session={session}>
-			<RewardDetailView rewardId={REWARD_ID} />
+			<RewardDetailView rewardId={REWARD_ID} tierAvailability={tierAvailability} />
 		</WebSessionTestProvider>,
 		{ wrapper: UiKitTestProviders },
 	);
@@ -102,6 +106,8 @@ beforeEach(() => {
 	legalStatusUseQuery.mockReset();
 	rewardListUseQuery.mockReset();
 	rewardListUseQuery.mockReturnValue({ data: { data: [] } });
+	tierMeUseQuery.mockReset();
+	tierMeUseQuery.mockReturnValue({ data: undefined });
 	rewardUseQuery.mockReturnValue({ data: { data: buildReward() }, isLoading: false, refetch: (): Promise<void> => Promise.resolve() });
 	legalStatusUseQuery.mockReturnValue({
 		data: { data: { hasAcceptedLegal: false, phoneVerified: false, phone: null } },
@@ -111,6 +117,43 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
+});
+
+describe("RewardDetailView locked rewards (ADR 085)", () => {
+	const SILVER_VIEWER: TierAvailability = { enabled: true, viewerTier: "SILVER" };
+
+	beforeEach(() => {
+		rewardUseQuery.mockReturnValue({ data: { data: buildReward({ minimumTier: "GOLD" }) }, isLoading: false, refetch: (): Promise<void> => Promise.resolve() });
+	});
+
+	it("shows a customer how far they are from the reward's tier in place of the claim flow", () => {
+		tierMeUseQuery.mockReturnValue({ data: { data: { countedRedemptions: 20, rules: DEFAULT_TIER_RULES } } });
+		renderView(signedInSession(), SILVER_VIEWER);
+
+		expect(screen.getByText("A Gold reward. You're Silver: 5 more redemptions to unlock it.")).toBeDefined();
+		expect(screen.getByRole("link", { name: "See my tier" }).getAttribute("href")).toBe("/dashboard/tier");
+		expect(screen.getByText("Gold only")).toBeDefined();
+		expect(screen.queryByRole("button", { name: "Accept & continue" })).toBeNull();
+		expect(legalStatusUseQuery).not.toHaveBeenCalled();
+	});
+
+	it("asks a signed-out visitor, counted as Bronze, to sign in to see their tier — without reading a tier page", () => {
+		renderView(GUEST_SESSION_STATE, { enabled: true, viewerTier: "BRONZE" });
+
+		expect(screen.getByText("A Gold reward. Sign in to see your tier.")).toBeDefined();
+		expect(tierMeUseQuery).toHaveBeenCalledWith(undefined, { enabled: false });
+	});
+
+	it("offers the claim flow once the customer's tier reaches the reward, and always while tiers are off", () => {
+		renderView(signedInSession(), { enabled: true, viewerTier: "GOLD" });
+		expect(screen.getByRole("button", { name: "Accept & continue" })).toBeDefined();
+		expect(screen.getByText("Gold")).toBeDefined();
+		cleanup();
+
+		renderView(signedInSession(), { enabled: false });
+		expect(screen.getByRole("button", { name: "Accept & continue" })).toBeDefined();
+		expect(screen.queryByText("Gold")).toBeNull();
+	});
 });
 
 describe("RewardDetailView claim gating", () => {

@@ -1,12 +1,12 @@
 import { Inject } from "@nestjs/common";
 import { CommandHandler, type ICommandHandler } from "@nestjs/cqrs";
-import type { EpochMs, RedemptionCheckoutInput, RedemptionCheckoutResponse } from "@workspace/shared";
+import { ENTRY_CUSTOMER_TIER, type CustomerTier, type EpochMs, type RedemptionCheckoutInput, type RedemptionCheckoutResponse } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { ClaimNoLongerRedeemableError } from "../../../../claims/public-api";
-import { RewardSale, type CheckoutPoint, type SaleLine } from "../../../domain/aggregates/reward-sale.aggregate";
+import { RewardSale, type CheckoutPoint, type PresentedClaim, type SaleLine } from "../../../domain/aggregates/reward-sale.aggregate";
 import { PosCodeLockedError, RedemptionCodeNotFoundError, SaleIdempotencyKeyTakenError, TillRedemptionDisabledError } from "../../../domain/errors/pos.errors";
 import { redemptionOfferOf } from "../../../domain/policies/redemption-offer.policy";
 import type { StoredSale } from "../../../domain/repositories/pos.repositories";
@@ -97,6 +97,7 @@ export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand,
 				idempotencyKey: input.idempotencyKey,
 				requestHash,
 				presented: resolution.codes,
+				customerTier: await this.customerTierOf(scope, resolution.codes),
 			},
 			now,
 		);
@@ -127,6 +128,15 @@ export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand,
 		await this.creditReferrals(scope, lines, customerUserId, now);
 		scope.events.collectFrom(sale);
 		return { kind: "recorded", response: await this.respond(scope, stored) };
+	}
+
+	/**
+	 * The customer's tier right now (ADR 085), recorded on every redemption of the sale. A bill with no code or with several
+	 * customers' codes is refused by the sale itself; their first code's customer is read so the refusal stays the sale's.
+	 */
+	private async customerTierOf(scope: PosScope, presented: readonly PresentedClaim[]): Promise<CustomerTier> {
+		const [first] = presented;
+		return first === undefined ? ENTRY_CUSTOMER_TIER : scope.tierSnapshot.tierOf(first.claim.customerUserId);
 	}
 
 	/** The referrer of every redeemed claim that was referred, then the customer's signup referral on their first redemption (ADR 035). */

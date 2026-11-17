@@ -1,7 +1,7 @@
 ---
 title: "API reference — Point of sale and integrations (machine-to-machine)"
 description: "Terminal pairing, validating a customer's QR / backup code and recording the paid bill, plus the integration API (`/integration/*`: rewards, analytics, redemption history). Authenticated with a merchant API key, which names its own tenant."
-order: 7
+order: 8
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000
@@ -243,6 +243,7 @@ POS validate QR or backup code
 | --- | --- | --- | --- |
 | `data.claimExpiresAt` | integer | yes |  |
 | `data.claimId` | string (uuid) | yes |  |
+| `data.customerTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.invalidReason` | "ALREADY_REDEEMED" \| "EXPIRED" \| "NOT_VALID_AT_STORE" \| "STORE_REQUIRED" \| "CUSTOMER_BANNED" \| null | yes |  |
 | `data.minSpendMinor` | integer \| null | yes |  |
 | `data.offer` | object | yes |  |
@@ -519,6 +520,9 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.byCustomerTier` | object[] | yes |  |
+| `data.byCustomerTier[].redemptions` | integer | yes |  |
+| `data.byCustomerTier[].tier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.byRedemptionMethod` | object[] | yes |  |
 | `data.byRedemptionMethod[].method` | "SCAN" \| "MANUAL" | yes |  |
 | `data.byRedemptionMethod[].redemptions` | integer | yes |  |
@@ -931,6 +935,7 @@ List the API key's tenant rewards
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationNames` | string[] | no |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data[].minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data[].quantityReserved` | integer | yes | min -9007199254740991 |
 | `data[].quantityTotal` | integer | yes | min -9007199254740991 |
@@ -1136,6 +1141,7 @@ Create a draft reward for the API key's tenant
 | `imageFileIds` | string (uuid)[] | yes | 1–10 items |
 | `locationIds` | string (uuid)[] | no | default `[]` |
 | `locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | no | default `"ALL_LOCATIONS"` |
+| `minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | no | default `"BRONZE"` |
 | `quantityTotal` | integer | yes | min 1 |
 | `referralPoolTotal` | integer | no | min 1 |
 | `referralsEnabled` | boolean | no | default `false` |
@@ -1177,6 +1183,7 @@ Create a draft reward for the API key's tenant
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -1351,6 +1358,7 @@ Read one of the API key's tenant rewards (404 when not offered at the key's stor
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -1488,6 +1496,7 @@ Update a draft or pending reward of the API key's tenant
 | `freeItem.name` | string | yes | length 1–200 |
 | `freeItem.sku` | string | yes | length 1–64; pattern `^[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?$` |
 | `imageFileIds` | string (uuid)[] | no | 1–10 items |
+| `minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | no |  |
 | `quantityTotal` | integer | no | min 1 |
 | `referralPoolTotal` | integer | no | min 1 |
 | `referralsEnabled` | boolean | no |  |
@@ -1528,6 +1537,7 @@ Update a draft or pending reward of the API key's tenant
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -1689,6 +1699,7 @@ _No fields._
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.minimumTier` | "BRONZE" \| "SILVER" \| "GOLD" \| "DIAMOND" | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |

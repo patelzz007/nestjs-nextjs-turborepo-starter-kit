@@ -24,6 +24,7 @@ describe("RLS apply plan", () => {
 			"prisma/rls/58-docs-publishing.sql",
 			"prisma/rls/60-notifications.sql",
 			"prisma/rls/66-outbound-webhooks.sql",
+			"prisma/rls/67-customer-tiers.sql",
 			"prisma/rls/70-audit-retention.sql",
 			"prisma/rls/75-account-erasure.sql",
 			"prisma/rls/80-saved-list-views.sql",

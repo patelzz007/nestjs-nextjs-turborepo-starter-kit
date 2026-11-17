@@ -3,7 +3,9 @@
 import { RewardInventoryBar } from "@/contexts/rewards/components/detail/inventory-bar";
 import { RewardCategoryVisual } from "@/contexts/rewards/components/detail/category-visual";
 import { RewardMerchantAvatar } from "@/components/dashboard/shared/merchant-avatar";
-import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type CustomerTier, type RewardResponse } from "@workspace/shared";
+import { TierBadge } from "@workspace/client/lib/contexts/tiers";
+import { hasTierMark, isRewardLockedFor } from "@/contexts/tiers";
 import { Badge } from "@workspace/ui/components/badge";
 import { isRewardJustForViewer, JUST_FOR_YOU_LABEL } from "@/contexts/rewards/lib/reward-audience";
 import { buttonVariants } from "@workspace/ui/components/button";
@@ -20,14 +22,17 @@ import { childPath, ROUTE_PREFIXES } from "@/lib/routes";
 export interface RewardListRowProps {
 	readonly reward: RewardResponse;
 	readonly detailPathPrefix?: string;
+	/** The viewer's tier while tiers are on (ADR 085); `null` while they are off. */
+	readonly viewerTier?: CustomerTier | null;
 }
 
 /** Compact list row for browsing many consumer offers: cover thumbnail with the merchant's mark, then copy and stock. */
-export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboardRewards }: RewardListRowProps): React.JSX.Element {
+export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboardRewards, viewerTier = null }: RewardListRowProps): React.JSX.Element {
 	const expiryLabel = formatEpochMs(reward.expiryDate, "date", PLATFORM_DISPLAY_REGION);
 	const percentLeft = reward.quantityTotal > 0 ? Math.round((reward.quantityRemaining / reward.quantityTotal) * 100) : 0;
 	const isLowStock = percentLeft > 0 && percentLeft <= 20;
 	const isSoldOut = reward.quantityRemaining === 0;
+	const isLocked = isRewardLockedFor(reward, viewerTier);
 	const [cover] = reward.images;
 
 	return (
@@ -57,6 +62,7 @@ export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.dashbo
 							{JUST_FOR_YOU_LABEL}
 						</Badge>
 					) : null}
+					{hasTierMark(reward, viewerTier) ? <TierBadge tier={reward.minimumTier} locked={isLocked} className="shrink-0" /> : null}
 					{isLowStock && !isSoldOut ? (
 						<Badge className="hidden shrink-0 border-transparent bg-warning-soft px-1.5 py-0 text-[10px] text-warning sm:inline-flex">Low</Badge>
 					) : null}
@@ -88,8 +94,8 @@ export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.dashbo
 					isSoldOut ? "pointer-events-none opacity-60" : undefined,
 				)}
 				aria-disabled={isSoldOut}
-				aria-label={isSoldOut ? `${reward.title} unavailable` : `View ${reward.title}`}>
-				{isSoldOut ? "Unavailable" : "View"}
+				aria-label={isSoldOut ? `${reward.title} unavailable` : isLocked ? `See how to unlock ${reward.title}` : `View ${reward.title}`}>
+				{isSoldOut ? "Unavailable" : isLocked ? "Unlock" : "View"}
 			</Link>
 		</article>
 	);

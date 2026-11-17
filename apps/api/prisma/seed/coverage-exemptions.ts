@@ -213,6 +213,19 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 	),
 	neverSoftDeleted("OpsAlert", "An alert ends through resolvedAt and is kept as the incident record; nothing soft-deletes one."),
 	neverSoftDeleted("OpsSettings", "The one settings row is created on first use and updated in place for the platform's whole life; nothing soft-deletes it."),
+	// Customer tiers (ADR 085).
+	neverSoftDeleted(
+		"CustomerTierSettings",
+		"The platform's one tier-rules row is created by the first change and updated in place for the platform's whole life; nothing soft-deletes it.",
+	),
+	neverSoftDeleted(
+		"CustomerTierStanding",
+		"A customer's tier standing is updated in place by every evaluation for the customer's whole life; only account erasure removes it, as a whole row, so nothing soft-deletes one.",
+	),
+	neverSoftDeleted(
+		"CustomerTierChange",
+		"Tier history is append-only: every promotion and demotion is written once and never edited or retracted; only account erasure removes a customer's rows outright.",
+	),
 	neverSoftDeleted(
 		"LoadTestRun",
 		"A load test ends through its status and is kept as the run's record (the purge removes what it created, never the run); nothing soft-deletes one.",

@@ -23,6 +23,12 @@ export const DOMAIN_ERROR_HTTP_STATUS: Readonly<Record<DomainErrorCode, HttpStat
 	REWARD_LOCATION_INVALID: HttpStatus.BAD_REQUEST,
 	REWARD_AUDIENCE_INVALID: HttpStatus.BAD_REQUEST,
 	REWARD_AUDIENCE_REFERRALS: HttpStatus.BAD_REQUEST,
+	// customer tiers (ADR 085): a minimum tier the reward cannot carry, or one set while tiers are off (400); a claim
+	// below the reward's minimum tier (403: the reward is visible, locked); a tier page while tiers are off (404)
+	REWARD_MINIMUM_TIER_INVALID: HttpStatus.BAD_REQUEST,
+	REWARD_MINIMUM_TIER_UNAVAILABLE: HttpStatus.BAD_REQUEST,
+	REWARD_TIER_LOCKED: HttpStatus.FORBIDDEN,
+	TIERS_DISABLED: HttpStatus.NOT_FOUND,
 	REWARD_FREE_ITEM_INVALID: HttpStatus.BAD_REQUEST,
 	TENANT_LOCATION_FORBIDDEN: HttpStatus.FORBIDDEN,
 	REWARD_EXPIRED: HttpStatus.BAD_REQUEST,

@@ -47,6 +47,7 @@ export {
 	SIGNUP_REFERRAL_SUCCESS_NOTIFICATION,
 } from "./domain/catalog/types/rewards.types";
 export { WEBHOOK_ENDPOINT_AUTO_DISABLED_NOTIFICATION } from "./domain/catalog/types/webhooks.types";
+export { TIER_DEMOTED_NOTIFICATION, TIER_DEMOTION_WARNING_NOTIFICATION, TIER_PROMOTED_NOTIFICATION } from "./domain/catalog/types/tiers.types";
 export { EMAIL_LOG_ID_TAG } from "./domain/value-objects/email-log-id-tag.value-object";
 export { NotificationsHealthIndicator } from "./infrastructure/adapters/notifications-health.adapter";
 

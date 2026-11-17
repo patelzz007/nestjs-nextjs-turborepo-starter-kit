@@ -3,6 +3,7 @@ import { CommandHandler, type ICommandHandler } from "@nestjs/cqrs";
 import type { CreateRewardClaimInput, EpochMs, RewardClaimCreatedResponse } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
+import { CUSTOMER_TIER_ACCESS, type CustomerTierAccess, type CustomerTierAccessPort } from "../../../../../platform/application/ports/customer-tier-access.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { RewardClaim } from "../../../domain/aggregates/reward-claim.aggregate";
 import { ClaimantNotFoundError, LegalAcceptanceRequiredError, OtpInvalidError, OtpMissingError, OtpRequiredError } from "../../../domain/errors/claims.errors";
@@ -16,6 +17,12 @@ import type { ClaimHold } from "../../../domain/aggregates/claim-hold.aggregate"
 import { actingUserId } from "../acting-user";
 import { assertCustomerMayClaim } from "../customer-may-claim";
 import { ClaimRewardCommand } from "./claim-reward.command";
+
+/** The customer claiming, and their tier access (ADR 085). */
+interface Claimant {
+	readonly userId: string;
+	readonly tierAccess: CustomerTierAccess;
+}
 
 /** How the claim transaction ended: a claim, or a wrong OTP whose spent attempt must still commit. */
 type ClaimOutcome = { readonly kind: "created"; readonly response: RewardClaimCreatedResponse } | { readonly kind: "otp_rejected" };
@@ -34,11 +41,14 @@ export class ClaimRewardHandler implements ICommandHandler<ClaimRewardCommand, R
 		@Inject(CLAIM_CODES) private readonly codes: ClaimCodesPort,
 		@Inject(CLAIM_ID_GENERATOR) private readonly ids: ClaimIdGenerator,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(CUSTOMER_TIER_ACCESS) private readonly tiers: Pick<CustomerTierAccessPort, "accessFor">,
 	) {}
 
 	public async execute(command: ClaimRewardCommand): Promise<RewardClaimCreatedResponse> {
 		const { actor, input } = command;
 		const userId = actingUserId(actor);
+		// The customer's tier, read before the claim's transaction (ADR 085): a reward above it is refused (403).
+		const tierAccess = await this.tiers.accessFor(userId);
 
 		const outcome = await this.uow.runSystemOperation(CLAIM_REWARD_OPERATION, actor, async (scope: ClaimsScope): Promise<ClaimOutcome> => {
 			const now = this.clock.now();
@@ -52,7 +62,7 @@ export class ClaimRewardHandler implements ICommandHandler<ClaimRewardCommand, R
 			if (claimNeedsOtp(claimant, input.phone) && !(await this.verifyOtp(scope, userId, input, now))) {
 				return { kind: "otp_rejected" };
 			}
-			return { kind: "created", response: await this.claim(scope, userId, claimant, input, now) };
+			return { kind: "created", response: await this.claim(scope, { userId, tierAccess }, claimant, input, now) };
 		});
 
 		if (outcome.kind === "otp_rejected") {
@@ -76,23 +86,24 @@ export class ClaimRewardHandler implements ICommandHandler<ClaimRewardCommand, R
 	}
 
 	/** The customer's held unit when the hold is still theirs; otherwise one from stock, if any is left. */
-	private async takeUnit(scope: ClaimsScope, hold: ClaimHold | null, userId: string, rewardId: string, now: EpochMs): Promise<void> {
+	private async takeUnit(scope: ClaimsScope, hold: ClaimHold | null, customer: Claimant, rewardId: string, now: EpochMs): Promise<void> {
 		if (hold !== null) {
 			hold.convert(now);
 			if (await scope.holds.saveIfUnchanged(hold)) {
-				await scope.rewards.claimHeldUnit(rewardId, now, userId);
+				await scope.rewards.claimHeldUnit(rewardId, now, customer.userId);
 				return;
 			}
 		}
-		await scope.rewards.reserve(rewardId, now, userId);
+		await scope.rewards.reserve(rewardId, now, customer.userId, customer.tierAccess);
 	}
 
-	private async claim(scope: ClaimsScope, userId: string, claimant: ClaimantProfile, input: CreateRewardClaimInput, now: EpochMs): Promise<RewardClaimCreatedResponse> {
+	private async claim(scope: ClaimsScope, customer: Claimant, claimant: ClaimantProfile, input: CreateRewardClaimInput, now: EpochMs): Promise<RewardClaimCreatedResponse> {
+		const { userId } = customer;
 		const hold = await scope.holds.findLive(userId, input.rewardId, now);
-		const reward = await scope.rewards.assertClaimable(input.rewardId, now, userId, hold !== null);
+		const reward = await scope.rewards.assertClaimable(input.rewardId, now, userId, customer.tierAccess, hold !== null);
 		await assertCustomerMayClaim(scope, reward.tenantId, userId, input.rewardId);
 		assertWithinClaimLimit(await scope.claims.countHeld(userId, input.rewardId), reward.maxClaimsPerUser);
-		await this.takeUnit(scope, hold, userId, input.rewardId, now);
+		await this.takeUnit(scope, hold, customer, input.rewardId, now);
 
 		const attributionToken = liveAttributionToken(claimant.pendingAttributionToken, claimant.pendingAttributionExpiresAt, now);
 		const referralId = attributionToken === null ? null : await scope.referralAttribution.attach(attributionToken, input.rewardId, userId);

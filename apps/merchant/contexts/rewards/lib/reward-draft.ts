@@ -47,6 +47,7 @@ const FIELD_GAPS: Readonly<Record<RewardFormField, FieldGapCopy>> = {
 	locationIds: { label: "Pick at least one store", sectionId: "reward-stores" },
 	audienceType: { label: "Choose who can claim it", sectionId: "reward-audience" },
 	audienceCustomerIds: { label: "Pick at least one customer", sectionId: "reward-audience" },
+	minimumTier: { label: "Open it to every tier, or choose everyone", sectionId: "reward-audience" },
 	termsConditions: { label: "Shorten the terms", sectionId: "reward-terms" },
 };
 
@@ -68,6 +69,7 @@ const PAGE_ORDER: readonly RewardFormField[] = [
 	"locationIds",
 	"audienceType",
 	"audienceCustomerIds",
+	"minimumTier",
 	"termsConditions",
 ];
 

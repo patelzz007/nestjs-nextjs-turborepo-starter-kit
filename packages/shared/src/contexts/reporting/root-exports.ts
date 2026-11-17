@@ -110,6 +110,7 @@ export {
 	MerchantRewardBreakdownSchema,
 	MerchantStoreBreakdownSchema,
 	RedemptionMethodBreakdownSchema,
+	CustomerTierBreakdownSchema,
 } from "./schemas/analytics-dashboard";
 export type {
 	AdminAnalyticsDashboard,
@@ -136,6 +137,7 @@ export type {
 	MerchantRewardBreakdown,
 	MerchantStoreBreakdown,
 	RedemptionMethodBreakdown,
+	CustomerTierBreakdown,
 } from "./schemas/analytics-dashboard";
 export {
 	ADMIN_ANALYTICS_EXPORT_SUBJECT,

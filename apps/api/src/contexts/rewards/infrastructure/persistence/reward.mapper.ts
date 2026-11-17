@@ -88,6 +88,7 @@ export function toRewardState(row: RewardAggregateRow): RewardState {
 		audience: RewardAudience.fromStorage(
 			row.audienceType,
 			row.audienceMembers.map((member) => member.userId),
+			row.minimumTier,
 		),
 		availableAtActiveStore: row.locationScopeType === "ALL_LOCATIONS" || row.locationScopes.some((scope) => !scope.location.isDeleted && scope.location.status === "ACTIVE"),
 		referrer: child === null || child.isDeleted ? null : rowState(child),

@@ -4,6 +4,7 @@ import { MERCHANT_CAPABILITY, type RewardResponse } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
+import { CUSTOMER_TIER_ACCESS, type CustomerTierAccessPort } from "../../../../../platform/application/ports/customer-tier-access.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { decideRewardAudience } from "../../../domain/policies/reward-audience.policy";
 import { RewardRulesValue } from "../../../domain/value-objects/reward-rules.value-object";
@@ -12,6 +13,7 @@ import { REWARDS_UNIT_OF_WORK, REWARD_MERCHANT_DISPLAY } from "../../ports/rewar
 import type { RewardMerchantDisplayPort } from "../../ports/reward-merchant-display.port";
 import type { RewardsScope } from "../../rewards-scope";
 import { rewardManager } from "../merchant-manager-scope";
+import { assertMinimumTierAvailable } from "../minimum-tier-availability";
 import { ReviseRewardCommand } from "./revise-reward.command";
 
 /**
@@ -26,11 +28,13 @@ export class ReviseRewardHandler implements ICommandHandler<ReviseRewardCommand,
 		@Inject(MERCHANT_ACCESS) private readonly merchantAccess: MerchantAccessPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 		@Inject(REWARD_MERCHANT_DISPLAY) private readonly merchantDisplay: RewardMerchantDisplayPort,
+		@Inject(CUSTOMER_TIER_ACCESS) private readonly tiers: Pick<CustomerTierAccessPort, "accessFor">,
 	) {}
 
 	public async execute(command: ReviseRewardCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
 		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		await assertMinimumTierAvailable(this.tiers, input.minimumTier);
 
 		// The merchant's name and logo after the commit (a read of its own: not inside this transaction).
 		return this.merchantDisplay.withMerchantDisplay(
@@ -58,6 +62,7 @@ export class ReviseRewardHandler implements ICommandHandler<ReviseRewardCommand,
 						referrerRewardTitle: input.referrerRewardTitle,
 						rules: input.rules === undefined ? undefined : RewardRulesValue.fromApi(input.rules),
 						audience,
+						minimumTier: input.minimumTier,
 					},
 					rewardManager(actor, grant),
 					this.clock.now(),

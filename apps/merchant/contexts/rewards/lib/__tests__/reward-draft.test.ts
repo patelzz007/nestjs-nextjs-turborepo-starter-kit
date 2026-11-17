@@ -26,6 +26,7 @@ function completeDraft(overrides: Partial<RewardEditorInput> = {}): RewardEditor
 		locationIds: [],
 		audienceType: "EVERYONE",
 		audienceCustomerIds: [],
+		minimumTier: "BRONZE",
 		...overrides,
 	};
 }

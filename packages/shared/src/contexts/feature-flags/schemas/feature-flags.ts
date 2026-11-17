@@ -7,7 +7,7 @@ import { EpochMsSchema } from "../../../schemas/api/common";
 // it on or off for the deployment, or on for a stable percentage of people, from the admin console; every
 // change is audited. Leaving a flag on DEFAULT keeps the old behaviour exactly.
 
-export const FeatureFlagKeySchema = z.enum(["showcase", "merchant-invites", "till-redemption"]);
+export const FeatureFlagKeySchema = z.enum(["showcase", "merchant-invites", "till-redemption", "customer-tiers"]);
 export type FeatureFlagKey = z.output<typeof FeatureFlagKeySchema>;
 
 /**
@@ -24,6 +24,16 @@ export type PlatformFeatureFlagKey = z.output<typeof PlatformFeatureFlagKeySchem
 /** The flags a merchant or a branch can be given its own setting of. */
 export const StoreFeatureFlagKeySchema = FeatureFlagKeySchema.extract(["till-redemption"]);
 export type StoreFeatureFlagKey = z.output<typeof StoreFeatureFlagKeySchema>;
+
+/**
+ * The deployment-wide flags the API itself decides on (a server-side rule, not only a screen): the API evaluates
+ * them for everyone at once, so a PERCENTAGE setting reads as off for these.
+ */
+export const ApiFeatureFlagKeySchema = FeatureFlagKeySchema.extract(["customer-tiers"]);
+export type ApiFeatureFlagKey = z.output<typeof ApiFeatureFlagKeySchema>;
+
+/** An API-decided flag's default where it has no setting: what the product does out of the box. */
+export const API_FEATURE_FLAG_DEFAULTS: Readonly<Record<ApiFeatureFlagKey, boolean>> = { "customer-tiers": true };
 
 export interface FeatureFlagDefinition {
 	readonly title: string;
@@ -51,6 +61,13 @@ export const FEATURE_FLAG_REGISTRY: Readonly<Record<FeatureFlagKey, FeatureFlagD
 		description: "Redeeming customers' reward codes at a store's till: the phone till and POS integrations. Off at a store, its tills refuse to redeem.",
 		defaultFrom: "On at every store",
 		scope: "store",
+	},
+	"customer-tiers": {
+		title: "Customer tiers",
+		description:
+			"Bronze, Silver, Gold and Diamond tiers earned by redeeming rewards, and rewards for a minimum tier. Off, every customer is treated as Bronze, every reward is open to everyone and no tier changes happen. A percentage reads as off: tiers are decided for everyone at once.",
+		defaultFrom: "On",
+		scope: "platform",
 	},
 };
 

@@ -65,6 +65,14 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		tags: ["Rewards", "Referrals", "Claims", "Legal"],
 	},
 	{
+		slug: "customer-tiers",
+		title: "Customer tiers",
+		description:
+			"Bronze, Silver, Gold and Diamond, earned by redemptions: whether tiers are on and the caller's tier, a customer's own progress and history, and the admin's tier rules (changed with a reason), a customer's standing and the tier distribution.",
+		guide: { label: "ADR 085: customer tiers", href: "../../adr/085-customer-tiers.md" },
+		tags: ["Tiers"],
+	},
+	{
 		slug: "pos",
 		title: "Point of sale and integrations (machine-to-machine)",
 		description:

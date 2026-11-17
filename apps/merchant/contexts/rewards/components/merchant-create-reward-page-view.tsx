@@ -17,7 +17,7 @@ import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";
 import { tenantRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useQueryClient } from "@tanstack/react-query";
-import { MERCHANT_CAPABILITY, mapMerchantCreateRewardFormToInput, type MerchantRewardFormValues, type RewardCategory } from "@workspace/shared";
+import { ENTRY_CUSTOMER_TIER, MERCHANT_CAPABILITY, mapMerchantCreateRewardFormToInput, type MerchantRewardFormValues, type RewardCategory } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { toastMessage } from "@workspace/ui/components/toast";
@@ -70,6 +70,7 @@ function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipl
 		locationIds: limitToActiveStore ? [activeLocationId] : [],
 		audienceType: "EVERYONE",
 		audienceCustomerIds: [],
+		minimumTier: ENTRY_CUSTOMER_TIER,
 	};
 }
 

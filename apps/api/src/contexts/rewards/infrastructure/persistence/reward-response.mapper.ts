@@ -72,6 +72,7 @@ export type RewardResponseSource = Pick<
 	| "referrerRewardId"
 	| "locationScopeType"
 	| "audienceType"
+	| "minimumTier"
 	| "createdAt"
 	| "updatedAt"
 	| "isDeleted"
@@ -206,6 +207,7 @@ export function mapRewardToResponse(reward: RewardResponseSource, tenant: Reward
 		rules: RewardRulesValue.fromStorage(storedRulesJson(reward.rules), reward.minSpendMinor).toApi(),
 		locationScopeType: reward.locationScopeType,
 		audienceType: reward.audienceType,
+		minimumTier: reward.minimumTier,
 		locationIds,
 		locationNames: locationNames.length > 0 ? locationNames : undefined,
 		createdAt: epochRequired(reward.createdAt),

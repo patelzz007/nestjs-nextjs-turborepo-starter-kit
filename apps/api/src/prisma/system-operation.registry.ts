@@ -482,6 +482,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 			"NotificationSchedule",
 			"PushDevice",
 			"PaymentIntent",
+			"CustomerTierStanding",
+			"CustomerTierChange",
 		),
 	),
 	"maintenance.audit_record_retention": runtime(
@@ -1050,6 +1052,15 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"payments.reconcile": runtime("Job: ask the gateway about payments still pending after a while, and apply what it says", tables("PaymentIntent", "PaymentEvent")),
 	"payments.refund": runtime("A tenant's owner or manager refunds a paid payment (after the route's merchant:manage_payments check)", tables("PaymentIntent", "PaymentEvent")),
+	"tiers.standing.read": runtime(
+		"Customer tiers (ADR 085): read customers' tier standings and history, the tier rules, and the counted redemptions behind them (each merchant's name, the staff memberships that leave a redemption out) — for the customer's own tier page, a merchant's view of its customers' tiers (after the merchant-access check) and platform staff's",
+		tables("CustomerTierStanding", "CustomerTierChange", "CustomerTierSettings", "RewardRedemption", "Membership", "Tenant", "TenantCustomer", "User"),
+	),
+	"tiers.standing.evaluate": runtime(
+		"Customer tiers (ADR 085): re-evaluate customers' tiers from their counted redemptions — just after a redemption and in the nightly review — and record each promotion, demotion warning and demotion with its notification",
+		tables("CustomerTierStanding", "CustomerTierChange", "CustomerTierSettings", "RewardRedemption", "Membership", "Notification"),
+	),
+	"tiers.settings.write": runtime("Platform staff with SYSTEM_SETTINGS:UPDATE: change the tier rules, with a reason (ADR 085)", tables("CustomerTierSettings", "User")),
 };
 
 /** True when `name` is an allowlisted operation. */

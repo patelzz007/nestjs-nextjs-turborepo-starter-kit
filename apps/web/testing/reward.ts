@@ -57,6 +57,7 @@ export function buildRewardResponse(overrides: RewardFixtureOverrides = {}): Rew
 		locationScopeType: "ALL_LOCATIONS",
 		locationIds: [],
 		audienceType: "EVERYONE",
+		minimumTier: "BRONZE",
 		createdAt: FIXTURE_NOW_MS,
 		updatedAt: FIXTURE_NOW_MS,
 		isDeleted: false,

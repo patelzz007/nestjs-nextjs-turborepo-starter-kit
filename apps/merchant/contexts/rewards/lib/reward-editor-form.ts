@@ -7,6 +7,8 @@
 
 import { useForm, useSelector } from "@tanstack/react-form";
 import {
+	CustomerTierSchema,
+	ENTRY_CUSTOMER_TIER,
 	LocationScopeTypeSchema,
 	MerchantRewardFormFieldsSchema,
 	RewardAudienceTypeSchema,
@@ -43,6 +45,8 @@ export const RewardEditorInputSchema = z
 		/** Who can claim it: everyone, or the customers in `audienceCustomerIds`. */
 		audienceType: RewardAudienceTypeSchema,
 		audienceCustomerIds: z.array(z.string()),
+		/** The lowest tier that may claim it (ADR 085): kept while the merchant tries chosen customers, sent only for everyone. */
+		minimumTier: CustomerTierSchema,
 	})
 	.strict();
 
@@ -95,6 +99,8 @@ export function toRewardFormCandidate(input: RewardEditorInput): z.input<typeof 
 		audienceType: input.audienceType,
 		// Customers are kept while the merchant flips back to "Everyone", but only sent for chosen customers.
 		audienceCustomerIds: input.audienceType === "SELECTED_CUSTOMERS" ? input.audienceCustomerIds : [],
+		// Chosen customers claim at any tier, so a minimum tier only goes with a reward for everyone.
+		minimumTier: input.audienceType === "EVERYONE" ? input.minimumTier : ENTRY_CUSTOMER_TIER,
 	};
 }
 
@@ -121,6 +127,7 @@ export function toRewardEditorInput(values: MerchantRewardFormValues): RewardEdi
 		...(values.locationIds === undefined ? {} : { locationIds: values.locationIds }),
 		audienceType: values.audienceType ?? "EVERYONE",
 		audienceCustomerIds: values.audienceCustomerIds ?? [],
+		minimumTier: values.minimumTier ?? ENTRY_CUSTOMER_TIER,
 	};
 }
 
@@ -270,6 +277,9 @@ export function useRewardEditorForm<TMeta>({ defaultValues, defaultMeta, onValid
 			},
 			audienceCustomerIds: (value, options): void => {
 				form.setFieldValue("audienceCustomerIds", value, options);
+			},
+			minimumTier: (value, options): void => {
+				form.setFieldValue("minimumTier", value, options);
 			},
 		}),
 		[form],

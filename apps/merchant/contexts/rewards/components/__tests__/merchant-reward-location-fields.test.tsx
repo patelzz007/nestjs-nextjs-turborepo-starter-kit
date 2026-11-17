@@ -53,6 +53,7 @@ const ALL_LOCATIONS_DEFAULTS: RewardEditorInput = {
 	locationIds: [],
 	audienceType: "EVERYONE",
 	audienceCustomerIds: [],
+	minimumTier: "BRONZE",
 };
 
 /** This section never saves. */

@@ -1,4 +1,4 @@
-import type { MerchantBusinessCategory, PilotCity, RewardRedemptionMethod } from "@workspace/shared";
+import type { CustomerTier, MerchantBusinessCategory, PilotCity, RewardRedemptionMethod } from "@workspace/shared";
 
 import type { AnalyticsScope, AnalyticsTimeRange, AnalyticsWindow, TenantAnalyticsScope } from "../../domain/value-objects/analytics-scope.value-object";
 
@@ -21,6 +21,12 @@ export interface RewardBreakdownRow {
 
 export interface RedemptionMethodRow {
 	readonly method: RewardRedemptionMethod;
+	readonly redemptions: number;
+}
+
+/** Redemptions of one customer tier, as each redemption recorded it (ADR 085). */
+export interface CustomerTierRow {
+	readonly tier: CustomerTier;
 	readonly redemptions: number;
 }
 
@@ -60,6 +66,7 @@ export interface AnalyticsBreakdownReadPort {
 	byStore(scope: TenantAnalyticsScope, range: AnalyticsTimeRange): Promise<StoreBreakdownRow[]>;
 	byReward(scope: TenantAnalyticsScope, range: AnalyticsTimeRange, limit: number): Promise<RewardBreakdownRow[]>;
 	byRedemptionMethod(scope: AnalyticsScope, range: AnalyticsTimeRange): Promise<RedemptionMethodRow[]>;
+	byCustomerTier(scope: TenantAnalyticsScope, range: AnalyticsTimeRange): Promise<CustomerTierRow[]>;
 	byMerchant(scope: AnalyticsScope, range: AnalyticsTimeRange, limit: number): Promise<MerchantSalesRow[]>;
 	byCategory(scope: AnalyticsScope, range: AnalyticsTimeRange): Promise<CategorySalesRow[]>;
 	byCity(scope: AnalyticsScope, range: AnalyticsTimeRange): Promise<CitySalesRow[]>;

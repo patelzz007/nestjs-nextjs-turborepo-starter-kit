@@ -1,7 +1,7 @@
 ---
 title: "API reference — Feature flags"
 description: "Runtime feature flags: every declared flag with its setting (default, on, off, a share of people) and who changed it, the bare settings the apps evaluate, and a store flag's per-merchant and per-branch settings (a branch's own decides over its merchant's)."
-order: 19
+order: 20
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000
@@ -38,7 +38,7 @@ Every feature flag: what it is, where its default comes from, its setting and wh
 | `data.flags` | object[] | yes |  |
 | `data.flags[].defaultFrom` | string | yes |  |
 | `data.flags[].description` | string | yes |  |
-| `data.flags[].key` | "showcase" \| "merchant-invites" \| "till-redemption" | yes |  |
+| `data.flags[].key` | "showcase" \| "merchant-invites" \| "till-redemption" \| "customer-tiers" | yes |  |
 | `data.flags[].mode` | "DEFAULT" \| "ON" \| "OFF" \| "PERCENTAGE" | yes |  |
 | `data.flags[].percentage` | integer \| null | yes | range 1–99 |
 | `data.flags[].reason` | string \| null | yes |  |
@@ -74,7 +74,7 @@ Set a flag: its default, on, off, or on for a percentage of people (with a reaso
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `key` | path | "showcase" \| "merchant-invites" \| "till-redemption" | yes |  |
+| `key` | path | "showcase" \| "merchant-invites" \| "till-redemption" \| "customer-tiers" | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -90,7 +90,7 @@ Set a flag: its default, on, off, or on for a percentage of people (with a reaso
 | --- | --- | --- | --- |
 | `data.defaultFrom` | string | yes |  |
 | `data.description` | string | yes |  |
-| `data.key` | "showcase" \| "merchant-invites" \| "till-redemption" | yes |  |
+| `data.key` | "showcase" \| "merchant-invites" \| "till-redemption" \| "customer-tiers" | yes |  |
 | `data.mode` | "DEFAULT" \| "ON" \| "OFF" \| "PERCENTAGE" | yes |  |
 | `data.percentage` | integer \| null | yes | range 1–99 |
 | `data.reason` | string \| null | yes |  |
@@ -266,7 +266,7 @@ Every flag's setting, for the console to evaluate (any admin staff member)
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.settings` | object[] | yes |  |
-| `data.settings[].key` | "showcase" \| "merchant-invites" \| "till-redemption" | yes |  |
+| `data.settings[].key` | "showcase" \| "merchant-invites" \| "till-redemption" \| "customer-tiers" | yes |  |
 | `data.settings[].mode` | "DEFAULT" \| "ON" \| "OFF" \| "PERCENTAGE" | yes |  |
 | `data.settings[].percentage` | integer \| null | yes | range 1–99 |
 

@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchListPage, keysetPagePosition, mapListResult, toPaginatedServiceResult, type ListPageSpec } from "../list-page";
+import { fetchListPage, fetchSegmentedPage, keysetPagePosition, mapListResult, toPaginatedServiceResult, type ListPageSpec } from "../list-page";
 import { timestampIdKeyset } from "../list-query/keyset-cursor";
 import { CursorPaginationUnsupportedError, InvalidListCursorError } from "../persistence.errors";
 
@@ -110,6 +110,65 @@ describe("fetchListPage", () => {
 			),
 		).rejects.toBeInstanceOf(InvalidListCursorError);
 		await expect(fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: "abc" }, buildSpec({ keyset: undefined }))).rejects.toBeInstanceOf(CursorPaginationUnsupportedError);
+	});
+});
+
+describe("fetchSegmentedPage", () => {
+	/** Three rows in the first group, two in the second — each read in the list order. */
+	const FIRST_GROUP: readonly Row[] = [
+		{ id: "a-3", createdAt: EPOCH },
+		{ id: "a-2", createdAt: EPOCH },
+		{ id: "a-1", createdAt: EPOCH },
+	];
+	const SECOND_GROUP: readonly Row[] = [
+		{ id: "b-2", createdAt: EPOCH },
+		{ id: "b-1", createdAt: EPOCH },
+	];
+	const FIRST: Where = { sku: "a" };
+	const SECOND: Where = { sku: "b" };
+	const LIST_WHERE: Where = { sku: "t-1" };
+
+	/** The group a segmented `where` (`{ AND: [list where, segment] }`) narrows to. */
+	function groupOf(where: Where): readonly Row[] {
+		return JSON.stringify(where) === JSON.stringify({ AND: [LIST_WHERE, FIRST] }) ? FIRST_GROUP : SECOND_GROUP;
+	}
+
+	function segmentedSpec(): ListPageSpec<Where, OrderBy, Row> & { readonly findMany: ReturnType<typeof vi.fn<ListPageSpec<Where, OrderBy, Row>["findMany"]>> } {
+		return {
+			...buildSpec({ count: (where: Where) => Promise.resolve(groupOf(where).length) }),
+			findMany: vi.fn<ListPageSpec<Where, OrderBy, Row>["findMany"]>((args) => {
+				const start = args.skip ?? 0;
+				return Promise.resolve(groupOf(args.where).slice(start, start + args.take));
+			}),
+		};
+	}
+
+	const ids = (rows: readonly Row[]): string[] => rows.map((row: Row): string => row.id);
+
+	it("lists every row of the first group before the second, across pages", async () => {
+		const spec = segmentedSpec();
+		const first = await fetchSegmentedPage({ page: 1, limit: PAGE_SIZE }, spec, [FIRST, SECOND]);
+		const second = await fetchSegmentedPage({ page: 2, limit: PAGE_SIZE }, spec, [FIRST, SECOND]);
+		const third = await fetchSegmentedPage({ page: 3, limit: PAGE_SIZE }, spec, [FIRST, SECOND]);
+		expect([ids(first.items), ids(second.items), ids(third.items)]).toEqual([["a-3", "a-2"], ["a-1", "b-2"], ["b-1"]]);
+		expect(second).toEqual(expect.objectContaining({ total: TOTAL_ROWS, page: 2, totalPages: 3, hasNext: true, hasPrevious: true, nextCursor: null }));
+		expect(third).toEqual(expect.objectContaining({ hasNext: false }));
+	});
+
+	it("reads only the groups the page touches, skipping into the later group", async () => {
+		const spec = segmentedSpec();
+		await fetchSegmentedPage({ page: 3, limit: PAGE_SIZE }, spec, [FIRST, SECOND]);
+		expect(spec.findMany).toHaveBeenCalledTimes(1);
+		expect(spec.findMany).toHaveBeenCalledWith({ where: { AND: [LIST_WHERE, SECOND] }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: 1, take: PAGE_SIZE });
+	});
+
+	it("is an empty first page with no groups", async () => {
+		const result = await fetchSegmentedPage({ page: 1, limit: PAGE_SIZE }, segmentedSpec(), []);
+		expect(result).toEqual(expect.objectContaining({ items: [], total: 0, page: 1, totalPages: 1, hasNext: false }));
+	});
+
+	it("refuses a cursor: it cannot say which group it is in", async () => {
+		await expect(fetchSegmentedPage({ page: 1, limit: PAGE_SIZE, cursor: "abc" }, segmentedSpec(), [FIRST, SECOND])).rejects.toBeInstanceOf(CursorPaginationUnsupportedError);
 	});
 });
 

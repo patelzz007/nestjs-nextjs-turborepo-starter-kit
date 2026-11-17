@@ -1,11 +1,13 @@
-import { epochMs, type EpochMs } from "@workspace/shared";
+import { epochMs, type CustomerTier, type EpochMs } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
+import type { CustomerTierAccess } from "../../../../platform/domain/customer-tier-access";
 import { ReferrerReward } from "../entities/referrer-reward.entity";
 import {
 	RewardAudienceReferralsError,
 	RewardExpiredError,
 	RewardJustSoldOutError,
+	RewardMinimumTierInvalidError,
 	RewardNotDraftError,
 	RewardNotEditableError,
 	RewardNotFoundError,
@@ -15,6 +17,7 @@ import {
 	RewardRejectionReasonBlankError,
 	RewardReservationMissingError,
 	RewardSoldOutError,
+	RewardTierLockedError,
 	RewardTransitionNotAllowedError,
 } from "../errors/reward.errors";
 import {
@@ -96,11 +99,29 @@ function reviewOf(row: RewardRowState, status: RewardLifecycleStatus): RewardRev
 	};
 }
 
-/** Referrals bring in new people, which a reward for chosen customers is not for. */
+/**
+ * Referrals bring in new people, which a reward for chosen customers is not for; and a newcomer starts at Bronze, so a
+ * reward for a higher minimum tier cannot have referrals either (ADR 085).
+ */
 function assertAudienceAllowsReferrals(audience: RewardAudience, referralsEnabled: boolean): void {
 	if (!audience.isEveryone && referralsEnabled) {
 		throw new RewardAudienceReferralsError();
 	}
+	if (audience.narrowsByTier && referralsEnabled) {
+		throw new RewardMinimumTierInvalidError("referrals");
+	}
+}
+
+/**
+ * The audience after a revision: the new audience (or the current one) with the minimum tier asked for. Left out, a
+ * reward still for everyone keeps its minimum tier, and one now for chosen customers is open to them at any tier.
+ */
+function revisedAudience(current: RewardAudience, revision: RewardRevision): RewardAudience {
+	const audience = revision.audience ?? current;
+	if (revision.minimumTier !== undefined) {
+		return audience.withMinimumTier(revision.minimumTier);
+	}
+	return audience.isEveryone ? audience.withMinimumTier(current.isEveryone ? current.minimumTier : audience.minimumTier) : audience;
 }
 
 function assertWholeQuantity(quantity: number): void {
@@ -385,8 +406,9 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		this.rules = revision.rules ?? this.rules;
 		this.startDate = revision.startDate === undefined ? this.startDate : revision.startDate;
 		this.referralsEnabled = revision.referralsEnabled ?? this.referralsEnabled;
-		if (revision.audience !== undefined && !revision.audience.equals(this.audience)) {
-			this.audience = revision.audience;
+		const audience = revisedAudience(this.audience, revision);
+		if (!audience.equals(this.audience)) {
+			this.audience = audience;
 			this.audienceReplacement = { actorId: manager.actorId, at: now };
 		}
 		assertAudienceAllowsReferrals(this.audience, this.referralsEnabled);
@@ -410,6 +432,25 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 			this.expiryDate = revision.expiryDate;
 		}
 		this.reviseReferrer(revision, offerChanged, now);
+		this.definitionChanged = true;
+		this.touch(now);
+		this.record(new RewardRevised(now, this.facts()));
+	}
+
+	/**
+	 * Changes who may claim the reward from now on, in every status the reward lives in — a draft, one in review, a
+	 * published one — without another review (ADR 085): a tier narrows or widens who claims, never what the reward gives.
+	 * Claims already made stand. Refused for a reward for chosen customers or with referrals (above Bronze), and outside
+	 * the caller's stores (as not found).
+	 */
+	public changeMinimumTier(minimumTier: CustomerTier, manager: RewardManager, now: EpochMs): void {
+		this.assertManageableBy(manager.locationIds);
+		const audience = this.audience.withMinimumTier(minimumTier);
+		assertAudienceAllowsReferrals(audience, this.referralsEnabled);
+		if (audience.equals(this.audience)) {
+			return;
+		}
+		this.audience = audience;
 		this.definitionChanged = true;
 		this.touch(now);
 		this.record(new RewardRevised(now, this.facts()));
@@ -483,12 +524,16 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 
 	// ── Inventory (claims and checkout, through RewardInventoryPort) ────
 
-	/** A consumer may start a claim: published, unexpired, in stock. Otherwise 404 / 400 / 409 as today. */
-	public assertClaimable(now: EpochMs, customerUserId: string, holdsUnit = false): ClaimableRewardFacts {
+	/**
+	 * A consumer may start a claim: published, unexpired, in stock, and the customer reaches its minimum tier (ADR 085).
+	 * Otherwise 404 / 400 / 409 as today, and 403 for a reward above the customer's tier (they can see it, locked).
+	 */
+	public assertClaimable(now: EpochMs, customerUserId: string, tierAccess: CustomerTierAccess, holdsUnit = false): ClaimableRewardFacts {
 		// A reward for chosen customers does not exist for anyone else (no existence oracle).
 		if (this.kind !== "CONSUMER" || this.review.status !== "PUBLISHED" || !this.audience.includes(customerUserId)) {
 			throw new RewardNotFoundError(this.id);
 		}
+		this.assertTierReached(tierAccess);
 		if (this.expiryDate < now) {
 			throw new RewardExpiredError();
 		}
@@ -499,8 +544,8 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	}
 
 	/** Holds one unit while a customer enters their claim code: remaining −1, reserved +1, so everyone sees the count drop. */
-	public holdUnit(now: EpochMs, customerUserId: string): void {
-		this.assertSellableTo(now, customerUserId);
+	public holdUnit(now: EpochMs, customerUserId: string, tierAccess: CustomerTierAccess): void {
+		this.assertSellableTo(now, customerUserId, tierAccess);
 		this.inventory = { ...this.inventory, quantityRemaining: this.inventory.quantityRemaining - 1, quantityReserved: this.inventory.quantityReserved + 1 };
 		this.touch(now);
 	}
@@ -513,8 +558,8 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	}
 
 	/** Takes one unit for a claim: remaining −1, reserved +1, claims +1. */
-	public reserve(now: EpochMs, customerUserId: string): ClaimableRewardFacts {
-		this.assertSellableTo(now, customerUserId);
+	public reserve(now: EpochMs, customerUserId: string, tierAccess: CustomerTierAccess): ClaimableRewardFacts {
+		this.assertSellableTo(now, customerUserId, tierAccess);
 		this.inventory = {
 			...this.inventory,
 			quantityRemaining: this.inventory.quantityRemaining - 1,
@@ -558,10 +603,18 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 
 	// ── Internals ───────────────────────────────────────────────────────
 
-	private assertSellableTo(now: EpochMs, customerUserId: string): void {
+	/** A customer below the reward's minimum tier sees it locked and cannot take it (ADR 085). */
+	private assertTierReached(tierAccess: CustomerTierAccess): void {
+		if (!this.audience.isOpenTo(tierAccess)) {
+			throw new RewardTierLockedError(this.id, this.audience.minimumTier);
+		}
+	}
+
+	private assertSellableTo(now: EpochMs, customerUserId: string, tierAccess: CustomerTierAccess): void {
 		if (!this.audience.includes(customerUserId)) {
 			throw new RewardNotFoundError(this.id);
 		}
+		this.assertTierReached(tierAccess);
 		const sellable =
 			this.kind === "CONSUMER" && this.review.status === "PUBLISHED" && this.expiryDate >= now && this.inventory.quantityRemaining > 0 && this.availableAtActiveStore;
 		if (!sellable) {

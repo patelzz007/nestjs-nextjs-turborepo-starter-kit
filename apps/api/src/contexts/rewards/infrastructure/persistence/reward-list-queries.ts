@@ -1,9 +1,12 @@
 import type { Prisma, Reward } from "@prisma/client";
 
 import {
+	CustomerTierSchema,
+	isTierAtLeast,
 	TENANT_OPERATING_LIFECYCLE_STATE,
 	adminPendingRewardListQuery,
 	rewardListQuery,
+	type CustomerTier,
 	type AdminPendingRewardListQuery,
 	type AdminPendingRewardListSortField,
 	type RewardListQuery,
@@ -13,6 +16,7 @@ import {
 } from "@workspace/shared";
 
 import type { MerchantAccessGrant } from "../../../../platform/application/ports/authorization.port";
+import type { CustomerTierAccess } from "../../../../platform/domain/customer-tier-access";
 import { timestampIdKeyset, type ListKeyset } from "../../../../platform/infrastructure/persistence/list-query/keyset-cursor";
 import { buildListOrder, type ListOrder, type SortColumns } from "../../../../platform/infrastructure/persistence/list-query/list-order";
 import { fieldWhere, toPrismaEqualityFilter } from "../../../../platform/infrastructure/persistence/list-query/prisma-filter";
@@ -84,6 +88,7 @@ export const MARKETPLACE_REWARD_SELECT = {
 	referrerRewardId: true,
 	locationScopeType: true,
 	audienceType: true,
+	minimumTier: true,
 	createdAt: true,
 	updatedAt: true,
 	isDeleted: true,
@@ -129,14 +134,49 @@ export function rewardAudienceWhere(viewerUserId: string | null): Prisma.RewardW
 	return { OR: [{ audienceType: "EVERYONE" }, { audienceMembers: { some: { userId: viewerUserId, isDeleted: false } } }] };
 }
 
+/** Whether the list query asked for locked rewards too (`includeLocked=true`). */
+function includesLocked(query: RewardListQuery): boolean {
+	return query.includeLocked === true || query.includeLocked === "true";
+}
+
+/** The minimum tiers a customer at `tier` reaches. */
+function reachedTiers(tier: CustomerTier): CustomerTier[] {
+	return CustomerTierSchema.options.filter((minimumTier: CustomerTier): boolean => isTierAtLeast(tier, minimumTier));
+}
+
+/**
+ * The rewards the viewer may claim by tier (ADR 085): every reward while tiers are off or when the client shows locked
+ * rewards; otherwise those whose minimum tier the viewer reaches.
+ */
+export function rewardTierWhere(tierAccess: CustomerTierAccess, includeLocked: boolean): Prisma.RewardWhereInput {
+	if (tierAccess.kind === "off" || includeLocked) {
+		return {};
+	}
+	return { minimumTier: { in: reachedTiers(tierAccess.tier) } };
+}
+
+/**
+ * The marketplace's groups when locked rewards are shown (ADR 085): the rewards the viewer can claim, then the ones their
+ * tier locks — so claimable offers lead on every page. `null` when the list is one group: tiers are off, or only
+ * claimable rewards are listed.
+ */
+export function marketplaceTierSegments(query: RewardListQuery, tierAccess: CustomerTierAccess): readonly Prisma.RewardWhereInput[] | null {
+	if (tierAccess.kind === "off" || !includesLocked(query)) {
+		return null;
+	}
+	const reached: CustomerTier[] = reachedTiers(tierAccess.tier);
+	return [{ minimumTier: { in: reached } }, { minimumTier: { notIn: reached } }];
+}
+
 /** Published, in-stock, unexpired consumer rewards of operating merchants the viewer may see + the filter AST + search. */
-export function buildMarketplaceWhere(query: RewardListQuery, viewerUserId: string | null, now = BigInt(Date.now())): Prisma.RewardWhereInput {
+export function buildMarketplaceWhere(query: RewardListQuery, viewerUserId: string | null, tierAccess: CustomerTierAccess, now = BigInt(Date.now())): Prisma.RewardWhereInput {
 	const filter = query.filter;
 	return {
 		AND: [
 			{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: now } },
 			OPERATING_MERCHANT_WHERE,
 			rewardAudienceWhere(viewerUserId),
+			rewardTierWhere(tierAccess, includesLocked(query)),
 			...fieldWhere(toPrismaEqualityFilter(filter?.category), (category) => ({ category })),
 			...fieldWhere(toPrismaEqualityFilter(filter?.city), (city): Prisma.RewardWhereInput => ({ tenant: { merchantProfile: { city } } })),
 			...fieldWhere(toPrismaEqualityFilter(filter?.tenantId), (tenantId) => ({ tenantId })),

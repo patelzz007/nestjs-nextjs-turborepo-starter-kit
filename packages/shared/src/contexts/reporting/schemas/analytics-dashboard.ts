@@ -19,6 +19,7 @@ import { SaleCurrencySchema } from "../../pos/schemas/redemption";
 import { MerchantBusinessCategorySchema, PilotCitySchema } from "../../tenancy/schemas/tenant-enums";
 import { RewardClaimStatusSchema } from "../../claims/schemas/claim-enums";
 import { RewardRedemptionMethodSchema } from "../../pos/schemas/pos-enums";
+import { CustomerTierSchema } from "../../tiers/schemas/customer-tier";
 
 // ── Queries ────────────────────────────────────────────────────────────────
 
@@ -142,6 +143,17 @@ export const RedemptionMethodBreakdownSchema = z.object({
 
 export type RedemptionMethodBreakdown = z.output<typeof RedemptionMethodBreakdownSchema>;
 
+/**
+ * Redemptions per customer tier, as each redemption recorded the customer's tier at that moment (ADR 085), so the split
+ * never shifts as tiers change later. Every tier is listed, zero included.
+ */
+export const CustomerTierBreakdownSchema = z.object({
+	tier: CustomerTierSchema,
+	redemptions: CountSchema,
+});
+
+export type CustomerTierBreakdown = z.output<typeof CustomerTierBreakdownSchema>;
+
 export const MerchantAnalyticsDashboardSchema = z.object({
 	range: AnalyticsReportRangeSchema,
 	currency: SaleCurrencySchema,
@@ -154,6 +166,8 @@ export const MerchantAnalyticsDashboardSchema = z.object({
 	/** Most claims + redemptions first, at most `MERCHANT_REWARD_BREAKDOWN_LIMIT`. */
 	byReward: z.array(MerchantRewardBreakdownSchema),
 	byRedemptionMethod: z.array(RedemptionMethodBreakdownSchema),
+	/** Shown only while tiers are on (`GET /tiers/availability`). */
+	byCustomerTier: z.array(CustomerTierBreakdownSchema),
 });
 
 export type MerchantAnalyticsDashboard = z.output<typeof MerchantAnalyticsDashboardSchema>;

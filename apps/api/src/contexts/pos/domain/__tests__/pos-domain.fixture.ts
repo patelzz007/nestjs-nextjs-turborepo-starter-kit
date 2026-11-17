@@ -45,6 +45,7 @@ export function newSale(presentedClaims: readonly PresentedClaim[], patch: Parti
 		idempotencyKey: "idem-1",
 		requestHash: "hash-1",
 		presented: presentedClaims,
+		customerTier: "BRONZE",
 		...patch,
 	};
 }

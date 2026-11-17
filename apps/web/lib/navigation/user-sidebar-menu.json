@@ -115,6 +115,13 @@
 					"disabled": false
 				},
 				{
+					"title": "My Tier",
+					"labelKey": "earn-more.my-tier",
+					"url": "/dashboard/tier",
+					"icon": "Award",
+					"disabled": false
+				},
+				{
 					"title": "Points",
 					"labelKey": "earn-more.points",
 					"url": "/dashboard/points",

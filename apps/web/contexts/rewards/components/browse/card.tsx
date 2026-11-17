@@ -3,7 +3,9 @@
 import { RewardInventoryBar } from "@/contexts/rewards/components/detail/inventory-bar";
 import { RewardCategoryVisual } from "@/contexts/rewards/components/detail/category-visual";
 import { RewardMerchantAvatar } from "@/components/dashboard/shared/merchant-avatar";
-import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type CustomerTier, type RewardResponse } from "@workspace/shared";
+import { TierBadge } from "@workspace/client/lib/contexts/tiers";
+import { hasTierMark, isRewardLockedFor } from "@/contexts/tiers";
 import { Badge } from "@workspace/ui/components/badge";
 import { isRewardJustForViewer, JUST_FOR_YOU_LABEL } from "@/contexts/rewards/lib/reward-audience";
 import { buttonVariants } from "@workspace/ui/components/button";
@@ -22,14 +24,17 @@ export interface RewardCardProps {
 	readonly detailPathPrefix?: string;
 	/** Loads the cover eagerly — only for the first card above the fold. */
 	readonly priority?: boolean;
+	/** The viewer's tier while tiers are on (ADR 085); `null` while they are off. */
+	readonly viewerTier?: CustomerTier | null;
 }
 
-/** Consumer reward tile — the offer's cover, then merchant context, copy and scarcity. */
-export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboardRewards, priority = false }: RewardCardProps): React.JSX.Element {
+/** Consumer reward tile — the offer's cover, then merchant context, copy and scarcity. A locked reward is a teaser (ADR 085). */
+export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboardRewards, priority = false, viewerTier = null }: RewardCardProps): React.JSX.Element {
 	const expiryLabel = formatEpochMs(reward.expiryDate, "date", PLATFORM_DISPLAY_REGION);
 	const percentLeft = reward.quantityTotal > 0 ? Math.round((reward.quantityRemaining / reward.quantityTotal) * 100) : 0;
 	const isLowStock = percentLeft > 0 && percentLeft <= 20;
 	const isSoldOut = reward.quantityRemaining === 0;
+	const isLocked = isRewardLockedFor(reward, viewerTier);
 	const [cover] = reward.images;
 
 	return (
@@ -66,6 +71,7 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboard
 						</Badge>
 						<Badge variant="outline">{rewardTypeLabel(reward.rewardType)}</Badge>
 						{isRewardJustForViewer(reward) ? <Badge variant="primary-light">{JUST_FOR_YOU_LABEL}</Badge> : null}
+						{hasTierMark(reward, viewerTier) ? <TierBadge tier={reward.minimumTier} locked={isLocked} /> : null}
 					</div>
 				</div>
 			</div>
@@ -90,7 +96,7 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboard
 					href={childPath(detailPathPrefix, reward.id)}
 					className={cn(buttonVariants({ variant: isSoldOut ? "outline" : "default" }), "w-full justify-center", isSoldOut ? "pointer-events-none opacity-60" : undefined)}
 					aria-disabled={isSoldOut}>
-					{isSoldOut ? "Unavailable" : "View offer"}
+					{isSoldOut ? "Unavailable" : isLocked ? "See how to unlock" : "View offer"}
 				</Link>
 			</div>
 		</article>

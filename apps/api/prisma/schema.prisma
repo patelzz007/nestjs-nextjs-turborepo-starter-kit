@@ -257,6 +257,8 @@ model User {
   rewardLegalAcceptances           RewardLegalAcceptance[]
   rewardNotifications              RewardNotification[]
   rewardAuditLogs                  RewardAuditLog[]
+  customerTierStanding             CustomerTierStanding?
+  customerTierChanges              CustomerTierChange[]
   avatar                           UserAvatar?
   githubAccountLink                GithubAccountLink?
   githubWebhookSubscriptions       GithubWebhookSubscription[]
@@ -2177,6 +2179,8 @@ model Reward {
   locationScopeType      LocationScopeType  @default(ALL_LOCATIONS)
   /// SELECTED_CUSTOMERS: only the customers in `audienceMembers` see and claim it (never with referrals).
   audienceType           RewardAudienceType @default(EVERYONE)
+  /// The lowest tier that may claim it (ADR 085). Above BRONZE only for an EVERYONE consumer reward without referrals.
+  minimumTier            CustomerTier       @default(BRONZE)
   submittedForReviewAt   BigInt?
   autoPublishAt          BigInt?
   reviewedAt             BigInt?
@@ -2732,6 +2736,8 @@ model RewardRedemption {
   /// (`RewardSale.idempotencyKey`); a claim is redeemed at most once (`claimId` is unique).
   saleId           String
   redeemedAt       BigInt
+  /// The customer's tier at the moment of this redemption (ADR 085), so "redemptions by tier" never shifts later.
+  customerTier     CustomerTier
 
   claim        RewardClaim         @relation(fields: [claimId], references: [id], onDelete: Restrict)
   tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2799,6 +2805,124 @@ model RewardSale {
   @@index([userId, paidAt])
   @@index([locationId])
   @@index([paidAt])
+}
+
+// ============================================================================
+// Tiers (ADR 085)
+// ============================================================================
+
+/// A customer's platform-wide tier, lowest first. Mirrors `CustomerTierSchema` (packages/shared).
+enum CustomerTier {
+  BRONZE
+  SILVER
+  GOLD
+  DIAMOND
+}
+
+/// Why a customer's tier changed. Mirrors `CustomerTierChangeReasonSchema` (packages/shared).
+enum CustomerTierChangeReason {
+  PROMOTION
+  DEMOTION
+}
+
+/// A customer's tier as of their last evaluation (ADR 085). No row means Bronze: a row is written the first time a
+/// redemption or the nightly review evaluates them. The tiers context is the only writer.
+/// RLS: the customer reads their own row; the till's API key reads the rows of its tenant's customers (67-customer-tiers.sql);
+/// every write, and staff and merchant reads, go through `tiers.*` system operations.
+/// @extends BaseModel
+model CustomerTierStanding {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId              String
+  tier                CustomerTier  @default(BRONZE)
+  /// Counted redemptions in the tier window at the last evaluation (capped per merchant, staff redemptions left out).
+  countedRedemptions  Int           @default(0)
+  /// When the tier was last reached by a promotion; null while the customer has never been promoted.
+  promotedAt          BigInt?
+  /// End of the tier hold: no demotion before it. Null when the customer was never promoted.
+  holdUntil           BigInt?
+  /// A pending demotion warning: the tier the customer will fall to, when, and when they were told. All three set
+  /// together, or none.
+  demotionWarningTier CustomerTier?
+  demotionDueAt       BigInt?
+  demotionWarnedAt    BigInt?
+  /// When the tiers context last evaluated this customer.
+  evaluatedAt         BigInt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId], where: { isDeleted: false })
+  /// The admin distribution: how many customers stand at each tier.
+  @@index([tier])
+  /// The nightly review's warnings that fall due.
+  @@index([demotionDueAt])
+}
+
+/// One change of a customer's tier (ADR 085): its tier history, shown to the customer and to platform staff. Append-only.
+/// RLS: the customer reads their own rows; writes and staff reads go through `tiers.*` system operations.
+/// @extends BaseModel
+model CustomerTierChange {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId             String
+  fromTier           CustomerTier
+  toTier             CustomerTier
+  reason             CustomerTierChangeReason
+  /// Counted redemptions in the tier window when the change happened.
+  countedRedemptions Int
+  occurredAt         BigInt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// A customer's history, newest first.
+  @@index([userId, occurredAt(sort: Desc)])
+}
+
+/// The platform's tier rules (ADR 085): one row, edited by platform staff with a reason. The nightly review applies a
+/// change. `TierRulesSchema` (packages/shared) validates every write; `DEFAULT_TIER_RULES` seeds it.
+/// RLS: bypass only (`tiers.settings.*` system operations).
+/// @extends BaseModel
+model CustomerTierSettings {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// Always "default": the table holds exactly one row.
+  key              String @unique @db.VarChar(20)
+  silverThreshold  Int
+  goldThreshold    Int
+  diamondThreshold Int
+  windowDays       Int
+  perMerchantCap   Int
+  holdDays         Int
+  warningDays      Int
+  /// Why the rules were last changed.
+  reason           String @db.VarChar(500)
 }
 
 // ============================================================================

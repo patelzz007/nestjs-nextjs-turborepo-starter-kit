@@ -116,6 +116,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"NotificationSuppression",
 		"TenantBroadcastStrike",
 		"TenantRateLimitOverride",
+		"CustomerTierSettings",
 	],
 	geo_reference: ["Region", "Subregion", "Country", "State", "City"],
 	user_identity: ["User"],
@@ -147,6 +148,8 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"RewardClaimHold",
 		"RewardLegalAcceptance",
 		"RewardNotification",
+		"CustomerTierStanding",
+		"CustomerTierChange",
 	],
 };
 

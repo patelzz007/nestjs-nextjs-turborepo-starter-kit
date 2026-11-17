@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Patch, Post, Put, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
@@ -9,7 +9,9 @@ import {
 	MerchantRewardListQuerySchema,
 	MerchantRewardSummaryQuerySchema,
 	MerchantRewardSummarySchema,
+	MerchantSetRewardMinimumTierSchema,
 	MerchantUpdateRewardSchema,
+	type MerchantSetRewardMinimumTierInput,
 	TenantSlugParamSchema,
 	RewardResponseSchema,
 	UuidParamSchema,
@@ -37,6 +39,7 @@ import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presenta
 import type { MerchantActor } from "../../../../platform/presentation/http/security/api-keys/merchant-actor";
 import { CreateRewardCommand } from "../../application/commands/create-reward/create-reward.command";
 import { ReviseRewardCommand } from "../../application/commands/revise-reward/revise-reward.command";
+import { SetRewardMinimumTierCommand } from "../../application/commands/set-reward-minimum-tier/set-reward-minimum-tier.command";
 import { SubmitRewardForReviewCommand } from "../../application/commands/submit-reward-for-review/submit-reward-for-review.command";
 import { GetRewardAudienceQuery } from "../../application/queries/get-reward-audience/get-reward-audience.query";
 import { GetTenantRewardQuery } from "../../application/queries/get-tenant-reward/get-tenant-reward.query";
@@ -160,5 +163,21 @@ export class TenantRewardsController {
 		@ZodParams(apiContract.tenants.rewards.publish.input) params: { tenantSlug: string; rewardId: string },
 	): Promise<RewardResponse> {
 		return this.commandBus.execute(new SubmitRewardForReviewCommand(actor, { tenantId: merchant.tenantId, rewardId: params.rewardId }));
+	}
+
+	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@Put(":rewardId/minimum-tier")
+	@ApiOperation({
+		summary: "Set the lowest customer tier that may claim a reward (a draft, one in review or a published one; no new review; claims already made stand)",
+	})
+	@ZodResponse(RewardResponseSchema, { description: "The reward with its new minimum tier" })
+	public setMinimumTier(
+		@GetMerchantActor() merchant: MerchantActor,
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, rewardId: UuidParamSchema }).strict())
+		params: { tenantSlug: string; rewardId: string },
+		@ZodBody(MerchantSetRewardMinimumTierSchema) body: MerchantSetRewardMinimumTierInput,
+	): Promise<RewardResponse> {
+		return this.commandBus.execute(new SetRewardMinimumTierCommand(actor, { tenantId: merchant.tenantId, rewardId: params.rewardId, minimumTier: body.minimumTier }));
 	}
 }

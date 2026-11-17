@@ -1,11 +1,8 @@
 import { evaluateStoreFeatureFlag, type StoreFeatureFlagKey, type StoreFlagTarget } from "@workspace/shared";
 
-import type { SystemOperationName } from "../../../../platform/application/system-operation-names";
+import { FEATURE_FLAGS_EVALUATE_OPERATION as EVALUATE_OPERATION } from "../../application/ports/feature-flags.operations";
 import type { StoreFeatureFlags } from "../../application/ports/store-feature-flags.port";
 import type { FeatureFlagTransactions } from "./prisma-feature-flag.store";
-
-/** Reads only the two flag tables (`feature_flags.evaluate`): a till's request learns nothing else. */
-const EVALUATE_OPERATION: SystemOperationName = "feature_flags.evaluate";
 
 /** `StoreFeatureFlags` over Prisma (enhancement 5.11): one small read per question, no cache (a change applies at once). */
 export class PrismaStoreFeatureFlags implements StoreFeatureFlags {

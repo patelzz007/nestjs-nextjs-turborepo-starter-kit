@@ -53,6 +53,8 @@ export async function seedCheckout(input: SeedCheckoutInput): Promise<string> {
 			redemptionMethod: "SCAN",
 			saleId: sale.id,
 			redeemedAt: input.paidAt,
+			// Bronze until customer-tiers.ts replays every customer's history and records the tier each redemption had.
+			customerTier: "BRONZE",
 		},
 	});
 	const metadata = {

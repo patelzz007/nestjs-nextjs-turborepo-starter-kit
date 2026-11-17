@@ -9,6 +9,7 @@ import { UserBanPanel } from "@/contexts/identity/components/users/user-ban-pane
 import { UserErasurePanel } from "@/contexts/identity/components/users/user-erasure-panel";
 import { UserMfaRecoveryPanel } from "@/contexts/identity/components/users/user-mfa-recovery-panel";
 import { UserProfileOverview } from "@/contexts/identity/components/users/user-profile-overview";
+import { UserTierCard } from "@/contexts/tiers";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { DetailBreadcrumb } from "@/components/common/detail-breadcrumb";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
@@ -62,6 +63,8 @@ export default function UserDetailView({ userId, initialUser, initialGrantsPage 
 					</header>
 
 					<UserProfileOverview user={user} />
+
+					<UserTierCard userId={userId} />
 
 					<UserBanPanel user={user} />
 					<UserErasurePanel user={user} />

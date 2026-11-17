@@ -49,6 +49,8 @@ function preview(overrides: Partial<{ valid: boolean; invalidReason: string | nu
 		valid: true,
 		invalidReason: null,
 		minSpendMinor: null,
+		// The API always names the customer's tier (ADR 085); this till screen does not show it.
+		customerTier: "BRONZE",
 		...overrides,
 	});
 }

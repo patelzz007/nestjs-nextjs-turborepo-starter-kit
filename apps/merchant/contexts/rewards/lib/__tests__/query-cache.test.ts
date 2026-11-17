@@ -48,6 +48,7 @@ function reward(title: string): RewardResponse {
 		locationScopeType: "ALL_LOCATIONS",
 		locationIds: [],
 		audienceType: "EVERYONE",
+		minimumTier: "BRONZE",
 		createdAt: NOW,
 		updatedAt: NOW,
 		isDeleted: false,

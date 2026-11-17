@@ -1,11 +1,12 @@
 import { Prisma } from "@prisma/client";
-import { MerchantBusinessCategorySchema, PilotCitySchema, RewardRedemptionMethodSchema } from "@workspace/shared";
+import { CustomerTierSchema, MerchantBusinessCategorySchema, PilotCitySchema, RewardRedemptionMethodSchema } from "@workspace/shared";
 import { z } from "zod";
 
 import type {
 	AnalyticsBreakdownReadPort,
 	CategorySalesRow,
 	CitySalesRow,
+	CustomerTierRow,
 	MerchantBucketSalesRow,
 	MerchantSalesRow,
 	RedemptionMethodRow,
@@ -33,6 +34,8 @@ const StoreBreakdownRowSchema = z.object({
 const RewardBreakdownRowSchema = z.object({ rewardId: z.string(), title: z.string(), claims: IntColumn, redemptions: IntColumn });
 
 const RedemptionMethodRowSchema = z.object({ method: RewardRedemptionMethodSchema, redemptions: IntColumn });
+
+const CustomerTierRowSchema = z.object({ tier: CustomerTierSchema, redemptions: IntColumn });
 
 const MerchantSalesRowSchema = z.object({
 	tenantId: z.string(),
@@ -152,6 +155,20 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 			GROUP BY rd."redemptionMethod"`,
 		);
 		return rows.map((row) => ({ method: row.method, redemptions: row.redemptions }));
+	}
+
+	/** Redemptions per customer tier as recorded at each redemption (ADR 085); tiers without redemptions are absent. */
+	public async byCustomerTier(scope: TenantAnalyticsScope, range: AnalyticsTimeRange): Promise<CustomerTierRow[]> {
+		const rows = await this.sql.rowsFor(
+			scope,
+			CustomerTierRowSchema,
+			Prisma.sql`
+			SELECT rd."customerTier"::text AS tier, COUNT(*)::int AS redemptions
+			FROM "RewardRedemption" rd JOIN "RewardClaim" c ON c.id = rd."claimId"
+			WHERE ${allOf([...redemptionConditions(scope), withinRange(Prisma.sql`rd."redeemedAt"`, range)])}
+			GROUP BY rd."customerTier"`,
+		);
+		return rows.map((row) => ({ tier: row.tier, redemptions: row.redemptions }));
 	}
 
 	/**

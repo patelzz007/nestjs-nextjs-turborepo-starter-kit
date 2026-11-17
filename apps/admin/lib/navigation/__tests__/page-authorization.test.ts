@@ -182,6 +182,8 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/settings/access", needs(PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ)],
 	// Runtime feature flags (enhancement 5.6).
 	["/settings/feature-flags", needs(PERMISSION.FEATURE_FLAG.LIST)],
+	// The tier rules (ADR 085); the route rule also carries the customer-tiers flag.
+	["/settings/tiers", needs(PERMISSION.SYSTEM_SETTINGS.READ)],
 ]);
 
 const SAMPLE_PARAM = "sample-id";

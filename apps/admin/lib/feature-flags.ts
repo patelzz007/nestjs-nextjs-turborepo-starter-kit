@@ -1,4 +1,4 @@
-import { evaluateFeatureFlag, type FeatureFlagKey, type FeatureFlagSetting, type PlatformFeatureFlagKey } from "@workspace/shared";
+import { API_FEATURE_FLAG_DEFAULTS, evaluateFeatureFlag, type FeatureFlagKey, type FeatureFlagSetting, type PlatformFeatureFlagKey } from "@workspace/shared";
 
 import type { AdminServerEnv } from "@/lib/env/env.schema";
 
@@ -7,6 +7,9 @@ export const SHOWCASE_FEATURE: PlatformFeatureFlagKey = "showcase";
 
 /** Merchant invites (`/merchants/invites`): off on a single-tenant deployment, which serves only its seeded tenant. */
 export const MERCHANT_INVITES_FEATURE: PlatformFeatureFlagKey = "merchant-invites";
+
+/** Customer tiers (ADR 085): the Tiers settings section, the tier distribution and a customer's tier on their page. */
+export const CUSTOMER_TIERS_FEATURE: PlatformFeatureFlagKey = "customer-tiers";
 
 /** What the API says about this deployment, beside the admin's own server config. */
 export interface DeploymentFeatures {
@@ -52,8 +55,11 @@ export function resolveEnabledFeatureFlags(
 	const defaults: Readonly<Record<PlatformFeatureFlagKey, boolean>> = {
 		showcase: isShowcaseEnabled(env),
 		"merchant-invites": deployment.merchantInvitesOffered,
+		"customer-tiers": API_FEATURE_FLAG_DEFAULTS["customer-tiers"],
 	};
 	const settingOf = (key: FeatureFlagKey): FeatureFlagSetting | undefined => context.settings.find((setting) => setting.key === key);
-	const keys: readonly PlatformFeatureFlagKey[] = [SHOWCASE_FEATURE, MERCHANT_INVITES_FEATURE];
-	return keys.filter((key) => evaluateFeatureFlag(key, settingOf(key), defaults[key], context.subjectId));
+	const keys: readonly PlatformFeatureFlagKey[] = [SHOWCASE_FEATURE, MERCHANT_INVITES_FEATURE, CUSTOMER_TIERS_FEATURE];
+	// Customer tiers are decided by the API for everyone at once (a percentage reads as off there), so the console
+	// evaluates them without a person too: it never shows tier screens the API would refuse.
+	return keys.filter((key) => evaluateFeatureFlag(key, settingOf(key), defaults[key], key === CUSTOMER_TIERS_FEATURE ? null : context.subjectId));
 }

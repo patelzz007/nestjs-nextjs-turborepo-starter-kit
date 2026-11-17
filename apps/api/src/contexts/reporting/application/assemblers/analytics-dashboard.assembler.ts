@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
 	ADMIN_TOP_MERCHANTS_LIMIT,
 	CUSTOMER_TOP_MERCHANTS_LIMIT,
+	CustomerTierSchema,
 	DEFAULT_SALE_CURRENCY,
 	EpochMsSchema,
 	IanaTimeZoneSchema,
@@ -96,15 +97,17 @@ export class AnalyticsDashboardAssembler {
 		const request = this.resolve(query, IanaTimeZoneSchema.parse(tenant.timeZone));
 		const scope: AnalyticsScope = { kind: "tenant", tenantId, locationScope };
 
-		const [series, totals, firstBillAt, byStore, byReward, byMethod] = await Promise.all([
+		const [series, totals, firstBillAt, byStore, byReward, byMethod, byTier] = await Promise.all([
 			this.facts.activitySeries(scope, request.window),
 			this.facts.activityTotals(scope, request.window, request.previous),
 			this.facts.firstBillAt(scope),
 			this.breakdowns.byStore(scope, request.window),
 			this.breakdowns.byReward(scope, request.window, MERCHANT_REWARD_BREAKDOWN_LIMIT),
 			this.breakdowns.byRedemptionMethod(scope, request.window),
+			this.breakdowns.byCustomerTier(scope, request.window),
 		]);
 		const redemptionsByMethod = new Map(byMethod.map((row) => [row.method, row.redemptions]));
+		const redemptionsByTier = new Map(byTier.map((row) => [row.tier, row.redemptions]));
 
 		const dashboard: MerchantAnalyticsDashboard = {
 			range: request.range,
@@ -130,6 +133,7 @@ export class AnalyticsDashboardAssembler {
 			byStore,
 			byReward: byReward.map((row) => ({ ...row, conversionRate: conversionRate(row.claims, row.redemptions) })),
 			byRedemptionMethod: RewardRedemptionMethodSchema.options.map((method) => ({ method, redemptions: redemptionsByMethod.get(method) ?? 0 })),
+			byCustomerTier: CustomerTierSchema.options.map((tier) => ({ tier, redemptions: redemptionsByTier.get(tier) ?? 0 })),
 		};
 		return { dashboard, subject: { slug: tenant.slug, displayName: tenant.displayName } };
 	}

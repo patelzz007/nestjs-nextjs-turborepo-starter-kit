@@ -73,6 +73,21 @@ CREATE POLICY countries_read ON public."Country"
   FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS customer_tier_changes_system ON public."CustomerTierChange";
+CREATE POLICY customer_tier_changes_system ON public."CustomerTierChange"
+  USING ((SELECT app_rls_bypass_on('CustomerTierChange')))
+  WITH CHECK ((SELECT app_rls_bypass_on('CustomerTierChange')));
+
+DROP POLICY IF EXISTS customer_tier_settings_system ON public."CustomerTierSettings";
+CREATE POLICY customer_tier_settings_system ON public."CustomerTierSettings"
+  USING ((SELECT app_rls_bypass_on('CustomerTierSettings')))
+  WITH CHECK ((SELECT app_rls_bypass_on('CustomerTierSettings')));
+
+DROP POLICY IF EXISTS customer_tier_standings_system ON public."CustomerTierStanding";
+CREATE POLICY customer_tier_standings_system ON public."CustomerTierStanding"
+  USING ((SELECT app_rls_bypass_on('CustomerTierStanding')))
+  WITH CHECK ((SELECT app_rls_bypass_on('CustomerTierStanding')));
+
 DROP POLICY IF EXISTS data_change_logs_select ON public."DataChangeLog";
 CREATE POLICY data_change_logs_select ON public."DataChangeLog"
   FOR SELECT

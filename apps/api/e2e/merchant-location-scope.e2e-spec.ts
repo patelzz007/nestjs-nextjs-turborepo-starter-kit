@@ -107,8 +107,8 @@ describe("Merchant store scope (e2e)", () => {
 			[saleId, TENANT_SEED_IDS.mlkTenant, locationId, aliceId, billTotalMinor, randomUUID(), sha256Hex(saleId), now],
 		);
 		await query(
-			`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
-       VALUES ($1, $2, $3, $4, $5, 'E2E-SCOPE-TILL', 'SCAN', $6, $7)`,
+			`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt", "customerTier")
+       VALUES ($1, $2, $3, $4, $5, 'E2E-SCOPE-TILL', 'SCAN', $6, $7, 'BRONZE')`,
 			[redemptionId, claimId, TENANT_SEED_IDS.mlkTenant, locationId, aliceId, saleId, now],
 		);
 	}

@@ -278,6 +278,37 @@ describe("POS checkout (e2e)", () => {
 		expect(methods.map((method) => String(method.redemptionMethod)).toSorted()).toEqual(["MANUAL", "SCAN"]);
 	});
 
+	it("records the customer's tier on the redemption, read under the till's own key, and re-evaluates the tier after the commit (ADR 085)", async () => {
+		// The till's key reads the standing of its tenant's customers only: a real claim links the customer to the tenant.
+		await query(
+			`INSERT INTO public."TenantCustomer" (id, "tenantId", "userId", "firstClaimedAt", "lastClaimedAt") VALUES ($1, $2, $3, $4, $4)
+       ON CONFLICT ("tenantId", "userId") DO NOTHING`,
+			[randomUUID(), TENANT_SEED_IDS.klTenant, aliceId, Date.now()],
+		);
+		await query(
+			`INSERT INTO public."CustomerTierStanding" (id, "userId", tier, "countedRedemptions", "evaluatedAt") VALUES ($1, $2, 'GOLD', 25, $3)
+       ON CONFLICT ("userId") WHERE "isDeleted" = false DO UPDATE SET tier = 'GOLD', "demotionWarningTier" = NULL, "demotionDueAt" = NULL, "demotionWarnedAt" = NULL`,
+			[randomUUID(), aliceId, Date.now() - DAY_MS],
+		);
+		const startedAt = Date.now();
+		const claim = await createClaim(aliceId);
+
+		const preview = parseSuccessEnvelope(await pos("validate", { token: claim.token }), RedemptionPreviewResponseSchema).data;
+		expect(preview.customerTier).toBe("GOLD");
+		const response = await checkout([{ token: claim.token }]);
+
+		expect(response.statusCode, response.body).toBe(201);
+		const sale = parseSuccessEnvelope(response, RedemptionCheckoutResponseSchema).data;
+		const [redemption] = await query(`SELECT "customerTier" FROM public."RewardRedemption" WHERE "saleId" = $1`, [sale.saleId]);
+		expect(redemption?.customerTier).toBe("GOLD");
+		const evaluated = await eventually(
+			`SELECT "evaluatedAt" FROM public."CustomerTierStanding" WHERE "userId" = $1 AND "isDeleted" = false`,
+			[aliceId],
+			(row) => Number(row?.evaluatedAt) >= startedAt,
+		);
+		expect(Number(evaluated?.evaluatedAt)).toBeGreaterThanOrEqual(startedAt);
+	});
+
 	it("replays a retried checkout instead of redeeming twice, and rejects the key reused for another bill", async () => {
 		const claim = await createClaim(aliceId);
 		const idempotencyKey = randomUUID();

@@ -4,6 +4,7 @@ import { MERCHANT_CAPABILITY, type RewardResponse } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
+import { CUSTOMER_TIER_ACCESS, type CustomerTierAccessPort } from "../../../../../platform/application/ports/customer-tier-access.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { Reward } from "../../../domain/aggregates/reward.aggregate";
 import { decideRewardAudience } from "../../../domain/policies/reward-audience.policy";
@@ -14,6 +15,7 @@ import { REWARD_ID_GENERATOR, REWARDS_UNIT_OF_WORK, type IdGenerator, REWARD_MER
 import type { RewardMerchantDisplayPort } from "../../ports/reward-merchant-display.port";
 import type { RewardsScope } from "../../rewards-scope";
 import { managerLocationIds } from "../merchant-manager-scope";
+import { assertMinimumTierAvailable } from "../minimum-tier-availability";
 import { CreateRewardCommand } from "./create-reward.command";
 
 /**
@@ -28,11 +30,13 @@ export class CreateRewardHandler implements ICommandHandler<CreateRewardCommand,
 		@Inject(REWARD_ID_GENERATOR) private readonly ids: IdGenerator,
 		@Inject(CLOCK) private readonly clock: Clock,
 		@Inject(REWARD_MERCHANT_DISPLAY) private readonly merchantDisplay: RewardMerchantDisplayPort,
+		@Inject(CUSTOMER_TIER_ACCESS) private readonly tiers: Pick<CustomerTierAccessPort, "accessFor">,
 	) {}
 
 	public async execute(command: CreateRewardCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
 		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		await assertMinimumTierAvailable(this.tiers, input.minimumTier);
 
 		// The merchant's name and logo after the commit (a read of its own: not inside this transaction).
 		return this.merchantDisplay.withMerchantDisplay(
@@ -63,7 +67,7 @@ export class CreateRewardHandler implements ICommandHandler<CreateRewardCommand,
 						referrerRewardTitle: input.referrerRewardTitle ?? null,
 						saveAsDraft: input.saveAsDraft,
 						locationScope: decideRewardLocationScope(managerLocationIds(grant), stores, { scopeType: input.locationScopeType, locationIds: input.locationIds }),
-						audience: decideRewardAudience({ audienceType: input.audienceType, customerIds: input.audienceCustomerIds }, knownCustomers),
+						audience: decideRewardAudience({ audienceType: input.audienceType, customerIds: input.audienceCustomerIds }, knownCustomers).withMinimumTier(input.minimumTier),
 						imageFileIds: input.imageFileIds,
 					},
 					now,

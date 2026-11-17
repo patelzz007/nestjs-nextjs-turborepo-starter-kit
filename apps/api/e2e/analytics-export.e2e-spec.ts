@@ -250,7 +250,14 @@ describe("Analytics exports (e2e)", () => {
 			expect(response.headers["content-type"]).toBe(ANALYTICS_EXPORT_CONTENT_TYPES.xlsx);
 			expect(response.headers["content-disposition"]).toContain(`analytics_${TENANT_SEED_SLUGS.mlk}_2019-06-01_2019-06-03_day.xlsx`);
 			const sheets = await readXlsxFile(response.rawPayload);
-			expect(sheets.map((sheet) => sheet.sheet)).toEqual(["Summary", "Activity over time", "Sales by store", "Rewards", "Redemptions by method"]);
+			expect(sheets.map((sheet) => sheet.sheet)).toEqual([
+				"Summary",
+				"Activity over time",
+				"Sales by store",
+				"Rewards",
+				"Redemptions by method",
+				"Redemptions by customer tier",
+			]);
 			const summary = sheets.at(0)?.data ?? [];
 			expect(summary.at(1)).toEqual(["Sales (MYR)", 191.34, 0, 191.34, null]);
 			const series = sheets.at(1)?.data ?? [];

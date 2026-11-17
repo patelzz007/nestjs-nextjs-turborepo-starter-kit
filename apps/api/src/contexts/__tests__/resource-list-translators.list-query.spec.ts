@@ -36,12 +36,15 @@ import { buildProductListOrder, buildProductListWhere } from "../catalog/infrast
 import { buildRewardClaimListOrder, buildRewardClaimListWhere } from "../claims/infrastructure/persistence/claim-list-queries";
 import { buildInAppNotificationListWhere } from "../notifications/infrastructure/persistence/prisma-notification-account.store";
 import { buildRedemptionListOrder, buildRedemptionListWhere } from "../pos/infrastructure/persistence/pos-list-queries";
-import { buildMarketplaceOrder, buildMarketplaceWhere } from "../rewards/public-api";
+import { buildMarketplaceOrder, buildMarketplaceWhere, marketplaceTierSegments } from "../rewards/public-api";
 import { MARKETPLACE_REWARD_SELECT } from "../rewards/infrastructure/persistence/reward-list-queries";
 import type { MerchantAccessGrant } from "../../platform/application/ports/authorization.port";
+import type { CustomerTierAccess } from "../../platform/domain/customer-tier-access";
 import { buildSampleCategoryListOrder } from "../catalog/infrastructure/persistence/prisma-sample-category.repository";
 
 const NOW = BigInt(1_790_812_800_000);
+/** Tiers off (ADR 085): the marketplace adds no tier condition. */
+const TIERS_OFF: CustomerTierAccess = { kind: "off" };
 const USER_ID = "6f1c2a52-9a3e-4d38-9a55-0d1e2f3a4b5c";
 const ORG_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
 const CATEGORY_ID = "8b3e4c74-1c50-4f5a-9c77-2f3a4b5c6d7e";
@@ -171,20 +174,35 @@ describe("audit and email logs", () => {
 describe("rewards", () => {
 	it("only lists live consumer rewards of operating merchants in the marketplace, filtering city through the merchant profile and by merchant", () => {
 		const query = RewardListQuerySchema.parse({ filter: { category: "cafe", city: { in: "MELAKA" } } });
-		expect(buildMarketplaceWhere(query, null, NOW)).toEqual({
+		expect(buildMarketplaceWhere(query, null, TIERS_OFF, NOW)).toEqual({
 			AND: [
 				{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: NOW } },
 				{ tenant: { isDeleted: false, lifecycleState: "ACTIVE" } },
 				{ audienceType: "EVERYONE" },
+				{},
 				{ category: { equals: "cafe" } },
 				{ tenant: { merchantProfile: { city: { in: ["MELAKA"] } } } },
 			],
 		});
-		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({ filter: { tenantId: ORG_ID } }), null, NOW).AND).toContainEqual({ tenantId: { equals: ORG_ID } });
+		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({ filter: { tenantId: ORG_ID } }), null, TIERS_OFF, NOW).AND).toContainEqual({ tenantId: { equals: ORG_ID } });
 		// Signed in: rewards for everyone, plus the ones given to this viewer.
-		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({}), ORG_ID, NOW).AND).toContainEqual({
+		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({}), ORG_ID, TIERS_OFF, NOW).AND).toContainEqual({
 			OR: [{ audienceType: "EVERYONE" }, { audienceMembers: { some: { userId: ORG_ID, isDeleted: false } } }],
 		});
+		// Tiers on (ADR 085): only the rewards the viewer's tier reaches, unless the client shows locked ones too.
+		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({}), ORG_ID, { kind: "on", tier: "SILVER" }, NOW).AND).toContainEqual({
+			minimumTier: { in: ["BRONZE", "SILVER"] },
+		});
+		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({ includeLocked: "true" }), ORG_ID, { kind: "on", tier: "SILVER" }, NOW).AND).not.toContainEqual({
+			minimumTier: { in: ["BRONZE", "SILVER"] },
+		});
+		// Locked rewards shown: claimable ones first, then the locked ones; one group otherwise.
+		expect(marketplaceTierSegments(RewardListQuerySchema.parse({ includeLocked: "true" }), { kind: "on", tier: "SILVER" })).toEqual([
+			{ minimumTier: { in: ["BRONZE", "SILVER"] } },
+			{ minimumTier: { notIn: ["BRONZE", "SILVER"] } },
+		]);
+		expect(marketplaceTierSegments(RewardListQuerySchema.parse({}), { kind: "on", tier: "SILVER" })).toBeNull();
+		expect(marketplaceTierSegments(RewardListQuerySchema.parse({ includeLocked: "true" }), TIERS_OFF)).toBeNull();
 		expect(buildMarketplaceOrder(RewardListQuerySchema.parse({ sort: "expiryDate" })).orderBy).toEqual([{ expiryDate: "asc" }, { id: "asc" }]);
 		const selected = Object.keys(MARKETPLACE_REWARD_SELECT);
 		expect(selected).toContain("title");

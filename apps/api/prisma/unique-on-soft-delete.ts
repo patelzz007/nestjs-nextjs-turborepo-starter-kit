@@ -34,6 +34,8 @@ export const REVIEWED_FULL_UNIQUES: Readonly<Record<string, FullUniqueReason>> =
 	"UserRole.userId,roleId": "JOIN_ROW",
 	"RolePermission.roleId,permissionId": "JOIN_ROW",
 	"Tenant.slug": "NATURAL_KEY_KEPT",
+	// The platform's one tier-rules row (ADR 085), changed in place and never deleted.
+	"CustomerTierSettings.key": "NATURAL_KEY_KEPT",
 	"TenantSlugHistory.slug": "NATURAL_KEY_KEPT",
 	"Location.tenantId,id": "TENANT_SCOPED_ID",
 	"Membership.tenantId,id": "TENANT_SCOPED_ID",

@@ -33,6 +33,7 @@ const DASHBOARD_PAGE_PATHS: readonly string[] = [
 	ROUTES.dashboard.wallet,
 	ROUTES.dashboard.activity,
 	ROUTES.dashboard.referrals,
+	ROUTES.dashboard.tier,
 	ROUTES.dashboard.account,
 	ROUTES.dashboard.notifications,
 	ROUTES.dashboard.notificationSettings,
@@ -60,6 +61,7 @@ describe("ROUTES", () => {
 			wallet: "/dashboard/wallet",
 			activity: "/dashboard/activity",
 			referrals: "/dashboard/referrals",
+			tier: "/dashboard/tier",
 			account: "/dashboard/account",
 			notifications: "/dashboard/notifications",
 			notificationSettings: "/dashboard/notifications/settings",
@@ -71,6 +73,7 @@ describe("ROUTES", () => {
 		expect(ROUTES.dashboard.browse).toBe(APP_LINKS.web.dashboard);
 		expect(ROUTES.dashboard.wallet).toBe(APP_LINKS.web.wallet);
 		expect(ROUTES.dashboard.account).toBe(APP_LINKS.web.account);
+		expect(ROUTES.dashboard.tier).toBe(APP_LINKS.web.tier);
 		expect(ROUTES.unsubscribe).toBe(APP_LINKS.web.unsubscribe);
 		expect(ROUTES.status).toBe(APP_LINKS.web.status);
 		expect(ROUTES.auth.login).toBe(APP_LINKS.auth.login);

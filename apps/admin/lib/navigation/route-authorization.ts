@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { SidebarAuthorizationSchema, type SidebarAuthorization, type SidebarMenuData, type SidebarMenuItem } from "@/lib/navigation/sidebar";
 import { SIDEBAR_MENU_DATA } from "@/lib/navigation/sidebar-menu";
-import { SHOWCASE_FEATURE } from "@/lib/feature-flags";
+import { CUSTOMER_TIERS_FEATURE, SHOWCASE_FEATURE } from "@/lib/feature-flags";
 import { ROUTE_PATTERNS, ROUTES } from "@/lib/routes";
 
 /**
@@ -187,6 +187,8 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	{ prefix: ROUTES.settings.access, authorization: { permissions: [PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ], mode: "any" } },
 	// GET /admin/feature-flags (LIST FEATURE_FLAG): a settings section, not a sidebar item (enhancement 5.6).
 	{ prefix: ROUTES.settings.featureFlags, authorization: { permissions: [PERMISSION.FEATURE_FLAG.LIST] } },
+	// GET /admin/tiers/settings (READ SYSTEM_SETTINGS): the tier rules, only while customer tiers are on (ADR 085).
+	{ prefix: ROUTES.settings.tiers, authorization: { permissions: [PERMISSION.SYSTEM_SETTINGS.READ] }, featureFlag: CUSTOMER_TIERS_FEATURE },
 	// GET + PATCH /sample-category/:id (READ + UPDATE)
 	{ prefix: ROUTE_PATTERNS.catalog.categories.edit, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ, PERMISSION.SAMPLE_CATEGORY.UPDATE], mode: "all" } },
 ];

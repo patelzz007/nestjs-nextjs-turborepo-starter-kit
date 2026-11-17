@@ -3,7 +3,9 @@ import { z } from "zod";
 import { LIST_SLOT_INDEX } from "../../../lib/named-list-index";
 import { BaseResponseSchema, type EpochMs, EpochMsSchema } from "../../../schemas/api/common";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
+import { BooleanQueryParamSchema } from "../../../schemas/api/query-params";
 import { JsonObjectSchema } from "../../../schemas/runtime/json";
+import { CustomerTierSchema, ENTRY_CUSTOMER_TIER, type CustomerTier } from "../../tiers/schemas/customer-tier";
 import { ImageSourceSchema } from "../../files/schemas/storage";
 import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 import { type LocationScopeType, LocationScopeTypeSchema } from "../../tenancy/schemas/tenant";
@@ -37,7 +39,15 @@ export const rewardListQuery = defineListQuery({
 		/** One merchant's live offers (e.g. "More from this merchant" on a reward page). */
 		tenantId: listFilter.uuid({ eq: true }),
 	},
-	params: { search: ListSearchSchema },
+	params: {
+		search: ListSearchSchema,
+		/**
+		 * Also list the rewards whose minimum tier is above the viewer's, to show them locked (ADR 085). Left out,
+		 * only the rewards the viewer can claim come back, so a client that cannot show a locked reward never
+		 * offers a claim that would be refused.
+		 */
+		includeLocked: BooleanQueryParamSchema,
+	},
 	defaultLimit: REWARD_LIST_DEFAULT_LIMIT,
 });
 
@@ -93,6 +103,12 @@ interface RewardAudienceValue {
 	readonly audienceType?: RewardAudienceType | undefined;
 	readonly audienceCustomerIds?: readonly string[] | undefined;
 	readonly referralsEnabled?: boolean | undefined;
+	readonly minimumTier?: CustomerTier | undefined;
+}
+
+/** Whether `minimumTier` narrows who may claim (Bronze, or none sent, is open to every customer). */
+function narrowsByTier(minimumTier: CustomerTier | undefined): boolean {
+	return minimumTier !== undefined && minimumTier !== ENTRY_CUSTOMER_TIER;
 }
 
 /**
@@ -110,6 +126,14 @@ function refineRewardAudience(value: RewardAudienceValue, ctx: z.RefinementCtx):
 	}
 	if (value.audienceType === "SELECTED_CUSTOMERS" && value.referralsEnabled === true) {
 		ctx.addIssue({ code: "custom", message: "A reward for chosen customers cannot have referrals", path: ["referralsEnabled"] });
+	}
+	// ADR 085: a minimum tier narrows a reward for everyone; chosen customers were picked by name already, and a
+	// referred newcomer starts at Bronze, so could never claim a tier-locked reward they were referred to.
+	if (narrowsByTier(value.minimumTier) && value.audienceType === "SELECTED_CUSTOMERS") {
+		ctx.addIssue({ code: "custom", message: "A reward for chosen customers is open to them at any tier", path: ["minimumTier"] });
+	}
+	if (narrowsByTier(value.minimumTier) && value.referralsEnabled === true) {
+		ctx.addIssue({ code: "custom", message: "A reward for a minimum tier cannot have referrals", path: ["referralsEnabled"] });
 	}
 }
 
@@ -164,6 +188,8 @@ export const MerchantCreateRewardSchema = z
 		/** Nothing chosen: the reward is for everyone. */
 		audienceType: RewardAudienceTypeSchema.optional().default("EVERYONE"),
 		audienceCustomerIds: RewardAudienceCustomerIdsSchema.optional().default([]),
+		/** The lowest tier that may claim it (ADR 085); Bronze is every customer. Only for a reward for everyone, without referrals. */
+		minimumTier: CustomerTierSchema.optional().default(ENTRY_CUSTOMER_TIER),
 	})
 	.strict()
 	.superRefine((value, ctx) => {
@@ -202,6 +228,7 @@ export const MerchantRewardFormFieldsSchema = z
 		locationIds: z.array(z.uuid()).optional(),
 		audienceType: RewardAudienceTypeSchema.optional(),
 		audienceCustomerIds: RewardAudienceCustomerIdsSchema.optional(),
+		minimumTier: CustomerTierSchema.optional(),
 	})
 	.strict()
 	.superRefine((value, ctx) => {
@@ -282,15 +309,21 @@ export function mapMerchantCreateRewardFormToInput(form: MerchantCreateRewardFor
 		locationIds: locationScopeType === "SELECTED" ? locationIds : [],
 		audienceType: audience.audienceType,
 		audienceCustomerIds: audience.audienceCustomerIds,
+		minimumTier: audience.minimumTier,
 	};
 }
 
 /** The form's audience as the API takes it: nothing chosen means everyone. */
-function rewardAudienceOfForm(form: MerchantRewardFormValues): { readonly audienceType: RewardAudienceType; readonly audienceCustomerIds: string[] } {
+function rewardAudienceOfForm(form: MerchantRewardFormValues): {
+	readonly audienceType: RewardAudienceType;
+	readonly audienceCustomerIds: string[];
+	readonly minimumTier: CustomerTier;
+} {
 	const audienceCustomerIds = form.audienceCustomerIds ?? [];
+	// A reward for chosen customers is open to them at any tier (ADR 085), so its minimum tier is always Bronze.
 	return form.audienceType === "SELECTED_CUSTOMERS" && audienceCustomerIds.length > 0
-		? { audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [...audienceCustomerIds] }
-		: { audienceType: "EVERYONE", audienceCustomerIds: [] };
+		? { audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [...audienceCustomerIds], minimumTier: ENTRY_CUSTOMER_TIER }
+		: { audienceType: "EVERYONE", audienceCustomerIds: [], minimumTier: form.minimumTier ?? ENTRY_CUSTOMER_TIER };
 }
 
 export function mapMerchantUpdateRewardFormToInput(form: MerchantRewardFormValues): MerchantUpdateRewardInput {
@@ -330,6 +363,7 @@ export function mapRewardResponseToFormValues(reward: RewardResponse, audienceCu
 		maxClaimsPerUser: rules?.maxUsePerUser ?? 1,
 		audienceType: reward.audienceType,
 		audienceCustomerIds: reward.audienceType === "SELECTED_CUSTOMERS" ? [...audienceCustomerIds] : [],
+		minimumTier: reward.minimumTier,
 	};
 }
 
@@ -353,6 +387,8 @@ export const MerchantUpdateRewardSchema = z
 		/** Sent together: who the reward is for from now on (customers removed keep the claims they made). */
 		audienceType: RewardAudienceTypeSchema.optional(),
 		audienceCustomerIds: RewardAudienceCustomerIdsSchema.optional(),
+		/** The lowest tier that may claim it from now on (claims already made stand, ADR 085). */
+		minimumTier: CustomerTierSchema.optional(),
 	})
 	.strict()
 	.superRefine((value, ctx) => {
@@ -368,6 +404,16 @@ export type MerchantUpdateRewardInput = z.output<typeof MerchantUpdateRewardSche
 export const MerchantUpdateRewardPathInputSchema = z.intersection(z.object({ rewardId: z.uuid() }).strict(), MerchantUpdateRewardSchema);
 
 export type MerchantUpdateRewardPathInput = z.output<typeof MerchantUpdateRewardPathInputSchema>;
+
+/**
+ * `PUT /tenants/:tenantSlug/rewards/:rewardId/minimum-tier`: who may claim a reward from now on, in any status
+ * that still has claims ahead of it (published too), without another review (ADR 085). Claims already made stand.
+ */
+export const MerchantSetRewardMinimumTierSchema = z.object({ minimumTier: CustomerTierSchema }).strict();
+export type MerchantSetRewardMinimumTierInput = z.output<typeof MerchantSetRewardMinimumTierSchema>;
+
+export const MerchantSetRewardMinimumTierPathInputSchema = MerchantSetRewardMinimumTierSchema.extend({ rewardId: z.uuid() }).strict();
+export type MerchantSetRewardMinimumTierPathInput = z.output<typeof MerchantSetRewardMinimumTierPathInputSchema>;
 
 /**
  * `GET /tenants/:tenantSlug/rewards` list query — the tenant's rewards newest first; `filter[status][in]`
@@ -535,6 +581,11 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	locationNames: z.array(z.string()).optional(),
 	/** `SELECTED_CUSTOMERS`: only the customers it was given to see and claim it (the list: `GET …/rewards/:rewardId/audience`, tenant only). */
 	audienceType: RewardAudienceTypeSchema,
+	/**
+	 * The lowest tier that may claim it (ADR 085). Customers below it see it locked, when they ask for locked
+	 * rewards at all. Always Bronze while tiers are off (`GET /tiers/availability`).
+	 */
+	minimumTier: CustomerTierSchema,
 });
 
 export type RewardResponse = z.output<typeof RewardResponseSchema>;
@@ -546,6 +597,8 @@ export const RewardCustomerSchema = z.object({
 	maskedEmail: z.string().nullable(),
 	lastClaimedAt: EpochMsSchema,
 	claimCount: z.number().int().nonnegative(),
+	/** The customer's tier (ADR 085), and nothing behind it; null while tiers are off. */
+	tier: CustomerTierSchema.nullable(),
 });
 export type RewardCustomer = z.output<typeof RewardCustomerSchema>;
 

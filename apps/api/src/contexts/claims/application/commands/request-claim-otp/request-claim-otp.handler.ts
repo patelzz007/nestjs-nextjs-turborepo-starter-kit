@@ -3,6 +3,7 @@ import { CommandHandler, type ICommandHandler } from "@nestjs/cqrs";
 import { epochMs, type EpochMs, type RequestClaimOtpResponse } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
+import { CUSTOMER_TIER_ACCESS, type CustomerTierAccess, type CustomerTierAccessPort } from "../../../../../platform/application/ports/customer-tier-access.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { RewardClaimOtpEmailTemplate } from "../../../../notifications/public-api";
 import type { ClaimableRewardFacts } from "../../../../rewards/public-api";
@@ -32,11 +33,14 @@ export class RequestClaimOtpHandler implements ICommandHandler<RequestClaimOtpCo
 		@Inject(CLAIM_CODES) private readonly codes: ClaimCodesPort,
 		@Inject(CLAIM_ID_GENERATOR) private readonly ids: ClaimIdGenerator,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(CUSTOMER_TIER_ACCESS) private readonly tiers: Pick<CustomerTierAccessPort, "accessFor">,
 	) {}
 
 	public async execute(command: RequestClaimOtpCommand): Promise<RequestClaimOtpResponse> {
 		const { actor, input } = command;
 		const userId = actingUserId(actor);
+		// The customer's tier, read before the transaction (ADR 085): no code and no held unit for a reward above it.
+		const tierAccess = await this.tiers.accessFor(userId);
 
 		return this.uow.runSystemOperation(CLAIM_OTP_REQUEST_OPERATION, actor, async (scope: ClaimsScope): Promise<RequestClaimOtpResponse> => {
 			const now = this.clock.now();
@@ -45,22 +49,29 @@ export class RequestClaimOtpHandler implements ICommandHandler<RequestClaimOtpCo
 				throw new ClaimantNotFoundError();
 			}
 			const live = await scope.holds.findLive(userId, input.rewardId, now);
-			const reward = await scope.rewards.assertClaimable(input.rewardId, now, userId, live !== null);
+			const reward = await scope.rewards.assertClaimable(input.rewardId, now, userId, tierAccess, live !== null);
 			const otp = this.codes.issueOtp();
 			const challenge = OtpChallenge.issue(this.ids.next(), userId, input.phone, input.rewardId, otp.codeHash, now);
 			await scope.otpChallenges.add(challenge);
-			const hold = live ?? (await this.takeHold(scope, userId, input.rewardId, reward, now));
+			const hold = live ?? (await this.takeHold(scope, { userId, tierAccess }, input.rewardId, reward, now));
 			await scope.emails.request(new RewardClaimOtpEmailTemplate({ to: claimant.email, rewardTitle: reward.title, otpCode: otp.code, expiresInMinutes: OTP_EXPIRES_MINUTES }));
 			scope.events.collectFrom(challenge);
 			return { ok: true, holdExpiresAt: hold.expiresAt };
 		});
 	}
 
-	private async takeHold(scope: ClaimsScope, userId: string, rewardId: string, reward: ClaimableRewardFacts, now: EpochMs): Promise<ClaimHold> {
+	private async takeHold(
+		scope: ClaimsScope,
+		customer: { readonly userId: string; readonly tierAccess: CustomerTierAccess },
+		rewardId: string,
+		reward: ClaimableRewardFacts,
+		now: EpochMs,
+	): Promise<ClaimHold> {
+		const { userId } = customer;
 		await assertCustomerMayClaim(scope, reward.tenantId, userId, rewardId);
 		assertWithinClaimLimit(await scope.claims.countHeld(userId, rewardId), reward.maxClaimsPerUser);
 		assertMayTakeHold(await scope.holds.countLive(userId, now), await scope.holds.countTakenSince(userId, rewardId, epochMs(now - CLAIM_HOLD_WINDOW_MS)));
-		await scope.rewards.holdUnit(rewardId, now, userId);
+		await scope.rewards.holdUnit(rewardId, now, userId, customer.tierAccess);
 		const hold = ClaimHold.place(this.ids.next(), userId, rewardId, now);
 		await scope.holds.add(hold);
 		return hold;

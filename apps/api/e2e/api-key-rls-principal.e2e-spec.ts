@@ -124,8 +124,8 @@ describe("API key RLS principal (e2e)", () => {
 				[bill.saleId, tenantId, locationId, customerId, BILL_MINOR, randomUUID(), sha256Hex(bill.saleId), now],
 			);
 			await client.query(
-				`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
-         VALUES ($1, $2, $3, $4, $5, 'E2E-RLS-TILL', 'SCAN', $6, $7)`,
+				`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt", "customerTier")
+         VALUES ($1, $2, $3, $4, $5, 'E2E-RLS-TILL', 'SCAN', $6, $7, 'BRONZE')`,
 				[bill.redemptionId, claimId, tenantId, locationId, customerId, bill.saleId, now],
 			);
 		});

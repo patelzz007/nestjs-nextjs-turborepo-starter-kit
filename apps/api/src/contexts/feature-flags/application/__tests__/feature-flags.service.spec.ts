@@ -87,8 +87,9 @@ describe("FeatureFlagsService", () => {
 			["showcase", "ON", "Ann"],
 			["merchant-invites", "DEFAULT", null],
 			["till-redemption", "DEFAULT", null],
+			["customer-tiers", "DEFAULT", null],
 		]);
-		expect(flags.map((flag) => flag.scope)).toStrictEqual(["platform", "platform", "store"]);
+		expect(flags.map((flag) => flag.scope)).toStrictEqual(["platform", "platform", "store", "platform"]);
 		expect(store.asked).toStrictEqual([true]);
 	});
 
@@ -99,6 +100,7 @@ describe("FeatureFlagsService", () => {
 				{ key: "showcase", mode: "ON", percentage: null },
 				{ key: "merchant-invites", mode: "DEFAULT", percentage: null },
 				{ key: "till-redemption", mode: "DEFAULT", percentage: null },
+				{ key: "customer-tiers", mode: "DEFAULT", percentage: null },
 			],
 		});
 		expect(store.asked).toStrictEqual([false]);

@@ -49,6 +49,7 @@ const DEFAULTS: RewardEditorInput = {
 	locationIds: [],
 	audienceType: "EVERYONE",
 	audienceCustomerIds: [],
+	minimumTier: "BRONZE",
 };
 
 /** The noop the stubbed photos field never calls. */

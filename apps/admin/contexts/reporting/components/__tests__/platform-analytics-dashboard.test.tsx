@@ -28,7 +28,17 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
-	useAuth: (): object => ({ api: { rewardsAdmin: { analyticsDashboard: { useQuery: mocks.dashboardQuery } }, download: mocks.download } }),
+	useAuth: (): object => ({
+		api: {
+			rewardsAdmin: { analyticsDashboard: { useQuery: mocks.dashboardQuery } },
+			download: mocks.download,
+			// Tiers off: the dashboard alone; the tier distribution has its own tests.
+			tiers: {
+				availability: { useQuery: (): object => ({ data: { data: { enabled: false } } }) },
+				distribution: { useQuery: (): object => ({ data: undefined, isError: false, refetch: vi.fn() }) },
+			},
+		},
+	}),
 }));
 
 vi.mock("@workspace/client/lib/api/download", async (importOriginal) => ({

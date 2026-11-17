@@ -7,6 +7,7 @@ import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 import { REWARD_LIST_DEFAULT_LIMIT } from "../../rewards/schemas/reward";
 import { RewardTypeSchema } from "../../rewards/schemas/reward-enums";
 import { RewardFreeItemResponseSchema } from "../../rewards/schemas/reward-free-item";
+import { CustomerTierSchema } from "../../tiers/schemas/customer-tier";
 import { RewardRedemptionMethodSchema } from "./pos-enums";
 
 // ── POS redemption: validate / checkout at the till, and the merchant's redemption history ──
@@ -164,6 +165,11 @@ export const RedemptionPreviewResponseSchema = z.object({
 	invalidReason: RedemptionInvalidReasonSchema.nullable(),
 	/** The reward's minimum bill, in minor units — the POS should not check out a smaller bill. */
 	minSpendMinor: z.number().int().nonnegative().nullable(),
+	/**
+	 * The customer's tier (ADR 085), so the till can greet a Gold customer as one. Nothing behind it (no counts, no other
+	 * merchants). Bronze while tiers have never been on; a till shows it only while tiers are on (`GET /tiers/availability`).
+	 */
+	customerTier: CustomerTierSchema,
 });
 
 export type RedemptionPreviewResponse = z.output<typeof RedemptionPreviewResponseSchema>;

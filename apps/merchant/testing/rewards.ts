@@ -52,6 +52,7 @@ export function rewardFixture(overrides: Partial<RewardResponse> = {}): RewardRe
 		locationScopeType: "SELECTED",
 		locationIds: ["5d2f6a1b-0c3e-4f7a-9b8c-2d1e0f3a4b5c"],
 		audienceType: "EVERYONE",
+		minimumTier: "BRONZE",
 		locationNames: ["Jonker Street Kitchen — Bukit Katil"],
 		createdAt: REWARD_FIXTURE_EXPIRY_MS,
 		updatedAt: REWARD_FIXTURE_EXPIRY_MS,

@@ -79,6 +79,28 @@ describe("who a reward is for", () => {
 	});
 });
 
+describe("a reward's minimum tier (ADR 085)", () => {
+	it("is Bronze, open to every customer, when none is sent", () => {
+		expect(MerchantCreateRewardSchema.parse(CREATE).minimumTier).toBe("BRONZE");
+	});
+
+	it("narrows a reward for everyone", () => {
+		expect(MerchantCreateRewardSchema.parse({ ...CREATE, minimumTier: "GOLD" }).minimumTier).toBe("GOLD");
+	});
+
+	it("is refused on a reward for chosen customers, who are open at any tier", () => {
+		expect(issuePaths(MerchantCreateRewardSchema.safeParse({ ...CREATE, audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE], minimumTier: "SILVER" }))).toEqual([
+			"minimumTier",
+		]);
+		expect(MerchantCreateRewardSchema.safeParse({ ...CREATE, audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE], minimumTier: "BRONZE" }).success).toBe(true);
+	});
+
+	it("is refused with referrals, because a referred newcomer starts at Bronze", () => {
+		expect(issuePaths(MerchantCreateRewardSchema.safeParse({ ...CREATE, minimumTier: "GOLD", referralsEnabled: true, referralPoolTotal: 5 }))).toEqual(["referralsEnabled"]);
+		expect(issuePaths(MerchantUpdateRewardSchema.safeParse({ minimumTier: "DIAMOND", referralsEnabled: true }))).toEqual(["referralsEnabled"]);
+	});
+});
+
 describe("the reward form's audience", () => {
 	const form: MerchantCreateRewardFormValues = {
 		rewardType: "FREE_ITEM",
@@ -105,5 +127,13 @@ describe("the reward form's audience", () => {
 
 		expect(mapMerchantCreateRewardFormToInput(chosen, "cafe")).toMatchObject({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE] });
 		expect(mapMerchantUpdateRewardFormToInput(chosen)).toMatchObject({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE] });
+	});
+
+	it("sends the minimum tier for a reward for everyone, and Bronze for chosen customers", () => {
+		expect(mapMerchantCreateRewardFormToInput({ ...form, minimumTier: "GOLD" }, "cafe")).toMatchObject({ audienceType: "EVERYONE", minimumTier: "GOLD" });
+		expect(mapMerchantCreateRewardFormToInput(form, "cafe")).toMatchObject({ minimumTier: "BRONZE" });
+		expect(mapMerchantUpdateRewardFormToInput({ ...form, audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE], minimumTier: "GOLD" })).toMatchObject({
+			minimumTier: "BRONZE",
+		});
 	});
 });

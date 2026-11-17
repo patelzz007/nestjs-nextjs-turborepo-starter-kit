@@ -33,6 +33,7 @@ import { tenantPaymentsContract } from "../contexts/payments/contract";
 import { adminPrivacyContract, privacyContract } from "../contexts/privacy/contract";
 import { savedViewsContract } from "../contexts/saved-views/contract";
 import { featureFlagsContract } from "../contexts/feature-flags/contract";
+import { tiersContract } from "../contexts/tiers/contract";
 import { githubContract, githubPullRequestsContract } from "../contexts/integrations-github/contract";
 import { geoContract } from "../contexts/reference-data/contract";
 import { integrationRewardsContract, legalContract, tenantRewardsContract, rewardsAdminRewardContract, rewardsContract } from "../contexts/rewards/contract";
@@ -106,6 +107,7 @@ export const apiContract = {
 	adminPrivacy: adminPrivacyContract,
 	savedViews: savedViewsContract,
 	featureFlags: featureFlagsContract,
+	tiers: tiersContract,
 	github: githubContract,
 	githubPullRequests: githubPullRequestsContract,
 	geo: geoContract,

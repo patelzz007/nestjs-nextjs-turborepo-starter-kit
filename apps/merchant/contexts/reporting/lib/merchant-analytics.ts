@@ -7,6 +7,7 @@
 // slot 2 (docs/technical/frontend/analytics-charts.md).
 
 import { formatShareOfTotal, type AnalyticsFormatters, type KpiDefinition } from "@workspace/client/lib/contexts/reporting/analytics-presentation";
+import { toTierShareSegments, type TierCount } from "@workspace/client/lib/contexts/tiers";
 import {
 	PILOT_CITY_LABELS,
 	PLATFORM_DISPLAY_REGION,
@@ -62,6 +63,14 @@ export const REDEMPTION_METHOD_DISPLAY: Readonly<Record<RewardRedemptionMethod, 
 	SCAN: { label: "QR code scan", color: "chart-1" },
 	MANUAL: { label: "Backup code", color: "chart-2" },
 };
+
+/** Redemptions by the customer's tier when they redeemed, as parts of the whole (every tier, zero included; ADR 085). */
+export function toCustomerTierSegments(dashboard: MerchantAnalyticsDashboard, formatters: AnalyticsFormatters): readonly ShareSegment[] {
+	return toTierShareSegments(
+		dashboard.byCustomerTier.map((row): TierCount => ({ tier: row.tier, count: row.redemptions })),
+		formatters,
+	);
+}
 
 /** Bills paid without a known store (only members who see every store get this row). */
 export const NO_STORE_LABEL = "No store recorded";

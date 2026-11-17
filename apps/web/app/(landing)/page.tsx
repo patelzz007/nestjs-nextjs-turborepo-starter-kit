@@ -8,6 +8,7 @@ import { hasServerSession } from "@/contexts/identity/lib/server";
 import { loginPath, ROUTE_PREFIXES, ROUTES } from "@/lib/routes";
 import { selectFeaturedOffers, selectMerchantNames, type FeaturedOffer } from "@/contexts/rewards/lib/featured-offers";
 import { REWARDS_BROWSE_URL_STATE, toRewardsBrowseListQuery } from "@/contexts/rewards/url-state/rewards-browse";
+import { readTierAvailability } from "@/contexts/tiers/lib/server-tier-availability";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { ApiPaginatedMetaSchema, nowEpochMs, type Envelope, type RewardResponse } from "@workspace/shared";
@@ -59,8 +60,11 @@ export default async function LandingPage({ searchParams }: { readonly searchPar
 	const actions = isSignedIn ? MEMBER_ACTIONS : GUEST_ACTIONS;
 
 	const catalogStateKey: string = REWARDS_BROWSE_URL_STATE.serialize(catalogState);
-	const defaultRequest = server.rewards.list.query(toRewardsBrowseListQuery(REWARDS_BROWSE_URL_STATE.defaults));
-	const catalogRequest = catalogStateKey === DEFAULT_CATALOG_STATE_KEY ? defaultRequest : server.rewards.list.query(toRewardsBrowseListQuery(catalogState));
+	// The catalog's request depends on whether tiers are on (locked rewards are listed then), so this is read first.
+	const tierAvailability = await readTierAvailability();
+	const tiersOn = tierAvailability?.enabled === true;
+	const defaultRequest = server.rewards.list.query(toRewardsBrowseListQuery(REWARDS_BROWSE_URL_STATE.defaults, tiersOn));
+	const catalogRequest = catalogStateKey === DEFAULT_CATALOG_STATE_KEY ? defaultRequest : server.rewards.list.query(toRewardsBrowseListQuery(catalogState, tiersOn));
 	const [defaultResult, catalogResult] = await Promise.allSettled([defaultRequest, catalogRequest]);
 
 	const defaultRewards: readonly RewardResponse[] = defaultResult.status === "fulfilled" ? defaultResult.value.data : [];
@@ -73,7 +77,12 @@ export default async function LandingPage({ searchParams }: { readonly searchPar
 			<LandingMerchants merchantNames={merchantNames} />
 			{/* The browse view owns the `#rewards` heading; offset it below the sticky header when jumped to. */}
 			<section className="mx-auto max-w-10xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 [&_#rewards]:scroll-mt-24">
-				<DashboardBrowseView variant="landing" detailPathPrefix={ROUTE_PREFIXES.publicRewards} initialPage={toPrefetchedQuery(catalogStateKey, catalogResult)} />
+				<DashboardBrowseView
+					variant="landing"
+					detailPathPrefix={ROUTE_PREFIXES.publicRewards}
+					initialPage={toPrefetchedQuery(catalogStateKey, catalogResult)}
+					tierAvailability={tierAvailability}
+				/>
 			</section>
 			<LandingHowItWorks />
 			<LandingCallToAction

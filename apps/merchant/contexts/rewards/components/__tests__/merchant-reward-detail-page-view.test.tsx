@@ -15,18 +15,26 @@ import { epochMs, type RewardResponse } from "@workspace/shared";
 
 const REWARD_ID = "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d";
 
-const { rewardQuery, audienceQuery, publishMutation, publish } = vi.hoisted(() => ({
+const { rewardQuery, audienceQuery, publishMutation, publish, tiersAvailability, setMinimumTier } = vi.hoisted(() => ({
 	rewardQuery: vi.fn(),
 	audienceQuery: vi.fn(),
 	publishMutation: vi.fn(),
 	publish: vi.fn(),
+	tiersAvailability: vi.fn((): object => ({ data: { data: { enabled: false } } })),
+	setMinimumTier: vi.fn(),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
+			tiers: { availability: { useQuery: tiersAvailability } },
 			tenants: {
-				rewards: { get: { useQuery: rewardQuery }, audience: { useQuery: audienceQuery }, publish: { useMutation: publishMutation } },
+				rewards: {
+					get: { useQuery: rewardQuery },
+					audience: { useQuery: audienceQuery },
+					publish: { useMutation: publishMutation },
+					setMinimumTier: { useMutation: (): object => ({ mutate: setMinimumTier, isPending: false }) },
+				},
 				context: { useQuery: (): object => contextQueryState(TWO_STORE_CONTEXT) },
 				listMembers: { useQuery: (): object => ({ data: { data: [] }, isLoading: false }) },
 			},
@@ -84,6 +92,7 @@ beforeEach((): void => {
 	rewardReturns({ data: { data: DRAFT }, isSuccess: true });
 	publishMutation.mockReturnValue({ mutate: publish, isPending: false });
 	audienceQuery.mockReturnValue({ data: undefined });
+	tiersAvailability.mockReturnValue({ data: { data: { enabled: false } } });
 });
 
 afterEach((): void => {
@@ -131,6 +140,35 @@ describe("MerchantRewardDetailPageView", () => {
 		renderPage();
 		const row = within(screen.getByRole("region", { name: "Details" })).getByText("Free item").nextElementSibling;
 		expect(row?.textContent).toBe("Latte (12 oz) · SKU BEV-LATTE-12OZ");
+	});
+
+	it("has no minimum tier row while tiers are off", () => {
+		renderPage();
+		expect(within(screen.getByRole("region", { name: "Details" })).queryByText("Minimum tier")).toBeNull();
+	});
+
+	it("lets a manager change a live reward's minimum tier in place, without another review (ADR 085)", async () => {
+		tiersAvailability.mockReturnValue({ data: { data: { enabled: true, viewerTier: "BRONZE" } } });
+		rewardReturns({ data: { data: { ...DRAFT, status: "PUBLISHED" } }, isSuccess: true });
+		renderPage();
+
+		const select = screen.getByRole("combobox", { name: "Minimum tier" });
+		expect(select.textContent).toContain("Every customer");
+		fireEvent.click(select);
+		const gold = await screen.findByRole("option", { name: "Gold and above" });
+		fireEvent.pointerDown(gold, { pointerType: "mouse" });
+		fireEvent.click(gold);
+		expect(setMinimumTier).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, rewardId: REWARD_ID, minimumTier: "GOLD" });
+	});
+
+	it("shows the minimum tier read-only for a reward for chosen customers", () => {
+		tiersAvailability.mockReturnValue({ data: { data: { enabled: true, viewerTier: "BRONZE" } } });
+		rewardReturns({ data: { data: { ...DRAFT, audienceType: "SELECTED_CUSTOMERS" } }, isSuccess: true });
+		audienceQuery.mockReturnValue({ data: { data: { audienceType: "SELECTED_CUSTOMERS", customers: [] } } });
+		renderPage();
+
+		expect(within(screen.getByRole("region", { name: "Details" })).getByText("Minimum tier").nextElementSibling?.textContent).toBe("Every customer");
+		expect(screen.queryByRole("combobox", { name: "Minimum tier" })).toBeNull();
 	});
 
 	it("says who can claim: everyone, without reading an audience", () => {

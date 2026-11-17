@@ -1,7 +1,7 @@
 ---
 title: "API reference — Privacy: your own data"
 description: "\"Download my data\": one ZIP of everything the platform holds about the signed-in person (a manifest and one JSON file per section), audited, once a day, never while impersonating."
-order: 11
+order: 12
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

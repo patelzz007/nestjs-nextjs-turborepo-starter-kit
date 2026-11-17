@@ -53,6 +53,7 @@ describe("ValidateRedemptionCodesHandler", () => {
 			valid: true,
 			invalidReason: null,
 			minSpendMinor: 2_000,
+			customerTier: "BRONZE",
 		});
 		expect(store.audit.entries).toEqual([
 			{
@@ -63,6 +64,13 @@ describe("ValidateRedemptionCodesHandler", () => {
 			},
 		]);
 		expect(store.uow.committed).toEqual([{ operation: null, actor: apiKeyActor() }]);
+	});
+
+	it("tells the till the customer's tier, and nothing behind it (ADR 085)", async () => {
+		const { token } = store.claims.seed("claim-01");
+		store.tierSnapshot.tiers.set(CUSTOMER, "GOLD");
+
+		await expect(handler.execute(new ValidateRedemptionCodesCommand(apiKeyActor(), POINT, { token }))).resolves.toMatchObject({ customerTier: "GOLD" });
 	});
 
 	it("says why a found code cannot be redeemed here, without failing", async () => {
@@ -132,6 +140,23 @@ describe("CheckoutSaleHandler", () => {
 	beforeEach(() => {
 		store = new InMemoryPosStore();
 		handler = new CheckoutSaleHandler(store.uow, new RedemptionCodeResolver(), new SequentialIds("sale"), new JoinedFingerprint(), new FixedClock(NOW), OPEN_GATE);
+	});
+
+	it("records the customer's tier at that moment on the sale's redemptions (ADR 085)", async () => {
+		const { token } = store.claims.seed("claim-01");
+		store.tierSnapshot.tiers.set(CUSTOMER, "SILVER");
+
+		await handler.execute(new CheckoutSaleCommand(apiKeyActor(), POINT, bill([{ token }])));
+
+		expect(store.sales.customerTiers.get("sale-1")).toBe("SILVER");
+	});
+
+	it("records a customer without a tier standing as Bronze", async () => {
+		const { token } = store.claims.seed("claim-01");
+
+		await handler.execute(new CheckoutSaleCommand(apiKeyActor(), POINT, bill([{ token }])));
+
+		expect(store.sales.customerTiers.get("sale-1")).toBe("BRONZE");
 	});
 
 	it("records the bill and redeems every code in one unit of work, crediting referrals and stamping the signup referral", async () => {

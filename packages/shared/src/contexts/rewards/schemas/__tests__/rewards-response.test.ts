@@ -70,6 +70,7 @@ const reward: RewardResponse = {
 	locationScopeType: "ALL_LOCATIONS",
 	locationIds: [],
 	audienceType: "EVERYONE",
+	minimumTier: "BRONZE",
 };
 
 const kybProfile: MerchantKybProfileResponse = {

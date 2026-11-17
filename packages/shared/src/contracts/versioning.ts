@@ -122,6 +122,9 @@ export const VersionedRoutePrefixSchema = z.enum([
 	"/me",
 	"/admin/users",
 	"/admin/feature-flags",
+	// Customer tiers (ADR 085): the customer's own tier and the platform's tier rules
+	"/tiers",
+	"/admin/tiers",
 	"/admin/notifications",
 	"/admin/broadcasts",
 	"/admin/broadcast-reports",

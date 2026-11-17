@@ -68,6 +68,7 @@ export class ValidateRedemptionCodesHandler implements ICommandHandler<ValidateR
 					valid: invalidReason === null,
 					invalidReason,
 					minSpendMinor: claim.minSpendMinor,
+					customerTier: await scope.tierSnapshot.tierOf(claim.customerUserId),
 				},
 			};
 		});

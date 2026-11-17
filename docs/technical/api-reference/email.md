@@ -1,7 +1,7 @@
 ---
 title: "API reference — Email log, templates and delivery webhooks"
 description: "The outbound email log, template previews and test sends, and the Resend delivery webhook."
-order: 13
+order: 14
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

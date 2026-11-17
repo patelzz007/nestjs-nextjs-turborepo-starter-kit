@@ -33,6 +33,7 @@ import {
 	STORE_A,
 	STORE_B,
 	TENANT_ID,
+	TIERS_OFF,
 	WEEK_MS,
 } from "./reward-state.fixture";
 import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
@@ -345,7 +346,7 @@ describe("Reward inventory", () => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED"));
 		const before = reward.snapshot().inventory;
 
-		reward.holdUnit(NOW, CUSTOMER_ID);
+		reward.holdUnit(NOW, CUSTOMER_ID, TIERS_OFF);
 
 		expect(reward.snapshot().inventory).toMatchObject({
 			quantityRemaining: before.quantityRemaining - 1,
@@ -356,7 +357,7 @@ describe("Reward inventory", () => {
 
 	it("turns a held unit into a claim without touching the stock again", () => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED"));
-		reward.holdUnit(NOW, CUSTOMER_ID);
+		reward.holdUnit(NOW, CUSTOMER_ID, TIERS_OFF);
 		const held = reward.snapshot().inventory;
 
 		reward.claimHeldUnit(NOW);
@@ -367,7 +368,7 @@ describe("Reward inventory", () => {
 	it("gives a held unit back on release", () => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED"));
 		const before = reward.snapshot().inventory;
-		reward.holdUnit(NOW, CUSTOMER_ID);
+		reward.holdUnit(NOW, CUSTOMER_ID, TIERS_OFF);
 
 		reward.release(NOW);
 
@@ -377,19 +378,19 @@ describe("Reward inventory", () => {
 	it("lets the customer holding the last unit through the stock check, and nobody else", () => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED"));
 		for (let units = reward.snapshot().inventory.quantityRemaining; units > 0; units -= 1) {
-			reward.holdUnit(NOW, CUSTOMER_ID);
+			reward.holdUnit(NOW, CUSTOMER_ID, TIERS_OFF);
 		}
 
 		expect(() => {
-			reward.holdUnit(NOW, CUSTOMER_ID);
+			reward.holdUnit(NOW, CUSTOMER_ID, TIERS_OFF);
 		}).toThrow(RewardJustSoldOutError);
-		expect(() => reward.assertClaimable(NOW, CUSTOMER_ID)).toThrow(RewardSoldOutError);
-		expect(reward.assertClaimable(NOW, CUSTOMER_ID, true)).toMatchObject({ rewardId: REWARD_ID });
+		expect(() => reward.assertClaimable(NOW, CUSTOMER_ID, TIERS_OFF)).toThrow(RewardSoldOutError);
+		expect(reward.assertClaimable(NOW, CUSTOMER_ID, TIERS_OFF, true)).toMatchObject({ rewardId: REWARD_ID });
 	});
 
 	it("reports claimable facts for a published, unexpired, stocked consumer reward", () => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED", { rules: RewardRulesValue.fromApi({ maxUsePerUser: 1 }) }));
-		expect(reward.assertClaimable(NOW, CUSTOMER_ID)).toEqual({
+		expect(reward.assertClaimable(NOW, CUSTOMER_ID, TIERS_OFF)).toEqual({
 			rewardId: REWARD_ID,
 			tenantId: TENANT_ID,
 			title: "Free coffee",
@@ -399,11 +400,11 @@ describe("Reward inventory", () => {
 	});
 
 	it.each(["DRAFT", "PENDING_REVIEW"])("treats a %s reward as not found for claims", (status) => {
-		expect(() => Reward.rehydrate(rewardState(status)).assertClaimable(NOW, CUSTOMER_ID)).toThrow(RewardNotFoundError);
+		expect(() => Reward.rehydrate(rewardState(status)).assertClaimable(NOW, CUSTOMER_ID, TIERS_OFF)).toThrow(RewardNotFoundError);
 	});
 
 	it("treats a referrer row as not found for claims", () => {
-		expect(() => Reward.rehydrate(rewardState("PUBLISHED", { kind: "REFERRER" })).assertClaimable(NOW, CUSTOMER_ID)).toThrow(RewardNotFoundError);
+		expect(() => Reward.rehydrate(rewardState("PUBLISHED", { kind: "REFERRER" })).assertClaimable(NOW, CUSTOMER_ID, TIERS_OFF)).toThrow(RewardNotFoundError);
 	});
 
 	it.each([
@@ -412,9 +413,9 @@ describe("Reward inventory", () => {
 	])("claimability when %s", (_label, expiryDate, error) => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED", { expiryDate }));
 		if (error === null) {
-			expect(reward.assertClaimable(NOW, CUSTOMER_ID).expiryDate).toBe(NOW);
+			expect(reward.assertClaimable(NOW, CUSTOMER_ID, TIERS_OFF).expiryDate).toBe(NOW);
 		} else {
-			expect(() => reward.assertClaimable(NOW, CUSTOMER_ID)).toThrow(error);
+			expect(() => reward.assertClaimable(NOW, CUSTOMER_ID, TIERS_OFF)).toThrow(error);
 		}
 	});
 
@@ -422,17 +423,17 @@ describe("Reward inventory", () => {
 		const reward = Reward.rehydrate(
 			rewardState("PUBLISHED", { inventory: { quantityTotal: 1, quantityRemaining: 0, quantityReserved: 1, claimCount: 1, redemptionCount: 0 } }),
 		);
-		expect(() => reward.assertClaimable(NOW, CUSTOMER_ID)).toThrow(RewardSoldOutError);
+		expect(() => reward.assertClaimable(NOW, CUSTOMER_ID, TIERS_OFF)).toThrow(RewardSoldOutError);
 	});
 
 	it("reserves one unit: remaining −1, reserved +1, claims +1", () => {
 		const reward = Reward.rehydrate(
 			rewardState("PUBLISHED", { inventory: { quantityTotal: 1, quantityRemaining: 1, quantityReserved: 0, claimCount: 0, redemptionCount: 0 } }),
 		);
-		reward.reserve(NOW, CUSTOMER_ID);
+		reward.reserve(NOW, CUSTOMER_ID, TIERS_OFF);
 		expect(reward.snapshot().inventory).toEqual({ quantityTotal: 1, quantityRemaining: 0, quantityReserved: 1, claimCount: 1, redemptionCount: 0 });
 		expect(reward.inventoryDelta()).toEqual({ quantityTotal: 0, quantityRemaining: -1, quantityReserved: 1, claimCount: 1, redemptionCount: 0 });
-		expect(() => reward.reserve(NOW, CUSTOMER_ID)).toThrow(RewardJustSoldOutError);
+		expect(() => reward.reserve(NOW, CUSTOMER_ID, TIERS_OFF)).toThrow(RewardJustSoldOutError);
 	});
 
 	it.each([
@@ -441,7 +442,7 @@ describe("Reward inventory", () => {
 		["a reward offered only at closed stores", rewardState("PUBLISHED", { availableAtActiveStore: false })],
 		["a referrer reward", rewardState("PUBLISHED", { kind: "REFERRER" })],
 	])("refuses to reserve %s", (_label, state) => {
-		expect(() => Reward.rehydrate(state).reserve(NOW, CUSTOMER_ID)).toThrow(RewardJustSoldOutError);
+		expect(() => Reward.rehydrate(state).reserve(NOW, CUSTOMER_ID, TIERS_OFF)).toThrow(RewardJustSoldOutError);
 	});
 
 	it("releases and redeems reserved units", () => {

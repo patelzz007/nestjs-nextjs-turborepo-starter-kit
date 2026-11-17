@@ -1,9 +1,11 @@
 import {
 	ADMIN_ANALYTICS_EXPORT_SUBJECT,
+	CUSTOMER_TIER_LABELS,
 	MERCHANT_BUSINESS_CATEGORY_LABELS,
 	PILOT_CITY_LABELS,
 	UNCATEGORISED_MERCHANT_CATEGORY_LABEL,
 	type AdminAnalyticsDashboard,
+	type CustomerTier,
 	type MerchantAnalyticsDashboard,
 	type MerchantBusinessCategory,
 	type PilotCity,
@@ -27,6 +29,9 @@ export const REDEMPTION_METHOD_LABELS: Readonly<Record<RewardRedemptionMethod, s
 	SCAN: "QR code scan",
 	MANUAL: "Backup code",
 };
+
+/** How each customer tier reads in a report (ADR 085). */
+export const CUSTOMER_TIER_REPORT_LABELS: Readonly<Record<CustomerTier, string>> = CUSTOMER_TIER_LABELS;
 
 /** Where the report comes from: the product name and when it was generated. */
 export interface ReportProvenance {
@@ -110,6 +115,12 @@ export function buildMerchantReport(dashboard: MerchantAnalyticsDashboard, subje
 		columns: [column("Method", "text"), column("Redemptions", "count")],
 		rows: dashboard.byRedemptionMethod.map((row) => [text(REDEMPTION_METHOD_LABELS[row.method]), count(row.redemptions)]),
 	};
+	const tiers: AnalyticsReportTable = {
+		key: "customerTiers",
+		title: "Redemptions by customer tier",
+		columns: [column("Tier", "text"), column("Redemptions", "count")],
+		rows: dashboard.byCustomerTier.map((row) => [text(CUSTOMER_TIER_REPORT_LABELS[row.tier]), count(row.redemptions)]),
+	};
 
 	return {
 		brand: provenance.brand,
@@ -140,7 +151,7 @@ export function buildMerchantReport(dashboard: MerchantAnalyticsDashboard, subje
 				],
 			},
 		],
-		tables: [series, stores, rewards, methods],
+		tables: [series, stores, rewards, methods, tiers],
 	};
 }
 

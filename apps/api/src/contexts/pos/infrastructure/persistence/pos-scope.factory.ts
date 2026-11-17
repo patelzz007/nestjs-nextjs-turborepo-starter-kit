@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 import type { ScopeFactory } from "../../../../platform/application/events/in-transaction-event-handler";
 import type { TransactionalEventCollector } from "../../../../platform/application/events/transactional-event-collector";
+import type { CustomerTierSnapshotPort } from "../../../../platform/application/ports/customer-tier-snapshot.port";
 import type { RewardCodeHasher } from "../../../../platform/infrastructure/crypto/reward-code-hasher";
 import { createClaimsTransactionalPorts } from "../../../claims/public-api";
 import { createTenantsTransactionalPorts } from "../../../tenancy/public-api";
@@ -15,12 +16,23 @@ import { PrismaRewardSaleRepository } from "./prisma-reward-sale.repository";
 import { PrismaTerminalView } from "./prisma-terminal.view";
 
 /**
+ * The customer's tier at the moment of a redemption, bound to the checkout's transaction (ADR 085). Provided by the
+ * tiers context under `CUSTOMER_TIER_SNAPSHOT_FACTORY`, so pos never imports tiers (tiers reacts to pos's events).
+ */
+export interface CustomerTierSnapshotFactory {
+	forTransaction(db: Prisma.TransactionClient): CustomerTierSnapshotPort;
+}
+
+/**
  * Builds the pos scope on one transaction: pos's own rows, plus claims' redemption, rewards' stock /
- * facts / audit, referrals' credit and tenants' POS policy, all bound to the same `db` (plan §5.4). Referrals' bonus stock
- * is rewards' inventory on that same transaction.
+ * facts / audit, referrals' credit, tenants' POS policy and the customer's tier, all bound to the same `db` (plan §5.4).
+ * Referrals' bonus stock is rewards' inventory on that same transaction.
  */
 export class PosScopeFactory implements ScopeFactory<PosScope, Prisma.TransactionClient> {
-	public constructor(private readonly codeHasher: RewardCodeHasher) {}
+	public constructor(
+		private readonly codeHasher: RewardCodeHasher,
+		private readonly tierSnapshots: CustomerTierSnapshotFactory,
+	) {}
 
 	public create(db: Prisma.TransactionClient, events: TransactionalEventCollector): PosScope {
 		const rewards = createRewardsTransactionalPorts(db);
@@ -38,6 +50,7 @@ export class PosScopeFactory implements ScopeFactory<PosScope, Prisma.Transactio
 			rewardFacts: rewards.redemptionFacts,
 			rewardAudit: rewards.audit,
 			referrals: createReferralCreditPort(db, events, rewards.inventory),
+			tierSnapshot: this.tierSnapshots.forTransaction(db),
 			events,
 		};
 	}

@@ -182,6 +182,7 @@ const PRODUCT_LIST_KEYSET = timestampIdKeyset<ProductRow, Prisma.ProductWhereInp
 | `buildListOrder(sort, { columns, tieBreaker, uniqueField? })` | Requested (or default) sort → `orderBy[]`, unique tie-breaker appended in the last term's direction. |
 | `timestampIdKeyset` / `defineKeyset` | Opaque base64url keyset cursor for the default order; decoded positions are re-validated with zod. |
 | `fetchListPage(query, spec)` | The one offset + keyset implementation: `count`, `findMany`, `meta`, cursor rules. |
+| `fetchSegmentedPage(query, spec, segments)` | Offset pages over a list read in groups: every row of the first segment (in the list order), then the next. No keyset: a cursor is refused (`cursor_unsupported`) and none is handed out. Used by `GET /rewards?includeLocked=true` (claimable rewards first, ADR 085). |
 
 Repositories built on `BaseRepository` provide `buildListWhere`, `buildListOrder`, `listKeyset`
 and `andWhere` ports and get `list()` for free; custom repositories call `fetchListPage` directly.
@@ -256,7 +257,7 @@ mean "no filter".
 | `GET /auth/admin/mfa/recovery/requests` | requestedAt, createdAt | status, userId | — | `-requestedAt` |
 | `GET /admin/audit` | createdAt | action, actorId, targetUserId, targetRoleId, createdAt | — | `-createdAt` |
 | `GET /notifications/email-log` | createdAt, subject, to, status | status, templateKey, createdAt | ✓ | `-createdAt` |
-| `GET /rewards` (marketplace) | createdAt, expiryDate, title | category, city | ✓ | `-createdAt` |
+| `GET /rewards` (marketplace; `includeLocked=true` also lists rewards above the viewer's tier, claimable ones first, offset pages only — ADR 085) | createdAt, expiryDate, title | category, city, tenantId | ✓ | `-createdAt` |
 | `GET /claims` (own claims) | claimedAt, createdAt | status | — | `-claimedAt` |
 | `GET /notifications?surface=…` (own inbox, one app) | createdAt | readAt, archivedAt (`isNull`), category (the bell's badge is `GET /notifications/unread-count`) | — | `-createdAt` |
 | `GET /auth/sessions` (own sessions) | lastActiveAt, createdAt | — | — | `-lastActiveAt` |

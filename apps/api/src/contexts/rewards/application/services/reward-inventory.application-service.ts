@@ -1,5 +1,6 @@
 import type { EpochMs } from "@workspace/shared";
 
+import type { CustomerTierAccess } from "../../../../platform/domain/customer-tier-access";
 import type { RewardRepository } from "../../domain/repositories/reward.repository";
 import type { ClaimableRewardFacts, ReferrerCreditFacts, RewardInventoryPort } from "../ports/reward-inventory.port";
 
@@ -11,21 +12,21 @@ import type { ClaimableRewardFacts, ReferrerCreditFacts, RewardInventoryPort } f
 export class RewardInventoryApplicationService implements RewardInventoryPort {
 	public constructor(private readonly rewards: RewardRepository) {}
 
-	public async assertClaimable(rewardId: string, now: EpochMs, customerUserId: string): Promise<ClaimableRewardFacts> {
+	public async assertClaimable(rewardId: string, now: EpochMs, customerUserId: string, tierAccess: CustomerTierAccess, holdsUnit = false): Promise<ClaimableRewardFacts> {
 		const reward = await this.rewards.getLive(rewardId);
-		return reward.assertClaimable(now, customerUserId);
+		return reward.assertClaimable(now, customerUserId, tierAccess, holdsUnit);
 	}
 
-	public async reserve(rewardId: string, now: EpochMs, customerUserId: string): Promise<ClaimableRewardFacts> {
+	public async reserve(rewardId: string, now: EpochMs, customerUserId: string, tierAccess: CustomerTierAccess): Promise<ClaimableRewardFacts> {
 		const reward = await this.rewards.getForInventory(rewardId);
-		const facts = reward.reserve(now, customerUserId);
+		const facts = reward.reserve(now, customerUserId, tierAccess);
 		await this.rewards.save(reward);
 		return facts;
 	}
 
-	public async holdUnit(rewardId: string, now: EpochMs, customerUserId: string): Promise<void> {
+	public async holdUnit(rewardId: string, now: EpochMs, customerUserId: string, tierAccess: CustomerTierAccess): Promise<void> {
 		const reward = await this.rewards.getForInventory(rewardId);
-		reward.holdUnit(now, customerUserId);
+		reward.holdUnit(now, customerUserId, tierAccess);
 		await this.rewards.save(reward);
 	}
 

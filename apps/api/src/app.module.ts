@@ -28,6 +28,8 @@ import { RateLimitingModule } from "./platform/infrastructure/rate-limiting/rate
 import { AppCacheModule } from "./platform/infrastructure/cache/app-cache.module";
 import { PosAccessModule } from "./contexts/pos/public-api";
 import { PosModule } from "./contexts/pos/pos.module";
+import { TiersAccessModule } from "./contexts/tiers/public-api";
+import { TiersModule } from "./contexts/tiers/tiers.module";
 import { IdentityModule } from "./contexts/identity/identity.module";
 import { ReferenceDataModule } from "./contexts/reference-data/public-api";
 import { GithubModule } from "./contexts/integrations-github/public-api";
@@ -100,6 +102,7 @@ if (observeConfig !== null) {
 		HealthModule,
 		PosAccessModule,
 		RewardsAccessModule,
+		TiersAccessModule,
 		RateLimitingModule,
 		TenantRateLimitOverridesModule,
 		AppCacheModule,
@@ -124,6 +127,7 @@ if (observeConfig !== null) {
 		ClaimsModule,
 		WebhooksOutboundModule,
 		PosModule,
+		TiersModule,
 		CatalogModule,
 		KanbanModule,
 		ReportingModule,

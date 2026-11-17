@@ -852,6 +852,17 @@ export const apiRouter = {
 		setOverride: defineMutation(apiContract.featureFlags.setOverride),
 		removeOverride: defineMutation(apiContract.featureFlags.removeOverride),
 	},
+	/** Customer tiers (ADR 085): whether they are on, the customer's own tier, and platform staff's rules and figures. */
+	tiers: {
+		availability: defineQuery(apiContract.tiers.availability, { scope: (): ApiQueryKey => ["tiers", "availability"] }),
+		me: defineQuery(apiContract.tiers.me, { scope: (): ApiQueryKey => ["me", "tier"] }),
+		settings: defineQuery(apiContract.tiers.settings, { scope: (): ApiQueryKey => ["admin", "tiers", "settings"] }),
+		updateSettings: defineMutation(apiContract.tiers.updateSettings),
+		distribution: defineQuery(apiContract.tiers.distribution, { scope: (): ApiQueryKey => ["admin", "tiers", "distribution"] }),
+		userTier: defineQuery(apiContract.tiers.userTier, {
+			scope: ({ userId }: { readonly userId: string }): ApiQueryKey => ["admin", "users", userId, "tier"],
+		}),
+	},
 	/** Saved views on admin lists (enhancement 5.10). */
 	savedViews: {
 		list: defineQuery(apiContract.savedViews.list, { scope: ({ listKey }: { readonly listKey: string }): ApiQueryKey => ["me", "saved-views", listKey] }),
@@ -986,6 +997,8 @@ export const apiRouter = {
 			create: defineMutation(apiContract.tenants.rewards.create),
 			update: defineMutation(apiContract.tenants.rewards.update),
 			publish: defineMutation(apiContract.tenants.rewards.publish),
+			/** Who may claim a reward from now on, by tier (ADR 085); a published reward too. */
+			setMinimumTier: defineMutation(apiContract.tenants.rewards.setMinimumTier),
 		},
 		apiKeys: {
 			list: defineQuery(apiContract.tenants.apiKeys.list, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "api-keys", "list"] }),

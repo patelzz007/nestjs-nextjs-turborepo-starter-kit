@@ -1,5 +1,7 @@
 import type { Readable } from "node:stream";
 
+import type { CustomerTierAccess } from "../../../../platform/domain/customer-tier-access";
+
 import type {
 	AdminPendingRewardListQuery,
 	AdminRewardImageDownloadResponse,
@@ -36,8 +38,11 @@ export interface RewardReadPort {
 	/** Cross-tenant: one live consumer reward in full, whatever its status. */
 	findConsumerForReview(actor: ActorContext, rewardId: string): Promise<RewardResponse | null>;
 
-	/** Cross-tenant: published, in-stock, unexpired consumer rewards. */
-	listMarketplace(actor: ActorContext, query: RewardListQuery): Promise<PaginatedServiceResult<RewardResponse>>;
+	/**
+	 * Cross-tenant: published, in-stock, unexpired consumer rewards the viewer may see — only those they can claim by tier
+	 * unless the query asks for locked ones too (ADR 085).
+	 */
+	listMarketplace(actor: ActorContext, query: RewardListQuery, tierAccess: CustomerTierAccess): Promise<PaginatedServiceResult<RewardResponse>>;
 
 	/** Cross-tenant: one published consumer reward. */
 	findPublished(actor: ActorContext, rewardId: string): Promise<RewardResponse | null>;

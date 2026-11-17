@@ -5,6 +5,8 @@ import { MerchantCapabilityGate, RecordSharesCard } from "@/contexts/tenancy";
 import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { RewardPageBackLink } from "@/contexts/rewards/components/merchant-reward-editor-layout";
 import { MerchantRewardUnavailable } from "@/contexts/rewards/components/merchant-reward-unavailable";
+import { MerchantRewardMinimumTier } from "@/contexts/rewards/components/merchant-reward-minimum-tier";
+import { useTiersEnabled } from "@workspace/client/lib/contexts/tiers";
 import { RewardStockMeter } from "@/contexts/rewards/components/reward-stock-meter";
 import { describeRewardAudience } from "@/contexts/rewards/lib/reward-audience";
 import { describeRewardStores, isRewardEnded } from "@/contexts/rewards/lib/presentation";
@@ -125,6 +127,7 @@ function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps)
 	const { can } = useAuthorization();
 	const routes = tenantRoutes(tenantSlug);
 	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
+	const tiersEnabled = useTiersEnabled();
 	const canEdit = canManageRewards && isRewardEditable(reward.status);
 	const canSubmit = canManageRewards && reward.status === "DRAFT";
 	const ended = isRewardEnded(reward.status);
@@ -247,6 +250,11 @@ function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps)
 							<DetailRow term="Who can claim">
 								<RewardAudienceSummary tenantSlug={tenantSlug} reward={reward} />
 							</DetailRow>
+							{tiersEnabled ? (
+								<DetailRow term="Minimum tier">
+									<MerchantRewardMinimumTier tenantSlug={tenantSlug} reward={reward} canManage={canManageRewards} />
+								</DetailRow>
+							) : null}
 							<DetailRow term="Category">
 								<span className="capitalize">{reward.category}</span>
 							</DetailRow>

@@ -1,7 +1,7 @@
 ---
 title: "API reference — Docs publishing"
 description: "The Notion webhook, what the docs sync reports, and the Operations console's Docs sync page: the setup, the run history, starting a sync and the webhook verification token."
-order: 10
+order: 11
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

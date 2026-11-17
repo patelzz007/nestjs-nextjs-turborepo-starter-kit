@@ -42,6 +42,7 @@ describe("AnalyticsDashboardAssembler", () => {
 		facts.cohortTotals = { current: { newCustomers: 1, returningCustomers: 0 }, previous: { newCustomers: 0, returningCustomers: 1 } };
 		breakdowns.rewards = [{ rewardId: "r", title: "Coffee", claims: 4, redemptions: 1 }];
 		breakdowns.methods = [{ method: "MANUAL", redemptions: 1 }];
+		breakdowns.tiers = [{ tier: "GOLD", redemptions: 1 }];
 		assembler = new AnalyticsDashboardAssembler(facts, breakdowns, tenants, sales, new FrozenClock(EpochMsSchema.parse(NOW)));
 	});
 
@@ -67,6 +68,12 @@ describe("AnalyticsDashboardAssembler", () => {
 			expect(dashboard.byRedemptionMethod).toEqual([
 				{ method: "SCAN", redemptions: 0 },
 				{ method: "MANUAL", redemptions: 1 },
+			]);
+			expect(dashboard.byCustomerTier).toEqual([
+				{ tier: "BRONZE", redemptions: 0 },
+				{ tier: "SILVER", redemptions: 0 },
+				{ tier: "GOLD", redemptions: 1 },
+				{ tier: "DIAMOND", redemptions: 0 },
 			]);
 			expect(dashboard.byReward).toEqual([{ rewardId: "r", title: "Coffee", claims: 4, redemptions: 1, conversionRate: 25 }]);
 			expect(dashboard.series.map((point) => point.start)).toEqual([NOW - 2 * DAY_MS, NOW - DAY_MS]);

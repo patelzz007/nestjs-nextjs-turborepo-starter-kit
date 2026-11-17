@@ -51,7 +51,7 @@ describe("AnalyticsReportExporter", () => {
 						to: FIXTURE_TO,
 						timeZone: "Asia/Kuala_Lumpur",
 						interval: "week",
-						rowCounts: { series: 1, stores: 1, rewards: 0, redemptionMethods: 2 },
+						rowCounts: { series: 1, stores: 1, rewards: 0, redemptionMethods: 2, customerTiers: 4 },
 					},
 				},
 			},

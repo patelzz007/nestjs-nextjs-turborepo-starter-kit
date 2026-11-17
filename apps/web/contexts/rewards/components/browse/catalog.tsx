@@ -6,7 +6,7 @@ import { REWARDS_CATALOG_LOADING_LABELS } from "@/components/loading/loading-lab
 import { RewardCatalogBones } from "@/components/loading/reward-catalog-skeleton";
 import { RewardsViewToggle, type RewardsViewToggleLabels } from "@workspace/client/lib/features/ui-preferences/rewards-view-toggle";
 import { useRewardsViewMode, useUiPreferencesCommands } from "@workspace/client/lib/features/ui-preferences/facade";
-import type { RewardResponse } from "@workspace/shared";
+import type { CustomerTier, RewardResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
@@ -24,6 +24,8 @@ export interface DashboardCatalogProps {
 	readonly onNext: () => void;
 	readonly onPrevious: () => void;
 	readonly detailPathPrefix?: string;
+	/** The viewer's tier while tiers are on, to mark locked rewards (ADR 085); `null` while they are off. */
+	readonly viewerTier?: CustomerTier | null;
 }
 
 /** Consumer rewards collection with grid/list toggle and cursor pagination. */
@@ -35,6 +37,7 @@ export function DashboardCatalog({
 	onNext,
 	onPrevious,
 	detailPathPrefix = ROUTE_PREFIXES.dashboardRewards,
+	viewerTier = null,
 }: DashboardCatalogProps): React.JSX.Element {
 	const viewMode = useRewardsViewMode();
 	const { changeRewardsViewMode } = useUiPreferencesCommands();
@@ -62,13 +65,13 @@ export function DashboardCatalog({
 				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 					{rewards.map((reward, index) => (
 						// Only the first card is reliably above the fold; the rest load as they scroll in.
-						<RewardCard key={reward.id} reward={reward} detailPathPrefix={detailPathPrefix} priority={index === 0} />
+						<RewardCard key={reward.id} reward={reward} detailPathPrefix={detailPathPrefix} priority={index === 0} viewerTier={viewerTier} />
 					))}
 				</div>
 			) : (
 				<div className="space-y-2">
 					{rewards.map((reward) => (
-						<RewardListRow key={reward.id} reward={reward} detailPathPrefix={detailPathPrefix} />
+						<RewardListRow key={reward.id} reward={reward} detailPathPrefix={detailPathPrefix} viewerTier={viewerTier} />
 					))}
 				</div>
 			)}

@@ -14,6 +14,7 @@ import {
 	type ApiPaginatedMeta,
 	type Envelope,
 	type RewardResponse,
+	type TierAvailability,
 } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -56,17 +57,17 @@ function paginatedMeta(page: number, hasNext: boolean): ApiPaginatedMeta {
 	});
 }
 
-function view(initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>>): React.JSX.Element {
+function view(initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>>, tierAvailability?: TierAvailability): React.JSX.Element {
 	return (
 		<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
-			<DashboardBrowseView initialPage={initialPage} />
+			<DashboardBrowseView initialPage={initialPage} tierAvailability={tierAvailability} />
 		</UiPreferencesStoreProvider>
 	);
 }
 
-function renderAt(query: string, initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>>): RenderResult {
+function renderAt(query: string, initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>>, tierAvailability?: TierAvailability): RenderResult {
 	window.history.replaceState(null, "", `${PATH}${query}`);
-	return render(view(initialPage), { wrapper: ClientTestProviders });
+	return render(view(initialPage, tierAvailability), { wrapper: ClientTestProviders });
 }
 
 function lastQuery(): { readonly input: RewardsListInput | undefined; readonly options: RewardsListOptions | undefined } {
@@ -88,6 +89,44 @@ afterEach((): void => {
 	rewardsListQuery.mockReset();
 	vi.restoreAllMocks();
 	window.history.replaceState(null, "", "/");
+});
+
+describe("DashboardBrowseView locked rewards (ADR 085)", () => {
+	const SILVER_VIEWER: TierAvailability = { enabled: true, viewerTier: "SILVER" };
+	const GOLD_BRUNCH: RewardResponse = buildRewardResponse({ id: "00000000-0000-4000-8000-000000000002", title: "Gold brunch", minimumTier: "GOLD" });
+
+	it("lists locked rewards while tiers are on, marks them, and offers to hide them", () => {
+		rewardsListQuery.mockReturnValue({ data: { data: [LATTE, GOLD_BRUNCH], meta: paginatedMeta(1, false) }, isLoading: false });
+		renderAt("", undefined, SILVER_VIEWER);
+
+		expect(lastQuery().input).toEqual({ page: 1, limit: REWARDS_BROWSE_PAGE_SIZE, includeLocked: true });
+		expect(isPressed("Hide locked")).toBe(false);
+		expect(screen.getByText("Gold only")).toBeTruthy();
+		expect(screen.getByRole("link", { name: "See how to unlock" })).toBeTruthy();
+	});
+
+	it("hides them through the URL, back on page 1, and clears with the other filters", async () => {
+		renderAt("?page=2", undefined, SILVER_VIEWER);
+
+		fireEvent.click(screen.getByRole("button", { name: "Hide locked" }));
+		await flushUrlUpdates();
+
+		expect(window.location.search).toBe("?hideLocked=true");
+		expect(lastQuery().input).toEqual({ page: 1, limit: REWARDS_BROWSE_PAGE_SIZE });
+		expect(isPressed("Hide locked")).toBe(true);
+		fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+		await flushUrlUpdates();
+		expect(window.location.search).toBe("");
+	});
+
+	it("shows no tier filter and no tier marks while tiers are off", () => {
+		rewardsListQuery.mockReturnValue({ data: { data: [GOLD_BRUNCH], meta: paginatedMeta(1, false) }, isLoading: false });
+		renderAt("", undefined, { enabled: false });
+
+		expect(lastQuery().input).toEqual({ page: 1, limit: REWARDS_BROWSE_PAGE_SIZE });
+		expect(screen.queryByRole("button", { name: "Hide locked" })).toBeNull();
+		expect(screen.queryByText("Gold only")).toBeNull();
+	});
 });
 
 describe("DashboardBrowseView URL state", () => {

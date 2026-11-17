@@ -19,6 +19,7 @@ import {
 	MerchantRewardListQuerySchema,
 	MerchantRewardSummaryQuerySchema,
 	MerchantRewardSummarySchema,
+	MerchantSetRewardMinimumTierPathInputSchema,
 	MerchantUpdateRewardPathInputSchema,
 	REWARD_IMAGES_ARCHIVE_CONTENT_TYPE,
 	RewardListQuerySchema,
@@ -172,6 +173,12 @@ export const tenantRewardsContract = {
 		method: "POST",
 		path: tenantRewardsRoutes.publish,
 		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, rewardId: UuidParamSchema }).strict(),
+		response: singleResponse(RewardResponseSchema),
+	}),
+	setMinimumTier: defineContract({
+		method: "PUT",
+		path: tenantRewardsRoutes.minimumTier,
+		input: MerchantSetRewardMinimumTierPathInputSchema.extend({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug }).strict(),
 		response: singleResponse(RewardResponseSchema),
 	}),
 	audience: defineContract({

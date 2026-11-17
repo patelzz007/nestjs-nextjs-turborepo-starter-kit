@@ -7,7 +7,7 @@ const LAST_CLAIM = epochMs(Date.UTC(2026, 9, 28, 12));
 
 describe("toRewardCustomerOption", () => {
 	it("shows the name, masked email and claim history", () => {
-		expect(toRewardCustomerOption({ userId: "u1", fullName: "Alice", maskedEmail: "a•••@x.com", lastClaimedAt: LAST_CLAIM, claimCount: 3 })).toEqual({
+		expect(toRewardCustomerOption({ userId: "u1", fullName: "Alice", maskedEmail: "a•••@x.com", lastClaimedAt: LAST_CLAIM, claimCount: 3, tier: null })).toEqual({
 			userId: "u1",
 			fullName: "Alice",
 			maskedEmail: "a•••@x.com",
@@ -17,7 +17,15 @@ describe("toRewardCustomerOption", () => {
 	});
 
 	it("says once for a single claim", () => {
-		expect(toRewardCustomerOption({ userId: "u1", fullName: "Alice", maskedEmail: null, lastClaimedAt: LAST_CLAIM, claimCount: 1 }).detail).toMatch(/^Claimed once/u);
+		expect(toRewardCustomerOption({ userId: "u1", fullName: "Alice", maskedEmail: null, lastClaimedAt: LAST_CLAIM, claimCount: 1, tier: null }).detail).toMatch(
+			/^Claimed once/u,
+		);
+	});
+
+	it("leads with the customer's tier while tiers are on (ADR 085)", () => {
+		expect(toRewardCustomerOption({ userId: "u1", fullName: "Alice", maskedEmail: null, lastClaimedAt: LAST_CLAIM, claimCount: 3, tier: "GOLD" }).detail).toBe(
+			"Gold · Claimed 3 times · last 28 Oct 2026",
+		);
 	});
 });
 

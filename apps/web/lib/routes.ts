@@ -44,6 +44,8 @@ export interface WebDashboardRoutes {
 	readonly account: Route;
 	/** Signup referral code and referee list. */
 	readonly referrals: Route;
+	/** The customer's tier: progress, hold, warning and history (ADR 085). */
+	readonly tier: Route;
 	/** The customer inbox (ADR 070). */
 	readonly notifications: Route;
 	/** What reaches the customer, and where: channels, quiet hours, consent per store, phones. */
@@ -93,6 +95,7 @@ export const ROUTES: WebRoutes = {
 		activity: appRoute(`${DASHBOARD_PREFIX}/activity`),
 		account: appRoute(APP_LINKS.web.account),
 		referrals: appRoute(`${DASHBOARD_PREFIX}/referrals`),
+		tier: appRoute(APP_LINKS.web.tier),
 		notifications: appRoute(APP_LINKS.web.notifications),
 		notificationSettings: appRoute(`${APP_LINKS.web.notifications}/settings`),
 	},

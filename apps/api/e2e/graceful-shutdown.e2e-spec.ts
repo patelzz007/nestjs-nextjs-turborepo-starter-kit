@@ -136,12 +136,12 @@ describe("Graceful shutdown with a job in flight (e2e, real BullMQ and Postgres)
 			expect(probe.started).not.toContain("queued-during-drain");
 
 			const next = await boot();
-			await vi.waitFor(() => {
-				expect(probe.finished).toContain("queued-during-drain");
-			}, WAIT);
 			const queue = probeQueue(next);
+			// The probe logs "finished" inside `process()`; BullMQ records the job completed only after it returns.
+			await vi.waitFor(async () => {
+				await expect(queue.getJobState(z.string().parse(queuedDuringDrain.id))).resolves.toBe("completed");
+			}, WAIT);
 			await expect(queue.getJobState(z.string().parse(running.id))).resolves.toBe("completed");
-			await expect(queue.getJobState(z.string().parse(queuedDuringDrain.id))).resolves.toBe("completed");
 			expect(probe.started.filter((label) => label === "queued-during-drain")).toHaveLength(1);
 			expect(probe.finished).toStrictEqual(["in-flight", "queued-during-drain"]);
 		},
@@ -162,12 +162,15 @@ describe("Graceful shutdown with a job in flight (e2e, real BullMQ and Postgres)
 			expect(probe.finished).toStrictEqual([]);
 
 			const next = await boot();
-			await vi.waitFor(() => {
-				expect(probe.finished).toStrictEqual(["undrained"]);
+			const queue = probeQueue(next);
+			// The probe logs "finished" inside `process()`; BullMQ records the job completed (and counts the
+			// attempt) only after it returns, so wait for that before reading the attempt count.
+			await vi.waitFor(async () => {
+				await expect(queue.getJobState(z.string().parse(job.id))).resolves.toBe("completed");
 			}, WAIT);
-			const retried = await probeQueue(next).getJob(z.string().parse(job.id));
+			const retried = await queue.getJob(z.string().parse(job.id));
 			expect(retried?.attemptsMade).toBe(2);
-			await expect(probeQueue(next).getJobState(z.string().parse(job.id))).resolves.toBe("completed");
+			expect(probe.finished).toStrictEqual(["undrained"]);
 			expect(probe.started).toStrictEqual(["undrained", "undrained"]);
 		},
 		TEST_TIMEOUT_MS,

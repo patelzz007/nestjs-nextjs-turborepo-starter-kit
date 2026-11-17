@@ -4,7 +4,7 @@ import type { PilotCity, RewardCategory } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { MapPin, Search, X } from "lucide-react";
+import { Lock, MapPin, Search, X } from "lucide-react";
 import * as React from "react";
 
 /** One city chip: the filter value and its display name. */
@@ -30,6 +30,17 @@ export interface DashboardFiltersProps {
 	readonly onCategoryChange: (category: RewardCategory | undefined) => void;
 	readonly onClearFilters: () => void;
 	readonly hasActiveFilters: boolean;
+	/**
+	 * The "Hide locked" toggle (ADR 085): whether locked rewards are hidden, and how to change it. Left out while tiers
+	 * are off — there is nothing to hide then.
+	 */
+	readonly lockedFilter?: LockedRewardsFilter | undefined;
+}
+
+/** The catalog's "Hide locked" toggle state and its change handler. */
+export interface LockedRewardsFilter {
+	readonly hideLocked: boolean;
+	readonly onHideLockedChange: (hideLocked: boolean) => void;
 }
 
 export function DashboardFilters({
@@ -44,6 +55,7 @@ export function DashboardFilters({
 	onCategoryChange,
 	onClearFilters,
 	hasActiveFilters,
+	lockedFilter,
 }: DashboardFiltersProps): React.JSX.Element {
 	const handleSubmit = React.useCallback(
 		(event: React.SubmitEvent<HTMLFormElement>): void => {
@@ -108,6 +120,8 @@ export function DashboardFilters({
 						))}
 					</div>
 				</div>
+
+				{lockedFilter !== undefined ? <HideLockedChip filter={lockedFilter} /> : null}
 			</div>
 
 			{hasActiveFilters ? (
@@ -138,6 +152,28 @@ function FilterChip({ label, isActive, onClick }: FilterChipProps): React.JSX.El
 			className={cn("h-9 rounded-full px-4 text-sm capitalize", !isActive ? "bg-background" : undefined)}>
 			{label}
 		</Button>
+	);
+}
+
+interface HideLockedChipProps {
+	readonly filter: LockedRewardsFilter;
+}
+
+/** "Hide locked": toggles the rewards above the viewer's tier out of the catalog. */
+function HideLockedChip({ filter }: HideLockedChipProps): React.JSX.Element {
+	const { hideLocked, onHideLockedChange } = filter;
+	const handleClick = React.useCallback((): void => {
+		onHideLockedChange(!hideLocked);
+	}, [hideLocked, onHideLockedChange]);
+
+	return (
+		<div className="flex flex-wrap items-center gap-2">
+			<span className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+				<Lock className="size-3.5" aria-hidden="true" />
+				Tier
+			</span>
+			<FilterChip label="Hide locked" isActive={hideLocked} onClick={handleClick} />
+		</div>
 	);
 }
 

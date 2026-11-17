@@ -18,6 +18,7 @@ export const REFERRALS_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loadin
 export const REFERRAL_CODE_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading your code…" };
 export const REFEREES_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading people who used your code…" };
 export const ACTIVITY_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading your activity…" };
+export const TIER_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading your tier…" };
 export const ACCOUNT_SETTINGS_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading account settings…" };
 export const PROFILE_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading your profile…" };
 export const PROFILE_EMAIL_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading your email…" };

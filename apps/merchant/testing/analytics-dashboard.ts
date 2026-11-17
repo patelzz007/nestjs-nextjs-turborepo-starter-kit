@@ -74,6 +74,12 @@ export function buildMerchantDashboard(overrides: Partial<MerchantAnalyticsDashb
 			{ method: "SCAN", redemptions: 12 },
 			{ method: "MANUAL", redemptions: 3 },
 		],
+		byCustomerTier: [
+			{ tier: "BRONZE", redemptions: 10 },
+			{ tier: "SILVER", redemptions: 4 },
+			{ tier: "GOLD", redemptions: 1 },
+			{ tier: "DIAMOND", redemptions: 0 },
+		],
 		...overrides,
 	});
 }

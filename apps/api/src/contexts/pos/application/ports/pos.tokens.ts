@@ -3,6 +3,9 @@ import type { SystemOperationName } from "../../../../platform/application/syste
 /** The pos unit of work (`UnitOfWork<PosScope>`). */
 export const POS_UNIT_OF_WORK = Symbol("POS_UNIT_OF_WORK");
 
+/** `CustomerTierSnapshotFactory`: provided by the tiers context (ADR 085), bound to the checkout's transaction. */
+export const CUSTOMER_TIER_SNAPSHOT_FACTORY = Symbol("CUSTOMER_TIER_SNAPSHOT_FACTORY");
+
 /** {@link PosIdGenerator}. */
 export const POS_ID_GENERATOR = Symbol("POS_ID_GENERATOR");
 

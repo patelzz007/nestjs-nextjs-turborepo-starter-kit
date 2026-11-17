@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { FakeCustomerTierAccess } from "../../../../platform/application/__tests__/fake-customer-tier-access";
 import { FixedClock } from "../../../../platform/application/__tests__/fixed-clock";
 import { FakeMerchantAccessPort } from "../../../../platform/application/__tests__/fakes/fake-merchant-access.port";
 import { InMemoryUnitOfWork } from "../../../../platform/application/__tests__/fakes/in-memory-unit-of-work";
@@ -10,6 +11,7 @@ import {
 	RewardImagesInvalidError,
 	RewardLocationForbiddenError,
 	RewardLocationInvalidError,
+	RewardMinimumTierUnavailableError,
 	RewardNotDraftError,
 	RewardNotEditableError,
 	RewardNotFoundError,
@@ -21,6 +23,8 @@ import { CreateRewardCommand, type CreateRewardInput } from "../commands/create-
 import { CreateRewardHandler } from "../commands/create-reward/create-reward.handler";
 import { ReviseRewardCommand } from "../commands/revise-reward/revise-reward.command";
 import { ReviseRewardHandler } from "../commands/revise-reward/revise-reward.handler";
+import { SetRewardMinimumTierCommand } from "../commands/set-reward-minimum-tier/set-reward-minimum-tier.command";
+import { SetRewardMinimumTierHandler } from "../commands/set-reward-minimum-tier/set-reward-minimum-tier.handler";
 import { SubmitRewardForReviewCommand } from "../commands/submit-reward-for-review/submit-reward-for-review.command";
 import { SubmitRewardForReviewHandler } from "../commands/submit-reward-for-review/submit-reward-for-review.handler";
 import type { RewardsScope } from "../rewards-scope";
@@ -48,6 +52,7 @@ function createInput(patch: Partial<CreateRewardInput> = {}): CreateRewardInput 
 		locationIds: [],
 		audienceType: "EVERYONE",
 		audienceCustomerIds: [],
+		minimumTier: "BRONZE",
 		...patch,
 	};
 }
@@ -57,18 +62,19 @@ interface Harness {
 	readonly uow: InMemoryUnitOfWork<RewardsScope>;
 	readonly access: FakeMerchantAccessPort;
 	readonly clock: FixedClock;
+	readonly tiers: FakeCustomerTierAccess;
 }
 
-function harness(activeStores: readonly string[] = []): Harness {
+function harness(activeStores: readonly string[] = [], tiers: FakeCustomerTierAccess = FakeCustomerTierAccess.on()): Harness {
 	const scope = fakeRewardsScope(activeStores);
 	scope.imageFiles.usable.add(IMAGE_ID);
-	return { scope, uow: new InMemoryUnitOfWork<RewardsScope>(scope), access: new FakeMerchantAccessPort(), clock: new FixedClock(NOW) };
+	return { scope, uow: new InMemoryUnitOfWork<RewardsScope>(scope), access: new FakeMerchantAccessPort(), clock: new FixedClock(NOW), tiers };
 }
 
 describe("CreateRewardHandler (D02)", () => {
 	it("creates the reward through the unit of work as the caller, locking its images, and returns its view", async () => {
 		const h = harness();
-		const handler = new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay());
+		const handler = new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers);
 		const actor = userActor();
 
 		const response = await handler.execute(new CreateRewardCommand(actor, createInput()));
@@ -83,7 +89,7 @@ describe("CreateRewardHandler (D02)", () => {
 
 	it("creates the referrer child in the same aggregate when referrals are on", async () => {
 		const h = harness();
-		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(
+		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 			new CreateRewardCommand(userActor(), createInput({ referralsEnabled: true, referralPoolTotal: 3 })),
 		);
 		const [rewardId] = h.scope.rewards.added;
@@ -94,7 +100,9 @@ describe("CreateRewardHandler (D02)", () => {
 		const h = harness();
 		h.access.deny("merchant:manage_rewards");
 		await expect(
-			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(new CreateRewardCommand(userActor(), createInput())),
+			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
+				new CreateRewardCommand(userActor(), createInput()),
+			),
 		).rejects.toThrow(AuthorizationDeniedError);
 		expect(h.scope.rewards.added).toEqual([]);
 		expect(h.uow.committed).toEqual([]);
@@ -103,7 +111,7 @@ describe("CreateRewardHandler (D02)", () => {
 	it("rolls back on an image that is not one of the tenant's ready reward images", async () => {
 		const h = harness();
 		await expect(
-			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(
+			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 				new CreateRewardCommand(userActor(), createInput({ imageFileIds: ["77777777-7777-4777-8777-777777777777"] })),
 			),
 		).rejects.toThrow(RewardImagesInvalidError);
@@ -115,14 +123,14 @@ describe("CreateRewardHandler (D02)", () => {
 		const limited = harness([STORE_A, STORE_B]);
 		limited.access.grantLocations([STORE_A]);
 		await expect(
-			new CreateRewardHandler(limited.uow, limited.access, new SequentialIds(), limited.clock, new RecordingMerchantDisplay()).execute(
+			new CreateRewardHandler(limited.uow, limited.access, new SequentialIds(), limited.clock, new RecordingMerchantDisplay(), limited.tiers).execute(
 				new CreateRewardCommand(userActor(), createInput()),
 			),
 		).rejects.toThrow(RewardLocationForbiddenError);
 
 		const all = harness([STORE_A, STORE_B]);
 		await expect(
-			new CreateRewardHandler(all.uow, all.access, new SequentialIds(), all.clock, new RecordingMerchantDisplay()).execute(
+			new CreateRewardHandler(all.uow, all.access, new SequentialIds(), all.clock, new RecordingMerchantDisplay(), all.tiers).execute(
 				new CreateRewardCommand(userActor(), createInput({ locationScopeType: "SELECTED", locationIds: [STORE_A, "77777777-7777-4777-8777-777777777777"] })),
 			),
 		).rejects.toThrow(RewardLocationInvalidError);
@@ -130,11 +138,65 @@ describe("CreateRewardHandler (D02)", () => {
 	});
 });
 
+describe("a reward's minimum tier (ADR 085)", () => {
+	it("creates a reward for Gold and above", async () => {
+		const h = harness();
+		const response = await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
+			new CreateRewardCommand(userActor(), createInput({ minimumTier: "GOLD" })),
+		);
+		const [rewardId] = h.scope.rewards.added;
+		expect(h.scope.rewards.rows.get(rewardId ?? "")?.audience.minimumTier).toBe("GOLD");
+		expect(response.id).toBe(rewardId);
+	});
+
+	it("refuses a minimum tier above Bronze while tiers are off, writing nothing", async () => {
+		const h = harness([], new FakeCustomerTierAccess());
+		await expect(
+			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
+				new CreateRewardCommand(userActor(), createInput({ minimumTier: "SILVER" })),
+			),
+		).rejects.toThrow(RewardMinimumTierUnavailableError);
+		expect(h.scope.rewards.added).toEqual([]);
+	});
+
+	it("lets a Bronze reward be made while tiers are off", async () => {
+		const h = harness([], new FakeCustomerTierAccess());
+		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
+			new CreateRewardCommand(userActor(), createInput()),
+		);
+		expect(h.scope.rewards.added).toHaveLength(1);
+	});
+
+	it("changes a published reward's minimum tier without another review, saved with a compare-and-set", async () => {
+		const h = harness();
+		h.scope.rewards.seed(rewardState("PUBLISHED"));
+		await new SetRewardMinimumTierHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
+			new SetRewardMinimumTierCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, minimumTier: "DIAMOND" }),
+		);
+		const saved = h.scope.rewards.rows.get(REWARD_ID);
+		expect(saved?.audience.minimumTier).toBe("DIAMOND");
+		expect(saved?.status).toBe("PUBLISHED");
+		expect(h.scope.events.recordedNames()).toEqual(["rewards.RewardRevised"]);
+	});
+
+	it("refuses a minimum tier on a reward the caller may not manage", async () => {
+		const h = harness();
+		h.access.deny("merchant:manage_rewards");
+		h.scope.rewards.seed(rewardState("PUBLISHED"));
+		await expect(
+			new SetRewardMinimumTierHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
+				new SetRewardMinimumTierCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, minimumTier: "GOLD" }),
+			),
+		).rejects.toThrow(AuthorizationDeniedError);
+		expect(h.scope.rewards.rows.get(REWARD_ID)?.audience.minimumTier).toBe("BRONZE");
+	});
+});
+
 describe("ReviseRewardHandler (D03)", () => {
 	it("saves the edit with a compare-and-set, the referrer child included, recording who replaced the images", async () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT", { referrer: referrerRow("DRAFT") }));
-		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 			new ReviseRewardCommand(userActor(), {
 				tenantId: TENANT_ID,
 				rewardId: REWARD_ID,
@@ -154,7 +216,7 @@ describe("ReviseRewardHandler (D03)", () => {
 	it("records the API key as the editor for a machine call", async () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT"));
-		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 			new ReviseRewardCommand(apiKeyActor(TENANT_ID), { tenantId: TENANT_ID, rewardId: REWARD_ID, imageFileIds: [IMAGE_ID] }),
 		);
 		expect(h.scope.rewards.imageReplacements).toEqual([{ actorId: API_KEY_ID, at: NOW }]);
@@ -163,7 +225,7 @@ describe("ReviseRewardHandler (D03)", () => {
 	it("does not lock images when the edit leaves them alone", async () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT"));
-		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+		await new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 			new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
 		);
 		expect(h.scope.imageFiles.locks).toEqual([]);
@@ -173,7 +235,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT", { tenantId: OTHER_TENANT_ID }));
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
 			),
 		).rejects.toThrow(RewardNotFoundError);
@@ -182,7 +244,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		limited.access.grantLocations([STORE_A]);
 		limited.scope.rewards.seed(rewardState("DRAFT", { locationScope: RewardLocationScope.selected([STORE_B]) }));
 		await expect(
-			new ReviseRewardHandler(limited.uow, limited.access, limited.clock, new RecordingMerchantDisplay()).execute(
+			new ReviseRewardHandler(limited.uow, limited.access, limited.clock, new RecordingMerchantDisplay(), limited.tiers).execute(
 				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
 			),
 		).rejects.toThrow(RewardNotFoundError);
@@ -193,7 +255,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("PUBLISHED"));
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
 			),
 		).rejects.toThrow(RewardNotEditableError);
@@ -204,7 +266,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("PENDING_REVIEW")).forceConflictOnNextSave();
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay()).execute(
+			new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
 			),
 		).rejects.toThrow(ConflictError);
@@ -253,7 +315,7 @@ describe("who a reward is for", () => {
 		const h = harness();
 		h.scope.customers.add(alice);
 
-		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(
+		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 			new CreateRewardCommand(userActor(), createInput({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE] })),
 		);
 
@@ -266,7 +328,7 @@ describe("who a reward is for", () => {
 		h.scope.customers.add(alice);
 
 		await expect(
-			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay()).execute(
+			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 				new CreateRewardCommand(userActor(), createInput({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE, STRANGER] })),
 			),
 		).rejects.toThrow(RewardAudienceInvalidError);
@@ -277,7 +339,7 @@ describe("who a reward is for", () => {
 		const h = harness();
 		h.scope.customers.add(alice);
 		h.scope.rewards.seed(rewardState("DRAFT"));
-		const revise = new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay());
+		const revise = new ReviseRewardHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers);
 
 		await revise.execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE] }));
 		expect(h.scope.rewards.rows.get(REWARD_ID)?.audience.equals(RewardAudience.selected([ALICE]))).toBe(true);

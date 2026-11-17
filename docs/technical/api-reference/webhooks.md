@@ -1,7 +1,7 @@
 ---
 title: "API reference — Webhooks (outgoing and received)"
 description: "A business's endpoints for signed event deliveries (create, update, switch on or off, rotate the secret, send a test), the delivery log and redelivery (owner-only, `merchant:manage_webhooks`), and the admin's log of every webhook the platform received."
-order: 9
+order: 10
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

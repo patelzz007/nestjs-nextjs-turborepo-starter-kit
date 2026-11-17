@@ -1,4 +1,4 @@
-import type { EpochMs, RewardFreeItem, RewardType } from "@workspace/shared";
+import type { CustomerTier, EpochMs, RewardFreeItem, RewardType } from "@workspace/shared";
 
 import type { RewardAudience } from "../value-objects/reward-audience.value-object";
 import type { RewardLocationScope } from "../value-objects/reward-location-scope.value-object";
@@ -125,6 +125,8 @@ export interface RewardRevision {
 	readonly rules?: RewardRulesValue | undefined;
 	/** Who the reward is for from now on (decided by `decideRewardAudience`). */
 	readonly audience?: RewardAudience | undefined;
+	/** The lowest tier that may claim it from now on (ADR 085); absent keeps it for a reward still for everyone. */
+	readonly minimumTier?: CustomerTier | undefined;
 }
 
 /** Everything a new consumer reward is created from. */

@@ -47,6 +47,10 @@ export const TABLE_POLICIES: Readonly<Record<string, readonly TablePolicy[]>> = 
 	],
 	City: [{ name: "cities_read", rule: "readableByAll" }],
 	Country: [{ name: "countries_read", rule: "readableByAll" }],
+	// Customer tiers (ADR 085): the tiers context writes through its system operations; the owner and till reads are in 67.
+	CustomerTierChange: [{ name: "customer_tier_changes_system", rule: "system" }],
+	CustomerTierSettings: [{ name: "customer_tier_settings_system", rule: "system" }],
+	CustomerTierStanding: [{ name: "customer_tier_standings_system", rule: "system" }],
 	DataChangeGroup: [],
 	DataChangeLog: [{ name: "data_change_logs_select", rule: "systemRead" }],
 	EmailDeliveryEvent: [{ name: "email_delivery_events_bypass", rule: "system" }],

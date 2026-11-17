@@ -3,21 +3,27 @@ import { QueryHandler, type IQueryHandler } from "@nestjs/cqrs";
 import { epochMs, MERCHANT_CAPABILITY, rewardCustomerListQuery, type PaginatedServiceResult, type RewardCustomer } from "@workspace/shared";
 
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
+import { CUSTOMER_TIER_ACCESS, type CustomerTierAccessPort } from "../../../../../platform/application/ports/customer-tier-access.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { MERCHANT_ACCESS, type TenantCustomerSummary } from "../../../../tenancy/public-api";
 import { REWARD_CUSTOMERS_READ_OPERATION, REWARDS_UNIT_OF_WORK } from "../../ports/rewards.tokens";
 import type { RewardsScope } from "../../rewards-scope";
 import { ListRewardCustomersQuery } from "./list-reward-customers.query";
 
-/** A customer as the reward editor shows them. */
-export function toRewardCustomer(summary: TenantCustomerSummary): RewardCustomer {
-	return {
+/**
+ * Customers as the reward editor shows them, each with their tier (ADR 085) — just the tier, nothing behind it; null for
+ * every customer while tiers are off.
+ */
+export async function toRewardCustomers(summaries: readonly TenantCustomerSummary[], tiers: Pick<CustomerTierAccessPort, "tiersOf">): Promise<RewardCustomer[]> {
+	const tierOf = await tiers.tiersOf(summaries.map((summary) => summary.userId));
+	return summaries.map((summary): RewardCustomer => ({
 		userId: summary.userId,
 		fullName: summary.fullName,
 		maskedEmail: summary.maskedEmail,
 		lastClaimedAt: epochMs(summary.lastClaimedAt),
 		claimCount: summary.claimCount,
-	};
+		tier: tierOf === null ? null : (tierOf.get(summary.userId) ?? null),
+	}));
 }
 
 /** The tenant's customers, to give a reward to (people who manage rewards only; masked contact details). */
@@ -26,6 +32,7 @@ export class ListRewardCustomersHandler implements IQueryHandler<ListRewardCusto
 	public constructor(
 		@Inject(MERCHANT_ACCESS) private readonly merchantAccess: MerchantAccessPort,
 		@Inject(REWARDS_UNIT_OF_WORK) private readonly uow: UnitOfWork<RewardsScope>,
+		@Inject(CUSTOMER_TIER_ACCESS) private readonly tiers: Pick<CustomerTierAccessPort, "tiersOf">,
 	) {}
 
 	public async execute(query: ListRewardCustomersQuery): Promise<PaginatedServiceResult<RewardCustomer>> {
@@ -43,7 +50,7 @@ export class ListRewardCustomersHandler implements IQueryHandler<ListRewardCusto
 		);
 		const totalPages = Math.max(1, Math.ceil(page.total / input.limit));
 		return {
-			items: page.items.map(toRewardCustomer),
+			items: await toRewardCustomers(page.items, this.tiers),
 			limit: input.limit,
 			total: page.total,
 			page: input.page,

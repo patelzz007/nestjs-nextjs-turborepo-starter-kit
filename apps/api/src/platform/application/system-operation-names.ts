@@ -221,5 +221,9 @@ export const SystemOperationNameSchema = z.enum([
 	"payments.callback.apply",
 	"payments.reconcile",
 	"payments.refund",
+	// ── Customer tiers (ADR 085) ─────────────────────────────────────────
+	"tiers.standing.read",
+	"tiers.standing.evaluate",
+	"tiers.settings.write",
 ]);
 export type SystemOperationName = z.output<typeof SystemOperationNameSchema>;

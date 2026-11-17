@@ -1,7 +1,7 @@
 ---
 title: "API reference — Kanban boards"
 description: "The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments."
-order: 21
+order: 22
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

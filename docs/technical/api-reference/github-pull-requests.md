@@ -1,7 +1,7 @@
 ---
 title: "API reference — GitHub pull requests"
 description: "Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves."
-order: 17
+order: 18
 author: "Generated from the OpenAPI export"
 category: "API reference"
 date: 1791072000000

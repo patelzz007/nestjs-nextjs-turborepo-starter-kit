@@ -133,7 +133,7 @@ describe("tenancy multi isolation", () => {
 		const session = new RewardsReadSession(transactions);
 		const rows = await session.readPublished(actor, (db) =>
 			db.reward.findMany({
-				where: buildMarketplaceWhere(RewardListQuerySchema.parse({}), null),
+				where: buildMarketplaceWhere(RewardListQuerySchema.parse({}), null, { kind: "off" }),
 				select: MARKETPLACE_REWARD_SELECT,
 			}),
 		);

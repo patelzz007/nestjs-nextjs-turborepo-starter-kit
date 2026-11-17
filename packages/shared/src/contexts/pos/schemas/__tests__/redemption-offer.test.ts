@@ -37,8 +37,10 @@ describe("a redemption's offer, in POS terms", () => {
 			valid: true,
 			invalidReason: null,
 			minSpendMinor: null,
+			customerTier: "GOLD",
 		});
 		expect(preview.offer).toEqual(offer);
+		expect(preview.customerTier).toBe("GOLD");
 		const item = RedemptionCheckoutItemSchema.parse({
 			redemptionId: REDEMPTION_ID,
 			claimId: CLAIM_ID,

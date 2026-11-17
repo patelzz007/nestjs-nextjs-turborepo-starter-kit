@@ -11,6 +11,7 @@ import {
 	MERCHANT_REWARD_KPIS,
 	MERCHANT_SALES_KPIS,
 	MERCHANT_SALES_SERIES,
+	toCustomerTierSegments,
 	toRedemptionMethodSegments,
 	toRewardItems,
 	toStoreItems,
@@ -18,6 +19,7 @@ import {
 import { tenantRoutes } from "@/lib/routes";
 import { keepPreviousData } from "@tanstack/react-query";
 import { AnalyticsExportMenu } from "@workspace/client/lib/contexts/reporting/analytics-export-menu";
+import { useTiersEnabled } from "@workspace/client/lib/contexts/tiers";
 import { AnalyticsKpiGrid } from "@workspace/client/lib/contexts/reporting/analytics-kpi-grid";
 import {
 	analyticsDisplayRegion,
@@ -206,6 +208,8 @@ export function MerchantAnalyticsSections({ dashboard, status, timeZone }: Merch
 	const engagement = toChartSeriesData(series, MERCHANT_ENGAGEMENT_SERIES);
 	const methods = dashboard === undefined ? [] : toRedemptionMethodSegments(dashboard, formatters);
 	const hasRedemptions = methods.some((segment) => segment.value > 0);
+	const tiersEnabled = useTiersEnabled();
+	const tierSegments = dashboard === undefined ? [] : toCustomerTierSegments(dashboard, formatters);
 
 	return (
 		<>
@@ -289,6 +293,11 @@ export function MerchantAnalyticsSections({ dashboard, status, timeZone }: Merch
 				<AnalyticsPanel title="By redemption method" description="How customers redeemed at the till">
 					<ShareBar label="Redemptions by method" segments={methods} state={toChartFrameState(status, !hasRedemptions, "No redemptions in this range.")} />
 				</AnalyticsPanel>
+				{tiersEnabled ? (
+					<AnalyticsPanel title="By customer tier" description="Each customer's tier when they redeemed">
+						<ShareBar label="Redemptions by customer tier" segments={tierSegments} state={toChartFrameState(status, !hasRedemptions, "No redemptions in this range.")} />
+					</AnalyticsPanel>
+				) : null}
 			</div>
 		</>
 	);

@@ -1,5 +1,6 @@
 import { RewardDetailView } from "@/contexts/rewards/components/detail/view";
 import { loadRewardDetail } from "@/contexts/rewards/lib/reward-detail-server";
+import { readTierAvailability } from "@/contexts/tiers/lib/server-tier-availability";
 import { ROUTE_PREFIXES } from "@/lib/routes";
 import * as React from "react";
 
@@ -10,11 +11,11 @@ export const dynamic = "force-dynamic";
 /** `/rewards/[rewardId]` — public (guest-browsable) reward detail; claiming asks the visitor to sign in. */
 export default async function PublicRewardDetailPage({ params }: { readonly params: Promise<{ rewardId: string }> }): Promise<React.JSX.Element> {
 	const { rewardId } = await params;
-	const reward = await loadRewardDetail(rewardId);
+	const [reward, tierAvailability] = await Promise.all([loadRewardDetail(rewardId), readTierAvailability()]);
 
 	return (
 		<PublicRewardDetailFrame>
-			<RewardDetailView rewardId={reward.data.id} initialReward={reward} detailPathPrefix={ROUTE_PREFIXES.publicRewards} />
+			<RewardDetailView rewardId={reward.data.id} initialReward={reward} detailPathPrefix={ROUTE_PREFIXES.publicRewards} tierAvailability={tierAvailability} />
 		</PublicRewardDetailFrame>
 	);
 }

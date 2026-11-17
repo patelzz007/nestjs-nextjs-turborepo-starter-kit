@@ -24,6 +24,7 @@ import * as referralsEntry from "../contexts/referrals/index";
 import * as reportingEntry from "../contexts/reporting/index";
 import * as docsPublishingEntry from "../contexts/docs-publishing/index";
 import * as rewardsEntry from "../contexts/rewards/index";
+import * as tiersEntry from "../contexts/tiers/index";
 import * as webhooksEntry from "../contexts/webhooks/index";
 
 const CONTEXTS_DIR: string = resolve(import.meta.dirname, "..", "contexts");
@@ -57,6 +58,7 @@ const ENTRIES: Readonly<Record<string, Readonly<Record<string, ExportedValue>>>>
 	referrals: referralsEntry,
 	reporting: reportingEntry,
 	rewards: rewardsEntry,
+	tiers: tiersEntry,
 	webhooks: webhooksEntry,
 };
 

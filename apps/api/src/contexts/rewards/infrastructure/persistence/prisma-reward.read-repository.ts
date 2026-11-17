@@ -16,10 +16,12 @@ import {
 import type { PublicUrlResolve } from "../../../../config/public-url.resolver";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { MerchantAccessGrant } from "../../../../platform/application/ports/authorization.port";
-import { fetchListPage, toPaginatedServiceResult } from "../../../../platform/infrastructure/persistence/list-page";
+import type { CustomerTierAccess } from "../../../../platform/domain/customer-tier-access";
+import { fetchListPage, fetchSegmentedPage, toPaginatedServiceResult, type ListPageSpec } from "../../../../platform/infrastructure/persistence/list-page";
 import type { DueForAutoPublish, RewardReadPort } from "../../application/ports/reward-read.port";
 import {
 	buildMarketplaceOrder,
+	marketplaceTierSegments,
 	buildMarketplaceWhere,
 	rewardAudienceWhere,
 	OPERATING_MERCHANT_WHERE,
@@ -114,19 +116,22 @@ export class PrismaRewardReadRepository implements RewardReadPort {
 		return this.toResponse(row);
 	}
 
-	public async listMarketplace(actor: ActorContext, query: RewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
+	public async listMarketplace(actor: ActorContext, query: RewardListQuery, tierAccess: CustomerTierAccess): Promise<PaginatedServiceResult<RewardResponse>> {
 		// The page is read and its transaction closed BEFORE the merchants' display data is fetched: that read
 		// is a transaction of its own, and opening it while this one holds its connection starved the pool.
-		const result = await this.session.readPublished(actor, async (db) =>
-			fetchListPage(query, {
-				where: buildMarketplaceWhere(query, viewerUserIdOf(actor)),
+		// With locked rewards shown, the ones the viewer can claim come first on every page (ADR 085).
+		const segments = marketplaceTierSegments(query, tierAccess);
+		const result = await this.session.readPublished(actor, async (db) => {
+			const spec: ListPageSpec<Prisma.RewardWhereInput, Prisma.RewardOrderByWithRelationInput, MarketplaceRewardRow> = {
+				where: buildMarketplaceWhere(query, viewerUserIdOf(actor), tierAccess),
 				order: buildMarketplaceOrder(query),
 				keyset: rewardListKeyset<MarketplaceRewardRow>(),
 				and: (left: Prisma.RewardWhereInput, right: Prisma.RewardWhereInput): Prisma.RewardWhereInput => ({ AND: [left, right] }),
 				count: (where) => db.reward.count({ where }),
 				findMany: (args): Promise<MarketplaceRewardRow[]> => db.reward.findMany({ ...args, select: MARKETPLACE_REWARD_SELECT }),
-			}),
-		);
+			};
+			return segments === null ? fetchListPage(query, spec) : fetchSegmentedPage(query, spec, segments);
+		});
 		const items = await this.toResponses(result.items);
 		return toPaginatedServiceResult({ ...result, items }, query);
 	}

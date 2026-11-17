@@ -304,6 +304,8 @@ export const DDD_CONTEXTS = [
 	"feature-flags",
 	// Inbound (ADR 081) and outbound (ADR 082) webhooks, enhancement 5.7 (2026-11-04).
 	"webhooks",
+	// Customer tiers (ADR 085), 2026-11-17.
+	"tiers",
 ];
 
 const DOMAIN_PURITY_MESSAGE = "Domain is pure: no framework, no persistence, no outer layers (decision #6).";
