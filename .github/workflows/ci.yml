@@ -521,9 +521,9 @@ jobs:
       MERCHANT_E2E_EMAIL: brew.owner@kl-rewards.demo
       MERCHANT_E2E_PASSWORD: BrewOwner@123
       MERCHANT_E2E_TENANT_SLUG: brew-bean-kl
-      # The admin suite drives the kanban board, which lives in the developer component gallery: a
-      # production build serves the gallery only when it is switched on (apps/admin/lib/feature-flags.ts).
-      ADMIN_SHOWCASE: "true"
+      # The admin suite drives the kanban board, which lives in the developer component showcase: the
+      # `showcase` feature flag, which the seeded rule turns on outside production (ADR 087). CI's API runs
+      # with NODE_ENV=test, so its DEPLOYMENT_ENVIRONMENT is development and the rule applies.
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

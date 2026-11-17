@@ -415,6 +415,7 @@ describe("OpenAPI document (e2e)", () => {
 			expect(passThrough.sort()).toEqual([
 				"AuditTrailController.stream",
 				"EmailLogController.stream",
+				"FeatureFlagsClientController.stream",
 				"GithubLiveUpdatesController.stream",
 				"GithubPicturesController.file",
 				"GithubPicturesController.upload",

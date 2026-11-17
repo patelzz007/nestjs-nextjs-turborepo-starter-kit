@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import * as React from "react";
 
 import { LaunchScreen } from "../components/launch-screen";
+import { FeatureFlagsProvider, SECURE_STORE_BUNDLE_STORAGE } from "../contexts/feature-flags";
 import { PrivacyCover } from "../components/privacy-cover";
 import { useAppLockLifecycle } from "../features/app-lock/use-app-lock-lifecycle";
 import { loadPreferences } from "../features/preferences/persistence";
@@ -29,7 +30,7 @@ export interface AppShellProps {
 	readonly fontsReady: boolean;
 }
 
-/** Root providers, in the order of §9.4: API client, query client, session store, preferences store. */
+/** Root providers, in the order of §9.4: API client, query client, session store, preferences store, then feature flags (ADR 087). */
 export function AppShell({ runtime, fontsReady }: AppShellProps): React.JSX.Element {
 	return (
 		<ReadyRuntimeProvider runtime={runtime}>
@@ -37,7 +38,9 @@ export function AppShell({ runtime, fontsReady }: AppShellProps): React.JSX.Elem
 				<QueryClientProvider client={runtime.queryClient}>
 					<SessionStoreProvider store={runtime.sessionStore}>
 						<PreferencesStoreProvider store={runtime.preferencesStore}>
-							<GuardedNavigator runtime={runtime} fontsReady={fontsReady} />
+							<FeatureFlagsProvider storage={SECURE_STORE_BUNDLE_STORAGE}>
+								<GuardedNavigator runtime={runtime} fontsReady={fontsReady} />
+							</FeatureFlagsProvider>
 						</PreferencesStoreProvider>
 					</SessionStoreProvider>
 				</QueryClientProvider>

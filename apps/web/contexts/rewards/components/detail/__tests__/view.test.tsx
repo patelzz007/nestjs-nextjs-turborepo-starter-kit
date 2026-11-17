@@ -7,7 +7,7 @@ import { WebSessionTestProvider, type WebSessionState } from "@/contexts/identit
 import { CLAIM_OPTIONS_LOADING_LABELS, REWARD_DETAIL_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { RewardDetailView } from "@/contexts/rewards/components/detail/view";
 import { expectSingleLoadingStatus } from "@/testing/skeleton";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import { GUEST_SESSION_STATE, signedInSession } from "@/testing/session";
 import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL, rewardImageFixture, type RewardFixtureOverrides } from "@/testing/reward";
 import { DEFAULT_TIER_RULES, type MyTier, type RewardResponse, type TierAvailability } from "@workspace/shared";
@@ -91,7 +91,7 @@ function renderView(session: WebSessionState, tierAvailability?: TierAvailabilit
 		<WebSessionTestProvider session={session}>
 			<RewardDetailView rewardId={REWARD_ID} tierAvailability={tierAvailability} />
 		</WebSessionTestProvider>,
-		{ wrapper: UiKitTestProviders },
+		{ wrapper: ClientTestProviders },
 	);
 }
 
@@ -226,7 +226,7 @@ describe("RewardDetailView merchant identity", () => {
 			<WebSessionTestProvider session={GUEST_SESSION_STATE}>
 				<RewardDetailView rewardId={REWARD_ID} />
 			</WebSessionTestProvider>,
-			{ wrapper: UiKitTestProviders },
+			{ wrapper: ClientTestProviders },
 		);
 
 		expect(screen.getByText("Brew & Bean KL")).toBeDefined();
@@ -386,7 +386,7 @@ describe("RewardDetailView more from the merchant", () => {
 			<WebSessionTestProvider session={GUEST_SESSION_STATE}>
 				<RewardDetailView rewardId={REWARD_ID} detailPathPrefix="/rewards" />
 			</WebSessionTestProvider>,
-			{ wrapper: UiKitTestProviders },
+			{ wrapper: ClientTestProviders },
 		);
 
 		expect(screen.getByRole("heading", { name: "More from Brew & Bean KL" })).toBeDefined();

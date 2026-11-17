@@ -7,7 +7,11 @@ import { loadServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-lo
 import { prefetchedDataOrUndefined } from "@/lib/server/server-query-outcome";
 import { analyticsPrefetchKey, ANALYTICS_URL_STATE, resolveAnalyticsRange, toAnalyticsRangeQuery } from "@workspace/client/lib/contexts/reporting/analytics-range";
 import { MerchantAnalyticsDashboardQuerySchema, nowEpochMs } from "@workspace/shared";
+import { notFound } from "next/navigation";
 import * as React from "react";
+
+import { MERCHANT_ANALYTICS_FEATURE } from "@/lib/feature-flags";
+import { isMerchantFeatureEnabled } from "@/lib/server/feature-flag-bundle";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +37,10 @@ export default async function MerchantAnalyticsPage({ params, searchParams }: Me
 	const denied = await guardTenantPage(tenantSlug, "/analytics");
 	if (denied !== null) {
 		return denied;
+	}
+	// Behind the merchant-analytics flag (ADR 087): while it is off for this store, the page doesn't exist for it.
+	if (!(await isMerchantFeatureEnabled(tenantSlug, MERCHANT_ANALYTICS_FEATURE))) {
+		notFound();
 	}
 	const urlState = ANALYTICS_URL_STATE.parse(await searchParams);
 	const nowMs = nowEpochMs();

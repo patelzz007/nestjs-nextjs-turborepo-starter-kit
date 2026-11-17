@@ -1,7 +1,7 @@
 // config/api-config/api-config.grouping.ts — The flat environment grouped into `ApiConfig`.
 // Part of the API environment contract; `../api-config.schema.ts` is its public entry.
 
-import { type GithubRepositoryParams, type NodeEnv, NodeEnvSchema, TenantIdSchema } from "@workspace/shared";
+import { DeploymentEnvironmentSchema, type GithubRepositoryParams, type NodeEnv, NodeEnvSchema, TenantIdSchema } from "@workspace/shared";
 import { toKafkaSecurityOptions } from "@workspace/messaging/kafka";
 
 import { resolveApiPublicUrl } from "../api-public-url";
@@ -57,6 +57,7 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			isDevelopment: nodeEnv === NodeEnvSchema.enum.development,
 			isTest: nodeEnv === NodeEnvSchema.enum.test,
 			appName: env.APP_NAME,
+			deploymentEnvironment: env.DEPLOYMENT_ENVIRONMENT ?? DeploymentEnvironmentSchema.enum.development,
 		},
 		http: {
 			host: env.HOST,

@@ -17,6 +17,8 @@ import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useEnabledFeatureFlags } from "@workspace/client/lib/contexts/feature-flags";
+import { MERCHANT_FEATURE_FLAGS } from "@/lib/feature-flags";
 import { useOwnAvatar } from "@workspace/client/lib/contexts/identity/profile/use-own-avatar";
 import type { TenantRewardMembershipResponse } from "@workspace/shared";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
@@ -85,7 +87,12 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, o
 
 	// In the language on screen (5.12); ids and the saved section order stay the English ones.
 	const menu = useTranslatedSidebarMenu(MERCHANT_SIDEBAR_MENU, MERCHANT_SIDEBAR_LABELS);
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(menu, menuFilterCapabilities), [menu, menuFilterCapabilities]);
+	// An item carrying a flag shows only while it is on for this member's store (ADR 087).
+	const enabledFeatureFlags = useEnabledFeatureFlags(MERCHANT_FEATURE_FLAGS);
+	const filteredMenu = React.useMemo(
+		() => filterCompiledSidebarMenu(menu, menuFilterCapabilities, { enabledFeatureFlags }),
+		[menu, menuFilterCapabilities, enabledFeatureFlags],
+	);
 	const enrollmentLockedMenu = React.useMemo(() => applyEnrollmentNavLock(filteredMenu, isEnrollmentLocked), [filteredMenu, isEnrollmentLocked]);
 	const resolvedMenu = React.useMemo(() => withResolvedSidebarMenuUrls(enrollmentLockedMenu, resolveNavHref), [enrollmentLockedMenu, resolveNavHref]);
 
@@ -101,13 +108,13 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, o
 
 	const pinnedItems = React.useMemo(
 		(): readonly PanelSidebarPinnedItem[] =>
-			resolveMerchantPinnedMenuItems(pinnedUrls, can).map((pinned) => ({
+			resolveMerchantPinnedMenuItems(pinnedUrls, can, enabledFeatureFlags).map((pinned) => ({
 				title: pinned.title,
 				url: resolveNavHref(pinned.url),
 				icon: pinned.icon,
 				disabled: isEnrollmentLocked && !isMerchantEnrollmentAllowedPath(pinned.url),
 			})),
-		[pinnedUrls, can, resolveNavHref, isEnrollmentLocked],
+		[pinnedUrls, can, enabledFeatureFlags, resolveNavHref, isEnrollmentLocked],
 	);
 
 	const handleToggleExpand = React.useCallback(

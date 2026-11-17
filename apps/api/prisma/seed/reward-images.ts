@@ -154,6 +154,56 @@ export async function linkRewardImages(links: readonly RewardImageLink[]): Promi
 	}
 }
 
+/** Rewards per bulk image write (well below the bind-parameter limit). */
+const COVER_COPY_CHUNK = 500;
+
+/** A tenant that shows some sets' covers as its own uploads, and who uploaded them. */
+export interface RewardCoverCopyOwner {
+	readonly tenantId: string;
+	readonly userId: string;
+	readonly slugs: readonly RewardImageSetSlug[];
+}
+
+/** The stored-file id of one tenant's copy of a set's cover — stable across re-seeds. */
+export function rewardCoverCopySeedId(tenantId: string, slug: RewardImageSetSlug): string {
+	return rewardImageSeedId(`${tenantId}/${slug}/01.webp`);
+}
+
+/**
+ * A file belongs to the tenant that uploaded it (and RLS shows it only to that tenant), so a merchant beyond the two
+ * demo tenants cannot show their photos: each gets its own READY `REWARD_IMAGE` copy of the covers it uses — one
+ * upload per set, not the whole set, which keeps the seed's 4K renditions few. Returns how many.
+ */
+export async function seedRewardCoverCopies(owners: readonly RewardCoverCopyOwner[]): Promise<number> {
+	const { seedReadyFile } = createSeedFileWriter();
+	const uploads = owners.flatMap((owner) => owner.slugs.map((slug) => ({ owner, slug })));
+	await mapWithConcurrency(uploads, SEED_IMAGE_CONCURRENCY, async ({ owner, slug }) =>
+		seedReadyFile({
+			id: rewardCoverCopySeedId(owner.tenantId, slug),
+			category: "REWARD_IMAGE",
+			ownerId: owner.tenantId,
+			fileName: `${slug}-01.webp`,
+			mimeType: "image/webp",
+			bytes: await readFile(join(IMAGE_DIRECTORY, slug, "01.webp")),
+			uploadedById: owner.userId,
+			tenantId: owner.tenantId,
+			uploadedDaysAgo: IMAGES_UPLOADED_DAYS_AGO,
+		}),
+	);
+	return uploads.length;
+}
+
+/** Gives each reward its tenant's copy of its set's cover as its one image (in bulk: hundreds of rewards); re-runs converge. */
+export async function linkRewardCoverCopies(links: readonly RewardImageLink[]): Promise<void> {
+	for (let start = 0; start < links.length; start += COVER_COPY_CHUNK) {
+		const chunk = links.slice(start, start + COVER_COPY_CHUNK);
+		await prisma.rewardImage.deleteMany({ where: { rewardId: { in: chunk.map((link) => link.rewardId) } } });
+		await prisma.rewardImage.createMany({
+			data: chunk.map((link) => ({ rewardId: link.rewardId, tenantId: link.tenantId, fileId: rewardCoverCopySeedId(link.tenantId, link.slug), position: 0 })),
+		});
+	}
+}
+
 /**
  * Image history for one reward: the cover it showed before the owner replaced
  * it, kept as a soft-deleted row (an image row is never hard-deleted in use).

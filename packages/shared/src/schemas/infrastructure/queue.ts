@@ -26,6 +26,7 @@ export const QueueNameSchema = z.enum([
 	"notifications.sms",
 	"notifications.maintenance",
 	"broadcasts.send",
+	"feature-flags.maintenance",
 ]);
 
 /**
@@ -61,6 +62,8 @@ export const QUEUE_NAMES = {
 	notificationsMaintenance: QueueNameSchema.enum["notifications.maintenance"],
 	/** ADR 073: sends one broadcast to its frozen audience, in batches. */
 	broadcastsSend: QueueNameSchema.enum["broadcasts.send"],
+	/** ADR 087: every minute, expires pending flag revisions and announces scheduled rollout steps. */
+	featureFlagsMaintenance: QueueNameSchema.enum["feature-flags.maintenance"],
 } satisfies Readonly<Record<string, z.output<typeof QueueNameSchema>>>;
 
 /** All queue names, for infrastructure that registers or inspects every queue. */
@@ -93,6 +96,11 @@ export type EmailSendJob = z.output<typeof EmailSendJobSchema>;
 export const RewardsMaintenanceJobSchema = z.object({}).strict();
 
 export type RewardsMaintenanceJob = z.output<typeof RewardsMaintenanceJobSchema>;
+
+/** The feature flags maintenance job carries nothing: each run reads the clock and the catalogue (ADR 087). */
+export const FeatureFlagsMaintenanceJobSchema = z.object({}).strict();
+
+export type FeatureFlagsMaintenanceJob = z.output<typeof FeatureFlagsMaintenanceJobSchema>;
 
 export const StorageDeleteJobSchema = z
 	.object({

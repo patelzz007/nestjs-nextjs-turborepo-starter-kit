@@ -18,7 +18,8 @@
 					"title": "Analytics",
 					"labelKey": "analytics",
 					"url": "/analytics",
-					"icon": "ChartColumn"
+					"icon": "ChartColumn",
+					"featureFlag": "mobile-analytics"
 				},
 				{
 					"title": "Search",

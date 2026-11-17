@@ -18,8 +18,9 @@ import {
 	type LucideIcon,
 } from "lucide-react";
 
-import type { CapabilitySlug } from "@workspace/shared";
+import type { CapabilitySlug, FeatureFlagKey } from "@workspace/shared";
 
+import { MERCHANT_ANALYTICS_FEATURE } from "@/lib/feature-flags";
 import { canOpenTenantPath } from "@/lib/navigation/tenant-route-authorization";
 import { TENANT_ROUTES, type AppPath } from "@/lib/routes";
 
@@ -36,6 +37,8 @@ export interface MerchantNavItem {
 	readonly description: string;
 	readonly icon: LucideIcon;
 	readonly keywords: readonly string[];
+	/** The feature flag the page sits behind, as its sidebar item's `featureFlag` (ADR 087). */
+	readonly featureFlag?: FeatureFlagKey;
 }
 
 export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
@@ -56,6 +59,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "Performance and trends",
 		icon: BarChart3,
 		keywords: ["analytics", "stats", "charts", "metrics"],
+		featureFlag: MERCHANT_ANALYTICS_FEATURE,
 	},
 	{
 		id: "rewards",
@@ -215,12 +219,21 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 /** Capability predicate — pass `useAuthorization().can` so nav uses the shared checker. */
 export type MerchantCapabilityPredicate = (permission: CapabilitySlug) => boolean;
 
-export function filterMerchantNavItems(items: readonly MerchantNavItem[], can: MerchantCapabilityPredicate): readonly MerchantNavItem[] {
-	return items.filter((item) => canOpenTenantPath(item.url, can));
+/** The entries this member may open: the page's rule allows it, and its feature flag (if any) is on (ADR 087). */
+export function filterMerchantNavItems(
+	items: readonly MerchantNavItem[],
+	can: MerchantCapabilityPredicate,
+	enabledFeatureFlags: readonly FeatureFlagKey[],
+): readonly MerchantNavItem[] {
+	return items.filter((item) => canOpenTenantPath(item.url, can) && (item.featureFlag === undefined || enabledFeatureFlags.includes(item.featureFlag)));
 }
 
-export function resolvePinnedMerchantNavItems(pinnedUrls: readonly string[], can: MerchantCapabilityPredicate): readonly MerchantNavItem[] {
-	const allowedItems = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can);
+export function resolvePinnedMerchantNavItems(
+	pinnedUrls: readonly string[],
+	can: MerchantCapabilityPredicate,
+	enabledFeatureFlags: readonly FeatureFlagKey[],
+): readonly MerchantNavItem[] {
+	const allowedItems = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can, enabledFeatureFlags);
 	return pinnedUrls.map((url) => allowedItems.find((item) => item.url === url)).filter((item): item is MerchantNavItem => item !== undefined);
 }
 

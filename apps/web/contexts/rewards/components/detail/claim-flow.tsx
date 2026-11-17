@@ -5,6 +5,8 @@ import { ClaimFlowBones } from "@/components/loading/reward-detail-skeleton";
 import { formatClaimApiError } from "@/contexts/claims";
 import { ClaimHoldCountdown } from "@/contexts/rewards/components/detail/claim-hold-countdown";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
+import { useDynamicConfig } from "@workspace/client/lib/contexts/feature-flags";
+import type { RewardClaimCtaValue } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -13,6 +15,12 @@ import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress
 import * as React from "react";
 import { walletClaimPath } from "@/lib/routes";
 import { BRAND_NAME } from "@workspace/tokens";
+
+/** The claim button's look for each emphasis of the `reward-claim-cta` config. */
+export const CLAIM_BUTTON_LOOK: Readonly<Record<RewardClaimCtaValue["emphasis"], { readonly size: "default" | "lg"; readonly className: string | undefined }>> = {
+	standard: { size: "default", className: undefined },
+	bold: { size: "lg", className: "w-full font-semibold" },
+};
 
 const TERMS_VERSION = "1.0";
 const PRIVACY_VERSION = "1.0";
@@ -37,6 +45,8 @@ export interface RewardClaimFlowProps {
  */
 export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed, onHoldChanged }: RewardClaimFlowProps): React.JSX.Element {
 	const { api } = useAuth();
+	// How loud the final claim button is: a dynamic config, and the subject of the bold-claim-button experiment (ADR 087).
+	const claimButton = CLAIM_BUTTON_LOOK[useDynamicConfig("reward-claim-cta").emphasis];
 	const router = useProgressRouter();
 
 	const checkoutQuery = api.legal.status.useQuery(undefined);
@@ -202,7 +212,7 @@ export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed, onHoldChan
 						{holdExpiresAt === null ? null : <ClaimHoldCountdown holdExpiresAt={holdExpiresAt} onExpired={handleHoldExpired} />}
 						<Label htmlFor="claim-otp">6-digit OTP</Label>
 						<Input id="claim-otp" inputMode="numeric" maxLength={6} value={otp} onChange={handleOtpChange} />
-						<Button disabled={claimMutation.isPending} onClick={handleClaim}>
+						<Button size={claimButton.size} className={claimButton.className} disabled={claimMutation.isPending} onClick={handleClaim}>
 							{claimMutation.isPending ? "Claiming…" : "Verify & claim"}
 						</Button>
 					</div>
@@ -210,7 +220,7 @@ export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed, onHoldChan
 			) : (
 				<div className="space-y-2">
 					<p className="text-sm text-muted-foreground">Your phone is already verified — claim directly without another OTP.</p>
-					<Button disabled={claimMutation.isPending} onClick={handleClaim}>
+					<Button size={claimButton.size} className={claimButton.className} disabled={claimMutation.isPending} onClick={handleClaim}>
 						{claimMutation.isPending ? "Claiming…" : "Claim reward"}
 					</Button>
 				</div>

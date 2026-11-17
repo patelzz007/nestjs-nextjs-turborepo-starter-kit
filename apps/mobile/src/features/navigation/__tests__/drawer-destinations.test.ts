@@ -26,9 +26,10 @@ const GITHUB_READ = PERMISSION.GITHUB_PULL_REQUEST.READ;
 const GITHUB_UPDATE = PERMISSION.GITHUB_PULL_REQUEST.UPDATE;
 const SERVERS = PERMISSION.SERVER_METRIC.LIST;
 
-const EVERYTHING: DrawerAccess = { capabilities: [GITHUB_READ, GITHUB_UPDATE, SERVERS], enabledFeatureFlags: ["showcase", "github-pull-requests"] };
+const EVERYTHING: DrawerAccess = { capabilities: [GITHUB_READ, GITHUB_UPDATE, SERVERS], enabledFeatureFlags: ["showcase", "github-pull-requests", "mobile-analytics"] };
 
-function accessWith(capabilities: readonly CapabilitySlug[], enabledFeatureFlags: DrawerAccess["enabledFeatureFlags"] = []): DrawerAccess {
+/** A session's access; analytics is on, as its flag's code default is (ADR 087). */
+function accessWith(capabilities: readonly CapabilitySlug[], enabledFeatureFlags: DrawerAccess["enabledFeatureFlags"] = ["mobile-analytics"]): DrawerAccess {
 	return { capabilities, enabledFeatureFlags };
 }
 
@@ -79,7 +80,7 @@ describe("the drawer's menu (mobile-drawer-items.json)", () => {
 	});
 
 	it("needs READ for the pull requests and READ and UPDATE together for the token", () => {
-		const readOnly = outline(drawerGroupsFor(accessWith([GITHUB_READ], ["github-pull-requests"])));
+		const readOnly = outline(drawerGroupsFor(accessWith([GITHUB_READ], ["github-pull-requests", "mobile-analytics"])));
 
 		expect(readOnly).toContainEqual(["GitHub", ["/profile/pull-requests"]]);
 	});
@@ -200,9 +201,20 @@ describe("checks made when the menu loads", () => {
 });
 
 describe("enabledDrawerFeatureFlags", () => {
-	it("turns the showcase on in a build that carries it, and pull requests unless the server has them off", () => {
-		expect(enabledDrawerFeatureFlags({ showcase: true, githubPullRequests: true })).toStrictEqual(["showcase", "github-pull-requests"]);
-		expect(enabledDrawerFeatureFlags({ showcase: false, githubPullRequests: false })).toStrictEqual([]);
+	it("turns the showcase on in a build that carries it, pull requests unless the server has them off, analytics while its flag is on", () => {
+		expect(enabledDrawerFeatureFlags({ showcase: true, githubPullRequests: true, mobileAnalytics: true })).toStrictEqual([
+			"showcase",
+			"github-pull-requests",
+			"mobile-analytics",
+		]);
+		expect(enabledDrawerFeatureFlags({ showcase: false, githubPullRequests: false, mobileAnalytics: false })).toStrictEqual([]);
+	});
+
+	it("hides the Analytics link while the mobile-analytics flag is off (ADR 087)", () => {
+		const routesOf = (access: DrawerAccess): readonly string[] =>
+			drawerGroupsFor(access).flatMap((group: DrawerGroup) => destinationsOf(group.nodes).map((screen) => screen.route));
+		expect(routesOf(accessWith([]))).toContain("/analytics");
+		expect(routesOf(accessWith([], []))).not.toContain("/analytics");
 	});
 });
 

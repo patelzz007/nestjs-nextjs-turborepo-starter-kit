@@ -3,7 +3,9 @@
 import { AccessUnavailableNotice, SignInPrompt } from "@/contexts/identity/components/access-fallback";
 import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
 import { canAccessWebPath, isWebRouteAllowed, resolveWebRouteAccess, WEB_ROUTE_ACCESS, type WebRouteAccessRule, type WebRouteSession } from "@/lib/navigation/route-access";
+import { WEB_FEATURE_FLAGS } from "@/lib/feature-flags";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useEnabledFeatureFlags } from "@workspace/client/lib/contexts/feature-flags";
 import type { CapabilitySlug } from "@workspace/shared";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -12,12 +14,14 @@ import * as React from "react";
 export function useWebRouteSession(): WebRouteSession {
 	const { isAuthenticated } = useWebSession();
 	const { can } = useAuthorization();
+	const enabledFeatureFlags = useEnabledFeatureFlags(WEB_FEATURE_FLAGS);
 	return React.useMemo(
 		(): WebRouteSession => ({
 			isAuthenticated,
 			isGranted: (permission: CapabilitySlug): boolean => can(permission),
+			enabledFeatureFlags,
 		}),
-		[can, isAuthenticated],
+		[can, enabledFeatureFlags, isAuthenticated],
 	);
 }
 
@@ -53,7 +57,14 @@ export function WebRouteAccessGuard({ rules = WEB_ROUTE_ACCESS, children }: WebR
 	const session = useWebRouteSession();
 	const rule = React.useMemo(() => resolveWebRouteAccess(pathname, rules), [pathname, rules]);
 
-	if (rule?.authorization === undefined) {
+	if (rule === null || (rule.authorization === undefined && rule.featureFlag === undefined)) {
+		return <>{children}</>;
+	}
+	if (rule.featureFlag !== undefined && !session.enabledFeatureFlags.includes(rule.featureFlag)) {
+		// Off for this session (ADR 087): the page isn't offered, whoever asks.
+		return <AccessUnavailableNotice title="Not available yet" description="This page isn't available for your account yet." />;
+	}
+	if (rule.authorization === undefined) {
 		return <>{children}</>;
 	}
 	if (!session.isAuthenticated) {

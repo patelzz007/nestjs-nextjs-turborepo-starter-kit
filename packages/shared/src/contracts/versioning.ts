@@ -122,6 +122,11 @@ export const VersionedRoutePrefixSchema = z.enum([
 	"/me",
 	"/admin/users",
 	"/admin/feature-flags",
+	// Feature flags v2: each app's bundle, the live version stream and exposures; configs, flag groups, experiments
+	"/feature-flags",
+	"/admin/dynamic-configs",
+	"/admin/flag-groups",
+	"/admin/experiments",
 	// Customer tiers (ADR 085): the customer's own tier and the platform's tier rules
 	"/tiers",
 	"/admin/tiers",

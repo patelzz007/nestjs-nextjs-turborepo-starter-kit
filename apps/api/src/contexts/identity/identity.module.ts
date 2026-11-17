@@ -14,6 +14,8 @@ import { IDENTITY_SESSIONS, type IdentitySessionsPort, type IdentitySessionsPort
 import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
 import { AuditTrailService } from "../../platform/infrastructure/audit/audit-trail.service";
 import { OutboxModule } from "../../platform/infrastructure/outbox/outbox.module";
+import { FeatureFlagsModule, SUBJECT_FACTS, type SubjectFactsRegistry } from "../feature-flags/public-api";
+import { identityFlagFacts } from "./infrastructure/adapters/identity-flag-facts";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
 import type { AfterCommitPublisher } from "../../platform/infrastructure/unit-of-work/after-commit-publisher";
 import { PrismaUnitOfWork } from "../../platform/infrastructure/unit-of-work/prisma-unit-of-work";
@@ -240,6 +242,7 @@ const HANDLERS = [
 		TenantAccessModule,
 		ReferralsModule,
 		SessionLocationModule,
+		FeatureFlagsModule,
 	],
 	controllers: [
 		AuthController,
@@ -378,14 +381,19 @@ export class IdentityModule implements OnModuleInit {
 		@Inject(IDENTITY_UNIT_OF_WORK) private readonly uow: UnitOfWork<IdentityScope>,
 		@Inject(CREDENTIAL_CRYPTO) private readonly crypto: CredentialCryptoPort,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(SUBJECT_FACTS) private readonly flagFacts: SubjectFactsRegistry,
 	) {}
 
-	/** Registers the `session.action` / `impersonation.action` outbox mapper (M3) and the account section of "Download my data" and identity's part of erasure (ADR 077). */
+	/**
+	 * Registers the `session.action` / `impersonation.action` outbox mapper (M3), the account section of "Download my
+	 * data" and identity's part of erasure (ADR 077), and the email-domain fact feature flag rules read (ADR 087).
+	 */
 	public onModuleInit(): void {
 		this.mappers.register(new IdentityIntegrationEventsMapper());
 		this.personalData.register(new IdentityPersonalDataExporter(this.transactions));
 		this.erasure.provideAccountGateway(new IdentityErasureGateway(this.transactions, this.uow, this.crypto, this.clock));
 		this.erasure.registerEraser(new IdentityPersonalDataEraser(this.transactions));
 		this.erasure.registerBlocker(new OpenMfaRecoveryBlocker(this.transactions));
+		this.flagFacts.register(identityFlagFacts(this.transactions));
 	}
 }

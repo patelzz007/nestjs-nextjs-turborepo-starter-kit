@@ -167,9 +167,9 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		slug: "feature-flags",
 		title: "Feature flags",
 		description:
-			"Runtime feature flags: every declared flag with its setting (default, on, off, a share of people) and who changed it, the bare settings the apps evaluate, and a store flag's per-merchant and per-branch settings (a branch's own decides over its merchant's).",
+			"Feature flags v2 (ADR 087): each app's bundle of answers, its live version stream and exposures; and the admin's Releases: flags (rules as revisions, kill switch, overrides, approvals, check a subject), dynamic configs, flag groups, experiments and rule promotion.",
 		guide: { label: "Feature flags guide", href: "../feature-flags.md" },
-		tags: ["Feature flags"],
+		tags: ["Feature flags", "Dynamic configs", "Flag groups", "Experiments"],
 	},
 	{
 		slug: "saved-views",

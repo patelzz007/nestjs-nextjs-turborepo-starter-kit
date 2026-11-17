@@ -38,6 +38,12 @@ function extraUserEmail(index: number): string {
 /** Every account {@link generateAdditionalSeedData} owns — the seed's cleanup is scoped to these. */
 export const EXTRA_SEED_USER_EMAILS: readonly string[] = NAMES.map((_name, index) => extraUserEmail(index));
 
+/** The extra accounts before this position are active; the last three are inactive. */
+export const ACTIVE_EXTRA_USER_COUNT = 17;
+
+/** The active extra accounts (the ones that can sign in, claim and redeem). */
+export const ACTIVE_EXTRA_SEED_USER_EMAILS: readonly string[] = EXTRA_SEED_USER_EMAILS.slice(0, ACTIVE_EXTRA_USER_COUNT);
+
 /** Additional seed data: 20 extra customer accounts (3 inactive), each with a web and a mobile device session. */
 export async function generateAdditionalSeedData(roles: Role[], userRole: Role): Promise<User[]> {
 	const hash = (pw: string): Promise<string> => bcrypt.hash(pw, 10);
@@ -47,7 +53,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 
 	for (const [i, name] of NAMES.entries()) {
 		const email = extraUserEmail(i);
-		const isActive = i < 17; // 3 inactive users
+		const isActive = i < ACTIVE_EXTRA_USER_COUNT;
 
 		const fullName = name;
 		const u = await upsertLiveUserByEmail(email, { fullName, isActive }, { email, passwordHash: defaultPassword, fullName, isActive, isSuperAdmin: false });

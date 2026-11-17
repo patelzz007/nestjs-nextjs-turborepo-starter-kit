@@ -90,6 +90,13 @@ export const PERSONAL_DATA_CLASSES: Readonly<Record<string, PersonalDataDecision
 	SignupReferralCode: { class: "ERASE", reason: "The person's own invite code" },
 	SignupReferral: { class: "ANONYMISE", reason: OTHERS_RECORD },
 	GithubWebhookSubscription: { class: "ANONYMISE", reason: STAFF_ACTION },
+	// ── Feature flags (ADR 087) ──────────────────────────────────────────────
+	FlagRevision: { class: "ANONYMISE", reason: `${STAFF_ACTION}: who wrote and who decided a rule change` },
+	FeatureFlagOverride: {
+		class: "ERASE",
+		reason: "An override forcing a flag for the person's own account is removed; one a staff member set for someone else keeps pointing at the tombstone",
+	},
+	ExperimentMetricEvent: { class: "ERASE", reason: "What the person did while in an experiment: no use once the account is gone (results are already summed)" },
 	// ── Kanban ───────────────────────────────────────────────────────────────
 	KanbanTask: { class: "ANONYMISE", reason: "The team's work item; its owner becomes the tombstone" },
 	KanbanTaskComment: { class: "ANONYMISE", reason: "The team's discussion; its author becomes the tombstone" },

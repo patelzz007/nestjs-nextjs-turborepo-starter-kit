@@ -22,8 +22,17 @@ BEGIN
     'OpsRestoreDrill',
     'StatusIncident',
     'StatusIncidentUpdate',
-    'FeatureFlagSetting',
-    'FeatureFlagStoreOverride',
+    'FeatureFlagCatalogVersion',
+    'FeatureFlagKillSwitch',
+    'FlagRevision',
+    'FeatureFlagOverride',
+    'FlagGroup',
+    'FlagGroupMember',
+    'FeatureFlagExposure',
+    'FeatureFlagExposureDaily',
+    'Experiment',
+    'ExperimentMetricEvent',
+    'ExperimentResult',
     'LoadTestRun',
     'LoadTestPoint',
     'LoadTestStepStat'
@@ -37,8 +46,8 @@ END $$;
 -- The public status page (enhancement 4.5): read anonymously and written by staff, always under a named
 -- `operations.status.*` system operation.
 
--- Runtime feature flags (enhancement 5.6): read by every admin staff member, changed with FEATURE_FLAG:UPDATE,
--- always under a named `feature_flags.*` system operation.
-
--- A store's own setting of a store feature flag (enhancement 5.11): only under the `feature_flags.*` operations.
+-- Feature flags v2 (ADR 086, ADR 087): the catalogue version, kill switches, revisions, flag overrides and flag
+-- groups are read and written only under a named `feature_flags.*` system operation (the API evaluates every
+-- flag; no client reads these tables). Exposures, their daily sums, experiments and experiment results are also
+-- read by the API under those operations; the analytics consumer's own access is in 90-analytics-consumer.sql.
 

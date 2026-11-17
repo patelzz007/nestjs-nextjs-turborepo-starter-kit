@@ -15,7 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { deterministicUuid } from "../prisma/seed/deterministic-uuid";
-import { TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { systemActor } from "../src/platform/application/actor-context";
 import { ReviewCustomerTiersCommand, type TierReviewResult } from "../src/contexts/tiers/application/commands/review-customer-tiers/review-customer-tiers.command";
 import { createE2eApp, grantSeedUsersFullSession, login, mutationHeaders, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
@@ -33,6 +33,11 @@ const CountRowsSchema = z.array(z.object({ n: z.coerce.number() }));
 const GOLD_REWARD_ID = deterministicUuid("reward-seed-history-reward", "mlk-heritage-set");
 const DIAMOND_REWARD_ID = deterministicUuid("reward-seed-history-reward", "mlk-beruang-brunch");
 const OPEN_REWARD_ID = deterministicUuid("reward-seed-history-reward", "kl-morning-brew");
+/**
+ * The Melaka demo merchant's catalogue, where the Gold and Diamond rewards are. It fits on one page; the whole
+ * marketplace does not (the merchant network adds 50 rewards per branch).
+ */
+const MELAKA_CATALOGUE = `/rewards?limit=100&filter[tenantId][eq]=${TENANT_SEED_IDS.mlkTenant}`;
 
 /** ADR 085: customer tiers over the real API and the seeded database. */
 describe("Customer tiers (e2e)", () => {
@@ -53,8 +58,9 @@ describe("Customer tiers (e2e)", () => {
 		});
 	}
 
+	/** Customer tiers off for everyone is the flag's kill switch (ADR 087); DEFAULT releases it. */
 	function setTiersFlag(mode: "DEFAULT" | "OFF"): Promise<InjectResponse> {
-		return call("PUT", "/admin/feature-flags/customer-tiers", superAdmin, { mode, percentage: null, reason: `Customer tiers ${mode} for the e2e suite` });
+		return call("PUT", "/admin/feature-flags/customer-tiers/kill-switch", superAdmin, { on: mode === "OFF", reason: `Customer tiers ${mode} for the e2e suite` });
 	}
 
 	beforeAll(async () => {
@@ -98,10 +104,10 @@ describe("Customer tiers (e2e)", () => {
 	});
 
 	it("lists only the rewards the viewer's tier reaches, and the locked ones too when asked", async () => {
-		const plain = ItemsSchema.parse((await call("GET", "/rewards?limit=100", null)).json()).data.map((reward) => reward.id);
+		const plain = ItemsSchema.parse((await call("GET", MELAKA_CATALOGUE, null)).json()).data.map((reward) => reward.id);
 		expect(plain).not.toContain(GOLD_REWARD_ID);
 		expect(plain).not.toContain(DIAMOND_REWARD_ID);
-		const withLocked = ItemsSchema.parse((await call("GET", "/rewards?limit=100&includeLocked=true", null)).json()).data;
+		const withLocked = ItemsSchema.parse((await call("GET", `${MELAKA_CATALOGUE}&includeLocked=true`, null)).json()).data;
 		const gold = withLocked.find((reward) => reward.id === GOLD_REWARD_ID);
 		expect(RewardResponseSchema.parse(gold).minimumTier).toBe("GOLD");
 		// A signed-out visitor is Bronze: every reward they can claim comes before every locked one.
@@ -174,7 +180,7 @@ describe("Customer tiers (e2e)", () => {
 		const page = await call("GET", "/tiers/me", customer);
 		expect(page.statusCode).toBe(404);
 		expect(ErrorSchema.parse(page.json()).error.code).toBe("TIERS_DISABLED");
-		const plain = ItemsSchema.parse((await call("GET", "/rewards?limit=100", null)).json()).data.map((reward) => reward.id);
+		const plain = ItemsSchema.parse((await call("GET", MELAKA_CATALOGUE, null)).json()).data.map((reward) => reward.id);
 		expect(plain).toContain(GOLD_REWARD_ID);
 		await setTiersFlag("DEFAULT");
 	});

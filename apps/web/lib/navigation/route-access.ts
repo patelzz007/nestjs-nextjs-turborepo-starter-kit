@@ -1,9 +1,10 @@
 import { evaluateSidebarAuthorization } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import type { SidebarAuthorization, SidebarMenuData, SidebarMenuItem } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import { assertNever, type CapabilitySlug } from "@workspace/shared";
+import { assertNever, type CapabilitySlug, type FeatureFlagKey } from "@workspace/shared";
 import type { SidebarTrailPage } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 import { findMostSpecificRoute } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
 
+import { WEB_ACTIVITY_FEATURE } from "@/lib/feature-flags";
 import { ROUTE_PATTERNS, ROUTES } from "@/lib/routes";
 
 /**
@@ -26,6 +27,8 @@ export interface WebRouteAccessRule {
 	 * the command palette and `WebRouteAccessGuard` all read it from here.
 	 */
 	readonly authorization?: SidebarAuthorization | undefined;
+	/** The feature flag the page sits behind (ADR 087): while it is off for the session, the page and its links are hidden. */
+	readonly featureFlag?: FeatureFlagKey | undefined;
 	/** Breadcrumb label for a page that has no menu entry of its own. */
 	readonly breadcrumbLabel?: string | undefined;
 }
@@ -61,8 +64,8 @@ export const WEB_ROUTE_ACCESS: readonly WebRouteAccessRule[] = [
 	// any session (own claims only). The label matches the page heading, so the crumb
 	// reads the same before and after the claim loads.
 	{ pattern: ROUTE_PATTERNS.walletClaim, audience: "signed-in", breadcrumbLabel: "Show at checkout" },
-	// GET /claims/analytics/dashboard — any session (own activity only)
-	{ pattern: ROUTES.dashboard.activity, audience: "signed-in" },
+	// GET /claims/analytics/dashboard — any session (own activity only); behind the web-activity flag
+	{ pattern: ROUTES.dashboard.activity, audience: "signed-in", featureFlag: WEB_ACTIVITY_FEATURE },
 	// GET /auth/signup-referrals/* — any session (own code and referees only)
 	{ pattern: ROUTES.dashboard.referrals, audience: "signed-in", breadcrumbLabel: "Referrals" },
 	// GET /tiers/me — any session (own tier only; 404 while tiers are off, ADR 085)
@@ -83,6 +86,8 @@ export const WEB_ROUTE_ACCESS: readonly WebRouteAccessRule[] = [
 export interface WebRouteSession {
 	readonly isAuthenticated: boolean;
 	readonly isGranted: (permission: CapabilitySlug) => boolean;
+	/** The web app's flags on for this session (the bundle's answer). */
+	readonly enabledFeatureFlags: readonly FeatureFlagKey[];
 }
 
 /** The rule of the page at `pathname` (exact page match), or `null` when no page lives there. */
@@ -103,9 +108,12 @@ function isAudienceAllowed(audience: WebRouteAudience, isAuthenticated: boolean)
 	}
 }
 
-/** True when `session` may open a page governed by `rule` (audience AND capabilities). */
+/** True when `session` may open a page governed by `rule` (audience, its feature flag AND capabilities). */
 export function isWebRouteAllowed(rule: WebRouteAccessRule, session: WebRouteSession): boolean {
 	if (!isAudienceAllowed(rule.audience, session.isAuthenticated)) {
+		return false;
+	}
+	if (rule.featureFlag !== undefined && !session.enabledFeatureFlags.includes(rule.featureFlag)) {
 		return false;
 	}
 	if (rule.authorization === undefined) {
@@ -132,6 +140,7 @@ export function resolveWebTrailPage(pathname: string): SidebarTrailPage | null {
 function applyToItem(item: SidebarMenuItem, rules: readonly WebRouteAccessRule[]): SidebarMenuItem {
 	const rule = resolveWebRouteAccess(item.url, rules);
 	const authorization = rule !== null ? rule.authorization : item.authorization;
+	const featureFlag = rule !== null ? rule.featureFlag : item.featureFlag;
 	const children = item.children?.map((child) => applyToItem(child, rules));
 	return {
 		title: item.title,
@@ -140,7 +149,7 @@ function applyToItem(item: SidebarMenuItem, rules: readonly WebRouteAccessRule[]
 		icon: item.icon,
 		disabled: item.disabled,
 		authorization,
-		featureFlag: item.featureFlag,
+		featureFlag,
 		children,
 	};
 }

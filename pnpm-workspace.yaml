@@ -131,6 +131,13 @@ auditConfig:
     # developer's machine — never untrusted input, and node-forge is not part of the app bundle.
     # review-by: 2026-11-09
     - GHSA-86w9-cpqp-85rv
+    # picomatch <=4.0.7 ReDoS through single-branch repeated extglobs; no patched release exists
+    # (4.0.7 is the latest). Reached only through build, test and CLI tooling — Metro and Jest
+    # (apps/mobile), the shadcn and dotenvx CLIs, the TanStack Start plugin, fdir and fast-glob →
+    # micromatch — which match glob patterns written in this repository, never request input.
+    # The API and analytics-consumer have no production path to it (`pnpm why picomatch --prod`).
+    # review-by: 2026-11-25
+    - GHSA-fc5q-39xc-vjpf
 
 permissions:
   '@tanstack/react-table':

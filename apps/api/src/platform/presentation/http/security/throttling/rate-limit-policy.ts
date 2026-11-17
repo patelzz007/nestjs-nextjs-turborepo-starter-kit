@@ -49,6 +49,13 @@ const MINUTES_PER_DAY = 1_440;
 export const PERSONAL_DATA_EXPORT_WINDOW_MS = MINUTES_PER_DAY * MS_PER_MINUTE;
 
 /**
+ * Feature flag exposure batches (ADR 087) per client IP per minute: a signed-out visitor may send them too, so
+ * they are counted per address, not per principal. A client batches up to 50 exposures and flushes about every
+ * ten seconds, so a page stays far below this.
+ */
+export const FEATURE_FLAG_EXPOSURES_LIMIT = 30;
+
+/**
  * The coarse pre-authentication throttler: requests per client IP per
  * `throttleTtlMs`, counted BEFORE `AuthGuard`, so a flood of bad credentials on
  * a protected route is limited too. A multiple of `throttleDefaultLimit`, so one
@@ -93,6 +100,7 @@ export const RATE_LIMIT_POLICY: {
 	readonly adminSecurityMutation: RateLimitPolicy;
 	readonly sessionRefresh: RateLimitPolicy;
 	readonly personalDataExport: RateLimitPolicy;
+	readonly featureFlagExposures: RateLimitPolicy;
 } = {
 	get credential(): RateLimitPolicy {
 		return policy("CREDENTIAL", "strict", "ip", CREDENTIAL_LOW_LIMIT);
@@ -124,5 +132,8 @@ export const RATE_LIMIT_POLICY: {
 	},
 	get personalDataExport(): RateLimitPolicy {
 		return policy("PERSONAL_DATA_EXPORT", "default", "principal", PERSONAL_DATA_EXPORT_LIMIT, PERSONAL_DATA_EXPORT_WINDOW_MS);
+	},
+	get featureFlagExposures(): RateLimitPolicy {
+		return policy("FEATURE_FLAG_EXPOSURES", "strict", "ip", FEATURE_FLAG_EXPOSURES_LIMIT, SECURITY_POLICY_WINDOW_MS);
 	},
 };

@@ -164,11 +164,16 @@ function applyTaskText(check: CheckProgress, workspace: string, text: string, no
 	return jestTotal === 0 ? seen : withPackage({ ...seen, tests: seen.tests + jestTotal }, workspace, (item) => ({ ...item, tests: item.tests + jestTotal }));
 }
 
+/** lint-staged reports a step once when it starts and again when it ends: the second report updates the first, in place. */
+function withStage(stages: readonly Stage[], stage: Stage): readonly Stage[] {
+	return stages.some((known) => known.text === stage.text) ? stages.map((known) => (known.text === stage.text ? stage : known)) : [...stages, stage].slice(-MAX_STAGES);
+}
+
 /** Folds one output line into the check. */
 export function applyLine(check: CheckProgress, rawLine: string, nowMs: number): CheckProgress {
 	if (check.task === undefined) {
 		const stage = parseStage(rawLine);
-		return stage === undefined ? check : { ...check, stages: [...check.stages, stage].slice(-MAX_STAGES) };
+		return stage === undefined ? check : { ...check, stages: withStage(check.stages, stage) };
 	}
 	const scope = parsePackagesInScope(rawLine);
 	if (scope !== undefined) {

@@ -7,11 +7,15 @@ import { SecureStoreTokenProvider } from "../secure-store-token-provider";
 
 const DEVICE_HEADERS = { "X-Device-Model": "iPhone%2015%20Pro" };
 
+/** The installation's feature flag device id, as the runtime hands it over once loaded. */
+const FLAG_DEVICE_HEADERS = { "X-Device-Id": "019b76da-a800-7000-8000-000000000030" };
+
 function client(onSessionExpired = jest.fn()): ReturnType<typeof createMobileApiClient> {
 	return createMobileApiClient({
 		baseUrl: "http://api.test",
 		appVersion: "1.2.3",
 		deviceHeaders: DEVICE_HEADERS,
+		requestHeaders: (): Readonly<Record<string, string>> => FLAG_DEVICE_HEADERS,
 		tokenProvider: new SecureStoreTokenProvider({ canReadRefreshToken: (): boolean => true }),
 		onSessionExpired,
 	});
@@ -26,7 +30,13 @@ describe("createMobileApiClient", () => {
 		await fetchQueryOrThrow(mobile.context, apiRouter.auth.me, undefined);
 
 		const [call] = api.callsTo("GET /auth/me");
-		expect(call?.headers).toMatchObject({ "x-client-type": "mobile", "x-app-version": "1.2.3", "x-device-model": "iPhone%2015%20Pro", authorization: "Bearer access-1" });
+		expect(call?.headers).toMatchObject({
+			"x-client-type": "mobile",
+			"x-app-version": "1.2.3",
+			"x-device-model": "iPhone%2015%20Pro",
+			"x-device-id": "019b76da-a800-7000-8000-000000000030",
+			authorization: "Bearer access-1",
+		});
 	});
 
 	it("signs out with the refresh token in the body (ADR 029)", async () => {
@@ -45,6 +55,7 @@ describe("createMobileApiClient", () => {
 				baseUrl: "not a url",
 				appVersion: "1.2.3",
 				deviceHeaders: {},
+				requestHeaders: (): Readonly<Record<string, string>> => ({}),
 				tokenProvider: new SecureStoreTokenProvider({ canReadRefreshToken: (): boolean => true }),
 				onSessionExpired: jest.fn(),
 			}),

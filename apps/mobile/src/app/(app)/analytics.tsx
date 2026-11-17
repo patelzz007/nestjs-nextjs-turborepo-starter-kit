@@ -11,14 +11,17 @@
 
 import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import CalendarRangeIcon from "lucide-react-native/icons/calendar-range";
+import ChartColumnIcon from "lucide-react-native/icons/chart-column";
 import ChevronDownIcon from "lucide-react-native/icons/chevron-down";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { Badge } from "@workspace/ui-native/components/badge";
 import { DateRangePicker, type LocalDateRange } from "@workspace/ui-native/components/date-range-picker";
+import { EmptyState } from "@workspace/ui-native/components/empty";
 import { Icon } from "@workspace/ui-native/components/icon";
 import { Screen } from "../../components/screen";
+import { FeatureFlagGate, MOBILE_ANALYTICS_FEATURE } from "../../contexts/feature-flags";
 import { SegmentedControl } from "@workspace/ui-native/components/segmented-control";
 import { MutedText } from "@workspace/ui-native/components/text";
 import {
@@ -39,7 +42,22 @@ import {
 	useActivityToday,
 } from "../../contexts/reporting";
 
+/** Behind the mobile-analytics feature flag (ADR 087): while it is off, the tab is hidden and a link here says so. */
 export default function AnalyticsScreen(): React.JSX.Element {
+	return (
+		<FeatureFlagGate
+			flag={MOBILE_ANALYTICS_FEATURE}
+			fallback={
+				<Screen testID="analytics-unavailable">
+					<EmptyState icon={ChartColumnIcon} title="Not available yet" message="Analytics isn't on for your account yet. It will appear in the tab bar when it is." />
+				</Screen>
+			}>
+			<AnalyticsContent />
+		</FeatureFlagGate>
+	);
+}
+
+function AnalyticsContent(): React.JSX.Element {
 	const [selection, setSelection] = React.useState<ActivitySelection>(DEFAULT_ACTIVITY_SELECTION);
 	const [pickerOpen, setPickerOpen] = React.useState(false);
 	const today = useActivityToday();

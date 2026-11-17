@@ -2,6 +2,9 @@
 // Shared by apps/analytics-consumer (runs it) and the API seed (replays published outbox events through it),
 // so the rows the seed writes are exactly the rows the consumer writes.
 export * from "./dead-letter";
+export * from "./experiment-statistics";
+export * from "./flag-analytics";
+export * from "./flag-projections";
 export * from "./inbox";
 export * from "./inbox-retention";
 export * from "./inbox-settings";

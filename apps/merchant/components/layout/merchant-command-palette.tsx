@@ -7,6 +7,8 @@ import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { TENANT_ROUTES } from "@/lib/routes";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useEnabledFeatureFlags } from "@workspace/client/lib/contexts/feature-flags";
+import { MERCHANT_FEATURE_FLAGS } from "@/lib/feature-flags";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
@@ -26,6 +28,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 	const router = useProgressRouter();
 	const { toggleTheme } = useThemeToggle();
 	const { can } = useAuthorization();
+	const enabledFeatureFlags = useEnabledFeatureFlags(MERCHANT_FEATURE_FLAGS);
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();
 	const tenantSlug = useTenantSlug();
 	const accountPath = useTenantPath(TENANT_ROUTES.account);
@@ -75,12 +78,12 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 	}, [can, closePalette, isEnrollmentLocked, rewardsPath, router, toggleTheme]);
 
 	const searchableItems = React.useMemo(() => {
-		const items = buildMerchantPaletteItems(can);
+		const items = buildMerchantPaletteItems(can, enabledFeatureFlags);
 		if (!isEnrollmentLocked) {
 			return items;
 		}
 		return items.filter((item) => isMerchantEnrollmentAllowedPath(item.url));
-	}, [can, isEnrollmentLocked]);
+	}, [can, enabledFeatureFlags, isEnrollmentLocked]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {

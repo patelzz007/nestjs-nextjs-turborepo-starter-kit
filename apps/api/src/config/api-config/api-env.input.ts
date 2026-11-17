@@ -4,6 +4,7 @@
 import {
 	BooleanFlagEnvSchema,
 	CookieDomainEnvSchema,
+	DeploymentEnvironmentSchema,
 	HttpUrlEnvSchema,
 	IanaTimeZoneSchema,
 	integerEnvSchema,
@@ -133,6 +134,8 @@ export const ApiEnvInputSchema = z.object({
 	// Runtime
 	NODE_ENV: NodeEnvSchema,
 	APP_NAME: NonEmptyEnvStringSchema,
+	/** The role this deployment plays (ADR 087): required in a production build, `development` otherwise. */
+	DEPLOYMENT_ENVIRONMENT: DeploymentEnvironmentSchema.optional(),
 
 	// HTTP server
 	HOST: NonEmptyEnvStringSchema.default(DEFAULT_HOST),

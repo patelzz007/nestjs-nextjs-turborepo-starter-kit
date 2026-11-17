@@ -1,42 +1,54 @@
 // ============================================
-// presentation/http/feature-flags.controller.ts — runtime feature flags (enhancement 5.6)
+// presentation/http/feature-flags.controller.ts — the console's Feature flags (ADR 087)
 // ============================================
-// The settings are readable by any admin staff member (the console evaluates them for everyone); the list with
-// who changed what needs FEATURE_FLAG:LIST, and a change FEATURE_FLAG:UPDATE with a reason (audited). A store flag
-// also has per-store settings (enhancement 5.11): read with LIST, set and removed with UPDATE, each with a reason.
+// Platform staff only. Reading needs FEATURE_FLAG:LIST; changing rules, the kill switch or an override needs
+// FEATURE_FLAG:UPDATE (each with a reason, kept by the request audit and the change trail); deciding someone
+// else's pending production change needs FEATURE_FLAG:APPROVE (never one's own).
 
 import { Controller, Get, HttpCode, HttpStatus, Inject, Post, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiPath,
-	FeatureFlagListSchema,
+	FeatureFlagDetailSchema,
+	FeatureFlagEnvironmentSchema,
 	FeatureFlagPathSchema,
-	FeatureFlagSchema,
-	FeatureFlagSettingsSchema,
-	FeatureFlagStoreOptionListSchema,
-	FeatureFlagStoreSearchQuerySchema,
-	FeatureFlagStoreOverrideListSchema,
-	FeatureFlagStoreOverridePathSchema,
-	FeatureFlagStoreOverrideSchema,
+	FeatureFlagSummaryListSchema,
+	FlagCheckResultSchema,
+	FlagOverridePathSchema,
+	FlagOverrideSchema,
+	FlagRevisionPathSchema,
+	FlagSubjectOptionListSchema,
+	FlagSubjectSearchQuerySchema,
+	KillSwitchStateSchema,
 	OkResponseSchema,
-	RemoveFeatureFlagStoreOverrideSchema,
-	SetFeatureFlagStoreOverrideSchema,
-	StoreFeatureFlagPathSchema,
-	UpdateFeatureFlagSchema,
-	type FeatureFlag,
-	type FeatureFlagList,
+	RemoveFlagOverrideSchema,
+	RevisionDecisionSchema,
+	RevisionListSchema,
+	RevisionSchema,
+	SaveFlagRevisionSchema,
+	SetFlagOverrideSchema,
+	SetKillSwitchSchema,
+	CheckSubjectSchema,
+	type CheckSubjectInput,
+	type FeatureFlagDetail,
+	type FeatureFlagEnvironment,
 	type FeatureFlagPath,
-	type FeatureFlagSettings,
-	type FeatureFlagStoreOptionList,
-	type FeatureFlagStoreSearchQuery,
-	type FeatureFlagStoreOverride,
-	type FeatureFlagStoreOverrideList,
-	type FeatureFlagStoreOverridePath,
+	type FeatureFlagSummaryList,
+	type FlagCheckResult,
+	type FlagOverride,
+	type FlagOverridePath,
+	type FlagRevisionPath,
+	type FlagSubjectOptionList,
+	type FlagSubjectSearchQuery,
+	type KillSwitchState,
 	type OkResponse,
-	type RemoveFeatureFlagStoreOverrideInput,
-	type SetFeatureFlagStoreOverrideInput,
-	type StoreFeatureFlagPath,
-	type UpdateFeatureFlagInput,
+	type RemoveFlagOverrideInput,
+	type Revision,
+	type RevisionDecisionInput,
+	type RevisionList,
+	type SaveFlagRevisionInput,
+	type SetFlagOverrideInput,
+	type SetKillSwitchInput,
 } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
@@ -47,93 +59,152 @@ import { RequirePermission } from "../../../../platform/presentation/http/securi
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ZodBody, ZodParams, ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
-import { FEATURE_FLAGS_READ_OPERATION, FEATURE_FLAGS_SERVICE, FEATURE_FLAGS_WRITE_OPERATION } from "../../application/ports/feature-flag.store";
-import type { FeatureFlagsService } from "../../application/services/feature-flags.service";
+import { FEATURE_FLAGS_READ_OPERATION, FEATURE_FLAGS_WRITE_OPERATION } from "../../application/ports/feature-flags.operations";
+import type { FlagAdminService } from "../../application/services/flag-admin.service";
+import type { FlagEvaluationService } from "../../application/services/flag-evaluation.service";
+import { FLAG_ADMIN, FLAG_EVALUATION } from "../../feature-flags.tokens";
 
 @ApiTags("Feature flags")
 @ApiBearerAuth()
 @AdminAccessOnly("Feature flags are for the admin console.")
 @Controller(apiPath("/admin/feature-flags"))
 export class FeatureFlagsController {
-	public constructor(@Inject(FEATURE_FLAGS_SERVICE) private readonly flags: FeatureFlagsService) {}
-
-	@PlatformOperation(FEATURE_FLAGS_READ_OPERATION)
-	@Get("settings")
-	@ApiOperation({ summary: "Every flag's setting, for the console to evaluate (any admin staff member)" })
-	@ZodResponse(FeatureFlagSettingsSchema, { description: "The settings" })
-	public settings(@CurrentActor() actor: ActorContext): Promise<FeatureFlagSettings> {
-		return this.flags.settings(actor);
-	}
+	public constructor(
+		@Inject(FLAG_ADMIN) private readonly flags: FlagAdminService,
+		@Inject(FLAG_EVALUATION) private readonly evaluation: FlagEvaluationService,
+	) {}
 
 	@RequirePermission("LIST", "FEATURE_FLAG")
-	@PlatformOperation(FEATURE_FLAGS_READ_OPERATION)
 	@Get()
-	@ApiOperation({ summary: "Every feature flag: what it is, where its default comes from, its setting and who last changed it" })
-	@ZodResponse(FeatureFlagListSchema, { description: "The flags" })
-	public list(@CurrentActor() actor: ActorContext): Promise<FeatureFlagList> {
+	@PlatformOperation(FEATURE_FLAGS_READ_OPERATION)
+	@ApiOperation({ summary: "Every declared feature flag: its kill switch, live and pending revision, overrides, exposures and whether it's ready to remove" })
+	@ZodResponse(FeatureFlagSummaryListSchema, { description: "The flags" })
+	public list(@CurrentActor() actor: ActorContext): Promise<FeatureFlagSummaryList> {
 		return this.flags.list(actor);
 	}
 
-	@RequirePermission("UPDATE", "FEATURE_FLAG")
-	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
-	@PlatformOperation(FEATURE_FLAGS_WRITE_OPERATION)
-	@Put(":key")
-	@ApiOperation({ summary: "Set a flag: its default, on, off, or on for a percentage of people (with a reason)" })
-	@ZodResponse(FeatureFlagSchema, { description: "The flag" })
-	public update(
-		@CurrentActor() actor: ActorContext,
-		@ZodParams(FeatureFlagPathSchema) path: FeatureFlagPath,
-		@ZodBody(UpdateFeatureFlagSchema) input: UpdateFeatureFlagInput,
-	): Promise<FeatureFlag> {
-		return this.flags.update(actor, path.key, input);
+	@RequirePermission("LIST", "FEATURE_FLAG")
+	@Get("environment")
+	@PlatformOperation(FEATURE_FLAGS_READ_OPERATION)
+	@ApiOperation({ summary: "This deployment's environment, and whether rule changes here wait for a second person" })
+	@ZodResponse(FeatureFlagEnvironmentSchema, { description: "The environment" })
+	public environment(): FeatureFlagEnvironment {
+		return this.flags.environmentInfo();
 	}
 
 	@RequirePermission("UPDATE", "FEATURE_FLAG")
+	@Get("subjects")
 	@PlatformOperation(FEATURE_FLAGS_READ_OPERATION)
-	@Get("stores")
-	@ApiOperation({ summary: "The stores a store flag can be set for: merchants by name, with their live branches (names only)" })
-	@ZodResponse(FeatureFlagStoreOptionListSchema, { description: "Up to 20 merchants" })
-	public stores(@CurrentActor() actor: ActorContext, @ZodQuery(FeatureFlagStoreSearchQuerySchema) query: FeatureFlagStoreSearchQuery): Promise<FeatureFlagStoreOptionList> {
-		return this.flags.searchStores(actor, query.search);
+	@ApiOperation({ summary: "The users, tenants or locations an override can name, by name (up to 20)" })
+	@ZodResponse(FlagSubjectOptionListSchema, { description: "Matching subjects" })
+	public subjects(@CurrentActor() actor: ActorContext, @ZodQuery(FlagSubjectSearchQuerySchema) query: FlagSubjectSearchQuery): Promise<FlagSubjectOptionList> {
+		return this.flags.searchSubjects(actor, query);
 	}
 
 	@RequirePermission("LIST", "FEATURE_FLAG")
+	@Get(":key")
 	@PlatformOperation(FEATURE_FLAGS_READ_OPERATION)
-	@Get(":key/overrides")
-	@ApiOperation({ summary: "A store flag's per-store settings: each merchant's and branch's own value, why, and who set it" })
-	@ZodResponse(FeatureFlagStoreOverrideListSchema, { description: "The per-store settings" })
-	public overrides(@CurrentActor() actor: ActorContext, @ZodParams(StoreFeatureFlagPathSchema) path: StoreFeatureFlagPath): Promise<FeatureFlagStoreOverrideList> {
-		return this.flags.storeOverrides(actor, path.key);
+	@ApiOperation({ summary: "One flag: its live and pending rules, overrides, kill switch and exposures over the last day and week" })
+	@ZodResponse(FeatureFlagDetailSchema, { description: "The flag" })
+	public detail(@CurrentActor() actor: ActorContext, @ZodParams(FeatureFlagPathSchema) path: FeatureFlagPath): Promise<FeatureFlagDetail> {
+		return this.flags.detail(actor, path.key);
+	}
+
+	@RequirePermission("LIST", "FEATURE_FLAG")
+	@Get(":key/revisions")
+	@PlatformOperation(FEATURE_FLAGS_READ_OPERATION)
+	@ApiOperation({ summary: "Every revision of a flag's rules, newest first" })
+	@ZodResponse(RevisionListSchema, { description: "The revisions" })
+	public revisions(@CurrentActor() actor: ActorContext, @ZodParams(FeatureFlagPathSchema) path: FeatureFlagPath): Promise<RevisionList> {
+		return this.flags.revisions(actor, path.key);
 	}
 
 	@RequirePermission("UPDATE", "FEATURE_FLAG")
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@Post(":key/revisions")
 	@PlatformOperation(FEATURE_FLAGS_WRITE_OPERATION)
+	@ApiOperation({
+		summary: "Save a flag's rules as a new revision, with a reason",
+		description:
+			"Live at once, except in production, where it waits up to 7 days for someone else's approval. 409 FEATURE_FLAG_REVISION_CONFLICT when the live revision isn't `basedOn` any more; 422 FEATURE_FLAG_RULES_INVALID when a rule names a group that doesn't exist.",
+	})
+	@ZodResponse(RevisionSchema, { status: HttpStatus.CREATED, description: "The new revision" })
+	public saveRevision(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(FeatureFlagPathSchema) path: FeatureFlagPath,
+		@ZodBody(SaveFlagRevisionSchema) input: SaveFlagRevisionInput,
+	): Promise<Revision> {
+		return this.flags.saveRevision(actor, path.key, input);
+	}
+
+	@RequirePermission("APPROVE", "FEATURE_FLAG")
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@Post(":key/revisions/:number/decision")
+	@HttpCode(HttpStatus.OK)
+	@PlatformOperation(FEATURE_FLAGS_WRITE_OPERATION)
+	@ApiOperation({ summary: "Approve (it goes live) or reject someone else's pending revision, with a reason", description: "403 FEATURE_FLAG_SELF_APPROVAL for one's own." })
+	@ZodResponse(RevisionSchema, { description: "The decided revision" })
+	public decide(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(FlagRevisionPathSchema) path: FlagRevisionPath,
+		@ZodBody(RevisionDecisionSchema) input: RevisionDecisionInput,
+	): Promise<Revision> {
+		return this.flags.decideRevision(actor, path.key, path.number, input);
+	}
+
+	@RequirePermission("UPDATE", "FEATURE_FLAG")
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@Put(":key/kill-switch")
+	@PlatformOperation(FEATURE_FLAGS_WRITE_OPERATION)
+	@ApiOperation({ summary: "Throw (off for everyone, at once) or release a flag's kill switch, with a reason — never waits for approval" })
+	@ZodResponse(KillSwitchStateSchema, { description: "The kill switch" })
+	public setKillSwitch(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(FeatureFlagPathSchema) path: FeatureFlagPath,
+		@ZodBody(SetKillSwitchSchema) input: SetKillSwitchInput,
+	): Promise<KillSwitchState> {
+		return this.flags.setKillSwitch(actor, path.key, input);
+	}
+
+	@RequirePermission("UPDATE", "FEATURE_FLAG")
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@Put(":key/overrides")
-	@ApiOperation({ summary: "Set a merchant's or one branch's own value of a store flag (replacing its earlier one), with a reason" })
-	@ZodResponse(FeatureFlagStoreOverrideSchema, { description: "The store's setting" })
+	@PlatformOperation(FEATURE_FLAGS_WRITE_OPERATION)
+	@ApiOperation({ summary: "Force a flag on or off for one user, location or tenant (replacing its earlier override), with a reason" })
+	@ZodResponse(FlagOverrideSchema, { description: "The override" })
 	public setOverride(
 		@CurrentActor() actor: ActorContext,
-		@ZodParams(StoreFeatureFlagPathSchema) path: StoreFeatureFlagPath,
-		@ZodBody(SetFeatureFlagStoreOverrideSchema) input: SetFeatureFlagStoreOverrideInput,
-	): Promise<FeatureFlagStoreOverride> {
-		return this.flags.setStoreOverride(actor, path.key, input);
+		@ZodParams(FeatureFlagPathSchema) path: FeatureFlagPath,
+		@ZodBody(SetFlagOverrideSchema) input: SetFlagOverrideInput,
+	): Promise<FlagOverride> {
+		return this.flags.setOverride(actor, path.key, input);
 	}
 
 	@RequirePermission("UPDATE", "FEATURE_FLAG")
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
-	@PlatformOperation(FEATURE_FLAGS_WRITE_OPERATION)
 	@Post(":key/overrides/:overrideId/remove")
 	@HttpCode(HttpStatus.OK)
-	@ApiOperation({ summary: "Remove a store's own value of a flag (it follows the deployment again), with a reason" })
+	@PlatformOperation(FEATURE_FLAGS_WRITE_OPERATION)
+	@ApiOperation({ summary: "Remove an override (the subject follows the rules again), with a reason — a POST, so the reason can't be dropped" })
 	@ZodResponse(OkResponseSchema, { description: "Removed" })
 	public async removeOverride(
 		@CurrentActor() actor: ActorContext,
-		@ZodParams(FeatureFlagStoreOverridePathSchema) path: FeatureFlagStoreOverridePath,
+		@ZodParams(FlagOverridePathSchema) path: FlagOverridePath,
 		// The reason is validated here and kept by the request audit with the rest of the call.
-		@ZodBody(RemoveFeatureFlagStoreOverrideSchema) _input: RemoveFeatureFlagStoreOverrideInput,
+		@ZodBody(RemoveFlagOverrideSchema) _input: RemoveFlagOverrideInput,
 	): Promise<OkResponse> {
-		await this.flags.removeStoreOverride(actor, path.key, path.overrideId);
+		await this.flags.removeOverride(actor, path.key, path.overrideId);
 		return { ok: true };
+	}
+
+	@RequirePermission("LIST", "FEATURE_FLAG")
+	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@Post(":key/check")
+	@HttpCode(HttpStatus.OK)
+	@PlatformOperation(FEATURE_FLAGS_READ_OPERATION)
+	@ApiOperation({ summary: "Check a subject: the value one user, store or device would get, and every step that decided it" })
+	@ZodResponse(FlagCheckResultSchema, { description: "The value and its trace" })
+	public check(@ZodParams(FeatureFlagPathSchema) path: FeatureFlagPath, @ZodBody(CheckSubjectSchema) body: CheckSubjectInput): Promise<FlagCheckResult> {
+		return this.evaluation.checkFlag(path.key, body.subject);
 	}
 }

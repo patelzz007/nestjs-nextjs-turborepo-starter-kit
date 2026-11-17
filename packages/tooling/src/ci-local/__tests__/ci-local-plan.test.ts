@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import {
 	API_CI_TENANCY,
-	BROWSER_ADMIN_FEATURE_ENV,
 	BROWSER_READINESS_URLS,
 	LOCAL_APP_PORTS,
 	BROWSER_SUITE_ENV,
@@ -269,12 +268,10 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 		}
 	});
 
-	it("builds and serves the admin with the features its suite drives, as the workflow does", () => {
-		for (const [name, value] of Object.entries(BROWSER_ADMIN_FEATURE_ENV)) {
-			expect(WORKFLOW).toContain(`${name}: "${value}"`);
-			expect(job.setup.find((step) => step.id === "browser:build")?.env?.[name]).toBe(value);
-			expect(job.servers.find((server) => server.id === "browser:admin")?.env?.[name]).toBe(value);
-		}
+	it("builds and serves the admin with no feature switch: the showcase is a feature flag the seeded rule turns on (ADR 087)", () => {
+		expect(WORKFLOW).not.toContain("ADMIN_SHOWCASE");
+		expect(job.setup.find((step) => step.id === "browser:build")?.env).toStrictEqual(CI_BUILD_ENV);
+		expect(job.servers.find((server) => server.id === "browser:admin")?.env).toBeUndefined();
 	});
 
 	it("serves and seeds the API from CI's generated browser env, never the developer's apps/api/.env", () => {

@@ -53,6 +53,7 @@ import { RewardsAdminAnalyticsController } from "./presentation/http/admin-analy
 import { ConsumerAnalyticsController } from "./presentation/http/consumer-analytics.controller";
 import { IntegrationAnalyticsController } from "./presentation/http/integration-analytics.controller";
 import { TenantAnalyticsController } from "./presentation/http/tenant-analytics.controller";
+import { FeatureFlagsModule } from "../feature-flags/public-api";
 
 /**
  * Reporting: the analytics read side (queries only, plan §7.8). Dashboards (customer / merchant /
@@ -62,7 +63,7 @@ import { TenantAnalyticsController } from "./presentation/http/tenant-analytics.
  * audit module.
  */
 @Module({
-	imports: [PrismaModule, SystemCommandModule, TenantAccessModule],
+	imports: [PrismaModule, SystemCommandModule, TenantAccessModule, FeatureFlagsModule],
 	controllers: [TenantAnalyticsController, IntegrationAnalyticsController, RewardsAdminAnalyticsController, ConsumerAnalyticsController],
 	providers: [
 		{ provide: REPORTING_MERCHANT_ACCESS, useExisting: MERCHANT_ACCESS },

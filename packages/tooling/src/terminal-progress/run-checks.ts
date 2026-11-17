@@ -13,9 +13,9 @@ import { openKeyboard, type KeyboardOpener } from "./keyboard.ts";
 import { LiveDashboard } from "./live-dashboard.ts";
 import type { LogLine, PanelData } from "./panels.ts";
 import { applyLine, finishCheck, startCheck, waitingCheck, type CheckProgress } from "./progress.ts";
-import { renderCancelled, renderFailed, renderPassed, renderSummary } from "./render.ts";
-import { readRunHistory, writeRunHistory } from "./run-history.ts";
-import type { ProgressStream } from "./screen.ts";
+import { renderCancelled, renderFailed, renderPassed, renderRerun, renderSummary } from "./render.ts";
+import { nextRunHistory, readRunHistory, runRecords, writeRunHistory, type FinishedRun } from "./run-history.ts";
+import { TERMINAL_BELL, type ProgressStream } from "./screen.ts";
 import { parseFailedTasks, parseTaskLine } from "./task-output.ts";
 import type { Tint } from "./text.ts";
 
@@ -56,6 +56,8 @@ const FAILURE_LOG_LINES = 80;
 const FAILURE_LINE_LENGTH = 300;
 /** Lines the Log view keeps to scroll through; the log file has them all. */
 const LOG_VIEW_LINES = 20_000;
+/** A run this long has usually lost the person to another window, so its end rings the bell. */
+const BELL_AFTER_MS = 30_000;
 const TAB = /\t/gu;
 const TAB_SPACES = "  ";
 const STOP_SIGNALS: readonly NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
@@ -175,11 +177,19 @@ export async function runChecks(options: RunChecksOptions): Promise<boolean> {
 	writeLog(logFile, allLines);
 	const totalMs = Date.now() - startedAtMs;
 	const finishedCleanly = !isCancelled() && progress.every((check) => check.status === "passed");
+	// A run cut short says nothing about speed or streaks, so it isn't recorded.
+	const run: FinishedRun = { passed: finishedCleanly, checks: progress, totalMs };
+	const nextHistory = isCancelled() ? undefined : nextRunHistory(history, run);
+	if (nextHistory !== undefined) {
+		writeRunHistory(historyFile, nextHistory);
+	}
 	if (live) {
 		const width = Math.min(stream.columns ?? DEFAULT_WIDTH, REPORT_MAX_WIDTH);
-		// A run cut short says nothing about speed.
-		const previousMs = finishedCleanly ? history?.totalMs : undefined;
-		stream.write(`${renderSummary({ headline: changes.headline, checks: progress, width, tint, totalMs, previousMs }).join("\n")}\n`);
+		const records = runRecords(history, nextHistory, run);
+		stream.write(`${renderSummary({ headline: changes.headline, checks: progress, width, tint, records }).join("\n")}\n`);
+		if (totalMs >= BELL_AFTER_MS && !isCancelled()) {
+			stream.write(TERMINAL_BELL);
+		}
 	}
 
 	if (isCancelled()) {
@@ -188,10 +198,12 @@ export async function runChecks(options: RunChecksOptions): Promise<boolean> {
 	}
 	// The exit codes, not the log: a check can fail without printing a word.
 	if (!finishedCleanly) {
-		stream.write(`${failures.map((line) => `${line}\n`).join("")}\n${renderFailed(progress, tint)}\n  ${tint.quiet(`Full log: ${path.relative(cwd, logFile)}`)}\n\n`);
+		const rerun = renderRerun(progress, tint);
+		stream.write(
+			`${failures.map((line) => `${line}\n`).join("")}\n${renderFailed(progress, tint)}\n  ${tint.quiet(`Full log: ${path.relative(cwd, logFile)}`)}\n${rerun.map((line) => `${line}\n`).join("")}\n`,
+		);
 		return false;
 	}
-	writeRunHistory(historyFile, progress, totalMs);
 	stream.write(`${renderPassed(progress, totalMs, tint)}\n`);
 	if (nextStep !== undefined) {
 		stream.write(`  ${tint.active("→")} ${nextStep}\n`);

@@ -197,8 +197,8 @@ current baseline) only added things: the new tables and enums, nullable `plannin
 ## Placement in the admin
 
 The boards are in the sidebar's **Components** section, beside the UI kit showcase, so they follow that
-section's `showcase` flag (`ADMIN_SHOWCASE`: on in development and test, off in
-production unless set; the CI browser job sets it, since its admin suite drives the board). To make them a product page everywhere, move the menu entry (and route folder)
+section's `showcase` feature flag (ADR 087: its rules are set in **Releases**; the seeded rule turns it on outside
+production). To make them a product page everywhere, move the menu entry (and route folder)
 out of the Components section and drop the flag from the item-page rules in
 `apps/admin/lib/navigation/route-authorization.ts`.
 

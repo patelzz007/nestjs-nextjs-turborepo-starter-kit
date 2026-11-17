@@ -28,7 +28,12 @@ export interface DashboardState {
 	readonly logFilter: string | undefined;
 	/** The first `q` asks; a run that took minutes shouldn't end on a slip of the finger. */
 	readonly confirmingCancel: boolean;
+	/** Whether the key list covers the panel. */
+	readonly help: boolean;
 }
+
+/** How far one notch of the wheel scrolls: one row at a time feels stuck. */
+export const WHEEL_ROWS = 3;
 
 /** What a key needs to know about the panel on screen. */
 export interface PanelShape {
@@ -44,14 +49,14 @@ export interface KeyResult {
 	readonly cancel: boolean;
 }
 
-export const INITIAL_DASHBOARD: DashboardState = { view: "live", top: undefined, selected: 0, logFilter: undefined, confirmingCancel: false };
+export const INITIAL_DASHBOARD: DashboardState = { view: "live", top: undefined, selected: 0, logFilter: undefined, confirmingCancel: false, help: false };
 
 function clamp(value: number, low: number, high: number): number {
 	return Math.min(Math.max(value, low), high);
 }
 
 function showView(state: DashboardState, view: ViewId): DashboardState {
-	return { ...state, view, top: undefined };
+	return { ...state, view, top: undefined, help: false };
 }
 
 function stepView(state: DashboardState, step: number): DashboardState {
@@ -75,20 +80,28 @@ function selectRow(state: DashboardState, row: number, panel: PanelShape): Dashb
 	return { ...state, selected: clamp(row, 0, Math.max(panel.length - 1, 0)) };
 }
 
+/** The packages view moves a selection; every other panel, and the key list over it, scrolls. */
+export function selectsRows(state: DashboardState): boolean {
+	return state.view === "packages" && !state.help;
+}
+
 function move(state: DashboardState, rows: number, panel: PanelShape): DashboardState {
-	return state.view === "packages" ? selectRow(state, state.selected + rows, panel) : scrollBy(state, rows, panel);
+	return selectsRows(state) ? selectRow(state, state.selected + rows, panel) : scrollBy(state, rows, panel);
 }
 
 function moveToEdge(state: DashboardState, target: number, panel: PanelShape): DashboardState {
-	return state.view === "packages" ? selectRow(state, target, panel) : scrollTo(state, target, panel);
+	return selectsRows(state) ? selectRow(state, target, panel) : scrollTo(state, target, panel);
 }
 
 function openPackageLog(state: DashboardState, panel: PanelShape): DashboardState {
-	const name = state.view === "packages" ? panel.packageAt(state.selected) : undefined;
+	const name = selectsRows(state) ? panel.packageAt(state.selected) : undefined;
 	return name === undefined ? state : { ...showView(state, "log"), logFilter: name };
 }
 
 function goBack(state: DashboardState): DashboardState {
+	if (state.help) {
+		return { ...state, help: false, top: undefined };
+	}
 	return state.logFilter === undefined ? state : { ...showView(state, "packages"), logFilter: undefined };
 }
 
@@ -106,6 +119,12 @@ function navigate(state: DashboardState, key: KeyName, panel: PanelShape): Dashb
 			return move(state, -1, panel);
 		case "down":
 			return move(state, 1, panel);
+		case "wheelUp":
+			return move(state, -WHEEL_ROWS, panel);
+		case "wheelDown":
+			return move(state, WHEEL_ROWS, panel);
+		case "help":
+			return { ...state, help: !state.help, top: undefined };
 		case "pageUp":
 			return move(state, -panel.height, panel);
 		case "pageDown":

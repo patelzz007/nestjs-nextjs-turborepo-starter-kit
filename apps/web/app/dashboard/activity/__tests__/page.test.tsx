@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { LIST_SLOT_INDEX } from "@workspace/shared";
+import { LIST_SLOT_INDEX, type FeatureFlagKey } from "@workspace/shared";
 import type * as ServerApi from "@workspace/client/lib/api/server-api";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,11 +13,14 @@ import { failedQuery, httpFailure } from "@/testing/server-query";
 import DashboardActivityPage from "../page";
 import { testEnvelope } from "@/testing/envelope";
 
-const { analyticsQuery, guardWebPage, analyticsView } = vi.hoisted(() => ({
+const { analyticsQuery, guardWebPage, analyticsView, isWebFeatureEnabled } = vi.hoisted(() => ({
 	analyticsQuery: vi.fn(),
 	guardWebPage: vi.fn<(returnPath: string) => Promise<void>>(),
 	analyticsView: vi.fn<(props: DashboardAnalyticsPageViewProps) => React.JSX.Element>(),
+	isWebFeatureEnabled: vi.fn<(key: FeatureFlagKey) => Promise<boolean>>(),
 }));
+
+vi.mock("@/lib/server/feature-flag-bundle", () => ({ isWebFeatureEnabled }));
 
 vi.mock("@/lib/web-server-api", () => ({ createWebServerCaller: (): object => ({ claims: { analyticsDashboard: { query: analyticsQuery } } }) }));
 vi.mock("@/contexts/identity/lib/page-guard", () => ({ guardWebPage }));
@@ -46,6 +49,7 @@ beforeEach((): void => {
 	vi.useFakeTimers({ toFake: ["Date"] });
 	vi.setSystemTime(NOW_MS);
 	guardWebPage.mockResolvedValue(undefined);
+	isWebFeatureEnabled.mockResolvedValue(true);
 	analyticsView.mockReturnValue(<p>activity</p>);
 	vi.spyOn(console, "error").mockImplementation((): void => {
 		// unexpected failures are logged
@@ -66,6 +70,14 @@ describe("DashboardActivityPage (server)", () => {
 		await renderPage();
 
 		expect(guardWebPage).toHaveBeenCalledWith(ROUTES.dashboard.activity);
+	});
+
+	it("doesn't exist for a customer whose web-activity flag is off, and asks for no analytics (ADR 087)", async () => {
+		isWebFeatureEnabled.mockResolvedValue(false);
+
+		await expect(pageExit(renderPage)).resolves.toEqual({ kind: "not-found" });
+		expect(isWebFeatureEnabled).toHaveBeenCalledWith("web-activity");
+		expect(analyticsQuery).not.toHaveBeenCalled();
 	});
 
 	it("prefetches the last 30 UTC days by default and hands the answer, keyed by its request, to the view", async () => {

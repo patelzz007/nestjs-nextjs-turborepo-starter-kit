@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 import { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "../../contexts/reporting/schemas/events";
+import { FeatureFlagExposureEventSchema } from "../../contexts/feature-flags/schemas/bundle";
 import { RewardPlatformEventSchema } from "../../contexts/rewards/schemas/reward";
 
 /** Kafka topics the API publishes platform events to. */
-export const KafkaTopicSchema = z.enum(["platform.auth", "platform.sessions", "platform.impersonation", "platform.email", "platform.rewards"]);
+export const KafkaTopicSchema = z.enum(["platform.auth", "platform.sessions", "platform.impersonation", "platform.email", "platform.rewards", "platform.feature-flags"]);
 
 export type KafkaTopic = z.output<typeof KafkaTopicSchema>;
 
@@ -55,6 +56,16 @@ const RewardPlatformEnvelopeSchema = z
 	})
 	.strict();
 
+/** A batch of feature flag exposures (ADR 087), projected by the analytics consumer into `FeatureFlagExposure`. */
+const FeatureFlagExposureEnvelopeSchema = z
+	.object({
+		type: z.literal("feature_flag.exposure"),
+		correlationId: z.string().nullable(),
+		occurredAt: z.number().int().nonnegative(),
+		payload: FeatureFlagExposureEventSchema,
+	})
+	.strict();
+
 /**
  * Discriminated envelope stored in `outbox_events.payload`. The stable event id
  * is the outbox row id — it is added on the wire ({@link PlatformEventMessageSchema}).
@@ -65,6 +76,7 @@ export const PlatformEventEnvelopeSchema = z.discriminatedUnion("type", [
 	ImpersonationActionEnvelopeSchema,
 	EmailLogUpdatedEnvelopeSchema,
 	RewardPlatformEnvelopeSchema,
+	FeatureFlagExposureEnvelopeSchema,
 ]);
 
 export type PlatformEventEnvelope = z.output<typeof PlatformEventEnvelopeSchema>;
@@ -85,6 +97,7 @@ export const PlatformEventInputSchema = z.discriminatedUnion("type", [
 	ImpersonationActionEnvelopeSchema.pick(ENVELOPE_INPUT_KEYS),
 	EmailLogUpdatedEnvelopeSchema.pick(ENVELOPE_INPUT_KEYS),
 	RewardPlatformEnvelopeSchema.pick(ENVELOPE_INPUT_KEYS),
+	FeatureFlagExposureEnvelopeSchema.pick(ENVELOPE_INPUT_KEYS),
 ]);
 
 export type PlatformEventInput = z.output<typeof PlatformEventInputSchema>;
@@ -107,6 +120,7 @@ export const PlatformEventMessageSchema = z.discriminatedUnion("type", [
 	ImpersonationActionEnvelopeSchema.extend(EVENT_ID_SHAPE),
 	EmailLogUpdatedEnvelopeSchema.extend(EVENT_ID_SHAPE),
 	RewardPlatformEnvelopeSchema.extend(EVENT_ID_SHAPE),
+	FeatureFlagExposureEnvelopeSchema.extend(EVENT_ID_SHAPE),
 ]);
 
 export type PlatformEventMessage = z.output<typeof PlatformEventMessageSchema>;
@@ -118,6 +132,7 @@ export const PLATFORM_EVENT_TOPICS: Readonly<Record<PlatformEventType, KafkaTopi
 	"impersonation.action": "platform.impersonation",
 	"email.log.updated": "platform.email",
 	"reward.platform": "platform.rewards",
+	"feature_flag.exposure": "platform.feature-flags",
 };
 
 /** Optional tenant tag publishers may include on any platform event payload. */

@@ -199,6 +199,8 @@ re-deriving the moves first, then money and delivery pipelines.
 | `RewardReferralStatus` | referrals | `reward-referral.aggregate.ts` |
 | `FileStatus` | files | `stored-file.aggregate.ts`, `file-processing.adapter.ts`; upload fields |
 | `WebhookDeliveryStatus` | webhooks | `prisma-webhooks.repositories.ts`; merchant delivery log |
+| `FlagRevisionStatus` | feature-flags | `revision-workflow.ts` (`PENDING` → `LIVE` → `SUPERSEDED`, or `PENDING` → `REJECTED` / `EXPIRED`; ADR 086), `flag-maintenance.service.ts` (expiry) |
+| `ExperimentStatus` | feature-flags | `experiment.service.ts` (`DRAFT` → `RUNNING` → `STOPPED`) |
 | `OutboxEventStatus` | platform | `outbox-dispatcher.ts`, `outbox-email-relay.ts` |
 | `AccountErasureStatus` | privacy | `prisma-account-erasure.store.ts`; delete-my-account panel |
 | `TenantEncryptionKeyStatus` | tenancy | tenant key rotation |

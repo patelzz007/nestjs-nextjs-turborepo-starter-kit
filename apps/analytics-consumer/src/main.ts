@@ -3,7 +3,16 @@ import { setTimeout as delay } from "node:timers/promises";
 import { EnvValidationError, KAFKA_TOPICS } from "@workspace/shared";
 
 import { loadConsumerEnv, type ConsumerEnv } from "./infrastructure/env";
-import { RetentionScheduler, createConsumerPool, PgInboxStore, ANALYTICS_CONSUMER_ID, type AbortableSleep, type MessageHandlerDeps } from "@workspace/messaging/inbox";
+import {
+	RetentionScheduler,
+	createConsumerPool,
+	FLAG_ANALYTICS_RETENTION_DAYS,
+	FlagAnalyticsScheduler,
+	PgInboxStore,
+	ANALYTICS_CONSUMER_ID,
+	type AbortableSleep,
+	type MessageHandlerDeps,
+} from "@workspace/messaging/inbox";
 import { assertTopicsExist, buildConsumerConfig, createKafkaClient } from "./infrastructure/kafka";
 import { createConsoleJsonLogger } from "./infrastructure/logger";
 import { projectPlatformEvent } from "./projections/platform-events/platform-events.projection";
@@ -56,6 +65,9 @@ const handlerDeps: MessageHandlerDeps = {
 };
 
 // Hourly purge of inbox claims and parked messages past their windows (advisory-locked: one instance at a time).
+// Hourly feature flag analytics (ADR 087): exposure and metric purges past 90 days, daily sums, experiment results.
+const flagAnalytics = new FlagAnalyticsScheduler({ store: inboxStore, logger, nowMs: (): number => Date.now() });
+
 const retention = new RetentionScheduler({
 	store: inboxStore,
 	logger,
@@ -96,6 +108,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 	try {
 		await consumer.disconnect();
 		await retention.stop();
+		await flagAnalytics.stop();
 		await pool.end();
 		clearTimeout(forceExitTimer);
 		kafkaClient.flushLogs();
@@ -138,6 +151,8 @@ async function main(): Promise<void> {
 
 	retention.start();
 	logger.info({ event: "analytics.retention_scheduled", inboxRetentionDays: env.inboxRetentionDays, deadLetterRetentionDays: env.deadLetterRetentionDays });
+	flagAnalytics.start();
+	logger.info({ event: "analytics.flag_analytics_scheduled", retentionDays: FLAG_ANALYTICS_RETENTION_DAYS });
 }
 
 async function run(): Promise<void> {

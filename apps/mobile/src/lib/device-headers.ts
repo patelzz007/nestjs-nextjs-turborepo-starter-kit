@@ -8,14 +8,30 @@
 // §8.10, §20.1). A value that already fails the shared display schema is not
 // sent at all.
 
-import { DEVICE_MODEL_HEADER, DEVICE_NAME_HEADER, encodeSessionDeviceHeaderValue, SessionDeviceModelSchema, SessionDeviceNameSchema } from "@workspace/shared";
+import {
+	CLIENT_PLATFORM_HEADER,
+	ClientPlatformSchema,
+	DEVICE_MODEL_HEADER,
+	DEVICE_NAME_HEADER,
+	encodeSessionDeviceHeaderValue,
+	SessionDeviceModelSchema,
+	SessionDeviceNameSchema,
+} from "@workspace/shared";
 import * as Device from "expo-device";
+import { Platform } from "react-native";
 import type { z } from "zod";
 
-/** What expo-device reports (each may be unknown). */
+/** What expo-device reports (each may be unknown), and the operating system React Native runs on. */
 export interface DeviceDetails {
 	readonly modelName: string | null;
 	readonly deviceName: string | null;
+	/** `Platform.OS`: `ios` or `android` is sent as `X-Client-Platform`, which feature flag rules can match (ADR 087). */
+	readonly platform: string;
+}
+
+function platformHeader(platform: string): Record<string, string> {
+	const parsed = ClientPlatformSchema.safeParse(platform);
+	return parsed.success ? { [CLIENT_PLATFORM_HEADER]: parsed.data } : {};
 }
 
 function encodedHeader(name: string, value: string | null, schema: z.ZodType<string>): Record<string, string> {
@@ -31,10 +47,11 @@ export function buildDeviceHeaders(details: DeviceDetails): Record<string, strin
 	return {
 		...encodedHeader(DEVICE_MODEL_HEADER, details.modelName, SessionDeviceModelSchema),
 		...encodedHeader(DEVICE_NAME_HEADER, details.deviceName, SessionDeviceNameSchema),
+		...platformHeader(details.platform),
 	};
 }
 
 /** This device's details. */
 export function readDeviceDetails(): DeviceDetails {
-	return { modelName: Device.modelName, deviceName: Device.deviceName };
+	return { modelName: Device.modelName, deviceName: Device.deviceName, platform: Platform.OS };
 }

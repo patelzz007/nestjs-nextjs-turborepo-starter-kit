@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 
 import { PROXY_REFRESH_COOLDOWN_MS } from "@workspace/client/lib/contexts/identity/edge/proxy-refresh";
+import { DEVICE_ID_COOKIE, DeviceIdSchema } from "@workspace/shared";
 
 import { createAdminProxy, createAdminRefreshAttempt, type AdminProxy } from "../proxy";
 
@@ -22,7 +23,12 @@ interface RequestOptions {
 	readonly secFetchMode?: string | null;
 	readonly accept?: string | null;
 	readonly query?: Record<string, string>;
+	/** The browser's device-id cookie (feature-flag bucketing); a returning browser has one, `null` is a first visit. */
+	readonly deviceId?: string | null;
 }
+
+/** A returning browser's device id: the proxy leaves it as it is. */
+const RETURNING_DEVICE_ID = "0193b9f4-6f2a-7c4e-9a1d-3c5e7f9b1d2f";
 
 function makeRequest(options: RequestOptions): NextRequest {
 	const headers = new Headers();
@@ -32,6 +38,8 @@ function makeRequest(options: RequestOptions): NextRequest {
 	const cookieParts: string[] = [];
 	if (options.accessToken !== null && options.accessToken !== undefined) cookieParts.push(`adminAccessToken=${options.accessToken}`);
 	if (options.refreshToken !== null && options.refreshToken !== undefined) cookieParts.push(`adminRefreshToken=${options.refreshToken}`);
+	const deviceId = options.deviceId === undefined ? RETURNING_DEVICE_ID : options.deviceId;
+	if (deviceId !== null) cookieParts.push(`${DEVICE_ID_COOKIE}=${deviceId}`);
 	if (cookieParts.length > 0) headers.set("cookie", cookieParts.join("; "));
 
 	const url = new URL(`http://localhost:3001${options.pathname ?? "/"}`);
@@ -296,6 +304,16 @@ describe("admin proxy server-side refresh", () => {
 		const cleared = clearedCookieNames(response);
 		expect(cleared).toEqual(["adminAccessToken", "adminRefreshToken"]);
 		expect(cleared.every((name) => response.cookies.get(name)?.maxAge === 0)).toBe(true);
+	});
+
+	it("gives a first-time browser its device-id cookie, and touches no session cookie", async () => {
+		vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+
+		const response = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt", deviceId: null, ...DOC_NAV });
+
+		expect(response.status).toBe(200);
+		expect(response.cookies.getAll().map((cookie) => cookie.name)).toEqual([DEVICE_ID_COOKIE]);
+		expect(DeviceIdSchema.safeParse(response.cookies.get(DEVICE_ID_COOKIE)?.value).success).toBe(true);
 	});
 
 	it("serves the panel without clearing cookies on a transient refresh failure", async () => {

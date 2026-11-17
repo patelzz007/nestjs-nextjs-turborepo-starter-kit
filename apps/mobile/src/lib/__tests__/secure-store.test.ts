@@ -21,6 +21,8 @@ describe("the Secure Store registry", () => {
 			"till.tenantName",
 			"till.tenantId",
 			"till.locationId",
+			"flags.deviceId",
+			"flags.bundle",
 			"till.checkoutQueue",
 		]);
 		expect(new Set(keys).size).toBe(keys.length);

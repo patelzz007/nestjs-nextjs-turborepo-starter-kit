@@ -180,8 +180,23 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/rewards/review", needs(PERMISSION.REWARD.APPROVE)],
 	["/rewards/review/[id]", needs(PERMISSION.REWARD.APPROVE)],
 	["/settings/access", needs(PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ)],
-	// Runtime feature flags (enhancement 5.6).
-	["/settings/feature-flags", needs(PERMISSION.FEATURE_FLAG.LIST)],
+	// Releases (ADR 087): the section redirects to flags; each page mirrors the admin API it calls.
+	["/releases", needs(PERMISSION.FEATURE_FLAG.LIST)],
+	["/releases/flags", needs(PERMISSION.FEATURE_FLAG.LIST)],
+	["/releases/flags/[id]", needs(PERMISSION.FEATURE_FLAG.LIST)],
+	["/releases/flags/[id]/edit", needsAll(PERMISSION.FEATURE_FLAG.LIST, PERMISSION.FEATURE_FLAG.UPDATE)],
+	["/releases/configs", needs(PERMISSION.DYNAMIC_CONFIG.LIST)],
+	["/releases/configs/[id]", needs(PERMISSION.DYNAMIC_CONFIG.LIST)],
+	["/releases/configs/[id]/edit", needsAll(PERMISSION.DYNAMIC_CONFIG.LIST, PERMISSION.DYNAMIC_CONFIG.UPDATE)],
+	["/releases/groups", needs(PERMISSION.FEATURE_FLAG_GROUP.LIST)],
+	["/releases/groups/new", needs(PERMISSION.FEATURE_FLAG_GROUP.UPDATE)],
+	["/releases/groups/[id]", needs(PERMISSION.FEATURE_FLAG_GROUP.LIST)],
+	["/releases/groups/[id]/edit", needsAll(PERMISSION.FEATURE_FLAG_GROUP.LIST, PERMISSION.FEATURE_FLAG_GROUP.UPDATE)],
+	["/releases/experiments", needs(PERMISSION.EXPERIMENT.LIST)],
+	["/releases/experiments/new", needsAll(PERMISSION.EXPERIMENT.UPDATE, PERMISSION.DYNAMIC_CONFIG.LIST)],
+	["/releases/experiments/[id]", needs(PERMISSION.EXPERIMENT.LIST)],
+	["/releases/experiments/[id]/edit", needsAll(PERMISSION.EXPERIMENT.LIST, PERMISSION.EXPERIMENT.UPDATE, PERMISSION.DYNAMIC_CONFIG.LIST)],
+	["/releases/promotion", needsAll(PERMISSION.FEATURE_FLAG.LIST, PERMISSION.FEATURE_FLAG.UPDATE)],
 	// The tier rules (ADR 085); the route rule also carries the customer-tiers flag.
 	["/settings/tiers", needs(PERMISSION.SYSTEM_SETTINGS.READ)],
 ]);

@@ -41,6 +41,19 @@ export const EXPECTED_CHANGES: Readonly<Record<string, string>> = {
 export const RENAMED_ANCHORS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
 	// 2026-11-05: apps/docs left TypeScript 6 with the TanStack Start rewrite, so one holdout remains, not two.
 	"/docs/technical/tooling/typescript": { "typescript-7-and-the-two-places-typescript-6-remains": "typescript-7-and-the-one-place-typescript-6-remains" },
+	// 2026-11-17: feature flags v2 (ADR 087) replaced the on/off settings endpoints; each old one points at its successor.
+	"/docs/technical/api-reference/feature-flags": {
+		// Turning a flag on or off is now a rule revision.
+		"put-apiv1adminfeature-flagskey": "post-apiv1adminfeature-flagskeyrevisions",
+		// Overrides are listed on the flag itself and set per subject.
+		"get-apiv1adminfeature-flagskeyoverrides": "put-apiv1adminfeature-flagskeyoverrides",
+		// The settings list is the flag list.
+		"get-apiv1adminfeature-flagssettings": "get-apiv1adminfeature-flags",
+		// The store picker became the subject search (stores, people, devices).
+		"get-apiv1adminfeature-flagsstores": "get-apiv1adminfeature-flagssubjects",
+	},
+	// 2026-11-17: a per-store switch is now an override or a rule condition, explained with the evaluation order.
+	"/docs/technical/feature-flags": { "per-store-enhancement-511": "how-a-decision-is-made" },
 };
 
 /** The host of the stock photos the guides' covers were until 2026-11-13. */

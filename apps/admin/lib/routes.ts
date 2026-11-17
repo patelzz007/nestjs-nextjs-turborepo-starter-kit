@@ -125,10 +125,24 @@ export interface SettingsRoutes {
 	/** Section prefix — redirects to `access`. */
 	readonly index: Route;
 	readonly access: Route;
-	/** Runtime feature flags (enhancement 5.6). */
-	readonly featureFlags: Route;
 	/** The customer tier rules (ADR 085). */
 	readonly tiers: Route;
+}
+
+/** Releases (ADR 087): feature flags, dynamic configs, flag groups, experiments and rule promotion. */
+export interface ReleasesRoutes {
+	/** Section prefix — redirects to `flags`. */
+	readonly index: Route;
+	readonly flags: Route;
+	readonly flag: RouteBuilder;
+	readonly editFlag: RouteBuilder;
+	readonly configs: Route;
+	readonly config: RouteBuilder;
+	readonly editConfig: RouteBuilder;
+	readonly groups: CrudRoutes;
+	readonly experiments: CrudRoutes;
+	/** Importing a promotion file from another environment. */
+	readonly promotion: Route;
 }
 
 export interface ComponentsRoutes {
@@ -206,6 +220,7 @@ export interface AdminRoutes {
 	readonly webhooks: WebhooksRoutes;
 	readonly catalog: CatalogRoutes;
 	readonly settings: SettingsRoutes;
+	readonly releases: ReleasesRoutes;
 	readonly components: ComponentsRoutes;
 	readonly kanban: KanbanRoutes;
 	readonly operations: OperationsRoutes;
@@ -274,6 +289,11 @@ const AUDIT_LOG_CHANGES = `${AUDIT_LOGS}/changes`;
 const WEBHOOKS_RECEIVED = "/webhooks/received";
 const CATALOG = "/catalog";
 const SETTINGS = "/settings";
+const RELEASES = "/releases";
+const RELEASE_FLAGS = `${RELEASES}/flags`;
+const RELEASE_CONFIGS = `${RELEASES}/configs`;
+const RELEASE_GROUPS = `${RELEASES}/groups`;
+const RELEASE_EXPERIMENTS = `${RELEASES}/experiments`;
 const ACCOUNT = "/account";
 const COMPONENTS = "/components";
 /** The board sits in the Components section (sidebar), beside the showcase, so its URL nests under it. */
@@ -347,8 +367,19 @@ export const ROUTES: AdminRoutes = {
 	settings: {
 		index: SETTINGS,
 		access: `${SETTINGS}/access`,
-		featureFlags: `${SETTINGS}/feature-flags`,
 		tiers: `${SETTINGS}/tiers`,
+	},
+	releases: {
+		index: RELEASES,
+		flags: RELEASE_FLAGS,
+		flag: (key: string): Route => childPath(RELEASE_FLAGS, key),
+		editFlag: (key: string): Route => appRoute(`${childPath(RELEASE_FLAGS, key)}/${EDIT_SEGMENT}`),
+		configs: RELEASE_CONFIGS,
+		config: (key: string): Route => childPath(RELEASE_CONFIGS, key),
+		editConfig: (key: string): Route => appRoute(`${childPath(RELEASE_CONFIGS, key)}/${EDIT_SEGMENT}`),
+		groups: crudRoutes(RELEASE_GROUPS),
+		experiments: crudRoutes(RELEASE_EXPERIMENTS),
+		promotion: `${RELEASES}/promotion`,
 	},
 	components: {
 		index: COMPONENTS,
@@ -407,6 +438,12 @@ export interface AdminRoutePatterns {
 	readonly kanban: { readonly task: string; readonly editTask: string };
 	readonly operations: { readonly server: string; readonly loadTest: string; readonly compare: string };
 	readonly emails: { readonly broadcast: string; readonly broadcastEdit: string };
+	readonly releases: {
+		readonly flag: CrudRoutePatterns;
+		readonly config: CrudRoutePatterns;
+		readonly groups: CrudRoutePatterns;
+		readonly experiments: CrudRoutePatterns;
+	};
 }
 
 /** Name of the dynamic segment in every admin detail page (`app/(panel)/x/[id]`). */
@@ -439,6 +476,12 @@ export const ROUTE_PATTERNS: AdminRoutePatterns = {
 		compare: `${OPERATIONS_LOAD_TESTS}/compare`,
 	},
 	emails: { broadcast: `${EMAIL_BROADCASTS}/${routeParam(ID_PARAM)}`, broadcastEdit: `${EMAIL_BROADCASTS}/${routeParam(ID_PARAM)}/${EDIT_SEGMENT}` },
+	releases: {
+		flag: crudRoutePatterns(RELEASE_FLAGS),
+		config: crudRoutePatterns(RELEASE_CONFIGS),
+		groups: crudRoutePatterns(RELEASE_GROUPS),
+		experiments: crudRoutePatterns(RELEASE_EXPERIMENTS),
+	},
 };
 
 /**

@@ -12,12 +12,14 @@ import { geistMono } from "@workspace/ui/fonts/geist-mono";
 import { geistSans } from "@workspace/ui/fonts/geist-sans";
 import { jetBrainsMono } from "@workspace/ui/fonts/jetbrains-mono";
 import { AppNavigationProgress } from "@workspace/client/lib/navigation/navigation-progress";
+import { FeatureFlagsProvider } from "@workspace/client/lib/contexts/feature-flags";
 
 import { WebAuthorizationProvider } from "@/contexts/identity/components/web-authorization-provider";
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
 import { WebClientAuthWrapper } from "@/contexts/identity/components/web-client-auth-wrapper";
 import { hasServerSession } from "@/contexts/identity/lib/server";
 import { loadWebServerSession } from "@/contexts/identity/lib/server-session";
+import { loadWebFeatureFlagBundle } from "@/lib/server/feature-flag-bundle";
 import { WEB_UI_PREFERENCES_DEVTOOLS_NAME, WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
@@ -49,6 +51,8 @@ export default async function RootLayout({
 	const nonce = await readSecurityNonce();
 	// ADR 076: the `lang` cookie, then the browser's Accept-Language, then English.
 	const language = await readRequestLanguage();
+	// The flags this page renders with, so a flagged section never shows and then disappears (ADR 087).
+	const featureFlags = await loadWebFeatureFlagBundle();
 
 	return (
 		<AppDocumentShell
@@ -63,14 +67,16 @@ export default async function RootLayout({
 						<QueryProvider>
 							<WebClientAuthWrapper sessionActive={sessionActive} serverSession={serverSession}>
 								<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={serverSession?.permissions}>
-									<ThemeProvider {...nonceProps(nonce)}>
-										{/* Root, not the /dashboard shell: the public landing page renders the rewards catalog too. */}
-										<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
-											<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
-										</UiPreferencesStoreProvider>
-										<Toaster position="top-right" />
-										<ScrollToTop />
-									</ThemeProvider>
+									<FeatureFlagsProvider app="web" locale={language} initialBundle={featureFlags}>
+										<ThemeProvider {...nonceProps(nonce)}>
+											{/* Root, not the /dashboard shell: the public landing page renders the rewards catalog too. */}
+											<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
+												<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+											</UiPreferencesStoreProvider>
+											<Toaster position="top-right" />
+											<ScrollToTop />
+										</ThemeProvider>
+									</FeatureFlagsProvider>
 								</WebAuthorizationProvider>
 							</WebClientAuthWrapper>
 						</QueryProvider>

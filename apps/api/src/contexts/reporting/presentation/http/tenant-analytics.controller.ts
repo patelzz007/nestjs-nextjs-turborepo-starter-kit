@@ -17,6 +17,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { z } from "zod";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
+import { RequireFeatureFlag } from "../../../feature-flags/public-api";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { GetMerchantActor } from "../../../../platform/presentation/http/security/decorators/get-merchant-actor.decorator";
 import { SkipAuthThrottle } from "../../../../platform/presentation/http/security/decorators/skip-auth-throttle.decorator";
@@ -34,8 +35,10 @@ import { sendReportFile } from "./report-file.reply";
 /**
  * The tenant's analytics, for signed-in members (`:tenantSlug`). An integration API key uses
  * `/integration/analytics` instead: a machine credential names no tenant (D6).
+ * Behind the `merchant-analytics` flag (ADR 087), for the tenant the authorization guard verified.
  */
 @ApiTags("Tenant Analytics")
+@RequireFeatureFlag("merchant-analytics")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
 @Controller(apiPath("/tenants/:tenantSlug/analytics"))

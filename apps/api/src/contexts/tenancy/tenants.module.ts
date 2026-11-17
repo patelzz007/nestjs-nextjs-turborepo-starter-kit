@@ -16,7 +16,9 @@ import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit
 import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrastructure/unit-of-work/unit-of-work.module";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
+import { FeatureFlagsModule, SUBJECT_FACTS, type SubjectFactsRegistry } from "../feature-flags/public-api";
 import { FilesModule, StoredFileAccess } from "../files/public-api";
+import { tenancyFlagFacts } from "./infrastructure/adapters/tenancy-flag-facts";
 import { NotificationsModule, NotificationsTransactionalPortsFactory } from "../notifications/public-api";
 import { DropTenantRouteOnLifecycleChangedHandler } from "./application/event-handlers/after-commit/drop-tenant-route-on-lifecycle-changed.event-handler";
 import { ReconcileKybOnFileVerdict } from "./application/event-handlers/in-transaction/reconcile-kyb-on-file-verdict.in-transaction-handler";
@@ -168,7 +170,7 @@ const HANDLERS = [
  * access surface other contexts consume lives in `TenantAccessModule`.
  */
 @Module({
-	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, TenantAccessModule, FilesModule, NotificationsModule],
+	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, TenantAccessModule, FilesModule, NotificationsModule, FeatureFlagsModule],
 	controllers: [
 		TenantController,
 		TenantCustomerBansController,
@@ -256,10 +258,15 @@ export class TenantsModule implements OnModuleInit {
 		@Inject(TENANTS_SCOPE_FACTORY) private readonly scopes: TenantsScopeFactory,
 		private readonly erasure: PersonalDataErasureRegistry,
 		private readonly erasureTransactions: TenantTransactionService,
+		@Inject(SUBJECT_FACTS) private readonly flagFacts: SubjectFactsRegistry,
 	) {}
 
-	/** KYB review follows the files context's scan verdicts, inside the verdict's own transaction (mechanism 1). Registered exactly once. */
+	/**
+	 * KYB review follows the files context's scan verdicts, inside the verdict's own transaction (mechanism 1);
+	 * feature flags learn whether a person works at a store (ADR 087). Registered exactly once.
+	 */
 	public onModuleInit(): void {
+		this.flagFacts.register(tenancyFlagFacts(this.erasureTransactions));
 		this.erasure.registerEraser(tenancyEraser(this.erasureTransactions));
 		this.erasure.registerBlocker(tenantOwnershipBlocker(this.erasureTransactions));
 		this.inTransactionHandlers.register(bindInTransactionHandler(new ReconcileKybOnFileVerdict(), this.scopes));

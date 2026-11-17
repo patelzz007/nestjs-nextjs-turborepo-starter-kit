@@ -1,11 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 
-import type { FeatureFlagEnv } from "@/lib/feature-flags";
-
 const NOT_FOUND = "NEXT_NOT_FOUND";
 
-const deployment = vi.hoisted((): { env: FeatureFlagEnv } => ({ env: { NODE_ENV: "development", ADMIN_SHOWCASE: undefined } }));
+const flags = vi.hoisted((): { showcase: boolean } => ({ showcase: true }));
 
 vi.mock("next/navigation", () => ({
 	notFound: (): void => {
@@ -13,23 +11,21 @@ vi.mock("next/navigation", () => ({
 	},
 }));
 
-vi.mock("@/lib/env/env.server", () => ({
-	get serverEnv(): FeatureFlagEnv {
-		return deployment.env;
-	},
+vi.mock("@/lib/server/feature-flag-settings", () => ({
+	isFeatureEnabled: (): Promise<boolean> => Promise.resolve(flags.showcase),
 }));
 
 const { default: ComponentsLayout } = await import("../layout");
 
 describe("ComponentsLayout", () => {
-	it("serves the showcase where it is enabled", async () => {
-		deployment.env = { NODE_ENV: "development", ADMIN_SHOWCASE: undefined };
+	it("serves the showcase while its flag is on", async () => {
+		flags.showcase = true;
 
 		await expect(ComponentsLayout({ children: null })).resolves.toBeDefined();
 	});
 
-	it("answers 404 in a deployment that has not enabled it", async () => {
-		deployment.env = { NODE_ENV: "production", ADMIN_SHOWCASE: undefined };
+	it("answers 404 while the showcase flag is off", async () => {
+		flags.showcase = false;
 
 		await expect(ComponentsLayout({ children: null })).rejects.toThrow(NOT_FOUND);
 	});

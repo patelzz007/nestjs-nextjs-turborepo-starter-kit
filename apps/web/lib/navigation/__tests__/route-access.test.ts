@@ -2,11 +2,12 @@ import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/clien
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { compileMenu } from "@workspace/client/lib/sidebar/sidebar-menu-compile";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem, SidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug, type FeatureFlagKey } from "@workspace/shared";
 import { samplePathForPattern } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
 import { describe, expect, it } from "vitest";
 
 import { isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/contexts/identity/lib/routes";
+import { WEB_ACTIVITY_FEATURE, WEB_FEATURE_FLAGS } from "@/lib/feature-flags";
 import {
 	applyWebRouteAuthorization,
 	canAccessWebPath,
@@ -25,13 +26,28 @@ import { listAppPageRoutes } from "@/testing/app-routes";
 
 const SAMPLE_PARAM = "sample-id";
 
-function session(isAuthenticated: boolean, capabilities: readonly CapabilitySlug[] = []): WebRouteSession {
+/** A session; every web flag is on unless a test turns them off (flags are their own axis, tested below). */
+function session(isAuthenticated: boolean, capabilities: readonly CapabilitySlug[] = [], enabledFeatureFlags: readonly FeatureFlagKey[] = WEB_FEATURE_FLAGS): WebRouteSession {
 	const granted = createGrantedCapabilities(capabilities);
-	return { isAuthenticated, isGranted: (permission: CapabilitySlug): boolean => isCapabilityGranted(granted, permission) };
+	return { isAuthenticated, isGranted: (permission: CapabilitySlug): boolean => isCapabilityGranted(granted, permission), enabledFeatureFlags };
 }
 
 const GUEST: WebRouteSession = session(false);
 const MEMBER: WebRouteSession = session(true);
+
+describe("feature-flagged pages (ADR 087)", () => {
+	it("keeps the activity page, its sidebar link and its palette entry from a customer whose web-activity flag is off", () => {
+		const flagOff = session(true, [], []);
+
+		expect(canAccessWebPath(ROUTES.dashboard.activity, MEMBER)).toBe(true);
+		expect(canAccessWebPath(ROUTES.dashboard.activity, flagOff)).toBe(false);
+		expect(accessiblePaletteItems((href) => canAccessWebPath(href, flagOff)).map((item) => item.url)).not.toContain(ROUTES.dashboard.activity);
+		const menuItem = USER_SIDEBAR_MENU.sections.flatMap((section) => section.items).find((item) => item.url === ROUTES.dashboard.activity);
+		expect(menuItem?.featureFlag).toBe(WEB_ACTIVITY_FEATURE);
+		const hidden = filterCompiledSidebarMenu(USER_SIDEBAR_MENU, [], { enabledFeatureFlags: [] });
+		expect(hidden.sections.flatMap((section) => section.items).map((item) => item.url)).not.toContain(ROUTES.dashboard.activity);
+	});
+});
 
 /** Every `app/**\/page.tsx` as a pattern string in App Router notation (`/` for the root). */
 const PAGE_PATTERNS: readonly string[] = listAppPageRoutes().map((segments) => `/${segments.join("/")}`);
@@ -165,7 +181,7 @@ function menuItems(menu: CompiledSidebarMenuData): readonly CompiledSidebarMenuI
 }
 
 function visibleUrls(menu: CompiledSidebarMenuData, capabilities: readonly CapabilitySlug[]): ReadonlySet<string> {
-	return new Set(menuItems(filterCompiledSidebarMenu(menu, capabilities)).map((item) => item.url));
+	return new Set(menuItems(filterCompiledSidebarMenu(menu, capabilities, { enabledFeatureFlags: WEB_FEATURE_FLAGS })).map((item) => item.url));
 }
 
 const SAMPLE_CAPABILITY_SETS: readonly (readonly CapabilitySlug[])[] = [

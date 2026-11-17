@@ -3,7 +3,7 @@ import type { User } from "@prisma/client";
 import { seedAccountSecurity, type AccountSecurityCastEmails } from "../account-security";
 import { seedAuthorizationKernel } from "../authorization-kernel";
 import { prisma } from "../client";
-import { EXTRA_SEED_USER_EMAILS, generateAdditionalSeedData } from "../extra-users";
+import { ACTIVE_EXTRA_SEED_USER_EMAILS, EXTRA_SEED_USER_EMAILS, generateAdditionalSeedData } from "../extra-users";
 import { useSeedRandom } from "../helpers";
 import { seedAnalyticsHistory } from "../analytics-history";
 import { seedCustomerBans } from "../customer-bans";
@@ -11,6 +11,7 @@ import { seedAccountErasures } from "../account-erasures";
 import { seedSavedViews } from "../saved-views";
 import { seedFeatureFlags } from "../feature-flags";
 import { seedCustomerTiers } from "../customer-tiers";
+import { printMerchantNetworkCredentials, seedMerchantNetwork } from "../merchant-network";
 import { seedAuditRetention } from "../audit-retention";
 import { seedPayments } from "../payments";
 import { seedAttachmentNotices } from "../notification-attachments";
@@ -71,6 +72,22 @@ const NON_CUSTOMER_SEED_EMAILS: readonly string[] = ["superadmin@example.com", "
 const TIER_CAST_EXTRA_USER_POSITION: { readonly lapsing: number; readonly lapsed: number } = { lapsing: 14, lapsed: 15 };
 const TIER_CAST_LAPSING_EMAIL: string = EXTRA_SEED_USER_EMAILS.at(TIER_CAST_EXTRA_USER_POSITION.lapsing) ?? "";
 const TIER_CAST_LAPSED_EMAIL: string = EXTRA_SEED_USER_EMAILS.at(TIER_CAST_EXTRA_USER_POSITION.lapsed) ?? "";
+
+/**
+ * The customers who return to five of the merchant network's merchants all year, and so reach Diamond (ADR 085):
+ * the first five active extra customers (none of the tier cast).
+ */
+const LOYAL_CUSTOMER_COUNT = 5;
+const LOYAL_CUSTOMER_EMAILS: readonly string[] = EXTRA_SEED_USER_EMAILS.slice(0, LOYAL_CUSTOMER_COUNT);
+
+/**
+ * The customers who visit the merchant network now and then: the other active extra customers. The named test
+ * accounts (alice, bob, …) are left out, because the e2e suites pin their tiers. So are the tier cast, whose year is
+ * scripted to the day.
+ */
+const NETWORK_VISITOR_EMAILS: readonly string[] = ACTIVE_EXTRA_SEED_USER_EMAILS.filter(
+	(email) => !LOYAL_CUSTOMER_EMAILS.includes(email) && email !== TIER_CAST_LAPSING_EMAIL && email !== TIER_CAST_LAPSED_EMAIL,
+);
 
 /**
  * `development` scenario (the default): reference data plus the full demo
@@ -199,6 +216,30 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 		createdByUserId: REWARD_SEED_IDS.mlkOwnerUser,
 	});
 	seedLog(`✅ Analytics history: ${String(history.rewards)} campaign rewards, ${String(history.claims)} claims, ${String(history.sales)} paid bills`);
+	seedLog("Seeding the merchant network (six more merchants, their branches, 50 rewards a branch, loyal customers)...");
+	const network = await seedMerchantNetwork({
+		random: SeededRandom.derive(options.seed, "merchant-network"),
+		nowMs: Date.now(),
+		customerIds: NETWORK_VISITOR_EMAILS.map(
+			(email) =>
+				requireRow(
+					allUsers.find((user) => user.email === email),
+					email,
+				).id,
+		),
+		loyalCustomerIds: LOYAL_CUSTOMER_EMAILS.map(
+			(email) =>
+				requireRow(
+					allUsers.find((user) => user.email === email),
+					email,
+				).id,
+		),
+		adminUser,
+		userRole,
+	});
+	seedLog(
+		`✅ Merchant network: ${String(network.tenants)} merchants, ${String(network.locations)} branches, ${String(network.rewards)} rewards, ${String(network.claims)} claims, ${String(network.redemptions)} redemptions, ${String(network.loyalCustomers)} loyal customers`,
+	);
 	seedLog("Seeding merchant customer bans (one active, one lifted)...");
 	const customerBans = await seedCustomerBans(Date.now());
 	seedLog(`✅ ${String(customerBans)} customer bans`);
@@ -218,7 +259,7 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog("Seeding customer tiers (the rules; every customer's tier and history replayed from their redemptions)...");
 	const tiers = await seedCustomerTiers(Date.now());
 	seedLog(
-		`✅ Tiers: ${String(tiers.customers)} customers (${String(tiers.byTier.BRONZE)} Bronze, ${String(tiers.byTier.SILVER)} Silver, ${String(tiers.byTier.GOLD)} Gold, ${String(tiers.byTier.DIAMOND)} Diamond — Diamond needs a third merchant), ${String(tiers.changes)} tier changes, ${String(tiers.warnings)} pending warnings, ${String(tiers.lockedRewards)} rewards for a minimum tier`,
+		`✅ Tiers: ${String(tiers.customers)} customers (${String(tiers.byTier.BRONZE)} Bronze, ${String(tiers.byTier.SILVER)} Silver, ${String(tiers.byTier.GOLD)} Gold, ${String(tiers.byTier.DIAMOND)} Diamond — the merchant network's loyal customers),${String(tiers.changes)} tier changes, ${String(tiers.warnings)} pending warnings, ${String(tiers.lockedRewards)} rewards for a minimum tier`,
 	);
 	const alignedAccounts = await alignCustomerAccountAges(
 		options.seed,
@@ -348,5 +389,6 @@ Products      : ${String(productSummary.products)}
 `);
 	printPlatformAccountCredentials();
 	printTenantSeedCredentials();
+	printMerchantNetworkCredentials();
 	printRewardSeedCredentials();
 }

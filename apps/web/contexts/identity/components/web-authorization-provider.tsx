@@ -3,7 +3,8 @@
 import { useSessionPermissionsQuery } from "@/lib/session/capabilities";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
-import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@workspace/shared";
+import { StaticFeatureFlagsProvider } from "@workspace/client/lib/contexts/feature-flags";
+import type { CapabilitySlug, Envelope, FeatureFlagBundle, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
 export interface WebSessionState {
@@ -65,14 +66,18 @@ export function useWebSession(): WebSessionState {
 
 export interface WebSessionTestProviderProps {
 	readonly session: WebSessionState;
+	/** The session's feature flags (ADR 087); null (the default) reads every flag as its code default. */
+	readonly featureFlags?: FeatureFlagBundle | null | undefined;
 	readonly children: React.ReactNode;
 }
 
-/** Static provider for tests and stories — no API calls. */
-export function WebSessionTestProvider({ session, children }: WebSessionTestProviderProps): React.JSX.Element {
+/** Static provider for tests and stories — no API calls. Carries the app root's flags too, as the real root does. */
+export function WebSessionTestProvider({ session, featureFlags = null, children }: WebSessionTestProviderProps): React.JSX.Element {
 	return (
 		<WebSessionContext.Provider value={session}>
-			<CapabilitiesProvider capabilities={session.capabilities}>{children}</CapabilitiesProvider>
+			<CapabilitiesProvider capabilities={session.capabilities}>
+				<StaticFeatureFlagsProvider bundle={featureFlags}>{children}</StaticFeatureFlagsProvider>
+			</CapabilitiesProvider>
 		</WebSessionContext.Provider>
 	);
 }

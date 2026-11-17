@@ -175,6 +175,7 @@ export {
 	QUEUE_NAMES,
 	QueueNameSchema,
 	RewardsMaintenanceJobSchema,
+	FeatureFlagsMaintenanceJobSchema,
 	StorageCdnInvalidationJobSchema,
 	StorageCleanupJobSchema,
 	StorageDeleteJobSchema,

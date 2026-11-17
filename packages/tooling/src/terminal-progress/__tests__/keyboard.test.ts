@@ -16,6 +16,15 @@ describe("decodeKeys", () => {
 		expect(decodeKeys("hjklgGq123456")).toStrictEqual(["previous", "down", "up", "next", "home", "end", "quit", "view1", "view2", "view3", "view4", "view5", "view6"]);
 	});
 
+	it("reads ? as the key list", () => {
+		expect(decodeKeys("?")).toStrictEqual(["help"]);
+	});
+
+	it("reads the mouse wheel, and ignores clicks and drags", () => {
+		expect(decodeKeys("\u001B[<64;10;5M\u001B[<65;10;5M")).toStrictEqual(["wheelUp", "wheelDown"]);
+		expect(decodeKeys("\u001B[<0;10;5M\u001B[<0;10;5m\u001B[<32;11;5M")).toStrictEqual([]);
+	});
+
 	it("drops anything else, whole sequences included", () => {
 		expect(decodeKeys("x\u001B[1;5A7")).toStrictEqual([]);
 	});

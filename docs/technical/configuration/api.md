@@ -147,6 +147,7 @@ missing). Summary, grouped as in the schema:
 | Group | Variables | Rules / defaults |
 | --- | --- | --- |
 | Runtime | `NODE_ENV`, `APP_NAME` | both **required**; `NODE_ENV` ∈ development/test/production |
+| Feature flags | `DEPLOYMENT_ENVIRONMENT` | `development` / `staging` / `production`; **required** on a deployed production environment (`NODE_ENV=production`, `APP_URL` not localhost), else `development`. Names the environment feature flag rules match on, and in `production` a rule change waits for approval (ADR 087) |
 | HTTP | `HOST`, `PORT`, `API_PUBLIC_URL`, `TRUST_PROXY`, `SHUTDOWN_TIMEOUT_MS`, `SECURITY_HARDENING_ENABLED`, `SWAGGER_ENABLED` | `127.0.0.1`, `8080` (1–65535), `http://HOST:PORT` (with a wildcard `HOST` such as `0.0.0.0`: this machine's LAN address in development, `localhost` elsewhere — `src/config/api-public-url.ts`), trust no proxy, `15000`; hardening on in production; Swagger and client-IP policy below |
 | CORS / cookies | `CORS_ORIGINS`, `COOKIE_DOMAIN` | origins **required** (≥ 1 absolute http(s) URL); bare cookie host optional |
 | Frontend URLs | `APP_URL`, `ADMIN_APP_URL`, `MERCHANT_APP_URL` | all **required** (no localhost fallbacks) |

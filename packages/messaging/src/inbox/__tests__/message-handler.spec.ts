@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import type { FlagExposureRow, MetricEventRow } from "../flag-projections";
 import type { AnalyticsEventRow, DeadLetterInput, InboxClaim, InboxStore, InboxTransaction } from "../inbox";
 import {
 	ANALYTICS_CONSUMER_ID,
@@ -38,6 +39,8 @@ class FakePgError extends Error {
 class InMemoryInboxStore implements InboxStore {
 	public readonly processed = new Set<string>();
 	public readonly analytics: AnalyticsEventRow[] = [];
+	public readonly exposures: FlagExposureRow[] = [];
+	public readonly metricEvents: MetricEventRow[] = [];
 	public readonly deadLetters = new Map<string, DeadLetterInput>();
 	/** One entry per upcoming analytics write: an Error fails that attempt, `null` lets it through. */
 	public readonly analyticsFailures: (Error | null)[] = [];
@@ -46,6 +49,8 @@ class InMemoryInboxStore implements InboxStore {
 	public async inTransaction<T>(work: (tx: InboxTransaction) => Promise<T>): Promise<T> {
 		const stagedClaims: string[] = [];
 		const stagedRows: AnalyticsEventRow[] = [];
+		const stagedExposures: FlagExposureRow[] = [];
+		const stagedMetrics: MetricEventRow[] = [];
 		const tx: InboxTransaction = {
 			claim: (claim: InboxClaim): Promise<boolean> => {
 				const key = `${claim.consumer}:${claim.eventId}`;
@@ -63,12 +68,22 @@ class InMemoryInboxStore implements InboxStore {
 				stagedRows.push(row);
 				return Promise.resolve();
 			},
+			insertFlagExposures: (rows: readonly FlagExposureRow[]): Promise<void> => {
+				stagedExposures.push(...rows);
+				return Promise.resolve();
+			},
+			insertMetricEvents: (rows: readonly MetricEventRow[]): Promise<void> => {
+				stagedMetrics.push(...rows);
+				return Promise.resolve();
+			},
 		};
 		const result = await work(tx);
 		for (const key of stagedClaims) {
 			this.processed.add(key);
 		}
 		this.analytics.push(...stagedRows);
+		this.exposures.push(...stagedExposures);
+		this.metricEvents.push(...stagedMetrics);
 		return result;
 	}
 

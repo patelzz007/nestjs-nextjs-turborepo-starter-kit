@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (486 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (516 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 category: "API reference"
@@ -15,7 +15,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 486 operations, 227 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 516 operations, 227 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -44,7 +44,7 @@ Every endpoint of `apps/api` — 486 operations, 227 with a sample captured from
 | [GitHub contributions](./github.md) | 5 | Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with. |
 | [GitHub pull requests](./github-pull-requests.md) | 25 | Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves. |
 | [Sample catalog (products and categories)](./catalog-samples.md) | 16 | The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk. |
-| [Feature flags](./feature-flags.md) | 7 | Runtime feature flags: every declared flag with its setting (default, on, off, a share of people) and who changed it, the bare settings the apps evaluate, and a store flag's per-merchant and per-branch settings (a branch's own decides over its merchant's). |
+| [Feature flags](./feature-flags.md) | 37 | Feature flags v2 (ADR 087): each app's bundle of answers, its live version stream and exposures; and the admin's Releases: flags (rules as revisions, kill switch, overrides, approvals, check a subject), dynamic configs, flag groups, experiments and rule promotion. |
 | [Saved views on admin lists](./saved-views.md) | 3 | Named filters staff keep on an admin list, stored as the list's URL query: your own, and the ones other staff shared. |
 | [Kanban boards](./kanban.md) | 25 | The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments. |
 | [Platform operations (servers, backups, load tests)](./platform-operations.md) | 44 | The admin panel's operations console (ADR 068): servers and their history, instances, dependencies, alerts, database backups and load tests — and the endpoint a server agent reports to. |
@@ -454,13 +454,43 @@ Every endpoint of `apps/api` — 486 operations, 227 with a sample captured from
 | POST | [`/api/v1/sample-category/{id}/restore`](./catalog-samples.md#post-apiv1sample-categoryidrestore) | Restore SampleCategory |
 | POST | [`/api/v1/sample-category/bulk`](./catalog-samples.md#post-apiv1sample-categorybulk) | Bulk create samplecategories |
 | POST | [`/api/v1/sample-category/bulk-delete`](./catalog-samples.md#post-apiv1sample-categorybulk-delete) | Bulk soft delete samplecategories |
-| GET | [`/api/v1/admin/feature-flags`](./feature-flags.md#get-apiv1adminfeature-flags) | Every feature flag: what it is, where its default comes from, its setting and who last changed it |
-| PUT | [`/api/v1/admin/feature-flags/{key}`](./feature-flags.md#put-apiv1adminfeature-flagskey) | Set a flag: its default, on, off, or on for a percentage of people (with a reason) |
-| GET | [`/api/v1/admin/feature-flags/{key}/overrides`](./feature-flags.md#get-apiv1adminfeature-flagskeyoverrides) | A store flag's per-store settings: each merchant's and branch's own value, why, and who set it |
-| PUT | [`/api/v1/admin/feature-flags/{key}/overrides`](./feature-flags.md#put-apiv1adminfeature-flagskeyoverrides) | Set a merchant's or one branch's own value of a store flag (replacing its earlier one), with a reason |
-| POST | [`/api/v1/admin/feature-flags/{key}/overrides/{overrideId}/remove`](./feature-flags.md#post-apiv1adminfeature-flagskeyoverridesoverrideidremove) | Remove a store's own value of a flag (it follows the deployment again), with a reason |
-| GET | [`/api/v1/admin/feature-flags/settings`](./feature-flags.md#get-apiv1adminfeature-flagssettings) | Every flag's setting, for the console to evaluate (any admin staff member) |
-| GET | [`/api/v1/admin/feature-flags/stores`](./feature-flags.md#get-apiv1adminfeature-flagsstores) | The stores a store flag can be set for: merchants by name, with their live branches (names only) |
+| GET | [`/api/v1/admin/dynamic-configs`](./feature-flags.md#get-apiv1admindynamic-configs) | Every declared dynamic config: its value shape, live and pending revision, running experiment and exposures |
+| GET | [`/api/v1/admin/dynamic-configs/{key}`](./feature-flags.md#get-apiv1admindynamic-configskey) | One dynamic config: its live and pending values and rules, and exposures |
+| POST | [`/api/v1/admin/dynamic-configs/{key}/check`](./feature-flags.md#post-apiv1admindynamic-configskeycheck) | Check a subject: the value one user, store or device would get, and why |
+| GET | [`/api/v1/admin/dynamic-configs/{key}/revisions`](./feature-flags.md#get-apiv1admindynamic-configskeyrevisions) | Every revision of a config, newest first |
+| POST | [`/api/v1/admin/dynamic-configs/{key}/revisions`](./feature-flags.md#post-apiv1admindynamic-configskeyrevisions) | Save a config's values and rules as a new revision, with a reason |
+| POST | [`/api/v1/admin/dynamic-configs/{key}/revisions/{number}/decision`](./feature-flags.md#post-apiv1admindynamic-configskeyrevisionsnumberdecision) | Approve or reject someone else's pending config revision, with a reason |
+| GET | [`/api/v1/admin/experiments`](./feature-flags.md#get-apiv1adminexperiments) | Every experiment, newest first |
+| POST | [`/api/v1/admin/experiments`](./feature-flags.md#post-apiv1adminexperiments) | Plan an experiment on a dynamic config (a draft), with a reason |
+| GET | [`/api/v1/admin/experiments/{experimentId}`](./feature-flags.md#get-apiv1adminexperimentsexperimentid) | One experiment, with its latest results |
+| PUT | [`/api/v1/admin/experiments/{experimentId}`](./feature-flags.md#put-apiv1adminexperimentsexperimentid) | Change a draft's plan, with a reason |
+| POST | [`/api/v1/admin/experiments/{experimentId}/start`](./feature-flags.md#post-apiv1adminexperimentsexperimentidstart) | Start a draft, with a reason |
+| POST | [`/api/v1/admin/experiments/{experimentId}/stop`](./feature-flags.md#post-apiv1adminexperimentsexperimentidstop) | Stop a running experiment, with a reason and its conclusion — everyone gets the config's rules again |
+| GET | [`/api/v1/admin/experiments/metrics`](./feature-flags.md#get-apiv1adminexperimentsmetrics) | The metrics an experiment can compare (declared in code) |
+| GET | [`/api/v1/admin/feature-flags`](./feature-flags.md#get-apiv1adminfeature-flags) | Every declared feature flag: its kill switch, live and pending revision, overrides, exposures and whether it's ready to remove |
+| GET | [`/api/v1/admin/feature-flags/{key}`](./feature-flags.md#get-apiv1adminfeature-flagskey) | One flag: its live and pending rules, overrides, kill switch and exposures over the last day and week |
+| POST | [`/api/v1/admin/feature-flags/{key}/check`](./feature-flags.md#post-apiv1adminfeature-flagskeycheck) | Check a subject: the value one user, store or device would get, and every step that decided it |
+| PUT | [`/api/v1/admin/feature-flags/{key}/kill-switch`](./feature-flags.md#put-apiv1adminfeature-flagskeykill-switch) | Throw (off for everyone, at once) or release a flag's kill switch, with a reason — never waits for approval |
+| PUT | [`/api/v1/admin/feature-flags/{key}/overrides`](./feature-flags.md#put-apiv1adminfeature-flagskeyoverrides) | Force a flag on or off for one user, location or tenant (replacing its earlier override), with a reason |
+| POST | [`/api/v1/admin/feature-flags/{key}/overrides/{overrideId}/remove`](./feature-flags.md#post-apiv1adminfeature-flagskeyoverridesoverrideidremove) | Remove an override (the subject follows the rules again), with a reason — a POST, so the reason can't be dropped |
+| GET | [`/api/v1/admin/feature-flags/{key}/revisions`](./feature-flags.md#get-apiv1adminfeature-flagskeyrevisions) | Every revision of a flag's rules, newest first |
+| POST | [`/api/v1/admin/feature-flags/{key}/revisions`](./feature-flags.md#post-apiv1adminfeature-flagskeyrevisions) | Save a flag's rules as a new revision, with a reason |
+| POST | [`/api/v1/admin/feature-flags/{key}/revisions/{number}/decision`](./feature-flags.md#post-apiv1adminfeature-flagskeyrevisionsnumberdecision) | Approve (it goes live) or reject someone else's pending revision, with a reason |
+| GET | [`/api/v1/admin/feature-flags/environment`](./feature-flags.md#get-apiv1adminfeature-flagsenvironment) | This deployment's environment, and whether rule changes here wait for a second person |
+| GET | [`/api/v1/admin/feature-flags/promotion/export`](./feature-flags.md#get-apiv1adminfeature-flagspromotionexport) | A flag's or config's live revision as a promotion file, with the condition groups its rules name |
+| POST | [`/api/v1/admin/feature-flags/promotion/import`](./feature-flags.md#post-apiv1adminfeature-flagspromotionimport) | Import a promotion file as a new revision, with a reason (pending in production) |
+| POST | [`/api/v1/admin/feature-flags/promotion/preview`](./feature-flags.md#post-apiv1adminfeature-flagspromotionpreview) | What importing a promotion file would change here: the rules side by side, groups new or changed, listed groups missing |
+| GET | [`/api/v1/admin/feature-flags/subjects`](./feature-flags.md#get-apiv1adminfeature-flagssubjects) | The users, tenants or locations an override can name, by name (up to 20) |
+| GET | [`/api/v1/admin/flag-groups`](./feature-flags.md#get-apiv1adminflag-groups) | Every flag group: its conditions or member count, and the flags and configs whose rules name it |
+| POST | [`/api/v1/admin/flag-groups`](./feature-flags.md#post-apiv1adminflag-groups) | Create a flag group: conditions, or a list of one rollout unit's subjects (added afterwards) |
+| GET | [`/api/v1/admin/flag-groups/{groupId}`](./feature-flags.md#get-apiv1adminflag-groupsgroupid) | One flag group |
+| PUT | [`/api/v1/admin/flag-groups/{groupId}`](./feature-flags.md#put-apiv1adminflag-groupsgroupid) | Change a group's name, description or (a condition group's) conditions, with a reason — its key and kind never change |
+| GET | [`/api/v1/admin/flag-groups/{groupId}/members`](./feature-flags.md#get-apiv1adminflag-groupsgroupidmembers) | One page of a listed group's subjects, newest first, with their names |
+| POST | [`/api/v1/admin/flag-groups/{groupId}/members`](./feature-flags.md#post-apiv1adminflag-groupsgroupidmembers) | Add or remove up to 1,000 listed subjects at once, with a reason |
+| POST | [`/api/v1/admin/flag-groups/{groupId}/remove`](./feature-flags.md#post-apiv1adminflag-groupsgroupidremove) | Remove a group no rule names any more, with a reason |
+| GET | [`/api/v1/feature-flags/bundle`](./feature-flags.md#get-apiv1feature-flagsbundle) | The caller's evaluated feature flags and dynamic configs for one app |
+| POST | [`/api/v1/feature-flags/exposures`](./feature-flags.md#post-apiv1feature-flagsexposures) | Record a batch of feature flag exposures |
+| GET | [`/api/v1/feature-flags/stream`](./feature-flags.md#get-apiv1feature-flagsstream) | The feature flag catalogue's version, live (SSE): a `{ version }` frame on connect and whenever it changes; refetch the bundle when it does |
 | GET | [`/api/v1/me/saved-views`](./saved-views.md#get-apiv1mesaved-views) | A list's saved views: your own, then the ones other staff shared |
 | POST | [`/api/v1/me/saved-views`](./saved-views.md#post-apiv1mesaved-views) | Save the list's current filters under a name (optionally shared with the other staff); 409 for a name you already use |
 | DELETE | [`/api/v1/me/saved-views/{viewId}`](./saved-views.md#delete-apiv1mesaved-viewsviewid) | Remove one of your saved views; 404 for anyone else's |

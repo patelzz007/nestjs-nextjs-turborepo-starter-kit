@@ -838,19 +838,64 @@ export const apiRouter = {
 		requestErasure: defineMutation(apiContract.privacy.requestErasure),
 		cancelErasure: defineMutation(apiContract.privacy.cancelErasure),
 	},
-	/** Runtime feature flags (enhancement 5.6). */
+	/**
+	 * Feature flags v2 (ADR 087). `bundle` is every app's: the caller's evaluated values, keyed by app and store, so
+	 * switching store re-evaluates; the live stream invalidates `["feature-flags", "bundle"]`. The rest is the
+	 * console's (flags, configs, groups, experiments, rule promotion), all under `["admin", "releases"]`.
+	 */
 	featureFlags: {
-		list: defineQuery(apiContract.featureFlags.list, { scope: (): ApiQueryKey => ["admin", "feature-flags"] }),
-		settings: defineQuery(apiContract.featureFlags.settings, { scope: (): ApiQueryKey => ["admin", "feature-flags", "settings"] }),
-		update: defineMutation(apiContract.featureFlags.update),
-		/** A store flag's per-store settings (enhancement 5.11). */
-		overrides: defineQuery(apiContract.featureFlags.overrides, {
-			scope: ({ key }: { readonly key: string }): ApiQueryKey => ["admin", "feature-flags", key, "overrides"],
+		bundle: defineQuery(apiContract.featureFlags.bundle, {
+			scope: ({ app, tenantId, locationId }: { readonly app: string; readonly tenantId?: string | undefined; readonly locationId?: string | undefined }): ApiQueryKey => [
+				"feature-flags",
+				"bundle",
+				app,
+				tenantId ?? "",
+				locationId ?? "",
+			],
 		}),
-		/** The stores a store flag can be set for, by name. */
-		stores: defineQuery(apiContract.featureFlags.stores, { scope: (): ApiQueryKey => ["admin", "feature-flags", "stores"] }),
+		exposures: defineMutation(apiContract.featureFlags.exposures),
+		list: defineQuery(apiContract.featureFlags.list, { scope: (): ApiQueryKey => ["admin", "releases", "flags"] }),
+		environment: defineQuery(apiContract.featureFlags.environment, { scope: (): ApiQueryKey => ["admin", "releases", "environment"] }),
+		subjects: defineQuery(apiContract.featureFlags.subjects, { scope: (): ApiQueryKey => ["admin", "releases", "subjects"] }),
+		detail: defineQuery(apiContract.featureFlags.detail, { scope: ({ key }: { readonly key: string }): ApiQueryKey => ["admin", "releases", "flags", key] }),
+		revisions: defineQuery(apiContract.featureFlags.revisions, {
+			scope: ({ key }: { readonly key: string }): ApiQueryKey => ["admin", "releases", "flags", key, "revisions"],
+		}),
+		saveRevision: defineMutation(apiContract.featureFlags.saveRevision),
+		decideRevision: defineMutation(apiContract.featureFlags.decideRevision),
+		setKillSwitch: defineMutation(apiContract.featureFlags.setKillSwitch),
 		setOverride: defineMutation(apiContract.featureFlags.setOverride),
 		removeOverride: defineMutation(apiContract.featureFlags.removeOverride),
+		check: defineMutation(apiContract.featureFlags.check),
+		configs: defineQuery(apiContract.featureFlags.configs, { scope: (): ApiQueryKey => ["admin", "releases", "configs"] }),
+		config: defineQuery(apiContract.featureFlags.config, { scope: ({ key }: { readonly key: string }): ApiQueryKey => ["admin", "releases", "configs", key] }),
+		configRevisions: defineQuery(apiContract.featureFlags.configRevisions, {
+			scope: ({ key }: { readonly key: string }): ApiQueryKey => ["admin", "releases", "configs", key, "revisions"],
+		}),
+		saveConfigRevision: defineMutation(apiContract.featureFlags.saveConfigRevision),
+		decideConfigRevision: defineMutation(apiContract.featureFlags.decideConfigRevision),
+		checkConfig: defineMutation(apiContract.featureFlags.checkConfig),
+		groups: defineQuery(apiContract.featureFlags.groups, { scope: (): ApiQueryKey => ["admin", "releases", "groups"] }),
+		group: defineQuery(apiContract.featureFlags.group, { scope: ({ groupId }: { readonly groupId: string }): ApiQueryKey => ["admin", "releases", "groups", groupId] }),
+		createGroup: defineMutation(apiContract.featureFlags.createGroup),
+		updateGroup: defineMutation(apiContract.featureFlags.updateGroup),
+		removeGroup: defineMutation(apiContract.featureFlags.removeGroup),
+		groupMembers: defineQuery(apiContract.featureFlags.groupMembers, {
+			scope: ({ groupId }: { readonly groupId: string }): ApiQueryKey => ["admin", "releases", "groups", groupId, "members"],
+		}),
+		changeGroupMembers: defineMutation(apiContract.featureFlags.changeGroupMembers),
+		experiments: defineQuery(apiContract.featureFlags.experiments, { scope: (): ApiQueryKey => ["admin", "releases", "experiments"] }),
+		experimentMetrics: defineQuery(apiContract.featureFlags.experimentMetrics, { scope: (): ApiQueryKey => ["admin", "releases", "experiment-metrics"] }),
+		experiment: defineQuery(apiContract.featureFlags.experiment, {
+			scope: ({ experimentId }: { readonly experimentId: string }): ApiQueryKey => ["admin", "releases", "experiments", experimentId],
+		}),
+		createExperiment: defineMutation(apiContract.featureFlags.createExperiment),
+		updateExperiment: defineMutation(apiContract.featureFlags.updateExperiment),
+		startExperiment: defineMutation(apiContract.featureFlags.startExperiment),
+		stopExperiment: defineMutation(apiContract.featureFlags.stopExperiment),
+		promotionExport: defineQuery(apiContract.featureFlags.promotionExport, { scope: (): ApiQueryKey => ["admin", "releases", "promotion"] }),
+		promotionPreview: defineMutation(apiContract.featureFlags.promotionPreview),
+		promotionImport: defineMutation(apiContract.featureFlags.promotionImport),
 	},
 	/** Customer tiers (ADR 085): whether they are on, the customer's own tier, and platform staff's rules and figures. */
 	tiers: {

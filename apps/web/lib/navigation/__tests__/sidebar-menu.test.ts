@@ -3,6 +3,7 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
+import { WEB_FEATURE_FLAGS } from "@/lib/feature-flags";
 import { USER_SIDEBAR_MENU, type CompiledSidebarMenuItem } from "@/lib/navigation/sidebar-menu";
 import { isPathWithin, rewardDetailPath, ROUTES, walletClaimPath } from "@/lib/routes";
 import { listAppPageRoutes, resolvesToAppPage } from "@/testing/app-routes";
@@ -42,8 +43,8 @@ function itemIdFor(url: string): string {
 /** Ids of the highlighted items for `pathname`, computed by the shared algorithm the sidebar panel renders with. */
 function activeItemIds(pathname: string): readonly string[] {
 	// No item in the consumer menu carries an authorization requirement, so a
-	// signed-in member with no capabilities sees the whole menu — as in the panel.
-	const menu = filterCompiledSidebarMenu(USER_SIDEBAR_MENU, []);
+	// signed-in member with no capabilities sees the whole menu — as in the panel, with every web flag on.
+	const menu = filterCompiledSidebarMenu(USER_SIDEBAR_MENU, [], { enabledFeatureFlags: WEB_FEATURE_FLAGS });
 	const view = buildSidebarView({ menu, pathname, sectionOrder: null, searchQuery: "" });
 	return Object.entries(view.routeState.activeItems)
 		.filter(([, isActive]) => isActive)

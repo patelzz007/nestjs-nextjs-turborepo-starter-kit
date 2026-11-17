@@ -1,4 +1,4 @@
-import type { AppVersion, GithubRepositoryParams, NodeEnv, OpsCloudProvider, TenantId } from "@workspace/shared";
+import type { AppVersion, DeploymentEnvironment, GithubRepositoryParams, NodeEnv, OpsCloudProvider, TenantId } from "@workspace/shared";
 
 // config/api-config/api-config.types.ts — The grouped, typed configuration the API reads (`ApiConfig`).
 // Part of the API environment contract; `../api-config.schema.ts` is its public entry.
@@ -41,6 +41,8 @@ export interface RuntimeConfig {
 	readonly isDevelopment: boolean;
 	readonly isTest: boolean;
 	readonly appName: string;
+	/** The role this deployment plays (`DEPLOYMENT_ENVIRONMENT`, ADR 087). */
+	readonly deploymentEnvironment: DeploymentEnvironment;
 }
 
 export interface HttpConfig {

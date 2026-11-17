@@ -13,9 +13,9 @@
 // - the platform's tier rules are seeded at their defaults (10 / 25 / 50 in a 12-month window, at most 20 per merchant,
 //   a 90-day hold, 14 days' warning), with who set them and why.
 //
-// A few running campaign rewards are given a minimum tier, so the marketplace shows locked rewards. With two demo
-// merchants and a cap of 20 counted redemptions each, Diamond (50) needs a third merchant: no seeded customer reaches
-// it, and the seed says so in its summary rather than invent one.
+// A few running campaign rewards are given a minimum tier, so the marketplace shows locked rewards. With a cap of 20
+// counted redemptions per merchant, Diamond (50) needs at least three merchants: the merchant network's five loyal
+// customers (merchant-network-plan.ts) redeem 11 times at each of five merchants, so they reach it from their own rows.
 //
 // Re-runnable: the tier tables hold nothing but this seed's rows, so they are cleared and rebuilt.
 

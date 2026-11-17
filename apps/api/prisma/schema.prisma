@@ -259,6 +259,8 @@ model User {
   rewardAuditLogs                  RewardAuditLog[]
   customerTierStanding             CustomerTierStanding?
   customerTierChanges              CustomerTierChange[]
+  /// Flag overrides forcing a feature flag on or off for this user.
+  featureFlagOverrides             FeatureFlagOverride[]
   avatar                           UserAvatar?
   githubAccountLink                GithubAccountLink?
   githubWebhookSubscriptions       GithubWebhookSubscription[]
@@ -840,6 +842,9 @@ enum PermissionResource {
   FEATURE_FLAG
   WEBHOOK
   DOCS_SYNC
+  FEATURE_FLAG_GROUP
+  DYNAMIC_CONFIG
+  EXPERIMENT
 }
 
 enum PermissionScope {
@@ -1362,8 +1367,8 @@ model Tenant {
 
   slugHistory              TenantSlugHistory[]
   locations                Location[]
-  /// Its own settings of store feature flags (enhancement 5.11).
-  featureFlagOverrides     FeatureFlagStoreOverride[]
+  /// Flag overrides forcing a feature flag on or off for this tenant.
+  featureFlagOverrides     FeatureFlagOverride[]
   memberships              Membership[]
   roles                    Role[]
   grants                   UserPermission[]
@@ -1454,8 +1459,8 @@ model Location {
   closureReason     String?        @db.Text
 
   tenant                   Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  /// Its own settings of store feature flags (enhancement 5.11).
-  featureFlagOverrides     FeatureFlagStoreOverride[]
+  /// Flag overrides forcing a feature flag on or off for this location.
+  featureFlagOverrides     FeatureFlagOverride[]
   requestedBy              User?                           @relation("LocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
   reviewedBy               User?                           @relation("LocationReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   locationScopes           MembershipLocationScope[]
@@ -5820,18 +5825,95 @@ enum OpsRestoreDrillOutcome {
   FAILED
 }
 
-/// How a feature flag is set (enhancement 5.6): DEFAULT follows the flag's own default.
-enum FeatureFlagMode {
-  DEFAULT
-  ON
-  OFF
-  PERCENTAGE
+// ── Feature flags v2 (GLOSSARY "Feature flags"; ADR 086, ADR 087) ─────────────────────────────────
+// Platform data: bypass-only RLS, read and written under the `feature_flags.*` system operations; every
+// change is change-captured. Exposures and experiment results are written by the analytics consumer.
+
+/// Whether a revision holds a feature flag's rules or a dynamic config's values and rules.
+enum FlagEntryKind {
+  FLAG
+  CONFIG
 }
 
-/// A runtime feature flag's setting (enhancement 5.6). One row per flag key once someone changes it; no row means
-/// DEFAULT. Platform data: bypass-only RLS under `feature_flags.*`; every change is change-captured.
+/// Where a flag revision stands (`RevisionStatusSchema` in @workspace/shared).
+enum FlagRevisionStatus {
+  LIVE
+  PENDING
+  SUPERSEDED
+  REJECTED
+  EXPIRED
+}
+
+/// Where a flag revision came from: this console, another environment (rule promotion) or the seed.
+enum FlagRevisionSource {
+  CONSOLE
+  PROMOTION
+  SEED
+}
+
+/// Who a flag override forces a flag for.
+enum FlagOverrideUnit {
+  USER
+  LOCATION
+  TENANT
+}
+
+/// The kind of subject a flag is decided per (GLOSSARY: rollout unit).
+enum FlagRolloutUnit {
+  USER
+  TENANT
+  LOCATION
+  DEVICE
+}
+
+/// A flag group is either a set of conditions or a list of subjects.
+enum FlagGroupKind {
+  CONDITIONS
+  LIST
+}
+
+/// What decided an exposure's value (`DecisionSourceSchema` in @workspace/shared).
+enum FlagDecisionSource {
+  KILL_SWITCH
+  OVERRIDE_USER
+  OVERRIDE_LOCATION
+  OVERRIDE_TENANT
+  RULE
+  EXPERIMENT
+  DEFAULT
+}
+
+/// Where an experiment stands.
+enum ExperimentStatus {
+  DRAFT
+  RUNNING
+  STOPPED
+}
+
+/// The catalogue's version: one row, raised in the same transaction as every change to what a bundle could
+/// answer (and by the scheduled-rollout job at a step). The live stream announces it.
 /// @extends BaseModel
-model FeatureFlagSetting {
+model FeatureFlagCatalogVersion {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// Always `catalog`: the one row.
+  scope   String @unique @db.VarChar(16)
+  version Int    @default(0)
+}
+
+/// A feature flag's kill switch (GLOSSARY: kill switch): while `isOn`, the flag is off for everyone. One row per
+/// flag once it has been thrown; releasing it keeps the row with `isOn` false. Outside revisions (ADR 086).
+/// @extends BaseModel
+model FeatureFlagKillSwitch {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -5844,22 +5926,18 @@ model FeatureFlagSetting {
   // ── end BaseModel ──
 
   /// `FeatureFlagKeySchema` in @workspace/shared.
-  key        String          @db.VarChar(64)
-  mode       FeatureFlagMode
-  /// 1–99 with PERCENTAGE; null otherwise.
-  percentage Int?
-  /// Why it was last changed.
-  reason     String          @db.VarChar(500)
+  key    String  @db.VarChar(64)
+  isOn   Boolean
+  /// Why it was last thrown or released.
+  reason String  @db.VarChar(500)
 
   @@unique([key], where: { isDeleted: false })
 }
 
-/// A store's own setting of a store feature flag (enhancement 5.11): a whole merchant (`locationId` null) or one
-/// of its branches. The branch's setting decides over the merchant's, the merchant's over the deployment's
-/// (`FeatureFlagSetting`). One live setting per flag and store; a change replaces it (the old one soft-deleted).
-/// RLS: bypass-only, read and written under `feature_flags.*`.
+/// One unchangeable version of a feature flag's rules or a dynamic config's values and rules (ADR 086). A save
+/// writes a new revision; at most one is LIVE and one PENDING per flag or config.
 /// @extends BaseModel
-model FeatureFlagStoreOverride {
+model FlagRevision {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -5871,20 +5949,290 @@ model FeatureFlagStoreOverride {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  /// `StoreFeatureFlagKeySchema` in @workspace/shared.
-  key        String    @db.VarChar(64)
-  tenantId   String
-  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  /// `null`: every branch of the merchant.
-  locationId String?
-  location   Location? @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  enabled    Boolean
-  /// Why it was set.
-  reason     String    @db.VarChar(500)
+  kind            FlagEntryKind
+  /// `FeatureFlagKeySchema` or `DynamicConfigKeySchema` in @workspace/shared.
+  key             String             @db.VarChar(64)
+  /// 1, 2, 3 … per flag or config.
+  number          Int
+  status          FlagRevisionStatus
+  /// `RevisionContentSchema` in @workspace/shared, parsed on every read.
+  content         Json
+  /// Why it was written.
+  reason          String             @db.VarChar(500)
+  source          FlagRevisionSource
+  /// The environment a promoted revision came from (`DeploymentEnvironmentSchema`).
+  promotedFrom    String?            @db.VarChar(16)
+  authorUserId    String?
+  /// When it went live, was rejected or expired, by whom and why.
+  decidedAt       BigInt?
+  decidedByUserId String?
+  decisionReason  String?            @db.VarChar(500)
+  /// When a pending revision expires.
+  expiresAt       BigInt?
 
-  @@unique([key, tenantId], where: { isDeleted: false, locationId: null })
-  @@unique([key, tenantId, locationId], where: { isDeleted: false })
+  @@unique([kind, key, number])
+  @@unique([kind, key], map: "FlagRevision_kind_key_live_key", where: { status: "LIVE" })
+  @@unique([kind, key], map: "FlagRevision_kind_key_pending_key", where: { status: "PENDING" })
+  @@index([status, expiresAt])
+}
+
+/// A flag override (GLOSSARY): one user, location or tenant forced on or off, ahead of every rule. Exactly one of
+/// `userId` / `locationId` / `tenantId` is set, matching `unit`. A change replaces the live one (soft-deleted).
+/// @extends BaseModel
+model FeatureFlagOverride {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// `FeatureFlagKeySchema` in @workspace/shared.
+  key        String           @db.VarChar(64)
+  unit       FlagOverrideUnit
+  userId     String?
+  user       User?            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  locationId String?
+  location   Location?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  tenantId   String?
+  tenant     Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  isOn       Boolean
+  /// Why it was set.
+  reason     String           @db.VarChar(500)
+
+  @@unique([key, userId], where: { isDeleted: false })
+  @@unique([key, locationId], where: { isDeleted: false })
+  @@unique([key, tenantId], where: { isDeleted: false })
+  @@index([userId, isDeleted])
+  @@index([locationId, isDeleted])
   @@index([tenantId, isDeleted])
+}
+
+/// A flag group (GLOSSARY): a named, reusable set of conditions (`conditions`) or of listed subjects of one
+/// rollout unit (`FlagGroupMember`). Rules name it by `key`, which never changes.
+/// @extends BaseModel
+model FlagGroup {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// `FlagGroupKeySchema` in @workspace/shared.
+  key         String           @db.VarChar(64)
+  name        String           @db.VarChar(80)
+  description String           @db.VarChar(500)
+  kind        FlagGroupKind
+  /// A listed group's rollout unit; null for a condition group.
+  unit        FlagRolloutUnit?
+  /// A condition group's conditions (`ConditionSchema[]`), parsed on every read; null for a listed group.
+  conditions  Json?
+  /// Why it was last changed.
+  reason      String           @db.VarChar(500)
+
+  members FlagGroupMember[]
+
+  @@unique([key], where: { isDeleted: false })
+}
+
+/// One subject listed in a flag group: a user, tenant or location id, or a device id. Removed by soft delete.
+/// Personal data when the group's unit is USER (erased with the user, ADR 077).
+/// @extends BaseModel
+model FlagGroupMember {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  groupId   String
+  group     FlagGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  subjectId String    @db.VarChar(64)
+
+  @@unique([groupId, subjectId], where: { isDeleted: false })
+  @@index([subjectId, isDeleted])
+}
+
+/// One exposure (GLOSSARY): a subject was given a flag's or config's value, and what decided it. Written by the
+/// analytics consumer from `feature_flag.exposure` events; kept 90 days, then summed into the daily table.
+/// @extends BaseModel
+model FeatureFlagExposure {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The platform event that carried it, and its place in that batch: a redelivery inserts nothing twice.
+  eventId      String             @db.Uuid
+  position     Int
+  kind         FlagEntryKind
+  key          String             @db.VarChar(64)
+  app          String             @db.VarChar(16)
+  subjectUnit  FlagRolloutUnit
+  /// The subject's id for the flag's rollout unit (a user id is personal data, erased with the user).
+  subjectId    String             @db.VarChar(64)
+  source       FlagDecisionSource
+  revision     Int?
+  ruleId       String?            @db.Uuid
+  /// `on` / `off` for a flag; the value's name or `default` for a config.
+  value        String             @db.VarChar(48)
+  experimentId String?            @db.Uuid
+  variant      String?            @db.VarChar(48)
+  occurredAt   BigInt
+
+  @@unique([eventId, position])
+  @@index([kind, key, occurredAt])
+  @@index([experimentId, subjectId])
+  @@index([subjectUnit, subjectId])
+  @@index([occurredAt])
+}
+
+/// Exposures summed per flag or config, day (UTC), decision and value: kept for as long as the flag exists.
+/// Rewritten for a day by the analytics consumer while that day's raw exposures are still kept.
+/// @extends BaseModel
+model FeatureFlagExposureDaily {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  kind      FlagEntryKind
+  key       String             @db.VarChar(64)
+  /// The day's start, epoch milliseconds (UTC).
+  day       BigInt
+  source    FlagDecisionSource
+  ruleId    String?            @db.Uuid
+  value     String             @db.VarChar(48)
+  exposures Int
+  subjects  Int
+
+  @@index([kind, key, day])
+  @@index([day])
+}
+
+/// An experiment (GLOSSARY): splits one dynamic config's subjects between variants and compares metrics.
+/// @extends BaseModel
+model Experiment {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  key               String           @db.VarChar(64)
+  /// `DynamicConfigKeySchema` in @workspace/shared.
+  configKey         String           @db.VarChar(64)
+  name              String           @db.VarChar(80)
+  hypothesis        String           @db.VarChar(1000)
+  status            ExperimentStatus
+  trafficPercentage Int
+  /// `ExperimentVariantSchema[]`, parsed on every read.
+  variants          Json
+  controlValueName  String           @db.VarChar(40)
+  primaryMetric     String           @db.VarChar(64)
+  guardrailMetrics  String[]
+  /// Salts the experiment's assignment hash, so two experiments split the same people differently.
+  salt              String           @db.VarChar(32)
+  plannedEndAt      BigInt?
+  startedAt         BigInt?
+  stoppedAt         BigInt?
+  conclusion        String?          @db.VarChar(2000)
+  /// Why it was last changed.
+  reason            String           @db.VarChar(500)
+
+  results ExperimentResult[]
+
+  @@unique([key], where: { isDeleted: false })
+  @@unique([configKey], where: { status: "RUNNING" })
+}
+
+/// One occurrence of an experiment metric (`EXPERIMENT_METRIC_REGISTRY`): a person claimed, redeemed or signed in.
+/// Projected by the analytics consumer from platform events (whose stored copy keeps no content); kept 90 days.
+/// Personal data (the user id), erased with the user (ADR 077).
+/// @extends BaseModel
+model ExperimentMetricEvent {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The platform event it came from: a redelivery inserts nothing twice.
+  eventId    String @db.Uuid
+  /// `ExperimentMetricKeySchema` in @workspace/shared.
+  metric     String @db.VarChar(64)
+  userId     String @db.VarChar(64)
+  occurredAt BigInt
+
+  @@unique([eventId, metric])
+  @@index([metric, userId, occurredAt])
+  @@index([occurredAt])
+  @@index([userId])
+}
+
+/// One variant's figures for one metric, as the analytics consumer last worked them out (rewritten each run).
+/// @extends BaseModel
+model ExperimentResult {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  experimentId String
+  experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Restrict)
+  metric       String     @db.VarChar(64)
+  valueName    String     @db.VarChar(40)
+  subjects     Int
+  mean         Float
+  delta        Float?
+  ciLow        Float?
+  ciHigh       Float?
+  significant  Boolean
+  computedAt   BigInt
+
+  @@unique([experimentId, metric, valueName])
 }
 
 /// A named filter a staff member saved on an admin list (enhancement 5.10), kept as the list's URL query so

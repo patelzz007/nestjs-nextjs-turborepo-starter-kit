@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fitEnd, fitStart, formatCount, plural, shortPackage } from "../text.ts";
+import { fitEnd, fitStart, formatCount, padVisible, plural, shortPackage } from "../text.ts";
 
 describe("fitStart and fitEnd", () => {
 	it("leave what fits alone", () => {
@@ -24,6 +24,13 @@ describe("formatCount and plural", () => {
 		expect(formatCount(18_143)).toBe("18,143");
 		expect(plural(1, "test")).toBe("1 test");
 		expect(plural(2, "test")).toBe("2 tests");
+	});
+});
+
+describe("padVisible", () => {
+	it("pads by what shows on screen, not counting colour codes, and never cuts", () => {
+		expect(padVisible("\u001B[32m✓\u001B[39m", 3)).toBe("\u001B[32m✓\u001B[39m  ");
+		expect(padVisible("abcd", 2)).toBe("abcd");
 	});
 });
 

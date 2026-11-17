@@ -9,6 +9,7 @@
 import { InvalidApiClientConfigError } from "@workspace/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
+import { FlagDeviceId } from "../contexts/feature-flags";
 import { createMobileApiClient, type MobileApiClient } from "../lib/api";
 import { InvalidAppVersionError } from "../lib/app-version";
 import type { BuildIdentity } from "../lib/build-identity";
@@ -47,6 +48,10 @@ export interface ReadyAppRuntime {
 	readonly preferencesStore: PreferencesStore;
 	readonly tokenProvider: SecureStoreTokenProvider;
 	readonly apiClient: MobileApiClient;
+	/** The installation's feature flag device id the API client sends, once loaded (ADR 087). */
+	readonly flagDeviceId: FlagDeviceId;
+	/** Reads (or makes) that id: run while the app starts. */
+	readonly readFlagDeviceId: () => Promise<string | null>;
 	/** Turns the app lock off and drops the session (biometrics changed, §11.2). */
 	readonly resetAppLock: () => Promise<void>;
 }
@@ -61,6 +66,8 @@ export interface AppRuntimeInputs {
 	readonly buildNumber: string | null;
 	readonly build: BuildIdentity;
 	readonly deviceDetails: DeviceDetails;
+	/** The installation's feature flag device id from Secure Store, made on first start (null: unavailable). */
+	readonly readFlagDeviceId: () => Promise<string | null>;
 	readonly applyTheme: (theme: ThemePreference) => void;
 	readonly savePreferences: (preferences: PreferencesState) => Promise<void>;
 	/** A non-fatal problem worth a developer's attention (a preference that could not be saved). */
@@ -114,12 +121,14 @@ export function createAppRuntime(inputs: AppRuntimeInputs): AppRuntime {
 		},
 	});
 
+	const flagDeviceId = new FlagDeviceId();
 	let apiClient: MobileApiClient;
 	try {
 		apiClient = createMobileApiClient({
 			baseUrl: envResult.env.apiBaseUrl,
 			appVersion,
 			deviceHeaders: buildDeviceHeaders(inputs.deviceDetails),
+			requestHeaders: (): Readonly<Record<string, string>> => flagDeviceId.headers(),
 			tokenProvider,
 			onSessionExpired: (): void => {
 				sessionStore.dispatch(sessionActions.expired());
@@ -150,6 +159,8 @@ export function createAppRuntime(inputs: AppRuntimeInputs): AppRuntime {
 		preferencesStore,
 		tokenProvider,
 		apiClient,
+		flagDeviceId,
+		readFlagDeviceId: inputs.readFlagDeviceId,
 		resetAppLock,
 	};
 }
@@ -160,7 +171,11 @@ export function createAppRuntime(inputs: AppRuntimeInputs): AppRuntime {
  * then the session.
  */
 export async function startAppRuntime(runtime: ReadyAppRuntime, loadPreferences: () => Promise<PreferencesState>): Promise<void> {
-	const preferences = await loadPreferences();
+	// The device id is read beside the preferences: the first requests (the session check) already carry it.
+	const [preferences, deviceId] = await Promise.all([loadPreferences(), runtime.readFlagDeviceId()]);
+	if (deviceId !== null) {
+		runtime.flagDeviceId.use(deviceId);
+	}
 	runtime.preferencesStore.dispatch(preferencesActions.restored(preferences));
 	const restored = await restoreSession({
 		readAccessToken: (): Promise<string | null> => runtime.tokenProvider.getAccessToken(),

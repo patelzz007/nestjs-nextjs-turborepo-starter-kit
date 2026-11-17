@@ -9,7 +9,7 @@
 // through the schema; a corrupt or unexpected value is treated as absent and
 // removed (or overwritten with the default), never cast.
 
-import { AccessTokenValueSchema, AppLanguageSchema, PosTerminalIdSchema, RefreshTokenValueSchema } from "@workspace/shared";
+import { AccessTokenValueSchema, AppLanguageSchema, DeviceIdSchema, PosTerminalIdSchema, RefreshTokenValueSchema } from "@workspace/shared";
 import * as SecureStore from "expo-secure-store";
 import { z } from "zod";
 
@@ -63,6 +63,10 @@ const TILL_CHECKOUT_QUEUE_MAX_LENGTH = 4_000;
 /** The till's offline checkout queue, as stored: JSON its own module parses (the registry holds primitives). */
 export const TillCheckoutQueueValueSchema = z.string().max(TILL_CHECKOUT_QUEUE_MAX_LENGTH);
 
+/** The cached feature flag bundle, as stored: JSON the feature-flags context parses; a larger one isn't cached. */
+const FLAG_BUNDLE_MAX_LENGTH = 4_000;
+export const FlagBundleValueSchema = z.string().max(FLAG_BUNDLE_MAX_LENGTH);
+
 /** One declared Secure Store entry: its key and the schema its value must match. */
 export interface SecureStoreEntry<TValue> {
 	readonly key: string;
@@ -88,6 +92,10 @@ export const SECURE_STORE_ENTRIES = {
 	tillTenantName: { key: "till.tenantName", schema: TillDisplayNameSchema },
 	tillTenantId: { key: "till.tenantId", schema: z.uuid() },
 	tillLocationId: { key: "till.locationId", schema: z.uuid() },
+	/** This installed app's anonymous id for feature flags (ADR 087): made once, never tied to a person. */
+	flagDeviceId: { key: "flags.deviceId", schema: DeviceIdSchema },
+	/** The last feature flag bundle, so a start without a connection shows what the API last said (JSON its module parses). */
+	flagBundle: { key: "flags.bundle", schema: FlagBundleValueSchema },
 	/** Checkouts waiting for the connection (enhancement 6.4): reward codes, so kept beside the till's key. */
 	tillCheckoutQueue: { key: "till.checkoutQueue", schema: TillCheckoutQueueValueSchema },
 } satisfies Record<string, SecureStoreEntry<string | number | boolean>>;

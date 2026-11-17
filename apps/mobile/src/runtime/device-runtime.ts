@@ -2,7 +2,9 @@
 // details, Uniwind and Secure Store.
 
 import Constants from "expo-constants";
+import { randomUUID } from "expo-crypto";
 
+import { loadFlagDeviceId, secureStoreFlagDeviceIdStorage } from "../contexts/feature-flags";
 import { readAppVersion, readBuildNumber } from "../lib/app-version";
 import { readBuildIdentity } from "../lib/build-identity-device";
 import { reportError } from "../lib/crash-reporting/crash-reporter";
@@ -23,6 +25,7 @@ export function createDeviceAppRuntime(): AppRuntime {
 		buildNumber: readBuildNumber(),
 		build: readBuildIdentity(),
 		deviceDetails: readDeviceDetails(),
+		readFlagDeviceId: (): Promise<string | null> => loadFlagDeviceId(secureStoreFlagDeviceIdStorage(randomUUID)),
 		applyTheme: applyThemePreference,
 		savePreferences,
 		reportWarning: (message: string, error: Error): void => {

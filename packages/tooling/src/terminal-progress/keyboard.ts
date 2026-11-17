@@ -16,6 +16,9 @@ export type KeyName =
 	| "escape"
 	| "quit"
 	| "interrupt"
+	| "help"
+	| "wheelUp"
+	| "wheelDown"
 	| "view1"
 	| "view2"
 	| "view3"
@@ -55,6 +58,7 @@ const KEYS = new Map<string, KeyName>([
 	["g", "home"],
 	["G", "end"],
 	["q", "quit"],
+	["?", "help"],
 	["1", "view1"],
 	["2", "view2"],
 	["3", "view3"],
@@ -63,13 +67,25 @@ const KEYS = new Map<string, KeyName>([
 	["6", "view6"],
 ]);
 
-/** One escape sequence or one character per match, so several keys arriving together all count. */
-const KEY_TOKEN = new RegExp(`${ESCAPE}\\[[0-9;]*[A-Za-z~]|[\\s\\S]`, "gu");
+/** One escape sequence or one character per match, so several keys arriving together all count. `<` opens a mouse report. */
+const KEY_TOKEN = new RegExp(`${ESCAPE}\\[<?[0-9;]*[A-Za-z~]|[\\s\\S]`, "gu");
+/** An SGR mouse report (`ESC [ < button ; column ; row M`), which the screen asks for so the wheel can scroll. */
+const MOUSE_REPORT = new RegExp(`^${ESCAPE}\\[<(?<button>\\d+);\\d+;\\d+[Mm]$`, "u");
+/** The wheel's buttons in a mouse report; clicks and drags are left alone. */
+const WHEEL_BUTTONS: ReadonlyMap<string, KeyName> = new Map<string, KeyName>([
+	["64", "wheelUp"],
+	["65", "wheelDown"],
+]);
+
+function decodeToken(token: string): KeyName | undefined {
+	const button = MOUSE_REPORT.exec(token)?.groups?.button;
+	return button === undefined ? KEYS.get(token) : WHEEL_BUTTONS.get(button);
+}
 
 /** What the terminal sent, as keys. Anything else is dropped. */
 export function decodeKeys(data: string): readonly KeyName[] {
 	return (data.match(KEY_TOKEN) ?? []).flatMap((token) => {
-		const key = KEYS.get(token);
+		const key = decodeToken(token);
 		return key === undefined ? [] : [key];
 	});
 }

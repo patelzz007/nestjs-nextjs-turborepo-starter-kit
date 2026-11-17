@@ -1,5 +1,8 @@
-import { Global, Module, type OnModuleInit } from "@nestjs/common";
+import { Global, Inject, Module, type OnModuleInit } from "@nestjs/common";
 import { PersonalDataErasureRegistry } from "../../platform/application/personal-data/personal-data-erasure.registry";
+import { FeatureFlagsModule, SUBJECT_FACTS, type SubjectFactsRegistry } from "../feature-flags/public-api";
+import type { SubjectAuthorizationReadPort } from "./application/ports/subject-authorization-read.port";
+import { authorizationFlagFacts } from "./infrastructure/adapters/authorization-flag-facts";
 import { authorizationEraser } from "./infrastructure/personal-data/authorization-erasure";
 import type { Prisma } from "@prisma/client";
 
@@ -125,7 +128,7 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
  */
 @Global()
 @Module({
-	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule],
+	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, FeatureFlagsModule],
 	providers: [
 		// ── Unit of work ────────────────────────────────────────────────
 		{
@@ -270,10 +273,13 @@ export class AuthorizationModule implements OnModuleInit {
 	public constructor(
 		private readonly erasure: PersonalDataErasureRegistry,
 		private readonly erasureTransactions: TenantTransactionService,
+		@Inject(SUBJECT_FACTS) private readonly flagFacts: SubjectFactsRegistry,
+		@Inject(SUBJECT_AUTHORIZATION_READ) private readonly grants: SubjectAuthorizationReadPort,
 	) {}
 
-	/** Registers this context's part of account erasure (ADR 077). */
+	/** Registers this context's part of account erasure (ADR 077) and the permission facts feature flag rules read (ADR 087). */
 	public onModuleInit(): void {
 		this.erasure.registerEraser(authorizationEraser(this.erasureTransactions));
+		this.flagFacts.register(authorizationFlagFacts(this.grants));
 	}
 }

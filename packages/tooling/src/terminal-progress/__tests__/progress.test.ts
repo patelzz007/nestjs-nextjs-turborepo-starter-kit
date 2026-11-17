@@ -111,6 +111,19 @@ describe("applyLine", () => {
 
 		expect(check.stages.map((stage) => stage.status)).toStrictEqual(["running", "passed"]);
 	});
+
+	it("updates a step in place when lint-staged reports it again, so each step shows once", () => {
+		const check = feed(waitingCheck("lint-staged", "Format, lint", undefined), [
+			'⋯ node packages/tooling/src/run-in-workspace/cli.ts "apps/web" oxfmt --write a.ts',
+			'⋯ node packages/tooling/src/run-in-workspace/cli.ts "apps/api" oxfmt --write b.ts',
+			'✔ node packages/tooling/src/run-in-workspace/cli.ts "apps/web" oxfmt --write a.ts',
+		]);
+
+		expect(check.stages).toStrictEqual([
+			{ text: "oxfmt in apps/web", status: "passed" },
+			{ text: "oxfmt in apps/api", status: "running" },
+		]);
+	});
 });
 
 describe("finishCheck", () => {

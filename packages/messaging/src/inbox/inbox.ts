@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { FlagExposureRow, MetricEventRow } from "./flag-projections";
+
 /** Why a message was parked — mirrors the `InboxDeadLetterReason` Postgres enum (schema.prisma). */
 export const DeadLetterReasonSchema = z.enum(["EMPTY_MESSAGE", "MALFORMED_JSON", "SCHEMA_VIOLATION", "PERMANENT_PROCESSING_ERROR", "RETRIES_EXHAUSTED"]);
 
@@ -68,6 +70,10 @@ export interface InboxTransaction {
 	 */
 	claim(claim: InboxClaim): Promise<boolean>;
 	insertAnalyticsEvent(row: AnalyticsEventRow): Promise<void>;
+	/** Feature flag exposures of one event (ADR 087); idempotent per (event, position). */
+	insertFlagExposures(rows: readonly FlagExposureRow[]): Promise<void>;
+	/** Experiment metric occurrences of one event (ADR 087); idempotent per (event, metric). */
+	insertMetricEvents(rows: readonly MetricEventRow[]): Promise<void>;
 }
 
 /** Persistence port for the consumer inbox (implemented by `PgInboxStore`). */

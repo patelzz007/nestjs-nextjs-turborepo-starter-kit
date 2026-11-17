@@ -78,7 +78,7 @@ export interface SeededTenants {
 	readonly mlkTenant: Tenant;
 }
 
-interface SeedLocation {
+export interface SeedLocation {
 	readonly id: string;
 	readonly name: string;
 	readonly code: string;
@@ -89,7 +89,7 @@ interface SeedLocation {
 	readonly status: "ACTIVE" | "PENDING_APPROVAL";
 }
 
-interface SeedTenant {
+export interface SeedTenant {
 	readonly id: string;
 	readonly slug: string;
 	readonly displayName: string;
@@ -107,7 +107,7 @@ interface SeedTenant {
  * tenant + transition + reason), created when missing and otherwise
  * brought to its seed correlation id, so a re-run never duplicates it.
  */
-async function upsertSeedTenant(input: SeedTenant, adminUser: User, now: bigint): Promise<Tenant> {
+export async function upsertSeedTenant(input: SeedTenant, adminUser: User, now: bigint): Promise<Tenant> {
 	const tenant = await prisma.tenant.upsert({
 		where: { id: input.id },
 		create: { id: input.id, slug: input.slug, displayName: input.displayName, lifecycleState: "ACTIVE", timeZone: input.timeZone },

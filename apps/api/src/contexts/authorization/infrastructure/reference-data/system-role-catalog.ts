@@ -38,7 +38,8 @@ export interface SystemRoleDefinition {
  * - SuperAdmin: the full matrix (the `isSuperAdmin` flag on the user row still bypasses checks; the role is for assigned operators).
  * - Admin: the admin panel except DELETE:USER and banning merchants (SuperAdmin only), plus
  *   GitHub pull requests with their own linked token (ADR 052 — no other role gets them), plus the whole kanban board,
- *   plus the operations console's metrics (ADR 068).
+ *   plus the operations console's metrics (ADR 068), plus Releases (ADR 087): flags, flag groups, dynamic configs and
+ *   experiments, including approving someone else's pending production change (never their own).
  * - Platform Developer: the operations console (ADR 068) — servers, instances, dependencies, alerts and load tests
  *   (not the purge) — and nothing else of the admin panel. Backups stay SuperAdmin only.
  * - User: customer app only, every grant OWN-scoped except READ:GITHUB (the configured repositories are shared,
@@ -80,7 +81,10 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matches(p, "READ", "CACHE") ||
 			matches(p, "LIST", "BACKGROUND_JOB") ||
 			matchesAny(p, "STATUS_INCIDENT", ["LIST", "CREATE", "UPDATE"]) ||
-			matches(p, "LIST", "FEATURE_FLAG"),
+			matchesAny(p, "FEATURE_FLAG", ["LIST", "UPDATE", "APPROVE"]) ||
+			matchesAny(p, "FEATURE_FLAG_GROUP", ["LIST", "UPDATE"]) ||
+			matchesAny(p, "DYNAMIC_CONFIG", ["LIST", "UPDATE", "APPROVE"]) ||
+			matchesAny(p, "EXPERIMENT", ["LIST", "UPDATE"]),
 	},
 	{
 		name: PLATFORM_DEVELOPER_ROLE_NAME,

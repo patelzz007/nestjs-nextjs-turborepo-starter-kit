@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ChangeSummary } from "../change-summary.ts";
 import { INITIAL_DASHBOARD, type DashboardState, type ViewId } from "../dashboard.ts";
-import { buildPanel, type LogLine, type Panel } from "../panels.ts";
+import { buildPanel, packageColumn, type LogLine, type Panel } from "../panels.ts";
 import { applyLine, finishCheck, startCheck, waitingCheck, type CheckProgress } from "../progress.ts";
 import type { Tint } from "../text.ts";
 
@@ -48,6 +48,21 @@ describe("live", () => {
 		expect(text).toMatch(/✓ api\s+src\/a\.spec\.ts\s+4 tests\s+11ms/u);
 		expect(text).toMatch(/2 tests\s+2\.5s/u);
 		expect(text).toMatch(/✗ ui\s+src\/c\.test\.tsx/u);
+	});
+
+	it("sizes the package column to the longest name, always with a gap before the path", () => {
+		const text = rows(
+			panel("live", [check(["@workspace/analytics-consumer:test:  ✓ src/logger.spec.ts (3 tests) 4ms", "@workspace/api:test:  ✓ src/a.spec.ts (4 tests) 11ms"])]),
+		);
+
+		expect(text).toContain("✓ analytics-consumer  src/logger.spec.ts");
+		expect(text).toContain("✓ api                 src/a.spec.ts");
+	});
+
+	it("cuts a very long package name short, and keeps the gap", () => {
+		const text = rows(panel("live", [check(["@workspace/a-package-name-much-longer-than-the-column:test:  ✓ src/a.spec.ts (4 tests) 11ms"])]));
+
+		expect(text).toContain("a-package-name-much-lon…  src/a.spec.ts");
 	});
 
 	it("gives a narrow terminal just the path", () => {
@@ -172,6 +187,12 @@ describe("log", () => {
 		expect(rows(panel("log", [], { log }))).toMatch(/api\s+api line/u);
 	});
 
+	it("keeps a gap after the longest package name", () => {
+		const long: readonly LogLine[] = [{ workspace: "@workspace/analytics-consumer", text: "consumer line" }];
+
+		expect(rows(panel("log", [], { log: long }))).toContain("analytics-consumer  consumer line");
+	});
+
 	it("narrows to one package", () => {
 		const target = panel("log", [], { log, state: { logFilter: "@workspace/ui" } });
 
@@ -180,6 +201,25 @@ describe("log", () => {
 		expect(target.packageAt(0)).toBeUndefined();
 		expect(rows(target)).toContain("ui line");
 		expect(target.row(5)).toBe("  ");
+	});
+});
+
+describe("key list", () => {
+	it("covers whichever view is on screen, every key with what it does", () => {
+		const text = rows(panel("packages", [check([])], { state: { help: true } }));
+
+		expect(text).toContain("Keys");
+		expect(text).toMatch(/↑ ↓ · j k · wheel\s+scroll/u);
+		expect(text).toMatch(/\?\s+show or hide this list/u);
+		expect(text).toContain("Hold Option (macOS) or Shift to select text");
+	});
+});
+
+describe("packageColumn", () => {
+	it("fits the longest name without its scope, within bounds", () => {
+		expect(packageColumn(["@workspace/api", "@workspace/analytics-consumer"])).toBe(18);
+		expect(packageColumn([undefined, "@workspace/ui"])).toBe(4);
+		expect(packageColumn(["@workspace/a-package-name-much-longer-than-the-column"])).toBe(24);
 	});
 });
 

@@ -51,6 +51,14 @@ export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization>
 	[ROUTES.operations.cache, { permissions: [PERMISSION.CACHE.READ] }],
 	// GET /admin/operations/queues (LIST BACKGROUND_JOB)
 	[ROUTES.operations.queues, { permissions: [PERMISSION.BACKGROUND_JOB.LIST] }],
+	// Releases (ADR 087): GET /admin/feature-flags (LIST FEATURE_FLAG) · GET /admin/dynamic-configs (LIST DYNAMIC_CONFIG) ·
+	// GET /admin/experiments (LIST EXPERIMENT) · GET /admin/flag-groups (LIST FEATURE_FLAG_GROUP) ·
+	// POST /admin/feature-flags/promotion/preview + import (LIST + UPDATE FEATURE_FLAG)
+	[ROUTES.releases.flags, { permissions: [PERMISSION.FEATURE_FLAG.LIST] }],
+	[ROUTES.releases.configs, { permissions: [PERMISSION.DYNAMIC_CONFIG.LIST] }],
+	[ROUTES.releases.experiments.list, { permissions: [PERMISSION.EXPERIMENT.LIST] }],
+	[ROUTES.releases.groups.list, { permissions: [PERMISSION.FEATURE_FLAG_GROUP.LIST] }],
+	[ROUTES.releases.promotion, { permissions: [PERMISSION.FEATURE_FLAG.LIST, PERMISSION.FEATURE_FLAG.UPDATE], mode: "all" }],
 	// GET /admin/operations/status/incidents (LIST STATUS_INCIDENT)
 	[ROUTES.operations.statusIncidents, { permissions: [PERMISSION.STATUS_INCIDENT.LIST] }],
 	// GET /admin/docs-publishing/overview and /runs (LIST DOCS_SYNC)

@@ -70,3 +70,47 @@ CREATE POLICY inbox_dead_letters_analytics_consumer ON public."InboxDeadLetter"
   TO analytics_consumer
   USING (consumer = 'analytics-warehouse')
   WITH CHECK (consumer = 'analytics-warehouse');
+
+-- Feature flags v2 (ADR 087): the consumer projects `feature_flag.exposure` events into exposures, sums them per
+-- day, works out running experiments' results, and purges exposures older than their 90-day window.
+--
+--   FeatureFlagExposure       INSERT, SELECT, DELETE      the projection (ON CONFLICT reads the arbiter), sums, purge
+--   FeatureFlagExposureDaily  INSERT, SELECT, DELETE      a day's sums are rewritten while its raw rows are kept
+--   ExperimentMetricEvent     INSERT, SELECT, DELETE      metric occurrences projected from claim / redeem / sign-in events, purge
+--   Experiment                SELECT                      which experiments are running, their plan
+--   ExperimentResult          INSERT, SELECT, UPDATE      upserted per experiment, metric and variant
+GRANT SELECT, INSERT, DELETE ON TABLE public."FeatureFlagExposure" TO analytics_consumer;
+GRANT SELECT, INSERT, DELETE ON TABLE public."FeatureFlagExposureDaily" TO analytics_consumer;
+GRANT SELECT, INSERT, DELETE ON TABLE public."ExperimentMetricEvent" TO analytics_consumer;
+GRANT SELECT ON TABLE public."Experiment" TO analytics_consumer;
+GRANT SELECT, INSERT, UPDATE ON TABLE public."ExperimentResult" TO analytics_consumer;
+
+DROP POLICY IF EXISTS feature_flag_exposures_analytics_consumer ON public."FeatureFlagExposure";
+CREATE POLICY feature_flag_exposures_analytics_consumer ON public."FeatureFlagExposure"
+  TO analytics_consumer
+  USING (true)
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS feature_flag_exposure_dailies_analytics_consumer ON public."FeatureFlagExposureDaily";
+CREATE POLICY feature_flag_exposure_dailies_analytics_consumer ON public."FeatureFlagExposureDaily"
+  TO analytics_consumer
+  USING (true)
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS experiment_metric_events_analytics_consumer ON public."ExperimentMetricEvent";
+CREATE POLICY experiment_metric_events_analytics_consumer ON public."ExperimentMetricEvent"
+  TO analytics_consumer
+  USING (true)
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS experiments_analytics_consumer_select ON public."Experiment";
+CREATE POLICY experiments_analytics_consumer_select ON public."Experiment"
+  FOR SELECT
+  TO analytics_consumer
+  USING ("isDeleted" = false);
+
+DROP POLICY IF EXISTS experiment_results_analytics_consumer ON public."ExperimentResult";
+CREATE POLICY experiment_results_analytics_consumer ON public."ExperimentResult"
+  TO analytics_consumer
+  USING (true)
+  WITH CHECK (true);

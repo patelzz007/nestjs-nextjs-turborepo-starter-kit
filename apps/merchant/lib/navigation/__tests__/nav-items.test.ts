@@ -1,12 +1,17 @@
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
-import { MERCHANT_CAPABILITY, type CapabilitySlug } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, type CapabilitySlug, type FeatureFlagKey } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
+import { MERCHANT_FEATURE_FLAGS } from "@/lib/feature-flags";
 import { filterMerchantNavItems, MERCHANT_NAV_ITEMS, resolvePinnedMerchantNavItems } from "@/lib/navigation/nav-items";
 import { buildMerchantPaletteItems } from "@/lib/palette/nav-items";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { TENANT_ROUTES } from "@/lib/routes";
 import { membershipFixture } from "@/testing/authorization";
+
+/** Every merchant flag on, as on a deployment that turned them all on. */
+const ALL_FLAGS: readonly FeatureFlagKey[] = MERCHANT_FEATURE_FLAGS;
+const NO_FLAGS: readonly FeatureFlagKey[] = [];
 
 function predicateFor(capabilities: readonly CapabilitySlug[]): (permission: CapabilitySlug) => boolean {
 	const granted = createGrantedCapabilities(capabilities);
@@ -17,7 +22,7 @@ describe("merchant nav authorization", () => {
 	it("shows every entry to owners", () => {
 		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("OWNER")));
 
-		expect(filterMerchantNavItems(MERCHANT_NAV_ITEMS, can).map((item) => item.id)).toEqual([
+		expect(filterMerchantNavItems(MERCHANT_NAV_ITEMS, can, ALL_FLAGS).map((item) => item.id)).toEqual([
 			"dashboard",
 			"analytics",
 			"rewards",
@@ -41,24 +46,24 @@ describe("merchant nav authorization", () => {
 	});
 
 	it("shows webhooks to owners only (merchant:manage_webhooks is the owner's by default)", () => {
-		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")))).map((item) => item.id);
-		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")))).map((item) => item.id);
+		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER"))), ALL_FLAGS).map((item) => item.id);
+		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER"))), ALL_FLAGS).map((item) => item.id);
 
 		expect(managerIds).not.toContain("webhooks");
 		expect(cashierIds).not.toContain("webhooks");
 	});
 
 	it("shows broadcasts to managers and keeps them from cashiers", () => {
-		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")))).map((item) => item.id);
-		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")))).map((item) => item.id);
+		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER"))), ALL_FLAGS).map((item) => item.id);
+		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER"))), ALL_FLAGS).map((item) => item.id);
 
 		expect(managerIds).toEqual(expect.arrayContaining(["broadcasts", "broadcasts-new"]));
 		expect(cashierIds).not.toContain("broadcasts");
 	});
 
 	it("shows payments to managers and keeps them from cashiers", () => {
-		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")))).map((item) => item.id);
-		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")))).map((item) => item.id);
+		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER"))), ALL_FLAGS).map((item) => item.id);
+		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER"))), ALL_FLAGS).map((item) => item.id);
 
 		expect(managerIds).toEqual(expect.arrayContaining(["payments", "payments-new"]));
 		expect(cashierIds).not.toContain("payments");
@@ -67,7 +72,7 @@ describe("merchant nav authorization", () => {
 
 	it("hides business verification from admins (owner-only)", () => {
 		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")));
-		const ids = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can).map((item) => item.id);
+		const ids = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can, ALL_FLAGS).map((item) => item.id);
 
 		expect(ids).toContain("settings-team");
 		expect(ids).toContain("settings-locations");
@@ -76,33 +81,45 @@ describe("merchant nav authorization", () => {
 
 	it("hides create-reward, POS terminals, API keys, team and verification from cashiers", () => {
 		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")));
-		const ids = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can).map((item) => item.id);
+		const ids = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can, ALL_FLAGS).map((item) => item.id);
 
 		// Cashiers can see the store logo (merchant:view_locations); only changing it needs merchant:manage_locations.
 		// Analytics needs a grant for a cashier (ADR 067, edge case 4).
 		expect(ids).toEqual(["dashboard", "rewards", "redemptions", "settings", "settings-locations", "settings-branding", "account"]);
-		expect(buildMerchantPaletteItems(can).map((item) => item.id)).toEqual(ids);
+		expect(buildMerchantPaletteItems(can, ALL_FLAGS).map((item) => item.id)).toEqual(ids);
 	});
 
 	it("drops pinned entries the role can no longer open", () => {
 		const can = predicateFor([MERCHANT_CAPABILITY.viewDashboard]);
 
-		expect(resolvePinnedMerchantNavItems([TENANT_ROUTES.apiKeys, TENANT_ROUTES.terminals, TENANT_ROUTES.dashboard], can).map((item) => item.id)).toEqual(["dashboard"]);
+		expect(resolvePinnedMerchantNavItems([TENANT_ROUTES.apiKeys, TENANT_ROUTES.terminals, TENANT_ROUTES.dashboard], can, ALL_FLAGS).map((item) => item.id)).toEqual([
+			"dashboard",
+		]);
 	});
 
 	it("ignores pins saved under retired URLs", () => {
 		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("OWNER")));
 
-		expect(resolvePinnedMerchantNavItems(["/", "/locations", "/settings/kyb"], can)).toEqual([]);
+		expect(resolvePinnedMerchantNavItems(["/", "/locations", "/settings/kyb"], can, ALL_FLAGS)).toEqual([]);
 	});
 
 	it("drops a pinned team page once the role loses merchant:manage_team", () => {
 		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")));
 
-		expect(resolvePinnedMerchantNavItems([TENANT_ROUTES.settings.team, TENANT_ROUTES.settings.locations], can).map((item) => item.id)).toEqual(["settings-locations"]);
+		expect(resolvePinnedMerchantNavItems([TENANT_ROUTES.settings.team, TENANT_ROUTES.settings.locations], can, ALL_FLAGS).map((item) => item.id)).toEqual([
+			"settings-locations",
+		]);
 	});
 
 	it("leaves only the open account entry without a membership", () => {
-		expect(filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(undefined))).map((item) => item.id)).toEqual(["account"]);
+		expect(filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(undefined)), ALL_FLAGS).map((item) => item.id)).toEqual(["account"]);
+	});
+
+	it("hides Analytics, and a pin of it, while the merchant-analytics flag is off for the store (ADR 087)", () => {
+		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("OWNER")));
+
+		expect(filterMerchantNavItems(MERCHANT_NAV_ITEMS, can, NO_FLAGS).map((item) => item.id)).not.toContain("analytics");
+		expect(buildMerchantPaletteItems(can, NO_FLAGS).map((item) => item.id)).not.toContain("analytics");
+		expect(resolvePinnedMerchantNavItems([TENANT_ROUTES.analytics, TENANT_ROUTES.dashboard], can, NO_FLAGS).map((item) => item.id)).toEqual(["dashboard"]);
 	});
 });

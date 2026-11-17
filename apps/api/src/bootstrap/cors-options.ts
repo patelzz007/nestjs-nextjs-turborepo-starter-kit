@@ -1,6 +1,6 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 
-import { CLIENT_TYPE_HEADER, IDEMPOTENCY_KEY_HEADER, LOCATION_ID_HEADER, MUTATION_INTENT_HEADER, TENANT_ID_HEADER } from "@workspace/shared";
+import { CLIENT_TYPE_HEADER, DEVICE_ID_HEADER, IDEMPOTENCY_KEY_HEADER, LOCATION_ID_HEADER, MUTATION_INTENT_HEADER, TENANT_ID_HEADER } from "@workspace/shared";
 
 import type { ApiConfig } from "../config/api-config.schema";
 
@@ -21,6 +21,8 @@ const CORS_METHODS: readonly string[] = ["GET", "HEAD", "POST", "PUT", "PATCH", 
  * - `X-Tenant-Id`, `X-Location-Id`: the merchant console names its tenant and store on every call.
  *   Information only for now (nothing selects from them); without them here the browser would
  *   refuse every merchant request at the preflight.
+ * - `X-Device-Id`: the browser's anonymous device id, read by the feature flag bundle and
+ *   exposures (ADR 087) for device-unit flags.
  */
 export const CORS_ALLOWED_HEADERS: readonly string[] = [
 	"Content-Type",
@@ -30,6 +32,7 @@ export const CORS_ALLOWED_HEADERS: readonly string[] = [
 	IDEMPOTENCY_KEY_HEADER,
 	TENANT_ID_HEADER,
 	LOCATION_ID_HEADER,
+	DEVICE_ID_HEADER,
 ];
 
 /**

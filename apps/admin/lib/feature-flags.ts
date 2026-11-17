@@ -1,65 +1,27 @@
-import { API_FEATURE_FLAG_DEFAULTS, evaluateFeatureFlag, type FeatureFlagKey, type FeatureFlagSetting, type PlatformFeatureFlagKey } from "@workspace/shared";
+import { featureFlagKeysFor, isFlagOn, type FeatureFlagBundle, type FeatureFlagKey } from "@workspace/shared";
 
-import type { AdminServerEnv } from "@/lib/env/env.schema";
-
-/** The sidebar's Components section (`/components`): the developer component showcase and the kanban board. Its sidebar group carries this flag. */
-export const SHOWCASE_FEATURE: PlatformFeatureFlagKey = "showcase";
+/** The sidebar's Components section (`/components`): the developer showcase and the kanban board. Its sidebar group carries this flag. */
+export const SHOWCASE_FEATURE: FeatureFlagKey = "showcase";
 
 /** Merchant invites (`/merchants/invites`): off on a single-tenant deployment, which serves only its seeded tenant. */
-export const MERCHANT_INVITES_FEATURE: PlatformFeatureFlagKey = "merchant-invites";
+export const MERCHANT_INVITES_FEATURE: FeatureFlagKey = "merchant-invites";
 
-/** Customer tiers (ADR 085): the Tiers settings section, the tier distribution and a customer's tier on their page. */
-export const CUSTOMER_TIERS_FEATURE: PlatformFeatureFlagKey = "customer-tiers";
+/** Customer tiers (ADR 085): the tier rules page under Settings shows only while tiers are on. */
+export const CUSTOMER_TIERS_FEATURE: FeatureFlagKey = "customer-tiers";
 
-/** What the API says about this deployment, beside the admin's own server config. */
+/** What the API says about this deployment, beside the flags. */
 export interface DeploymentFeatures {
 	/** `GET /admin/invites/availability` did not answer "no" (see `isMerchantInvitingOffered`). */
 	readonly merchantInvitesOffered: boolean;
 }
 
-/** The server config the flags are decided from. */
-export type FeatureFlagEnv = Pick<AdminServerEnv, "NODE_ENV" | "ADMIN_SHOWCASE">;
-
 /**
- * Whether this deployment serves the component showcase: `ADMIN_SHOWCASE` when it is set,
- * otherwise every build except production. It is a developer tool, not part of the admin product.
+ * The admin flags on for this request's staff member (ADR 087), matched against `featureFlag` in
+ * `lib/navigation/sidebar-menu.json` and the flagged routes. The API works each flag out (the bundle); without a
+ * bundle (the API couldn't answer) every flag reads as its code default, so a read failure never turns anything on.
+ * Merchant invites also need a deployment that serves more than one tenant, whatever the flag says. Feature flags
+ * are orthogonal to authorization: an item shows only when the permission is allowed AND its feature is on.
  */
-export function isShowcaseEnabled(env: FeatureFlagEnv): boolean {
-	return env.ADMIN_SHOWCASE === undefined ? env.NODE_ENV !== "production" : env.ADMIN_SHOWCASE === "true";
-}
-
-/** Who the flags are evaluated for, and what staff set at runtime (enhancement 5.6). */
-export interface FeatureFlagContext {
-	/** The stored settings (`GET /admin/feature-flags/settings`); empty when the API couldn't answer. */
-	readonly settings: readonly FeatureFlagSetting[];
-	/** The signed-in staff member, for a percentage rollout; null before the session is known. */
-	readonly subjectId: string | null;
-}
-
-/**
- * Flags enabled for this deployment, matched against `featureFlag` in
- * `lib/navigation/sidebar-menu.json`. Evaluated on the server (env vars are not
- * exposed to the browser, and the API's answers are fetched there) and passed
- * to the client shell as data. Feature flags
- * are orthogonal to authorization: an item shows only when the permission is
- * allowed AND its feature is enabled. A flagged route also refuses itself
- * (`app/(panel)/components/(showcase)/layout.tsx` answers 404 while the showcase is off).
- */
-export function resolveEnabledFeatureFlags(
-	env: FeatureFlagEnv,
-	deployment: DeploymentFeatures,
-	context: FeatureFlagContext = { settings: [], subjectId: null },
-): readonly string[] {
-	// Each flag's default is the deployment fact it always was; a runtime setting (5.6) decides over it. Only the
-	// deployment-wide flags gate the console: a store flag (5.11) is decided where the store acts (its till), not here.
-	const defaults: Readonly<Record<PlatformFeatureFlagKey, boolean>> = {
-		showcase: isShowcaseEnabled(env),
-		"merchant-invites": deployment.merchantInvitesOffered,
-		"customer-tiers": API_FEATURE_FLAG_DEFAULTS["customer-tiers"],
-	};
-	const settingOf = (key: FeatureFlagKey): FeatureFlagSetting | undefined => context.settings.find((setting) => setting.key === key);
-	const keys: readonly PlatformFeatureFlagKey[] = [SHOWCASE_FEATURE, MERCHANT_INVITES_FEATURE, CUSTOMER_TIERS_FEATURE];
-	// Customer tiers are decided by the API for everyone at once (a percentage reads as off there), so the console
-	// evaluates them without a person too: it never shows tier screens the API would refuse.
-	return keys.filter((key) => evaluateFeatureFlag(key, settingOf(key), defaults[key], key === CUSTOMER_TIERS_FEATURE ? null : context.subjectId));
+export function enabledAdminFeatureFlags(bundle: FeatureFlagBundle | null, deployment: DeploymentFeatures): readonly FeatureFlagKey[] {
+	return featureFlagKeysFor("admin").filter((key) => isFlagOn(bundle, key) && (key !== MERCHANT_INVITES_FEATURE || deployment.merchantInvitesOffered));
 }

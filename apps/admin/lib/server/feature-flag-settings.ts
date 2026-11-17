@@ -1,12 +1,10 @@
 import "server-only";
 
-import type { FeatureFlagKey, FeatureFlagSetting } from "@workspace/shared";
+import type { FeatureFlagBundle, FeatureFlagKey } from "@workspace/shared";
 import { cache } from "react";
 
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { loadAdminServerSession } from "@/lib/auth-server";
-import { serverEnv } from "@/lib/env/env.server";
-import { resolveEnabledFeatureFlags } from "@/lib/feature-flags";
+import { enabledAdminFeatureFlags } from "@/lib/feature-flags";
 import { loadMerchantInvitingOffered } from "@/lib/server/merchant-invite-availability";
 import { prefetch, type PrefetchFailureLogger } from "@/lib/server/prefetch";
 
@@ -17,28 +15,25 @@ const logFailuresOnly: PrefetchFailureLogger = (level, message): void => {
 };
 
 /**
- * The feature flags' stored settings (enhancement 5.6), asked once per request. When the API can't answer, no
- * setting applies and every flag keeps its default: a flag never turns something on because a read failed.
+ * The admin app's feature flag bundle for this request's staff member (ADR 087), asked once per request: the API's
+ * evaluated values. Null when the API couldn't answer: every flag then reads as its code default.
  */
-export const loadFeatureFlagSettings = cache(async (): Promise<readonly FeatureFlagSetting[]> => {
+export const loadFeatureFlagBundle = cache(async (): Promise<FeatureFlagBundle | null> => {
 	const result = await prefetch(
-		{ page: "(panel)", resource: "feature flag settings" },
-		() => createAdminServerCaller().featureFlags.settings.query(undefined),
+		{ page: "(panel)", resource: "feature flag bundle" },
+		() => createAdminServerCaller().featureFlags.bundle.query({ app: "admin" }),
 		logFailuresOnly,
 	);
-	return result.status === "ok" ? result.data.data.settings : [];
+	return result.status === "ok" ? result.data.data : null;
 });
 
 /**
- * The flags on for this request's staff member (enhancement 5.6): the deployment defaults with the runtime
- * settings applied. One answer per request, shared by the sidebar, the home page and the flagged routes, so a
- * menu item and its page never disagree.
+ * The flags on for this request's staff member: one answer per request, shared by the sidebar, the home page and
+ * the flagged routes, so a menu item and its page never disagree.
  */
-export const loadEnabledFeatureFlags = cache(async (): Promise<readonly string[]> => {
-	// The person comes from the API-verified session (never the undecoded token), so a rollout can't be steered.
-	const [session, merchantInvitesOffered, settings] = await Promise.all([loadAdminServerSession(), loadMerchantInvitingOffered(), loadFeatureFlagSettings()]);
-	const subjectId = session.kind === "signed-in" ? session.session.profile.data.id : null;
-	return resolveEnabledFeatureFlags(serverEnv, { merchantInvitesOffered }, { settings, subjectId });
+export const loadEnabledFeatureFlags = cache(async (): Promise<readonly FeatureFlagKey[]> => {
+	const [bundle, merchantInvitesOffered] = await Promise.all([loadFeatureFlagBundle(), loadMerchantInvitingOffered()]);
+	return enabledAdminFeatureFlags(bundle, { merchantInvitesOffered });
 });
 
 /** Whether one flag is on for this request's staff member. */

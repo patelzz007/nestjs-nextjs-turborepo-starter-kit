@@ -266,12 +266,6 @@ export function databaseSteps({
 }
 
 /**
- * The admin features the browser suite drives that a production build leaves off (ci.yml →
- * jobs.browser-e2e.env): the kanban board lives in the developer component gallery.
- */
-export const BROWSER_ADMIN_FEATURE_ENV = { ADMIN_SHOWCASE: "true" };
-
-/**
  * The `browser-e2e` job: build, migrate + seed a fresh database, start the API,
  * web and admin in the background (`servers`), wait for readiness, then run
  * both Playwright suites (`suites`). `setup` runs before the servers start.
@@ -290,7 +284,7 @@ export function browserJob({ databaseUrl, apiEnvFile }: { databaseUrl: string; a
 				job,
 				command: "pnpm",
 				args: ["turbo", "run", "build", `--filter=${ws.api}`, `--filter=${ws.web}`, `--filter=${ws.admin}`, `--filter=${ws.merchant}`],
-				env: { ...CI_BUILD_ENV, ...BROWSER_ADMIN_FEATURE_ENV },
+				env: CI_BUILD_ENV,
 			},
 			{ id: "browser:deploy", job, command: "pnpm", args: ["tools", "db:deploy"], env: api },
 			{ id: "browser:seed", job, command: "pnpm", args: ["db:seed", "--", "--scenario", "development"], env: api },
@@ -317,7 +311,6 @@ export function browserJob({ databaseUrl, apiEnvFile }: { databaseUrl: string; a
 				job,
 				command: "pnpm",
 				args: ["--filter", ws.admin, "exec", "next", "start", "--port", String(LOCAL_APP_PORTS.admin)],
-				env: BROWSER_ADMIN_FEATURE_ENV,
 				port: LOCAL_APP_PORTS.admin,
 			},
 			{

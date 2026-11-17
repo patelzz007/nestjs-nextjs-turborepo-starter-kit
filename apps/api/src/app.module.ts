@@ -39,7 +39,7 @@ import { NotificationsModule } from "./contexts/notifications/public-api";
 import { PaymentsModule } from "./contexts/payments/public-api";
 import { PrivacyModule } from "./contexts/privacy/public-api";
 import { SavedViewsModule } from "./contexts/saved-views/public-api";
-import { FeatureFlagsModule } from "./contexts/feature-flags/public-api";
+import { FeatureFlagsModule, FeatureFlagsQueueModule } from "./contexts/feature-flags/public-api";
 import { PersonalDataModule } from "./platform/infrastructure/personal-data/personal-data.module";
 import { AuditLogInterceptor } from "./platform/infrastructure/audit/audit-log.interceptor";
 import { AuditLogModule } from "./platform/infrastructure/audit/audit-log.module";
@@ -69,6 +69,9 @@ import { TenancyModule } from "./platform/infrastructure/tenancy/tenancy.module"
 // the agent worker add measurable boot overhead. The config was already
 // parsed (and validated) by main.ts before this module was imported.
 const observeConfig: ObserveConfig | null = getApiConfig().observability.observe;
+
+/** The feature flags maintenance worker runs where BullMQ does (Redis configured), as the claims workers do. */
+const featureFlagsQueueImports: (typeof FeatureFlagsQueueModule)[] = getApiConfig().messaging.redisUrl !== undefined ? [FeatureFlagsQueueModule] : [];
 
 let observeImports: DynamicModule[] = [];
 export let ObserveInstrument: NestApplicationOptions["instrument"] | undefined = undefined;
@@ -115,6 +118,7 @@ if (observeConfig !== null) {
 		PrivacyModule,
 		SavedViewsModule,
 		FeatureFlagsModule,
+		...featureFlagsQueueImports,
 		ReferenceDataModule,
 		GithubModule,
 		AuditLogModule,

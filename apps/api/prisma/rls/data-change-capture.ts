@@ -112,6 +112,11 @@ export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = 
 	WebhookEvent: `${MESSAGING_REASON} The outgoing webhook outbox (ADR 082): one row per public event, written with the change it describes.`,
 	WebhookDelivery: `${LOG_REASON} The outgoing webhook delivery log (ADR 082): one row per event and endpoint, updated on every attempt.`,
 	AnalyticsEvent: "Telemetry projected from domain events by the analytics consumer; the domain writes behind each event are captured.",
+	FeatureFlagExposure: `${TELEMETRY_REASON} One row per exposure, projected by the analytics consumer from feature_flag.exposure events.`,
+	FeatureFlagExposureDaily: `${TELEMETRY_REASON} Daily sums of the exposures, rewritten by the analytics consumer.`,
+	ExperimentResult: `${TELEMETRY_REASON} Figures the analytics consumer works out from exposures and platform events; rewritten each run.`,
+	ExperimentMetricEvent: `${TELEMETRY_REASON} Metric occurrences the analytics consumer projects from platform events; the domain writes behind each are captured.`,
+	FeatureFlagCatalogVersion: "A counter raised with every flag change, whose own change is captured on the table that changed.",
 	OutboxEvent: MESSAGING_REASON,
 	InboxProcessedEvent: MESSAGING_REASON,
 	InboxDeadLetter: MESSAGING_REASON,
@@ -152,6 +157,9 @@ const KEY_VERSION_REASON = "The version number of the key that encrypted a secre
 
 /** Columns whose name matches {@link SECRET_LOOKING_COLUMN} but whose value is not secret — kept in change records. */
 export const DATA_CHANGE_NON_SECRET_COLUMNS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+	Experiment: {
+		salt: "Spreads one experiment's people differently from another's (ADR 087); knowing it only tells which variant someone gets, which guards nothing.",
+	},
 	OpsServer: {
 		agentTokenPrefix: "The first 16 characters of a 49-character agent token, shown so operators can tell tokens apart; the remaining 256 random bits stay secret.",
 	},

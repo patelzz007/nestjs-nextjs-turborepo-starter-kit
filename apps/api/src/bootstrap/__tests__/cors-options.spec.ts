@@ -14,7 +14,7 @@ describe("buildCorsOptions", () => {
 	});
 
 	it("allows exactly the request headers the API reads, plus the merchant console's tenant and store headers", () => {
-		expect(options.allowedHeaders).toEqual(["Content-Type", "Accept", "X-Client-Type", "X-Mutation-Intent", "Idempotency-Key", "X-Tenant-Id", "X-Location-Id"]);
+		expect(options.allowedHeaders).toEqual(["Content-Type", "Accept", "X-Client-Type", "X-Mutation-Intent", "Idempotency-Key", "X-Tenant-Id", "X-Location-Id", "X-Device-Id"]);
 	});
 
 	it("lets browser code read a download's file name and a rate limit's wait, cross-origin", () => {

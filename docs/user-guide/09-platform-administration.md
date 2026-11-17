@@ -172,8 +172,8 @@ Permissions: `LIST`/`READ` `KANBAN_TASK` to see the boards and items (and to wat
 items, `UPDATE` to edit, move, link, tick checklists, comment and attach, `DELETE` to delete items (once
 they have no children), and `UPDATE` on `KANBAN_BOARD` to rearrange columns and set WIP limits. Admins
 have all of them. Anyone holding `READ` can be assigned.
-The boards sit in the Components section, so they are shown where that section is enabled
-(`ADMIN_SHOWCASE`).
+The boards sit in the Components section, so they are shown while that section's `showcase` feature flag is on
+(**Releases → Feature flags**).
 
 ## Under the hood
 

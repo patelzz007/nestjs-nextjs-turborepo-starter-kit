@@ -3,6 +3,7 @@ import { z } from "zod";
 import { JsonValueSchema, PLATFORM_EVENT_TOPICS, PlatformEventMessageSchema, readPlatformEventTenantId, type JsonValue, type PlatformEventMessage } from "@workspace/shared";
 
 import { boundErrorText, captureDeadLetterPayload } from "./dead-letter";
+import { exposureRowsOf, metricRowsOf } from "./flag-projections";
 import type { ProcessingRetrySettings } from "./inbox-settings";
 import type { DeadLetterReason, InboxStore, KafkaCoordinates } from "./inbox";
 
@@ -189,6 +190,8 @@ function applyMessage(record: KafkaRecord, message: PlatformEventMessage, deps: 
 			payload: { eventId: message.eventId, type: message.type, correlationId: message.correlationId, tenantId, occurredAt: message.occurredAt },
 			occurredAt: message.occurredAt,
 		});
+		await tx.insertFlagExposures(exposureRowsOf(message));
+		await tx.insertMetricEvents(metricRowsOf(message));
 		return true;
 	});
 }

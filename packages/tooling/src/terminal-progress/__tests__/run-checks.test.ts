@@ -2,12 +2,12 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ChangeSummary } from "../change-summary.ts";
 import type { KeyboardOpener, KeyName } from "../keyboard.ts";
 import { failureLog, runChecks, terminalStream, toLogLine, type LiveCheck } from "../run-checks.ts";
-import type { ProgressStream } from "../screen.ts";
+import { TERMINAL_BELL, type ProgressStream } from "../screen.ts";
 
 const CHANGES: ChangeSummary = { headline: "main → origin/main · 1 commit", commits: [], files: [] };
 const NO_KEYBOARD: KeyboardOpener = () => undefined;
@@ -126,25 +126,65 @@ describe("runChecks", () => {
 		expect(text.slice(text.indexOf("\u001B[?1049l"))).toContain("All clear");
 	});
 
-	it("compares a run with the last one only when it finished", async () => {
+	it("compares a run with the ones before only when it finished", async () => {
 		writeHistory(folder, { totalMs: 60_000, checks: { one: 60_000 } });
 		const failed = recording(true);
 		const passed = recording(true);
 
 		await run([nodeCheck("one", "process.exit(1)")], failed);
 		await run([nodeCheck("one", "")], passed);
-		expect(failed.text()).not.toContain("than last time");
-		expect(passed.text()).toContain("faster than last time");
+		expect(failed.text()).not.toContain("New best time");
+		expect(passed.text()).toContain("New best time");
 	});
 
-	it("remembers a good run's timings, and not a failed one's", async () => {
+	it("remembers a good run's timings, not a failed one's, and a failure ends the streak", async () => {
 		const history = path.join(folder, "logs/hook.history.json");
 
 		await run([nodeCheck("one", "process.exit(1)")], recording(false));
 		expect(existsSync(history)).toBe(false);
 
 		await run([nodeCheck("one", "")], recording(false));
+		await run([nodeCheck("one", "")], recording(false));
 		expect(readFileSync(history, "utf8")).toContain('"one"');
+		expect(readFileSync(history, "utf8")).toContain('"streak": 2');
+
+		await run([nodeCheck("one", "process.exit(1)")], recording(false));
+		expect(readFileSync(history, "utf8")).toContain('"streak": 0');
+		expect(readFileSync(history, "utf8")).toContain('"one"');
+	});
+
+	it("names the command that reruns just the package that failed", async () => {
+		const stream = recording(false);
+		const failing: LiveCheck = { ...nodeCheck("test", "console.log('Failed:    @workspace/api#test'); process.exit(1)"), task: "test" };
+
+		await run([failing], stream);
+		expect(stream.text()).toContain("$ pnpm turbo run test --filter=@workspace/api");
+	});
+
+	it("rings the bell at the end of a long run in a terminal, and not of a short one", async () => {
+		const realNow = Date.now.bind(Date);
+		let offsetMs = 0;
+		const clock = vi.spyOn(Date, "now").mockImplementation(() => realNow() + offsetMs);
+		const long = recording(true);
+		const short = recording(true);
+
+		try {
+			const pending = run([nodeCheck("one", "setTimeout(() => {}, 400)")], long);
+			await new Promise((resolve) => {
+				setTimeout(resolve, 100);
+			});
+			offsetMs = 60_000;
+			await pending;
+			offsetMs = 0;
+			await run([nodeCheck("one", "")], short);
+		} finally {
+			clock.mockRestore();
+		}
+
+		// The tab title is ended by the same character, so only what follows the dashboard counts.
+		const afterDashboard = (text: string): string => text.slice(text.indexOf("\u001B[?1049l"));
+		expect(afterDashboard(long.text())).toContain(TERMINAL_BELL);
+		expect(afterDashboard(short.text())).not.toContain(TERMINAL_BELL);
 	});
 
 	it("colours a terminal that supports it, and leaves one that doesn't plain", async () => {

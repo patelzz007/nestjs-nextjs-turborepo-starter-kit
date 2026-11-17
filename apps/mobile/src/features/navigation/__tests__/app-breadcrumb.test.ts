@@ -8,9 +8,10 @@ import { NAVIGATION_LABELS } from "../navigation-labels";
 
 const EVERYTHING: DrawerAccess = {
 	capabilities: [PERMISSION.GITHUB_PULL_REQUEST.READ, PERMISSION.GITHUB_PULL_REQUEST.UPDATE, PERMISSION.SERVER_METRIC.LIST],
-	enabledFeatureFlags: ["showcase", "github-pull-requests"],
+	enabledFeatureFlags: ["showcase", "github-pull-requests", "mobile-analytics"],
 };
-const NOTHING_EXTRA: DrawerAccess = { capabilities: [], enabledFeatureFlags: [] };
+/** No extra capability and no switch beyond the API flags' code defaults (analytics is on). */
+const NOTHING_EXTRA: DrawerAccess = { capabilities: [], enabledFeatureFlags: ["mobile-analytics"] };
 
 /** The trail as labels and links, for a session with `access`, in English. */
 function trailOf(pathname: string, access: DrawerAccess = EVERYTHING): readonly (readonly [string, AppCrumb["href"]])[] {

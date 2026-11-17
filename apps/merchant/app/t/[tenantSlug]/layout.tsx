@@ -5,6 +5,7 @@ import { loadMerchantServerContext, loadTenantContext, loadPreferredTenantSlug, 
 import { isCanonicalTenantSlug } from "@/contexts/tenancy/lib/tenant/resolve-slug";
 import { loadServerLocationScope, type ServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
 import { tenantRoutes, ROUTES } from "@/lib/routes";
+import { loadMerchantFeatureFlagBundle } from "@/lib/server/feature-flag-bundle";
 import { redirect } from "next/navigation";
 import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
@@ -52,6 +53,8 @@ export default async function TenantLayout({ children, params }: TenantLayoutPro
 	// Seeds the tenant context (store filter + accessible locations) so the first client render
 	// asks for exactly the store the pages prefetch. Skipped for a non-member: the page guard denies.
 	const locationScope: ServerLocationScope | undefined = resolvedTenant !== undefined ? await loadServerLocationScope(tenantSlug) : undefined;
+	// The store's flags as the server sees them, so a flagged item never shows and then disappears (ADR 087).
+	const featureFlags = resolvedTenant !== undefined ? await loadMerchantFeatureFlagBundle(tenantSlug) : null;
 
 	return (
 		<MerchantShell
@@ -61,7 +64,8 @@ export default async function TenantLayout({ children, params }: TenantLayoutPro
 			initialMemberships={ctx.membershipsEnvelope}
 			initialUser={session.user}
 			initialIsImpersonating={session.isImpersonating}
-			initialSidebarOpen={sidebarOpen}>
+			initialSidebarOpen={sidebarOpen}
+			initialFeatureFlags={featureFlags}>
 			{resolvedTenant !== undefined ? <TenantBootstrap tenantSlug={resolvedTenant.slug} /> : null}
 			{children}
 		</MerchantShell>

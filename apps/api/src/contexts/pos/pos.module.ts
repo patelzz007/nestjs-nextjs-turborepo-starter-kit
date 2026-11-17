@@ -56,7 +56,7 @@ import { IntegrationRedemptionsController } from "./presentation/http/integratio
 import { TenantRedemptionsController } from "./presentation/http/tenant-redemptions.controller";
 import { TenantTerminalsController, PosTerminalsController } from "./presentation/http/tenant-terminals.controller";
 import { RedemptionsController } from "./presentation/http/redemptions.controller";
-import { FeatureFlagsModule, STORE_FEATURE_FLAGS, type StoreFeatureFlags } from "../feature-flags/public-api";
+import { FEATURE_FLAGS, FeatureFlagsModule, type FeatureFlags } from "../feature-flags/public-api";
 import { TILL_REDEMPTION_GATE, type TillRedemptionGate } from "./application/ports/till-redemption.port";
 import { FeatureFlagTillRedemptionGate } from "./infrastructure/feature-flags/feature-flag-till-redemption.gate";
 
@@ -80,8 +80,8 @@ import { FeatureFlagTillRedemptionGate } from "./infrastructure/feature-flags/fe
 		REWARD_CODE_HASHER_PROVIDER,
 		{
 			provide: TILL_REDEMPTION_GATE,
-			inject: [STORE_FEATURE_FLAGS],
-			useFactory: (flags: StoreFeatureFlags): TillRedemptionGate => new FeatureFlagTillRedemptionGate(flags),
+			inject: [FEATURE_FLAGS],
+			useFactory: (flags: FeatureFlags): TillRedemptionGate => new FeatureFlagTillRedemptionGate(flags),
 		},
 		{
 			provide: POS_UNIT_OF_WORK,

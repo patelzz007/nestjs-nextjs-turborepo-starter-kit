@@ -1,5 +1,6 @@
 import { Controller, Delete, Get, HttpStatus, Inject, Patch, Post, Put, Sse, type MessageEvent } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import {
 	apiContract,
 	apiPath,
@@ -54,6 +55,11 @@ export class NotificationsController {
 		@Inject(IN_APP_SIGNAL) private readonly signals: InAppSignalPort,
 	) {}
 
+	// The bell's three reads (inbox, unread count, stream) load with every page of every app, so they skip the per-IP
+	// `strict` throttler meant for credential routes, like profile and preferences: without TRUST_PROXY every server
+	// render arrives from the renderer's one address, and a refused stream closes, refreshes the session and can end it.
+	// The per-principal `default` and the per-IP `preAuth` throttlers still count them.
+	@SkipThrottle({ strict: true })
 	@RequirePermission("READ", "PROFILE", OWN)
 	@Get()
 	@ApiOperation({ summary: "The caller's inbox on one surface, newest first (`filter[readAt][isNull]=true` = unread)" })
@@ -65,6 +71,7 @@ export class NotificationsController {
 		return this.account.listInbox(actor, query);
 	}
 
+	@SkipThrottle({ strict: true })
 	@RequirePermission("READ", "PROFILE", OWN)
 	@Get("unread-count")
 	@ApiOperation({ summary: "How many notifications on one surface are unread (the bell badge)" })
@@ -76,6 +83,7 @@ export class NotificationsController {
 		return { unread: await this.account.unreadCount(actor, query.surface) };
 	}
 
+	@SkipThrottle({ strict: true })
 	@RequirePermission("READ", "PROFILE", OWN)
 	@Sse("stream")
 	@ApiOperation({ summary: "The caller's inbox, live (SSE): a `{ surface, unread }` frame whenever it changes" })

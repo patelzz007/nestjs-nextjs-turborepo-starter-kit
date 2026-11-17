@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import { MERCHANT_CAPABILITY, MerchantCapabilitySchema, MembershipRoleSchema, type CapabilitySlug, type MembershipRole } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, MerchantCapabilitySchema, MembershipRoleSchema, type CapabilitySlug, type FeatureFlagKey, type MembershipRole } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
@@ -16,6 +16,7 @@ import {
 	resolveTenantPageRoute,
 	type TenantPageRoute,
 } from "@/lib/navigation/tenant-route-authorization";
+import { MERCHANT_FEATURE_FLAGS } from "@/lib/feature-flags";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { membershipFixture } from "@/testing/authorization";
@@ -80,9 +81,10 @@ function flattenSidebar(menu: CompiledSidebarMenuData): readonly FlatSidebarItem
 
 const SIDEBAR_ROWS: readonly FlatSidebarItem[] = flattenSidebar(MERCHANT_SIDEBAR_MENU);
 
-function visibleSidebarUrls(role: MembershipRole | undefined): readonly string[] {
+/** What the sidebar shows a role; feature flags are a separate axis (all on here unless a test says otherwise). */
+function visibleSidebarUrls(role: MembershipRole | undefined, enabledFeatureFlags: readonly FeatureFlagKey[] = MERCHANT_FEATURE_FLAGS): readonly string[] {
 	const membership = role === undefined ? undefined : membershipFixture(role);
-	const filtered = filterCompiledSidebarMenu(MERCHANT_SIDEBAR_MENU, resolveMerchantCapabilities(membership));
+	const filtered = filterCompiledSidebarMenu(MERCHANT_SIDEBAR_MENU, resolveMerchantCapabilities(membership), { enabledFeatureFlags });
 	return [
 		...new Set(
 			flattenSidebar(filtered)
@@ -202,6 +204,15 @@ describe("merchant sidebar ↔ tenant route map", () => {
 	it("uses only known merchant capability slugs", () => {
 		const unknown = SIDEBAR_ROWS.flatMap((row) => row.item.authorization?.permissions ?? []).filter((slug) => !MerchantCapabilitySchema.safeParse(slug).success);
 		expect(unknown).toEqual([]);
+	});
+
+	it("names only flags the merchant app reads, and hides an item while its flag is off (ADR 087)", () => {
+		const unknown = SIDEBAR_ROWS.flatMap((row) => (row.item.featureFlag === undefined ? [] : [row.item.featureFlag])).filter(
+			(key) => !MERCHANT_FEATURE_FLAGS.some((merchantKey) => merchantKey === key),
+		);
+		expect(unknown).toEqual([]);
+		expect(visibleSidebarUrls("OWNER")).toContain("/analytics");
+		expect(visibleSidebarUrls("OWNER", [])).not.toContain("/analytics");
 	});
 
 	it("gives every item the same requirement as the page it opens", () => {

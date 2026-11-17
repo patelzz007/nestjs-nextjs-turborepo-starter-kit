@@ -70,6 +70,29 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 	// An erasure request ends as CANCELLED or COMPLETED, never deleted: it is the evidence (ADR 077).
 	neverSoftDeleted("AccountErasure", "An erasure request ends as cancelled or completed, never deleted: it is the evidence it was asked for and carried out."),
 	neverSoftDeleted("AuditLegalHold", "A legal hold is lifted, never deleted: the record of who held what, and why, stays."),
+	// Feature flags (ADR 087): overrides, groups and group members are soft-deleted (and seeded so); these never are.
+	neverSoftDeleted("FeatureFlagExposure", APPEND_ONLY_RECORD),
+	neverSoftDeleted("ExperimentMetricEvent", APPEND_ONLY_RECORD),
+	neverSoftDeleted(
+		"FlagRevision",
+		"A rule revision ends through its status (superseded, rejected, expired) and is kept as the flag's change history (ADR 086/087); nothing soft-deletes one.",
+	),
+	neverSoftDeleted(
+		"Experiment",
+		"An experiment ends through its status (stopped) and is kept with its results as the decision record; there is no delete, so nothing soft-deletes one.",
+	),
+	neverSoftDeleted(
+		"FeatureFlagCatalogVersion",
+		"The catalogue's single version row is upserted and raised in place by every catalogue change for the deployment's whole life; nothing soft-deletes it.",
+	),
+	neverSoftDeleted(
+		"FeatureFlagExposureDaily",
+		"A derived rollup: the analytics consumer rebuilds a whole day's rows (delete and re-insert) from the exposures; no write path soft-deletes one.",
+	),
+	neverSoftDeleted(
+		"ExperimentResult",
+		"A derived projection: the analytics consumer recomputes an experiment's results from its metric events and exposures; no write path soft-deletes one.",
+	),
 	...[
 		"DocsSyncRun",
 		"GithubWebhookDelivery",

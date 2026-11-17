@@ -27,14 +27,11 @@ export const AdminClientEnvSchema = createPublicEnvSchema({
 });
 export type AdminClientEnv = z.output<typeof AdminClientEnvSchema>;
 
-/** Server-only config (never bundled for the browser). */
-export const AdminServerEnvSchema = NextAppServerEnvSchema.extend({
-	/**
-	 * The developer component showcase (`/components`): `"true"` / `"false"`. Unset follows the build — on
-	 * in development and test, off in production, so a deployed admin panel does not serve it unless asked.
-	 */
-	ADMIN_SHOWCASE: z.enum(["true", "false"], { error: 'must be "true" or "false"' }).optional(),
-});
+/**
+ * Server-only config (never bundled for the browser). The developer component showcase is the `showcase` feature
+ * flag now (ADR 087): a rule turns it on outside production, set from the console, not from this file.
+ */
+export const AdminServerEnvSchema = NextAppServerEnvSchema;
 export type AdminServerEnv = z.output<typeof AdminServerEnvSchema>;
 
 /** Label used in fail-fast error messages. */

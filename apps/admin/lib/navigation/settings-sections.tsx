@@ -1,4 +1,4 @@
-import { Award, CircleUserRound, KeyRound, Shield, ShieldCheck, ToggleRight } from "lucide-react";
+import { Award, CircleUserRound, KeyRound, Shield, ShieldCheck } from "lucide-react";
 import type * as React from "react";
 
 import { ROUTES } from "@/lib/routes";
@@ -27,7 +27,6 @@ export const ADMIN_SETTINGS_SECTIONS: readonly AdminSettingsGroup[] = [
 		label: "Platform",
 		sections: [
 			{ id: "access", label: "Access control", href: ROUTES.settings.access, icon: <ShieldCheck /> },
-			{ id: "feature-flags", label: "Feature flags", href: ROUTES.settings.featureFlags, icon: <ToggleRight /> },
 			{ id: "tiers", label: "Customer tiers", href: ROUTES.settings.tiers, icon: <Award /> },
 		],
 	},

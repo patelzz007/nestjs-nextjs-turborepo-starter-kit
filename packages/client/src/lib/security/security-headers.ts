@@ -13,7 +13,10 @@
 //
 // Edge-safe: Web Crypto and string work only.
 
+import { DEVICE_ID_COOKIE } from "@workspace/shared";
 import { NextResponse, type NextRequest } from "next/server";
+
+import { deviceIdCookieToSet } from "../contexts/feature-flags/device-id";
 
 /** The request header carrying the nonce to the layout. */
 export const SECURITY_NONCE_HEADER = "x-nonce";
@@ -89,6 +92,14 @@ export interface SecurityHeadersOptions {
 	readonly development: boolean;
 	/** Replaced in tests. */
 	readonly nonce?: () => string;
+	/** A fresh anonymous device id (ADR 087); replaced in tests. */
+	readonly deviceId?: () => string;
+}
+
+/** `cookie` with one more `name=value` pair. */
+function withCookie(cookieHeader: string | null, name: string, value: string): string {
+	const pair = `${name}=${encodeURIComponent(value)}`;
+	return cookieHeader === null || cookieHeader === "" ? pair : `${cookieHeader}; ${pair}`;
 }
 
 /**
@@ -101,8 +112,22 @@ export async function withSecurityHeaders(request: NextRequest, proxy: SecuredPr
 	const requestHeaders = new Headers(request.headers);
 	requestHeaders.set(SECURITY_NONCE_HEADER, nonce);
 	requestHeaders.set(CONTENT_SECURITY_POLICY_HEADER, policy);
+	// The browser's anonymous device id (ADR 087): a first visit gets one, and this very render already sees it.
+	const deviceCookie = deviceIdCookieToSet(request.cookies.get(DEVICE_ID_COOKIE)?.value, options.deviceId ?? ((): string => crypto.randomUUID()), !options.development);
+	if (deviceCookie !== null) {
+		requestHeaders.set("cookie", withCookie(request.headers.get("cookie"), deviceCookie.name, deviceCookie.value));
+	}
 	const next = (): NextResponse => NextResponse.next({ request: { headers: requestHeaders } });
 	const response: NextResponse = await proxy(request, next);
+	if (deviceCookie !== null) {
+		response.cookies.set(deviceCookie.name, deviceCookie.value, {
+			maxAge: deviceCookie.maxAge,
+			path: deviceCookie.path,
+			sameSite: deviceCookie.sameSite,
+			httpOnly: deviceCookie.httpOnly,
+			secure: deviceCookie.secure,
+		});
+	}
 	response.headers.set(CONTENT_SECURITY_POLICY_HEADER, policy);
 	for (const [name, value] of Object.entries(STATIC_SECURITY_HEADERS)) {
 		response.headers.set(name, value);

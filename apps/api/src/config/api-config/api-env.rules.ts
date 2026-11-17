@@ -193,6 +193,15 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 	const isProduction: boolean = env.NODE_ENV === NodeEnvSchema.enum.production;
 
 	requireDistinctSecrets(env, context);
+	// A production build on localhost (a local smoke run) is development as far as feature flags go; a deployed one
+	// must say which environment it is, since rules match on it and production rule changes wait for approval.
+	if (isDeployedProduction(env) && env.DEPLOYMENT_ENVIRONMENT === undefined) {
+		context.addIssue({
+			code: "custom",
+			path: ["DEPLOYMENT_ENVIRONMENT"],
+			message: "is required on a deployed production environment: staging or production (feature flag rules and approvals depend on it, ADR 087)",
+		});
+	}
 	if (!env.TENANCY_ENABLED && env.DEFAULT_TENANT_ID === undefined) {
 		context.addIssue({
 			code: "custom",
@@ -231,8 +240,8 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 	// A deployed production API must really deliver email: `log-only` would
 	// print one-time codes and reset links into the log, and `noop` would
 	// report fake "sent" results to every caller.
-	const isDeployedProduction: boolean = isProduction && !isLoopbackUrl(env.APP_URL);
-	if (isDeployedProduction && env.EMAIL_MODE !== "send") {
+	const deployedProduction: boolean = isDeployedProduction(env);
+	if (deployedProduction && env.EMAIL_MODE !== "send") {
 		context.addIssue({
 			code: "custom",
 			path: ["EMAIL_MODE"],
@@ -241,7 +250,7 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 	}
 	// Without the signing secret every Resend delivery webhook is rejected, so
 	// bounces and complaints would never reach the email log.
-	if (isDeployedProduction && env.EMAIL_MODE === "send" && env.RESEND_WEBHOOK_SECRET === undefined) {
+	if (deployedProduction && env.EMAIL_MODE === "send" && env.RESEND_WEBHOOK_SECRET === undefined) {
 		context.addIssue({
 			code: "custom",
 			path: ["RESEND_WEBHOOK_SECRET"],

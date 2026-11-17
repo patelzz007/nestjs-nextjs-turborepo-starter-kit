@@ -135,7 +135,6 @@ Every app's `.env.example` lists these with comments. Copy it to `.env`.
 | `NEXT_PUBLIC_SESSION_POLL_MS` | | optional | | client | whole ms. Unset or `0` → `null` (disabled) |
 | `NODE_ENV` | set by Next | set by Next | set by Next | server | `development` / `test` / `production` |
 | `COOKIE_DOMAIN` | optional | optional | optional | server | bare host (`localhost`, `.example.com`) |
-| `ADMIN_SHOWCASE` | | optional | | server | `true` / `false`. Unset → the developer component showcase (`/components`, the `showcase` flag's default) is served in development and test, **not** in production; off, the route answers 404 and the sidebar hides it |
 
 Empty values (`FOO=`) are treated as unset. There are **no hardcoded URL
 fallbacks**. A missing origin fails fast instead of silently pointing

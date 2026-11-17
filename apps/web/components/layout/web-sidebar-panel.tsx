@@ -1,6 +1,6 @@
 "use client";
 
-import { useCanAccessWebPath } from "@/contexts/identity/components/route-access-guard";
+import { useCanAccessWebPath, useWebRouteSession } from "@/contexts/identity/components/route-access-guard";
 import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
 import { useWebBreadcrumb } from "@/components/breadcrumb-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
@@ -66,7 +66,8 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 
 	// In the language on screen (5.12); ids and the saved section order stay the English ones.
 	const menu = useTranslatedSidebarMenu(USER_SIDEBAR_MENU, USER_SIDEBAR_LABELS);
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(menu, capabilities), [capabilities, menu]);
+	const { enabledFeatureFlags } = useWebRouteSession();
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(menu, capabilities, { enabledFeatureFlags }), [capabilities, enabledFeatureFlags, menu]);
 	const pinnedUrls = useCommandPalettePinnedUrls();
 
 	const view = React.useMemo(() => buildSidebarView({ menu: filteredMenu, pathname, sectionOrder, searchQuery }), [filteredMenu, pathname, sectionOrder, searchQuery]);

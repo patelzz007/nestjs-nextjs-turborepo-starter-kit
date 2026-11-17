@@ -72,6 +72,8 @@ const NOT_MODELLED: readonly string[] = [
 	"StatusIncidentState",
 	"WebhookEndpointStatus",
 	"WebhookDeliveryStatus",
+	"FlagRevisionStatus",
+	"ExperimentStatus",
 ];
 
 /** Every status enum of the schema, with its values. */

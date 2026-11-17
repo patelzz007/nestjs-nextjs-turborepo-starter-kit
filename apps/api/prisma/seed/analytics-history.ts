@@ -36,7 +36,7 @@ import { seedCodeHash } from "./reward-code-hashing";
 export const ANALYTICS_HISTORY_DAYS = 365;
 
 /** How long a claim stays redeemable (the app's default claim window). */
-const CLAIM_WINDOW_MS = 7 * DAY_MS;
+export const CLAIM_WINDOW_MS = 7 * DAY_MS;
 
 /** Kuala Lumpur and Melaka are UTC+8 all year: local wall clock = UTC + 8 h. */
 const STORE_UTC_OFFSET_MS = 8 * 3_600_000;
@@ -328,13 +328,13 @@ function offeredAt(reward: HistoryReward, store: HistoryStore): boolean {
 }
 
 /** Local midnight (UTC+8) of the day `daysAgo` days before `nowMs`, as epoch ms. */
-function localMidnight(nowMs: number, daysAgo: number): number {
+export function localMidnight(nowMs: number, daysAgo: number): number {
 	const local = nowMs + STORE_UTC_OFFSET_MS - daysAgo * DAY_MS;
 	return local - (local % DAY_MS) - STORE_UTC_OFFSET_MS;
 }
 
 /** A random instant inside opening hours of the local day starting at `midnightMs`. */
-function duringOpeningHours(random: SeededRandom, midnightMs: number): number {
+export function duringOpeningHours(random: SeededRandom, midnightMs: number): number {
 	return midnightMs + random.int(OPENING_HOUR * MINUTES_PER_HOUR, CLOSING_HOUR * MINUTES_PER_HOUR - 1) * MINUTE_MS;
 }
 

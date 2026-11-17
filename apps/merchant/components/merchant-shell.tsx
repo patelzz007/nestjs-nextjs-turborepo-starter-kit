@@ -15,7 +15,8 @@ import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
 import { TenantContextProvider, TenantRequestScope } from "@/features/tenant-context/facade";
 import { useSwitchTenant } from "@/contexts/tenancy/lib/tenant/use-switch-tenant";
 import { useAuth, useAuthUser } from "@workspace/client/lib/contexts/identity";
-import type { Envelope, TenantContextResponse, TenantRewardMembershipResponse } from "@workspace/shared";
+import type { Envelope, FeatureFlagBundle, TenantContextResponse, TenantRewardMembershipResponse } from "@workspace/shared";
+import { MerchantFeatureFlags } from "@/components/merchant-feature-flags";
 import { StoreBoundAppPanelShell } from "@workspace/client/lib/features/sidebar/store-bound-panel-shell";
 import { MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME, MERCHANT_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
 import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
@@ -40,6 +41,8 @@ export interface MerchantShellProps {
 	readonly initialIsImpersonating?: boolean;
 	/** Whether the desktop sidebar was open, read by the server from its cookie — the first paint matches it. */
 	readonly initialSidebarOpen?: boolean | undefined;
+	/** The feature flag bundle the server rendered with (ADR 087); null when it couldn't be read. */
+	readonly initialFeatureFlags?: FeatureFlagBundle | null | undefined;
 }
 
 /** Merchant portal chrome — custom sidebar + topbar with command palette. */
@@ -64,6 +67,7 @@ function MerchantShellContent({
 	initialMemberships,
 	initialUser = null,
 	initialIsImpersonating = false,
+	initialFeatureFlags = null,
 }: MerchantShellProps): React.JSX.Element {
 	const { api } = useAuth();
 	const pathname = usePathname();
@@ -89,35 +93,37 @@ function MerchantShellContent({
 	return (
 		<TenantContextProvider tenantSlug={tenantSlug} initialLocationId={initialLocationId} initialTenantContext={initialTenantContext}>
 			<TenantRequestScope />
-			<MerchantAuthorizationProvider>
-				<MerchantBreadcrumbProvider>
-					<StoreBoundAppPanelShell
-						shellClassName="merchant-panel-shell"
-						contentClassName="space-y-6"
-						scrollResetKey={pathname}
-						banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
-						sidebar={
-							<MerchantSidebarPanel memberships={memberships} hasMoreStores={hasMoreStores} tenantSlug={tenantSlug} onStoreChange={switchTenant} initialUser={initialUser} />
-						}
-						topbar={<MerchantTopbar />}>
-						{showMembershipLoading ? (
-							<MerchantAccessLoading />
-						) : lifecycleScreen !== undefined ? (
-							<TenantLifecycleScreen membership={lifecycleScreen} />
-						) : showMembershipGate ? (
-							<div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
-								<p className="text-sm font-medium text-foreground">No merchant membership found</p>
-								<p className="mt-2 text-sm text-muted-foreground">Ask an admin for an invite, or impersonate a merchant owner from the panel below.</p>
-								<div className="mt-6">
-									<ImpersonateUserPanel />
+			<MerchantFeatureFlags initialBundle={initialFeatureFlags}>
+				<MerchantAuthorizationProvider>
+					<MerchantBreadcrumbProvider>
+						<StoreBoundAppPanelShell
+							shellClassName="merchant-panel-shell"
+							contentClassName="space-y-6"
+							scrollResetKey={pathname}
+							banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
+							sidebar={
+								<MerchantSidebarPanel memberships={memberships} hasMoreStores={hasMoreStores} tenantSlug={tenantSlug} onStoreChange={switchTenant} initialUser={initialUser} />
+							}
+							topbar={<MerchantTopbar />}>
+							{showMembershipLoading ? (
+								<MerchantAccessLoading />
+							) : lifecycleScreen !== undefined ? (
+								<TenantLifecycleScreen membership={lifecycleScreen} />
+							) : showMembershipGate ? (
+								<div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
+									<p className="text-sm font-medium text-foreground">No merchant membership found</p>
+									<p className="mt-2 text-sm text-muted-foreground">Ask an admin for an invite, or impersonate a merchant owner from the panel below.</p>
+									<div className="mt-6">
+										<ImpersonateUserPanel />
+									</div>
 								</div>
-							</div>
-						) : (
-							children
-						)}
-					</StoreBoundAppPanelShell>
-				</MerchantBreadcrumbProvider>
-			</MerchantAuthorizationProvider>
+							) : (
+								children
+							)}
+						</StoreBoundAppPanelShell>
+					</MerchantBreadcrumbProvider>
+				</MerchantAuthorizationProvider>
+			</MerchantFeatureFlags>
 		</TenantContextProvider>
 	);
 }

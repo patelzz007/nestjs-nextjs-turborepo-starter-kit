@@ -12,7 +12,7 @@ import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit
 import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrastructure/unit-of-work/unit-of-work.module";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
-import { API_FEATURE_FLAGS, FeatureFlagsModule, type ApiFeatureFlags } from "../feature-flags/public-api";
+import { FEATURE_FLAGS, FeatureFlagsModule, type FeatureFlags } from "../feature-flags/public-api";
 import { NotificationsModule, NotificationsTransactionalPortsFactory } from "../notifications/public-api";
 import { EvaluateCustomerTierHandler } from "./application/commands/evaluate-customer-tier/evaluate-customer-tier.handler";
 import { ReviewCustomerTiersHandler } from "./application/commands/review-customer-tiers/review-customer-tiers.handler";
@@ -67,8 +67,8 @@ import { TierReviewCron } from "./presentation/jobs/tier-review.cron";
 		},
 		{
 			provide: TIERS_AVAILABILITY,
-			inject: [API_FEATURE_FLAGS],
-			useFactory: (flags: ApiFeatureFlags): TiersAvailabilityPort => new TiersAvailabilityAdapter(flags),
+			inject: [FEATURE_FLAGS],
+			useFactory: (flags: FeatureFlags): TiersAvailabilityPort => new TiersAvailabilityAdapter(flags),
 		},
 		{
 			provide: TIER_READS,

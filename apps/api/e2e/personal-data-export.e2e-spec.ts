@@ -62,8 +62,16 @@ describe("Personal-data export (e2e)", () => {
 		const text = (name: string): string => Buffer.from(files[name] ?? new Uint8Array()).toString("utf8");
 		const manifest = PersonalDataManifestSchema.parse(JSON.parse(text("manifest.json")));
 		expect(manifest.userId).toBe(aliceId);
-		expect(manifest.sections.map((section) => section.name)).toStrictEqual(["account", "claims", "notifications", "referrals", "tiers"]);
-		expect(Object.keys(files).sort()).toStrictEqual(["account.json", "claims.json", "manifest.json", "notifications.json", "referrals.json", "tiers.json"]);
+		expect(manifest.sections.map((section) => section.name)).toStrictEqual(["account", "claims", "feature-flags", "notifications", "referrals", "tiers"]);
+		expect(Object.keys(files).sort()).toStrictEqual([
+			"account.json",
+			"claims.json",
+			"feature-flags.json",
+			"manifest.json",
+			"notifications.json",
+			"referrals.json",
+			"tiers.json",
+		]);
 
 		const account = z.object({ profile: z.object({ id: z.string(), email: z.string() }) }).parse(JSON.parse(text("account.json")));
 		expect(account.profile).toMatchObject({ id: aliceId, email: "alice.johnson@example.com" });

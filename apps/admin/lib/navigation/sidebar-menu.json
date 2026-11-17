@@ -253,6 +253,42 @@
 					]
 				}
 			]
+		},
+		{
+			"title": "Releases",
+			"labelKey": "releases",
+			"items": [
+				{
+					"title": "Feature flags",
+					"labelKey": "releases.feature-flags",
+					"url": "/releases/flags",
+					"icon": "ToggleRight"
+				},
+				{
+					"title": "Dynamic configs",
+					"labelKey": "releases.dynamic-configs",
+					"url": "/releases/configs",
+					"icon": "SlidersHorizontal"
+				},
+				{
+					"title": "Experiments",
+					"labelKey": "releases.experiments",
+					"url": "/releases/experiments",
+					"icon": "FlaskConical"
+				},
+				{
+					"title": "Flag groups",
+					"labelKey": "releases.flag-groups",
+					"url": "/releases/groups",
+					"icon": "UsersRound"
+				},
+				{
+					"title": "Promotion",
+					"labelKey": "releases.promotion",
+					"url": "/releases/promotion",
+					"icon": "ArrowRightLeft"
+				}
+			]
 		}
 	],
 	"bottomItems": [

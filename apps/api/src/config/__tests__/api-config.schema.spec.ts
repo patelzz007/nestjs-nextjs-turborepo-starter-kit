@@ -52,6 +52,8 @@ const DEPLOYED_PRODUCTION: TestEnv = {
 	MERCHANT_APP_URL: "https://merchant.example.com",
 	// ADR 080: every client app is on the passkey RP ID or a subdomain of it.
 	WEBAUTHN_RP_ID: "example.com",
+	// ADR 087: a deployed production API names its environment (feature flag rules and approvals depend on it).
+	DEPLOYMENT_ENVIRONMENT: "production",
 	EMAIL_MODE: "send",
 	RESEND_API_KEY: "re_test_only_key",
 	RESEND_WEBHOOK_SECRET: "whsec_test_only_secret",
@@ -90,7 +92,14 @@ describe("API env schema", () => {
 	it("parses the TEST-ONLY fixture into the grouped config", () => {
 		const config = parse();
 
-		expect(config.runtime).toEqual({ nodeEnv: "test", isProduction: false, isDevelopment: false, isTest: true, appName: "Starter Test" });
+		expect(config.runtime).toEqual({
+			nodeEnv: "test",
+			isProduction: false,
+			isDevelopment: false,
+			isTest: true,
+			appName: "Starter Test",
+			deploymentEnvironment: "development",
+		});
 		expect(config.http.corsOrigins).toEqual(["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"]);
 		expect(config.clientApps).toEqual({ webUrl: "http://localhost:3000", adminUrl: "http://localhost:3001", merchantUrl: "http://localhost:3003" });
 		expect(config.auth.bcryptSaltRounds).toBe(10);
@@ -443,6 +452,15 @@ describe("API env schema", () => {
 				resendApiKey: null,
 			});
 			expect(parse({ ...PRODUCTION, EMAIL_MODE: "send", EMAIL_PROVIDER: "mailpit" }).email.provider).toBe("mailpit");
+		});
+
+		it("requires DEPLOYMENT_ENVIRONMENT on a deployed production environment only, defaulting to development elsewhere (ADR 087)", () => {
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, DEPLOYMENT_ENVIRONMENT: undefined }).variables).toEqual(["DEPLOYMENT_ENVIRONMENT"]);
+			expect(parse(DEPLOYED_PRODUCTION).runtime.deploymentEnvironment).toBe("production");
+			expect(parse({ ...DEPLOYED_PRODUCTION, DEPLOYMENT_ENVIRONMENT: "staging" }).runtime.deploymentEnvironment).toBe("staging");
+			// A production build on localhost is not a deployment: it is development as far as flags go.
+			expect(parse(PRODUCTION).runtime.deploymentEnvironment).toBe("development");
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, DEPLOYMENT_ENVIRONMENT: "qa" }).variables).toEqual(["DEPLOYMENT_ENVIRONMENT"]);
 		});
 
 		it("refuses Mailpit on every deployed environment, whatever its NODE_ENV", () => {

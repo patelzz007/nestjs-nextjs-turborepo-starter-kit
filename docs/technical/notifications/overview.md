@@ -73,6 +73,7 @@ from the mobile app, which is the customer surface.
 | Where it comes from | `GET /notifications/unread-count?surface=…` | the same |
 | Live | `GET /notifications/stream` (SSE): every frame reloads the count and the inbox; polls every 60 s while the stream is down | the same stream over `expo/fetch` with the bearer token, only while the app is in the foreground; one reload whenever it reconnects or the app comes back |
 | Inbox | Bell dropdown (newest 4) and the full notifications page | The notifications screen (below) |
+| Rate limits | The inbox, the count and the stream load with every page, so they skip the per-IP `strict` throttler meant for credential routes (without `TRUST_PROXY`, every server render comes from the renderer's one address, and a refused stream closes and refreshes the session). The per-principal `default` throttler and the per-IP `preAuth` bucket still count them | the same |
 
 A notification is signalled over Redis pub/sub (`notifications:inbox`), so the stream works whichever API
 instance holds it. The stream carries no content — just "your inbox changed".

@@ -3,7 +3,20 @@ import { describe, expect, it } from "vitest";
 import { INITIAL_DASHBOARD } from "../dashboard.ts";
 import { buildPanel, type Panel } from "../panels.ts";
 import { applyLine, finishCheck, startCheck, waitingCheck, type CheckProgress } from "../progress.ts";
-import { panelHeight, renderCancelled, renderFailed, renderFrame, renderPassed, renderSummary, SPINNER_FRAMES, type FrameView } from "../render.ts";
+import {
+	panelHeight,
+	panelWidth,
+	renderCancelled,
+	renderFailed,
+	renderFrame,
+	renderPassed,
+	renderRerun,
+	renderSummary,
+	sparkline,
+	SPINNER_FRAMES,
+	windowTitle,
+	type FrameView,
+} from "../render.ts";
 import type { Tint } from "../text.ts";
 
 const PLAIN: Tint = { title: String, active: String, pass: String, fail: String, warn: String, quiet: String };
@@ -12,7 +25,11 @@ const HEIGHT = 30;
 const NOW = 5000;
 
 function panelFor(checks: readonly CheckProgress[], width: number, state = INITIAL_DASHBOARD): Panel {
-	return buildPanel(state, { checks, log: [], changes: { headline: "", commits: [], files: [] } }, { width, tint: PLAIN, nowMs: NOW, spinner: "⠋" });
+	return buildPanel(state, { checks, log: [], changes: { headline: "", commits: [], files: [] } }, { width: panelWidth(width), tint: PLAIN, nowMs: NOW, spinner: "⠋" });
+}
+
+function rowsPanel(length: number, tail: boolean): Panel {
+	return { length, tail, empty: "", row: (index) => `row ${String(index)}`, packageAt: () => undefined };
 }
 
 function frame(checks: readonly CheckProgress[], overrides: Partial<FrameView> = {}): string[] {
@@ -23,6 +40,7 @@ function frame(checks: readonly CheckProgress[], overrides: Partial<FrameView> =
 		checks,
 		panel: panelFor(checks, WIDTH),
 		estimate: { fraction: 0.25, remainingMs: 90_000 },
+		throughput: [],
 		frame: 0,
 		elapsedMs: 30_000,
 		nowMs: NOW,
@@ -151,17 +169,87 @@ describe("renderFrame", () => {
 	});
 
 	it("follows a tail, and stays put once scrolled", () => {
-		const tail: Panel = { length: 100, tail: true, empty: "", row: (index) => `row ${String(index)}`, packageAt: () => undefined };
+		const tail = rowsPanel(100, true);
 
 		expect(frame([running], { panel: tail }).join("\n")).toContain("row 99");
 		expect(frame([running], { panel: tail, state: { ...INITIAL_DASHBOARD, top: 3 } }).join("\n")).toContain("row 3");
+	});
+
+	it("leaves a blank row between the panel and the key bar", () => {
+		const lines = frame([running]);
+
+		expect(lines.at(-2)).toBe("");
+		expect(lines.at(-1)).toContain("q cancel");
+	});
+
+	it("says where a long panel is scrolled to, with a scrollbar, and none when it all fits", () => {
+		const height = panelHeight(HEIGHT, 1);
+		const following = frame([running], { panel: rowsPanel(100, true) }).join("\n");
+		const top = frame([running], { panel: rowsPanel(100, false) });
+
+		expect(following).toContain(`${String(100 - height + 1)}–100 of 100`);
+		expect(following).not.toContain("paused");
+		expect(top.join("\n")).toContain(`1–${String(height)} of 100`);
+		expect(top.filter((line) => line.endsWith("┃"))).toHaveLength(Math.round((height * height) / 100));
+		expect(top.filter((line) => line.endsWith("│")).length).toBeGreaterThan(0);
+		expect(frame([running], { panel: rowsPanel(2, false) }).join("\n")).not.toMatch(/[┃│]$/mu);
+		expect(frame([running], { panel: rowsPanel(2, false) }).join("\n")).not.toContain(" of 2");
+	});
+
+	it("says a tail has stopped following once scrolled up, and how to follow it again", () => {
+		expect(frame([running], { panel: rowsPanel(100, true), state: { ...INITIAL_DASHBOARD, top: 3 } }).join("\n")).toContain("paused · G follows · 4–");
+	});
+
+	it("drops the keys that don't fit, keeping shorter ones and always cancel", () => {
+		const narrow = 30;
+		const bar = frame([running], { width: narrow, panel: panelFor([running], narrow) }).at(-1) ?? "";
+
+		expect(bar).toBe("  ←→ views   ? keys   q cancel");
+		expect(frame([running]).at(-1)).toBe("  ←→ views   ↑↓ scroll   G newest   ? keys   q cancel");
+	});
+
+	it("shows the selection keys in the packages view, and how to close the key list", () => {
+		expect(frame([running], { state: { ...INITIAL_DASHBOARD, view: "packages" } }).at(-1)).toContain("enter its log");
+		const help = frame([running], { state: { ...INITIAL_DASHBOARD, help: true } });
+
+		expect(help.at(-1)).toContain("? close");
+		expect(help.join("\n")).toContain("── keys ──");
+		expect(help.join("\n")).not.toContain("[1 Live]");
+	});
+
+	it("shows how many test files finish a second once any have", () => {
+		expect(frame([running], { throughput: [0, 2, 4, 8] }).join("\n")).toContain("▁▃▅█ 4/s");
+		expect(frame([running], { throughput: [0, 0] }).join("\n")).not.toContain("/s");
+		expect(frame([running], { throughput: [8], width: 40, panel: panelFor([running], 40) }).join("\n")).not.toContain("/s");
+	});
+});
+
+describe("sparkline", () => {
+	it("draws each value against the largest, and a flat line for none", () => {
+		expect(sparkline([0, 1, 2, 4])).toBe("▁▃▅█");
+		expect(sparkline([0, 0])).toBe("▁▁");
+		expect(sparkline([])).toBe("");
+	});
+});
+
+describe("windowTitle", () => {
+	it("leads with how far along the run is, and the problems once there are any", () => {
+		expect(windowTitle("Checking your push", [running], { fraction: 0.426, remainingMs: undefined })).toBe("42% · Checking your push");
+		expect(windowTitle("Checking your push", [finishCheck(running, false, 1)], { fraction: 1, remainingMs: 0 })).toBe("✗ 1 problem · 100% · Checking your push");
 	});
 });
 
 describe("panelHeight", () => {
 	it("gives the panel what the rest leaves, or nothing when that's too little", () => {
-		expect(panelHeight(30, 3)).toBe(17);
+		expect(panelHeight(30, 3)).toBe(16);
 		expect(panelHeight(14, 3)).toBe(0);
+	});
+});
+
+describe("panelWidth", () => {
+	it("leaves room for the scrollbar", () => {
+		expect(panelWidth(80)).toBe(78);
+		expect(panelWidth(1)).toBe(0);
 	});
 });
 
@@ -180,23 +268,45 @@ describe("closing lines", () => {
 	});
 });
 
+describe("renderRerun", () => {
+	it("names a turbo command for each package that failed, and nothing when none did", () => {
+		const failed = finishCheck(applyLine(running, " Failed:    @workspace/api#test", NOW), false, NOW);
+
+		expect(renderRerun([failed], PLAIN)).toStrictEqual(["  Rerun just what failed:", "    $ pnpm turbo run test --filter=@workspace/api"]);
+		expect(renderRerun([running, finishCheck(startCheck(waitingCheck("commit", "Format, lint", undefined), 0), false, 1)], PLAIN)).toStrictEqual([]);
+	});
+});
+
 describe("renderSummary", () => {
 	const finished = finishCheck(running, true, 4000);
-	const view = { headline: "main → origin/main", checks: [finished], width: WIDTH, tint: PLAIN, totalMs: 60_000, previousMs: undefined };
+	const view = { headline: "main → origin/main", checks: [finished], width: WIDTH, tint: PLAIN, records: [] };
 
-	it("keeps what was checked, each check, and the slowest files", () => {
-		const text = renderSummary(view).join("\n");
+	it("keeps what was checked, each check, and the slowest files, in a card", () => {
+		const lines = renderSummary(view);
+		const text = lines.join("\n");
 
 		expect(text).toContain("main → origin/main");
-		expect(text).toMatch(/✓ Unit tests .* 1 file · 14 tests .* 2\.0s/u);
+		expect(text).toMatch(/│ ✓ Unit tests .* 1 file · 14 tests .* 2\.0s +│/u);
 		expect(text).toContain("Slowest");
-		expect(text).toContain("login.handler.spec.ts");
+		// The package column is at least four wide, then a two-space gap; a file's time keeps its milliseconds.
+		expect(text).toContain("  9ms  api   src/contexts/identity/login.handler.spec.ts");
+		expect(text).toContain("╭");
+		expect(text).toContain("╰");
 	});
 
-	it("compares with the last run only when the difference is worth saying", () => {
-		expect(renderSummary({ ...view, previousMs: 120_000 }).join("\n")).toContain("1m 00s faster than last time");
-		expect(renderSummary({ ...view, previousMs: 30_000 }).join("\n")).toContain("30.0s slower than last time");
-		expect(renderSummary({ ...view, previousMs: 61_000 }).join("\n")).not.toContain("than last time");
+	it("draws every row of the card to the same width", () => {
+		const widths = new Set(
+			renderSummary({ ...view, records: ["★ New best time"] })
+				.filter((line) => line.length > 0)
+				.map((line) => line.length),
+		);
+
+		expect(widths).toStrictEqual(new Set([WIDTH]));
+	});
+
+	it("shows the run's records", () => {
+		expect(renderSummary({ ...view, records: ["★ New best time, 1m 00s (was 1m 40s)", "● 3 green runs in a row"] }).join("\n")).toMatch(/New best time[\s\S]*3 green runs/u);
+		expect(renderSummary(view).join("\n")).not.toContain("★");
 	});
 
 	it("leaves the slowest out when nothing was timed", () => {

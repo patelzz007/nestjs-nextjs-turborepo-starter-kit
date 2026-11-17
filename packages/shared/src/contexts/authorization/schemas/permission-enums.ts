@@ -87,6 +87,9 @@ export const PermissionResourceSchema = z.enum([
 	"FEATURE_FLAG",
 	"WEBHOOK",
 	"DOCS_SYNC",
+	"FEATURE_FLAG_GROUP",
+	"DYNAMIC_CONFIG",
+	"EXPERIMENT",
 ]);
 export type PermissionResource = z.output<typeof PermissionResourceSchema>;
 

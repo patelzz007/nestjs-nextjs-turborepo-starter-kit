@@ -12,7 +12,8 @@ import { FloatingTabBar, type FloatingTabBarItem } from "../../components/floati
 import { playSelectionFeedback } from "@workspace/ui-native/lib/haptics";
 import { useKeyboardVisible } from "../../lib/use-keyboard-visible";
 import { useLabels } from "../language/use-app-language";
-import { appTabOf } from "./app-tabs";
+import { MOBILE_FEATURE_FLAGS, useEnabledFeatureFlags } from "../../contexts/feature-flags";
+import { appTabOf, isTabOffered } from "./app-tabs";
 import { NAVIGATION_LABELS } from "./navigation-labels";
 import { usePreloadedTabs } from "./use-preloaded-tabs";
 
@@ -22,12 +23,13 @@ export function AppTabBar({ state, emitter, navigateToTab, insets }: BottomTabBa
 	// Set by the navigator: what it reports to screens as the tab bar's height (src/components/screen.tsx).
 	const reportHeight = React.use(BottomTabBarHeightCallbackContext);
 	const { headings } = useLabels(NAVIGATION_LABELS);
+	const enabledFeatureFlags = useEnabledFeatureFlags(MOBILE_FEATURE_FLAGS);
 
 	const items = React.useMemo(
 		(): readonly FloatingTabBarItem[] =>
 			state.routes.flatMap((route, position): FloatingTabBarItem[] => {
 				const tab = appTabOf(route.name);
-				if (tab === undefined) {
+				if (tab === undefined || !isTabOffered(tab, enabledFeatureFlags)) {
 					return [];
 				}
 				const selected = position === state.index;
@@ -51,7 +53,7 @@ export function AppTabBar({ state, emitter, navigateToTab, insets }: BottomTabBa
 					},
 				];
 			}),
-		[emitter, headings, navigateToTab, state.index, state.routes],
+		[emitter, enabledFeatureFlags, headings, navigateToTab, state.index, state.routes],
 	);
 
 	if (keyboardVisible) {

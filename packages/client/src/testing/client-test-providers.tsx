@@ -3,6 +3,7 @@
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import type * as React from "react";
 
+import { StaticFeatureFlagsProvider } from "../lib/contexts/feature-flags/feature-flags-context";
 import { UrlStateTestProvider } from "../lib/url-state/url-state-test-provider";
 
 export interface ClientTestProvidersProps {
@@ -19,7 +20,10 @@ export interface ClientTestProvidersProps {
 export function ClientTestProviders({ children }: ClientTestProvidersProps): React.JSX.Element {
 	return (
 		<UiKitTestProviders>
-			<UrlStateTestProvider>{children}</UrlStateTestProvider>
+			<UrlStateTestProvider>
+				{/* Every flag and config at its code default, as when the API hasn't answered (ADR 087). */}
+				<StaticFeatureFlagsProvider bundle={null}>{children}</StaticFeatureFlagsProvider>
+			</UrlStateTestProvider>
 		</UiKitTestProviders>
 	);
 }

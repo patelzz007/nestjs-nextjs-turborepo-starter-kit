@@ -194,5 +194,8 @@ export function resolvePartitionKey(event: PlatformEventInput): string | null {
 			return null;
 		case "reward.platform":
 			return event.payload.tenantId ?? event.payload.actorUserId;
+		case "feature_flag.exposure":
+			// One batch is one app's exposures of mixed subjects: the app keys it, so batches spread by app.
+			return event.payload.app;
 	}
 }

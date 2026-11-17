@@ -71,6 +71,27 @@ describe("originOf", () => {
 	});
 });
 
+describe("withSecurityHeaders: the anonymous device id (ADR 087)", () => {
+	const DEVICE = "019b76da-a800-7000-8000-000000000030";
+
+	it("gives a first visit a device id, which this very render already sees", async () => {
+		const response = await withSecurityHeaders(new NextRequest("https://app.example.com/"), (_request, next) => Promise.resolve(next()), {
+			apiBaseUrl: API,
+			development: false,
+			nonce: (): string => "n",
+			deviceId: (): string => DEVICE,
+		});
+		expect(response.cookies.get("flagDeviceId")).toMatchObject({ value: DEVICE, httpOnly: false, secure: true, sameSite: "lax" });
+		expect(response.headers.get("x-middleware-request-cookie")).toContain(`flagDeviceId=${DEVICE}`);
+	});
+
+	it("leaves a browser's existing device id alone", async () => {
+		const request = new NextRequest("https://app.example.com/", { headers: { cookie: `flagDeviceId=${DEVICE}` } });
+		const response = await withSecurityHeaders(request, (_request, next) => Promise.resolve(next()), { apiBaseUrl: API, development: false, nonce: (): string => "n" });
+		expect(response.cookies.get("flagDeviceId")).toBeUndefined();
+	});
+});
+
 describe("withSecurityHeaders", () => {
 	it("continues the request with the nonce and the policy, and stamps the response with every header", async () => {
 		let forwarded: NextResponse | null = null;

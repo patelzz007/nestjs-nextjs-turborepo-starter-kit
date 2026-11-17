@@ -31,6 +31,7 @@ import {
 } from "../../contexts/identity/session/session-check";
 import { createAuthChannel, type AuthChannel, type AuthSyncEvent } from "../../contexts/identity/session/sync";
 import { createFeatureStoreContext } from "../../state/feature-store-context";
+import { browserDeviceIdHeaders } from "../../contexts/feature-flags/device-id";
 import { authActions, type AuthAction } from "./actions";
 import type { AuthBroadcaster } from "./effects";
 import {
@@ -564,8 +565,12 @@ function AuthSession({
 		dispatch(authActions.serverSessionCleared(false));
 	}, [clearServerSession, dispatch, finalizeSessionExit, invalidateSession, shouldRedirectOnUnauthorized]);
 
+	// Every call names this browser's anonymous device id (feature flags decided per device, ADR 087), then the
+	// app's own headers (the merchant console's tenant and store).
+	const headersWithDevice = React.useCallback((): Readonly<Record<string, string>> => ({ ...browserDeviceIdHeaders(), ...(requestHeaders?.() ?? {}) }), [requestHeaders]);
+
 	// Cookie auth + silent refresh on 401 for every typed API call.
-	const api = useApi(apiRouter, baseUrl, clientType, handleUnauthorized, refreshOnce, requestHeaders);
+	const api = useApi(apiRouter, baseUrl, clientType, handleUnauthorized, refreshOnce, headersWithDevice);
 
 	// ── Commands.
 	const login = React.useCallback(

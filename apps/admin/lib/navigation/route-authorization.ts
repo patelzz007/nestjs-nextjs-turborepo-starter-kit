@@ -185,8 +185,24 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	// GET /admin/roles (LIST ROLE) · GET /admin/permissions (LIST PERMISSION) · POST /admin/permissions/check (READ PERMISSION):
 	// a settings section, not a sidebar item (Settings is one link, enhancement 5.13), so its rule is its own.
 	{ prefix: ROUTES.settings.access, authorization: { permissions: [PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ], mode: "any" } },
-	// GET /admin/feature-flags (LIST FEATURE_FLAG): a settings section, not a sidebar item (enhancement 5.6).
-	{ prefix: ROUTES.settings.featureFlags, authorization: { permissions: [PERMISSION.FEATURE_FLAG.LIST] } },
+	// Releases (ADR 087). The section prefix redirects to the flags list.
+	{ prefix: ROUTES.releases.index, authorization: { permissions: [PERMISSION.FEATURE_FLAG.LIST] } },
+	// One flag (LIST) and its editor (LIST + UPDATE): GET /admin/feature-flags/:key, POST …/revisions.
+	{ prefix: ROUTE_PATTERNS.releases.flag.detail, authorization: { permissions: [PERMISSION.FEATURE_FLAG.LIST] } },
+	{ prefix: ROUTE_PATTERNS.releases.flag.edit, authorization: { permissions: [PERMISSION.FEATURE_FLAG.LIST, PERMISSION.FEATURE_FLAG.UPDATE], mode: "all" } },
+	{ prefix: ROUTE_PATTERNS.releases.config.detail, authorization: { permissions: [PERMISSION.DYNAMIC_CONFIG.LIST] } },
+	{ prefix: ROUTE_PATTERNS.releases.config.edit, authorization: { permissions: [PERMISSION.DYNAMIC_CONFIG.LIST, PERMISSION.DYNAMIC_CONFIG.UPDATE], mode: "all" } },
+	// Flag groups: POST /admin/flag-groups (UPDATE), one group (LIST), its editor (LIST + UPDATE).
+	{ prefix: ROUTES.releases.groups.create, authorization: { permissions: [PERMISSION.FEATURE_FLAG_GROUP.UPDATE] } },
+	{ prefix: ROUTE_PATTERNS.releases.groups.detail, authorization: { permissions: [PERMISSION.FEATURE_FLAG_GROUP.LIST] } },
+	{ prefix: ROUTE_PATTERNS.releases.groups.edit, authorization: { permissions: [PERMISSION.FEATURE_FLAG_GROUP.LIST, PERMISSION.FEATURE_FLAG_GROUP.UPDATE], mode: "all" } },
+	// Experiments: POST /admin/experiments (UPDATE; the config's values are LIST DYNAMIC_CONFIG), one (LIST), a draft's editor.
+	{ prefix: ROUTES.releases.experiments.create, authorization: { permissions: [PERMISSION.EXPERIMENT.UPDATE, PERMISSION.DYNAMIC_CONFIG.LIST], mode: "all" } },
+	{ prefix: ROUTE_PATTERNS.releases.experiments.detail, authorization: { permissions: [PERMISSION.EXPERIMENT.LIST] } },
+	{
+		prefix: ROUTE_PATTERNS.releases.experiments.edit,
+		authorization: { permissions: [PERMISSION.EXPERIMENT.LIST, PERMISSION.EXPERIMENT.UPDATE, PERMISSION.DYNAMIC_CONFIG.LIST], mode: "all" },
+	},
 	// GET /admin/tiers/settings (READ SYSTEM_SETTINGS): the tier rules, only while customer tiers are on (ADR 085).
 	{ prefix: ROUTES.settings.tiers, authorization: { permissions: [PERMISSION.SYSTEM_SETTINGS.READ] }, featureFlag: CUSTOMER_TIERS_FEATURE },
 	// GET + PATCH /sample-category/:id (READ + UPDATE)

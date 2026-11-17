@@ -114,15 +114,65 @@ CREATE POLICY email_logs_update ON public."EmailLog"
   USING ((SELECT app_rls_bypass_on('EmailLog')))
   WITH CHECK ((SELECT app_rls_bypass_on('EmailLog')));
 
-DROP POLICY IF EXISTS feature_flag_setting_bypass ON public."FeatureFlagSetting";
-CREATE POLICY feature_flag_setting_bypass ON public."FeatureFlagSetting"
-  USING ((SELECT app_rls_bypass_on('FeatureFlagSetting')))
-  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagSetting')));
+DROP POLICY IF EXISTS feature_flag_catalog_version_bypass ON public."FeatureFlagCatalogVersion";
+CREATE POLICY feature_flag_catalog_version_bypass ON public."FeatureFlagCatalogVersion"
+  USING ((SELECT app_rls_bypass_on('FeatureFlagCatalogVersion')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagCatalogVersion')));
 
-DROP POLICY IF EXISTS feature_flag_store_override_bypass ON public."FeatureFlagStoreOverride";
-CREATE POLICY feature_flag_store_override_bypass ON public."FeatureFlagStoreOverride"
-  USING ((SELECT app_rls_bypass_on('FeatureFlagStoreOverride')))
-  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagStoreOverride')));
+DROP POLICY IF EXISTS feature_flag_kill_switch_bypass ON public."FeatureFlagKillSwitch";
+CREATE POLICY feature_flag_kill_switch_bypass ON public."FeatureFlagKillSwitch"
+  USING ((SELECT app_rls_bypass_on('FeatureFlagKillSwitch')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagKillSwitch')));
+
+DROP POLICY IF EXISTS flag_revision_bypass ON public."FlagRevision";
+CREATE POLICY flag_revision_bypass ON public."FlagRevision"
+  USING ((SELECT app_rls_bypass_on('FlagRevision')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FlagRevision')));
+
+DROP POLICY IF EXISTS feature_flag_override_bypass ON public."FeatureFlagOverride";
+CREATE POLICY feature_flag_override_bypass ON public."FeatureFlagOverride"
+  USING ((SELECT app_rls_bypass_on('FeatureFlagOverride')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagOverride')));
+
+DROP POLICY IF EXISTS flag_group_bypass ON public."FlagGroup";
+CREATE POLICY flag_group_bypass ON public."FlagGroup"
+  USING ((SELECT app_rls_bypass_on('FlagGroup')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FlagGroup')));
+
+DROP POLICY IF EXISTS flag_group_member_bypass ON public."FlagGroupMember";
+CREATE POLICY flag_group_member_bypass ON public."FlagGroupMember"
+  USING ((SELECT app_rls_bypass_on('FlagGroupMember')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FlagGroupMember')));
+
+DROP POLICY IF EXISTS feature_flag_exposure_bypass ON public."FeatureFlagExposure";
+CREATE POLICY feature_flag_exposure_bypass ON public."FeatureFlagExposure"
+  TO app_runtime
+  USING ((SELECT app_rls_bypass_on('FeatureFlagExposure')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagExposure')));
+
+DROP POLICY IF EXISTS feature_flag_exposure_daily_bypass ON public."FeatureFlagExposureDaily";
+CREATE POLICY feature_flag_exposure_daily_bypass ON public."FeatureFlagExposureDaily"
+  TO app_runtime
+  USING ((SELECT app_rls_bypass_on('FeatureFlagExposureDaily')))
+  WITH CHECK ((SELECT app_rls_bypass_on('FeatureFlagExposureDaily')));
+
+DROP POLICY IF EXISTS experiment_bypass ON public."Experiment";
+CREATE POLICY experiment_bypass ON public."Experiment"
+  TO app_runtime
+  USING ((SELECT app_rls_bypass_on('Experiment')))
+  WITH CHECK ((SELECT app_rls_bypass_on('Experiment')));
+
+DROP POLICY IF EXISTS experiment_metric_event_bypass ON public."ExperimentMetricEvent";
+CREATE POLICY experiment_metric_event_bypass ON public."ExperimentMetricEvent"
+  TO app_runtime
+  USING ((SELECT app_rls_bypass_on('ExperimentMetricEvent')))
+  WITH CHECK ((SELECT app_rls_bypass_on('ExperimentMetricEvent')));
+
+DROP POLICY IF EXISTS experiment_result_bypass ON public."ExperimentResult";
+CREATE POLICY experiment_result_bypass ON public."ExperimentResult"
+  TO app_runtime
+  USING ((SELECT app_rls_bypass_on('ExperimentResult')))
+  WITH CHECK ((SELECT app_rls_bypass_on('ExperimentResult')));
 
 DROP POLICY IF EXISTS github_account_links_own ON public."GithubAccountLink";
 CREATE POLICY github_account_links_own ON public."GithubAccountLink"

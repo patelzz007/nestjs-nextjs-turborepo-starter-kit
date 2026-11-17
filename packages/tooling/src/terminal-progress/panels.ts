@@ -38,7 +38,11 @@ export interface Panel {
 }
 
 const INDENT = "  ";
-const PACKAGE_COLUMN = 18;
+/** Always between a package and what follows it: `analytics-consumer` filled the old fixed column to the last character. */
+const GUTTER = "  ";
+/** The package column fits the longest name on screen, within these bounds. */
+const MIN_PACKAGE_COLUMN = 4;
+const MAX_PACKAGE_COLUMN = 24;
 const COUNT_COLUMN = 10;
 const PACKAGE_COUNTS_COLUMN = 26;
 const TIME_COLUMN = 8;
@@ -49,7 +53,7 @@ const NARROW_WIDTH = 60;
 const MS_PER_SECOND = 1000;
 
 /** A test file's time: most take milliseconds, which `0.0s` would hide. */
-function fileTime(durationMs: number | undefined): string {
+export function fileTime(durationMs: number | undefined): string {
 	if (durationMs === undefined) {
 		return "";
 	}
@@ -60,12 +64,38 @@ function listPanel(rows: readonly string[], empty: string, tail = false): Panel 
 	return { length: rows.length, tail, empty, row: (index) => rows.at(index) ?? "", packageAt: () => undefined };
 }
 
-function fileRow(file: TestFileLine, { width, tint }: PanelContext): string {
+/** How wide the package column is for these packages: as wide as the longest, within bounds. */
+export function packageColumn(workspaces: readonly (string | undefined)[]): number {
+	const longest = workspaces.reduce((widest, workspace) => Math.max(widest, shortPackage(workspace ?? "").length), 0);
+	return Math.min(Math.max(longest, MIN_PACKAGE_COLUMN), MAX_PACKAGE_COLUMN);
+}
+
+/** A package name in its column, and the gutter after it. */
+function ownerCell(workspace: string | undefined, column: number): string {
+	return `${fitEnd(shortPackage(workspace ?? ""), column).padEnd(column)}${GUTTER}`;
+}
+
+function fileRow(file: TestFileLine, column: number, { width, tint }: PanelContext): string {
 	const wide = width >= NARROW_WIDTH;
 	const counts = wide ? `${(file.tests === undefined ? "" : plural(file.tests, "test")).padStart(COUNT_COLUMN)}${fileTime(file.durationMs).padStart(TIME_COLUMN)}` : "";
-	const owner = wide ? shortPackage(file.workspace).padEnd(PACKAGE_COLUMN) : "";
+	const owner = wide ? ownerCell(file.workspace, column) : "";
 	const room = width - INDENT.length - "✓ ".length - owner.length - counts.length;
 	return `${INDENT}${file.passed ? tint.pass("✓") : tint.fail("✗")} ${tint.quiet(owner)}${fitStart(file.file, room).padEnd(Math.max(room, 0))}${tint.quiet(counts)}`;
+}
+
+/** Test files, their package column sized to them. */
+function filesPanel(files: readonly TestFileLine[], empty: string, tail: boolean, context: PanelContext): Panel {
+	const column = packageColumn(files.map((file) => file.workspace));
+	return {
+		length: files.length,
+		tail,
+		empty,
+		row: (index) => {
+			const file = files.at(index);
+			return file === undefined ? "" : fileRow(file, column, context);
+		},
+		packageAt: () => undefined,
+	};
 }
 
 function stageRow(stage: Stage, { width, tint, spinner }: PanelContext): string {
@@ -74,17 +104,18 @@ function stageRow(stage: Stage, { width, tint, spinner }: PanelContext): string 
 	return `${INDENT}${marks[stage.status]} ${fitEnd(stage.text, room)}`;
 }
 
-function logRow(line: LogLine, showOwner: boolean, { width, tint }: PanelContext): string {
-	const owner = showOwner ? shortPackage(line.workspace ?? "").padEnd(PACKAGE_COLUMN) : "";
+function logRow(line: LogLine, column: number | undefined, { width, tint }: PanelContext): string {
+	const owner = column === undefined ? "" : ownerCell(line.workspace, column);
 	return `${INDENT}${tint.quiet(owner)}${fitEnd(line.text, width - INDENT.length - owner.length)}`;
 }
 
 function logPanel(lines: readonly LogLine[], showOwner: boolean, empty: string, context: PanelContext): Panel {
+	const column = showOwner ? packageColumn(lines.map((line) => line.workspace)) : undefined;
 	return {
 		length: lines.length,
 		tail: true,
 		empty,
-		row: (index) => logRow(lines.at(index) ?? { workspace: undefined, text: "" }, showOwner, context),
+		row: (index) => logRow(lines.at(index) ?? { workspace: undefined, text: "" }, column, context),
 		packageAt: () => undefined,
 	};
 }
@@ -100,8 +131,7 @@ function livePanel({ checks, log }: PanelData, context: PanelContext): Panel {
 		);
 	}
 	if (current !== undefined && current.recent.length > 0) {
-		const { recent } = current;
-		return { length: recent.length, tail: true, empty: "", row: (index) => (recent[index] === undefined ? "" : fileRow(recent[index], context)), packageAt: () => undefined };
+		return filesPanel(current.recent, "", true, context);
 	}
 	return logPanel(
 		log.filter((line) => line.text.trim().length > 0),
@@ -132,7 +162,7 @@ function packageRow(item: PackageProgress, check: CheckProgress, selected: boole
 	const time = item.startedAtMs === undefined || item.cached ? "" : formatDuration((item.lastLineAtMs ?? item.startedAtMs) - item.startedAtMs);
 	const counts = item.testFiles === 0 ? "" : `${plural(item.testFiles, "file")} · ${plural(item.tests, "test")}`;
 	const nameRoom = width - INDENT.length - "▸ ✓ ".length - STATE_COLUMN - PACKAGE_COUNTS_COLUMN - TIME_COLUMN;
-	const name = fitEnd(shortPackage(item.name), nameRoom).padEnd(Math.max(nameRoom, 0));
+	const name = fitEnd(shortPackage(item.name), nameRoom - GUTTER.length).padEnd(Math.max(nameRoom, 0));
 	return `${INDENT}${selected ? tint.active("▸") : " "} ${mark} ${selected ? tint.title(name) : name}${tint.quiet(`${text.padEnd(STATE_COLUMN)}${counts.padEnd(PACKAGE_COUNTS_COLUMN)}${time.padStart(TIME_COLUMN)}`)}`;
 }
 
@@ -150,10 +180,7 @@ function packagesPanel(checks: readonly CheckProgress[], selected: number, conte
 
 function slowestPanel(checks: readonly CheckProgress[], context: PanelContext): Panel {
 	const files = checks.flatMap((check) => check.slowest).toSorted((a, b) => (b.durationMs ?? 0) - (a.durationMs ?? 0));
-	return listPanel(
-		files.map((file) => fileRow(file, context)),
-		"Nothing timed yet. Test files appear here as they finish.",
-	);
+	return filesPanel(files, "Nothing timed yet. Test files appear here as they finish.", false, context);
 }
 
 function problemRows(check: CheckProgress, { width, tint }: PanelContext): readonly string[] {
@@ -191,8 +218,30 @@ function changesPanel({ commits, files }: ChangeSummary, context: PanelContext):
 	return listPanel(rows, "Git couldn't say what changed. The checks run the same.");
 }
 
+/** Every key, with what it does: the hint row only has room for the common ones. */
+const HELP_KEYS: readonly (readonly [keys: string, does: string])[] = [
+	["← → · tab · h l", "previous / next view"],
+	["1 – 6", "jump to a view"],
+	["↑ ↓ · j k · wheel", "scroll (in Packages: move the selection)"],
+	["PgUp PgDn", "a page at a time"],
+	["g · G", "first row · newest row (and follow it again)"],
+	["enter", "in Packages: that package's log"],
+	["esc", "close this list, or back from one package's log"],
+	["?", "show or hide this list"],
+	["q q · Ctrl+C", "cancel (q asks first)"],
+];
+const HELP_KEY_COLUMN = 20;
+
+function helpPanel({ width, tint }: PanelContext): Panel {
+	const rows = HELP_KEYS.map(([keys, does]) => `${INDENT}${tint.active(keys.padEnd(HELP_KEY_COLUMN))}${fitEnd(does, width - INDENT.length - HELP_KEY_COLUMN)}`);
+	return listPanel([`${INDENT}${tint.title("Keys")}`, "", ...rows, "", tint.quiet(`${INDENT}Hold Option (macOS) or Shift to select text with the mouse.`)], "");
+}
+
 /** The rows of the view on screen. */
-export function buildPanel({ view, selected, logFilter }: DashboardState, data: PanelData, context: PanelContext): Panel {
+export function buildPanel({ view, selected, logFilter, help }: DashboardState, data: PanelData, context: PanelContext): Panel {
+	if (help) {
+		return helpPanel(context);
+	}
 	const panels: Readonly<Record<ViewId, () => Panel>> = {
 		live: () => livePanel(data, context),
 		packages: () => packagesPanel(data.checks, selected, context),

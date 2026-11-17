@@ -36,6 +36,17 @@ describe("scrolling", () => {
 		expect(press(["end", "home"]).top).toBe(0);
 	});
 
+	it("scrolls three rows a notch of the wheel, in a list and a tail", () => {
+		expect(press(["wheelDown", "wheelDown"]).top).toBe(6);
+		expect(press(["wheelDown", "wheelUp"]).top).toBe(0);
+		expect(press(["wheelUp"], TAIL).top).toBe(87);
+		expect(press(["wheelUp", "wheelDown"], TAIL).top).toBeUndefined();
+	});
+
+	it("moves the packages selection with the wheel", () => {
+		expect(press(["wheelDown"], LIST, { ...INITIAL_DASHBOARD, view: "packages" }).selected).toBe(3);
+	});
+
 	it("leaves a tail on scrolling up, and follows it again at the bottom", () => {
 		expect(press(["up"], TAIL).top).toBe(89);
 		expect(press(["up", "down"], TAIL).top).toBeUndefined();
@@ -68,6 +79,33 @@ describe("packages", () => {
 
 	it("ignores escape with nothing to go back from", () => {
 		expect(press(["escape"])).toStrictEqual(INITIAL_DASHBOARD);
+	});
+});
+
+describe("key list", () => {
+	it("opens and closes on ?, starting at its top each time", () => {
+		const open = press(["down", "help"]);
+
+		expect(open).toMatchObject({ help: true, top: undefined, view: "live" });
+		expect(press(["help"], LIST, open)).toMatchObject({ help: false, top: undefined });
+	});
+
+	it("closes on escape before going back from a package's log", () => {
+		const narrowed: DashboardState = { ...INITIAL_DASHBOARD, view: "log", logFilter: "package-1", help: true };
+
+		expect(press(["down", "escape"], LIST, narrowed)).toMatchObject({ help: false, top: undefined, view: "log", logFilter: "package-1" });
+	});
+
+	it("closes on a view change", () => {
+		expect(press(["help", "view3"])).toMatchObject({ help: false, view: "slowest" });
+	});
+
+	it("scrolls over the packages view instead of moving its selection, and enter opens nothing", () => {
+		const over: DashboardState = { ...INITIAL_DASHBOARD, view: "packages", help: true };
+
+		expect(press(["down"], LIST, over)).toMatchObject({ selected: 0, top: 1 });
+		expect(press(["end"], LIST, over)).toMatchObject({ selected: 0, top: 90 });
+		expect(press(["enter"], LIST, over).view).toBe("packages");
 	});
 });
 

@@ -204,6 +204,7 @@
 					"icon": "BarChart2",
 					"disabled": false,
 					"authorization": { "permissions": ["merchant:view_analytics"] },
+					"featureFlag": "merchant-analytics",
 					"children": [
 						{
 							"title": "Overview",

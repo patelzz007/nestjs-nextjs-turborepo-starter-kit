@@ -3,7 +3,9 @@ import {
 	type AbortableSleep,
 	type AnalyticsEventRow,
 	type DeadLetterInput,
+	type FlagExposureRow,
 	type InboxClaim,
+	type MetricEventRow,
 	type InboxStore,
 	type InboxTransaction,
 	type ConsumerLogger,
@@ -26,10 +28,14 @@ const MAX_DEAD_LETTER_PAYLOAD_BYTES = 1_024;
 class InMemoryInbox implements InboxStore {
 	public readonly claims = new Set<string>();
 	public readonly analytics: AnalyticsEventRow[] = [];
+	public readonly exposures: FlagExposureRow[] = [];
+	public readonly metricEvents: MetricEventRow[] = [];
 	public readonly deadLetters: DeadLetterInput[] = [];
 
 	public async inTransaction<T>(work: (tx: InboxTransaction) => Promise<T>): Promise<T> {
 		const staged: AnalyticsEventRow[] = [];
+		const stagedExposures: FlagExposureRow[] = [];
+		const stagedMetrics: MetricEventRow[] = [];
 		const stagedClaims: string[] = [];
 		const tx: InboxTransaction = {
 			claim: (claim: InboxClaim): Promise<boolean> => {
@@ -44,12 +50,22 @@ class InMemoryInbox implements InboxStore {
 				staged.push(row);
 				return Promise.resolve();
 			},
+			insertFlagExposures: (rows: readonly FlagExposureRow[]): Promise<void> => {
+				stagedExposures.push(...rows);
+				return Promise.resolve();
+			},
+			insertMetricEvents: (rows: readonly MetricEventRow[]): Promise<void> => {
+				stagedMetrics.push(...rows);
+				return Promise.resolve();
+			},
 		};
 		const result = await work(tx);
 		for (const key of stagedClaims) {
 			this.claims.add(key);
 		}
 		this.analytics.push(...staged);
+		this.exposures.push(...stagedExposures);
+		this.metricEvents.push(...stagedMetrics);
 		return result;
 	}
 
@@ -103,6 +119,41 @@ describe("projectPlatformEvent", () => {
 		expect(outcome).toEqual({ kind: "processed", eventId, attempts: 1 });
 		expect(inbox.analytics.map((row) => [row.eventId, row.eventType, row.partitionKey])).toEqual([[eventId, "reward.platform", TENANT_ID]]);
 		expect(inbox.deadLetters).toHaveLength(0);
+	});
+
+	it("projects a claim as one experiment metric occurrence of its person (ADR 087)", async () => {
+		await projectPlatformEvent(rewardDelivery("0b8f5a52-6a3c-4c3e-9d8e-5d8b5f0f4a19", "user.claim_reward", "7"), deps);
+		expect(inbox.metricEvents).toMatchObject([{ metric: "reward-claims", userId: REVIEWER_ID }]);
+		expect(inbox.exposures).toStrictEqual([]);
+	});
+
+	it("stores a feature flag exposure batch once, even when it is delivered twice", async () => {
+		const value = JSON.stringify({
+			eventId: "0b8f5a52-6a3c-4c3e-9d8e-5d8b5f0f4a20",
+			type: "feature_flag.exposure",
+			correlationId: null,
+			occurredAt: OCCURRED_AT_MS,
+			payload: {
+				app: "web",
+				exposures: [
+					{
+						kind: "FLAG",
+						key: "web-activity",
+						on: false,
+						source: "KILL_SWITCH",
+						revision: null,
+						ruleId: null,
+						at: OCCURRED_AT_MS,
+						subjectUnit: "USER",
+						subjectId: REVIEWER_ID,
+					},
+				],
+			},
+		});
+		const delivery: PlatformEventDelivery = { topic: "platform.feature-flags", partition: 0, message: { offset: "9", value: Buffer.from(value, "utf8") } };
+		await projectPlatformEvent(delivery, deps);
+		await projectPlatformEvent(delivery, deps);
+		expect(inbox.exposures).toMatchObject([{ key: "web-activity", value: "off", source: "KILL_SWITCH", position: 0 }]);
 	});
 
 	it("accepts every reward platform action the shared schema defines", async () => {

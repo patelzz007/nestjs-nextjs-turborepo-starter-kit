@@ -36,6 +36,7 @@ import {
 	apiVersionPrefix,
 	AUTH_COOKIE_NAMES,
 	clientTypeHeader,
+	DEVICE_ID_COOKIE,
 	type AuthCookieNamePair,
 	type BrowserClientType,
 	type DataValue,
@@ -45,6 +46,7 @@ import { cookies, headers } from "next/headers";
 import { catchError, defer, from, mergeMap, Observable, of, retry, throwError, timer, firstValueFrom } from "rxjs";
 import { z } from "zod";
 
+import { deviceIdHeaders } from "../contexts/feature-flags/device-id";
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -381,6 +383,8 @@ export async function fetchServerQuery<Input extends SerializableInput, Resp ext
 					headers: {
 						...def.baseOptions?.headers,
 						...readForwardedHeaders(await headers()),
+						// The browser's anonymous device id (ADR 087), for feature flags decided per device.
+						...deviceIdHeaders((await cookies()).get(DEVICE_ID_COOKIE)?.value),
 						...config.requestHeaders,
 						Accept: "application/json",
 						...clientTypeHeader(config.clientType),

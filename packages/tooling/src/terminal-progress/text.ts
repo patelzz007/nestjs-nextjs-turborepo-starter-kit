@@ -1,4 +1,5 @@
 // Text helpers shared by what the hooks draw. `Tint` is the only thing that knows about colour.
+import { stripVTControlCharacters } from "node:util";
 
 /** Colours the text; the identity when colour is off. */
 export interface Tint {
@@ -35,6 +36,11 @@ export function formatCount(count: number): string {
 
 export function plural(count: number, noun: string): string {
 	return `${formatCount(count)} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/** Pads text that may already be coloured: colour codes take no room on screen, so `padEnd` would count them. */
+export function padVisible(text: string, width: number): string {
+	return `${text}${" ".repeat(Math.max(width - stripVTControlCharacters(text).length, 0))}`;
 }
 
 /** A package's name without its scope, which every package in a repository tends to share. */

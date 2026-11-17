@@ -21,19 +21,24 @@ export interface MobileApiClientOptions {
 	readonly baseUrl: string;
 	readonly appVersion: string;
 	readonly deviceHeaders: Record<string, string>;
+	/** Headers read as each request is sent: the installation's feature flag device id, known only once loaded. */
+	readonly requestHeaders: () => Readonly<Record<string, string>>;
 	readonly tokenProvider: TokenProvider;
 	readonly onSessionExpired: OnSessionExpired;
 }
 
 /** @throws {InvalidApiClientConfigError} when the config is wrong — at app start, never on the first request. */
 export function createMobileApiClient(options: MobileApiClientOptions): MobileApiClient {
-	const context = createApiClientContext({
-		baseUrl: options.baseUrl,
-		clientType: "mobile",
-		transport: { kind: "token", tokenProvider: options.tokenProvider },
-		appVersion: options.appVersion,
-		headers: options.deviceHeaders,
-		onSessionExpired: options.onSessionExpired,
-	});
+	const context: ApiRequestContext = {
+		...createApiClientContext({
+			baseUrl: options.baseUrl,
+			clientType: "mobile",
+			transport: { kind: "token", tokenProvider: options.tokenProvider },
+			appVersion: options.appVersion,
+			headers: options.deviceHeaders,
+			onSessionExpired: options.onSessionExpired,
+		}),
+		requestHeaders: options.requestHeaders,
+	};
 	return { context, api: buildClientRouter(apiRouter, context) };
 }

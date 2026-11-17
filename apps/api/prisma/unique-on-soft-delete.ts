@@ -95,6 +95,12 @@ export const REVIEWED_FULL_UNIQUES: Readonly<Record<string, FullUniqueReason>> =
 	"TenantBroadcastStrike.tenantId,broadcastId": "JOIN_ROW",
 	"PaymentIntent.tenantId,idempotencyKey": "NATURAL_KEY_KEPT",
 	"PaymentIntent.provider,providerPaymentId": "SECRET_OR_GENERATED",
+	// Feature flags (ADR 086, ADR 087).
+	"FeatureFlagCatalogVersion.scope": "ONE_PER_OWNER",
+	"FlagRevision.kind,key,number": "NATURAL_KEY_KEPT",
+	"FeatureFlagExposure.eventId,position": "NATURAL_KEY_KEPT",
+	"ExperimentMetricEvent.eventId,metric": "NATURAL_KEY_KEPT",
+	"ExperimentResult.experimentId,metric,valueName": "ONE_PER_OWNER",
 };
 
 const MODEL_BLOCK = /^model (?<name>\w+) \{(?<body>[\s\S]*?)^\}/gmu;

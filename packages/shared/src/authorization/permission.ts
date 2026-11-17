@@ -96,6 +96,9 @@ export const PERMISSION: PermissionRegistry = {
 	CLAIM: actionSlugs("CLAIM"),
 	TERMINAL: actionSlugs("TERMINAL"),
 	WEBHOOK: actionSlugs("WEBHOOK"),
+	FEATURE_FLAG_GROUP: actionSlugs("FEATURE_FLAG_GROUP"),
+	DYNAMIC_CONFIG: actionSlugs("DYNAMIC_CONFIG"),
+	EXPERIMENT: actionSlugs("EXPERIMENT"),
 };
 
 /**

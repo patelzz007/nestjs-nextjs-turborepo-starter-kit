@@ -51,6 +51,8 @@ export const DrawerFeatureFlagSchema = z.enum([
 	"showcase",
 	// GitHub pull requests (ADR 052): on unless the server has them off.
 	"github-pull-requests",
+	// The Analytics tab (ADR 087): the API's mobile-analytics feature flag for this person.
+	"mobile-analytics",
 ]);
 
 export type DrawerFeatureFlag = z.output<typeof DrawerFeatureFlagSchema>;
@@ -182,20 +184,27 @@ export function drawerGroupsFor(access: DrawerAccess, menu: CompiledSidebarMenuD
 		.map(resolveGroup);
 }
 
-/** What turns the flags on: whether this build carries the showcase (the env's `showcase`), and whether the server has pull requests on. */
+/**
+ * What turns the flags on: whether this build carries the showcase (the env's `showcase`), whether the server has
+ * pull requests on, and whether the mobile-analytics feature flag is on for this person.
+ */
 export interface DrawerFeatureSwitches {
 	readonly showcase: boolean;
 	readonly githubPullRequests: boolean;
+	readonly mobileAnalytics: boolean;
 }
 
-/** The flags that are on: the showcase in a build that carries it, pull requests unless the server has them off. */
-export function enabledDrawerFeatureFlags({ showcase, githubPullRequests }: DrawerFeatureSwitches): readonly DrawerFeatureFlag[] {
+/** The flags that are on: the showcase in a build that carries it, pull requests unless the server has them off, analytics while its flag is on. */
+export function enabledDrawerFeatureFlags({ showcase, githubPullRequests, mobileAnalytics }: DrawerFeatureSwitches): readonly DrawerFeatureFlag[] {
 	const flags: DrawerFeatureFlag[] = [];
 	if (showcase) {
 		flags.push("showcase");
 	}
 	if (githubPullRequests) {
 		flags.push("github-pull-requests");
+	}
+	if (mobileAnalytics) {
+		flags.push("mobile-analytics");
 	}
 	return flags;
 }

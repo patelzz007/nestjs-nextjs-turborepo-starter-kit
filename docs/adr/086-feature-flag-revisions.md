@@ -15,13 +15,13 @@ order: 86
 
 ## Status
 
-Proposed (2026-11-13). Agreed in a design session for the feature flags v2 work (enhancement 5.6 follow-up); nothing is built yet.
+Accepted (2026-11-17). Agreed in a design session for the feature flags v2 work (enhancement 5.6 follow-up) on 2026-11-13 and built with it (ADR 087).
 
 Terms used below (**feature flag**, **dynamic config**, **rule**, **flag revision**, **rule promotion**, **exposure**, **environment**) are defined in `GLOSSARY.md`.
 
 ## Decision
 
-Every save of a feature flag's or dynamic config's rules writes a new, unchangeable **flag revision**: a sequence number per flag, the complete ordered rule set, the author, the reason and the time. The previous revision is soft-deleted and kept. Exactly one revision per flag is live. Rules are never updated in place.
+Every save of a feature flag's or dynamic config's rules writes a new, unchangeable **flag revision**: a sequence number per flag, the complete ordered rule set, the author, the reason and the time. The previous live revision becomes `SUPERSEDED` and is kept, never deleted (soft or hard): a revision's status is its only changing column, and it moves one way (`PENDING` → `LIVE` → `SUPERSEDED`, or `PENDING` → `REJECTED` / `EXPIRED`). Exactly one revision per flag is live (a partial unique index). Rules are never updated in place.
 
 ## Why
 

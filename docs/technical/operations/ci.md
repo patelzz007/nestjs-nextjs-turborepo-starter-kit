@@ -251,7 +251,17 @@ Both hooks share `packages/tooling/src/terminal-progress/`. In a terminal it red
 check, the elapsed time and the latest test files. In a GUI git client or CI it prints one plain line per
 check, and `NO_COLOR` turns colour off. The exit codes decide the result; the output is only displayed.
 
-Both hooks share one dashboard (`packages/tooling/src/terminal-progress/`). It fills a terminal with what is being sent, each check, the time left and six views: Live, Packages, Slowest, Problems, Log and Changes. Keys come from `/dev/tty`, because git owns a hook's stdin; with no terminal there are no keys and the checks run the same. In a GUI git client or CI it prints one plain line per check. Only exit codes decide the result: the dashboard's one power is to cancel, which fails the hook. A cancel signals each check's whole process group, SIGINT first, then SIGTERM after 5 seconds and SIGKILL after 10, because a background process can ignore SIGINT and hold the output open. The last good run's timings are kept in `.artifacts/ci/<hook>.history.json` for the time-left estimate; a missing or damaged file only means no estimate.
+Both hooks share one dashboard (`packages/tooling/src/terminal-progress/`). It fills a terminal with what is being sent, each check, the time left and six views: Live, Packages, Slowest, Problems, Log and Changes. Keys come from `/dev/tty`, because git owns a hook's stdin; with no terminal there are no keys and the checks run the same. In a GUI git client or CI it prints one plain line per check. Only exit codes decide the result: the dashboard's one power is to cancel, which fails the hook. A cancel signals each check's whole process group, SIGINT first, then SIGTERM after 5 seconds and SIGKILL after 10, because a background process can ignore SIGINT and hold the output open. The last good run's timings are kept in `.artifacts/ci/<hook>.history.json` for the time-left estimate, with the best time and the number of green runs in a row; a missing or damaged file only means no estimate.
+
+| While it runs | What it does |
+| --- | --- |
+| Scrolling | ↑↓, PgUp/PgDn, `g`/`G` and the mouse wheel scroll every view. Scrolling up a live list pauses it ("paused · G follows" on the rule); `G` follows the newest row again. A scrollbar and "11–28 of 40" show where you are. The wheel works because the dashboard asks for mouse reports, so hold Option (macOS) or Shift to select text with the mouse |
+| `?` | Lists every key over the panel; `?` or `esc` closes it |
+| Activity | Beside the overall bar, a sparkline of test files finished per second over the last 20 seconds, and the current rate |
+| Tab title | The terminal tab shows the percentage (and the problem count once there is one), so the run can be watched from another tab. The title you had before comes back at the end |
+| Bell | A run of 30 seconds or more rings the terminal bell when it ends (not when cancelled), which a terminal in the background turns into a badge or bounce |
+
+When it ends, the scrollback keeps a card: what was checked, each check, the three slowest test files, and, for a green run, a new best time or the change since last time, and the streak. A failed run also prints `pnpm turbo run <task> --filter=<package>` for each package turbo named as failed.
 
 Every pre-commit command starts `node packages/tooling/src/run-in-workspace/cli.ts`, never `pnpm`:
 lint-staged starts commands without a shell, a shebang-less `pnpm` shim (nvm installs one) cannot

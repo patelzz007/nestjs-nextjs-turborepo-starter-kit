@@ -3,10 +3,11 @@
 import { applyKey, INITIAL_DASHBOARD, type DashboardState } from "./dashboard.ts";
 import type { Keyboard, KeyboardOpener, KeyName } from "./keyboard.ts";
 import { buildPanel, type Panel, type PanelContext, type PanelData } from "./panels.ts";
-import { panelHeight, renderFrame, spinnerAt } from "./render.ts";
+import { panelHeight, panelWidth, renderFrame, spinnerAt, windowTitle } from "./render.ts";
 import type { RunHistory } from "./run-history.ts";
 import { estimateRun } from "./run-history.ts";
 import { Screen, type ProgressStream } from "./screen.ts";
+import { sampleThroughput, startThroughput, type Throughput } from "./throughput.ts";
 import type { Tint } from "./text.ts";
 
 export interface LiveDashboardOptions {
@@ -27,7 +28,6 @@ const DEFAULT_WIDTH = 80;
 const DEFAULT_HEIGHT = 24;
 /** Past this a wide terminal only adds empty space between the columns. */
 const MAX_WIDTH = 140;
-
 export class LiveDashboard {
 	private readonly _options: LiveDashboardOptions;
 	private readonly _screen: Screen;
@@ -35,10 +35,14 @@ export class LiveDashboard {
 	private _keyboard: Keyboard | undefined;
 	private _timer: NodeJS.Timeout | undefined;
 	private _frame = 0;
+	private _throughput: Throughput;
+	/** Only a changed title is written: a title on every frame is wasted output. */
+	private _title = "";
 
 	public constructor(options: LiveDashboardOptions) {
 		this._options = options;
 		this._screen = new Screen(options.stream);
+		this._throughput = startThroughput(options.startedAtMs);
 	}
 
 	/** A crash must not leave the person's terminal blank, cursorless and ignoring what they type. */
@@ -75,7 +79,7 @@ export class LiveDashboard {
 	}
 
 	private panel(data: PanelData, nowMs: number): Panel {
-		const context: PanelContext = { width: this.width(), tint: this._options.tint, nowMs, spinner: spinnerAt(this._frame) };
+		const context: PanelContext = { width: panelWidth(this.width()), tint: this._options.tint, nowMs, spinner: spinnerAt(this._frame) };
 		return buildPanel(this._state, data, context);
 	}
 
@@ -95,11 +99,25 @@ export class LiveDashboard {
 		this.draw();
 	}
 
+	private retitle(text: string): void {
+		if (text !== this._title) {
+			this._title = text;
+			this._screen.title(text);
+		}
+	}
+
 	private draw(): void {
 		const { title, action, tint, history, startedAtMs, isStopping } = this._options;
 		const nowMs = Date.now();
 		const data = this._options.data();
+		const estimate = estimateRun(data.checks, history, nowMs);
 		this._frame += 1;
+		this._throughput = sampleThroughput(
+			this._throughput,
+			data.checks.reduce((sum, check) => sum + check.testFiles, 0),
+			nowMs,
+		);
+		this.retitle(windowTitle(title, data.checks, estimate));
 		this._screen.draw(
 			renderFrame({
 				title,
@@ -107,7 +125,8 @@ export class LiveDashboard {
 				headline: data.changes.headline,
 				checks: data.checks,
 				panel: this.panel(data, nowMs),
-				estimate: estimateRun(data.checks, history, nowMs),
+				estimate,
+				throughput: this._throughput.perSecond,
 				frame: this._frame,
 				elapsedMs: nowMs - startedAtMs,
 				nowMs,

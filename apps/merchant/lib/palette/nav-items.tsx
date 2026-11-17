@@ -1,4 +1,5 @@
 import { filterMerchantNavItems, MERCHANT_NAV_ITEMS, type MerchantCapabilityPredicate, type MerchantNavItem } from "@/lib/navigation/nav-items";
+import type { FeatureFlagKey } from "@workspace/shared";
 import type { PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
 import type { LucideIcon } from "lucide-react";
 import * as React from "react";
@@ -14,8 +15,8 @@ function toPaletteItem(item: MerchantNavItem): PaletteSearchableItem {
 	};
 }
 
-export function buildMerchantPaletteItems(can: MerchantCapabilityPredicate): readonly PaletteSearchableItem[] {
-	return filterMerchantNavItems(MERCHANT_NAV_ITEMS, can).map(toPaletteItem);
+export function buildMerchantPaletteItems(can: MerchantCapabilityPredicate, enabledFeatureFlags: readonly FeatureFlagKey[]): readonly PaletteSearchableItem[] {
+	return filterMerchantNavItems(MERCHANT_NAV_ITEMS, can, enabledFeatureFlags).map(toPaletteItem);
 }
 
 const iconById = new Map<string, LucideIcon>(MERCHANT_NAV_ITEMS.map((item) => [item.id, item.icon]));

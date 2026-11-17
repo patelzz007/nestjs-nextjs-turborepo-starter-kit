@@ -9,6 +9,7 @@ import { Slot, Stack } from "expo-router";
 import * as React from "react";
 import { Text, View } from "react-native";
 
+import { StaticFeatureFlagsProvider } from "../src/contexts/feature-flags";
 import { AppDrawerStoreProvider } from "../src/features/app-drawer/facade";
 import { createAppDrawerStore } from "../src/features/app-drawer/store";
 import { PreferencesStoreProvider } from "../src/features/preferences/facade";
@@ -56,7 +57,11 @@ export interface TestRuntimeOverrides {
 	readonly build?: BuildIdentity;
 	readonly applyTheme?: (theme: ThemePreference) => void;
 	readonly savePreferences?: (preferences: PreferencesState) => Promise<void>;
+	readonly readFlagDeviceId?: () => Promise<string | null>;
 }
+
+/** The installation's feature flag device id in tests (ADR 087). */
+export const TEST_FLAG_DEVICE_ID = "019b76da-a800-7000-8000-000000000030";
 
 export function testRuntimeInputs(overrides: TestRuntimeOverrides = {}): AppRuntimeInputs {
 	return {
@@ -65,7 +70,8 @@ export function testRuntimeInputs(overrides: TestRuntimeOverrides = {}): AppRunt
 		readAppVersion: overrides.readAppVersion ?? ((): string => "1.0.0"),
 		buildNumber: null,
 		build: overrides.build ?? TEST_BUILD_IDENTITY,
-		deviceDetails: { modelName: "iPhone 15 Pro", deviceName: "Alex’s iPhone" },
+		deviceDetails: { modelName: "iPhone 15 Pro", deviceName: "Alex’s iPhone", platform: "ios" },
+		readFlagDeviceId: overrides.readFlagDeviceId ?? ((): Promise<string | null> => Promise.resolve(TEST_FLAG_DEVICE_ID)),
 		applyTheme: overrides.applyTheme ?? jest.fn(),
 		savePreferences: overrides.savePreferences ?? jest.fn((): Promise<void> => Promise.resolve()),
 		reportWarning: jest.fn(),
@@ -103,14 +109,17 @@ export function AppProviders({ runtime, children }: AppProvidersProps): React.JS
 				<QueryClientProvider client={runtime.queryClient}>
 					<SessionStoreProvider store={runtime.sessionStore}>
 						<PreferencesStoreProvider store={runtime.preferencesStore}>
-							<AppDrawerStoreProvider store={drawerStore}>
-								<ToastStoreProvider store={toastStore}>
-									<View className="flex-1">
-										{children}
-										<ToastHost top={0} bottom={0} />
-									</View>
-								</ToastStoreProvider>
-							</AppDrawerStoreProvider>
+							{/* Every flag at its code default, with no bundle request (the shell mounts the live provider). */}
+							<StaticFeatureFlagsProvider bundle={null}>
+								<AppDrawerStoreProvider store={drawerStore}>
+									<ToastStoreProvider store={toastStore}>
+										<View className="flex-1">
+											{children}
+											<ToastHost top={0} bottom={0} />
+										</View>
+									</ToastStoreProvider>
+								</AppDrawerStoreProvider>
+							</StaticFeatureFlagsProvider>
 						</PreferencesStoreProvider>
 					</SessionStoreProvider>
 				</QueryClientProvider>

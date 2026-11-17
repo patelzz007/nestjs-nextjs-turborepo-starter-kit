@@ -7,7 +7,10 @@ import { createWebServerCaller } from "@/lib/web-server-api";
 import { analyticsPrefetchKey, ANALYTICS_URL_STATE, resolveAnalyticsRange, toAnalyticsRangeQuery } from "@workspace/client/lib/contexts/reporting/analytics-range";
 import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
 import { CustomerAnalyticsDashboardQuerySchema, nowEpochMs, UTC_TIME_ZONE } from "@workspace/shared";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+
+import { WEB_ACTIVITY_FEATURE } from "@/lib/feature-flags";
+import { isWebFeatureEnabled } from "@/lib/server/feature-flag-bundle";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +30,10 @@ export interface DashboardActivityPageProps {
  */
 export default async function DashboardActivityPage({ searchParams }: DashboardActivityPageProps): Promise<React.JSX.Element> {
 	await guardWebPage(ROUTES.dashboard.activity);
+	// Behind the web-activity flag (ADR 087): while it is off for this customer, the page doesn't exist for them.
+	if (!(await isWebFeatureEnabled(WEB_ACTIVITY_FEATURE))) {
+		notFound();
+	}
 
 	const nowMs = nowEpochMs();
 	const rangeQuery = toAnalyticsRangeQuery(resolveAnalyticsRange(ANALYTICS_URL_STATE.parse(await searchParams), nowMs, UTC_TIME_ZONE));
