@@ -49,6 +49,20 @@ export async function settle(): Promise<void> {
 	});
 }
 
+/**
+ * Lets what an example started play out (fake timers): one timer per render, until none is left or `budgetMs` of the
+ * clock has passed. A run sets its next timer in an effect after each render (a character typed, a batch imported, a
+ * "Saved" that resets), so a clock jump inside one render moves it a single step.
+ */
+export async function runOut(budgetMs: number): Promise<void> {
+	const endsAt = jest.now() + budgetMs;
+	while (jest.getTimerCount() > 0 && jest.now() < endsAt) {
+		await act((): void => {
+			jest.advanceTimersToNextTimer();
+		});
+	}
+}
+
 /** Every plain, checkbox and radio item on screen. */
 export function itemsOnScreen(): TestInstance[] {
 	return MENU_ITEM_ROLES.flatMap((role: string): TestInstance[] => screen.queryAllByRole(role));

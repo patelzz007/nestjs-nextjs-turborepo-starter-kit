@@ -1,14 +1,12 @@
-import { act, fireEvent, screen } from "@testing-library/react-native";
+import { fireEvent, screen } from "@testing-library/react-native";
 import type { TestInstance } from "test-renderer";
 
-import { fakeDeviceBoundaries, renderShowcaseExample } from "../../../../test/showcase-example";
+import { fakeDeviceBoundaries, renderShowcaseExample, runOut } from "../../../../test/showcase-example";
 import { SHOWCASE_FEATURE_INDEX } from "../generated/feature-index";
 import { SHOWCASE_FEATURE_SETS } from "../generated/feature-sets";
 import type { ShowcaseComponentModule } from "../showcase-feature";
 
-/** A trace example plays out a run (a plan applied, agents working, files encoding) on timers, a tick at a time. */
-const TICK_MS = 1_000;
-/** Long enough for the longest sample run to finish. */
+/** Long enough for the longest sample run (a plan applied, agents working, files encoding) to finish. */
 const RUN_MS = 12_000;
 /** One example's runs, each control used twice, on the fake clock. */
 const EXAMPLE_TIMEOUT_MS = 30_000;
@@ -35,13 +33,9 @@ async function useEveryControl(): Promise<void> {
 	}
 }
 
-/** Lets a sample run play out, a tick at a time so every interval fires. */
+/** Lets a sample run play out to its end, timer by timer (the runs that tick every 24–160 ms included). */
 async function playOut(): Promise<void> {
-	for (let elapsed = 0; elapsed < RUN_MS; elapsed += TICK_MS) {
-		await act((): void => {
-			jest.advanceTimersByTime(TICK_MS);
-		});
-	}
+	await runOut(RUN_MS);
 }
 
 function loadTrace(): Promise<ShowcaseComponentModule> {
@@ -51,6 +45,16 @@ function loadTrace(): Promise<ShowcaseComponentModule> {
 	}
 	return load();
 }
+
+/**
+ * How long loading the trace examples may take. On a cold Jest cache (or with coverage instrumenting them) this load
+ * is where Babel compiles every example; it runs up front so the first test's budget is spent playing, not compiling.
+ */
+const COLD_COMPILE_TIMEOUT_MS = 180_000;
+
+beforeAll(async (): Promise<void> => {
+	await loadTrace();
+}, COLD_COMPILE_TIMEOUT_MS);
 
 beforeEach((): void => {
 	jest.useFakeTimers();

@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react-native";
+import { cleanup, fireEvent, screen } from "@testing-library/react-native";
 import type { TestInstance } from "test-renderer";
 import * as React from "react";
 
@@ -38,6 +38,12 @@ const SWEEP_TIMEOUT_MS = 120_000;
 
 /** A screen reader's swipe up on a slider. */
 const INCREMENT = { nativeEvent: { actionName: "increment" } };
+
+/**
+ * How many more settles an example gets after its last press, while timers are pending: enough for an upload to fill
+ * or a save to show Saved and reset. Bounded, because a spinner's timers never run out.
+ */
+const RUN_OUT_SETTLES = 4;
 
 /** How many of a menu's items the sweep picks, one per opening. */
 const MAX_MENU_ITEMS = 8;
@@ -97,7 +103,15 @@ async function exerciseExample(render_: () => React.JSX.Element, testID: string)
 		await fireEvent.press(target);
 		await settle();
 	}
+	// What the last presses started (a save that resets, an upload that completes) runs to its end on this example.
+	for (let round = 0; round < RUN_OUT_SETTLES && jest.getTimerCount() > 0; round += 1) {
+		await settle();
+	}
 	expect(screen.getByTestId(testID)).toBeOnTheScreen();
+	// Testing Library unmounts only after each test, and one test uses every example of a component in turn: without
+	// this, each example stayed mounted under the next, its running rows and timers advancing on every settle, and the
+	// trace sweep (22 examples) went from 12 s to 77 s, past its budget on a busy machine.
+	await cleanup();
 }
 
 /**
@@ -117,6 +131,8 @@ describe.each(MODULES)("the %s examples", (_slug, load) => {
 		for (const feature of features) {
 			await renderExample((): React.JSX.Element => (feature satisfies ShowcaseFeature).render(), `example-${feature.anchor}`);
 			expect(feature.source).toContain(`export function`);
+			// One example on screen at a time, as in the sweep below.
+			await cleanup();
 		}
 	});
 
