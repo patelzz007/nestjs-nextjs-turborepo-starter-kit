@@ -24,6 +24,13 @@ WORKDIR /repo
 
 # ── The workspace, installed once ────────────────────────────────────────────
 FROM base AS workspace
+# The Kafka client (@confluentinc/kafka-javascript) publishes no prebuilt binary for Node 26, so the
+# install compiles it and its bundled librdkafka, which fetches and builds OpenSSL, zlib, zstd and curl
+# from source: a C/C++ toolchain, Python (node-gyp), Perl (OpenSSL's configure) and curl. Only this
+# stage needs them; the runtime images copy the built /repo. Drop them once a prebuilt ships.
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ca-certificates curl g++ make perl python3 \
+	&& rm -rf /var/lib/apt/lists/*
 COPY . .
 RUN pnpm install --frozen-lockfile
 
