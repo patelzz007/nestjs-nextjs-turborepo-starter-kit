@@ -14,7 +14,7 @@ import type { SystemOperationTransactions } from "./prisma-audit-read-session";
 /** `app_purge_audit_batch` returns one row of two bigints (driver: bigint). */
 const PurgeRowSchema = z.object({ affected: z.bigint(), held: z.bigint() });
 
-/** The retention store over `public.app_purge_audit_batch` (prisma/rls/70-audit-retention.sql). */
+/** The retention store over `public.app_purge_audit_batch` (prisma/security/generator/functions/audit-retention.ts). */
 export class PrismaAuditRetentionAdapter implements AuditRetentionPort {
 	public constructor(private readonly transactions: SystemOperationTransactions) {}
 

@@ -954,6 +954,8 @@ describe("api contract public surface (DDD migration snapshot)", () => {
 		const names = sortedSharedExportNames();
 		expect(names).toMatchInlineSnapshot(`
 			[
+			  "abilityAllowsCapability",
+			  "abilityRules",
 			  "AcceptRewardLegalSchema",
 			  "ACCESS_TOKEN_MAX_LENGTH",
 			  "AccessTokenPayloadSchema",
@@ -1285,7 +1287,6 @@ describe("api contract public surface (DDD migration snapshot)", () => {
 			  "CreateApiKeySchema",
 			  "createApiPaginatedEnvelopeSchema",
 			  "createApiSuccessEnvelopeSchema",
-			  "createAuthorizationChecker",
 			  "CreateCitySchema",
 			  "CreateCountrySchema",
 			  "CreateExperimentSchema",
@@ -2024,7 +2025,6 @@ describe("api contract public surface (DDD migration snapshot)", () => {
 			  "MAX_WEBHOOK_ENDPOINTS_PER_TENANT",
 			  "MAX_WEBHOOK_SECRET_GRACE_HOURS",
 			  "measureNetworkQuality",
-			  "meetsRequirement",
 			  "MembershipResponseSchema",
 			  "MembershipRoleSchema",
 			  "MembershipStatusSchema",
@@ -2398,6 +2398,7 @@ describe("api contract public surface (DDD migration snapshot)", () => {
 			  "permissionListQuery",
 			  "PermissionListQuerySchema",
 			  "PermissionMatrixResponseSchema",
+			  "permissionOfCapability",
 			  "PermissionPairSchema",
 			  "PermissionPreviewResponseSchema",
 			  "PermissionReferenceSchema",
@@ -2640,6 +2641,7 @@ describe("api contract public surface (DDD migration snapshot)", () => {
 			  "RewardTerminalIdHeaderSchema",
 			  "rewardTypeGivesFreeItem",
 			  "RewardTypeSchema",
+			  "RewardViewerCapabilitiesSchema",
 			  "RICH_TEXT_LINK_MAX_LENGTH",
 			  "RICH_TEXT_MAX_CALLS_TO_ACTION",
 			  "RICH_TEXT_MAX_IMAGES",

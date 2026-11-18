@@ -27,7 +27,7 @@ export class NotificationsFileRegistrations implements OnModuleInit {
 		this.access.register(
 			this.tenantFiles.ruleFor(["BROADCAST_IMAGE"], {
 				manage: MERCHANT_CAPABILITY.manageBroadcasts,
-				read: MERCHANT_CAPABILITY.manageBroadcasts,
+				read: MERCHANT_CAPABILITY.viewBroadcasts,
 				deniedMessage: "Your tenant role cannot write broadcasts",
 			}),
 		);

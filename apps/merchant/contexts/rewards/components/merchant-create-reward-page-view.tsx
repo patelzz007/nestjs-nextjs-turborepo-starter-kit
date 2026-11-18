@@ -88,10 +88,10 @@ export interface MerchantCreateRewardPageViewProps {
 	readonly defaultCategory: RewardCategory;
 }
 
-/** Create-reward route — requires `merchant:manage_rewards` (create endpoint); form hooks mount only when allowed. */
+/** Create-reward route — requires `merchant:create_rewards` (create endpoint); form hooks mount only when allowed. */
 export function MerchantCreateRewardPageView(props: MerchantCreateRewardPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageRewards} loading={<MerchantRewardEditorPageSkeleton />}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.createRewards} loading={<MerchantRewardEditorPageSkeleton />}>
 			<MerchantCreateRewardPageContent {...props} />
 		</MerchantCapabilityGate>
 	);

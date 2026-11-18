@@ -4,6 +4,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../../../src/config/api-config";
 import { CryptoService } from "../../../src/contexts/identity/infrastructure/security/crypto.service";
 import { TENANT_SEED_IDS } from "../../../prisma/seed/tenant-seed-ids";
 import { TENANT_SEED_SLUGS } from "../../../prisma/seed/tenants";
@@ -44,7 +45,7 @@ describe("tenancy multi: membership over HTTP", () => {
 	beforeAll(async () => {
 		app = await createE2eApp();
 		await seedTwoTenantFixture(app.get(PrismaService));
-		const pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		const pool = new Pool({ connectionString: getApiConfig().database.url });
 		const passwordHash = await app.get(CryptoService).hash(FIXTURE_PASSWORD);
 		await pool.query(`UPDATE public."User" SET "passwordHash" = $1 WHERE id = ANY($2::text[])`, [
 			passwordHash,

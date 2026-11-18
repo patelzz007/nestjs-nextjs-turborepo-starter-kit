@@ -17,8 +17,10 @@ One row per table that carries a `tenantId` (plus `Tenant` itself), read from th
 
 - **RLS / Forced**: `relrowsecurity` / `relforcerowsecurity`. Every application table must have both, or the API refuses to boot (`RuntimeRoleProof`, D9) — so a `no` here cannot ship.
 - **Read / Insert / Update / Delete**: whether a policy admits that command for the runtime role. A policy admits a system operation only through `app_rls_bypass_on('<table>')`, which lists the tables each operation may reach (`src/prisma/system-operation.registry.ts`).
-- **Delete**: business rows are soft-deleted (`isDeleted`, `deletedAt`, `deletedBy`); a delete policy exists for cascades and seed cleanup, not for an API hard delete. Append-only logs have no update or delete policy and their `UPDATE`/`DELETE` privileges are withheld (`prisma/rls/withheld-privileges.ts`).
+- **Delete**: business rows are soft-deleted (`isDeleted`, `deletedAt`, `deletedBy`); a delete policy exists for cascades and seed cleanup, not for an API hard delete. Append-only logs have no update or delete policy and their `UPDATE`/`DELETE` privileges are withheld (`prisma/security/withheld-privileges.ts`).
 - **Proven by**: the test IDs of the multi-tenancy plan §8.3 — `DB-*` in `apps/api/e2e/rls/`, `MT-*` / `LOC-*` / `MACH-*` in `apps/api/e2e/tenancy/`. DB-001 (no tenant set → no rows, insert denied) and DB-005 (no setting survives on a pooled connection) cover every row.
+
+- **Which member a policy admits** (ADR 090): tenant tables check the catalogue permission each command needs (role or live grant, at the row's store), not only membership. The per-table rules are in `apps/api/prisma/security/table-policies.ts`; Owner-vs-Cashier proof is `apps/api/e2e/tenant-permission-tightening.e2e-spec.ts`.
 
 | Table | RLS | Forced | Read | Insert | Update | Delete | Proven by |
 |---|---|---|---|---|---|---|---|

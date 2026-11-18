@@ -1666,7 +1666,7 @@ List the current user's tenant memberships
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
-| `data[].capabilities` | "merchant:view_dashboard" \| "merchant:view_rewards" \| "merchant:manage_rewards" \| "merchant:view_redemptions" \| "merchant:manage_api_keys" \| "merchant:view_analytics" \| "merchant:manage_team" \| "merchant:view_locations" \| "merchant:manage_locations" \| "merchant:manage_verification" \| … (+5 more)[] | no |  |
+| `data[].capabilities` | "merchant:view_dashboard" \| "merchant:view_rewards" \| "merchant:manage_rewards" \| "merchant:view_redemptions" \| "merchant:manage_api_keys" \| "merchant:view_analytics" \| "merchant:manage_team" \| "merchant:view_locations" \| "merchant:manage_locations" \| "merchant:manage_verification" \| … (+28 more)[] | no |  |
 | `data[].createdAt` | integer | no |  |
 | `data[].displayName` | string | yes |  |
 | `data[].kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
@@ -2715,6 +2715,9 @@ List tenant rewards
 | `data[].termsConditions` | string \| null | yes |  |
 | `data[].title` | string | yes |  |
 | `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data[].viewerCapabilities` | object | no |  |
+| `data[].viewerCapabilities.publish` | boolean | yes |  |
+| `data[].viewerCapabilities.update` | boolean | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
@@ -2964,6 +2967,9 @@ Create a draft reward
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -3142,6 +3148,9 @@ Read one tenant reward (404 when not offered at any of the caller's stores)
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -3320,6 +3329,9 @@ Update a draft or pending reward
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -3527,6 +3539,9 @@ Set the lowest customer tier that may claim a reward (a draft, one in review or 
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -3615,6 +3630,9 @@ _No fields._
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 

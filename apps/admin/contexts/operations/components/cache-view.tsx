@@ -2,9 +2,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { FlushCacheSchema, PERMISSION, type CacheNamespaceSummary, type CacheOverview, type FlushCacheInput } from "@workspace/shared";
+import { FlushCacheSchema, type CacheNamespaceSummary, type CacheOverview, type FlushCacheInput } from "@workspace/shared";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -48,10 +48,10 @@ export function formatTtl(ttlMs: number): string {
 /** `/operations/cache` (ADR 072): each cache's hit ratio and size, Redis memory, and flushing a cache or a tenant. */
 export function CacheView(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const cacheQuery = api.operations.cache.useQuery(undefined, { refetchInterval: CACHE_REFRESH_MS });
 	const overview = cacheQuery.data?.data;
-	const canFlush = can(PERMISSION.CACHE.DELETE);
+	const canFlush = ability.can("DELETE", "CACHE");
 
 	return (
 		<div className="flex flex-col gap-6">

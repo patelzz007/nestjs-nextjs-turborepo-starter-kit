@@ -37,7 +37,7 @@ describe("tenancy single mode", () => {
 	const prisma = new PrismaService(config);
 	const transactions = new TenantTransactionService(prisma, new RequestContextService());
 	const source = new FixedTenantSource(new TenancyConfigService(config), new PrismaTenantRouteLookup(transactions));
-	const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+	const pool = new Pool({ connectionString: getApiConfig().database.url });
 
 	beforeAll(async () => {
 		await prisma.ensureConnected();

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { epochMs, type BroadcastResponse } from "@workspace/shared";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
+import { epochMs, PERMISSION, type BroadcastResponse, type CapabilitySlug } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -16,7 +17,6 @@ const { broadcastData, scheduleMutate, approveMutate, cancelMutate } = vi.hoiste
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: (): object => ({ push: vi.fn() }) }));
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({ useAuthorization: (): object => ({ can: (): boolean => true }) }));
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
@@ -64,10 +64,15 @@ function broadcast(overrides: Partial<BroadcastResponse> = {}): BroadcastRespons
 	};
 }
 
+/** Every broadcast permission the detail page checks: edit, send, approve and cancel. */
+const BROADCAST_GRANTS: readonly CapabilitySlug[] = [PERMISSION.BROADCAST.UPDATE, PERMISSION.BROADCAST.PUBLISH, PERMISSION.BROADCAST.APPROVE, PERMISSION.BROADCAST.DELETE];
+
 function renderDetail(): void {
 	render(
 		<QueryClientProvider client={new QueryClient()}>
-			<PlatformBroadcastDetailView broadcastId={ID} />
+			<SessionAbilityProvider capabilities={BROADCAST_GRANTS} namespace="platform">
+				<PlatformBroadcastDetailView broadcastId={ID} />
+			</SessionAbilityProvider>
 		</QueryClientProvider>,
 		{ wrapper: UiKitTestProviders },
 	);

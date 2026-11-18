@@ -82,7 +82,7 @@ describe("CreateRewardHandler (D02)", () => {
 		expect(h.scope.rewards.added).toHaveLength(1);
 		expect(response.title).toBe("Free coffee");
 		expect(h.scope.imageFiles.locks).toEqual([{ tenantId: TENANT_ID, fileIds: [IMAGE_ID] }]);
-		expect(h.access.requests.at(0)?.request).toEqual({ tenantId: TENANT_ID, capability: "merchant:manage_rewards" });
+		expect(h.access.requests.at(0)?.request).toEqual({ tenantId: TENANT_ID, capability: "merchant:create_rewards" });
 		expect(h.uow.committed).toEqual([{ actor, operation: null }]);
 		expect(h.scope.events.recordedNames()).toEqual(["rewards.RewardCreated"]);
 	});
@@ -96,9 +96,9 @@ describe("CreateRewardHandler (D02)", () => {
 		expect(h.scope.rewards.rows.get(rewardId ?? "")?.referrer?.inventory.quantityTotal).toBe(3);
 	});
 
-	it("writes nothing when the caller may not manage rewards", async () => {
+	it("writes nothing when the caller may not create rewards", async () => {
 		const h = harness();
-		h.access.deny("merchant:manage_rewards");
+		h.access.deny("merchant:create_rewards");
 		await expect(
 			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
 				new CreateRewardCommand(userActor(), createInput()),
@@ -189,6 +189,19 @@ describe("a reward's minimum tier (ADR 085)", () => {
 			),
 		).rejects.toThrow(AuthorizationDeniedError);
 		expect(h.scope.rewards.rows.get(REWARD_ID)?.audience.minimumTier).toBe("BRONZE");
+	});
+
+	it("decides a minimum-tier change for THIS reward, so a share of it counts (ADR 067)", async () => {
+		const h = harness();
+		h.scope.rewards.seed(rewardState("PUBLISHED"));
+		await new SetRewardMinimumTierHandler(h.uow, h.access, h.clock, new RecordingMerchantDisplay(), h.tiers).execute(
+			new SetRewardMinimumTierCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, minimumTier: "GOLD" }),
+		);
+		expect(h.access.requests.at(0)?.request).toEqual({
+			tenantId: TENANT_ID,
+			capability: "merchant:manage_rewards",
+			target: { resource: "REWARD", resourceId: REWARD_ID },
+		});
 	});
 });
 

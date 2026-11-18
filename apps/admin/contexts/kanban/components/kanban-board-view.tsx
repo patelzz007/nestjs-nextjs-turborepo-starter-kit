@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { trimUrlDraft, useUrlDraft } from "@workspace/client/lib/url-state/use-url-draft";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
@@ -12,7 +12,6 @@ import {
 	KanbanItemTypeSchema,
 	kanbanTypesOnBoard,
 	LIST_SLOT_INDEX,
-	PERMISSION,
 	type Envelope,
 	type KanbanBoard,
 	type KanbanBoardKind,
@@ -232,11 +231,11 @@ export interface KanbanBoardViewProps {
  */
 export function KanbanBoardView({ initialBoard }: KanbanBoardViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
-	const canCreateTasks = can(PERMISSION.KANBAN_TASK.CREATE);
-	const canMoveTasks = can(PERMISSION.KANBAN_TASK.UPDATE);
-	const canManageColumns = can(PERMISSION.KANBAN_BOARD.UPDATE);
+	const canCreateTasks = ability.can("CREATE", "KANBAN_TASK");
+	const canMoveTasks = ability.can("UPDATE", "KANBAN_TASK");
+	const canManageColumns = ability.can("UPDATE", "KANBAN_BOARD");
 
 	const [urlState, updateUrlState] = useUrlState(KANBAN_BOARD_URL_STATE);
 	const boardKind = KANBAN_BOARD_OF_PARAM[urlState.board];

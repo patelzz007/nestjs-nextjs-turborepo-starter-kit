@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -42,9 +42,9 @@ const PATH = "/merchants";
 function table(): React.JSX.Element {
 	return (
 		<QueryClientProvider client={new QueryClient()}>
-			<CapabilitiesProvider capabilities={[PERMISSION.MERCHANT_ORG.LIST]}>
+			<SessionAbilityProvider capabilities={[PERMISSION.MERCHANT_ORG.LIST]} namespace="platform">
 				<MerchantsAllTable />
-			</CapabilitiesProvider>
+			</SessionAbilityProvider>
 		</QueryClientProvider>
 	);
 }

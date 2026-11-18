@@ -52,7 +52,7 @@ PostgreSQL and Redis; locally, the developer's laptop is the server.
 - `pg_dump --format=custom` run by a BullMQ job **on the worker**, as a dedicated read-only
   `app_backup` role with `BYPASSRLS` (its own `BACKUP_DATABASE_URL`; the application's roles are
   unchanged), streamed by multipart upload into a private, server-side-encrypted storage prefix.
-  Locally, a `pg_dump` older than the server runs from the `postgres:18.6` image instead.
+  Locally, a `pg_dump` older than the server runs from the `postgres:18.7` image instead.
 - Manual and daily (03:00, platform time zone); 14 days kept; a pinned backup is never pruned. Download
   is a 5-minute signed URL behind a fresh password / 2FA check, and audited. SuperAdmin only.
 - **Not built:** restore from the panel (a documented CLI runbook instead) and client-side encryption.

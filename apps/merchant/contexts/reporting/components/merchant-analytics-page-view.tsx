@@ -39,7 +39,7 @@ import { AnalyticsRangePickerSkeleton } from "@workspace/ui/components/analytics
 import { apiDownloads } from "@workspace/client/lib/api/download";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import {
 	DEFAULT_SALE_CURRENCY,
@@ -100,7 +100,7 @@ function storeScope(locationId: string | undefined): string {
 
 function MerchantAnalyticsContent({ tenantSlug, nowMs, timeZone, initialDashboard }: MerchantAnalyticsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const { locationId } = useActiveLocationFilter();
 	const controller = useAnalyticsRange(nowMs, timeZone);
 	const rangeQuery = React.useMemo((): AnalyticsRangeQuery => toAnalyticsRangeQuery(controller.range), [controller.range]);
@@ -129,7 +129,7 @@ function MerchantAnalyticsContent({ tenantSlug, nowMs, timeZone, initialDashboar
 		[tenantSlug, rangeQuery, locationId],
 	);
 	// The empty sales state links to API keys only for members who may create one (POST /t/:tenantSlug/api-keys).
-	const apiKeysHref = can(MERCHANT_CAPABILITY.manageApiKeys) ? tenantRoutes(tenantSlug).apiKeys : undefined;
+	const apiKeysHref = ability.can("CREATE", "API_KEY") ? tenantRoutes(tenantSlug).apiKeys : undefined;
 
 	return (
 		<div className="space-y-6">

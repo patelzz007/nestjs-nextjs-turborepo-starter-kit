@@ -39,7 +39,7 @@ describe("Backup restore drill (e2e, real pg_dump and pg_restore)", () => {
 	}
 
 	beforeAll(() => {
-		const url = new URL(z.string().min(1).parse(process.env.DATABASE_URL));
+		const url = new URL(getApiConfig().database.url);
 		url.pathname = "/postgres";
 		url.search = "";
 		serverUrl = url.toString();
@@ -54,7 +54,7 @@ describe("Backup restore drill (e2e, real pg_dump and pg_restore)", () => {
 		"restores a real backup, finds every table, rows, the migration and row-level security, then drops the copy",
 		async () => {
 			const before = await drillDatabases();
-			const checks = await new PgRestoreDrillAdapter(serverUrl, EXECUTABLE_SEARCH_PATH).restoreAndCheck(dumpOf(z.string().parse(process.env.DATABASE_URL)));
+			const checks = await new PgRestoreDrillAdapter(serverUrl, EXECUTABLE_SEARCH_PATH).restoreAndCheck(dumpOf(getApiConfig().database.url));
 
 			expect(checks.failures).toStrictEqual([]);
 			expect(checks.tablesChecked).toBe(Object.values(Prisma.ModelName).length);

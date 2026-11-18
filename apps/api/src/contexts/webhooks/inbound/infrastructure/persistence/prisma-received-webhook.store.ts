@@ -1,7 +1,7 @@
 // ============================================
 // prisma-received-webhook.store.ts - The received-webhook log's writes (ADR 081)
 // ============================================
-// `ReceivedWebhook` is bypass-only platform plumbing (prisma/rls/57-inbound-webhooks.sql), reached only
+// `ReceivedWebhook` is bypass-only platform plumbing (prisma/security/table-policies.ts), reached only
 // through the allowlisted system operation `webhooks.inbound.record`. A claim is settled in one statement:
 // INSERT … ON CONFLICT (provider, "providerDeliveryId") DO UPDATE … WHERE <the delivery may be processed
 // again>, so two instances receiving the same delivery at once never both process it — the second waits

@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../../../src/config/api-config";
 import { ImpersonationGrantRequiredError } from "../../../src/contexts/identity/domain/errors/identity.errors";
 import { PrismaService } from "../../../src/prisma/prisma.service";
 import { createE2eApp, login, uniqueClientIp } from "../../e2e-helpers";
@@ -41,7 +42,7 @@ describe("tenancy multi: platform staff on tenant routes", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		await seedTwoTenantFixture(app.get(PrismaService));
 		superAdminId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = $1`, [SUPER_ADMIN_EMAIL])).rows.at(0)).id;
 		accessToken = (await login(app, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD)).accessToken;

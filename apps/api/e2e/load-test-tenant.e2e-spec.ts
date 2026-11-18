@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { API_VERSION_PREFIX, getFileCategoryPolicy, ImageRulesSchema, LIST_SLOT_INDEX, RewardResponseSchema } from "@workspace/shared";
 
+import { getApiConfig } from "../src/config/api-config";
 import { systemActor, type ActorContext } from "../src/platform/application/actor-context";
 import { ServerFileIngest } from "../src/contexts/files/public-api";
 import { LOAD_TEST_PURGE_OPERATION, LOAD_TEST_WRITE_OPERATION } from "../src/contexts/operations/application/ports/operations.tokens";
@@ -14,7 +15,7 @@ import { createPrismaLoadTestTenant, LOAD_TEST_REWARD_COUNT, LOAD_TEST_TENANT_SL
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
 import { createE2eApp, login, parseSuccessEnvelope } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 /** A run's size where five shared staff accounts ran out of sessions (5 × 5 = 25). */
 const VIRTUAL_USERS = 26;

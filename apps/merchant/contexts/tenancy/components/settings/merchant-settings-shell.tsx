@@ -2,10 +2,10 @@
 
 import { canOpenTenantPath } from "@/lib/navigation/tenant-route-authorization";
 import { TENANT_ROUTES, tenantPath, toTenantRelativePath, type AppPath } from "@/lib/routes";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { MERCHANT_CAPABILITY } from "@workspace/shared";
+import { abilityAllowsCapability, type CapabilitySlug } from "@workspace/shared";
 import { SettingsShell, type SettingsLinkProps, type SettingsNavGroup } from "@workspace/ui/components/settings-shell";
 import { BadgeCheck, Ban, Building2, Palette, Plug, ShieldCheck, Store, Users } from "lucide-react";
 import Link from "next/link";
@@ -70,18 +70,19 @@ export interface MerchantSettingsShellProps {
 /** Settings for one business: the sections the member may open on the left, the open one on the right. */
 export function MerchantSettingsShell({ tenantSlug, children }: MerchantSettingsShellProps): React.JSX.Element {
 	const pathname = usePathname();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const { api } = useAuth();
-	const canManageTeam = can(MERCHANT_CAPABILITY.manageTeam);
+	// The pending-invitation list is the team list's read (member.read).
+	const canViewTeam = ability.can("READ", "MEMBER");
 	// Waiting invitations, counted by the API (one row asked for; the total is in `meta`).
-	const invitesQuery = api.tenants.listMemberInvites.useQuery({ tenantSlug, page: 1, limit: 1 }, { enabled: canManageTeam });
-	const pendingInvites = canManageTeam ? readPaginatedTotal(invitesQuery.data?.meta, 0) : 0;
+	const invitesQuery = api.tenants.listMemberInvites.useQuery({ tenantSlug, page: 1, limit: 1 }, { enabled: canViewTeam });
+	const pendingInvites = canViewTeam ? readPaginatedTotal(invitesQuery.data?.meta, 0) : 0;
 
 	const groups: readonly SettingsNavGroup[] = MERCHANT_SETTINGS_SECTIONS.map((group) => ({
 		id: group.id,
 		label: group.label,
 		items: group.sections
-			.filter((section) => canOpenTenantPath(section.path, can))
+			.filter((section) => canOpenTenantPath(section.path, (slug: CapabilitySlug): boolean => abilityAllowsCapability(ability, slug)))
 			.map((section) => ({
 				id: section.id,
 				label: section.label,

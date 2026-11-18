@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, grantSeedUsersFullSession, login, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 const PageSchema = z.object({ data: z.array(z.object({ userId: z.string(), fullName: z.string() })), meta: z.looseObject({}) });
@@ -33,7 +34,7 @@ describe("Broadcast customers looked up by id (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		await grantSeedUsersFullSession(pool, [OWNER_EMAIL]);
 		owner = await login(app, OWNER_EMAIL, "BrewOwner@123", "merchant");
 		const ofKl = `FROM public."TenantCustomer" tc JOIN public."Tenant" t ON t.id = tc."tenantId" WHERE t.slug = $1 AND tc."isDeleted" = false`;

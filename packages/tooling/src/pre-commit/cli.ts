@@ -10,7 +10,7 @@ import path from "node:path";
 import { settings } from "../shared/settings.ts";
 import { describeStaged } from "../terminal-progress/change-summary.ts";
 import { runChecks, terminalStream } from "../terminal-progress/run-checks.ts";
-import { stagedFilesNote } from "./pre-commit.ts";
+import { stagedFilesNote, touchesSecuritySql } from "./pre-commit.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../../..");
 
@@ -29,6 +29,18 @@ const passed = await runChecks({
 			command: path.join(REPO_ROOT, "node_modules/.bin/lint-staged"),
 			args: ["--config", "packages/tooling/lint-staged.config.mjs"],
 		},
+		// Only when the commit touches what the security SQL is generated from: the committed SQL must match it.
+		...(touchesSecuritySql(staged, settings.securitySql.inputs)
+			? [
+					{
+						id: "security-sql",
+						label: "Generated security SQL",
+						note: "the committed SQL matches its declarations",
+						command: "pnpm",
+						args: ["--filter", settings.securitySql.workspace, settings.securitySql.checkScript],
+					},
+				]
+			: []),
 	],
 	cwd: REPO_ROOT,
 	stream: terminalStream(),

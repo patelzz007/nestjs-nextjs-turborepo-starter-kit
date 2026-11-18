@@ -5,7 +5,7 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CapabilitiesProvider } from "../../../authorization/index";
+import { SessionAbilityProvider } from "../../../authorization/index";
 import { IMPERSONATE_USER_PANEL_LABELS } from "../impersonate-user-panel-labels";
 import { ImpersonateUserPanel } from "../impersonate-user-panel";
 
@@ -131,7 +131,9 @@ function renderPanel({
 	function Providers({ children }: { readonly children: ReactNode }): JSX.Element {
 		return (
 			<UiKitTestProviders>
-				<CapabilitiesProvider capabilities={grants}>{children}</CapabilitiesProvider>
+				<SessionAbilityProvider capabilities={grants} namespace="platform">
+					{children}
+				</SessionAbilityProvider>
 			</UiKitTestProviders>
 		);
 	}

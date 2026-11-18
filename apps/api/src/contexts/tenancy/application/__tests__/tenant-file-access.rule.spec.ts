@@ -74,14 +74,14 @@ describe("TenantFileAccessRule", () => {
 		await expect(rule.assertCanAct(ACTOR, file("MERCHANT_KYB"), "read")).rejects.toThrow("capability denied");
 	});
 
-	it("needs manage_verification for every KYB action, read included", async () => {
+	it("reads KYB evidence with view_verification (kyb.read) and changes it with manage_verification (kyb.update)", async () => {
 		const gate = new RecordingGate();
 		const rule = new TenantFileAccessRule(["MERCHANT_KYB"], KYB_EVIDENCE_CAPABILITIES, new Memberships("OWNER"), gate);
 
 		await rule.assertCanAct(ACTOR, file("MERCHANT_KYB"), "read");
 		await rule.assertCanAct(ACTOR, file("MERCHANT_KYB"), "delete");
 
-		expect(gate.checks.map((check) => check.capability)).toEqual(["merchant:manage_verification", "merchant:manage_verification"]);
+		expect(gate.checks.map((check) => check.capability)).toEqual(["merchant:view_verification", "merchant:manage_verification"]);
 	});
 
 	it("decides by the CURRENT capability, never by who uploaded: a former member who uploaded cannot delete", async () => {

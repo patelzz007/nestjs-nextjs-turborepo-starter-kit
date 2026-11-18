@@ -100,12 +100,12 @@ beforeEach(() => {
 });
 
 describe("ListMembersHandler", () => {
-	it("checks manage-team, then reads the requested page acting in the member's tenant", async () => {
+	it("checks view-team (member.read), then reads the requested page acting in the member's tenant", async () => {
 		const query: TenantMemberListQuery = { page: 2, limit: 10, filter: { role: { eq: "CASHIER" } } };
 
 		await new ListMembersHandler(ports, ports, ports).execute(new ListMembersQuery(ACTOR, { tenantSlug: "brew-bean", query }));
 
-		expect(ports.capabilityRequests).toEqual([{ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.manageTeam }]);
+		expect(ports.capabilityRequests).toEqual([{ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.viewTeam }]);
 		expect(ports.reads).toEqual([{ kind: "members", tenantId: TENANT_ID, actorTenantId: TENANT_ID, query }]);
 	});
 
@@ -120,12 +120,12 @@ describe("ListMembersHandler", () => {
 });
 
 describe("ListPendingInvitesHandler", () => {
-	it("checks manage-team, then reads the requested page of pending invites", async () => {
+	it("checks view-team (member.read), then reads the requested page of pending invites", async () => {
 		const query: TenantMemberInviteListQuery = { page: 1, limit: 20, sort: "expiresAt" };
 
 		await new ListPendingInvitesHandler(ports, ports, ports).execute(new ListPendingInvitesQuery(ACTOR, { tenantSlug: "brew-bean", query }));
 
-		expect(ports.capabilityRequests).toEqual([{ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.manageTeam }]);
+		expect(ports.capabilityRequests).toEqual([{ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.viewTeam }]);
 		expect(ports.reads).toEqual([{ kind: "invites", tenantId: TENANT_ID, actorTenantId: TENANT_ID, query }]);
 	});
 });

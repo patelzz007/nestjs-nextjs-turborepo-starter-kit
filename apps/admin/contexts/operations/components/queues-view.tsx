@@ -2,9 +2,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { OpsQueueJobActionSchema, PERMISSION, type OpsFailedJob, type OpsQueue, type QueueName } from "@workspace/shared";
+import { OpsQueueJobActionSchema, type OpsFailedJob, type OpsQueue, type QueueName } from "@workspace/shared";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -202,7 +202,7 @@ function useJobAction(queue: QueueName): { readonly act: (action: JobAction, job
 /** One queue's failed jobs (never their data: it can hold personal data), with retry and discard. */
 export function FailedJobsCard({ queue }: { readonly queue: QueueName }): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const failed = api.operations.queueFailedJobs.useQuery({ queueName: queue });
 	const list = failed.data?.data;
 	const { act, isPending } = useJobAction(queue);
@@ -210,8 +210,8 @@ export function FailedJobsCard({ queue }: { readonly queue: QueueName }): React.
 	const reasonValid = OpsQueueJobActionSchema.safeParse({ reason }).success;
 	/** A retry or discard needs a reason, and one change at a time. */
 	const actionsEnabled: boolean = reasonValid && !isPending;
-	const canRetry = can(PERMISSION.BACKGROUND_JOB.UPDATE);
-	const canDiscard = can(PERMISSION.BACKGROUND_JOB.DELETE);
+	const canRetry = ability.can("UPDATE", "BACKGROUND_JOB");
+	const canDiscard = ability.can("DELETE", "BACKGROUND_JOB");
 	const reasonId = React.useId();
 	const handleReason = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setReason(event.currentTarget.value);

@@ -14,13 +14,13 @@ import { TenantTransactionService } from "../src/prisma/tenant-transaction.servi
 
 /**
  * The durable backstop of cache invalidation, against the real database: the
- * `users_authorization_change_stamp` trigger (prisma/rls/30-authorization-change-stamp.sql)
+ * `users_authorization_change_stamp` trigger (prisma/security/triggers.ts)
  * stamps every access change in its own transaction, the feed reads the stamps
  * under `maintenance.authorization_change_sweep` (whose bypass reaches `User`
  * only), and the sweep drops the swept accounts from this instance's caches.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 /** Records which accounts this instance dropped (authorization cache + session cache). */
 class RecordingCaches {

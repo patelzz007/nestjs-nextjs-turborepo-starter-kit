@@ -24,7 +24,7 @@ export class EnableWebhookEndpointHandler implements ICommandHandler<EnableWebho
 
 	public async execute(command: EnableWebhookEndpointCommand): Promise<WebhookEndpointSummary> {
 		const { input } = command;
-		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId, "manage");
 		const now = this.clock.now();
 		const endpoint = await this.uow.run(member.actor, (scope: WebhooksScope) =>
 			changeLiveEndpoint(scope, input.tenantId, input.endpointId, (live): void => {

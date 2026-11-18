@@ -17,7 +17,7 @@ export class ListWebhookDeliveriesHandler implements IQueryHandler<ListWebhookDe
 	) {}
 
 	public async execute(query: ListWebhookDeliveriesQuery): Promise<PaginatedServiceResult<WebhookDeliverySummary>> {
-		const member = await assertWebhookMember(this.merchantAccess, query.actor, query.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, query.actor, query.tenantId, "view");
 		return this.reads.listDeliveries(member.actor, query.tenantId, query.query);
 	}
 }

@@ -1,15 +1,15 @@
 "use client";
 
 import { useMerchantCapabilities } from "@/contexts/tenancy/lib/tenant/capabilities";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import type { CapabilitySlug } from "@workspace/shared";
 import * as React from "react";
 
-/** Resolution state of the active membership that backs `useAuthorization()`. */
+/** Resolution state of the active membership that backs the session's CASL ability (`useAbility()` / `<Can>`). */
 export interface MerchantAuthorizationStatus {
 	/** True until the tenant context settles — gates render a skeleton, never a denial. */
 	readonly isLoading: boolean;
-	/** Granted `merchant:*` capability slugs (also fed to `CapabilitiesProvider`). */
+	/** Granted `merchant:*` capability slugs (the ability is built from them; menus filter on the raw slugs). */
 	readonly capabilities: readonly CapabilitySlug[];
 }
 
@@ -33,13 +33,15 @@ export interface MerchantAuthorizationStateProviderProps {
 	readonly children: React.ReactNode;
 }
 
-/** Pure provider: exposes the shared `can()` / `<Can>` API plus the membership resolution state. */
+/** Pure provider: the session's CASL ability (namespace "merchant": `useAbility()` / `<Can>`) plus the membership resolution state. */
 export function MerchantAuthorizationStateProvider({ isLoading, capabilities, children }: MerchantAuthorizationStateProviderProps): React.JSX.Element {
 	const status = React.useMemo((): MerchantAuthorizationStatus => ({ isLoading, capabilities }), [capabilities, isLoading]);
 
 	return (
 		<MerchantAuthorizationStatusContext.Provider value={status}>
-			<CapabilitiesProvider capabilities={capabilities}>{children}</CapabilitiesProvider>
+			<SessionAbilityProvider capabilities={capabilities} namespace="merchant">
+				{children}
+			</SessionAbilityProvider>
 		</MerchantAuthorizationStatusContext.Provider>
 	);
 }

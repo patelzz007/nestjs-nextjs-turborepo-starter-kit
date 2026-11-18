@@ -3,6 +3,7 @@ import type { SystemOperationName } from "../../../../platform/application/syste
 /** Injection tokens of the tenants context. */
 export const TENANTS_UNIT_OF_WORK = Symbol("TENANTS_UNIT_OF_WORK");
 export const MERCHANT_ACCESS = Symbol("MERCHANT_ACCESS");
+export const MERCHANT_CAPABILITY_QUERY = Symbol("MERCHANT_CAPABILITY_QUERY");
 export const TENANT_DIRECTORY = Symbol("TENANT_DIRECTORY");
 export const TENANT_READ = Symbol("TENANT_READ");
 export const TENANT_AUDIT = Symbol("TENANT_AUDIT");
@@ -30,6 +31,7 @@ export const TENANT_LIFECYCLE_READ_OPERATION: SystemOperationName = "tenant.life
 export const TENANT_LIFECYCLE_APPEAL_OPERATION: SystemOperationName = "tenant.lifecycle.appeal";
 export const TENANT_LIFECYCLE_REACTIVATE_OPERATION: SystemOperationName = "tenant.lifecycle.reactivate";
 export const TENANT_MEMBERSHIP_LEAVE_OPERATION: SystemOperationName = "tenant.membership.leave";
+export const TENANT_MEMBERSHIP_RENAME_OWN_OPERATION: SystemOperationName = "tenant.membership.rename_own";
 export const TENANT_LIFECYCLE_ADMIN_SUSPEND_OPERATION: SystemOperationName = "tenant.lifecycle.admin_suspend";
 export const TENANT_LIFECYCLE_ADMIN_BAN_OPERATION: SystemOperationName = "tenant.lifecycle.admin_ban";
 export const TENANT_CUSTOMER_BAN_CREATE_OPERATION: SystemOperationName = "tenant.customer_ban.create";

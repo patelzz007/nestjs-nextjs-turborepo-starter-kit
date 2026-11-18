@@ -1,6 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { DEFAULT_TIER_RULES, epochMs, PERMISSION, type AdminUserTier, type TierAvailability, type TierDistribution, type TierSettingsResponse } from "@workspace/shared";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
+import {
+	DEFAULT_TIER_RULES,
+	epochMs,
+	PERMISSION,
+	type AdminUserTier,
+	type CapabilitySlug,
+	type TierAvailability,
+	type TierDistribution,
+	type TierSettingsResponse,
+} from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +19,7 @@ import { TierDistributionPanel, toTierCounts } from "@/contexts/tiers/components
 import { TierSettingsView } from "@/contexts/tiers/components/tier-settings-view";
 import { tierChangeLine, UserTierCard } from "@/contexts/tiers/components/user-tier-card";
 
-const { mocks, permissions } = vi.hoisted(() => ({
+const { mocks } = vi.hoisted(() => ({
 	mocks: {
 		availability: vi.fn<() => { readonly data: { readonly data: TierAvailability } | undefined }>(),
 		settings: vi.fn<() => { readonly data: { readonly data: TierSettingsResponse } | undefined }>(),
@@ -17,11 +27,23 @@ const { mocks, permissions } = vi.hoisted(() => ({
 		userTier: vi.fn<(input: { readonly userId: string }, options: { readonly enabled: boolean }) => { readonly data: { readonly data: AdminUserTier } | undefined }>(),
 		distribution: vi.fn<(input: undefined, options: { readonly enabled: boolean }) => object>(),
 	},
-	permissions: { granted: new Set<string>() },
 }));
 
+/** The signed-in staff member's capabilities, fed to the real session ability. */
+const permissions: { granted: readonly CapabilitySlug[] } = { granted: [] };
+
+/** The UI kit plus the session ability built from `permissions.granted`. */
+function SettingsProviders({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+	return (
+		<UiKitTestProviders>
+			<SessionAbilityProvider capabilities={permissions.granted} namespace="platform">
+				{children}
+			</SessionAbilityProvider>
+		</UiKitTestProviders>
+	);
+}
+
 vi.mock("@tanstack/react-query", async (importOriginal) => ({ ...(await importOriginal<object>()), useQueryClient: (): object => ({ invalidateQueries: vi.fn() }) }));
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({ useAuthorization: (): object => ({ can: (slug: string): boolean => permissions.granted.has(slug) }) }));
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
@@ -48,7 +70,7 @@ const NOW = Date.UTC(2026, 10, 17);
 beforeEach((): void => {
 	mocks.availability.mockReturnValue({ data: { data: ON } });
 	mocks.settings.mockReturnValue({ data: { data: SETTINGS } });
-	permissions.granted = new Set([PERMISSION.SYSTEM_SETTINGS.UPDATE]);
+	permissions.granted = [PERMISSION.SYSTEM_SETTINGS.UPDATE];
 });
 
 afterEach((): void => {
@@ -58,8 +80,8 @@ afterEach((): void => {
 
 describe("TierSettingsView", () => {
 	it("shows the rules read-only, with who last changed them, to staff who may only read them", () => {
-		permissions.granted = new Set();
-		render(<TierSettingsView />, { wrapper: UiKitTestProviders });
+		permissions.granted = [];
+		render(<TierSettingsView />, { wrapper: SettingsProviders });
 
 		expect(screen.getByText(/by Sam Staff: Launch rules/u)).toBeTruthy();
 		expect(screen.getByText("Gold at").nextElementSibling?.textContent).toBe("25");
@@ -67,7 +89,7 @@ describe("TierSettingsView", () => {
 	});
 
 	it("saves changed rules with a reason, and refuses to save without one", () => {
-		render(<TierSettingsView />, { wrapper: UiKitTestProviders });
+		render(<TierSettingsView />, { wrapper: SettingsProviders });
 		const form = within(screen.getByRole("form", { name: "Change the tier rules" }));
 
 		fireEvent.change(form.getByLabelText("Gold at"), { target: { value: "30" } });
@@ -82,7 +104,7 @@ describe("TierSettingsView", () => {
 
 	it("says the rules are untouched before anyone changed them", () => {
 		mocks.settings.mockReturnValue({ data: { data: { ...DEFAULT_TIER_RULES, reason: null, updatedAt: null, updatedByName: null } } });
-		render(<TierSettingsView />, { wrapper: UiKitTestProviders });
+		render(<TierSettingsView />, { wrapper: SettingsProviders });
 		expect(screen.getByText("The launch rules: nobody has changed them yet.")).toBeTruthy();
 	});
 });

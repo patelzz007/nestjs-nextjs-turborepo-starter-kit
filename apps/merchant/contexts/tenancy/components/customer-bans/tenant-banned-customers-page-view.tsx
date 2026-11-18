@@ -3,6 +3,7 @@
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
@@ -35,10 +36,13 @@ export interface TenantBannedCustomersPageViewProps {
 	readonly tenantSlug: string;
 }
 
-/** Banned customers — requires `merchant:manage_rewards` (the customer-bans endpoints); the list mounts only when allowed. */
+/**
+ * Banned customers — the list needs `merchant:view_customer_bans` (customer_ban.read) and mounts only when allowed;
+ * lifting a ban needs `merchant:lift_customer_bans` (customer_ban.delete).
+ */
 export function TenantBannedCustomersPageView(props: TenantBannedCustomersPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageRewards} loading={<MerchantBannedCustomersPageSkeleton />}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewCustomerBans} loading={<MerchantBannedCustomersPageSkeleton />}>
 			<TenantBannedCustomersPageContent {...props} />
 		</MerchantCapabilityGate>
 	);
@@ -53,6 +57,7 @@ interface BanRowProps {
 function BanRow({ tenantSlug, ban }: BanRowProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
+	const canLift = useAbility().can("DELETE", "CUSTOMER_BAN");
 	const [error, setError] = React.useState<string | null>(null);
 	const lift = api.tenants.liftCustomerBan.useMutation({
 		onSuccess: async () => {
@@ -83,9 +88,11 @@ function BanRow({ tenantSlug, ban }: BanRowProps): React.JSX.Element {
 						{ban.bannedBy === null ? "" : ` by ${ban.bannedBy.fullName}`}
 					</p>
 				</div>
-				<Button type="button" variant="outline" size="sm" onClick={handleLift} disabled={lift.isPending}>
-					Lift ban
-				</Button>
+				{canLift ? (
+					<Button type="button" variant="outline" size="sm" onClick={handleLift} disabled={lift.isPending}>
+						Lift ban
+					</Button>
+				) : null}
 			</div>
 			{error !== null ? (
 				<p role="alert" className="text-sm text-destructive">

@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook } from "@testing-library/react";
+import { createElement, type ReactElement, type ReactNode } from "react";
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import {
 	LIST_SLOT_INDEX,
@@ -36,6 +38,11 @@ const { useQueryMock } = vi.hoisted(() => ({
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): { api: { auth: { permissions: { useQuery: typeof useQueryMock } } } } => ({ api: { auth: { permissions: { useQuery: useQueryMock } } } }),
 }));
+
+/** The hook also watches the query client for capability refusals (ADR 092), so it renders inside one. */
+function withQueryClient({ children }: { readonly children: ReactNode }): ReactElement {
+	return createElement(QueryClientProvider, { client: new QueryClient() }, children);
+}
 
 function permissions(capabilities: readonly string[]): SessionPermissionsResponse {
 	return {
@@ -82,7 +89,7 @@ describe("useSessionPermissionsQuery", () => {
 	it("refetches on window focus and on an interval", () => {
 		useQueryMock.mockReturnValue({ data: { data: PRELOADED }, isError: false });
 
-		renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE));
+		renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE), { wrapper: withQueryClient });
 
 		const options = useQueryMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second];
 		expect(options?.initialData).toBe(PRELOADED_ENVELOPE);
@@ -94,7 +101,7 @@ describe("useSessionPermissionsQuery", () => {
 	it("returns the live (empty) list once the query has data, ignoring the preload", () => {
 		useQueryMock.mockReturnValue({ data: { data: permissions([]) }, isError: false });
 
-		const { result } = renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE));
+		const { result } = renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE), { wrapper: withQueryClient });
 
 		expect(result.current.capabilities).toEqual([]);
 		expect(result.current.status).toBe("ready");
@@ -103,7 +110,7 @@ describe("useSessionPermissionsQuery", () => {
 	it("is unresolved while the first fetch is pending without a preload", () => {
 		useQueryMock.mockReturnValue({ data: undefined, isError: false });
 
-		const { result } = renderHook(() => useSessionPermissionsQuery());
+		const { result } = renderHook(() => useSessionPermissionsQuery(), { wrapper: withQueryClient });
 
 		expect(result.current.capabilities).toEqual([]);
 		expect(result.current.status).toBe("loading");
@@ -112,7 +119,7 @@ describe("useSessionPermissionsQuery", () => {
 	it("reports a failed first fetch as failed — not as a resolved empty permission list", () => {
 		useQueryMock.mockReturnValue({ data: undefined, isError: true, refetch: vi.fn() });
 
-		const { result } = renderHook(() => useSessionPermissionsQuery());
+		const { result } = renderHook(() => useSessionPermissionsQuery(), { wrapper: withQueryClient });
 
 		expect(result.current.status).toBe("failed");
 		expect(result.current.capabilities).toEqual([]);
@@ -121,7 +128,7 @@ describe("useSessionPermissionsQuery", () => {
 	it("keeps the preloaded answer when a refetch fails", () => {
 		useQueryMock.mockReturnValue({ data: undefined, isError: true, refetch: vi.fn() });
 
-		const { result } = renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE));
+		const { result } = renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE), { wrapper: withQueryClient });
 
 		expect(result.current.status).toBe("ready");
 		expect(result.current.capabilities).toEqual(PRELOADED.capabilities);
@@ -131,7 +138,7 @@ describe("useSessionPermissionsQuery", () => {
 		const refetch = vi.fn().mockResolvedValue(undefined);
 		useQueryMock.mockReturnValue({ data: undefined, isError: true, refetch });
 
-		const { result } = renderHook(() => useSessionPermissionsQuery());
+		const { result } = renderHook(() => useSessionPermissionsQuery(), { wrapper: withQueryClient });
 		result.current.retry();
 
 		expect(refetch).toHaveBeenCalledTimes(1);

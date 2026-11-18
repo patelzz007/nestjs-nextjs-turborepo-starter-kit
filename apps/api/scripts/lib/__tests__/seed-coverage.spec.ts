@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { PRISMA_MIGRATIONS_TABLE } from "../../../prisma/rls/data-change-capture.js";
+import { PRISMA_MIGRATIONS_TABLE } from "../../../prisma/security/data-change-capture.js";
 import { MIN_EXEMPTION_REASON_LENGTH, SEED_COVERAGE_EXEMPTIONS, type SeedCoverageExemption } from "../../../prisma/seed/coverage-exemptions.js";
 import {
 	formatSeedCoverageReport,

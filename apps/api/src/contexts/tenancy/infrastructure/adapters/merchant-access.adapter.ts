@@ -2,7 +2,7 @@ import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { ApiKeyCapabilitiesPort } from "../../application/ports/api-key-capabilities.port";
-import type { MerchantAccessGrant, MerchantAccessPort, MerchantAccessRequest } from "../../../../platform/application/ports/authorization.port";
+import type { MerchantAccessGrant, MerchantAccessPort, MerchantAccessRequest, MerchantCapabilityQueryPort } from "../../../../platform/application/ports/authorization.port";
 import type { TenantContextService } from "./tenant-context.service";
 import type { TenantRewardAuthService } from "./tenant-reward-auth.service";
 
@@ -18,7 +18,7 @@ function merchantAuthRequired(): UnauthorizedException {
  * scope's capability table. The grant is the caller's store scope; a
  * `locationId` must be a live ACTIVE store inside it (404 / 403).
  */
-export class MerchantAccessAdapter implements MerchantAccessPort {
+export class MerchantAccessAdapter implements MerchantAccessPort, MerchantCapabilityQueryPort {
 	public constructor(
 		private readonly auth: TenantRewardAuthService,
 		private readonly context: TenantContextService,
@@ -35,9 +35,21 @@ export class MerchantAccessAdapter implements MerchantAccessPort {
 		throw merchantAuthRequired();
 	}
 
+	/** The same decision as {@link assertCapability} for a member or an API key, as a yes/no; not audited. */
+	public async holds(actor: ActorContext, request: MerchantAccessRequest): Promise<boolean> {
+		if (actor.kind === "user") {
+			const resolved = await this.auth.resolveTenantFromSlug(actor.userId, request.tenantId);
+			return this.auth.holdsMembershipCapability({ userId: actor.userId, tenantId: resolved.tenantId, role: resolved.membership.role }, request.capability, request.target);
+		}
+		if (actor.kind === "api_key" && actor.tenantId === request.tenantId) {
+			return (await this.apiKeys.capabilitiesOf(actor))?.includes(request.capability) === true;
+		}
+		return false;
+	}
+
 	private async assertMember(userId: string, request: MerchantAccessRequest): Promise<MerchantAccessGrant> {
 		const { tenantId, locationId } = request;
-		await this.auth.requireCapabilityForSlug(userId, tenantId, request.capability);
+		await this.auth.requireCapabilityForSlug(userId, tenantId, request.capability, request.target);
 		if (locationId !== undefined && locationId !== null) {
 			await this.context.assertAccessibleLocation(userId, tenantId, locationId);
 			return { tenantId, locationScope: "SELECTED", locationIds: [locationId] };

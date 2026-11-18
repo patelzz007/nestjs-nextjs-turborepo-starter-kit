@@ -15,6 +15,7 @@ import { z } from "zod";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
+import { getApiConfig } from "../src/config/api-config";
 import {
 	createE2eApp,
 	login,
@@ -89,7 +90,7 @@ describe("Tenant and customer bans (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		rewardId = randomUUID();
 		const ownerId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 		await withTenantMember(app, ownerId, KL_TENANT_ID, (tx) =>

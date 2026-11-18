@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -19,7 +20,7 @@ import { createE2eApp, login, mutationHeaders, type InjectResponse, type LoginRe
  * data-changes.controller.spec.ts).
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const REGION_PREFIX = "data-change-e2e-";
 
 const ChangeRowSchema = z.object({

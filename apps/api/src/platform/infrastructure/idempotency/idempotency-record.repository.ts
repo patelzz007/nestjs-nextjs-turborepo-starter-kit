@@ -41,7 +41,7 @@ export interface IdempotencyLease {
 /**
  * Prisma access for `PlatformResourceIdempotencyRecord`.
  *
- * The table is RLS bypass-only (prisma/rls/manifest-index.ts), so every
+ * The table is RLS bypass-only (prisma/security/manifest-index.ts), so every
  * statement runs in its own transaction under the allowlisted
  * `http.idempotency` system operation. Requests never delete rows: an
  * expired row (lease or replay window over) is taken over in place. Only the

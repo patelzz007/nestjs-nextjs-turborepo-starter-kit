@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createScratchDatabase, SCRATCH_SETUP_TIMEOUT_MS, type ScratchDatabase } from "./support/scratch-database";
 
 const API_ROOT = join(import.meta.dirname, "..");
@@ -33,7 +34,7 @@ describe("The minimal seed scenario (e2e, scratch database)", () => {
 	}
 
 	beforeAll(async () => {
-		database = await createScratchDatabase(process.env.DATABASE_URL ?? "", "minimal_seed_e2e");
+		database = await createScratchDatabase(getApiConfig().database.url, "minimal_seed_e2e");
 	}, SCRATCH_SETUP_TIMEOUT_MS);
 
 	afterAll(async () => {

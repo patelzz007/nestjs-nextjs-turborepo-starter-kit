@@ -2,9 +2,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION, type TierSettingsResponse } from "@workspace/shared";
+import type { TierSettingsResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Input } from "@workspace/ui/components/input";
@@ -29,7 +29,7 @@ const DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", 
 /** `/settings/tiers` (ADR 085): the customer tier rules, who last changed them and why, and changing them with a reason. */
 export function TierSettingsView(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const settings = api.tiers.settings.useQuery(undefined).data?.data;
 	return (
 		<div className="flex flex-col gap-6">
@@ -39,7 +39,11 @@ export function TierSettingsView(): React.JSX.Element {
 					How customers move between Bronze, Silver, Gold and Diamond. A change applies at the next nightly review: warnings go out first, and nobody drops a tier without one.
 				</p>
 			</header>
-			{settings === undefined ? <Skeleton className="h-72 w-full rounded-xl" /> : <TierSettingsCard settings={settings} canChange={can(PERMISSION.SYSTEM_SETTINGS.UPDATE)} />}
+			{settings === undefined ? (
+				<Skeleton className="h-72 w-full rounded-xl" />
+			) : (
+				<TierSettingsCard settings={settings} canChange={ability.can("UPDATE", "SYSTEM_SETTINGS")} />
+			)}
 		</div>
 	);
 }

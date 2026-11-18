@@ -11,6 +11,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { z } from "zod";
 
+import { getApiConfig } from "../../src/config/api-config";
 import { TENANT_INTEGRITY_CHECK_OPERATION, TENANT_INTEGRITY_RELATIONS, type TenantIntegrityRelation } from "../../src/platform/infrastructure/tenancy/tenant-integrity";
 
 const EXIT_OK = 0;
@@ -101,7 +102,7 @@ export function createPrismaIntegrityStore(prisma: PrismaClient): IntegrityCount
 }
 
 async function main(): Promise<number> {
-	const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+	const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: getApiConfig().database.url }) });
 	try {
 		const counts = await checkTenantIntegrity(createPrismaIntegrityStore(prisma));
 		process.stdout.write(`${formatIntegrityReport(counts)}\n`);

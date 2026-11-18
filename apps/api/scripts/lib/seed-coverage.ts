@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PRISMA_MIGRATIONS_TABLE } from "../../prisma/rls/data-change-capture.js";
+import { PRISMA_MIGRATIONS_TABLE } from "../../prisma/security/data-change-capture.js";
 import { SeedCoverageExemptionSchema, SOFT_DELETE_COLUMNS, type SeedCoverageExemption } from "../../prisma/seed/coverage-exemptions.js";
 
 /**

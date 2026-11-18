@@ -22,6 +22,11 @@ export const ToolingConfigSchema = z
 		budgets: z.object({ bundle: FolderSchema, load: FolderSchema, mobileStartup: FolderSchema }).strict(),
 		artifacts: z.object({ ci: FolderSchema, devTiming: FolderSchema, logs: FolderSchema, playwright: FolderSchema }).strict(),
 		migrations: z.object({ directory: FolderSchema, baselineFile: FolderSchema }).strict(),
+		/**
+		 * The generated security SQL (ADR 089): the paths it is generated from (a trailing `/` is a whole folder) and the
+		 * workspace script that proves the committed SQL matches them. The pre-commit hook runs it when one is staged.
+		 */
+		securitySql: z.object({ inputs: z.array(FolderSchema).min(1), workspace: z.string().min(1), checkScript: z.string().min(1) }).strict(),
 		envExampleFiles: z.array(FolderSchema).min(1),
 		testPlacementWorkspaces: z.array(FolderSchema).min(1),
 		deploy: z.object({ apps: z.array(DeployAppSchema).min(1), pm2Ecosystem: FolderSchema }).strict(),

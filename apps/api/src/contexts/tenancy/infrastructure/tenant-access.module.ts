@@ -6,10 +6,18 @@ import { PrismaModule } from "../../../prisma/prisma.module";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { MERCHANT_PORTAL_ACCESS } from "../../identity/public-api";
 import type { ApiKeyCapabilitiesPort } from "../application/ports/api-key-capabilities.port";
-import type { MerchantAccessPort } from "../../../platform/application/ports/authorization.port";
+import type { MerchantAccessPort, MerchantCapabilityQueryPort } from "../../../platform/application/ports/authorization.port";
 import type { TenantReadPort } from "../application/ports/tenant-read.port";
 import type { TenantFileAccessPort } from "../application/ports/tenant-file-access.port";
-import { API_KEY_CAPABILITIES, MERCHANT_ACCESS, TENANT_CONTEXT_READ, TENANT_DIRECTORY, TENANT_FILE_ACCESS, TENANT_READ } from "../application/ports/tenants.tokens";
+import {
+	API_KEY_CAPABILITIES,
+	MERCHANT_ACCESS,
+	MERCHANT_CAPABILITY_QUERY,
+	TENANT_CONTEXT_READ,
+	TENANT_DIRECTORY,
+	TENANT_FILE_ACCESS,
+	TENANT_READ,
+} from "../application/ports/tenants.tokens";
 import { MerchantAccessAdapter } from "./adapters/merchant-access.adapter";
 import { MerchantPortalAccessAdapter } from "./adapters/merchant-portal-access.adapter";
 import { TenantContextService } from "./adapters/tenant-context.service";
@@ -39,6 +47,12 @@ import { PrismaOwnMembershipsReadRepository } from "./persistence/prisma-own-mem
 			provide: MERCHANT_ACCESS,
 			inject: [TenantRewardAuthService, TenantContextService, API_KEY_CAPABILITIES],
 			useFactory: (auth: TenantRewardAuthService, context: TenantContextService, apiKeys: ApiKeyCapabilitiesPort): MerchantAccessPort =>
+				new MerchantAccessAdapter(auth, context, apiKeys),
+		},
+		{
+			provide: MERCHANT_CAPABILITY_QUERY,
+			inject: [TenantRewardAuthService, TenantContextService, API_KEY_CAPABILITIES],
+			useFactory: (auth: TenantRewardAuthService, context: TenantContextService, apiKeys: ApiKeyCapabilitiesPort): MerchantCapabilityQueryPort =>
 				new MerchantAccessAdapter(auth, context, apiKeys),
 		},
 		{
@@ -72,6 +86,7 @@ import { PrismaOwnMembershipsReadRepository } from "./persistence/prisma-own-mem
 	],
 	exports: [
 		MERCHANT_ACCESS,
+		MERCHANT_CAPABILITY_QUERY,
 		MERCHANT_TENANT_RESOLVER,
 		TENANT_READ,
 		TENANT_FILE_ACCESS,

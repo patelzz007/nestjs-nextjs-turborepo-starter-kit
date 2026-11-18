@@ -52,7 +52,7 @@ export const CONSUMER_APPLICATION_NAME = "analytics-consumer";
 /**
  * Who the consumer's writes are recorded as. The consumer has no RLS session (no user, API key or system
  * operation), so it names itself through `app.actor`: the database's row-audit trigger stamps `createdBy` /
- * `updatedBy` / `deletedBy` from it (apps/api/prisma/rls/row-audit.ts).
+ * `updatedBy` / `deletedBy` from it (apps/api/prisma/security/row-audit.ts).
  */
 export const CONSUMER_ACTOR = "system:analytics-consumer";
 
@@ -222,7 +222,7 @@ const VariantSumsRowSchema = z.object({ valueName: z.string(), subjects: z.numbe
 
 /**
  * Postgres inbox. Connects as the least-privilege `analytics_consumer` login
- * (prisma/rls/90-analytics-consumer.sql): INSERT/SELECT/DELETE on its three
+ * (apps/api/prisma/security/roles.ts): INSERT/SELECT/DELETE on its three
  * tables only, and RLS policies that apply to that role alone — it never
  * switches role and never sets `app.rls_bypass`.
  */

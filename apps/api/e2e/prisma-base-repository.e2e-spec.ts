@@ -28,7 +28,7 @@ describe("PrismaBaseRepository (e2e)", () => {
 		prisma.onModuleInit();
 		await prisma.ensureConnected();
 		transactions = new TenantTransactionService(prisma, new RequestContextService());
-		verifier = new Pool({ connectionString: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo" });
+		verifier = new Pool({ connectionString: getApiConfig().database.url });
 	});
 
 	afterAll(async () => {

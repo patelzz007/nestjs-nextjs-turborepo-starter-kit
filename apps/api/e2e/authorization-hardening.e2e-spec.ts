@@ -13,9 +13,10 @@ import {
 } from "@workspace/shared";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, createTestPlatformRole, dropTestPlatformRole, extractCookie, login, mutationHeaders, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 function cookieHeader(session: LoginResult): string {
 	return `accessToken=${session.accessToken}; refreshToken=${session.refreshToken}`;

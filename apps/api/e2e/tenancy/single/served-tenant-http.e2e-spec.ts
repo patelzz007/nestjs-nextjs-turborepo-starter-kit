@@ -4,7 +4,6 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { API_VERSION_PREFIX } from "@workspace/shared";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { z } from "zod";
 
 import { getApiConfig } from "../../../src/config/api-config";
 import { TypedConfigService } from "../../../src/config/typed-config.service";
@@ -59,7 +58,7 @@ describe("tenancy single mode over HTTP", () => {
 		// The default tenant's default policies, as provisioning gives every real tenant, so its owner is authorized
 		// and only the tenancy rules below can refuse.
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		const ids = TWO_TENANT_FIXTURE;
 		await pool.query(`UPDATE public."User" SET "passwordHash" = $1 WHERE id = $2`, [await app.get(CryptoService).hash(FIXTURE_PASSWORD), ids.userAOwner]);
 		for (const [id, tenantId, locationId, plaintext, createdByUserId] of [

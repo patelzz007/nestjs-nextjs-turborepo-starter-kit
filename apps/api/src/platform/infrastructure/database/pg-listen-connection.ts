@@ -1,5 +1,5 @@
 // A dedicated `pg` client that LISTENs on PostgreSQL channels — the live
-// signals of the audit trail (prisma/rls/95-audit-trail-notify.sql) and of
+// signals of the audit trail (prisma/security/triggers.ts) and of
 // GitHub pull requests (the webhook receiver's pg_notify). Not from a pool: a
 // LISTEN belongs to its session, and a pooled client would be handed to other
 // work. Every API instance listens, so a NOTIFY reaches all of them.

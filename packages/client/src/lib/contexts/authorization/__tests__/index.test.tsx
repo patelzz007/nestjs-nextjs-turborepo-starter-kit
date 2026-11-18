@@ -2,188 +2,136 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { PERMISSION } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, PERMISSION, type CapabilitySlug } from "@workspace/shared";
 
-import { Can, CapabilitiesProvider, useAuthorization, useCan } from "../index";
-
-const READ = PERMISSION.USER.READ;
-const DELETE = PERMISSION.USER.DELETE;
-const UPDATE = PERMISSION.USER.UPDATE;
+import { Can, SessionAbilityProvider, useAbility } from "../index";
 
 afterEach(() => {
 	cleanup();
 });
 
-describe("Can component", () => {
-	it("renders children when the single permission is granted", () => {
+function Platform({ capabilities, children }: { readonly capabilities: readonly CapabilitySlug[]; readonly children: React.ReactNode }): React.JSX.Element {
+	return (
+		<SessionAbilityProvider capabilities={capabilities} namespace="platform">
+			{children}
+		</SessionAbilityProvider>
+	);
+}
+
+describe("<Can>", () => {
+	it("renders children when the session holds the permission", () => {
 		render(
-			<CapabilitiesProvider capabilities={[READ]}>
-				<Can permission={READ}>
+			<Platform capabilities={[PERMISSION.USER.READ]}>
+				<Can I="READ" a="USER">
 					<div>allowed-content</div>
 				</Can>
-			</CapabilitiesProvider>,
+			</Platform>,
 		);
-
 		expect(screen.getByText("allowed-content")).toBeDefined();
 	});
 
-	it("renders fallback when the permission is missing", () => {
+	it("hides children when it does not, and denies everything for an empty session", () => {
 		render(
-			<CapabilitiesProvider capabilities={[READ]}>
-				<Can permission={DELETE} fallback={<div>denied-fallback</div>}>
+			<Platform capabilities={[]}>
+				<Can I="READ" a="USER">
 					<div>hidden-content</div>
 				</Can>
-			</CapabilitiesProvider>,
+			</Platform>,
 		);
-
-		expect(screen.getByText("denied-fallback")).toBeDefined();
 		expect(screen.queryByText("hidden-content")).toBeNull();
 	});
 
-	it("evaluates permission lists with any semantics by default", () => {
+	it("renders a fallback through the render function", () => {
 		render(
-			<CapabilitiesProvider capabilities={[DELETE]}>
-				<Can permissions={[READ, DELETE]}>
-					<div>any-content</div>
+			<Platform capabilities={[PERMISSION.USER.READ]}>
+				<Can I="DELETE" a="USER" passThrough>
+					{({ isAllowed }) => (isAllowed ? <div>delete</div> : <div>denied-fallback</div>)}
 				</Can>
-			</CapabilitiesProvider>,
+			</Platform>,
 		);
-
-		expect(screen.getByText("any-content")).toBeDefined();
-	});
-
-	it("evaluates permission lists with all semantics when configured", () => {
-		render(
-			<CapabilitiesProvider capabilities={[DELETE]}>
-				<Can permissions={[READ, DELETE]} mode="all">
-					<div>all-content</div>
-				</Can>
-				<Can permissions={[READ, DELETE]} mode="all" fallback={<div>all-denied</div>}>
-					<div>never</div>
-				</Can>
-			</CapabilitiesProvider>,
-		);
-
-		expect(screen.queryByText("all-content")).toBeNull();
-		expect(screen.getByText("all-denied")).toBeDefined();
+		expect(screen.getByText("denied-fallback")).toBeDefined();
 	});
 
 	it("never lets one held action imply another, on the same resource or any other", () => {
 		render(
-			<CapabilitiesProvider capabilities={[UPDATE]}>
-				<Can permission={READ} fallback={<div>read-denied</div>}>
+			<Platform capabilities={[PERMISSION.USER.UPDATE]}>
+				<Can I="READ" a="USER">
 					<div>read-content</div>
 				</Can>
-				<Can permission={PERMISSION.ORDER.READ} fallback={<div>other-resource-denied</div>}>
+				<Can I="UPDATE" a="ORDER">
 					<div>other-resource-content</div>
 				</Can>
-			</CapabilitiesProvider>,
+				<Can not I="READ" a="USER">
+					<div>read-denied</div>
+				</Can>
+			</Platform>,
 		);
-
-		expect(screen.getByText("read-denied")).toBeDefined();
 		expect(screen.queryByText("read-content")).toBeNull();
-		expect(screen.getByText("other-resource-denied")).toBeDefined();
 		expect(screen.queryByText("other-resource-content")).toBeNull();
+		expect(screen.getByText("read-denied")).toBeDefined();
+	});
+
+	it("reads merchant capabilities in the merchant namespace as the permissions behind them", () => {
+		render(
+			<SessionAbilityProvider capabilities={[MERCHANT_CAPABILITY.manageTeam]} namespace="merchant">
+				<Can I="UPDATE" a="MEMBER">
+					<div>team</div>
+				</Can>
+			</SessionAbilityProvider>,
+		);
+		expect(screen.getByText("team")).toBeDefined();
 	});
 });
 
-describe("useCan hook", () => {
-	it("returns a deny-all checker when no provider is present (fail closed)", () => {
-		function Probe(): React.JSX.Element {
-			const { can } = useCan();
-			return <div>{can(READ) ? "allowed" : "denied"}</div>;
-		}
+describe("useAbility", () => {
+	function Probe(): React.JSX.Element {
+		const ability = useAbility();
+		return <div>{ability.can("READ", "USER") ? "allowed" : "denied"}</div>;
+	}
 
-		render(<Probe />);
-
-		expect(screen.getByText("denied")).toBeDefined();
-	});
-
-	it("checks a single capability", () => {
-		function Probe(): React.JSX.Element {
-			const { can } = useCan();
-			return <div>{can(READ) ? "allowed" : "denied"}</div>;
-		}
-
+	it("checks imperatively", () => {
 		render(
-			<CapabilitiesProvider capabilities={[READ]}>
+			<Platform capabilities={[PERMISSION.USER.READ]}>
 				<Probe />
-			</CapabilitiesProvider>,
+			</Platform>,
 		);
-
 		expect(screen.getByText("allowed")).toBeDefined();
 	});
 
-	it("supports all/any list checks", () => {
-		function Probe(): React.JSX.Element {
-			const { canAll, canAny } = useCan();
-			return (
-				<div>
-					<span>{canAll([READ, DELETE]) ? "all-yes" : "all-no"}</span>
-					<span>{canAny([READ, DELETE]) ? "any-yes" : "any-no"}</span>
-				</div>
-			);
-		}
-
-		render(
-			<CapabilitiesProvider capabilities={[READ]}>
+	it("follows a new capability list: a sign-out or tenant switch replaces the ability", () => {
+		const view = render(
+			<Platform capabilities={[PERMISSION.USER.READ]}>
 				<Probe />
-			</CapabilitiesProvider>,
+			</Platform>,
 		);
+		expect(screen.getByText("allowed")).toBeDefined();
+		view.rerender(
+			<Platform capabilities={[]}>
+				<Probe />
+			</Platform>,
+		);
+		expect(screen.getByText("denied")).toBeDefined();
+	});
 
-		expect(screen.getByText("all-no")).toBeDefined();
-		expect(screen.getByText("any-yes")).toBeDefined();
+	it("allows nothing outside a provider (fails closed), and does not crash the page", () => {
+		render(<Probe />);
+		expect(screen.getByText("denied")).toBeDefined();
 	});
 });
 
-describe("useAuthorization hook", () => {
-	function Probe({ capabilities }: { readonly capabilities: readonly string[] }): React.JSX.Element {
-		return (
-			<CapabilitiesProvider capabilities={capabilities}>
-				<Checks />
-			</CapabilitiesProvider>
-		);
-	}
-
-	function Checks(): React.JSX.Element {
-		const auth = useAuthorization();
-		return (
-			<div>
-				<span>{auth.can(DELETE) ? "can-yes" : "can-no"}</span>
-				<span>{auth.cannot(DELETE) ? "cannot-yes" : "cannot-no"}</span>
-			</div>
-		);
-	}
-
-	it("cannot is the negation of can", () => {
-		render(<Probe capabilities={[]} />);
-
-		expect(screen.getByText("can-no")).toBeDefined();
-		expect(screen.getByText("cannot-yes")).toBeDefined();
-	});
-
-	it("allows exactly the held permission", () => {
-		render(<Probe capabilities={[DELETE]} />);
-		expect(screen.getByText("can-yes")).toBeDefined();
-		cleanup();
-
-		render(<Probe capabilities={[UPDATE]} />);
-		expect(screen.getByText("can-no")).toBeDefined();
-		expect(screen.getByText("cannot-yes")).toBeDefined();
-	});
-
-	it("useCan exposes the same checker", () => {
-		function Legacy(): React.JSX.Element {
-			const { cannot } = useCan();
-			return <div>{cannot(READ) ? "legacy-denied" : "legacy-allowed"}</div>;
-		}
-
+describe("outside a provider", () => {
+	it("hides what <Can> guards and shows what `not` guards", () => {
 		render(
-			<CapabilitiesProvider capabilities={[READ]}>
-				<Legacy />
-			</CapabilitiesProvider>,
+			<>
+				<Can I="READ" a="USER">
+					<div>guarded</div>
+				</Can>
+				<Can not I="READ" a="USER">
+					<div>shown-when-denied</div>
+				</Can>
+			</>,
 		);
-
-		expect(screen.getByText("legacy-allowed")).toBeDefined();
+		expect(screen.queryByText("guarded")).toBeNull();
+		expect(screen.getByText("shown-when-denied")).toBeDefined();
 	});
 });

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { epochMs, PERMISSION, type OpsFailedJobList, type OpsQueueList } from "@workspace/shared";
 import { accessibilityViolations } from "@workspace/ui/testing/axe";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
@@ -17,7 +18,6 @@ const { queuesQuery, failedQuery, retryMutate, discardMutate, permissions } = vi
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => ({ ...(await importOriginal<object>()), useQueryClient: (): object => ({ invalidateQueries: vi.fn() }) }));
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({ useAuthorization: (): object => ({ can: (slug: string): boolean => permissions.granted.has(slug) }) }));
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
@@ -30,6 +30,17 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 		},
 	}),
 }));
+
+/** The session's ability, built from whatever `permissions.granted` holds when the test renders. */
+function Providers({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+	return (
+		<UiKitTestProviders>
+			<SessionAbilityProvider capabilities={[...permissions.granted]} namespace="platform">
+				{children}
+			</SessionAbilityProvider>
+		</UiKitTestProviders>
+	);
+}
 
 const LIST: OpsQueueList = {
 	available: true,
@@ -82,7 +93,7 @@ describe("formatFailureRate", () => {
 
 describe("QueuesView", () => {
 	it("shows every queue's depth, last hour and failure rate, and which are paused", () => {
-		render(<QueuesView />, { wrapper: UiKitTestProviders });
+		render(<QueuesView />, { wrapper: Providers });
 		const table = within(screen.getByRole("table", { name: "Queues" }));
 		expect(table.getByText("email.send")).toBeTruthy();
 		expect(table.getByText("18 done, 2 failed")).toBeTruthy();
@@ -93,12 +104,12 @@ describe("QueuesView", () => {
 
 	it("says so where the API runs without queues", () => {
 		queuesQuery.mockReturnValue({ data: { data: { available: false, metricsWindowMinutes: 60, queues: [] } } });
-		render(<QueuesView />, { wrapper: UiKitTestProviders });
+		render(<QueuesView />, { wrapper: Providers });
 		expect(screen.getByText("No queues here")).toBeTruthy();
 	});
 
 	it("lists a queue's failed jobs and retries or discards one only once a reason is given", () => {
-		render(<QueuesView />, { wrapper: UiKitTestProviders });
+		render(<QueuesView />, { wrapper: Providers });
 		openFailedJobs();
 		expect(failedQuery).toHaveBeenCalledWith({ queueName: "email.send" });
 		expect(screen.getByText("SMTP 554: mailbox unavailable")).toBeTruthy();
@@ -121,7 +132,7 @@ describe("QueuesView", () => {
 
 	it("offers no retry, discard or reason to staff who may only look", () => {
 		permissions.granted = new Set();
-		render(<QueuesView />, { wrapper: UiKitTestProviders });
+		render(<QueuesView />, { wrapper: Providers });
 		openFailedJobs();
 		expect(screen.getByText("SMTP 554: mailbox unavailable")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Retry job job-7" })).toBeNull();
@@ -130,7 +141,7 @@ describe("QueuesView", () => {
 	});
 
 	it("has no serious accessibility problems (enhancement 3.2)", async () => {
-		render(<QueuesView />, { wrapper: UiKitTestProviders });
+		render(<QueuesView />, { wrapper: Providers });
 		openFailedJobs();
 		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
 	});

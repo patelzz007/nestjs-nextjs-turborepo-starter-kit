@@ -46,7 +46,7 @@
 							"url": "/rewards/new",
 							"icon": "PlusCircle",
 							"disabled": false,
-							"authorization": { "permissions": ["merchant:manage_rewards"] }
+							"authorization": { "permissions": ["merchant:create_rewards"] }
 						},
 						{
 							"title": "Archived",
@@ -105,7 +105,7 @@
 					"url": "/broadcasts",
 					"icon": "Megaphone",
 					"disabled": false,
-					"authorization": { "permissions": ["merchant:manage_broadcasts"] },
+					"authorization": { "permissions": ["merchant:view_broadcasts"] },
 					"children": [
 						{
 							"title": "All Broadcasts",
@@ -113,7 +113,7 @@
 							"url": "/broadcasts",
 							"icon": "List",
 							"disabled": false,
-							"authorization": { "permissions": ["merchant:manage_broadcasts"] }
+							"authorization": { "permissions": ["merchant:view_broadcasts"] }
 						},
 						{
 							"title": "New Broadcast",
@@ -121,7 +121,7 @@
 							"url": "/broadcasts/new",
 							"icon": "PlusCircle",
 							"disabled": false,
-							"authorization": { "permissions": ["merchant:manage_broadcasts"] }
+							"authorization": { "permissions": ["merchant:create_broadcasts"] }
 						}
 					]
 				}
@@ -172,7 +172,7 @@
 					"url": "/terminals",
 					"icon": "MonitorSmartphone",
 					"disabled": false,
-					"authorization": { "permissions": ["merchant:manage_api_keys"] }
+					"authorization": { "permissions": ["merchant:view_terminals"] }
 				},
 				{
 					"title": "API Keys",
@@ -180,7 +180,7 @@
 					"url": "/api-keys",
 					"icon": "KeyRound",
 					"disabled": false,
-					"authorization": { "permissions": ["merchant:manage_api_keys"] }
+					"authorization": { "permissions": ["merchant:view_api_keys"] }
 				},
 				{
 					"title": "Webhooks",
@@ -188,7 +188,7 @@
 					"url": "/webhooks",
 					"icon": "Webhook",
 					"disabled": false,
-					"authorization": { "permissions": ["merchant:manage_webhooks"] }
+					"authorization": { "permissions": ["merchant:view_webhooks"] }
 				}
 			]
 		},
@@ -241,21 +241,43 @@
 			"labelKey": "bottom.settings",
 			"url": "/settings",
 			"icon": "Settings",
-			"authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification", "merchant:manage_rewards"], "mode": "any" },
+			"authorization": {
+				"permissions": [
+					"merchant:view_team",
+					"merchant:manage_team",
+					"merchant:view_locations",
+					"merchant:view_verification",
+					"merchant:view_customer_bans",
+					"merchant:view_api_keys",
+					"merchant:view_terminals"
+				],
+				"mode": "any"
+			},
 			"children": [
 				{
 					"title": "Overview",
 					"labelKey": "bottom.settings.overview",
 					"url": "/settings",
 					"icon": "Settings",
-					"authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification", "merchant:manage_rewards"], "mode": "any" }
+					"authorization": {
+						"permissions": [
+							"merchant:view_team",
+							"merchant:manage_team",
+							"merchant:view_locations",
+							"merchant:view_verification",
+							"merchant:view_customer_bans",
+							"merchant:view_api_keys",
+							"merchant:view_terminals"
+						],
+						"mode": "any"
+					}
 				},
 				{
 					"title": "Team",
 					"labelKey": "bottom.settings.team",
 					"url": "/settings/team",
 					"icon": "Users",
-					"authorization": { "permissions": ["merchant:manage_team"] }
+					"authorization": { "permissions": ["merchant:view_team"] }
 				},
 				{
 					"title": "Locations",
@@ -276,14 +298,14 @@
 					"labelKey": "bottom.settings.verification",
 					"url": "/settings/verification",
 					"icon": "ShieldCheck",
-					"authorization": { "permissions": ["merchant:manage_verification"] }
+					"authorization": { "permissions": ["merchant:view_verification"] }
 				},
 				{
 					"title": "Banned customers",
 					"labelKey": "bottom.settings.banned-customers",
 					"url": "/settings/banned-customers",
 					"icon": "UserX",
-					"authorization": { "permissions": ["merchant:manage_rewards"] }
+					"authorization": { "permissions": ["merchant:view_customer_bans"] }
 				}
 			]
 		},

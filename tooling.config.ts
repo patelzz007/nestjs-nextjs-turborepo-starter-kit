@@ -29,6 +29,19 @@ export const toolingConfig = {
 	budgets: { bundle: "budgets/bundle.json", load: "budgets/load.json", mobileStartup: "budgets/mobile-startup.json" },
 	artifacts: { ci: ".artifacts/ci", devTiming: ".artifacts/dev-timing", logs: ".artifacts/logs", playwright: ".artifacts/playwright" },
 	migrations: { directory: "apps/api/prisma/migrations", baselineFile: "apps/api/prisma/migrations-baseline.json" },
+	securitySql: {
+		inputs: [
+			"apps/api/prisma/security/",
+			"apps/api/prisma/rls/",
+			"apps/api/prisma/schema.prisma",
+			"apps/api/prisma/schema/",
+			"apps/api/src/prisma/system-operation.registry.ts",
+			"apps/api/src/platform/application/system-operation-names.ts",
+			"packages/shared/src/authorization/",
+		],
+		workspace: "@workspace/api",
+		checkScript: "db:check-security",
+	},
 	envExampleFiles: ["apps/api/.env.example", "apps/web/.env.example", "apps/admin/.env.example", "apps/merchant/.env.example", "apps/analytics-consumer/.env.example", "apps/mobile/.env.example"],
 	testPlacementWorkspaces: ["apps/web", "apps/admin", "apps/merchant", "apps/docs", "apps/mobile", "infra/aws", "packages"],
 	deploy: {

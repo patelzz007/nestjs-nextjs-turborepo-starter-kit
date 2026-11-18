@@ -26,7 +26,7 @@ export class RevokeInviteHandler implements ICommandHandler<RevokeInviteCommand,
 		const { actor, input } = command;
 		const manager = requireUserActor(actor);
 		const member = await this.directory.resolveMember(actor, input.tenantSlug);
-		await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageTeam });
+		await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.revokeInvites });
 
 		await this.uow.runSystemOperation("tenant.invitation.revoke", actor, async (scope): Promise<void> => {
 			const invite = await scope.invitations.findPendingTeamInvite(member.tenantId, input.inviteId);

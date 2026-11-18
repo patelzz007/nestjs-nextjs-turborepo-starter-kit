@@ -79,7 +79,7 @@ describe("Rate-limit policies (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: process.env.DATABASE_URL });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 	});
 
 	afterAll(async () => {

@@ -10,9 +10,9 @@ import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { MERCHANTS_PAGE_SIZE_OPTIONS, MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "@/contexts/tenancy/url-state/merchants";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth, useImpersonation } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import type { Envelope, MerchantTenantResponse } from "@workspace/shared";
-import { adminMerchantListQuery, KybStatusSchema, MerchantTenantStatusSchema, PERMISSION } from "@workspace/shared";
+import { adminMerchantListQuery, KybStatusSchema, MerchantTenantStatusSchema } from "@workspace/shared";
 import { ALL_FILTER_OPTION, parseFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
@@ -50,7 +50,7 @@ export interface MerchantsAllTableProps {
  */
 export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const router = useProgressRouter();
 	const [urlState, updateUrlState] = useUrlState(MERCHANTS_TABLE_URL_STATE);
 	const isFiltered = urlState.search !== undefined || urlState.kybStatus !== undefined || urlState.status !== undefined;
@@ -103,7 +103,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	const { requestStart: requestImpersonation } = impersonation;
 
 	// `PATCH /admin/merchants/:id/kyb` needs APPROVE; viewing the KYB page only LIST.
-	const canManageKyb = can(PERMISSION.MERCHANT_ORG.APPROVE);
+	const canManageKyb = ability.can("APPROVE", "MERCHANT_ORG");
 	// `POST /auth/impersonate/:userId` is `@SuperAdminOnly`.
 	const canImpersonateOwner = useCanStartImpersonation();
 

@@ -30,11 +30,41 @@ const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, M
 		groupName: "Rewards",
 		sortOrder: 10,
 	},
-	"merchant:manage_rewards": {
-		label: "Manage rewards",
-		description: "Create, edit, publish, and archive reward campaigns.",
+	"merchant:create_rewards": {
+		label: "Create rewards",
+		description: "Draft new reward campaigns.",
 		groupName: "Rewards",
 		sortOrder: 11,
+	},
+	"merchant:manage_rewards": {
+		label: "Edit rewards",
+		description: "Edit reward campaigns, their stores, images and audience, and pick the customers they go to.",
+		groupName: "Rewards",
+		sortOrder: 12,
+	},
+	"merchant:publish_rewards": {
+		label: "Publish rewards",
+		description: "Submit a reward campaign for review so it goes live.",
+		groupName: "Rewards",
+		sortOrder: 13,
+	},
+	"merchant:view_customer_bans": {
+		label: "View banned customers",
+		description: "See the customers banned from the business's rewards.",
+		groupName: "Rewards",
+		sortOrder: 14,
+	},
+	"merchant:ban_customers": {
+		label: "Ban customers",
+		description: "Ban a customer from the business's rewards.",
+		groupName: "Rewards",
+		sortOrder: 15,
+	},
+	"merchant:lift_customer_bans": {
+		label: "Lift customer bans",
+		description: "Lift a customer's ban.",
+		groupName: "Rewards",
+		sortOrder: 16,
 	},
 	"merchant:view_redemptions": {
 		label: "View redemptions",
@@ -42,11 +72,41 @@ const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, M
 		groupName: "Operations",
 		sortOrder: 20,
 	},
-	"merchant:manage_api_keys": {
-		label: "Manage API keys",
-		description: "Create and revoke POS terminal API keys.",
+	"merchant:view_api_keys": {
+		label: "View API keys",
+		description: "See the POS API keys and the till settings.",
 		groupName: "Operations",
 		sortOrder: 21,
+	},
+	"merchant:manage_api_keys": {
+		label: "Create API keys",
+		description: "Create POS API keys and change the till settings.",
+		groupName: "Operations",
+		sortOrder: 22,
+	},
+	"merchant:revoke_api_keys": {
+		label: "Revoke API keys",
+		description: "Revoke a POS API key.",
+		groupName: "Operations",
+		sortOrder: 23,
+	},
+	"merchant:view_terminals": {
+		label: "View tills",
+		description: "See the registered tills and whether each is paired.",
+		groupName: "Operations",
+		sortOrder: 24,
+	},
+	"merchant:manage_terminals": {
+		label: "Register tills",
+		description: "Register a till and issue its pairing code.",
+		groupName: "Operations",
+		sortOrder: 25,
+	},
+	"merchant:remove_terminals": {
+		label: "Remove tills",
+		description: "Remove a till and revoke its key.",
+		groupName: "Operations",
+		sortOrder: 26,
 	},
 	"merchant:view_analytics": {
 		label: "View analytics",
@@ -54,11 +114,47 @@ const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, M
 		groupName: "Insights",
 		sortOrder: 30,
 	},
+	"merchant:view_team": {
+		label: "View team",
+		description: "See the member roster and pending invitations.",
+		groupName: "Tenant",
+		sortOrder: 39,
+	},
 	"merchant:manage_team": {
 		label: "Manage team",
-		description: "View the member roster, invite members, and revoke pending invitations.",
+		description: "Change members, their roles and their store access, and manage the tenant's roles.",
 		groupName: "Tenant",
 		sortOrder: 40,
+	},
+	"merchant:invite_members": {
+		label: "Invite members",
+		description: "Invite someone to the team.",
+		groupName: "Tenant",
+		sortOrder: 44,
+	},
+	"merchant:revoke_invites": {
+		label: "Revoke invitations",
+		description: "Revoke a pending invitation.",
+		groupName: "Tenant",
+		sortOrder: 45,
+	},
+	"merchant:approve_access_requests": {
+		label: "Approve join requests",
+		description: "Approve a request to join the team.",
+		groupName: "Tenant",
+		sortOrder: 46,
+	},
+	"merchant:reject_access_requests": {
+		label: "Reject join requests",
+		description: "Reject a request to join the team.",
+		groupName: "Tenant",
+		sortOrder: 47,
+	},
+	"merchant:view_verification": {
+		label: "View business verification",
+		description: "Read the business verification (KYB) details and documents.",
+		groupName: "Tenant",
+		sortOrder: 48,
 	},
 	"merchant:view_locations": {
 		label: "View store locations",
@@ -74,7 +170,7 @@ const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, M
 	},
 	"merchant:manage_verification": {
 		label: "Manage business verification",
-		description: "Read and submit business verification (KYB) details and documents.",
+		description: "Submit business verification (KYB) details and documents, and appeal a suspension.",
 		groupName: "Tenant",
 		sortOrder: 43,
 	},
@@ -84,29 +180,71 @@ const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, M
 		groupName: "Customers",
 		sortOrder: 50,
 	},
-	"merchant:manage_broadcasts": {
-		label: "Manage broadcasts",
-		description: "Draft, edit, schedule and submit announcements to the business's customers.",
+	"merchant:view_broadcasts": {
+		label: "View broadcasts",
+		description: "See the business's announcements, their audience counts and the weekly allowance.",
 		groupName: "Customers",
 		sortOrder: 51,
 	},
-	"merchant:publish_broadcasts": {
-		label: "Approve broadcasts",
-		description: "Approve another member's broadcast so it is sent.",
+	"merchant:create_broadcasts": {
+		label: "Draft broadcasts",
+		description: "Start a new announcement to the business's customers.",
 		groupName: "Customers",
 		sortOrder: 52,
 	},
-	"merchant:manage_payments": {
-		label: "Manage payments",
-		description: "Ask customers to pay through Billplz or CHIP, follow each payment, and refund it.",
+	"merchant:manage_broadcasts": {
+		label: "Edit broadcasts",
+		description: "Edit announcement drafts and their images.",
+		groupName: "Customers",
+		sortOrder: 53,
+	},
+	"merchant:publish_broadcasts": {
+		label: "Send broadcasts",
+		description: "Schedule or cancel an announcement, and approve another member's so it is sent.",
+		groupName: "Customers",
+		sortOrder: 54,
+	},
+	"merchant:view_payments": {
+		label: "View payments",
+		description: "Follow the business's payments.",
 		groupName: "Payments",
 		sortOrder: 60,
 	},
+	"merchant:manage_payments": {
+		label: "Take payments",
+		description: "Ask customers to pay through Billplz or CHIP.",
+		groupName: "Payments",
+		sortOrder: 61,
+	},
+	"merchant:refund_payments": {
+		label: "Refund payments",
+		description: "Refund a paid payment.",
+		groupName: "Payments",
+		sortOrder: 62,
+	},
+	"merchant:view_webhooks": {
+		label: "View webhooks",
+		description: "See the business's webhook endpoints and their delivery log.",
+		groupName: "Operations",
+		sortOrder: 27,
+	},
+	"merchant:create_webhooks": {
+		label: "Add webhooks",
+		description: "Add a webhook endpoint that receives the business's events.",
+		groupName: "Operations",
+		sortOrder: 28,
+	},
 	"merchant:manage_webhooks": {
 		label: "Manage webhooks",
-		description: "Send the business's events to its own systems: add webhook endpoints, rotate their signing secrets, read the delivery log and redeliver.",
+		description: "Change webhook endpoints, rotate their signing secrets, test them and redeliver.",
 		groupName: "Operations",
-		sortOrder: 23,
+		sortOrder: 29,
+	},
+	"merchant:delete_webhooks": {
+		label: "Delete webhooks",
+		description: "Delete a webhook endpoint.",
+		groupName: "Operations",
+		sortOrder: 31,
 	},
 };
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { ApiError } from "@workspace/client/lib/api/api-request";
 import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug, type CheckPermissionInput, type RoleListItem } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
@@ -99,9 +99,9 @@ vi.mock("@workspace/client/lib/contexts/identity", () => {
 
 function renderPanel(capabilities: readonly CapabilitySlug[]): void {
 	render(
-		<CapabilitiesProvider capabilities={capabilities}>
+		<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 			<AccessControlPanel />
-		</CapabilitiesProvider>,
+		</SessionAbilityProvider>,
 		{ wrapper: ClientTestProviders },
 	);
 }

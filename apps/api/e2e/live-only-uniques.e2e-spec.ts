@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, mutationHeaders, uniqueClientIp } from "./e2e-helpers";
 
 const PASSWORD = "Live-only-e2e-1A!";
@@ -57,7 +58,7 @@ describe("Live-only uniques (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 	});
 
 	afterAll(async () => {

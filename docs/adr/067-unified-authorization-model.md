@@ -15,7 +15,7 @@ order: 67
 
 ## Status
 
-**Accepted; Phases 1–3 built, Phase 4 partly built (2026-10-28).** Every decision below was agreed in a
+**Amended by [ADR 090](./090-permission-level-tenant-rls.md) (2026-11-18): tenant tables check the catalogue permission in the database, not only membership.** **Accepted; Phases 1–3 built, Phase 4 partly built (2026-10-28).** Every decision below was agreed in a
 design interview (the Q&A trail is [at the end](#the-decision-trail)) and refined by two external
 reviews. Phase 4 removed Cedar, the JSON policy engine, `MANAGE` and role inheritance; what it has not removed yet is listed under
 [As built (Phase 4)](#as-built-phase-4). Supersedes the authorization parts of

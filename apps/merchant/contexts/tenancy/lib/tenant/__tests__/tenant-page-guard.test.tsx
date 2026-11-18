@@ -37,12 +37,15 @@ describe("guardTenantPage (server-side tenant page guard)", () => {
 		expect(screen.getByRole("heading", { name: "Team access required" })).toBeTruthy();
 	});
 
-	it("renders the owner-only denial when an admin opens business verification directly", async () => {
-		signedInAs("MANAGER");
+	it("renders the verification denial when a cashier opens business verification directly, and lets an admin read it", async () => {
+		signedInAs("CASHIER");
 
 		render(<>{await guardTenantPage(TEST_ORG_SLUG, "/settings/verification")}</>);
 
-		expect(screen.getByRole("heading", { name: "Owner access required" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "Verification access required" })).toBeTruthy();
+
+		signedInAs("MANAGER");
+		await expect(guardTenantPage(TEST_ORG_SLUG, "/settings/verification")).resolves.toBeNull();
 	});
 
 	it("falls back to the generic denial copy for pages without custom copy", async () => {

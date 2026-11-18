@@ -1,4 +1,4 @@
-import type { CapabilitySlug, LocationScopeType, UserPermissions } from "@workspace/shared";
+import type { CapabilitySlug, LocationScopeType, PermissionResource, UserPermissions } from "@workspace/shared";
 
 import type { ActorContext } from "../actor-context";
 
@@ -18,11 +18,22 @@ export interface AuthorizationPort {
 	can(actor: ActorContext, check: AuthorizationCheck): Promise<boolean>;
 }
 
+/**
+ * The one record a merchant check is about (ADR 067). With it, the decision also honours a share of that record and
+ * its ownership; without it, only the member's role and live grants count.
+ */
+export interface MerchantAccessTarget {
+	readonly resource: PermissionResource;
+	readonly resourceId: string;
+}
+
 /** Merchant capability check. `locationId` narrows the check to one location when the capability is location-scoped. */
 export interface MerchantAccessRequest {
 	readonly tenantId: string;
 	readonly capability: CapabilitySlug;
 	readonly locationId?: string | null;
+	/** The record acted on, when the action is about one (a per-record decision). */
+	readonly target?: MerchantAccessTarget;
 }
 
 /** The caller's location scope inside the tenant, as the membership already stores it. */
@@ -35,6 +46,15 @@ export interface MerchantAccessGrant {
 /** Merchant capability gate. Writes the same `authorize.*` tenant audit rows as every merchant capability check. */
 export interface MerchantAccessPort {
 	assertCapability(actor: ActorContext, request: MerchantAccessRequest): Promise<MerchantAccessGrant>;
+}
+
+/**
+ * Whether the caller WOULD pass a merchant capability check — the same decision as {@link MerchantAccessPort}, but
+ * neither thrown nor audited: it tells the UI which actions one record allows (per-row capabilities). It never
+ * authorizes anything; the action itself is checked (and audited) by `assertCapability`.
+ */
+export interface MerchantCapabilityQueryPort {
+	holds(actor: ActorContext, request: MerchantAccessRequest): Promise<boolean>;
 }
 
 /** What a user holds, as the session payloads (`/auth/me`, `/auth/permissions`, tokens) show it. */

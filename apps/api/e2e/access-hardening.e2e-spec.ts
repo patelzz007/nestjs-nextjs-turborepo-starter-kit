@@ -5,9 +5,10 @@ import { LIST_SLOT_INDEX, API_VERSION_PREFIX, ApiErrorResponseSchema, RewardClai
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
+import { getApiConfig } from "../src/config/api-config";
 import { clearPendingTeamInviteForEmail, createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 describe("Access hardening (e2e)", () => {
 	let app: NestFastifyApplication;

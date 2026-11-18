@@ -9,8 +9,8 @@ import { LocationRequestForm } from "@/contexts/tenancy/components/tenant/tenant
 import { resolveActiveLocations, resolveAllLocations } from "@/contexts/tenancy/lib/tenant/location-access";
 import { tenantRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
-import { MERCHANT_CAPABILITY, type LocationResponse } from "@workspace/shared";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
+import type { LocationResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Card } from "@workspace/ui/components/card";
@@ -25,8 +25,8 @@ export interface LocationsPageViewProps {
 /** Store locations route — `merchant:view_locations` (every member); request/resubmit need `merchant:manage_locations` (enforced by the API). */
 export function LocationsPageView({ tenantSlug }: LocationsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
-	const canManageLocations = can(MERCHANT_CAPABILITY.manageLocations);
+	const ability = useAbility();
+	const canManageLocations = ability.can("UPDATE", "LOCATION");
 	const { isLoading: isAuthorizationLoading } = useMerchantAuthorizationStatus();
 	const contextQuery = api.tenants.context.useQuery({ tenantSlug });
 	const context = contextQuery.data?.data;

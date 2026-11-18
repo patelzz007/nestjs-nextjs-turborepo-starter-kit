@@ -14,6 +14,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 
@@ -22,7 +23,7 @@ import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 // tenant context then carries it, a removal takes it away again, and a
 // logo that is not square — or an upload by a cashier — is refused.
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const FILES = `${API_VERSION_PREFIX}/files`;
 const TENANT_SLUG = "jonker-street-kitchen";
 const CONTEXT_URL = `${API_VERSION_PREFIX}/tenants/${TENANT_SLUG}/context`;

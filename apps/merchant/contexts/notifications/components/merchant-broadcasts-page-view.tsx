@@ -6,6 +6,7 @@ import { BROADCAST_CHANNEL_LABELS, formatWallClock } from "@workspace/client/lib
 import { BROADCASTS_URL_STATE, toBroadcastsQuery } from "@/contexts/notifications/url-state/broadcasts";
 import { tenantRoutes } from "@/lib/routes";
 import { keepPreviousData } from "@tanstack/react-query";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useUrlListPager } from "@workspace/client/lib/url-state/use-url-list-pager";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
@@ -34,16 +35,20 @@ export interface MerchantBroadcastsPageViewProps {
 	readonly tenantSlug: string;
 }
 
-/** The store's broadcasts (ADR 073): this week's allowance, every message newest first, and the way to write one. */
+/**
+ * The store's broadcasts (ADR 073): this week's allowance and every message newest first (`merchant:view_broadcasts`),
+ * and — with `merchant:create_broadcasts` — the way to write one.
+ */
 export function MerchantBroadcastsPageView({ tenantSlug }: MerchantBroadcastsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const canCreate = useAbility().can("CREATE", "BROADCAST");
 	const routes = tenantRoutes(tenantSlug);
 	const [urlState, updateUrlState] = useUrlState(BROADCASTS_URL_STATE);
 	const broadcastsQuery = api.tenantNotifications.broadcasts.useQuery({ tenantSlug, ...toBroadcastsQuery(urlState) }, { placeholderData: keepPreviousData });
 	const allowanceQuery = api.tenantNotifications.broadcastAllowance.useQuery({ tenantSlug });
 	const pager = useUrlListPager(urlState, updateUrlState, broadcastsQuery.data?.meta);
 	const allowance = allowanceQuery.data?.data;
-	const canWrite = allowance === undefined || (allowance.broadcastingEnabled && allowance.used < allowance.limit);
+	const canWrite = canCreate && (allowance === undefined || (allowance.broadcastingEnabled && allowance.used < allowance.limit));
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -51,9 +56,11 @@ export function MerchantBroadcastsPageView({ tenantSlug }: MerchantBroadcastsPag
 				title="Broadcasts"
 				description="Write to your customers in the app, by email and on their phones. Only customers who agreed to hear from you get them."
 				actions={
-					<Link href={appRoute(routes.broadcasts.new)} aria-disabled={!canWrite} className={cn(buttonVariants(), !canWrite && "pointer-events-none opacity-50")}>
-						New broadcast
-					</Link>
+					canCreate ? (
+						<Link href={appRoute(routes.broadcasts.new)} aria-disabled={!canWrite} className={cn(buttonVariants(), !canWrite && "pointer-events-none opacity-50")}>
+							New broadcast
+						</Link>
+					) : null
 				}
 			/>
 			{allowance === undefined ? null : <BroadcastAllowanceNotice allowance={allowance} />}

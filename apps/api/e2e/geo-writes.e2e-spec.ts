@@ -5,6 +5,7 @@ import { API_VERSION_PREFIX, ApiErrorResponseSchema, GeoImportResultSchema, Regi
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -14,7 +15,7 @@ import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, type Inject
  * the same transaction, and conflict-safe bulk import.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const GEO_URL = `${API_VERSION_PREFIX}/geo`;
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;

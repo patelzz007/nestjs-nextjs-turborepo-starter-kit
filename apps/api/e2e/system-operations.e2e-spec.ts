@@ -20,7 +20,7 @@ import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
  *   nothing else.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 describe("System operations are enforced by the database (integration)", () => {
 	let pool: Pool;

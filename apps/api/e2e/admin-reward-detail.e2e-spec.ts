@@ -7,9 +7,10 @@ import { API_VERSION_PREFIX, ApiErrorResponseSchema, RewardResponseSchema } from
 
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { rewardImageSeedId } from "../prisma/seed/reward-images";
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, type LoginResult, parseSuccessEnvelope, resetSeedRewardToPendingReview } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 function rewardPath(rewardId: string): string {
 	return `${API_VERSION_PREFIX}/admin/rewards/${rewardId}`;

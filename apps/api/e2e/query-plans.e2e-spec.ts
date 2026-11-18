@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { createE2eApp, login, markSeedUserEmailVerified, uniqueClientIp, type LoginResult } from "./e2e-helpers";
 import { recordStatements, type RecordedStatement } from "./support/sql-statement-recorder";
@@ -95,7 +96,7 @@ describe("Query plans of the busiest list endpoints (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		explain = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		explain = new Pool({ connectionString: getApiConfig().database.url });
 		await markSeedUserEmailVerified(explain, "alice.johnson@example.com");
 		superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123", "admin");
 		alice = await login(app, "alice.johnson@example.com", "Alice@123");

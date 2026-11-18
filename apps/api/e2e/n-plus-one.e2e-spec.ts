@@ -5,6 +5,7 @@ import { API_VERSION_PREFIX } from "@workspace/shared";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { createE2eApp, login, type LoginResult } from "./e2e-helpers";
 import { expectNoNPlusOne } from "./support/sql-statement-counter";
@@ -14,7 +15,7 @@ import { expectNoNPlusOne } from "./support/sql-statement-counter";
  * and a 25-row page (migration plan §11). Housekeeping (BEGIN, set_config, COMMIT)
  * is ignored by the counter.
  */
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const PRODUCT_LIST_URL = `${API_VERSION_PREFIX}/product`;
 const FIXTURE_EPOCH = 1_790_812_800_000;
 

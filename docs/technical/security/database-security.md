@@ -29,9 +29,9 @@ a forbidden action. The full model (tenants, stores, policies per table) is in
 | System operation | `app_runtime` or `app_enumerator` | `app.rls_bypass` + `app.system_operation = <name>` | Allow-listed background / cross-tenant work |
 | Analytics consumer | `analytics_consumer` (own LOGIN) | — | `apps/analytics-consumer` only |
 
-Policies that repeat across tables are generated from `prisma/rls/table-policies.ts` into `prisma/rls/97-standard-policies.sql` ([ADR 083](../../adr/083-generated-standard-rls-policies.md)); one-offs are hand-written in the numbered fragments.
+Every policy is declared in `prisma/security/table-policies.ts` and generated into `prisma/rls/04-policies.sql` ([ADR 089](../../adr/089-generated-security-sql.md)); reusable rules live in `prisma/security/generator/policy-rules.ts`, one-offs in `table-specific-rules.ts`. Never write `prisma/rls/*.sql` by hand: change the TypeScript and run `pnpm --filter @workspace/api db:security` ([adding a table](../database/adding-a-table.md)).
 
-The API-key principal gets **additional** permissive policies (`prisma/rls/40-api-key-principal.sql`):
+The API-key principal gets **additional** permissive policies (helpers in `prisma/security/generator/functions/api-key.ts`, policies in `table-policies.ts`):
 exactly its tenant's rows, and for store-owned tables (redemptions, sales, terminals) only its
 store's rows when the key is store-scoped. It never deletes anything and has **no RLS bypass**.
 
@@ -71,8 +71,8 @@ document it in [Tenancy §3.1](../authorization/tenancy-and-rls.md#31-system-ope
 
 ## Withheld privileges
 
-`apps/api/prisma/rls/withheld-privileges.ts` is the one list of privileges `app_runtime` must not
-hold even though `99-app-runtime-grants.sql` grants DML on every table:
+`apps/api/prisma/security/withheld-privileges.ts` is the one list of privileges `app_runtime` must not
+hold even though its grants in `prisma/security/roles.ts` (generated into `05-grants.sql`) give DML on every table:
 
 | Tables | Withheld | Why |
 | --- | --- | --- |
@@ -132,12 +132,12 @@ bare `prisma migrate reset` recreates the schema without them. Re-apply the secu
 ## Related
 
 [Database](../database.md) · [Threat model](./threat-model.md) ·
-[Data classification](./data-classification.md) · `apps/api/prisma/rls/README.md`
+[Data classification](./data-classification.md) · `apps/api/prisma/security/README.md`
 
 ## Row-level data-change trail (ADR 051)
 
 Every table in `public` except the declared exemptions carries two triggers, generated and
-installed by `pnpm tools db:apply-security` (`prisma/rls/data-change-capture.ts`):
+installed by `pnpm tools db:apply-security` (`prisma/security/data-change-capture.ts`):
 
 - `data_change_capture` (AFTER INSERT / UPDATE / DELETE, per row) and
   `data_change_capture_truncate` (AFTER TRUNCATE, per statement) append one `DataChangeLog`

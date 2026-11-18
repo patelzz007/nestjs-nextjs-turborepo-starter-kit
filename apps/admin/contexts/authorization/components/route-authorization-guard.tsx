@@ -1,6 +1,7 @@
 "use client";
 
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
+import { abilityAllowsCapability, type CapabilitySlug } from "@workspace/shared";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
@@ -42,8 +43,9 @@ export function RouteAuthorizationGuard({
 	children,
 }: RouteAuthorizationGuardProps): React.JSX.Element {
 	const pathname = usePathname();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const rule = React.useMemo(() => resolveRouteAuthorization(rules, pathname), [rules, pathname]);
+	const isGranted = (slug: CapabilitySlug): boolean => abilityAllowsCapability(ability, slug);
 
 	if (rule === null || isOpenRouteRule(rule)) {
 		return <>{children}</>;
@@ -54,7 +56,7 @@ export function RouteAuthorizationGuard({
 	if (permissionsStatus === "loading" || (rule.superAdminOnly === true && !superAdmin.isResolved)) {
 		return <PanelContentSkeleton labels={ROUTE_ACCESS_LOADING_LABELS} />;
 	}
-	if (!isRouteRuleSatisfied(rule, can, enabledFeatureFlags, superAdmin.isSuperAdmin)) {
+	if (!isRouteRuleSatisfied(rule, isGranted, enabledFeatureFlags, superAdmin.isSuperAdmin)) {
 		return <AdminAccessDenied />;
 	}
 	return <>{children}</>;

@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -16,7 +17,7 @@ import { createE2eApp, login, type InjectResponse, type LoginResult } from "./e2
  * `id` tie-breaker is what keeps pages disjoint and stable.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const PRODUCT_LIST_URL = `${API_VERSION_PREFIX}/product`;
 const PAGE_SIZE = 2;
 const FIXTURE_EPOCH = 1_790_812_800_000;

@@ -6,12 +6,13 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { createE2eApp, login, type LoginResult } from "./e2e-helpers";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { expectNoNPlusOne } from "./support/sql-statement-counter";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 /**
  * 2020-01-01T00:00:00Z: years before anything the seed writes. The seed's analytics history fills the
  * last 365 days of the KL store's opening hours with redemptions, so a window inside that year (this

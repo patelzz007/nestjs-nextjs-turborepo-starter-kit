@@ -7,7 +7,10 @@
  *
  * - `MERCHANT_ACCESS` (`MerchantAccessPort`, declared once in `platform/application/ports/authorization.port.ts`): the merchant capability gate with
  *   the caller's store scope; every capability decision writes its `authorize.*`
- *   tenant audit row. Provided by `TenantAccessModule`.
+ *   tenant audit row. Provided by `TenantAccessModule`. With a `target`, the decision is about one record (a share
+ *   of it, its ownership).
+ * - `MERCHANT_CAPABILITY_QUERY` (`MerchantCapabilityQueryPort`): the same decision as a yes/no, not audited — what one
+ *   record allows, for per-row UI capabilities. Never an authorization. Provided by `TenantAccessModule`.
  * - `TENANT_READ` (`TenantReadPort`): batched display data (name +
  *   logo image sources) and owner user ids. Provided by `TenantAccessModule`.
  * - `createTenantsTransactionalPorts(db)`: `MerchantPosSettingsPort`, `CustomerStandingPort`
@@ -36,6 +39,7 @@ export type { TenantFileAccessPort, TenantFileCapabilities } from "./application
 export {
 	API_KEY_CAPABILITIES,
 	MERCHANT_ACCESS,
+	MERCHANT_CAPABILITY_QUERY,
 	TENANT_AUDIT,
 	TENANT_FILE_ACCESS,
 	TENANT_READ,

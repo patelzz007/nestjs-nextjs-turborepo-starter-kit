@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { Can, useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { Can, SessionAbilityProvider, useAbility } from "@workspace/client/lib/contexts/authorization";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,8 +11,8 @@ import { MERCHANT_ACCESS_LOADING_LABELS } from "@/components/loading/merchant-pa
 import { busyRegionAnnouncements } from "@/testing/skeleton";
 
 function ManageRewardsProbe(): React.JSX.Element {
-	const { can } = useAuthorization();
-	return <p>{can(MERCHANT_CAPABILITY.manageRewards) ? "can-manage" : "read-only"}</p>;
+	const ability = useAbility();
+	return <p>{ability.can("UPDATE", "REWARD") ? "can-manage" : "read-only"}</p>;
 }
 
 afterEach((): void => {
@@ -92,11 +92,13 @@ describe("MerchantCapabilityGate", () => {
 		expect(screen.queryByText("rewards page skeleton")).toBeNull();
 	});
 
-	it("denies everything without a provider (fail closed)", () => {
+	it("denies everything when the session holds no capabilities (fail closed)", () => {
 		render(
-			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewDashboard}>
-				<p>dashboard</p>
-			</MerchantCapabilityGate>,
+			<SessionAbilityProvider capabilities={[]} namespace="merchant">
+				<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewDashboard}>
+					<p>dashboard</p>
+				</MerchantCapabilityGate>
+			</SessionAbilityProvider>,
 		);
 
 		expect(screen.queryByText("dashboard")).toBeNull();
@@ -104,12 +106,12 @@ describe("MerchantCapabilityGate", () => {
 });
 
 describe("shared authorization API", () => {
-	it("exposes can() and <Can> backed by the membership capabilities", () => {
+	it("exposes useAbility() and <Can> backed by the membership capabilities", () => {
 		renderWithAuthorization(
 			<>
 				<ManageRewardsProbe />
-				<Can permission={MERCHANT_CAPABILITY.viewAnalytics} fallback={<p>no analytics</p>}>
-					<p>analytics</p>
+				<Can I="READ" a="ANALYTICS" passThrough>
+					{({ isAllowed }: { readonly isAllowed: boolean }): React.ReactNode => (isAllowed ? <p>analytics</p> : <p>no analytics</p>)}
 				</Can>
 			</>,
 			{ role: "CASHIER", capabilities: CASHIER_GRANTED_ANALYTICS },

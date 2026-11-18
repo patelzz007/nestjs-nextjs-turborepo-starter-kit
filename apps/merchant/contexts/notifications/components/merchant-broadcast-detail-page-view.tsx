@@ -10,7 +10,7 @@ import { tenantRoutes } from "@/lib/routes";
 import { userSafeErrorMessage } from "@/lib/query/query-policy";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { MERCHANT_CAPABILITY, type BroadcastResponse } from "@workspace/shared";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
@@ -33,10 +33,14 @@ export interface MerchantBroadcastDetailPageViewProps {
 	readonly broadcastId: string;
 }
 
-/** `/t/:tenantSlug/broadcasts/:broadcastId` — one broadcast: its state, who and how, the results, and the message. */
+/**
+ * `/t/:tenantSlug/broadcasts/:broadcastId` — one broadcast: its state, who and how, the results, and the message
+ * (`merchant:view_broadcasts`); editing it needs `merchant:manage_broadcasts`, sending or cancelling it
+ * `merchant:publish_broadcasts`.
+ */
 export function MerchantBroadcastDetailPageView(props: MerchantBroadcastDetailPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageBroadcasts} loading={<MerchantRewardDetailPageSkeleton />}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewBroadcasts} loading={<MerchantRewardDetailPageSkeleton />}>
 			<MerchantBroadcastDetailContent {...props} />
 		</MerchantCapabilityGate>
 	);
@@ -89,10 +93,11 @@ export function describeBroadcastAudience(broadcast: BroadcastResponse): string 
 
 function MerchantBroadcastDetail({ tenantSlug, broadcast }: MerchantBroadcastDetailProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
 	const routes = tenantRoutes(tenantSlug).broadcasts;
-	const canSend = can(MERCHANT_CAPABILITY.publishBroadcasts);
+	const canSend = ability.can("PUBLISH", "BROADCAST");
+	const canEdit = ability.can("UPDATE", "BROADCAST");
 
 	const applyChange = React.useCallback(
 		(response: { readonly data: BroadcastResponse }): void => {
@@ -148,7 +153,7 @@ function MerchantBroadcastDetail({ tenantSlug, broadcast }: MerchantBroadcastDet
 					<p className="text-sm text-muted-foreground">{describeBroadcastWhen(broadcast)}</p>
 				</div>
 				<div className="flex flex-wrap gap-2">
-					{isBroadcastEditable(broadcast.status) ? (
+					{isBroadcastEditable(broadcast.status) && canEdit ? (
 						<Link href={appRoute(routes.edit(broadcast.id))} className={cn(buttonVariants({ variant: "outline" }))}>
 							Edit
 						</Link>
@@ -158,7 +163,7 @@ function MerchantBroadcastDetail({ tenantSlug, broadcast }: MerchantBroadcastDet
 							{broadcast.sendAt === null && broadcast.localSendAt === null ? "Send" : "Schedule"}
 						</Button>
 					) : null}
-					{isBroadcastCancellable(broadcast.status) ? (
+					{isBroadcastCancellable(broadcast.status) && canSend ? (
 						<Button type="button" variant="outline" onClick={handleCancel} disabled={busy}>
 							Cancel broadcast
 						</Button>

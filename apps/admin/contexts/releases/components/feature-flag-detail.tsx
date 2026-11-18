@@ -1,9 +1,9 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION, type FeatureFlagDetail, type FeatureFlagKey, type FlagRule, type Revision, type SubjectContext } from "@workspace/shared";
+import type { FeatureFlagDetail, FeatureFlagKey, FlagRule, Revision, SubjectContext } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -45,9 +45,9 @@ export function FeatureFlagDetailView({ flagKey }: { readonly flagKey: FeatureFl
 
 function FlagDetailLoaded({ flag, revisions }: { readonly flag: FeatureFlagDetail; readonly revisions: readonly Revision[] | undefined }): React.JSX.Element {
 	const { api, user } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
-	const canChange = can(PERMISSION.FEATURE_FLAG.UPDATE);
+	const canChange = ability.can("UPDATE", "FEATURE_FLAG");
 	const refresh = React.useCallback(async (): Promise<void> => {
 		await queryClient.invalidateQueries({ queryKey: RELEASES_SCOPE });
 	}, [queryClient]);
@@ -159,7 +159,7 @@ function FlagDetailLoaded({ flag, revisions }: { readonly flag: FeatureFlagDetai
 				<PendingRevisionCard
 					revision={pending}
 					preview={<RulesSummary rules={rulesOf(pending)} fallback={fallback} now={now} />}
-					canDecide={can(PERMISSION.FEATURE_FLAG.APPROVE)}
+					canDecide={ability.can("APPROVE", "FEATURE_FLAG")}
 					isOwn={isOwnPending}
 					pending={decide.isPending}
 					onDecide={decidePending}

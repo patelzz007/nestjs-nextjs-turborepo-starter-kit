@@ -1,10 +1,10 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
-import { PERMISSION, PromotionFileSchema, type PromotionFile, type PromotionPreview, type PromotedGroupChange } from "@workspace/shared";
+import { PromotionFileSchema, type PromotionFile, type PromotionPreview, type PromotedGroupChange } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { FieldError } from "@workspace/ui/components/field";
@@ -61,14 +61,14 @@ function rulesOf(content: PromotionPreview["incoming"]): readonly SummarisedRule
 /** `/releases/promotion` (ADR 087): import rules exported from another environment, after seeing what would change. */
 export function PromotionImport(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
 	const router = useProgressRouter();
 	const [text, setText] = React.useState("");
 	const [problem, setProblem] = React.useState<string | null>(null);
 	const [file, setFile] = React.useState<PromotionFile | null>(null);
 	const [preview, setPreview] = React.useState<PromotionPreview | null>(null);
-	const canImport = can(PERMISSION.FEATURE_FLAG.UPDATE) && can(PERMISSION.DYNAMIC_CONFIG.UPDATE);
+	const canImport = ability.can("UPDATE", "FEATURE_FLAG") && ability.can("UPDATE", "DYNAMIC_CONFIG");
 	const previewMutation = api.featureFlags.promotionPreview.useMutation({
 		onSuccess: (response): void => {
 			setPreview(response.data);

@@ -16,7 +16,7 @@ import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readP
 import { useActiveLocationFilter } from "@/features/tenant-context/facade";
 import type { DayWindow } from "@/contexts/pos/lib/redemptions/today-window";
 import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/contexts/pos/url-state/redemptions";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
@@ -52,9 +52,9 @@ export function MerchantRedemptionsPageView(props: MerchantRedemptionsPageViewPr
 
 function MerchantRedemptionsPageViewContent({ tenantSlug, initialRedemptions, today, initialTodayCount }: MerchantRedemptionsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
-	// Banning a customer from the log needs `merchant:manage_rewards` (the API enforces it).
-	const canBanCustomers = can(MERCHANT_CAPABILITY.manageRewards);
+	const ability = useAbility();
+	// Banning a customer from the log needs `merchant:ban_customers` (customer_ban.create; the API enforces it).
+	const canBanCustomers = ability.can("CREATE", "CUSTOMER_BAN");
 	const { locationId } = useActiveLocationFilter();
 
 	// The page is URL state (`?page=`); the store is the tenant-context filter.

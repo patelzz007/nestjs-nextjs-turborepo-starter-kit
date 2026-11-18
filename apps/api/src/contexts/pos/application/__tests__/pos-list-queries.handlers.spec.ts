@@ -128,7 +128,7 @@ describe("ListApiKeysHandler", () => {
 		const reads = new RecordingApiKeyReads();
 
 		await expect(
-			new ListApiKeysHandler(new FakeMerchantAccessPort().deny("merchant:manage_api_keys"), reads).execute(
+			new ListApiKeysHandler(new FakeMerchantAccessPort().deny("merchant:view_api_keys"), reads).execute(
 				new ListApiKeysQuery(member(), { ...MerchantApiKeyListQuerySchema.parse({}), tenantId: TENANT_ID }),
 			),
 		).rejects.toBeInstanceOf(AuthorizationDeniedError);
@@ -191,7 +191,7 @@ describe("GetTerminalSummaryHandler", () => {
 		const reads = new RecordingTerminalSummaries();
 
 		await expect(
-			new GetTerminalSummaryHandler(new FakeMerchantAccessPort().deny("merchant:manage_api_keys"), reads, new FixedClock(NOW)).execute(
+			new GetTerminalSummaryHandler(new FakeMerchantAccessPort().deny("merchant:view_terminals"), reads, new FixedClock(NOW)).execute(
 				new GetTerminalSummaryQuery(member(), { tenantId: TENANT_ID }),
 			),
 		).rejects.toBeInstanceOf(AuthorizationDeniedError);

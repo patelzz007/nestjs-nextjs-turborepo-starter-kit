@@ -40,7 +40,7 @@ export class GetKybDocumentDownloadUrlHandler implements IQueryHandler<GetKybDoc
 		}
 		const user = requireUserActor(actor);
 		const member = await this.directory.resolveMember(user, requester.tenantSlug);
-		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageVerification });
+		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.viewVerification });
 		return { tenantId: member.tenantId, readActor: actingInTenant(user, member.tenantId) };
 	}
 }

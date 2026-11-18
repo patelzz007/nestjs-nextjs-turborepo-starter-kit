@@ -21,7 +21,7 @@ export class ListApiKeysHandler implements IQueryHandler<ListApiKeysQuery, Pagin
 		const { actor, input } = query;
 		const grant = await this.merchantAccess.assertCapability(actor, {
 			tenantId: input.tenantId,
-			capability: MERCHANT_CAPABILITY.manageApiKeys,
+			capability: MERCHANT_CAPABILITY.viewApiKeys,
 			locationId: input.locationId ?? null,
 		});
 		const tenant = actingInTenant(actor, input.tenantId);

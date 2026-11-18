@@ -278,10 +278,10 @@ afterEach((): void => {
 });
 
 describe("TerminalsPageView authorization", () => {
-	it("renders the access-denied page and never lists terminals without merchant:manage_api_keys", () => {
+	it("renders the access-denied page and never lists terminals without merchant:view_terminals", () => {
 		renderWithAuthorization(<TerminalsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
 
-		expect(screen.getByText("Owner or admin access required")).toBeTruthy();
+		expect(screen.getByText("Terminal access required")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Add terminal" })).toBeNull();
 		expect(terminalsListQuery).not.toHaveBeenCalled();
 		expect(settingsQuery).not.toHaveBeenCalled();

@@ -3,10 +3,10 @@
 import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { contractFormSchema } from "@workspace/client/lib/forms/contract-form-schema";
-import { PERMISSION, PostStatusIncidentUpdateSchema, StatusIncidentStateSchema, type PostStatusIncidentUpdateInput, type StatusIncident } from "@workspace/shared";
+import { PostStatusIncidentUpdateSchema, StatusIncidentStateSchema, type PostStatusIncidentUpdateInput, type StatusIncident } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -28,13 +28,13 @@ type StatusUpdateFormValues = z.input<typeof StatusUpdateFormSchema>;
 /** `/operations/status/[id]`: one incident as customers read it, its updates, and posting the next one. */
 export function StatusIncidentDetail({ incidentId }: { readonly incidentId: string }): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const query = api.operations.statusIncident.useQuery({ incidentId });
 	const incident = query.data?.data;
 	if (incident === undefined) {
 		return <Skeleton className="h-64 w-full rounded-xl" />;
 	}
-	const canPost = can(PERMISSION.STATUS_INCIDENT.UPDATE) && incident.resolvedAt === null;
+	const canPost = ability.can("UPDATE", "STATUS_INCIDENT") && incident.resolvedAt === null;
 	return (
 		<div className="flex flex-col gap-6">
 			<header className="flex flex-col gap-2">

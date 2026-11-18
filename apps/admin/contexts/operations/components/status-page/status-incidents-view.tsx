@@ -1,8 +1,8 @@
 "use client";
 
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION, type StatusIncident } from "@workspace/shared";
+import type { StatusIncident } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -20,7 +20,7 @@ import { componentsSummary, IMPACT_SHORT_LABELS, IMPACT_TONES, STATE_LABELS, STA
 /** `/operations/status` (enhancement 4.5): the incidents told to customers on the public status page. */
 export function StatusIncidentsView(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const list = api.operations.statusIncidents.useQuery(undefined);
 	const incidents = list.data?.data.incidents;
 
@@ -33,7 +33,7 @@ export function StatusIncidentsView(): React.JSX.Element {
 						What customers and merchants read when something is wrong. Each part&apos;s status also follows the monitor on its own.
 					</p>
 				</div>
-				{can(PERMISSION.STATUS_INCIDENT.CREATE) ? (
+				{ability.can("CREATE", "STATUS_INCIDENT") ? (
 					<Button render={<Link href={ROUTES.operations.newStatusIncident} />} nativeButton={false}>
 						<Megaphone className="size-4" />
 						Open an incident

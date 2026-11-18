@@ -7,13 +7,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX, ApiErrorResponseSchema, SignupReferralDashboardSchema, SignupReferralRefereeItemSchema } from "@workspace/shared";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { SweepSignupSuccessNoticesCommand } from "../src/contexts/claims/application/commands/sweep-signup-success-notices/sweep-signup-success-notices.command";
 import { SIGNUP_SUCCESS_NOTICE_OPERATION } from "../src/contexts/claims/application/services/signup-success-notice.application-service";
 import { systemActor } from "../src/platform/application/actor-context";
 import { createE2eApp, login, markSeedUserEmailVerified, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
 import { deleteNotificationsByPayload, notificationsByPayload } from "./support/notification-rows";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const DASHBOARD_URL = `${API_VERSION_PREFIX}/auth/signup-referrals/dashboard`;
 const REFEREES_URL = `${API_VERSION_PREFIX}/auth/signup-referrals/referees`;
 /** The seeded demo referrer has at least these referees (one redeemed and notified, one owed, one not redeemed). */

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { merchantProfileMenuItems, type MerchantProfileMenuAccess, type MerchantProfileMenuPaths } from "@/components/layout/merchant-profile-menu";
 
 const PATHS: MerchantProfileMenuPaths = { account: "/o/acme/account", dashboard: "/o/acme", apiKeys: "/o/acme/api-keys", settings: "/o/acme/settings" };
-const FULL_ACCESS: MerchantProfileMenuAccess = { isEnrollmentLocked: false, canViewDashboard: true, canManageApiKeys: true };
+const FULL_ACCESS: MerchantProfileMenuAccess = { isEnrollmentLocked: false, canViewDashboard: true, canViewApiKeys: true };
 
 function labelsOf(access: MerchantProfileMenuAccess): readonly string[] {
 	return merchantProfileMenuItems(access, PATHS, vi.fn()).map((item) => item.label);
@@ -19,7 +19,7 @@ describe("merchantProfileMenuItems", () => {
 	});
 
 	it("leaves out the pages the member's capabilities do not allow", () => {
-		expect(labelsOf({ ...FULL_ACCESS, canViewDashboard: false, canManageApiKeys: false })).toStrictEqual(["Account", "Tenant settings"]);
+		expect(labelsOf({ ...FULL_ACCESS, canViewDashboard: false, canViewApiKeys: false })).toStrictEqual(["Account", "Tenant settings"]);
 	});
 
 	it("takes each item to its tenant-scoped page", () => {

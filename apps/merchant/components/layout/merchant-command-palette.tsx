@@ -6,10 +6,10 @@ import { useTenantSlug } from "@/contexts/tenancy/lib/tenant/use-tenant-slug";
 import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { TENANT_ROUTES } from "@/lib/routes";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useEnabledFeatureFlags } from "@workspace/client/lib/contexts/feature-flags";
 import { MERCHANT_FEATURE_FLAGS } from "@/lib/feature-flags";
-import { MERCHANT_CAPABILITY } from "@workspace/shared";
+import { abilityAllowsCapability, type CapabilitySlug } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
@@ -27,7 +27,9 @@ export interface MerchantCommandPaletteProps {
 export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSetOpen }: MerchantCommandPaletteProps): React.JSX.Element {
 	const router = useProgressRouter();
 	const { toggleTheme } = useThemeToggle();
-	const { can } = useAuthorization();
+	const ability = useAbility();
+	// The palette's nav items take a capability-slug predicate; the slug is answered by the session's ability.
+	const isGranted = React.useCallback((slug: CapabilitySlug): boolean => abilityAllowsCapability(ability, slug), [ability]);
 	const enabledFeatureFlags = useEnabledFeatureFlags(MERCHANT_FEATURE_FLAGS);
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();
 	const tenantSlug = useTenantSlug();
@@ -59,7 +61,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 			},
 		];
 
-		if (!isEnrollmentLocked && can(MERCHANT_CAPABILITY.viewRewards)) {
+		if (!isEnrollmentLocked && ability.can("READ", "REWARD")) {
 			actions.push({
 				id: "open-rewards",
 				title: "Open rewards",
@@ -75,15 +77,15 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 		}
 
 		return actions;
-	}, [can, closePalette, isEnrollmentLocked, rewardsPath, router, toggleTheme]);
+	}, [ability, closePalette, isEnrollmentLocked, rewardsPath, router, toggleTheme]);
 
 	const searchableItems = React.useMemo(() => {
-		const items = buildMerchantPaletteItems(can, enabledFeatureFlags);
+		const items = buildMerchantPaletteItems(isGranted, enabledFeatureFlags);
 		if (!isEnrollmentLocked) {
 			return items;
 		}
 		return items.filter((item) => isMerchantEnrollmentAllowedPath(item.url));
-	}, [can, enabledFeatureFlags, isEnrollmentLocked]);
+	}, [isGranted, enabledFeatureFlags, isEnrollmentLocked]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {

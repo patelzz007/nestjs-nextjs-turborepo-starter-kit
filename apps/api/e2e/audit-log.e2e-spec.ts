@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -17,7 +18,7 @@ import { createE2eApp, login, mutationHeaders, type InjectResponse, type LoginRe
  * sessions holding AUDIT_LOG, and records every viewing as a sensitive read.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const USER_AGENT = "audit-e2e/1.0";
 
 const AuditRowSchema = z.object({

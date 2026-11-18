@@ -3,9 +3,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { BROADCAST_STATUS_LABELS, isBroadcastCancellable } from "@workspace/client/lib/features/broadcasts/broadcast-draft";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { LIST_DEFAULT_LIMIT, PERMISSION, type BroadcastReportEntry, type BroadcastResponse, type BroadcastStatus, type ReviewBroadcastReportInput } from "@workspace/shared";
+import { LIST_DEFAULT_LIMIT, type BroadcastReportEntry, type BroadcastResponse, type BroadcastStatus, type ReviewBroadcastReportInput } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { RichTextView } from "@workspace/ui/components/rich-text-view";
@@ -51,11 +51,12 @@ function useInvalidateBroadcasts(): () => Promise<void> {
 /** `/emails/broadcasts` (ADR 073): every broadcast — tenants' and the platform's — with approvals, pauses and reports. */
 export function BroadcastsAdminView(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
+	const canListReports = ability.can("LIST", "BROADCAST_REPORT");
 	const broadcastsQuery = api.notificationsAdmin.broadcasts.useQuery({ page: 1, limit: LIST_DEFAULT_LIMIT });
 	const reportsQuery = api.notificationsAdmin.broadcastReports.useQuery(
 		{ page: 1, limit: LIST_DEFAULT_LIMIT, filter: { status: { eq: "OPEN" } } },
-		{ enabled: can(PERMISSION.BROADCAST_REPORT.LIST) },
+		{ enabled: canListReports },
 	);
 
 	return (
@@ -67,14 +68,14 @@ export function BroadcastsAdminView(): React.JSX.Element {
 						Messages tenants send their customers and notices the platform sends its users. A notice to everyone needs a second person to approve it.
 					</p>
 				</div>
-				{can(PERMISSION.BROADCAST.CREATE) ? (
+				{ability.can("CREATE", "BROADCAST") ? (
 					<Link href={ROUTES.emails.broadcastNew} className={buttonVariants()}>
 						<Plus className="size-4" aria-hidden="true" />
 						New broadcast
 					</Link>
 				) : null}
 			</header>
-			{can(PERMISSION.BROADCAST_REPORT.LIST) ? <ReportsCard reports={reportsQuery.data?.data} canReview={can(PERMISSION.BROADCAST_REPORT.UPDATE)} /> : null}
+			{canListReports ? <ReportsCard reports={reportsQuery.data?.data} canReview={ability.can("UPDATE", "BROADCAST_REPORT")} /> : null}
 			<Card>
 				<CardHeader>
 					<CardTitle>All broadcasts</CardTitle>
@@ -89,7 +90,7 @@ export function BroadcastsAdminView(): React.JSX.Element {
 						<ul className="flex flex-col divide-y divide-border">
 							{broadcastsQuery.data.data.map((broadcast): React.JSX.Element => (
 								<li key={broadcast.id}>
-									<BroadcastAdminRow broadcast={broadcast} canApprove={can(PERMISSION.BROADCAST.APPROVE)} canCancel={can(PERMISSION.BROADCAST.DELETE)} />
+									<BroadcastAdminRow broadcast={broadcast} canApprove={ability.can("APPROVE", "BROADCAST")} canCancel={ability.can("DELETE", "BROADCAST")} />
 								</li>
 							))}
 						</ul>

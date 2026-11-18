@@ -2,8 +2,8 @@
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
-import { PERMISSION, type Envelope, type SampleCategory } from "@workspace/shared";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
+import type { Envelope, SampleCategory } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -34,8 +34,8 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 	// GET /sample-category/:id needs READ, which the route guard enforces for this page
 	// (lib/navigation/route-authorization.ts), so it is not repeated here.
 	// PATCH /sample-category/:id needs UPDATE — a finer-grained check for the Edit link.
-	const { can } = useAuthorization();
-	const canUpdate = can(PERMISSION.SAMPLE_CATEGORY.UPDATE);
+	const ability = useAbility();
+	const canUpdate = ability.can("UPDATE", "SAMPLE_CATEGORY");
 	const detailQuery = api.sampleCategory.detail.useQuery({ id }, initialDataOption(initialSampleCategory));
 	const entity: SampleCategory | undefined = detailQuery.data?.data;
 

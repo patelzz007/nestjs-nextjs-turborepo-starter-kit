@@ -1,8 +1,8 @@
 "use client";
 
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION, type DocsSyncOverview } from "@workspace/shared";
+import type { DocsSyncOverview } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
@@ -36,7 +36,7 @@ function setupItems(overview: DocsSyncOverview): readonly SetupItem[] {
 /** The verification token, once asked for. The operator pastes it into Notion, then sets NOTION_WEBHOOK_SECRET. */
 function HandshakePanel(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const [token, setToken] = React.useState<string | null>(null);
 	const reveal = api.docsPublishing.revealHandshake.useMutation({
 		onSuccess: (result): void => {
@@ -66,7 +66,7 @@ function HandshakePanel(): React.JSX.Element {
 				Paste it into Notion to activate the webhook, then set it as NOTION_WEBHOOK_SECRET on this server. It is kept for an hour.
 			</p>
 			{token === null ? (
-				<Button variant="outline" size="sm" className="mt-3 gap-1.5" disabled={!can(PERMISSION.DOCS_SYNC.READ) || reveal.isPending} onClick={handleReveal}>
+				<Button variant="outline" size="sm" className="mt-3 gap-1.5" disabled={ability.cannot("READ", "DOCS_SYNC") || reveal.isPending} onClick={handleReveal}>
 					<KeyRound className="size-3.5" aria-hidden />
 					Show token
 				</Button>

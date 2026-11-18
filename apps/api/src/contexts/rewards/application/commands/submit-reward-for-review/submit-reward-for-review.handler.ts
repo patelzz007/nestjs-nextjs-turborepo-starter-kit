@@ -24,7 +24,12 @@ export class SubmitRewardForReviewHandler implements ICommandHandler<SubmitRewar
 
 	public async execute(command: SubmitRewardForReviewCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		// Decided for THIS reward (ADR 067): reward.publish (a share gives only read and update).
+		const grant = await this.merchantAccess.assertCapability(actor, {
+			tenantId: input.tenantId,
+			capability: MERCHANT_CAPABILITY.publishRewards,
+			target: { resource: "REWARD", resourceId: input.rewardId },
+		});
 
 		// The merchant's name and logo after the commit (a read of its own: not inside this transaction).
 		return this.merchantDisplay.withMerchantDisplay(

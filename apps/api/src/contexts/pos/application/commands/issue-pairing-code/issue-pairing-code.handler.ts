@@ -31,7 +31,7 @@ export class IssuePairingCodeHandler implements ICommandHandler<IssuePairingCode
 	public async execute(command: IssuePairingCodeCommand): Promise<MerchantTerminalPairing> {
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageTerminals });
 		const tenant = actingInTenant(actor, input.tenantId);
 		const secret = this.credentials.newPairingCode();
 		return this.uow.run(tenant, async (scope: PosScope): Promise<MerchantTerminalPairing> => {

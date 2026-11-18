@@ -9,9 +9,9 @@ export const STORE_BRANDING_CAPABILITIES: TenantFileCapabilities = {
 	deniedMessage: "Your tenant role cannot change store branding",
 };
 
-/** KYB evidence: owner-only for every action. */
+/** KYB evidence: `view_verification` (kyb.read) reads it; `manage_verification` (kyb.update, the Owner's) changes it. */
 export const KYB_EVIDENCE_CAPABILITIES: TenantFileCapabilities = {
 	manage: MERCHANT_CAPABILITY.manageVerification,
-	read: MERCHANT_CAPABILITY.manageVerification,
-	deniedMessage: "Only tenant owners can manage verification documents",
+	read: MERCHANT_CAPABILITY.viewVerification,
+	deniedMessage: "Your tenant role cannot manage verification documents",
 };

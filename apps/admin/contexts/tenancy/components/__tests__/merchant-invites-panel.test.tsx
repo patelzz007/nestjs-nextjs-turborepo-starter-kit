@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ApiError } from "@workspace/client/lib/api/api-request";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import {
 	EmailPreviewSchema,
 	epochMs,
@@ -106,9 +106,9 @@ const refetch = vi.fn((): Promise<void> => Promise.resolve());
 
 function renderPanel(capabilities: readonly CapabilitySlug[] = [PERMISSION.MERCHANT_ORG.CREATE]): void {
 	render(
-		<CapabilitiesProvider capabilities={capabilities}>
+		<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 			<MerchantInvitesPanel />
-		</CapabilitiesProvider>,
+		</SessionAbilityProvider>,
 		{ wrapper: UiKitTestProviders },
 	);
 }

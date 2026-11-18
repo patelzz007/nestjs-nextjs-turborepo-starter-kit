@@ -24,8 +24,9 @@ apps/api/scripts/
   __tests__/    checks on the package scripts themselves
 ```
 
-The RLS apply code lives with the RLS SQL in `prisma/rls/apply.ts` and `prisma/rls/apply-plan.ts`,
-because the seed and the e2e scratch databases import it too.
+The security generator and apply code live in `prisma/security/` (`apply.ts`, `apply-plan.ts`; see its
+`README.md`), because the seed and the e2e scratch databases import it too. The SQL it generates is
+`prisma/rls/*.sql`; never edit those files by hand.
 
 ## `scripts/db.ts`
 
@@ -34,12 +35,14 @@ because the seed and the e2e scratch databases import it too.
 | `db:schema` (`--check` to verify)     | `schema`                           | Writes the base model into every `/// @extends BaseModel` model of `prisma/schema.prisma`.              |
 | `db:apply-security`                   | `apply-security`                   | Applies RLS, grants, withheld privileges, data-change capture and the row audit triggers.               |
 | `db:check-rls-manifest`               | `check-rls-manifest`               | Fails when the Prisma models, the RLS manifest and the RLS SQL disagree.                                |
-| `db:generate-system-operation-scopes` | `generate-system-operation-scopes` | Renders `prisma/rls/00-system-operation-scopes.sql` from the system-operation registry.                 |
+| `db:generate-security`                | `generate-security`                | Writes `prisma/rls/*.sql` from `prisma/security/` (old names `db:generate-rls-policies` and `db:generate-system-operation-scopes` are aliases). |
+| `db:check-security`                   | `check-security`                   | Fails when the committed `prisma/rls/*.sql` differs from what `prisma/security/` generates (CI).       |
+| `db:security`                         | `generate-security` + `apply-security` | Generates, then applies: what you run after changing `prisma/security/`.                            |
 | `db:check-drift`                      | `check-drift`                      | Fails when `prisma/migrations` does not reproduce `prisma/schema.prisma` (needs `SHADOW_DATABASE_URL`). |
 | `db:check-seed-coverage`              | `check-seed-coverage`              | Fails when a table or nullable column of the seeded database is empty.                                  |
 
 `db:generate` runs `schema` before `prisma generate`, so `scripts/db.ts` loads without a generated
-Prisma client: only `generate-system-operation-scopes` and `check-seed-coverage` import it, inside
+Prisma client: only `generate-security`, `check-security` and `check-seed-coverage` import it, inside
 the command (`scripts/__tests__/db-cli-imports.spec.ts` keeps it that way). After an install that
 re-creates `@prisma/client` (a new peer version gives it a new store folder), `pnpm db:generate` is
 all it takes to bring the client back.

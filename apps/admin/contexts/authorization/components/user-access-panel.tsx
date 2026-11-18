@@ -1,13 +1,13 @@
 "use client";
 
-import { PERMISSION, type AdminUserDetail, type CheckPermissionInput, type CheckPermissionResponse, type Envelope, type PermissionListItem } from "@workspace/shared";
+import type { AdminUserDetail, CheckPermissionInput, CheckPermissionResponse, Envelope, PermissionListItem } from "@workspace/shared";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlListPager } from "@workspace/client/lib/url-state/use-url-list-pager";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth, invalidateSessionAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
 import { AccessHierarchyRow } from "@/contexts/authorization/components/access-hierarchy";
 import { AccessPermissionTree } from "@/contexts/authorization/components/access-permission-tree";
@@ -43,14 +43,14 @@ export interface UserAccessPanelProps {
  */
 export function UserAccessPanel({ userId, user, initialGrantsPage }: UserAccessPanelProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
-	const canManageRoles = can(PERMISSION.ROLE.UPDATE);
-	const canManageDirectGrants = can(PERMISSION.PERMISSION.UPDATE);
-	const canCheckPermissions = can(PERMISSION.PERMISSION.READ);
+	const canManageRoles = ability.can("UPDATE", "ROLE");
+	const canManageDirectGrants = ability.can("UPDATE", "PERMISSION");
+	const canCheckPermissions = ability.can("READ", "PERMISSION");
 	// Catalog reads are separately permissioned (LIST ROLE / LIST PERMISSION) — skip calls that would 403.
-	const canListRoles = can(PERMISSION.ROLE.LIST);
-	const canListPermissions = can(PERMISSION.PERMISSION.LIST);
+	const canListRoles = ability.can("LIST", "ROLE");
+	const canListPermissions = ability.can("LIST", "PERMISSION");
 
 	// The grant tree pages through the permission catalog; its page is URL state (`?grantsPage=`).
 	const [grantsState, updateGrantsState] = useUrlState(GRANTS_URL_STATE);

@@ -1,8 +1,7 @@
 "use client";
 
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -19,7 +18,7 @@ import { formatWhen, ROLLOUT_UNIT_LABELS } from "../lib/release-labels";
 /** `/releases/groups` (ADR 087): the reusable sets rules name — conditions, or a list of people or stores. */
 export function FlagGroupsList(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const groups = api.featureFlags.groups.useQuery(undefined).data?.data.groups;
 	return (
 		<div className="flex flex-col gap-6">
@@ -30,7 +29,7 @@ export function FlagGroupsList(): React.JSX.Element {
 						A named set many rules can share: either conditions (staff, one country&apos;s apps) or a list of people, merchants, branches or devices.
 					</p>
 				</div>
-				{can(PERMISSION.FEATURE_FLAG_GROUP.UPDATE) ? (
+				{ability.can("UPDATE", "FEATURE_FLAG_GROUP") ? (
 					<Button render={<Link href={ROUTES.releases.groups.create} />} nativeButton={false}>
 						<Plus className="size-4" />
 						New group

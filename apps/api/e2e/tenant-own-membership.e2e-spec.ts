@@ -11,10 +11,11 @@ import {
 } from "@workspace/shared";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION } from "../src/contexts/tenancy/application/commands/rename-own-membership/rename-own-membership.handler";
 import { createE2eApp, type InjectResponse, login, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const MLK_PATH = `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}`;
 const CASHIER_MEMBERSHIP_ID = TENANT_SEED_IDS.mlkCashierMembership;
 

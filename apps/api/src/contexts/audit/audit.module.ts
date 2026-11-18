@@ -35,7 +35,7 @@ import { DataChangesController } from "./presentation/http/data-changes.controll
  * (row changes); this context never writes an audit row except the
  * sensitive-read row of its own reads, in the read's own transaction. The live
  * signal (`/admin/audit-trail/events`) comes from the database's
- * `NOTIFY audit_trail` (prisma/rls/95-audit-trail-notify.sql).
+ * `NOTIFY audit_trail` (prisma/security/triggers.ts).
  */
 @Module({
 	imports: [PrismaModule, SystemCommandModule],

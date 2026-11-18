@@ -4,6 +4,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, grantSeedUsersFullSession, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -14,7 +15,7 @@ import { createE2eApp, grantSeedUsersFullSession, login, mutationHeaders, parseS
  * every preference row of theirs afterwards.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const PREFERENCES = `${API_VERSION_PREFIX}/auth/preferences`;
 const CONSUMER = { email: "user@example.com", password: "User@123" };
 

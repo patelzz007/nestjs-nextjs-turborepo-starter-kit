@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION, ProductSchema, type CapabilitySlug, type Product } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -111,7 +111,9 @@ vi.mock("@workspace/client/lib/contexts/identity", () => {
 function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNode, queryClient: QueryClient = new QueryClient()): void {
 	render(
 		<QueryClientProvider client={queryClient}>
-			<CapabilitiesProvider capabilities={capabilities}>{node}</CapabilitiesProvider>
+			<SessionAbilityProvider capabilities={capabilities} namespace="platform">
+				{node}
+			</SessionAbilityProvider>
 		</QueryClientProvider>,
 		{ wrapper: ClientTestProviders },
 	);

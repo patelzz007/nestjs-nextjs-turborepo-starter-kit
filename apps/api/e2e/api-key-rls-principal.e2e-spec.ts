@@ -6,10 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
+import { getApiConfig } from "../src/config/api-config";
 import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
 import { anonymousRlsContext, apiKeyRlsContext, rlsSessionVariables, type RlsContext } from "../src/prisma/rls-context";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 const KL_ORG = TENANT_SEED_IDS.klTenant;
 const KL_STORE = TENANT_SEED_IDS.klLocation;
@@ -30,7 +31,7 @@ interface StoreBill {
 }
 
 /**
- * The merchant API key as a DATABASE principal (prisma/rls/40-api-key-principal.sql).
+ * The merchant API key as a DATABASE principal (prisma/security/generator/functions/api-key.ts and its policies in prisma/security/table-policies.ts).
  *
  * Each check opens a transaction exactly as the API pool does for an API-key
  * request — `SET ROLE app_runtime` plus the session variables produced by

@@ -21,6 +21,7 @@ import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
+import { getApiConfig } from "../src/config/api-config";
 import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
 import {
 	createE2eApp,
@@ -34,7 +35,7 @@ import {
 	type LoginResult,
 } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 const KATIL = TENANT_SEED_IDS.mlkLocationKatil;
 const BERUANG = TENANT_SEED_IDS.mlkLocationBeruang;

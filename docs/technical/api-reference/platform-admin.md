@@ -1902,6 +1902,9 @@ Get one reward in full, whatever its status (moderation detail)
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -1990,6 +1993,9 @@ _No fields._
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -2222,6 +2228,9 @@ Reject a pending reward
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -2387,6 +2396,9 @@ List rewards pending moderation (oldest first, paginated)
 | `data[].termsConditions` | string \| null | yes |  |
 | `data[].title` | string | yes |  |
 | `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data[].viewerCapabilities` | object | no |  |
+| `data[].viewerCapabilities.publish` | boolean | yes |  |
+| `data[].viewerCapabilities.update` | boolean | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |

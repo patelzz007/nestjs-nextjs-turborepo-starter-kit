@@ -6,6 +6,7 @@ import { Client, Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -16,7 +17,7 @@ import { createE2eApp, login, mutationHeaders, type InjectResponse, type LoginRe
  * cursor paging continues it.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const REGION_PREFIX = "audit-trail-e2e-";
 const TRAIL_URL = `${API_VERSION_PREFIX}${apiRoutes.auditTrail.list}`;
 
@@ -219,7 +220,7 @@ describe("Audit trail timeline (e2e)", () => {
 				expect(read.statusCode, read.body).toBe(200);
 				await new Promise((resolve) => setTimeout(resolve, QUIET_MS));
 				const recorded = await pool.query<{ signals: boolean }>(
-					// The trigger's own WHEN clause (prisma/rls/95-audit-trail-notify.sql), evaluated for this row.
+					// The trigger's own WHEN clause (prisma/security/triggers.ts), evaluated for this row.
 					`SELECT NOT (method = 'GET' AND endpoint ~ '^/api/v[0-9]+/admin/(audit-|data-changes)') AS signals FROM public."AuditLog" WHERE "correlationId" = $1`,
 					[readCorrelationId],
 				);

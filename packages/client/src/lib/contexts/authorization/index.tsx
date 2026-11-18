@@ -1,82 +1,65 @@
 "use client";
 
+import { Ability } from "@casl/ability";
+import { AbilityProvider, Can as CaslCan, type CanProps } from "@casl/react";
 import * as React from "react";
 
-import type { CapabilitySlug } from "@workspace/shared";
+import { abilityRules, type AppAbility, type CapabilityNamespace, type CapabilitySlug, type PermissionAction, type PermissionResource } from "@workspace/shared";
 
-import { createAuthorizationChecker, meetsRequirement, type AuthorizationChecker, type CapabilityCheckMode } from "./permission-check";
+export type { AppAbility, CapabilityNamespace } from "@workspace/shared";
 
-export type { AuthorizationChecker, CapabilityCheckMode } from "./permission-check";
+/**
+ * The ability for a session's capabilities (@workspace/shared's `abilityRules`). An empty list (signed out, loading,
+ * failed) allows nothing. The plain `Ability`, not `createMongoAbility`: the rules never carry a condition. Built here,
+ * not in @workspace/shared, so CASL's code loads only on pages that mount an ability provider.
+ */
+export function defineSessionAbility(capabilities: readonly CapabilitySlug[], namespace: CapabilityNamespace): AppAbility {
+	return new Ability<[PermissionAction, PermissionResource]>(abilityRules(capabilities, namespace));
+}
 
-/** Back-compat name for {@link AuthorizationChecker}. */
-export type CapabilitiesChecker = AuthorizationChecker;
+/** The ability that allows nothing (an empty capability list). */
+const DENY_ALL_ABILITY: AppAbility = defineSessionAbility([], "platform");
 
-const CapabilitiesContext = React.createContext<AuthorizationChecker | null>(null);
+/**
+ * The session's ability. Outside a {@link SessionAbilityProvider} it is the ability that allows nothing, so a
+ * `<Can>` or `useAbility()` rendered where no provider is mounted hides what it guards instead of crashing.
+ */
+const AbilityContext = React.createContext<AppAbility>(DENY_ALL_ABILITY);
 
-const DENY_ALL_CHECKER: AuthorizationChecker = createAuthorizationChecker([]);
-
-export interface CapabilitiesProviderProps {
-	/** Granted capability slugs from `GET /auth/permissions`. */
+export interface SessionAbilityProviderProps {
+	/** Granted capability slugs (`GET /auth/permissions`, or the merchant membership's). Empty: nothing is allowed. */
 	readonly capabilities: readonly CapabilitySlug[];
+	/** Which slugs this app's ability is built from (`platform` or `merchant`). */
+	readonly namespace: CapabilityNamespace;
 	readonly children: React.ReactNode;
 }
 
 /**
- * Provides the session capability set for `useAuthorization()` / `<Can>`
- * consumers. Purely advisory UX state — the backend remains authoritative.
+ * Provides the session's CASL ability to `<Can>` and `useAbility()` below it. A new capability list (sign-in, tenant
+ * switch, a role change, sign-out) builds a new ability, so every check re-renders. Purely UX: the API and row-level
+ * security check every request again.
  */
-export function CapabilitiesProvider({ capabilities, children }: CapabilitiesProviderProps): React.JSX.Element {
-	const checker = React.useMemo(() => createAuthorizationChecker(capabilities), [capabilities]);
+export function SessionAbilityProvider({ capabilities, namespace, children }: SessionAbilityProviderProps): React.JSX.Element {
+	const ability = React.useMemo((): AppAbility => defineSessionAbility(capabilities, namespace), [capabilities, namespace]);
+	return <AbilityContext.Provider value={ability}>{children}</AbilityContext.Provider>;
+}
 
-	return <CapabilitiesContext.Provider value={checker}>{children}</CapabilitiesContext.Provider>;
+/** The session's ability: `const ability = useAbility(); ability.can("DELETE", "PRODUCT")`. Allows nothing outside a provider. */
+export function useAbility(): AppAbility {
+	return React.useContext(AbilityContext);
 }
 
 /**
- * Local, synchronous authorization checks (never calls the API):
- *
- * ```tsx
- * const auth = useAuthorization();
- * <Button disabled={auth.cannot(PERMISSION.USER.DELETE)} />
- * ```
- *
- * Falls back to a deny-all checker when no provider is present: fail closed.
+ * @casl/react's `<Can>`, bound to the session ability: `<Can I="UPDATE" a="REWARD">…</Can>`. Also `not`,
+ * `passThrough` and a render function `{({ isAllowed }) => …}` (for a fallback). Denies outside a provider:
+ * @casl/react's own `<Can>` reads only its own context (and throws without it), so the session ability — or the
+ * deny-all default — is handed to it here.
  */
-export function useAuthorization(): AuthorizationChecker {
-	return React.useContext(CapabilitiesContext) ?? DENY_ALL_CHECKER;
-}
-
-/** Alias of {@link useAuthorization} kept for existing callers. */
-export function useCan(): AuthorizationChecker {
-	return useAuthorization();
-}
-
-export interface CanProps {
-	/** Single required capability. */
-	readonly permission?: CapabilitySlug;
-	/** Alternative: multiple capabilities evaluated with `mode` semantics. */
-	readonly permissions?: readonly CapabilitySlug[];
-	readonly mode?: CapabilityCheckMode;
-	/** Rendered when the requirement is not met. */
-	readonly fallback?: React.ReactNode;
-	readonly children: React.ReactNode;
-}
-
-/**
- * Conditional render gate:
- *
- * ```tsx
- * <Can permission={PERMISSION.USER.DELETE} fallback={<DisabledButton />}>
- *   <DeleteButton />
- * </Can>
- * ```
- */
-export function Can({ permission, permissions, mode, fallback = null, children }: CanProps): React.JSX.Element {
-	const checker = useAuthorization();
-	const allowed = React.useMemo(() => meetsRequirement(checker, { permission, permissions, mode }), [checker, mode, permission, permissions]);
-
-	if (!allowed) {
-		return <>{fallback}</>;
-	}
-
-	return <>{children}</>;
+export function Can(props: CanProps<AppAbility>): React.ReactNode {
+	const ability = useAbility();
+	return (
+		<AbilityProvider value={ability}>
+			<CaslCan {...props} />
+		</AbilityProvider>
+	);
 }

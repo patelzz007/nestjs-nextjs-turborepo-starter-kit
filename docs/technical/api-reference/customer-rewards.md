@@ -96,6 +96,9 @@ Browse published consumer rewards (signed in: also the rewards given to you; nev
 | `data[].termsConditions` | string \| null | yes |  |
 | `data[].title` | string | yes |  |
 | `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data[].viewerCapabilities` | object | no |  |
+| `data[].viewerCapabilities.publish` | boolean | yes |  |
+| `data[].viewerCapabilities.update` | boolean | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
@@ -335,6 +338,9 @@ Get published reward detail (a reward given to chosen customers is 404 for every
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 

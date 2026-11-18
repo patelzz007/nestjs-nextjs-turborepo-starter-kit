@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { PrismaRbacGraphReader } from "../src/contexts/authorization/infrastructure/persistence/prisma-rbac-graph.reader";
 import { systemRlsContext } from "../src/prisma/rls-context";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
@@ -29,7 +30,7 @@ describe("PrismaRbacGraphReader (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		holderId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = $1`, [HOLDER_EMAIL])).rows.at(0)).id;
 		permissionId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."Permission" WHERE "isDeleted" = false ORDER BY id LIMIT 1`)).rows.at(0)).id;
 		await pool.query(`INSERT INTO public."Role" (id, name) VALUES ($1, $2)`, [conferringRoleId, `e2e-conferring-${conferringRoleId}`]);

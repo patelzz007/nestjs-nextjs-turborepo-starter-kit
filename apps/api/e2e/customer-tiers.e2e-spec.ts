@@ -16,6 +16,7 @@ import { z } from "zod";
 
 import { deterministicUuid } from "../prisma/seed/deterministic-uuid";
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { systemActor } from "../src/platform/application/actor-context";
 import { ReviewCustomerTiersCommand, type TierReviewResult } from "../src/contexts/tiers/application/commands/review-customer-tiers/review-customer-tiers.command";
 import { createE2eApp, grantSeedUsersFullSession, login, mutationHeaders, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
@@ -65,7 +66,7 @@ describe("Customer tiers (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		await grantSeedUsersFullSession(pool, ["superadmin@example.com", "alice.johnson@example.com"]);
 		superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123", "admin");
 		customer = await login(app, "alice.johnson@example.com", "Alice@123");

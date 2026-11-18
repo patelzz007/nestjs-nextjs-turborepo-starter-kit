@@ -1,8 +1,7 @@
 "use client";
 
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -19,7 +18,7 @@ import { EXPERIMENT_STATUS_LABELS, EXPERIMENT_STATUS_TONES, formatWhen } from ".
 /** `/releases/experiments` (ADR 087): experiments on dynamic configs, newest first. */
 export function ExperimentsList(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const experiments = api.featureFlags.experiments.useQuery(undefined).data?.data.experiments;
 	return (
 		<div className="flex flex-col gap-6">
@@ -28,7 +27,7 @@ export function ExperimentsList(): React.JSX.Element {
 					<h1 className="text-2xl font-semibold tracking-tight">Experiments</h1>
 					<p className="text-sm text-muted-foreground">Split a dynamic config&apos;s audience between its values and compare what they do: claims, redemptions, sign-ins.</p>
 				</div>
-				{can(PERMISSION.EXPERIMENT.UPDATE) ? (
+				{ability.can("UPDATE", "EXPERIMENT") ? (
 					<Button render={<Link href={ROUTES.releases.experiments.create} />} nativeButton={false}>
 						<Plus className="size-4" />
 						Plan an experiment

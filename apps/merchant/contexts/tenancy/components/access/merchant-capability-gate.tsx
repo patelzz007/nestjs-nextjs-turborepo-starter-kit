@@ -2,8 +2,8 @@
 
 import { useMerchantAuthorizationStatus } from "@/contexts/tenancy/components/access/merchant-authorization-provider";
 import { MERCHANT_ACCESS_LOADING_LABELS, MerchantPageSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { Can } from "@workspace/client/lib/contexts/authorization";
-import type { CapabilitySlug } from "@workspace/shared";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
+import { abilityAllowsCapability, type CapabilitySlug } from "@workspace/shared";
 import { Eye, ShieldAlert } from "lucide-react";
 import * as React from "react";
 
@@ -60,17 +60,21 @@ export interface MerchantCapabilityGateProps {
 	readonly loading?: React.ReactNode;
 }
 
-/** Page/section gate: `<Can>` with the merchant loading state and access-denied fallback. */
+/**
+ * Page/section gate over the session's CASL ability (the capability slug answered through its catalogue
+ * permission), with the merchant loading state and access-denied fallback.
+ */
 export function MerchantCapabilityGate({ capability, children, fallback, loading }: MerchantCapabilityGateProps): React.JSX.Element {
 	const { isLoading } = useMerchantAuthorizationStatus();
+	const ability = useAbility();
 
 	if (isLoading) {
 		return <>{loading ?? <MerchantAccessLoading />}</>;
 	}
 
-	return (
-		<Can permission={capability} fallback={fallback ?? <MerchantAccessDenied />}>
-			{children}
-		</Can>
-	);
+	if (!abilityAllowsCapability(ability, capability)) {
+		return <>{fallback ?? <MerchantAccessDenied />}</>;
+	}
+
+	return <>{children}</>;
 }

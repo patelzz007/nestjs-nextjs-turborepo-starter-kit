@@ -4,24 +4,24 @@ import { AccessUnavailableNotice, SignInPrompt } from "@/contexts/identity/compo
 import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
 import { canAccessWebPath, isWebRouteAllowed, resolveWebRouteAccess, WEB_ROUTE_ACCESS, type WebRouteAccessRule, type WebRouteSession } from "@/lib/navigation/route-access";
 import { WEB_FEATURE_FLAGS } from "@/lib/feature-flags";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useEnabledFeatureFlags } from "@workspace/client/lib/contexts/feature-flags";
-import type { CapabilitySlug } from "@workspace/shared";
+import { abilityAllowsCapability, type CapabilitySlug } from "@workspace/shared";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
 /** The current session in the shape route rules are evaluated against. */
 export function useWebRouteSession(): WebRouteSession {
 	const { isAuthenticated } = useWebSession();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const enabledFeatureFlags = useEnabledFeatureFlags(WEB_FEATURE_FLAGS);
 	return React.useMemo(
 		(): WebRouteSession => ({
 			isAuthenticated,
-			isGranted: (permission: CapabilitySlug): boolean => can(permission),
+			isGranted: (permission: CapabilitySlug): boolean => abilityAllowsCapability(ability, permission),
 			enabledFeatureFlags,
 		}),
-		[can, enabledFeatureFlags, isAuthenticated],
+		[ability, enabledFeatureFlags, isAuthenticated],
 	);
 }
 

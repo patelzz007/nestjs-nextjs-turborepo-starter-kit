@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { createE2eApp, login, markSeedUserEmailVerified, type LoginResult } from "./e2e-helpers";
 import { expectNoNPlusOne } from "./support/sql-statement-counter";
@@ -15,7 +16,7 @@ import { expectNoNPlusOne } from "./support/sql-statement-counter";
  * (migration plan §11). Rows the seed does not hold enough of are cloned from a seeded row with a
  * unique marker, and removed again afterwards.
  */
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const HTTP_OK = 200;
 const SUPER_ADMIN = { email: "superadmin@example.com", password: "SuperAdmin@123" };
 const CONSUMER = { email: "user@example.com", password: "User@123" };

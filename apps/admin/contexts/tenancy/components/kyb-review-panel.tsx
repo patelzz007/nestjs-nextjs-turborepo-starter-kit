@@ -22,7 +22,7 @@ import type {
 	LocationResponse,
 	LocationStatus,
 } from "@workspace/shared";
-import { EpochMsSchema, JsonPrimitiveSchema, MerchantTenantResponseSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
+import { EpochMsSchema, JsonPrimitiveSchema, MerchantTenantResponseSchema, nowEpochMs } from "@workspace/shared";
 import { z } from "zod";
 import { Badge } from "@workspace/ui/components/badge";
 import { buttonVariants } from "@workspace/ui/components/button";
@@ -559,16 +559,20 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 							</Card>
 
 							{/* `PATCH /admin/merchants/:id/kyb` requires APPROVE on MERCHANT_ORG; viewing needs only LIST. */}
-							<Can
-								permission={PERMISSION.MERCHANT_ORG.APPROVE}
-								fallback={<AccessRestrictedNotice description="Updating a merchant's KYB status requires the merchant tenant manage permission." />}>
-								<KybReviewDecisionForm
-									key={`${merchant.id}-${String(merchant.updatedAt)}`}
-									kybStatus={merchant.kybStatus}
-									kybFields={merchant.kybFields}
-									isSaving={updateKyb.isPending}
-									onSubmitReview={handleSubmitReview}
-								/>
+							<Can I="APPROVE" a="MERCHANT_ORG" passThrough>
+								{({ isAllowed }): React.ReactNode =>
+									isAllowed ? (
+										<KybReviewDecisionForm
+											key={`${merchant.id}-${String(merchant.updatedAt)}`}
+											kybStatus={merchant.kybStatus}
+											kybFields={merchant.kybFields}
+											isSaving={updateKyb.isPending}
+											onSubmitReview={handleSubmitReview}
+										/>
+									) : (
+										<AccessRestrictedNotice description="Updating a merchant's KYB status requires the merchant tenant manage permission." />
+									)
+								}
 							</Can>
 						</>
 					) : null}

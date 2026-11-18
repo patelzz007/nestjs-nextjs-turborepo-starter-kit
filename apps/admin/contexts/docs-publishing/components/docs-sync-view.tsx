@@ -5,20 +5,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { ALL_FILTER_OPTION, parseFilterOption } from "@workspace/client/lib/api/list-query";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
-import {
-	docsSyncRunListQuery,
-	DocsSyncRunStatusSchema,
-	DocsSyncTriggerSchema,
-	PERMISSION,
-	type DocsSyncOverview,
-	type DocsSyncRunSummary,
-	type Envelope,
-} from "@workspace/shared";
+import { docsSyncRunListQuery, DocsSyncRunStatusSchema, DocsSyncTriggerSchema, type DocsSyncOverview, type DocsSyncRunSummary, type Envelope } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
@@ -108,7 +100,7 @@ export interface DocsSyncViewProps {
  */
 export default function DocsSyncView({ initialOverview, initialPage }: DocsSyncViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const [urlState, updateUrlState] = useUrlState(DOCS_SYNC_RUNS_URL_STATE);
@@ -262,7 +254,7 @@ export default function DocsSyncView({ initialOverview, initialPage }: DocsSyncV
 		return <TablePageSkeleton labels={DOCS_SYNC_LOADING_LABELS} shape={DOCS_SYNC_TABLE_PAGE} />;
 	}
 
-	const canStart: boolean = can(PERMISSION.DOCS_SYNC.CREATE) && overview.dispatchConfigured;
+	const canStart: boolean = ability.can("CREATE", "DOCS_SYNC") && overview.dispatchConfigured;
 
 	return (
 		<div className="mx-auto w-full max-w-10xl space-y-6">

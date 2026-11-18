@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { cleanup, render, screen } from "@testing-library/react";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { AdminUserDetailSchema, PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import * as React from "react";
 import { ApiError } from "@workspace/client/lib/api/api-request";
@@ -148,9 +148,9 @@ const USER = AdminUserDetailSchema.parse({
 function renderPanel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient = new QueryClient()): void {
 	render(
 		<QueryClientProvider client={queryClient}>
-			<CapabilitiesProvider capabilities={capabilities}>
+			<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 				<UserAccessPanel userId={USER.id} user={USER} />
-			</CapabilitiesProvider>
+			</SessionAbilityProvider>
 		</QueryClientProvider>,
 		{ wrapper: ClientTestProviders },
 	);

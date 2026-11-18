@@ -123,7 +123,7 @@ let queue: RecordingQueue;
 let uow: RecordingNotificationsUnitOfWork;
 
 function service(
-	capabilities: readonly MerchantCapability[] = ["merchant:manage_broadcasts", "merchant:publish_broadcasts"],
+	capabilities: readonly MerchantCapability[] = ["merchant:view_broadcasts", "merchant:create_broadcasts", "merchant:manage_broadcasts", "merchant:publish_broadcasts"],
 	allowance: RateLimitAllowance | null = null,
 ): BroadcastService {
 	return new BroadcastService({
@@ -254,6 +254,15 @@ describe("scheduling", () => {
 		const created = await service().create(user(AUTHOR), TENANT_SENDER, tenantDraft());
 
 		await expect(service(["merchant:manage_broadcasts"]).schedule(user(AUTHOR), TENANT_SENDER, created.id)).rejects.toBeInstanceOf(AuthorizationError);
+	});
+
+	it("checks each broadcast action's own verb (ADR 090): reading, drafting and editing are separate", async () => {
+		const created = await service().create(user(AUTHOR), TENANT_SENDER, tenantDraft());
+
+		await expect(service(["merchant:view_broadcasts"]).get(user(AUTHOR), TENANT_SENDER, created.id)).resolves.toMatchObject({ id: created.id });
+		await expect(service(["merchant:view_broadcasts"]).create(user(AUTHOR), TENANT_SENDER, tenantDraft())).rejects.toBeInstanceOf(AuthorizationError);
+		await expect(service(["merchant:create_broadcasts"]).update(user(AUTHOR), TENANT_SENDER, created.id, tenantDraft())).rejects.toBeInstanceOf(AuthorizationError);
+		await expect(service(["merchant:create_broadcasts"]).get(user(AUTHOR), TENANT_SENDER, created.id)).rejects.toBeInstanceOf(AuthorizationError);
 	});
 
 	it("holds a platform notice to every user for a second staff member, who must not be its author", async () => {

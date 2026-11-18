@@ -136,11 +136,15 @@ public async list(@CurrentActor() actor: ActorContext, @ZodQuery(RewardListQuery
 2. In the **container** component:
 
    ```tsx
-   const { can } = useAuthorization();
-   return can(PERMISSION.ROLE.UPDATE)
+   const ability = useAbility(); // from @workspace/client/lib/contexts/authorization
+   return ability.can("UPDATE", "ROLE")
      ? <AssignRoleButton onClick={assign} />
      : <AccessRestrictedNotice>You can view roles but not assign them.</AccessRestrictedNotice>;
    ```
+
+   For a button alone, `<Can I="UPDATE" a="ROLE"><AssignRoleButton onClick={assign} /></Can>` does the
+   same. When the slug is in a variable, use `abilityAllowsCapability(ability, slug)`
+   ([frontend §1](./frontend.md)).
 
 3. **New page?** Add its menu item to `lib/navigation/sidebar-menu.json` and its requirement to
    `ADMIN_MENU_AUTHORIZATION` in `lib/navigation/menu-authorization.ts`:
@@ -154,7 +158,7 @@ public async list(@CurrentActor() actor: ActorContext, @ZodQuery(RewardListQuery
    `@SuperAdminOnly` pages go into the explicit `superAdminOnly` route rules instead.
 4. Add tests (see [frontend tests](#frontend-tests)).
 
-Merchant: use `MERCHANT_CAPABILITY.*` and `MerchantCapabilityGate` / `useAuthorization()` — never a membership role name. A new org page also needs a rule in `ORG_PAGE_RULES` and a `guardOrgPage` call (see [frontend §5](./frontend.md#5-merchant-app-appsmerchant)).
+Merchant: use `MERCHANT_CAPABILITY.*` and `MerchantCapabilityGate` / `useAbility()` / `<Can>` — never a membership role name. A new org page also needs a rule in `ORG_PAGE_RULES` and a `guardOrgPage` call (see [frontend §5](./frontend.md#5-merchant-app-appsmerchant)).
 Web: use `AccessGate`.
 
 ---
@@ -210,19 +214,21 @@ Add a unit test for owner / non-owner / missing. Never read the owner from the r
 1. Prisma model with `tenantId` (and `locationId` if relevant), `@@map("snake_case")`,
    an index on the tenant columns, and a `/// RLS:` doc comment like its neighbours.
 2. Migration: `pnpm --filter @workspace/api db:migrate:create`, then check the SQL.
-3. Add the table name to the right profile in `apps/api/prisma/rls/manifest-index.ts`
+3. Add the table name to the right profile in `apps/api/prisma/security/manifest-index.ts`
    (usually `tenant_tenant`).
-4. Enable + force RLS and add policies in `apps/api/prisma/rls/10-policies.sql`, e.g.:
+4. List the table and pick its policy rules in `apps/api/prisma/security/table-policies.ts`
+   ([adding a table](../database/adding-a-table.md)); never write `prisma/rls/*.sql` by hand. E.g.:
 
-   ```sql
-   DROP POLICY IF EXISTS invoices_member ON public.invoices;
-   CREATE POLICY invoices_member ON public.invoices
-     USING (app_rls_bypass() OR app_tenant_tenant_member_of(tenant_id))
-     WITH CHECK (app_rls_bypass() OR app_tenant_tenant_member_of(tenant_id));
+   ```ts
+   Invoice: [
+     { name: "invoice_read", rule: "permissionRead", resource: "PAYMENT", action: "READ", column: "tenantId" },
+     { name: "invoice_write", rule: "system" },
+   ],
    ```
 
-5. `pnpm --filter @workspace/api db:check-rls-manifest` → must print "No RLS manifest drift".
-6. `pnpm tools db:apply-security`.
+5. `pnpm --filter @workspace/api db:security` (generates `prisma/rls/*.sql` and applies it); commit
+   the regenerated SQL with the TypeScript.
+6. `pnpm --filter @workspace/api db:check-rls-manifest` → must print "No RLS manifest drift".
 7. Add an e2e test that reads / writes another tenant's rows and expects nothing / an error
    (spec §102).
 
@@ -396,20 +402,21 @@ vi.mock("../tenant-membership.service", () => ({
 ### Frontend tests
 
 ```tsx
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION } from "@workspace/shared";
 
 it("hides Assign role without ROLE.UPDATE", () => {
 	render(
-		<CapabilitiesProvider capabilities={[PERMISSION.ROLE.READ]}>
+		<SessionAbilityProvider capabilities={[PERMISSION.ROLE.READ]} namespace="platform">
 			<UserAccessPanel userId="u-1" />
-		</CapabilitiesProvider>,
+		</SessionAbilityProvider>,
 	);
 	expect(screen.queryByRole("button", { name: /assign role/i })).toBeNull();
 });
 ```
 
-Merchant tests use the helpers in `apps/merchant/testing/authorization.tsx`.
+`useAbility()` and `<Can>` throw without a provider, so every component test that reaches them wraps
+the component like this. Merchant tests use the helpers in `apps/merchant/testing/authorization.tsx`.
 
 ### What every new gated feature must test
 
@@ -456,13 +463,13 @@ Use this as a pull-request checklist. The repo-wide list is [Dos and don'ts](../
 | Let an admin grant what they do not hold, or edit their own roles | Privilege escalation. `domain/policies/rbac-escalation.policy.ts` enforces this — never bypass it. |
 | Put permissions or roles into the JWT | Tokens grow and go stale ([ADR 003](../../adr/003-jwt-identity-only.md)). |
 | Add a decision cache "just in case" | Measure first; grants are already cached per user ([caches](./backend.md#caches-and-invalidation)). |
-| Add CASL / Oso / Cerbos / OpenFGA next to the kernel | One engine ([ADR 026](../../adr/026-kernel-first-authorization.md)). |
+| Add Oso / Cerbos / OpenFGA, or CASL rules with conditions, next to the kernel | One engine ([ADR 026](../../adr/026-kernel-first-authorization.md)). The frontend's CASL ability only copies what the API decided ([ADR 091](../../adr/091-casl-frontend-ability.md)). |
 
 ### Frontend
 
 | ✅ Do | Why |
 | --- | --- |
-| Use `useAuthorization().can(...)` or `<Can>` | One API in every app. |
+| Use `useAbility().can(...)` or `<Can I=… a=…>` (`abilityAllowsCapability` for a slug in a variable) | One API in every app. |
 | Use `PERMISSION.*` / `MERCHANT_CAPABILITY.*` constants | A typo fails at compile time instead of silently denying forever. |
 | Mirror the **exact** permission of the API route the component calls | UI and API stay consistent. |
 | Gate in container (smart) components | Presentational components stay reusable. |
@@ -485,7 +492,7 @@ Use this as a pull-request checklist. The repo-wide list is [Dos and don'ts](../
 
 | ✅ Do | ❌ Don't |
 | --- | --- |
-| Add every new tenant table to `prisma/rls/manifest-index.ts` and give it policies ([profiles](./tenancy-and-rls.md#8-policy-profiles-and-sql-helpers)) | Ship a table without RLS "for now" |
+| Add every new tenant table to `prisma/security/manifest-index.ts` and give it policies in `prisma/security/table-policies.ts` ([profiles](./tenancy-and-rls.md#8-policy-profiles-and-sql-helpers)) | Ship a table without RLS "for now" |
 | Run `pnpm --filter @workspace/api db:check-rls-manifest` | Rely on application filters alone |
 | Stop the API before `db:reset` / `db:apply-security` | Run RLS DDL while workers hammer the same tables |
 | `pnpm tools build:shared` before seeding | Seed against a stale shared build (new permissions go missing) |

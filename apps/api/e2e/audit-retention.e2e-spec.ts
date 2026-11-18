@@ -4,6 +4,7 @@ import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { RECORD_RETENTION_MS } from "../src/platform/domain/record-retention";
 
 const RETENTION_OPERATION = "maintenance.audit_record_retention";
@@ -82,7 +83,7 @@ describe("Audit-record retention (e2e, database)", () => {
 	}
 
 	beforeAll(() => {
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 	});
 
 	afterAll(async () => {

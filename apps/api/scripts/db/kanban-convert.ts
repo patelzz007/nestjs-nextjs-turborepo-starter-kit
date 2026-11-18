@@ -17,7 +17,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import type { KanbanItemType } from "@workspace/shared";
 import { z } from "zod";
 
-import { ACTOR_SETTING } from "../../prisma/rls/row-audit";
+import { ACTOR_SETTING } from "../../prisma/security/row-audit";
+import { getApiConfig } from "../../src/config/api-config";
 import { KANBAN_CONVERSION_OPERATION } from "../../src/contexts/kanban/infrastructure/kanban-conversion.operation";
 import { KANBAN_BOARD_LOCK_KEY } from "../../src/contexts/kanban/infrastructure/persistence/prisma-kanban-board.repository";
 import { EXIT_FAILED, EXIT_OK, PROCESS_OUTPUT, type CliOutput } from "../lib/cli";
@@ -288,7 +289,7 @@ export async function runConversion(prisma: PrismaClient, args: ConvertArguments
 
 async function main(): Promise<number> {
 	const args = parseConvertArguments(process.argv.slice(2));
-	const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL, application_name: "kanban-convert" }) });
+	const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: getApiConfig().database.url, application_name: "kanban-convert" }) });
 	try {
 		return await runConversion(prisma, args, PROCESS_OUTPUT);
 	} finally {

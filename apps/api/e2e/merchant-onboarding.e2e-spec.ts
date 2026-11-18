@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -25,7 +26,7 @@ describe("Merchant onboarding (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123", "admin");
 	});
 

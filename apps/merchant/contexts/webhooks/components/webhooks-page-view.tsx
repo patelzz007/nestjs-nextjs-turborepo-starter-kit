@@ -19,6 +19,7 @@ import { tenantRoutes } from "@/lib/routes";
 import { userSafeErrorMessage } from "@/lib/query/query-policy";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { MAX_WEBHOOK_ENDPOINTS_PER_TENANT, MERCHANT_CAPABILITY, type WebhookEndpointSummary } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
@@ -36,18 +37,21 @@ export interface WebhooksPageViewProps {
 	readonly tenantSlug: string;
 }
 
-/** Outgoing webhooks: the tenant's endpoints, adding one, the delivery log and how to receive them. */
+/**
+ * Outgoing webhooks: the tenant's endpoints and delivery log (`merchant:view_webhooks`), adding one
+ * (`merchant:create_webhooks`), sending a delivery again (`merchant:manage_webhooks`), and how to receive them.
+ */
 export function WebhooksPageView(props: WebhooksPageViewProps): React.JSX.Element {
 	return (
 		<MerchantCapabilityGate
-			capability={MERCHANT_CAPABILITY.manageWebhooks}
+			capability={MERCHANT_CAPABILITY.viewWebhooks}
 			loading={<Skeleton className="h-96 rounded-xl" />}
 			fallback={
 				<div className="space-y-8">
 					<MerchantPageHeader title="Webhooks" description="Send your store's events to your own systems." />
 					<MerchantAccessDenied
 						title="Webhook access required"
-						description="Only members allowed to manage webhooks (owners, by default) can set them up. Ask your store owner for access."
+						description="Only members allowed to see webhooks (owners, by default) can open them. Ask your store owner for access."
 					/>
 				</div>
 			}>
@@ -96,6 +100,9 @@ function EndpointRow({ endpoint, href }: EndpointRowProps): React.JSX.Element {
 
 function WebhooksPageContent({ tenantSlug }: WebhooksPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const ability = useAbility();
+	const canCreate = ability.can("CREATE", "WEBHOOK");
+	const canRedeliver = ability.can("UPDATE", "WEBHOOK");
 	const routes = tenantRoutes(tenantSlug).webhooks;
 	const invalidate = useInvalidateWebhooks(tenantSlug);
 
@@ -151,7 +158,7 @@ function WebhooksPageContent({ tenantSlug }: WebhooksPageViewProps): React.JSX.E
 				title="Webhooks"
 				description="Tell your own systems the moment something happens in your store: a reward goes live, a customer claims or redeems one, a sale or a payment completes."
 				actions={
-					isAdding || atLimit ? null : (
+					isAdding || atLimit || !canCreate ? null : (
 						<Button onClick={handleStartAdding}>
 							<Plus className="size-4" aria-hidden="true" />
 							Add endpoint
@@ -210,7 +217,7 @@ function WebhooksPageContent({ tenantSlug }: WebhooksPageViewProps): React.JSX.E
 							<EmptyTitle>No endpoints yet</EmptyTitle>
 							<EmptyDescription>Add the address of your server, choose the events it should hear about, then send it a test.</EmptyDescription>
 						</EmptyHeader>
-						{isAdding ? null : (
+						{isAdding || !canCreate ? null : (
 							<Button onClick={handleStartAdding}>
 								<Plus className="size-4" aria-hidden="true" />
 								Add endpoint
@@ -233,7 +240,7 @@ function WebhooksPageContent({ tenantSlug }: WebhooksPageViewProps): React.JSX.E
 				onRetry={handleRetryDeliveries}
 				showEndpoint
 				redeliveringId={redelivery.redeliveringId}
-				onRedeliver={redelivery.redeliver}
+				onRedeliver={canRedeliver ? redelivery.redeliver : null}
 				redeliverError={redelivery.error}
 			/>
 

@@ -2,9 +2,9 @@
 
 import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { EXPERIMENT_METRIC_REGISTRY, PERMISSION, StopExperimentSchema, type ExperimentDetail, type ExperimentMetricResult } from "@workspace/shared";
+import { EXPERIMENT_METRIC_REGISTRY, StopExperimentSchema, type ExperimentDetail, type ExperimentMetricResult } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -78,9 +78,9 @@ function MetricResults({ metric, rows, control }: { readonly metric: string; rea
 
 function ExperimentLoaded({ experiment }: { readonly experiment: ExperimentDetail }): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
-	const canChange = can(PERMISSION.EXPERIMENT.UPDATE);
+	const canChange = ability.can("UPDATE", "EXPERIMENT");
 	const refresh = async (): Promise<void> => {
 		await queryClient.invalidateQueries({ queryKey: RELEASES_SCOPE });
 	};

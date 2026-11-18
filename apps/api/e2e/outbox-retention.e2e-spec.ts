@@ -21,7 +21,7 @@ import { RequestContextService } from "../src/platform/infrastructure/context/re
  * never a recent one — under the RLS bypass-only policy of `OutboxEvent`.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const ONE_HOUR_MS: number = 60 * 60 * 1000;
 /** Marks this run's fixture rows so assertions and cleanup touch nothing else. */
 const FIXTURE_EVENT_TYPE = "retention.e2e";

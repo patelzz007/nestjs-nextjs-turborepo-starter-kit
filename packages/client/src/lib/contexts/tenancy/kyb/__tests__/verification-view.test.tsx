@@ -6,6 +6,7 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import type { JSX, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { envelopeFixture } from "../../../../../testing/auth-fixtures";
 import { MERCHANT_KYB_VERIFICATION_LOADING_LABELS } from "../verification-skeleton";
 import { MerchantKybVerificationView } from "../verification-view";
 
@@ -39,7 +40,7 @@ afterEach((): void => {
 describe("MerchantKybVerificationView loading", () => {
 	it("draws the verification form's shape in one busy region while the profile loads", (): void => {
 		mocks.profile.mockReturnValue({ data: undefined, isLoading: true });
-		render(<MerchantKybVerificationView tenantSlug="acme-coffee" />, { wrapper: Providers });
+		render(<MerchantKybVerificationView tenantSlug="acme-coffee" canEdit />, { wrapper: Providers });
 
 		const status = screen.getByRole("status");
 		expect(status.getAttribute("aria-busy")).toBe("true");
@@ -49,9 +50,33 @@ describe("MerchantKybVerificationView loading", () => {
 
 	it("says the details could not load once the query settles without a profile", (): void => {
 		mocks.profile.mockReturnValue({ data: undefined, isLoading: false });
-		render(<MerchantKybVerificationView tenantSlug="acme-coffee" />, { wrapper: Providers });
+		render(<MerchantKybVerificationView tenantSlug="acme-coffee" canEdit />, { wrapper: Providers });
 
 		expect(screen.getByText("Unable to load business verification details.")).toBeTruthy();
 		expect(screen.queryByRole("status")).toBeNull();
+	});
+});
+
+const PENDING_PROFILE: MerchantKybProfileResponse = {
+	tenantId: "0193f2c4-0000-7000-8000-000000000001",
+	businessName: "Acme Coffee",
+	legalName: "Acme Coffee Sdn Bhd",
+	addressText: "1 Jalan Ampang",
+	contactPhone: null,
+	contactEmail: "owner@acme.example",
+	city: "KUALA_LUMPUR",
+	kybStatus: "PENDING",
+	kybFields: null,
+	documents: [],
+	status: "ONBOARDING",
+};
+
+describe("MerchantKybVerificationView access", () => {
+	it("shows a member who may only view the details read-only, with no way to submit them (kyb.read without kyb.update)", (): void => {
+		mocks.profile.mockReturnValue({ data: envelopeFixture(PENDING_PROFILE), isLoading: false });
+		render(<MerchantKybVerificationView tenantSlug="acme-coffee" canEdit={false} />, { wrapper: Providers });
+
+		expect(screen.getByText(/Your role can see the business verification but not change it/u)).toBeTruthy();
+		expect(screen.queryByRole("button", { name: /submit/iu })).toBeNull();
 	});
 });

@@ -15,6 +15,7 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { GITHUB_FETCH, type GithubFetch } from "../src/contexts/integrations-github/infrastructure/github-api/github-http.transport";
 import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/contexts/integrations-github/infrastructure/github-api/github-pull-request.client";
 import {
@@ -52,7 +53,7 @@ const STAFF_PERMISSIONS: TestPermissionPairs = [
 // the app at lasting addresses of the API, read with the caller's own token.
 // GitHub itself is faked at its one HTTP boundary.
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const FILES = `${API_VERSION_PREFIX}/files`;
 const PULL_REQUEST = `${API_VERSION_PREFIX}/github/pull-requests/octocat/hello-world/7`;
 const PICTURES = `${PULL_REQUEST}/pictures`;

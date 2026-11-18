@@ -5,9 +5,10 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AdminTenantInviteCreatedResponseSchema, API_VERSION_PREFIX } from "@workspace/shared";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 /**
  * Every tenant lifecycle event carries the correlation id of the request

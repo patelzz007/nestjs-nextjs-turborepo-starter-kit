@@ -60,7 +60,7 @@ describe("tenancy multi isolation", () => {
 	const prisma = new PrismaService(new TypedConfigService(getApiConfig()));
 	const transactions = new TenantTransactionService(prisma, new RequestContextService());
 	const routes = new RouteTenantSource(new PrismaTenantRouteLookup(transactions));
-	const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+	const pool = new Pool({ connectionString: getApiConfig().database.url });
 
 	beforeAll(async () => {
 		await prisma.ensureConnected();
@@ -113,6 +113,7 @@ describe("tenancy multi isolation", () => {
 		);
 		const handler = new GetTenantRewardHandler(
 			{ assertCapability: (): Promise<MerchantAccessGrant> => Promise.resolve({ tenantId: ids.tenantA, locationScope: "ALL_LOCATIONS", locationIds: [] }) },
+			{ holds: (): Promise<boolean> => Promise.resolve(true) },
 			reads,
 		);
 		await expect(handler.execute(new GetTenantRewardQuery(actor, { tenantId: ids.tenantA, rewardId: ids.rewardB }))).rejects.toBeInstanceOf(RewardNotFoundError);

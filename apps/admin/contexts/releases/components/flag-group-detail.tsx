@@ -3,10 +3,10 @@
 import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
-import { ChangeFlagGroupMembersSchema, FLAG_GROUP_MAX_MEMBERS, PERMISSION, type FlagGroup } from "@workspace/shared";
+import { ChangeFlagGroupMembersSchema, FLAG_GROUP_MAX_MEMBERS, type FlagGroup } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -56,10 +56,10 @@ export function FlagGroupDetailView({ groupId }: { readonly groupId: string }): 
 
 function GroupLoaded({ group }: { readonly group: FlagGroup }): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
 	const router = useProgressRouter();
-	const canChange = can(PERMISSION.FEATURE_FLAG_GROUP.UPDATE);
+	const canChange = ability.can("UPDATE", "FEATURE_FLAG_GROUP");
 	const remove = api.featureFlags.removeGroup.useMutation({
 		onSuccess: async (): Promise<void> => {
 			toastMessage.success({ title: `${group.name} removed` });

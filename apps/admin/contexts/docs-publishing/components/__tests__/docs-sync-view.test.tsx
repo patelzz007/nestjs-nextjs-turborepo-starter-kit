@@ -2,20 +2,31 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
-import { ApiPaginatedMetaSchema, DocsSyncOverviewSchema, DocsSyncRunSummarySchema, type DocsSyncOverview, type DocsSyncRunSummary } from "@workspace/shared";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
+import {
+	ApiPaginatedMetaSchema,
+	DocsSyncOverviewSchema,
+	DocsSyncRunSummarySchema,
+	PERMISSION,
+	type CapabilitySlug,
+	type DocsSyncOverview,
+	type DocsSyncRunSummary,
+} from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import DocsSyncView from "../docs-sync-view";
 
-const { overviewQuery, runsQuery, startMutate, revealMutate, can, push } = vi.hoisted(() => ({
+const { overviewQuery, runsQuery, startMutate, revealMutate, push } = vi.hoisted(() => ({
 	overviewQuery: vi.fn(),
 	runsQuery: vi.fn(),
 	startMutate: vi.fn(),
 	revealMutate: vi.fn(),
-	can: vi.fn(),
 	push: vi.fn(),
 }));
+
+/** Every docs-sync permission the page checks: start a sync (CREATE) and reveal the handshake (READ). */
+const DOCS_SYNC_GRANTS: readonly CapabilitySlug[] = [PERMISSION.DOCS_SYNC.CREATE, PERMISSION.DOCS_SYNC.READ];
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
@@ -29,8 +40,6 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 		},
 	}),
 }));
-
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({ useAuthorization: (): object => ({ can }) }));
 
 vi.mock("next/navigation", async (importOriginal) => ({
 	...(await importOriginal<typeof import("next/navigation")>()),
@@ -80,10 +89,12 @@ function overview(overrides: Partial<DocsSyncOverview> = {}): DocsSyncOverview {
 	});
 }
 
-function show(): void {
+function show(capabilities: readonly CapabilitySlug[] = DOCS_SYNC_GRANTS): void {
 	render(
 		<QueryClientProvider client={new QueryClient()}>
-			<DocsSyncView />
+			<SessionAbilityProvider capabilities={capabilities} namespace="platform">
+				<DocsSyncView />
+			</SessionAbilityProvider>
 		</QueryClientProvider>,
 		{ wrapper: ClientTestProviders },
 	);
@@ -91,7 +102,6 @@ function show(): void {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	can.mockReturnValue(true);
 	overviewQuery.mockReturnValue({ data: { data: overview() }, error: null });
 	runsQuery.mockReturnValue({ data: { data: [RUN], meta: META }, isLoading: false, isFetching: false, error: null });
 });
@@ -117,8 +127,7 @@ describe("DocsSyncView", () => {
 	});
 
 	it("disables starting a sync without the permission", () => {
-		can.mockReturnValue(false);
-		show();
+		show([]);
 
 		expect(screen.getByRole<HTMLButtonElement>("button", { name: "Sync now" }).disabled).toBe(true);
 	});

@@ -18,7 +18,7 @@ export class GetWebhookEndpointHandler implements IQueryHandler<GetWebhookEndpoi
 	) {}
 
 	public async execute(query: GetWebhookEndpointQuery): Promise<WebhookEndpointSummary> {
-		const member = await assertWebhookMember(this.merchantAccess, query.actor, query.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, query.actor, query.tenantId, "view");
 		const endpoint = await this.reads.findEndpoint(member.actor, query.tenantId, query.endpointId);
 		if (endpoint === null) {
 			throw new WebhookEndpointNotFoundError(query.endpointId);

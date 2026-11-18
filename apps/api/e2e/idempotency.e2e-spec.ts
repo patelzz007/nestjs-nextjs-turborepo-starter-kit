@@ -6,12 +6,13 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
 
 /** The slice of the created product this spec asserts on: its server-generated id. */
 const CreatedProductSchema = z.object({ id: z.string().min(1) });
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 /**
  * `@Idempotent()` on `POST /api/v1/product` against the real AppModule,

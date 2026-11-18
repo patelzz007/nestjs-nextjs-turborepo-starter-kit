@@ -535,6 +535,16 @@ export const RewardImageResponseSchema = z.object({
 
 export type RewardImageResponse = z.output<typeof RewardImageResponseSchema>;
 
+/** The actions one reward allows the member reading it (see `RewardResponse.viewerCapabilities`). */
+export const RewardViewerCapabilitiesSchema = z.object({
+	/** Edit it (`PATCH …/rewards/:rewardId`): reward.update, or an EDIT share of it. */
+	update: z.boolean(),
+	/** Submit it for review (`POST …/rewards/:rewardId/publish`): reward.publish. */
+	publish: z.boolean(),
+});
+
+export type RewardViewerCapabilities = z.output<typeof RewardViewerCapabilitiesSchema>;
+
 export const RewardResponseSchema = BaseResponseSchema.extend({
 	id: z.uuid(),
 	tenantId: z.uuid(),
@@ -586,6 +596,12 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	 * rewards at all. Always Bronze while tiers are off (`GET /tiers/availability`).
 	 */
 	minimumTier: CustomerTierSchema,
+	/**
+	 * What the signed-in member may do to THIS reward (ADR 067: their role, a live grant, a share of this reward or its
+	 * ownership), decided by the API per record. Only the merchant's single-reward read
+	 * (`GET /tenants/:tenantSlug/rewards/:rewardId`) carries it; it is a hint for the UI — every action is checked again.
+	 */
+	viewerCapabilities: RewardViewerCapabilitiesSchema.optional(),
 });
 
 export type RewardResponse = z.output<typeof RewardResponseSchema>;

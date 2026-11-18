@@ -8,7 +8,7 @@ import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { useMerchantLocation } from "@/features/tenant-context/facade";
 import { tenantRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { REWARDS_STALE_TIME_MS, retryTransientFailures, userSafeErrorMessage } from "@/lib/query/query-policy";
 import { defaultRewardStatusGroupId, groupStatusCounts, type RewardStatusGroupId } from "@/contexts/rewards/lib/presentation";
 import { REWARDS_URL_STATE, rewardsTabPatch, toRewardsQuery } from "@/contexts/rewards/url-state/rewards";
@@ -36,7 +36,7 @@ export interface MerchantRewardsPageViewProps {
 	readonly tenantSlug: string;
 }
 
-/** Rewards catalog route — requires `merchant:view_rewards` (list endpoint); create CTAs need `merchant:manage_rewards`. */
+/** Rewards catalog route — requires `merchant:view_rewards` (list endpoint); create CTAs need `merchant:create_rewards`. */
 export function MerchantRewardsPageView({ tenantSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
 	return (
 		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards} loading={<MerchantRewardsPageSkeleton />}>
@@ -47,10 +47,12 @@ export function MerchantRewardsPageView({ tenantSlug }: MerchantRewardsPageViewP
 
 function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const createRewardPath = tenantRoutes(tenantSlug).rewards.new;
 	const { locationId, isLoading: isLocationLoading } = useMerchantLocation();
-	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
+	const canManageRewards = ability.can("UPDATE", "REWARD");
+	const canCreateRewards = ability.can("CREATE", "REWARD");
+	const isReadOnly = !canManageRewards && !canCreateRewards && !ability.can("PUBLISH", "REWARD");
 
 	// The catalog's figures over every reward in the store scope: the tab counts and the summary strip.
 	const summaryQuery = api.tenants.rewards.summary.useQuery(
@@ -140,7 +142,7 @@ function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps
 				title="Rewards"
 				description="Create drafts, submit for review, and monitor live inventory across your store."
 				actions={
-					canManageRewards ? (
+					canCreateRewards ? (
 						<Link href={appRoute(createRewardPath)} className={cn(buttonVariants(), "gap-2")}>
 							<Plus className="size-4" aria-hidden="true" />
 							New reward
@@ -149,7 +151,7 @@ function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps
 				}
 			/>
 
-			{canManageRewards ? null : <MerchantReadOnlyNotice>Your role can view rewards but not create, edit, or submit them for review.</MerchantReadOnlyNotice>}
+			{isReadOnly ? <MerchantReadOnlyNotice>Your role can view rewards but not create, edit, or submit them for review.</MerchantReadOnlyNotice> : null}
 
 			{isLoading ? (
 				// Figures of a catalog not loaded yet would read as zeros; the catalog's region below announces the load.
@@ -188,7 +190,7 @@ function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps
 						</EmptyTitle>
 						<EmptyDescription>Start with a draft offer — you can refine details and submit for review before it goes live.</EmptyDescription>
 					</EmptyHeader>
-					{canManageRewards ? (
+					{canCreateRewards ? (
 						<EmptyContent>
 							<Link href={appRoute(createRewardPath)} className={cn(buttonVariants(), "gap-2")}>
 								<Plus className="size-4" aria-hidden="true" />
@@ -226,6 +228,7 @@ function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps
 						) : null
 					}
 					canManageRewards={canManageRewards}
+					canCreateRewards={canCreateRewards}
 					createRewardHref={createRewardPath}
 				/>
 			)}

@@ -34,7 +34,7 @@ export class BanCustomerHandler implements ICommandHandler<BanCustomerCommand, T
 		const { actor, input } = command;
 		const staff = requireUserActor(actor);
 		const member = await this.directory.resolveMember(actor, input.tenantSlug);
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.banCustomers });
 
 		const banId = await this.uow.runSystemOperation(TENANT_CUSTOMER_BAN_CREATE_OPERATION, actor, async (scope): Promise<string> => {
 			const redemption = await scope.redemptionCustomers.findRedemptionCustomer(grant, input.redemptionId);

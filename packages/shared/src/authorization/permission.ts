@@ -103,8 +103,10 @@ export const PERMISSION: PermissionRegistry = {
 
 /**
  * Merchant-app capability slugs (tenant-scoped, granted per membership
- * role by the API's tenant policies). Same `can()` / `<Can>` API as platform
- * permissions: `can(MERCHANT_CAPABILITY.manageRewards)`.
+ * role by the API's tenant policies). The merchant app's CASL ability is built
+ * from them (`abilityRules(capabilities, "merchant")`), each one mapped
+ * to its catalogue permission by `MERCHANT_CAPABILITY_PERMISSION` below, so a
+ * check reads `ability.can("UPDATE", "REWARD")` or `<Can I="UPDATE" a="REWARD">`.
  *
  * Every merchant page, sidebar item, and API check is expressed with one of
  * these — never with a membership role name.
@@ -125,6 +127,30 @@ export const MerchantCapabilitySchema = z.enum([
 	"merchant:publish_broadcasts",
 	"merchant:manage_payments",
 	"merchant:manage_webhooks",
+	// Read and write split per catalogue verb (ADR 090): a route checks exactly the verb of what it does.
+	"merchant:create_rewards",
+	"merchant:publish_rewards",
+	"merchant:view_api_keys",
+	"merchant:revoke_api_keys",
+	"merchant:view_terminals",
+	"merchant:manage_terminals",
+	"merchant:remove_terminals",
+	"merchant:view_team",
+	"merchant:invite_members",
+	"merchant:revoke_invites",
+	"merchant:approve_access_requests",
+	"merchant:reject_access_requests",
+	"merchant:view_verification",
+	"merchant:view_payments",
+	"merchant:refund_payments",
+	"merchant:view_webhooks",
+	"merchant:create_webhooks",
+	"merchant:delete_webhooks",
+	"merchant:view_broadcasts",
+	"merchant:create_broadcasts",
+	"merchant:view_customer_bans",
+	"merchant:ban_customers",
+	"merchant:lift_customer_bans",
 ]);
 
 export type MerchantCapability = z.output<typeof MerchantCapabilitySchema>;
@@ -152,8 +178,54 @@ export interface MerchantCapabilityRegistry {
 	readonly publishBroadcasts: MerchantCapability;
 	/** Ask for payments through the tenant's gateways, follow them and refund them (ADR 020). */
 	readonly managePayments: MerchantCapability;
-	/** The tenant's outgoing webhooks: endpoints, signing secrets and the delivery log (ADR 082). */
+	/** Change the tenant's outgoing webhook endpoints, rotate their secrets, replay deliveries (ADR 082). */
 	readonly manageWebhooks: MerchantCapability;
+	/** Create a reward (draft). */
+	readonly createRewards: MerchantCapability;
+	/** Submit a reward for review to go live. */
+	readonly publishRewards: MerchantCapability;
+	/** See the tenant's API keys and the POS settings. */
+	readonly viewApiKeys: MerchantCapability;
+	/** Revoke an API key. */
+	readonly revokeApiKeys: MerchantCapability;
+	/** See the tenant's tills (terminals). */
+	readonly viewTerminals: MerchantCapability;
+	/** Register a till, issue its pairing code, rename it. */
+	readonly manageTerminals: MerchantCapability;
+	/** Remove a till. */
+	readonly removeTerminals: MerchantCapability;
+	/** See the team roster and pending invitations. */
+	readonly viewTeam: MerchantCapability;
+	/** Invite someone to the team. */
+	readonly inviteMembers: MerchantCapability;
+	/** Revoke a pending invitation. */
+	readonly revokeInvites: MerchantCapability;
+	/** Approve a request to join the team. */
+	readonly approveAccessRequests: MerchantCapability;
+	/** Reject a request to join the team. */
+	readonly rejectAccessRequests: MerchantCapability;
+	/** See the business verification (KYB) details and documents. */
+	readonly viewVerification: MerchantCapability;
+	/** See the tenant's payments. */
+	readonly viewPayments: MerchantCapability;
+	/** Refund a payment. */
+	readonly refundPayments: MerchantCapability;
+	/** See the tenant's outgoing webhook endpoints and deliveries. */
+	readonly viewWebhooks: MerchantCapability;
+	/** Add an outgoing webhook endpoint. */
+	readonly createWebhooks: MerchantCapability;
+	/** Delete an outgoing webhook endpoint. */
+	readonly deleteWebhooks: MerchantCapability;
+	/** See the tenant's broadcasts. */
+	readonly viewBroadcasts: MerchantCapability;
+	/** Draft a new broadcast. */
+	readonly createBroadcasts: MerchantCapability;
+	/** See the customers banned from the tenant's rewards. */
+	readonly viewCustomerBans: MerchantCapability;
+	/** Ban a customer from the tenant's rewards. */
+	readonly banCustomers: MerchantCapability;
+	/** Lift a customer ban. */
+	readonly liftCustomerBans: MerchantCapability;
 }
 
 export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
@@ -172,6 +244,29 @@ export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
 	publishBroadcasts: "merchant:publish_broadcasts",
 	managePayments: "merchant:manage_payments",
 	manageWebhooks: "merchant:manage_webhooks",
+	createRewards: "merchant:create_rewards",
+	publishRewards: "merchant:publish_rewards",
+	viewApiKeys: "merchant:view_api_keys",
+	revokeApiKeys: "merchant:revoke_api_keys",
+	viewTerminals: "merchant:view_terminals",
+	manageTerminals: "merchant:manage_terminals",
+	removeTerminals: "merchant:remove_terminals",
+	viewTeam: "merchant:view_team",
+	inviteMembers: "merchant:invite_members",
+	revokeInvites: "merchant:revoke_invites",
+	approveAccessRequests: "merchant:approve_access_requests",
+	rejectAccessRequests: "merchant:reject_access_requests",
+	viewVerification: "merchant:view_verification",
+	viewPayments: "merchant:view_payments",
+	refundPayments: "merchant:refund_payments",
+	viewWebhooks: "merchant:view_webhooks",
+	createWebhooks: "merchant:create_webhooks",
+	deleteWebhooks: "merchant:delete_webhooks",
+	viewBroadcasts: "merchant:view_broadcasts",
+	createBroadcasts: "merchant:create_broadcasts",
+	viewCustomerBans: "merchant:view_customer_bans",
+	banCustomers: "merchant:ban_customers",
+	liftCustomerBans: "merchant:lift_customer_bans",
 };
 
 /**
@@ -199,6 +294,29 @@ export const MERCHANT_CAPABILITY_CEDAR_ACTIONS: Readonly<Record<MerchantCapabili
 	"merchant:publish_broadcasts": "tenant:publish_broadcasts",
 	"merchant:manage_payments": "tenant:manage_payments",
 	"merchant:manage_webhooks": "tenant:manage_webhooks",
+	"merchant:create_rewards": "tenant:create_rewards",
+	"merchant:publish_rewards": "tenant:publish_rewards",
+	"merchant:view_api_keys": "tenant:view_api_keys",
+	"merchant:revoke_api_keys": "tenant:revoke_api_keys",
+	"merchant:view_terminals": "tenant:view_terminals",
+	"merchant:manage_terminals": "tenant:manage_terminals",
+	"merchant:remove_terminals": "tenant:remove_terminals",
+	"merchant:view_team": "tenant:view_team",
+	"merchant:invite_members": "tenant:invite_members",
+	"merchant:revoke_invites": "tenant:revoke_invites",
+	"merchant:approve_access_requests": "tenant:approve_access_requests",
+	"merchant:reject_access_requests": "tenant:reject_access_requests",
+	"merchant:view_verification": "tenant:view_verification",
+	"merchant:view_payments": "tenant:view_payments",
+	"merchant:refund_payments": "tenant:refund_payments",
+	"merchant:view_webhooks": "tenant:view_webhooks",
+	"merchant:create_webhooks": "tenant:create_webhooks",
+	"merchant:delete_webhooks": "tenant:delete_webhooks",
+	"merchant:view_broadcasts": "tenant:view_broadcasts",
+	"merchant:create_broadcasts": "tenant:create_broadcasts",
+	"merchant:view_customer_bans": "tenant:view_customer_bans",
+	"merchant:ban_customers": "tenant:ban_customers",
+	"merchant:lift_customer_bans": "tenant:lift_customer_bans",
 };
 
 export const PermissionPairSchema = z
@@ -346,6 +464,29 @@ export const MERCHANT_CAPABILITY_PERMISSION: Readonly<Record<MerchantCapability,
 	"merchant:publish_broadcasts": pair("BROADCAST", "PUBLISH"),
 	"merchant:manage_payments": pair("PAYMENT", "CREATE"),
 	"merchant:manage_webhooks": pair("WEBHOOK", "UPDATE"),
+	"merchant:create_rewards": pair("REWARD", "CREATE"),
+	"merchant:publish_rewards": pair("REWARD", "PUBLISH"),
+	"merchant:view_api_keys": pair("API_KEY", "READ"),
+	"merchant:revoke_api_keys": pair("API_KEY", "DELETE"),
+	"merchant:view_terminals": pair("TERMINAL", "READ"),
+	"merchant:manage_terminals": pair("TERMINAL", "CREATE"),
+	"merchant:remove_terminals": pair("TERMINAL", "DELETE"),
+	"merchant:view_team": pair("MEMBER", "READ"),
+	"merchant:invite_members": pair("INVITE", "CREATE"),
+	"merchant:revoke_invites": pair("INVITE", "DELETE"),
+	"merchant:approve_access_requests": pair("ACCESS_REQUEST", "APPROVE"),
+	"merchant:reject_access_requests": pair("ACCESS_REQUEST", "REJECT"),
+	"merchant:view_verification": pair("KYB", "READ"),
+	"merchant:view_payments": pair("PAYMENT", "READ"),
+	"merchant:refund_payments": pair("PAYMENT", "UPDATE"),
+	"merchant:view_webhooks": pair("WEBHOOK", "READ"),
+	"merchant:create_webhooks": pair("WEBHOOK", "CREATE"),
+	"merchant:delete_webhooks": pair("WEBHOOK", "DELETE"),
+	"merchant:view_broadcasts": pair("BROADCAST", "READ"),
+	"merchant:create_broadcasts": pair("BROADCAST", "CREATE"),
+	"merchant:view_customer_bans": pair("CUSTOMER_BAN", "READ"),
+	"merchant:ban_customers": pair("CUSTOMER_BAN", "CREATE"),
+	"merchant:lift_customer_bans": pair("CUSTOMER_BAN", "DELETE"),
 };
 
 /** The merchant capability slugs a set of effective permissions satisfies (what the merchant app shows). */

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { epochMs, PERMISSION, type StatusIncident } from "@workspace/shared";
 import { accessibilityViolations } from "@workspace/ui/testing/axe";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
@@ -21,7 +22,6 @@ const { listQuery, detailQuery, createMutate, postMutate, push, permissions } = 
 
 vi.mock("next/navigation", () => ({ useRouter: (): object => ({ push }) }));
 vi.mock("@tanstack/react-query", async (importOriginal) => ({ ...(await importOriginal<object>()), useQueryClient: (): object => ({ invalidateQueries: vi.fn() }) }));
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({ useAuthorization: (): object => ({ can: (slug: string): boolean => permissions.granted.has(slug) }) }));
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
@@ -34,6 +34,17 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 		},
 	}),
 }));
+
+/** The session's ability, built from whatever `permissions.granted` holds when the test renders. */
+function Providers({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+	return (
+		<UiKitTestProviders>
+			<SessionAbilityProvider capabilities={[...permissions.granted]} namespace="platform">
+				{children}
+			</SessionAbilityProvider>
+		</UiKitTestProviders>
+	);
+}
 
 const INCIDENT: StatusIncident = {
 	id: "0190f0e0-0000-7000-8000-000000000001",
@@ -77,7 +88,7 @@ afterEach((): void => {
 
 describe("StatusIncidentsView", () => {
 	it("lists incidents with where they stand, and offers opening one only to staff who may", () => {
-		const { unmount } = render(<StatusIncidentsView />, { wrapper: UiKitTestProviders });
+		const { unmount } = render(<StatusIncidentsView />, { wrapper: Providers });
 		const table = within(screen.getByRole("table", { name: "Incidents" }));
 		expect(table.getByRole("link", { name: "Emails are delayed" }).getAttribute("href")).toBe("/operations/status/0190f0e0-0000-7000-8000-000000000001");
 		expect(table.getByText("Cause found")).toBeTruthy();
@@ -87,14 +98,14 @@ describe("StatusIncidentsView", () => {
 		unmount();
 
 		permissions.granted = new Set();
-		render(<StatusIncidentsView />, { wrapper: UiKitTestProviders });
+		render(<StatusIncidentsView />, { wrapper: Providers });
 		expect(screen.queryByRole("button", { name: "Open an incident" })).toBeNull();
 	});
 });
 
 describe("StatusIncidentDetail", () => {
 	it("shows the updates newest first and posts the next one", async () => {
-		render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: UiKitTestProviders });
+		render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: Providers });
 		const updates = within(screen.getByRole("list", { name: "Updates" })).getAllByRole("listitem");
 		expect(updates.map((item) => item.textContent)).toStrictEqual([
 			expect.stringContaining("The mail provider is slow."),
@@ -113,7 +124,7 @@ describe("StatusIncidentDetail", () => {
 	});
 
 	it("refuses a message too short to tell customers anything", async () => {
-		render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: UiKitTestProviders });
+		render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: Providers });
 		act((): void => {
 			fireEvent.change(screen.getByLabelText("Message"), { target: { value: "ok" } });
 		});
@@ -128,25 +139,25 @@ describe("StatusIncidentDetail", () => {
 
 	it("offers no update form once resolved, or to staff who may only look", () => {
 		detailQuery.mockReturnValue({ data: { data: { ...INCIDENT, state: "RESOLVED", resolvedAt: epochMs(Date.UTC(2026, 10, 3, 10, 0)) } } });
-		const { unmount } = render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: UiKitTestProviders });
+		const { unmount } = render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: Providers });
 		expect(screen.queryByRole("button", { name: "Post update" })).toBeNull();
 		unmount();
 
 		detailQuery.mockReturnValue({ data: { data: INCIDENT } });
 		permissions.granted = new Set();
-		render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: UiKitTestProviders });
+		render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: Providers });
 		expect(screen.queryByRole("button", { name: "Post update" })).toBeNull();
 	});
 
 	it("has no serious accessibility problems (enhancement 3.2)", async () => {
-		render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: UiKitTestProviders });
+		render(<StatusIncidentDetail incidentId={INCIDENT.id} />, { wrapper: Providers });
 		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
 	});
 });
 
 describe("NewStatusIncidentForm", () => {
 	it("opens an incident on the chosen parts and goes to it", async () => {
-		render(<NewStatusIncidentForm />, { wrapper: UiKitTestProviders });
+		render(<NewStatusIncidentForm />, { wrapper: Providers });
 		act((): void => {
 			fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Emails are delayed" } });
 			fireEvent.change(screen.getByLabelText("First update"), { target: { value: "Emails are arriving late. We're on it." } });
@@ -168,7 +179,7 @@ describe("NewStatusIncidentForm", () => {
 	});
 
 	it("needs at least one affected part", async () => {
-		render(<NewStatusIncidentForm />, { wrapper: UiKitTestProviders });
+		render(<NewStatusIncidentForm />, { wrapper: Providers });
 		act((): void => {
 			fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Emails are delayed" } });
 			fireEvent.change(screen.getByLabelText("First update"), { target: { value: "Emails are arriving late. We're on it." } });
@@ -183,7 +194,7 @@ describe("NewStatusIncidentForm", () => {
 	});
 
 	it("has no serious accessibility problems (enhancement 3.2)", async () => {
-		render(<NewStatusIncidentForm />, { wrapper: UiKitTestProviders });
+		render(<NewStatusIncidentForm />, { wrapper: Providers });
 		await expect(accessibilityViolations(document.body)).resolves.toStrictEqual([]);
 	});
 });

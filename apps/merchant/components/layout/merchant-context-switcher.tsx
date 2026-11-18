@@ -12,9 +12,8 @@ import { resolveLocationShortLabel } from "@/contexts/tenancy/lib/tenant/locatio
 import { TENANT_ROLE_LABELS } from "@/contexts/tenancy/lib/tenant/role-labels";
 import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { TENANT_ROUTES } from "@/lib/routes";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import type { MembershipRole, TenantRewardMembershipResponse } from "@workspace/shared";
-import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
 import { IconTile } from "@workspace/ui/components/icon-tile";
 import {
@@ -134,7 +133,7 @@ export function MerchantContextSwitcher({ memberships, hasMoreStores, tenantSlug
 	const { locationId, activeLocation, accessibleLocations, canSelectAllLocations, isLoading } = useMerchantLocation();
 	const commands = useTenantContextCommands();
 	const logo = useActiveTenantLogo();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const router = useProgressRouter();
 	const locationsPath = useTenantPath(TENANT_ROUTES.settings.locations);
 	const storesPath = useTenantPath(TENANT_ROUTES.stores);
@@ -193,11 +192,11 @@ export function MerchantContextSwitcher({ memberships, hasMoreStores, tenantSlug
 	const actions = React.useMemo(
 		(): readonly PanelSidebarSwitcherAction[] => [
 			...(hasMoreStores ? [{ id: "all-stores", label: "All stores", icon: <List className="size-4" aria-hidden="true" />, onSelect: handleAllStores }] : []),
-			...(can(MERCHANT_CAPABILITY.viewLocations)
+			...(ability.can("READ", "LOCATION")
 				? [{ id: "manage-locations", label: "Manage locations", icon: <MapPinPlus className="size-4" aria-hidden="true" />, onSelect: handleManageLocations }]
 				: []),
 		],
-		[can, handleAllStores, handleManageLocations, hasMoreStores],
+		[ability, handleAllStores, handleManageLocations, hasMoreStores],
 	);
 
 	const subtitle =

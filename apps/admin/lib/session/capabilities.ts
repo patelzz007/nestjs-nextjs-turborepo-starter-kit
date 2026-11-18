@@ -5,6 +5,7 @@ import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@work
 import * as React from "react";
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import { useRefreshOnCapabilityRefusal } from "@workspace/client/lib/contexts/authorization/capability-refusals";
 import { resolveSessionCapabilities, SESSION_PERMISSIONS_QUERY_OPTIONS } from "@workspace/client/lib/contexts/authorization/session-permissions";
 
 export { SESSION_PERMISSIONS_REFETCH_INTERVAL_MS } from "@workspace/client/lib/contexts/authorization/session-permissions";
@@ -20,7 +21,7 @@ export { SESSION_PERMISSIONS_REFETCH_INTERVAL_MS } from "@workspace/client/lib/c
 export type SessionPermissionsStatus = "loading" | "ready" | "failed";
 
 export interface SessionPermissionsState {
-	/** Capability slugs fed into `CapabilitiesProvider` — the single client source of truth. */
+	/** Capability slugs fed into `SessionAbilityProvider` — the single client source of truth. */
 	readonly capabilities: readonly CapabilitySlug[];
 	readonly status: SessionPermissionsStatus;
 	/** Refetches `GET /auth/permissions` (the retry of the `failed` state). */
@@ -37,8 +38,9 @@ export function resolveSessionPermissionsStatus(hasLiveAnswer: boolean, hasPrelo
 
 /**
  * Owns `GET /auth/permissions` for the admin panel. Mounted once by
- * `DashboardLayout`, which feeds the result into `CapabilitiesProvider`;
- * every other consumer reads through `useAuthorization()`.
+ * `DashboardLayout`, which feeds the result into `SessionAbilityProvider`
+ * (namespace "platform"); every other consumer reads the CASL ability through
+ * `useAbility()` / `<Can>`.
  */
 export function useSessionPermissionsQuery(initialSessionPermissions?: Envelope<SessionPermissionsResponse>): SessionPermissionsState {
 	const { api } = useAuth();
@@ -58,6 +60,8 @@ export function useSessionPermissionsQuery(initialSessionPermissions?: Envelope<
 	const retry = React.useCallback((): void => {
 		void refetch();
 	}, [refetch]);
+	// A request refused for the session's capabilities means they changed (a role edit, a revoked grant): re-read them.
+	useRefreshOnCapabilityRefusal(retry);
 
 	return {
 		capabilities,

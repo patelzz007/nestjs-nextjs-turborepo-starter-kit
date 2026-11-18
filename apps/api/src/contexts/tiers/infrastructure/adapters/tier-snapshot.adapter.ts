@@ -6,7 +6,7 @@ import type { CustomerTierSnapshotFactory } from "../../../pos/public-api";
 
 /**
  * The customer's stored tier inside the till's checkout transaction, under the API key's own session (the key reads the
- * standing of its tenant's customers, 67-customer-tiers.sql). Only a read: tier rules never run inside a checkout.
+ * standing of its tenant's customers, prisma/security/table-policies.ts). Only a read: tier rules never run inside a checkout.
  */
 export class PrismaTierSnapshot implements CustomerTierSnapshotPort {
 	public constructor(private readonly db: Prisma.TransactionClient) {}

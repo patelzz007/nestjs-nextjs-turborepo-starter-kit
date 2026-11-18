@@ -6,7 +6,7 @@
 //     request / response payloads in TypeScript;
 //   - the data-change trail (ADR 051) applies it inside PostgreSQL — the
 //     capture trigger is GENERATED from these constants
-//     (`prisma/rls/data-change-capture.ts`), so the two can never drift.
+//     (`prisma/security/data-change-capture.ts`), so the two can never drift.
 // Dependency-free on purpose: the RLS apply script imports it.
 
 /** Replacement for a personal-data value in an audit record. */

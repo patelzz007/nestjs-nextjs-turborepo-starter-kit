@@ -24,7 +24,7 @@ import { restoreGithubAccountLinks, snapshotGithubAccountLinks, type GithubAccou
 // token; a signed delivery is recorded once and announced to every API
 // instance through pg_notify; turning it off deletes the webhook.
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const SECRET = "e2e-webhook-secret-0123456789abcdef0123";
 const WEBHOOK_URL = "https://api.example.com/api/v1/github/webhook";
 const TOKEN = "github_pat_11E2ETEST0000000000000_e2e_live_updates";

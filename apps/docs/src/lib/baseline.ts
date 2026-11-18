@@ -54,6 +54,13 @@ export const RENAMED_ANCHORS: Readonly<Record<string, Readonly<Record<string, st
 	},
 	// 2026-11-17: a per-store switch is now an override or a rule condition, explained with the evaluation order.
 	"/docs/technical/feature-flags": { "per-store-enhancement-511": "how-a-decision-is-made" },
+	// 2026-11-18: the frontend moved to CASL (ADR 091): the hook is `useAbility()`, and the provider section came first.
+	"/docs/technical/authorization/frontend": {
+		"11-the-hook-useauthorization": "12-the-hook-useability",
+		"12-the-component-can": "13-the-component-can",
+		"13-decisions-about-one-record": "14-decisions-about-one-record",
+		"14-vocabulary--never-type-slugs-by-hand": "15-vocabulary--never-type-slugs-by-hand",
+	},
 };
 
 /** The host of the stock photos the guides' covers were until 2026-11-13. */

@@ -29,7 +29,7 @@ export class RemoveTerminalHandler implements ICommandHandler<RemoveTerminalComm
 	public async execute(command: RemoveTerminalCommand): Promise<OkResponse> {
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.removeTerminals });
 		const tenant = actingInTenant(actor, input.tenantId);
 		await this.uow.run(tenant, async (scope: PosScope): Promise<void> => {
 			const terminal = await scope.terminals.lockLive(input.terminalRowId, input.tenantId);

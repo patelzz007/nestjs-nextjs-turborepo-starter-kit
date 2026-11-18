@@ -70,13 +70,14 @@ describe("merchant nav authorization", () => {
 		expect(cashierIds).not.toContain("payments-new");
 	});
 
-	it("hides business verification from admins (owner-only)", () => {
+	it("shows admins business verification to read (only the owner submits it, in-page)", () => {
 		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")));
 		const ids = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can, ALL_FLAGS).map((item) => item.id);
 
 		expect(ids).toContain("settings-team");
 		expect(ids).toContain("settings-locations");
-		expect(ids).not.toContain("settings-verification");
+		expect(ids).toContain("settings-verification");
+		expect(can(MERCHANT_CAPABILITY.manageVerification)).toBe(false);
 	});
 
 	it("hides create-reward, POS terminals, API keys, team and verification from cashiers", () => {

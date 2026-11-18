@@ -3,12 +3,11 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import {
 	AdminCreateMerchantInviteSchema,
 	AdminMerchantInvitePreviewQuerySchema,
 	EmailTemplateKeySchema,
-	PERMISSION,
 	PilotCitySchema,
 	type AdminCreateMerchantInviteInput,
 	type AdminMerchantInviteCreatedResponse,
@@ -159,7 +158,7 @@ function PilotCityChoice({ id, value, onChange }: PilotCityChoiceProps): React.J
 
 export default function MerchantInvitesPanel(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const [lastInvite, setLastInvite] = React.useState<{ readonly sentTo: string; readonly invite: AdminMerchantInviteCreatedResponse } | null>(null);
 	const [device, setDevice] = React.useState<EmailPreviewDevice>("desktop");
 
@@ -310,7 +309,7 @@ export default function MerchantInvitesPanel(): React.JSX.Element {
 					device={device}
 					onDeviceChange={setDevice}
 					onRetry={handleRetryPreview}
-					templatesHref={can(PERMISSION.EMAIL.READ) ? ROUTES.emails.template(MERCHANT_INVITE_TEMPLATE_KEY) : undefined}
+					templatesHref={ability.can("READ", "EMAIL") ? ROUTES.emails.template(MERCHANT_INVITE_TEMPLATE_KEY) : undefined}
 				/>
 			</div>
 		</div>

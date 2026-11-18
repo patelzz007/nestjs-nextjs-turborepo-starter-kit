@@ -39,7 +39,7 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand,
 		const { actor, input } = command;
 		const manager = requireUserActor(actor);
 		const member = await this.directory.resolveMember(actor, input.tenantSlug);
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageTeam });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.inviteMembers });
 		const granted = LocationScope.of(input.locationScopeType, input.locationIds);
 		LocationScope.of(grant.locationScope, grant.locationIds).assertCanGrant(granted);
 		const token = this.tokens.issue();

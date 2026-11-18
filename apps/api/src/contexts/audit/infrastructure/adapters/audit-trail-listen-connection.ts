@@ -1,5 +1,5 @@
 // The audit trail's live signal: the channel its triggers notify
-// (prisma/rls/95-audit-trail-notify.sql) and the injection token of the
+// (prisma/security/triggers.ts) and the injection token of the
 // listen connection (src/platform/infrastructure/database/pg-listen-connection.ts).
 
 /** The PostgreSQL channel the audit trail's triggers notify. */

@@ -16,6 +16,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { seedGithubAccountLinks } from "../prisma/seed/github-account-links";
+import { getApiConfig } from "../src/config/api-config";
 import { GITHUB_FETCH, type GithubFetch } from "../src/contexts/integrations-github/infrastructure/github-api/github-http.transport";
 import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/contexts/integrations-github/infrastructure/github-api/github-pull-request.client";
 import { restoreGithubAccountLinks, snapshotGithubAccountLinks, type GithubAccountLinkSnapshot } from "./support/github-account-link-snapshots";
@@ -215,7 +216,7 @@ describe("GitHub pull requests (e2e, real Postgres + RLS + audit trail)", () => 
 
 	beforeAll(async () => {
 		app = await createE2eApp((builder: TestingModuleBuilder): TestingModuleBuilder => builder.overrideProvider(GITHUB_FETCH).useValue(FAKE_GITHUB));
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		adminId = await userId(ADMIN_EMAIL);
 		superAdminId = await userId(SUPER_ADMIN_EMAIL);
 		linksBefore = await snapshotGithubAccountLinks(pool, [adminId, superAdminId]);

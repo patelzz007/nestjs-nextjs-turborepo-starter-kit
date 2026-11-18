@@ -82,6 +82,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 			"pnpm turbo run build --concurrency=3",
 			"pnpm tools bundle:check",
 			"pnpm --filter @workspace/api db:check-rls-manifest",
+			"pnpm --filter @workspace/api db:check-security",
 			"pnpm turbo run deps:check",
 			"pnpm audit --audit-level=high",
 			"node packages/tooling/src/env-example-secrets/cli.ts",

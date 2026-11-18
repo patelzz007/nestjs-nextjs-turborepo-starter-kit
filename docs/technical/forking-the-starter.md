@@ -56,7 +56,7 @@ Merging later starter releases is easy in proportion to how little of the starte
 |---|---|
 | Editing `packages/ui` components in place | Wrap or compose them in your app instead; the kit changes often |
 | Reformatting or reorganising starter files | Every moved line is a future conflict |
-| Hand-editing generated files (`docs/generated/`, `00-system-operation-scopes.sql`, `packages/tokens/generated/`, `project-identity.ts`) | Regenerate them |
+| Hand-editing generated files (`docs/generated/`, `apps/api/prisma/rls/*.sql`, `packages/tokens/generated/`, `project-identity.ts`) | Regenerate them |
 
 ## 4. Pulling a later starter release
 
@@ -78,7 +78,7 @@ Then, in order:
    | `apps/api/prisma/migrations-baseline.json` | Take the starter's if it squashed its history, then follow the note |
    | `project.json`, `package.json` `name` | Keep **yours**, then `pnpm project:sync` |
    | `docs/blog/changelog.md` | Keep yours; read the starter's in its release notes |
-   | `docs/generated/openapi.json`, generated SQL | Regenerate (`pnpm tools openapi:export`, `db:generate-system-operation-scopes`) |
+   | `docs/generated/openapi.json`, generated SQL | Regenerate (`pnpm tools openapi:export`, `db:generate-security`) |
 
 3. `pnpm install`, then the completion gate: `pnpm run format`, `lint`, `typecheck`, `test`, `test e2e`,
    `ci:local`.

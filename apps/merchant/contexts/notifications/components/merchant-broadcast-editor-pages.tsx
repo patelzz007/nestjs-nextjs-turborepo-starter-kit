@@ -11,7 +11,7 @@ import { tenantRoutes } from "@/lib/routes";
 import { userSafeErrorMessage } from "@/lib/query/query-policy";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { LIST_MAX_LIMIT, MERCHANT_CAPABILITY, type BroadcastDraftInput, type BroadcastResponse, type BroadcastWeeklyAllowance } from "@workspace/shared";
 import { buttonVariants } from "@workspace/ui/components/button";
@@ -113,10 +113,13 @@ export interface MerchantNewBroadcastPageViewProps {
 	readonly tenantSlug: string;
 }
 
-/** `/t/:tenantSlug/broadcasts/new` — requires `merchant:manage_broadcasts`; sending needs `merchant:publish_broadcasts`. */
+/**
+ * `/t/:tenantSlug/broadcasts/new` — requires `merchant:create_broadcasts`; adding a picture needs
+ * `merchant:manage_broadcasts` (broadcast.update) and sending `merchant:publish_broadcasts`.
+ */
 export function MerchantNewBroadcastPageView({ tenantSlug }: MerchantNewBroadcastPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageBroadcasts} loading={<MerchantRewardEditorPageSkeleton />}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.createBroadcasts} loading={<MerchantRewardEditorPageSkeleton />}>
 			<MerchantNewBroadcastContent tenantSlug={tenantSlug} />
 		</MerchantCapabilityGate>
 	);
@@ -125,7 +128,7 @@ export function MerchantNewBroadcastPageView({ tenantSlug }: MerchantNewBroadcas
 const NO_CUSTOMERS: readonly CustomerPickerOption[] = [];
 
 function MerchantNewBroadcastContent({ tenantSlug }: MerchantNewBroadcastPageViewProps): React.JSX.Element {
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const { timeZone, allowance } = useComposerContext(tenantSlug);
 	const { save, isSaving, savingIntent } = useSaveBroadcast(tenantSlug, null);
 	const [initialValues] = React.useState((): BroadcastComposerValues => emptyBroadcastComposerValues(format(new Date(), "yyyy-MM-dd")));
@@ -142,7 +145,7 @@ function MerchantNewBroadcastContent({ tenantSlug }: MerchantNewBroadcastPageVie
 				storeTimeZone={timeZone}
 				initialValues={initialValues}
 				initialCustomers={NO_CUSTOMERS}
-				canSend={can(MERCHANT_CAPABILITY.publishBroadcasts)}
+				canSend={ability.can("PUBLISH", "BROADCAST")}
 				sendBlockedReason={sendBlockedReasonOf(allowance)}
 				isSaving={isSaving}
 				savingIntent={savingIntent}
@@ -234,7 +237,7 @@ function PickedCustomersLookup({
 }
 
 function MerchantEditBroadcastForm({ tenantSlug, broadcast, timeZone, allowance }: MerchantEditBroadcastFormProps): React.JSX.Element {
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const { save, isSaving, savingIntent } = useSaveBroadcast(tenantSlug, broadcast.id);
 	const [initialValues] = React.useState((): BroadcastComposerValues => broadcastComposerValuesOf(broadcast, timeZone, format(new Date(), "yyyy-MM-dd")));
 	// The picked people's names, looked up by id one page at a time (enhancement 5.5): every picked person is named.
@@ -257,7 +260,7 @@ function MerchantEditBroadcastForm({ tenantSlug, broadcast, timeZone, allowance 
 				storeTimeZone={timeZone}
 				initialValues={initialValues}
 				initialCustomers={initialCustomers}
-				canSend={can(MERCHANT_CAPABILITY.publishBroadcasts)}
+				canSend={ability.can("PUBLISH", "BROADCAST")}
 				sendBlockedReason={sendBlockedReasonOf(allowance)}
 				isSaving={isSaving}
 				savingIntent={savingIntent}

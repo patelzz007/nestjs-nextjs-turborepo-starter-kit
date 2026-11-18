@@ -64,7 +64,7 @@ describe("terminal commands", () => {
 				pairingCodeExpiresAt: NOW + POS_PAIRING_CODE_TTL_MS,
 				terminal: { id: "terminal-1", status: "AWAITING_PAIRING", locationName: "Store A" },
 			});
-			expect(access.requests.map((recorded) => recorded.request)).toEqual([{ tenantId: TENANT_ID, capability: "merchant:manage_api_keys", locationId: STORE_A }]);
+			expect(access.requests.map((recorded) => recorded.request)).toEqual([{ tenantId: TENANT_ID, capability: "merchant:manage_terminals", locationId: STORE_A }]);
 			expect(store.terminals.rows.get("terminal-1")).toMatchObject({ createdByUserId: MEMBER, state: { pairingCode: { issuedByUserId: MEMBER, issuedAt: NOW } } });
 			expect(pairing.terminal.terminalId).toMatch(/^TERM-/u);
 			expect(store.audit.entries).toEqual([
@@ -119,7 +119,7 @@ describe("terminal commands", () => {
 		});
 
 		it("saves nothing when the member lacks the capability", async () => {
-			const handler = new RegisterTerminalHandler(store.uow, access.deny("merchant:manage_api_keys"), credentials, new SequentialIds("terminal"), clock);
+			const handler = new RegisterTerminalHandler(store.uow, access.deny("merchant:manage_terminals"), credentials, new SequentialIds("terminal"), clock);
 
 			await expect(handler.execute(new RegisterTerminalCommand(member(), { tenantId: TENANT_ID, locationId: STORE_A, name: "Till" }))).rejects.toBeInstanceOf(
 				AuthorizationDeniedError,
@@ -178,7 +178,7 @@ describe("terminal commands", () => {
 			store.terminals.seed({ id: "terminal-1" });
 
 			await expect(
-				new IssuePairingCodeHandler(store.uow, access.deny("merchant:manage_api_keys"), credentials, clock).execute(
+				new IssuePairingCodeHandler(store.uow, access.deny("merchant:manage_terminals"), credentials, clock).execute(
 					new IssuePairingCodeCommand(member(), { tenantId: TENANT_ID, terminalRowId: "terminal-1" }),
 				),
 			).rejects.toBeInstanceOf(AuthorizationDeniedError);
@@ -230,7 +230,7 @@ describe("terminal commands", () => {
 				new RemoveTerminalHandler(store.uow, access, clock).execute(new RemoveTerminalCommand(member(), { tenantId: TENANT_ID, terminalRowId: "foreign" })),
 			).rejects.toBeInstanceOf(TerminalNotFoundError);
 			await expect(
-				new RemoveTerminalHandler(store.uow, new FakeMerchantAccessPort().deny("merchant:manage_api_keys"), clock).execute(
+				new RemoveTerminalHandler(store.uow, new FakeMerchantAccessPort().deny("merchant:remove_terminals"), clock).execute(
 					new RemoveTerminalCommand(member(), { tenantId: TENANT_ID, terminalRowId: "terminal-1" }),
 				),
 			).rejects.toBeInstanceOf(AuthorizationDeniedError);
@@ -430,7 +430,7 @@ describe("API key commands", () => {
 
 	it("mints and revokes nothing without the capability", async () => {
 		store.apiKeys.seed("key-1");
-		access.deny("merchant:manage_api_keys");
+		access.deny("merchant:manage_api_keys").deny("merchant:revoke_api_keys");
 
 		await expect(
 			new IssueApiKeyHandler(store.uow, access, new FakeCredentials(), new SequentialIds("key")).execute(
@@ -443,6 +443,21 @@ describe("API key commands", () => {
 		expect([...store.apiKeys.rows.keys()]).toEqual(["key-1"]);
 		expect(store.apiKeys.rows.get("key-1")?.revokedAt).toBeNull();
 		expect(store.uow.committed).toEqual([]);
+	});
+
+	it("checks each key action's own verb: creating a key does not let a member revoke one (ADR 090)", async () => {
+		store.apiKeys.seed("key-1");
+		access.deny("merchant:revoke_api_keys");
+
+		await expect(
+			new IssueApiKeyHandler(store.uow, access, new FakeCredentials(), new SequentialIds("key")).execute(
+				new IssueApiKeyCommand(member(), { tenantId: TENANT_ID, scope: "POS" }),
+			),
+		).resolves.toBeDefined();
+		await expect(
+			new RevokeApiKeyHandler(store.uow, access, new FixedClock(NOW)).execute(new RevokeApiKeyCommand(member(), { tenantId: TENANT_ID, keyId: "key-1" })),
+		).rejects.toBeInstanceOf(AuthorizationDeniedError);
+		expect(store.apiKeys.rows.get("key-1")?.revokedAt).toBeNull();
 	});
 });
 
@@ -485,7 +500,7 @@ describe("terminal queries", () => {
 			new ListTerminalsQuery(member(), { tenantId: TENANT_ID, locationId: STORE_A, limit: 20, page: 1 }),
 		);
 
-		expect(access.requests.at(0)?.request).toEqual({ tenantId: TENANT_ID, capability: "merchant:manage_api_keys", locationId: STORE_A });
+		expect(access.requests.at(0)?.request).toEqual({ tenantId: TENANT_ID, capability: "merchant:view_terminals", locationId: STORE_A });
 		expect(reads.grants).toEqual([{ tenantId: TENANT_ID, locationScope: "SELECTED", locationIds: [STORE_A] }]);
 	});
 

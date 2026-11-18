@@ -34,7 +34,7 @@ export class CreateWebhookEndpointHandler implements ICommandHandler<CreateWebho
 
 	public async execute(command: CreateWebhookEndpointCommand): Promise<WebhookEndpointWithSecret> {
 		const { input } = command;
-		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId, "create");
 		if (!this.secrets.isConfigured()) {
 			throw new WebhooksNotConfiguredError();
 		}

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { MembershipRole, TenantRoleResponse } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, type MembershipRole, type TenantRoleResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -99,12 +99,28 @@ describe("MerchantSettingsShell", () => {
 });
 
 describe("TenantIntegrationsView", () => {
-	it("says what is connected and links to managing it", () => {
+	it("says what is connected and links to each page", () => {
 		renderAs(<TenantIntegrationsView tenantSlug={TEST_ORG_SLUG} />, "OWNER");
 
 		expect(screen.getByText("3 active · 1 waiting to pair of 4")).toBeTruthy();
 		expect(screen.getByText("2 keys in use")).toBeTruthy();
-		expect(screen.getByRole("link", { name: "Manage tills" }).getAttribute("href")).toContain("/terminals");
+		expect(screen.getByRole("link", { name: "Open tills" }).getAttribute("href")).toContain("/terminals");
+		expect(screen.getByRole("link", { name: "Open API keys" }).getAttribute("href")).toContain("/api-keys");
+	});
+
+	it("shows each card only with its own capability, and never asks for what it may not see", () => {
+		renderWithAuthorization(<TenantIntegrationsView tenantSlug={TEST_ORG_SLUG} />, { role: "MANAGER", capabilities: [MERCHANT_CAPABILITY.viewTerminals] });
+
+		expect(screen.getByRole("link", { name: "Open tills" })).toBeTruthy();
+		expect(screen.queryByRole("link", { name: "Open API keys" })).toBeNull();
+		expect(mocks.keys).not.toHaveBeenCalled();
+	});
+
+	it("explains the denial when neither card may be seen", () => {
+		renderWithAuthorization(<TenantIntegrationsView tenantSlug={TEST_ORG_SLUG} />, { role: "CASHIER", capabilities: [] });
+
+		expect(screen.getByText("Integration access required")).toBeTruthy();
+		expect(mocks.tills).not.toHaveBeenCalled();
 	});
 
 	it("describes tills in words", () => {
@@ -121,7 +137,7 @@ describe("RoleCapabilityMatrix", () => {
 		const onCustomise = vi.fn();
 		render(<RoleCapabilityMatrix roles={[MANAGER_ROLE, CASHIER_ROLE]} onCustomise={onCustomise} />);
 
-		const teamRow = screen.getByRole("rowheader", { name: "Manage the team" }).closest("tr");
+		const teamRow = screen.getByRole("rowheader", { name: "Manage the team and its roles" }).closest("tr");
 		expect(
 			teamRow === null
 				? []

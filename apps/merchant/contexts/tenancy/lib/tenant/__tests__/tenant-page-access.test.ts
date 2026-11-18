@@ -6,7 +6,8 @@ import { decideTenantPageAccess } from "@/contexts/tenancy/lib/tenant/tenant-pag
 describe("decideTenantPageAccess", () => {
 	it.each([
 		["OWNER", true, true],
-		["MANAGER", true, false],
+		// Managers read the verification (kyb.read); submitting it stays the owner's.
+		["MANAGER", true, true],
 		["CASHIER", false, false],
 	] satisfies [MembershipRole, boolean, boolean][])("%s → team %s, verification %s (same roles the API allows)", (role, team, verification) => {
 		expect(decideTenantPageAccess({ role }, "/settings/team").allowed).toBe(team);
@@ -16,7 +17,7 @@ describe("decideTenantPageAccess", () => {
 	});
 
 	it("returns the page's denial copy", () => {
-		expect(decideTenantPageAccess({ role: "MANAGER" }, "/settings/verification")).toMatchObject({ allowed: false, denial: { title: "Owner access required" } });
+		expect(decideTenantPageAccess({ role: "CASHIER" }, "/settings/verification")).toMatchObject({ allowed: false, denial: { title: "Verification access required" } });
 	});
 
 	it("denies gated pages without a membership in the URL's tenant", () => {

@@ -37,7 +37,7 @@ export class RegisterTerminalHandler implements ICommandHandler<RegisterTerminal
 	public async execute(command: RegisterTerminalCommand): Promise<MerchantTerminalPairing> {
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
-		await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys, locationId: input.locationId });
+		await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageTerminals, locationId: input.locationId });
 		const tenant = actingInTenant(actor, input.tenantId);
 		const secret = this.credentials.newPairingCode();
 		return this.uow.run(tenant, async (scope: PosScope): Promise<MerchantTerminalPairing> => {

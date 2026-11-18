@@ -209,7 +209,7 @@ beforeEach(() => {
 });
 
 describe("BanCustomerHandler", () => {
-	it("bans the customer behind a redemption at the manager's store, audited, under manage_rewards", async () => {
+	it("bans the customer behind a redemption at the manager's store, audited, under ban_customers", async () => {
 		await expect(ban()).resolves.toEqual({
 			id: "ban-1",
 			reason: "Abusive to staff",
@@ -219,7 +219,7 @@ describe("BanCustomerHandler", () => {
 		});
 
 		expect(store.bans.get("ban-1")).toMatchObject({ tenantId: TENANT_ID, customerUserId: CUSTOMER_ID, sourceRedemptionId: REDEMPTION_ID, bannedByUserId: MANAGER_ID });
-		expect(access.requests).toEqual([{ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.manageRewards }]);
+		expect(access.requests).toEqual([{ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.banCustomers }]);
 		expect(store.operations).toEqual(["tenant.customer_ban.create"]);
 		expect(store.audit).toEqual([
 			{
@@ -260,6 +260,7 @@ describe("LiftCustomerBanHandler", () => {
 		expect(store.bans.get(created.id)?.liftedAt).toBe(NOW);
 		expect(store.audit.at(-1)).toMatchObject({ action: "tenant.customer_ban_lifted", resourceId: created.id });
 		expect(store.operations).toEqual(["tenant.customer_ban.create", "tenant.customer_ban.lift"]);
+		expect(access.requests.at(-1)).toEqual({ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.liftCustomerBans });
 		await expect(ban(REDEMPTION_ID, "Back again")).resolves.toMatchObject({ id: "ban-2" });
 	});
 
@@ -273,7 +274,7 @@ describe("LiftCustomerBanHandler", () => {
 });
 
 describe("ListCustomerBansHandler", () => {
-	it("lists the active bans after the manage_rewards check", async () => {
+	it("lists the active bans after the view_customer_bans check", async () => {
 		const created = await ban();
 
 		const page = await new ListCustomerBansHandler(DIRECTORY, access, reads).execute(
@@ -281,7 +282,7 @@ describe("ListCustomerBansHandler", () => {
 		);
 
 		expect(page.items.map((item) => item.id)).toEqual([created.id]);
-		expect(access.requests.at(-1)).toEqual({ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.manageRewards });
+		expect(access.requests.at(-1)).toEqual({ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.viewCustomerBans });
 	});
 });
 

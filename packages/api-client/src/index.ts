@@ -9,6 +9,7 @@
 // React bindings live in the "./react" entry.
 
 export { BodyTokenPairSchema, BodyTokenRefreshResponseSchema, type BodyTokenPair } from "./body-token-contract";
+export { CAPABILITY_REFUSAL_CODES, isCapabilityRefusal } from "./capability-refusal";
 export {
 	ApiClientConfigSchema,
 	ApiClientHeadersSchema,

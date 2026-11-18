@@ -933,6 +933,12 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@casl/ability':
+        specifier: 7.1.3
+        version: 7.1.3
+      '@casl/react':
+        specifier: 7.1.0
+        version: 7.1.0(@casl/ability@7.1.3)(react@19.3.0)
       '@expo-google-fonts/bricolage-grotesque':
         specifier: 0.4.1
         version: 0.4.1
@@ -1460,6 +1466,12 @@ importers:
 
   packages/client:
     dependencies:
+      '@casl/ability':
+        specifier: 7.1.3
+        version: 7.1.3
+      '@casl/react':
+        specifier: 7.1.0
+        version: 7.1.0(@casl/ability@7.1.3)(react@19.3.0)
       '@simplewebauthn/browser':
         specifier: ^14.0.0
         version: 14.0.0
@@ -1865,6 +1877,9 @@ importers:
 
   packages/shared:
     dependencies:
+      '@casl/ability':
+        specifier: 7.1.3
+        version: 7.1.3
       '@date-fns/tz':
         specifier: ^1.5.0
         version: 1.5.0
@@ -3102,6 +3117,15 @@ packages:
 
   '@borewit/text-codec@0.2.2':
     resolution: {integrity: sha512-DDaRehssg1aNrH4+2hnj1B7vnUGEjU6OIlyRdkMd0aUdIUvKXrJfXsy8LVtXAy7DRvYVluWbMspsRhz2lcW0mQ==}
+
+  '@casl/ability@7.1.3':
+    resolution: {integrity: sha512-4V7ER1Q7r0be9dwpJQuSA99Cazk6gnFEpYpiCV1MCSkBoLAycMgrpXjsrFR06OHBtWlTeGKAhARXQKg+pw3fbg==}
+
+  '@casl/react@7.1.0':
+    resolution: {integrity: sha512-z0TkQNReAGGOGhPhtfrLBB2uJTxS2b55rBZH4aEw7dYUQQSYMj688NwCT75SwfyiKFnmwn0+B+II/DsoJKNe4w==}
+    peerDependencies:
+      '@casl/ability': ^4.0.0 || ^5.1.0 || ^6.0.0 || ^7.0.0
+      react: ^18.0.0 || ^19.0.0
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -7680,6 +7704,18 @@ packages:
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [win32]
+
+  '@ucast/core@2.0.0':
+    resolution: {integrity: sha512-4XVx6LzPXZGvnZO5jp39cm/G4UvuwvEdtmg+9+4+zl6uFkCcB7UJacvtMYeBE56GJVT99Zqy6Pii7dGJq3Kz9Q==}
+
+  '@ucast/js@4.0.1':
+    resolution: {integrity: sha512-9O5xPBvwEWQk2WvO69Eh2WJB8QljVZ2vRVdFvfnKjlZwWXcYxp1lqLBhwXBU1AtuSgCvKhJPkXdjKJggUmAmQQ==}
+
+  '@ucast/mongo2js@2.0.0':
+    resolution: {integrity: sha512-vNBZzRnsfLr/TSxEoxz6W6hHQ5tmWsfEeC0nCq5z8RezC1AqIRy3cfHm8AGvlGtcn+cTSFQcZremfqnz6wm+nQ==}
+
+  '@ucast/mongo@3.0.0':
+    resolution: {integrity: sha512-kwuSH+kdB4GCR0LGhy/PEDm4PCflur89AlK82kNiYD0FvsA8A/p+0sx7m+/R8mMFAlmlkAd3VXp7sM/cLLYWYg==}
 
   '@ungap/structured-clone@1.4.0':
     resolution: {integrity: sha512-1mEZtMKPM09vDmQt5y7YvmN2+DFTP7Tg0EWXdic8/C6VRnpb33e4ghisCIE3WZjsE2N8mf+QV1Zqh7ZFYLWInQ==}
@@ -15155,6 +15191,15 @@ snapshots:
 
   '@borewit/text-codec@0.2.2': {}
 
+  '@casl/ability@7.1.3':
+    dependencies:
+      '@ucast/mongo2js': 2.0.0
+
+  '@casl/react@7.1.0(@casl/ability@7.1.3)(react@19.3.0)':
+    dependencies:
+      '@casl/ability': 7.1.3
+      react: 19.3.0
+
   '@colors/colors@1.5.0':
     optional: true
 
@@ -19787,6 +19832,22 @@ snapshots:
 
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
+
+  '@ucast/core@2.0.0': {}
+
+  '@ucast/js@4.0.1':
+    dependencies:
+      '@ucast/core': 2.0.0
+
+  '@ucast/mongo2js@2.0.0':
+    dependencies:
+      '@ucast/core': 2.0.0
+      '@ucast/js': 4.0.1
+      '@ucast/mongo': 3.0.0
+
+  '@ucast/mongo@3.0.0':
+    dependencies:
+      '@ucast/core': 2.0.0
 
   '@ungap/structured-clone@1.4.0': {}
 

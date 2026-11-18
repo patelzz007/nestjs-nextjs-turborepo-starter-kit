@@ -42,7 +42,9 @@ export interface MerchantRewardsCatalogProps {
 	/** The pager under the tab's rewards, when the tab has more than one page. */
 	readonly pager: React.ReactNode;
 	readonly canManageRewards: boolean;
-	/** Where "Create a reward" in an empty tab leads (shown only to members who can manage rewards). */
+	/** Whether the member may create rewards (reward.create): an empty tab offers "Create a reward" only then. */
+	readonly canCreateRewards: boolean;
+	/** Where "Create a reward" in an empty tab leads. */
 	readonly createRewardHref: string;
 }
 
@@ -397,6 +399,7 @@ export function MerchantRewardsCatalog({
 	pastEndAction,
 	pager,
 	canManageRewards,
+	canCreateRewards,
 	createRewardHref,
 }: MerchantRewardsCatalogProps): React.JSX.Element {
 	const viewMode = useRewardsViewMode();
@@ -425,7 +428,7 @@ export function MerchantRewardsCatalog({
 				</Button>
 			);
 		}
-		if (!canManageRewards || groupId === "ended") {
+		if (!canCreateRewards || groupId === "ended") {
 			return undefined;
 		}
 		return (

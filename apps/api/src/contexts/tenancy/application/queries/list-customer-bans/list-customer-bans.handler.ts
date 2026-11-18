@@ -20,7 +20,7 @@ export class ListCustomerBansHandler implements IQueryHandler<ListCustomerBansQu
 	public async execute(query: ListCustomerBansQuery): Promise<PaginatedServiceResult<TenantCustomerBanResponse>> {
 		const user = requireUserActor(query.actor);
 		const member = await this.directory.resolveMember(user, query.input.tenantSlug);
-		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.viewCustomerBans });
 		return this.reads.listActive(member.tenantId, query.input.query);
 	}
 }

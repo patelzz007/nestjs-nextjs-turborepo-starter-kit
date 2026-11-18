@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { MARKETPLACE_PUBLIC_CACHE_CONTROL, MARKETPLACE_VIEWER_CACHE_CONTROL } from "../src/contexts/rewards/presentation/http/viewer-cache-control";
 import {
 	createE2eApp,
@@ -56,7 +57,7 @@ describe("Reward audiences (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
 		await markSeedUserEmailVerified(pool, "bob.smith@example.com");
 		const aliceId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'alice.johnson@example.com'`)).rows.at(0)).id;

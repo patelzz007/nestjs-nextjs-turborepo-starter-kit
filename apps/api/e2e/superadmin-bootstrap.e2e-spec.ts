@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { Pool } from "pg";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import type { BootstrapSuperAdminInput } from "../src/contexts/identity/application/commands/bootstrap-super-admin/bootstrap-super-admin.command";
@@ -83,7 +84,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 	}
 
 	beforeAll(async () => {
-		database = await createScratchDatabase(process.env.DATABASE_URL ?? "", "bootstrap_e2e");
+		database = await createScratchDatabase(getApiConfig().database.url, "bootstrap_e2e");
 		scratch = database.pool;
 		config = createTestTypedConfig({ DATABASE_URL: database.url });
 	}, SCRATCH_SETUP_TIMEOUT_MS);

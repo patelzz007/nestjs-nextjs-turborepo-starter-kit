@@ -35,7 +35,10 @@ export class ReviewAccessRequestHandler implements ICommandHandler<ReviewAccessR
 		const { actor, input } = command;
 		const reviewer = requireUserActor(actor);
 		const member = await this.directory.resolveMember(actor, input.tenantSlug);
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageTeam });
+		const grant = await this.merchantAccess.assertCapability(actor, {
+			tenantId: member.tenantId,
+			capability: input.approve ? MERCHANT_CAPABILITY.approveAccessRequests : MERCHANT_CAPABILITY.rejectAccessRequests,
+		});
 		const granted = input.approve ? LocationScope.of(input.locationScopeType, input.locationIds) : null;
 		if (granted !== null) {
 			LocationScope.of(grant.locationScope, grant.locationIds).assertCanGrant(granted);

@@ -23,7 +23,7 @@ export class ListTerminalsHandler implements IQueryHandler<ListTerminalsQuery, P
 		const { actor, input } = query;
 		const grant = await this.merchantAccess.assertCapability(actor, {
 			tenantId: input.tenantId,
-			capability: MERCHANT_CAPABILITY.manageApiKeys,
+			capability: MERCHANT_CAPABILITY.viewTerminals,
 			locationId: input.locationId ?? null,
 		});
 		const tenant = actingInTenant(actor, input.tenantId);

@@ -16,6 +16,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, extractCookie, mutationHeaders, parsePaginatedEnvelope, parseSuccessEnvelope, type InjectResponse, uniqueClientIp } from "./e2e-helpers";
 
 /**
@@ -28,7 +29,7 @@ import { createE2eApp, extractCookie, mutationHeaders, parsePaginatedEnvelope, p
  * per-user session cap never retires a session a test still holds.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const PASSWORD = "DeviceSessions@123";
 const APP_VERSION = "1.4.0";
 const CHROME_MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.54 Safari/537.36";

@@ -4,6 +4,7 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { EMAIL_LOG_ID_TAG } from "../src/contexts/notifications/public-api";
 import { createE2eApp, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
 import { signResendWebhook } from "./support/resend-webhook-signature";
@@ -15,7 +16,7 @@ import { signResendWebhook } from "./support/resend-webhook-signature";
  * older event never overrides a newer outcome.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const WEBHOOK_URL = "/notifications/email-webhook";
 const MS_PER_MINUTE = 60_000;
 

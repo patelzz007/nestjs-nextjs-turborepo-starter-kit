@@ -98,7 +98,7 @@ const KafkaConnectionEnvShape = {
  * environment (PATH, HOME, …) — undeclared keys are ignored, never read.
  */
 export const ConsumerEnvInputSchema = z.object({
-	/** Login of the least-privilege `analytics_consumer` Postgres role (prisma/rls/90-analytics-consumer.sql). */
+	/** Login of the least-privilege `analytics_consumer` Postgres role (apps/api/prisma/security/roles.ts). */
 	ANALYTICS_CONSUMER_DATABASE_URL: PostgresUrlEnvSchema,
 	ANALYTICS_DB_POOL_MAX: integerEnvSchema({ min: 1, max: MAX_DB_POOL_MAX, defaultValue: DEFAULT_DB_POOL_MAX }),
 	ANALYTICS_DB_CONNECTION_TIMEOUT_MS: integerEnvSchema({ min: 1, defaultValue: DEFAULT_DB_CONNECTION_TIMEOUT_MS }),

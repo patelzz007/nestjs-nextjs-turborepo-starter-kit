@@ -26,7 +26,8 @@ side.
 | `apps/api/prisma/schema.prisma` | The schema — single source of truth for tables, columns, indexes. Models `/// @extends BaseModel`; `pnpm db:schema` writes the base fields into each ([rules/08](../../rules/08-database-prisma.md#the-schema-and-the-base-model)) |
 | `apps/api/prisma/migrations/` | Prisma-generated migrations; immutable once committed |
 | `apps/api/prisma/migrations-baseline.json` | The [baseline marker](#migration-baseline) |
-| `apps/api/prisma/rls/10-policies.sql`, `apps/api/prisma/rls/*.sql` | Row-level security, roles and grants — applied after every migrate ([database security](./security/database-security.md)) |
+| `apps/api/prisma/security/` | Row-level security, roles and grants, declared in TypeScript ([ADR 089](../adr/089-generated-security-sql.md), [adding a table](./database/adding-a-table.md)) |
+| `apps/api/prisma/rls/*.sql` | The SQL generated from `prisma/security/` — never edited by hand; applied after every migrate ([database security](./security/database-security.md)) |
 | `apps/api/prisma/seed.ts`, `apps/api/prisma/seed/` | Seed orchestrator, per-domain seeders, scenarios |
 | `apps/api/prisma.config.ts` | Prisma CLI configuration |
 
@@ -42,6 +43,8 @@ Run from the repo root (`pnpm db:*` forwards to `apps/api`).
 | `pnpm db:migrate:create --name <change>` | Generate a migration without applying it (review the SQL first) | No |
 | `pnpm tools db:deploy` | `prisma migrate deploy` then RLS — the only command for shared/deployed databases | No |
 | `pnpm tools db:migrate:status` | Which migrations are applied | No |
+| `pnpm --filter @workspace/api db:security` | Generate `prisma/rls/*.sql` from `prisma/security/`, then apply it — run after any security change | No |
+| `pnpm --filter @workspace/api db:check-security` | Fail when the committed `prisma/rls/*.sql` is stale (CI) | No |
 | `pnpm tools db:apply-security` | Re-apply RLS policies, roles, grants and withheld privileges (idempotent) | No |
 | `pnpm tools db:check-rls-manifest` | Prisma models ↔ RLS manifest ↔ SQL agree (no database needed) | No |
 | `pnpm --filter @workspace/api db:check-drift` | Replays migrations into `SHADOW_DATABASE_URL` and compares with `schema.prisma` | Wipes the shadow DB |
@@ -63,7 +66,7 @@ flowchart TD
     C -- no --> D[Schema drift: fix the drift,<br/>never strip the SQL by hand]
     D --> B
     C -- yes --> E[pnpm db:migrate<br/>applies + RLS]
-    E --> F[Update RLS manifest/SQL if a table was added<br/>pnpm tools db:check-rls-manifest]
+    E --> F[Add a new table to prisma/security<br/>pnpm --filter @workspace/api db:security]
     F --> G[Update the seed so every new<br/>table/column has data]
     G --> H[Zod schema in packages/shared,<br/>contract, API, client]
 ```
@@ -76,7 +79,8 @@ flowchart TD
   database-level performance work. The requirements (justification, idempotency, clean-database
   test, clean drift check, recovery note) are in `rules/08-database-prisma.md`; every such file is
   listed under [Hand-written SQL](#hand-written-sql).
-- **RLS is never appended to a migration.** Policies live in `prisma/rls*` and are re-applied by
+- **RLS is never appended to a migration.** Policies are declared in `prisma/security/`, generated
+  into `prisma/rls/*.sql` (never edited by hand) and re-applied by
   every `db:migrate`, `db:deploy`, `db:reset` and `db:push`.
 - **Committed migrations are immutable.** Undo with a new forward migration.
 - **Expand / contract** for anything that runs against live data: add the new column, backfill,
@@ -124,10 +128,13 @@ idempotently by `db:apply-security` (and every `db:migrate`, `db:deploy`, `db:re
 
 | File | What | Why Prisma can't express it |
 | --- | --- | --- |
-| `prisma/rls/*.sql` | Row-level security policies, the `app_*` helper functions, grants | Prisma has no RLS, function or grant syntax |
-| `prisma/rls/00-system-operation-scopes.sql` | Which system operation may touch which table (generated from `system-operation-scopes.ts`) | Policies, as above |
-| `prisma/rls/data-change-capture.ts` | The row-change capture and audit-trail group triggers (ADR 051) | Triggers |
-| `prisma/rls/70-audit-retention.sql` | The `app_retention` role, its delete-only policies and `app_purge_audit_batch` (ADR 078) | Roles, `SECURITY DEFINER` functions, role-specific policies |
+| `prisma/security/table-policies.ts` → `prisma/rls/04-policies.sql` | Row-level security policies for every table | Prisma has no RLS syntax |
+| `prisma/security/generator/functions/` → `prisma/rls/02-functions.sql` | The `app_*` helper and trigger functions | Prisma has no function syntax |
+| `prisma/security/roles.ts` → `prisma/rls/01-roles.sql`, `05-grants.sql` | The database roles and their grants | Prisma has no role or grant syntax |
+| `prisma/security/system-operation-scopes.ts` → `prisma/rls/02-functions.sql` | Which system operation may touch which table | Policies, as above |
+| `prisma/security/triggers.ts` → `prisma/rls/03-triggers.sql` | The hand-picked triggers (authorization-change stamp, audit-trail notify) | Triggers |
+| `prisma/security/data-change-capture.ts` | The row-change capture and audit-trail group triggers (ADR 051) | Triggers |
+| `prisma/security/generator/functions/audit-retention.ts` | `app_purge_audit_batch`; the `app_retention` role is in `roles.ts`, its delete-only policies in `table-policies.ts` (ADR 078) | Roles, `SECURITY DEFINER` functions, role-specific policies |
 
 ## Migration baseline
 

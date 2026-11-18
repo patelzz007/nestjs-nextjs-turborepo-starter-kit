@@ -23,7 +23,7 @@ export class GetTerminalHandler implements IQueryHandler<GetTerminalQuery, Merch
 
 	public async execute(query: GetTerminalQuery): Promise<MerchantTerminalSummary> {
 		const { actor, input } = query;
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.viewTerminals });
 		const tenant = actingInTenant(actor, input.tenantId);
 		const terminal = await this.reads.find(tenant, input.tenantId, input.terminalRowId, this.clock.now());
 		if (terminal === null || !isWithinGrant(grant, terminal.locationId)) {

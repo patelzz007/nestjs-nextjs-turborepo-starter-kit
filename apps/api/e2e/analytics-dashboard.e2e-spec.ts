@@ -16,6 +16,7 @@ import {
 } from "@workspace/shared";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import {
 	createE2eApp,
 	grantTenantPermission,
@@ -27,7 +28,7 @@ import {
 	type LoginResult,
 } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;

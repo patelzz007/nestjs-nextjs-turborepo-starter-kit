@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { epochMs, type TenantLifecycleResponse } from "@workspace/shared";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
+import { epochMs, PERMISSION, type CapabilitySlug, type TenantLifecycleResponse } from "@workspace/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -34,9 +35,8 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	}),
 }));
 
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({
-	Can: ({ children }: { readonly children: React.ReactNode }): React.JSX.Element => <>{children}</>,
-}));
+/** Every capability the panel's actions require: suspend, reinstate and reject an appeal. */
+const LIFECYCLE_GRANTS: readonly CapabilitySlug[] = [PERMISSION.MERCHANT_ORG.SUSPEND, PERMISSION.MERCHANT_ORG.REACTIVATE, PERMISSION.MERCHANT_ORG.REJECT];
 
 function lifecycle(overrides: Partial<TenantLifecycleResponse>): TenantLifecycleResponse {
 	return { tenantId: TENANT_ID, lifecycleState: "ACTIVE", deletionGraceEndsAt: null, suspension: null, ban: null, appeals: [], ...overrides };
@@ -45,7 +45,9 @@ function lifecycle(overrides: Partial<TenantLifecycleResponse>): TenantLifecycle
 function renderPanel(value: TenantLifecycleResponse): void {
 	render(
 		<QueryClientProvider client={new QueryClient()}>
-			<MerchantLifecyclePanel lifecycle={value} />
+			<SessionAbilityProvider capabilities={LIFECYCLE_GRANTS} namespace="platform">
+				<MerchantLifecyclePanel lifecycle={value} />
+			</SessionAbilityProvider>
 		</QueryClientProvider>,
 	);
 }

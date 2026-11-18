@@ -5,12 +5,13 @@ import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@work
 import * as React from "react";
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import { useRefreshOnCapabilityRefusal } from "@workspace/client/lib/contexts/authorization/capability-refusals";
 import { resolveSessionCapabilities, SESSION_PERMISSIONS_QUERY_OPTIONS } from "@workspace/client/lib/contexts/authorization/session-permissions";
 
 export { SESSION_PERMISSIONS_REFETCH_INTERVAL_MS } from "@workspace/client/lib/contexts/authorization/session-permissions";
 
 export interface SessionPermissionsState {
-	/** Capability slugs fed into `CapabilitiesProvider` — the single client source of truth. */
+	/** Capability slugs the session's CASL ability is built from — the single client source of truth. */
 	readonly capabilities: readonly CapabilitySlug[];
 	/** Latest `GET /auth/permissions` answer (live, else preloaded) — `undefined` for guests. */
 	readonly session: SessionPermissionsResponse | undefined;
@@ -20,9 +21,9 @@ export interface SessionPermissionsState {
 
 /**
  * Owns `GET /auth/permissions` for the consumer web app. Mounted once by
- * `WebAuthorizationProvider`, which feeds the result into
- * `CapabilitiesProvider`; every other consumer reads through
- * `useAuthorization()` / `useWebSession()`.
+ * `WebAuthorizationProvider`, which builds the session's CASL ability from
+ * the result (`SessionAbilityProvider`, namespace "platform"); every other
+ * consumer reads through `useAbility()` / `<Can>` / `useWebSession()`.
  *
  * Guests never call the endpoint and resolve to an empty capability set, so
  * every gated control denies without a 401 round-trip.
@@ -49,6 +50,15 @@ export function useSessionPermissionsQuery(initialSessionPermissions: Envelope<S
 	const preloaded = isAuthenticated ? serverPermissions : undefined;
 
 	const capabilities = React.useMemo((): readonly CapabilitySlug[] => resolveSessionCapabilities(liveResponse, preloaded), [liveResponse, preloaded]);
+
+	// A request refused for the session's capabilities means they changed: re-read them (signed-in sessions only).
+	const { refetch } = permissionsQuery;
+	const refresh = React.useCallback((): void => {
+		if (isAuthenticated) {
+			void refetch();
+		}
+	}, [isAuthenticated, refetch]);
+	useRefreshOnCapabilityRefusal(refresh);
 
 	return {
 		capabilities,

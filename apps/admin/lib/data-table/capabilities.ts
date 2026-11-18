@@ -3,8 +3,8 @@ import type { DataTableCheckboxConfig, DataTableBulkSelectionContext } from "@wo
 
 export interface ResourceTableCheckboxOptions<TData extends RowData> {
 	/**
-	 * `useAuthorization().can(PERMISSION.<RESOURCE>.DELETE)` — the container
-	 * decides; bulk delete is offered only when true.
+	 * `useAbility().can("DELETE", "<RESOURCE>")` — the container decides;
+	 * bulk delete is offered only when true.
 	 */
 	readonly canDelete: boolean;
 	readonly exportFilename: string;

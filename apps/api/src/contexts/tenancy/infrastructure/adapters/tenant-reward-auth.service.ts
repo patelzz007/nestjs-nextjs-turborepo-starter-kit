@@ -3,7 +3,8 @@ import type { CapabilitySlug, MembershipRole, MerchantCapability, TenantRewardMe
 import { MERCHANT_CAPABILITY_PERMISSION, merchantCapabilitiesOf, MerchantCapabilitySchema } from "@workspace/shared";
 
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
-import { ACCESS_CONTROL, type AccessControlPort } from "../../../authorization/public-api";
+import type { MerchantAccessTarget } from "../../../../platform/application/ports/authorization.port";
+import { ACCESS_CONTROL, type AccessControlPort, type AccessDecision } from "../../../authorization/public-api";
 import { TenantAuditService } from "../audit/tenant-audit.adapter";
 import { TenantContextService } from "./tenant-context.service";
 
@@ -83,19 +84,18 @@ export class TenantRewardAuthService {
 
 	/**
 	 * The single merchant capability check (ADR 067): the capability's `noun.verb` permission, decided by
-	 * the access-control service (the member's role, a live grant — deny by default) and audited with the
-	 * path that allowed it. Throws 403.
+	 * the access-control service (the member's role, a live grant, and — when `target` names one record — a share
+	 * of that record or its ownership; deny by default) and audited with the path that allowed it. Throws 403.
 	 */
-	public async requireMembershipCapability(subject: TenantCapabilitySubject, capability: CapabilitySlug): Promise<void> {
-		const permission = MERCHANT_CAPABILITY_PERMISSION[knownCapability(capability)];
-		const decision = await this.accessControl.decide({ userId: subject.userId, tenantId: subject.tenantId, permission });
+	public async requireMembershipCapability(subject: TenantCapabilitySubject, capability: CapabilitySlug, target?: MerchantAccessTarget): Promise<void> {
+		const decision = await this.decideCapability(subject, capability, target);
 		await this.tenantTx.withTenantTransaction({ userId: subject.userId, tenantId: subject.tenantId, purpose: `authorize.${capability}` }, (tx) =>
 			this.audit.recordInTx(tx, {
 				tenantId: subject.tenantId,
 				actorUserId: subject.userId,
 				action: `authorize.${capability}`,
-				resourceType: "Tenant",
-				resourceId: subject.tenantId,
+				resourceType: target === undefined ? "Tenant" : target.resource,
+				resourceId: target === undefined ? subject.tenantId : target.resourceId,
 				decision: decision.allowed ? "Allow" : "Deny",
 				...(decision.path === null ? {} : { metadata: { allowedBy: decision.path } }),
 			}),
@@ -105,10 +105,28 @@ export class TenantRewardAuthService {
 		}
 	}
 
+	/**
+	 * Whether the member would pass {@link requireMembershipCapability} — the same decision, neither thrown nor audited:
+	 * a hint for the UI about one record, never an authorization.
+	 */
+	public async holdsMembershipCapability(subject: TenantCapabilitySubject, capability: CapabilitySlug, target?: MerchantAccessTarget): Promise<boolean> {
+		return (await this.decideCapability(subject, capability, target)).allowed;
+	}
+
 	/** Resolves the caller's membership for `tenantSlug` (uniform 404 for non-members), then {@link requireMembershipCapability}. */
-	public async requireCapabilityForSlug(userId: string, tenantSlug: string, capability: CapabilitySlug): Promise<ResolvedTenantRewardContext> {
+	public async requireCapabilityForSlug(userId: string, tenantSlug: string, capability: CapabilitySlug, target?: MerchantAccessTarget): Promise<ResolvedTenantRewardContext> {
 		const resolved = await this.resolveTenantFromSlug(userId, tenantSlug);
-		await this.requireMembershipCapability({ userId, tenantId: resolved.tenantId, role: resolved.membership.role }, capability);
+		await this.requireMembershipCapability({ userId, tenantId: resolved.tenantId, role: resolved.membership.role }, capability, target);
 		return resolved;
+	}
+
+	private async decideCapability(subject: TenantCapabilitySubject, capability: CapabilitySlug, target: MerchantAccessTarget | undefined): Promise<AccessDecision> {
+		const permission = MERCHANT_CAPABILITY_PERMISSION[knownCapability(capability)];
+		return this.accessControl.decide({
+			userId: subject.userId,
+			tenantId: subject.tenantId,
+			permission,
+			...(target === undefined ? {} : { target: { resource: target.resource, resourceId: target.resourceId } }),
+		});
 	}
 }

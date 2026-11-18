@@ -79,29 +79,29 @@ export interface CapabilityTenantPageRule {
 
 export type TenantPageRule = OpenTenantPageRule | CapabilityTenantPageRule;
 
-const OWNER_ONLY_VERIFICATION_DENIAL: TenantPageDenialCopy = {
-	title: "Owner access required",
-	description: "Business verification is submitted and updated by the tenant owner. Contact your store owner if details need to change.",
+const VERIFICATION_DENIAL: TenantPageDenialCopy = {
+	title: "Verification access required",
+	description: "Your role can't see the business verification. It is submitted and updated by the tenant owner; contact them if details need to change.",
 };
 
 const BANNED_CUSTOMERS_DENIAL: TenantPageDenialCopy = {
-	title: "Reward management access required",
-	description: "Only members who manage rewards can see and lift customer bans. Contact your store owner if you need access.",
+	title: "Banned-customer access required",
+	description: "Your role can't see the customers banned from your rewards. Contact your store owner if you need access.",
 };
 
 const WEBHOOKS_DENIAL: TenantPageDenialCopy = {
 	title: "Webhook access required",
-	description: "Webhooks send your store's events to your own systems. Only members allowed to manage webhooks (owners, by default) can set them up.",
+	description: "Webhooks send your store's events to your own systems. Only members allowed to see webhooks (owners, by default) can open them.",
 };
 
 const PAYMENTS_DENIAL: TenantPageDenialCopy = {
-	title: "Payments are for owners and managers",
-	description: "Your role can't take or refund payments. Contact your store owner if you need access.",
+	title: "Payments access required",
+	description: "Your role can't see or take payments. Contact your store owner if you need access.",
 };
 
 const BROADCASTS_DENIAL: TenantPageDenialCopy = {
-	title: "Broadcasts are for owners and managers",
-	description: "Your role can't write messages to the store's customers. Contact your store owner if you need access.",
+	title: "Broadcasts access required",
+	description: "Your role can't see or write messages to the store's customers. Contact your store owner if you need access.",
 };
 
 const TEAM_DENIAL: TenantPageDenialCopy = {
@@ -121,65 +121,74 @@ export const ORG_PAGE_RULES: Readonly<Record<TenantPageRoute, TenantPageRule>> =
 	"/dashboard": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewDashboard] } },
 	// GET /t/:tenantSlug/rewards (merchant:view_rewards).
 	"/rewards": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRewards] } },
-	// POST /t/:tenantSlug/rewards (merchant:manage_rewards).
-	"/rewards/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] } },
-	// GET /t/:tenantSlug/rewards (merchant:view_rewards) — the read-only reward page; its edit and submit actions need merchant:manage_rewards in-page.
+	// POST /t/:tenantSlug/rewards (merchant:create_rewards).
+	"/rewards/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.createRewards] } },
+	// GET /t/:tenantSlug/rewards (merchant:view_rewards) — the read-only reward page; its edit and submit actions need merchant:manage_rewards and merchant:publish_rewards in-page.
 	"/rewards/[rewardId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRewards] } },
 	// PATCH /t/:tenantSlug/rewards/:rewardId (merchant:manage_rewards).
 	"/rewards/[rewardId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] } },
-	// GET /tenants/:tenantSlug/broadcasts (merchant:manage_broadcasts); sending needs merchant:publish_broadcasts in-page.
-	"/broadcasts": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
-	// POST /tenants/:tenantSlug/broadcasts (merchant:manage_broadcasts).
-	"/broadcasts/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
-	// GET /tenants/:tenantSlug/broadcasts/:broadcastId (merchant:manage_broadcasts).
-	"/broadcasts/[broadcastId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
+	// GET /tenants/:tenantSlug/broadcasts (merchant:view_broadcasts); drafting, editing and sending need their own capabilities in-page.
+	"/broadcasts": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewBroadcasts] }, denial: BROADCASTS_DENIAL },
+	// POST /tenants/:tenantSlug/broadcasts (merchant:create_broadcasts).
+	"/broadcasts/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.createBroadcasts] }, denial: BROADCASTS_DENIAL },
+	// GET /tenants/:tenantSlug/broadcasts/:broadcastId (merchant:view_broadcasts).
+	"/broadcasts/[broadcastId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewBroadcasts] }, denial: BROADCASTS_DENIAL },
 	// PUT /tenants/:tenantSlug/broadcasts/:broadcastId (merchant:manage_broadcasts).
 	"/broadcasts/[broadcastId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
-	// GET /tenants/:tenantSlug/payments (merchant:manage_payments).
-	"/payments": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.managePayments] }, denial: PAYMENTS_DENIAL },
+	// GET /tenants/:tenantSlug/payments (merchant:view_payments).
+	"/payments": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewPayments] }, denial: PAYMENTS_DENIAL },
 	// POST /tenants/:tenantSlug/payments (merchant:manage_payments).
 	"/payments/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.managePayments] }, denial: PAYMENTS_DENIAL },
-	// GET /tenants/:tenantSlug/payments/:paymentId and its refund (merchant:manage_payments).
-	"/payments/[paymentId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.managePayments] }, denial: PAYMENTS_DENIAL },
+	// GET /tenants/:tenantSlug/payments/:paymentId (merchant:view_payments); its refund needs merchant:refund_payments in-page.
+	"/payments/[paymentId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewPayments] }, denial: PAYMENTS_DENIAL },
 	// GET /t/:tenantSlug/redemptions (merchant:view_redemptions).
 	"/redemptions": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRedemptions] } },
 	// GET /t/:tenantSlug/analytics (merchant:view_analytics).
 	"/analytics": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewAnalytics] } },
-	// /t/:tenantSlug/terminals[/settings] (merchant:manage_api_keys — a paired till receives an API key).
-	"/terminals": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageApiKeys] } },
-	// /t/:tenantSlug/api-keys (merchant:manage_api_keys).
-	"/api-keys": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageApiKeys] } },
-	// /tenants/:tenantSlug/webhooks/** (merchant:manage_webhooks, ADR 082).
-	"/webhooks": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageWebhooks] }, denial: WEBHOOKS_DENIAL },
-	"/webhooks/[endpointId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageWebhooks] }, denial: WEBHOOKS_DENIAL },
+	// GET /t/:tenantSlug/terminals (merchant:view_terminals); registering and removing a till need their own capabilities in-page.
+	"/terminals": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewTerminals] } },
+	// GET /t/:tenantSlug/api-keys (merchant:view_api_keys); creating and revoking a key need their own capabilities in-page.
+	"/api-keys": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewApiKeys] } },
+	// GET /tenants/:tenantSlug/webhooks/** (merchant:view_webhooks, ADR 082); every change needs its own capability in-page.
+	"/webhooks": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewWebhooks] }, denial: WEBHOOKS_DENIAL },
+	"/webhooks/[endpointId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewWebhooks] }, denial: WEBHOOKS_DENIAL },
+	// PATCH /tenants/:tenantSlug/webhooks/:endpointId (merchant:manage_webhooks).
 	"/webhooks/[endpointId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageWebhooks] }, denial: WEBHOOKS_DENIAL },
 	// Settings index: reachable when at least one settings page is.
 	"/settings": {
 		kind: "capability",
 		requirement: {
-			permissions: [MERCHANT_CAPABILITY.manageTeam, MERCHANT_CAPABILITY.viewLocations, MERCHANT_CAPABILITY.manageVerification, MERCHANT_CAPABILITY.manageRewards],
+			permissions: [
+				MERCHANT_CAPABILITY.viewTeam,
+				MERCHANT_CAPABILITY.manageTeam,
+				MERCHANT_CAPABILITY.viewLocations,
+				MERCHANT_CAPABILITY.viewVerification,
+				MERCHANT_CAPABILITY.viewCustomerBans,
+				MERCHANT_CAPABILITY.viewApiKeys,
+				MERCHANT_CAPABILITY.viewTerminals,
+			],
 			mode: "any",
 		},
 	},
-	// GET /t/:tenantSlug/members[/invites], POST …/members/invite (merchant:manage_team).
-	"/settings/team": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
+	// GET /t/:tenantSlug/members[/invites] (merchant:view_team); inviting and revoking need their own capabilities in-page.
+	"/settings/team": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewTeam] }, denial: TEAM_DENIAL },
 	// /t/:tenantSlug/access/roles… (role.read / role.create / role.update — the API decides each).
 	"/settings/team/roles": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
 	"/settings/team/roles/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
 	"/settings/team/roles/[roleId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
 	"/settings/team/roles/[roleId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
-	// Counts of GET /t/:tenantSlug/terminals and …/api-keys (merchant:manage_api_keys), with links to manage them.
-	"/settings/integrations": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageApiKeys] } },
+	// Counts of GET /t/:tenantSlug/terminals (merchant:view_terminals) and …/api-keys (merchant:view_api_keys): either one.
+	"/settings/integrations": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewTerminals, MERCHANT_CAPABILITY.viewApiKeys], mode: "any" } },
 	// /t/:tenantSlug/access/members/:membershipId… (member.read / member.update).
 	"/settings/team/members/[membershipId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
 	// Reads the member-wide tenant context; requesting stores needs merchant:manage_locations in-page.
 	"/settings/locations": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } },
 	// Reads the logo from the member-wide tenant context; uploading or removing it (POST /files, DELETE /files/:id) needs merchant:manage_locations in-page.
 	"/settings/branding": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } },
-	// GET/PATCH /t/:tenantSlug/kyb (merchant:manage_verification, owner-only).
-	"/settings/verification": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageVerification] }, denial: OWNER_ONLY_VERIFICATION_DENIAL },
-	// GET /t/:tenantSlug/customer-bans, POST …/customer-bans/:banId/lift (merchant:manage_rewards).
-	"/settings/banned-customers": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] }, denial: BANNED_CUSTOMERS_DENIAL },
+	// GET /t/:tenantSlug/kyb (merchant:view_verification); submitting (PATCH) needs merchant:manage_verification (the owner's) in-page.
+	"/settings/verification": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewVerification] }, denial: VERIFICATION_DENIAL },
+	// GET /t/:tenantSlug/customer-bans (merchant:view_customer_bans); lifting one needs merchant:lift_customer_bans in-page.
+	"/settings/banned-customers": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewCustomerBans] }, denial: BANNED_CUSTOMERS_DENIAL },
 	"/account": { kind: "open", reason: "Personal account (password, 2FA, email) — restricted enrollment sessions must always reach it." },
 	"/notifications": {
 		kind: "open",

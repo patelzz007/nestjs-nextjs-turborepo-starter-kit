@@ -5,7 +5,7 @@ import { MerchantCapabilityGate } from "@/contexts/tenancy/components/access/mer
 import { StatCard } from "@workspace/ui/components/stat-card";
 import { LocationList } from "@/contexts/tenancy/components/tenant/tenant-location-list";
 import { tenantRoutes, ROUTES } from "@/lib/routes";
-import { Can, useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { Can, useAbility } from "@workspace/client/lib/contexts/authorization";
 import { KYB_STATUS_DISPLAY, TENANT_LIFECYCLE_DISPLAY } from "@/contexts/tenancy/lib/tenant/tenant-status";
 import { TENANT_ROLE_LABELS } from "@/contexts/tenancy/lib/tenant/role-labels";
 import { LIST_SLOT_INDEX, MERCHANT_CAPABILITY, type TenantContextResponse } from "@workspace/shared";
@@ -64,8 +64,8 @@ export function TenantDashboardPageView(props: TenantDashboardPageViewProps): Re
 }
 
 function TenantDashboardPageContent({ tenantSlug, context, contextError = false }: TenantDashboardPageViewProps): React.JSX.Element {
-	const { can } = useAuthorization();
-	const canManageLocations = can(MERCHANT_CAPABILITY.manageLocations);
+	const ability = useAbility();
+	const canManageLocations = ability.can("UPDATE", "LOCATION");
 	const displayName = context?.tenant.displayName ?? tenantSlug;
 	const lifecycleState = context?.tenant.lifecycleState;
 	const membershipRole = context?.membership.role;
@@ -148,7 +148,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 						</p>
 					</div>
 					<div className="space-y-3">
-						<Can permission={MERCHANT_CAPABILITY.viewLocations}>
+						<Can I="READ" a="LOCATION">
 							<TenantNavLink
 								href={tenantRoutes(tenantSlug).settings.locations}
 								title="Store locations"
@@ -157,21 +157,21 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 								icon={<MapPin className="size-5" aria-hidden="true" />}
 							/>
 						</Can>
-						<Can permission={MERCHANT_CAPABILITY.manageTeam}>
+						<Can I="READ" a="MEMBER">
 							<TenantNavLink
 								href={tenantRoutes(tenantSlug).settings.team}
 								title="Team & access"
 								tone="violet"
-								description="Invite members, manage roles, and review access requests."
+								description="See the team, invite members, manage roles, and review access requests."
 								icon={<Users className="size-5" aria-hidden="true" />}
 							/>
 						</Can>
-						<Can permission={MERCHANT_CAPABILITY.manageVerification}>
+						<Can I="READ" a="KYB">
 							<TenantNavLink
 								href={tenantRoutes(tenantSlug).settings.verification}
 								title="Business verification"
 								tone="teal"
-								description="Submit or update KYB documents for this tenant."
+								description="See, submit or update KYB documents for this tenant."
 								icon={<ShieldCheck className="size-5" aria-hidden="true" />}
 							/>
 						</Can>
@@ -184,7 +184,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 						<p className="text-sm text-muted-foreground">Rewards, analytics, and POS activity for this tenant.</p>
 					</div>
 					<div className="space-y-3">
-						<Can permission={MERCHANT_CAPABILITY.viewRewards}>
+						<Can I="READ" a="REWARD">
 							<TenantNavLink
 								href={tenantRoutes(tenantSlug).rewards.list}
 								title="Rewards"
@@ -193,7 +193,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 								icon={<Gift className="size-5" aria-hidden="true" />}
 							/>
 						</Can>
-						<Can permission={MERCHANT_CAPABILITY.viewAnalytics}>
+						<Can I="READ" a="ANALYTICS">
 							<TenantNavLink
 								href={tenantRoutes(tenantSlug).analytics}
 								title="Analytics"
@@ -202,7 +202,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 								icon={<BarChart3 className="size-5" aria-hidden="true" />}
 							/>
 						</Can>
-						<Can permission={MERCHANT_CAPABILITY.viewRedemptions}>
+						<Can I="READ" a="REDEMPTION">
 							<TenantNavLink
 								href={tenantRoutes(tenantSlug).redemptions}
 								title="Redemptions log"
@@ -224,7 +224,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 								{context.locations.length} location{context.locations.length === 1 ? "" : "s"} under this tenant.
 							</p>
 						</div>
-						<Can permission={MERCHANT_CAPABILITY.viewLocations}>
+						<Can I="READ" a="LOCATION">
 							<Link href={appRoute(tenantRoutes(tenantSlug).settings.locations)} className={cn(buttonVariants({ size: "sm" }), "gap-2")}>
 								<MapPin className="size-4" aria-hidden="true" />
 								{canManageLocations ? "Manage locations" : "View locations"}

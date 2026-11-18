@@ -30,7 +30,7 @@ function q(identifier: string): string {
 
 describe("composite tenant foreign keys", () => {
 	const prisma = new PrismaService(new TypedConfigService(getApiConfig()));
-	const pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+	const pool = new Pool({ connectionString: getApiConfig().database.url });
 
 	beforeAll(async () => {
 		await prisma.ensureConnected();

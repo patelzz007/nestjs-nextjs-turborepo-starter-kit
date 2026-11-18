@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
-import { MERCHANT_CAPABILITY } from "@workspace/shared";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -18,15 +17,15 @@ vi.mock("@/contexts/tenancy/lib/tenant/capabilities", () => ({
 }));
 
 function Probe(): React.JSX.Element {
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const { isLoading, capabilities } = useMerchantAuthorizationStatus();
 	return (
 		<ul>
 			<li>{`loading:${String(isLoading)}`}</li>
 			<li>{`capabilities:${String(capabilities.length)}`}</li>
-			<li>{`manageRewards:${String(can(MERCHANT_CAPABILITY.manageRewards))}`}</li>
-			<li>{`manageTeam:${String(can(MERCHANT_CAPABILITY.manageTeam))}`}</li>
-			<li>{`manageVerification:${String(can(MERCHANT_CAPABILITY.manageVerification))}`}</li>
+			<li>{`manageRewards:${String(ability.can("UPDATE", "REWARD"))}`}</li>
+			<li>{`manageTeam:${String(ability.can("UPDATE", "MEMBER"))}`}</li>
+			<li>{`manageVerification:${String(ability.can("UPDATE", "KYB"))}`}</li>
 		</ul>
 	);
 }
@@ -37,7 +36,7 @@ afterEach((): void => {
 });
 
 describe("MerchantAuthorizationProvider", () => {
-	it("feeds the shared can() API from the active membership", () => {
+	it("feeds the session's CASL ability from the active membership", () => {
 		const membership = membershipFixture("OWNER");
 		merchantCapabilities.mockReturnValue({ membership, capabilities: resolveMerchantCapabilities(membership), isLoading: false, isPolicyReady: true });
 

@@ -14,7 +14,7 @@ import {
 } from "@workspace/client/lib/contexts/reporting/analytics-presentation";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { Can } from "@workspace/client/lib/contexts/authorization";
-import { DEFAULT_SALE_CURRENCY, PERMISSION, PLATFORM_DISPLAY_REGION, UTC_TIME_ZONE, type AdminAnalyticsDashboardQuery } from "@workspace/shared";
+import { DEFAULT_SALE_CURRENCY, PLATFORM_DISPLAY_REGION, UTC_TIME_ZONE, type AdminAnalyticsDashboardQuery } from "@workspace/shared";
 import { AnalyticsPanel } from "@workspace/ui/components/analytics-panel";
 import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
 import { buttonVariants } from "@workspace/ui/components/button";
@@ -92,7 +92,7 @@ function PlatformSalesCardsContent(): React.JSX.Element {
  */
 export function PlatformSalesCards(): React.JSX.Element {
 	return (
-		<Can permission={PERMISSION.ANALYTICS.READ}>
+		<Can I="READ" a="ANALYTICS">
 			<PlatformSalesCardsContent />
 		</Can>
 	);

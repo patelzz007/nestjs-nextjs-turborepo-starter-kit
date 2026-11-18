@@ -13,6 +13,7 @@ import {
 	type ProcessingRetrySettings,
 } from "@workspace/messaging/inbox";
 
+import { getApiConfig } from "../../src/config/api-config";
 import { prisma } from "./client";
 import { seedLog } from "./seed-log";
 
@@ -32,7 +33,7 @@ import { seedLog } from "./seed-log";
 // one marked published (by an API left running while the database was reset) is not the consumer's.
 // ---------------------------------------------------------------------------
 
-/** The database role the analytics consumer runs as (prisma/rls/90-analytics-consumer.sql). */
+/** The database role the analytics consumer runs as (prisma/security/roles.ts). */
 const ANALYTICS_CONSUMER_ROLE = "analytics_consumer";
 
 const POOL_SETTINGS = { max: 1, connectionTimeoutMs: 10_000, idleTimeoutMs: 1_000, statementTimeoutMs: 30_000 };
@@ -66,10 +67,7 @@ async function assertActedAsConsumer(roleSwitches: readonly Promise<Error | null
 
 /** Replays every PUBLISHED outbox event on a Kafka topic through the analytics consumer's own handler. */
 export async function seedAnalyticsIngest(): Promise<AnalyticsIngestSummary> {
-	const databaseUrl: string | undefined = process.env.DATABASE_URL;
-	if (databaseUrl === undefined) {
-		throw new Error("DATABASE_URL is required to seed analytics events");
-	}
+	const databaseUrl: string = getApiConfig().database.url;
 	const published = await prisma.outboxEvent.findMany({
 		where: { status: "PUBLISHED", topic: { in: [...KAFKA_TOPICS] } },
 		orderBy: [{ topic: "asc" }, { createdAt: "asc" }, { id: "asc" }],

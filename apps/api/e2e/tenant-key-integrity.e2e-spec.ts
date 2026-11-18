@@ -4,8 +4,9 @@ import { DatabaseError, Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 /** PostgreSQL `unique_violation`. */
 const UNIQUE_VIOLATION = "23505";
 

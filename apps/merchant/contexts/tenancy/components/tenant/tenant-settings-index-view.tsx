@@ -1,9 +1,9 @@
 "use client";
 
 import { tenantRoutes } from "@/lib/routes";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type KybStatus, type TenantContextResponse, type TenantLifecycleState } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type KybStatus, type TenantContextResponse, type TenantLifecycleState } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
@@ -46,7 +46,7 @@ export interface TenantSettingsIndexViewProps {
  */
 export function TenantSettingsIndexView({ tenantSlug }: TenantSettingsIndexViewProps): JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const contextQuery = api.tenants.context.useQuery({ tenantSlug });
 	const context = contextQuery.data?.data;
 
@@ -56,12 +56,7 @@ export function TenantSettingsIndexView({ tenantSlug }: TenantSettingsIndexViewP
 			{context === undefined ? (
 				<Skeleton aria-label="Loading business profile" className="h-56 w-full rounded-xl" />
 			) : (
-				<BusinessProfileCard
-					tenantSlug={tenantSlug}
-					context={context}
-					canEditBranding={can(MERCHANT_CAPABILITY.viewLocations)}
-					canReviewKyb={can(MERCHANT_CAPABILITY.manageVerification)}
-				/>
+				<BusinessProfileCard tenantSlug={tenantSlug} context={context} canEditBranding={ability.can("READ", "LOCATION")} canReviewKyb={ability.can("UPDATE", "KYB")} />
 			)}
 			<SupportAccessApprovalsCard tenantSlug={tenantSlug} />
 			<LeaveTenantCard tenantSlug={tenantSlug} />

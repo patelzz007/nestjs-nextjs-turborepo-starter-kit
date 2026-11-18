@@ -962,6 +962,9 @@ List the API key's tenant rewards
 | `data[].termsConditions` | string \| null | yes |  |
 | `data[].title` | string | yes |  |
 | `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data[].viewerCapabilities` | object | no |  |
+| `data[].viewerCapabilities.publish` | boolean | yes |  |
+| `data[].viewerCapabilities.update` | boolean | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
@@ -1210,6 +1213,9 @@ Create a draft reward for the API key's tenant
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -1385,6 +1391,9 @@ Read one of the API key's tenant rewards (404 when not offered at the key's stor
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -1564,6 +1573,9 @@ Update a draft or pending reward of the API key's tenant
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -1726,6 +1738,9 @@ _No fields._
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.viewerCapabilities` | object | no |  |
+| `data.viewerCapabilities.publish` | boolean | yes |  |
+| `data.viewerCapabilities.update` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 

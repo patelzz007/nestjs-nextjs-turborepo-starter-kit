@@ -29,7 +29,7 @@ export class RevokeApiKeyHandler implements ICommandHandler<RevokeApiKeyCommand,
 	public async execute(command: RevokeApiKeyCommand): Promise<OkResponse> {
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.revokeApiKeys });
 		const tenant = actingInTenant(actor, input.tenantId);
 		await this.uow.run(tenant, async (scope: PosScope): Promise<void> => {
 			const key = await scope.apiKeys.findInTenant(input.keyId, input.tenantId);

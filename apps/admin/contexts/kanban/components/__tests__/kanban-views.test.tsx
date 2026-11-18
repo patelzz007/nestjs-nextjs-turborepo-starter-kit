@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import {
 	KanbanActivitySchema,
 	KanbanBoardSchema,
@@ -234,7 +234,9 @@ function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNo
 	render(
 		<QueryClientProvider client={new QueryClient()}>
 			<AdminBreadcrumbProvider pathname={window.location.pathname}>
-				<CapabilitiesProvider capabilities={capabilities}>{node}</CapabilitiesProvider>
+				<SessionAbilityProvider capabilities={capabilities} namespace="platform">
+					{node}
+				</SessionAbilityProvider>
 			</AdminBreadcrumbProvider>
 		</QueryClientProvider>,
 		{ wrapper: ClientTestProviders },

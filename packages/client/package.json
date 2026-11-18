@@ -10,6 +10,8 @@
 		"typecheck": "tsrs --noEmit"
 	},
 	"dependencies": {
+		"@casl/ability": "7.1.3",
+		"@casl/react": "7.1.0",
 		"@simplewebauthn/browser": "^14.0.0",
 		"@tanstack/react-query": "^5.107.1",
 		"@workspace/api-client": "workspace:*",
@@ -122,6 +124,7 @@
 		"./lib/contexts/identity/profile/use-profile-avatar": "./src/lib/contexts/identity/profile/use-profile-avatar.ts",
 		"./lib/contexts/identity/profile/use-own-profile": "./src/lib/contexts/identity/profile/use-own-profile.ts",
 		"./lib/contexts/identity/profile/use-own-avatar": "./src/lib/contexts/identity/profile/use-own-avatar.ts",
+		"./lib/contexts/authorization/capability-refusals": "./src/lib/contexts/authorization/capability-refusals.ts",
 		"./lib/contexts/authorization/permission-check": "./src/lib/contexts/authorization/permission-check.ts",
 		"./lib/contexts/authorization/session-permissions": "./src/lib/contexts/authorization/session-permissions.ts",
 		"./lib/contexts/identity/session/client-auth-wrapper": "./src/lib/contexts/identity/session/client-auth-wrapper.tsx",
@@ -134,7 +137,8 @@
 		"./lib/contexts/rewards/reward-offer": "./src/lib/contexts/rewards/reward-offer.ts",
 		"./lib/contexts/tiers": "./src/lib/contexts/tiers/index.ts",
 		"./lib/contexts/feature-flags": "./src/lib/contexts/feature-flags/index.ts",
-		"./lib/contexts/feature-flags/device-id": "./src/lib/contexts/feature-flags/device-id.ts",		"./lib/contexts/reporting": "./src/lib/contexts/reporting/index.ts",
+		"./lib/contexts/feature-flags/device-id": "./src/lib/contexts/feature-flags/device-id.ts",
+		"./lib/contexts/reporting": "./src/lib/contexts/reporting/index.ts",
 		"./lib/contexts/tenancy/kyb/document-preview-dialog": "./src/lib/contexts/tenancy/kyb/document-preview-dialog.tsx",
 		"./lib/contexts/tenancy/kyb/document-preview-dialog.client-only": "./src/lib/contexts/tenancy/kyb/document-preview-dialog.client-only.tsx",
 		"./lib/contexts/tenancy/kyb/document-utils": "./src/lib/contexts/tenancy/kyb/document-utils.ts",

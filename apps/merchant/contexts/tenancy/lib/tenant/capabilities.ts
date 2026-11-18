@@ -16,8 +16,9 @@ export interface MerchantCapabilitiesState {
  * Client hook — the capabilities the member holds in the tenant the URL names, as the API computed them
  * from their role and live grants (ADR 067). Fails closed: outside tenant routes, or for an
  * tenant the user does not belong to (the context answers 404), there is no membership and no capability —
- * another tenant's role is never borrowed. Feeds `MerchantAuthorizationProvider`; UI checks go through
- * `useAuthorization().can(MERCHANT_CAPABILITY.x)` / `<Can>`.
+ * another tenant's role is never borrowed. Feeds `MerchantAuthorizationProvider`, which builds the session's
+ * CASL ability from it; UI checks go through `useAbility().can("UPDATE", "REWARD")` / `<Can I="UPDATE" a="REWARD">`
+ * (each merchant capability's catalogue permission is in `MERCHANT_CAPABILITY_PERMISSION`).
  */
 export function useMerchantCapabilities(): MerchantCapabilitiesState {
 	const { membership, isLoading } = useActiveMembership();

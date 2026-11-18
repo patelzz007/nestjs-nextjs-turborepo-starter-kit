@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import type { BroadcastSaveIntent } from "@workspace/client/lib/features/broadcasts/broadcast-composer-form";
 import {
@@ -13,7 +13,7 @@ import {
 	isBroadcastCancellable,
 	isBroadcastEditable,
 } from "@workspace/client/lib/features/broadcasts/broadcast-draft";
-import { PERMISSION, type BroadcastDraftInput, type BroadcastResponse } from "@workspace/shared";
+import type { BroadcastDraftInput, BroadcastResponse } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { RichTextView } from "@workspace/ui/components/rich-text-view";
@@ -123,7 +123,7 @@ function PageHeader({ title, description }: { readonly title: string; readonly d
 
 /** `/emails/broadcasts/new` — write a platform notice (CREATE BROADCAST); sending needs PUBLISH BROADCAST. */
 export function NewPlatformBroadcastView(): React.JSX.Element {
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const { save, isSaving, savingIntent } = useSavePlatformBroadcast(null);
 	const [initialValues] = React.useState((): PlatformBroadcastValues => emptyPlatformBroadcastValues(today()));
 	return (
@@ -132,7 +132,7 @@ export function NewPlatformBroadcastView(): React.JSX.Element {
 			<PlatformBroadcastComposer
 				senderTimeZone={senderTimeZone()}
 				initialValues={initialValues}
-				canSend={can(PERMISSION.BROADCAST.PUBLISH)}
+				canSend={ability.can("PUBLISH", "BROADCAST")}
 				isSaving={isSaving}
 				savingIntent={savingIntent}
 				onSave={save}
@@ -145,7 +145,7 @@ export function NewPlatformBroadcastView(): React.JSX.Element {
 /** `/emails/broadcasts/[id]/edit` — a platform draft in the composer (READ + UPDATE BROADCAST); anything else shows its page instead. */
 export function EditPlatformBroadcastView({ broadcastId }: { readonly broadcastId: string }): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const broadcast = api.notificationsAdmin.broadcast.useQuery({ broadcastId }).data?.data;
 	const { save, isSaving, savingIntent } = useSavePlatformBroadcast(broadcastId);
 	if (broadcast === undefined) {
@@ -167,7 +167,7 @@ export function EditPlatformBroadcastView({ broadcastId }: { readonly broadcastI
 			<PlatformBroadcastComposer
 				senderTimeZone={senderTimeZone()}
 				initialValues={platformBroadcastValuesOf(broadcast, senderTimeZone(), today())}
-				canSend={can(PERMISSION.BROADCAST.PUBLISH)}
+				canSend={ability.can("PUBLISH", "BROADCAST")}
 				isSaving={isSaving}
 				savingIntent={savingIntent}
 				onSave={save}
@@ -200,7 +200,7 @@ export function sendTimeOf(broadcast: BroadcastResponse): string {
 /** `/emails/broadcasts/[id]` — one platform notice: the message, who and how, its status and results, and what can be done next. */
 export function PlatformBroadcastDetailView({ broadcastId }: { readonly broadcastId: string }): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
 	const query = api.notificationsAdmin.broadcast.useQuery({ broadcastId });
 	const refresh = React.useCallback(async (): Promise<void> => {
@@ -268,22 +268,22 @@ export function PlatformBroadcastDetailView({ broadcastId }: { readonly broadcas
 					{broadcast.pauseReason === null ? null : <p className="text-sm text-muted-foreground">{broadcast.pauseReason}</p>}
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
-					{draft && can(PERMISSION.BROADCAST.UPDATE) ? (
+					{draft && ability.can("UPDATE", "BROADCAST") ? (
 						<Link href={ROUTES.emails.broadcastEdit(broadcast.id)} className={buttonVariants({ variant: "outline" })}>
 							Edit
 						</Link>
 					) : null}
-					{draft && can(PERMISSION.BROADCAST.PUBLISH) ? (
+					{draft && ability.can("PUBLISH", "BROADCAST") ? (
 						<Button type="button" onClick={handleSend} disabled={busy}>
 							{broadcast.sendAt === null && broadcast.localSendAt === null ? "Send" : "Schedule"}
 						</Button>
 					) : null}
-					{broadcast.status === "PENDING_APPROVAL" && can(PERMISSION.BROADCAST.APPROVE) ? (
+					{broadcast.status === "PENDING_APPROVAL" && ability.can("APPROVE", "BROADCAST") ? (
 						<Button type="button" onClick={handleApprove} disabled={busy}>
 							Approve
 						</Button>
 					) : null}
-					{isBroadcastCancellable(broadcast.status) && can(PERMISSION.BROADCAST.DELETE) ? (
+					{isBroadcastCancellable(broadcast.status) && ability.can("DELETE", "BROADCAST") ? (
 						<Button type="button" variant="outline" onClick={handleCancel} disabled={busy}>
 							Cancel broadcast
 						</Button>

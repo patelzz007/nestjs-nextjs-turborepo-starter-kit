@@ -6,10 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX, ApiErrorResponseSchema } from "@workspace/shared";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { TENANT_MEMBERSHIP_ERROR_CODES } from "../src/contexts/tenancy/domain/errors/tenants.errors";
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const ORG_PATH = `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.kl}`;
 const ORG_ID = TENANT_SEED_IDS.klTenant;
 const APPROVED_REQUESTER_EMAIL = "grace.wilson@example.com";

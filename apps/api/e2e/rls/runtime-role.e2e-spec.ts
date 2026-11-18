@@ -59,7 +59,7 @@ const INSERT_LOCATION = `INSERT INTO public."Location" (id, "tenantId", name, co
 
 describe("RLS as the runtime role", () => {
 	const prisma = new PrismaService(new TypedConfigService(getApiConfig()));
-	const pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+	const pool = new Pool({ connectionString: getApiConfig().database.url });
 
 	beforeAll(async () => {
 		await prisma.ensureConnected();
@@ -163,7 +163,7 @@ describe("DB-006: FORCE ROW LEVEL SECURITY filters the table owner", () => {
 	const owner = `rls_owner_probe_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
 
 	beforeAll(async () => {
-		scratch = await createScratchDatabase(z.string().min(1).parse(process.env.DATABASE_URL), "rls_owner");
+		scratch = await createScratchDatabase(getApiConfig().database.url, "rls_owner");
 		// A NOSUPERUSER login that owns one application table, as the migration login owns them in production.
 		await scratch.pool.query(`CREATE ROLE ${owner} NOLOGIN NOSUPERUSER NOBYPASSRLS`);
 		await scratch.pool.query(`GRANT USAGE ON SCHEMA public TO ${owner}`);

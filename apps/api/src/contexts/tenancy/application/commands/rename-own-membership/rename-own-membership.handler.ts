@@ -10,7 +10,7 @@ import { actingInTenant, requireUserActor } from "../../tenant-actor";
 import { toMembershipResponse } from "../../tenant-responses";
 import type { TenantsScope } from "../../tenants-scope";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
-import { TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
+import { TENANT_DIRECTORY, TENANT_MEMBERSHIP_RENAME_OWN_OPERATION, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { RenameOwnMembershipCommand } from "./rename-own-membership.command";
 
 /** Audit action of a member changing their own display name. */
@@ -39,7 +39,9 @@ export class RenameOwnMembershipHandler implements ICommandHandler<RenameOwnMemb
 			throw new MembershipUpdateDuringImpersonationError();
 		}
 
-		return this.uow.run(actingInTenant(user, member.tenantId), async (scope): Promise<MembershipResponse> => {
+		// A system operation (ADR 090): members hold no UPDATE on Membership at all, so the database cannot be asked to
+		// change a member's own role or status; this operation changes only the caller's own display name.
+		return this.uow.runSystemOperation(TENANT_MEMBERSHIP_RENAME_OWN_OPERATION, actingInTenant(user, member.tenantId), async (scope): Promise<MembershipResponse> => {
 			const membership = await scope.memberships.getOwnActiveForUpdate(member.tenantId, user.userId);
 			if (membership === null) {
 				throw new NotFoundError();

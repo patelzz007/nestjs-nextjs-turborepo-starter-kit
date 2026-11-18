@@ -16,11 +16,10 @@ import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useEnabledFeatureFlags } from "@workspace/client/lib/contexts/feature-flags";
 import { MERCHANT_FEATURE_FLAGS } from "@/lib/feature-flags";
 import { useOwnAvatar } from "@workspace/client/lib/contexts/identity/profile/use-own-avatar";
-import type { TenantRewardMembershipResponse } from "@workspace/shared";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
 import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/panel-sidebar-nav";
 import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sidebar-nav-item";
@@ -28,7 +27,7 @@ import { SidebarFooter } from "@workspace/ui/components/sidebar";
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { AppShellSidebarAccount } from "@workspace/ui/components/app-shell-sidebar-account";
-import { MERCHANT_CAPABILITY } from "@workspace/shared";
+import { abilityAllowsCapability, type CapabilitySlug, type TenantRewardMembershipResponse } from "@workspace/shared";
 import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { TENANT_ROUTES } from "@/lib/routes";
 import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
@@ -72,7 +71,9 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, o
 	const pathname = usePathname();
 	const sessionProfile = useMerchantSessionProfile();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip, enrollmentReason } = useMerchantEnrollmentLock();
-	const { can } = useAuthorization();
+	const ability = useAbility();
+	// Navigation helpers take a capability-slug predicate; the slug is answered by the session's ability.
+	const isGranted = React.useCallback((slug: CapabilitySlug): boolean => abilityAllowsCapability(ability, slug), [ability]);
 	// The picture comes from the own profile, which every avatar change reloads.
 	const avatar = useOwnAvatar();
 	const { capabilities: menuFilterCapabilities } = useMerchantAuthorizationStatus();
@@ -108,13 +109,13 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, o
 
 	const pinnedItems = React.useMemo(
 		(): readonly PanelSidebarPinnedItem[] =>
-			resolveMerchantPinnedMenuItems(pinnedUrls, can, enabledFeatureFlags).map((pinned) => ({
+			resolveMerchantPinnedMenuItems(pinnedUrls, isGranted, enabledFeatureFlags).map((pinned) => ({
 				title: pinned.title,
 				url: resolveNavHref(pinned.url),
 				icon: pinned.icon,
 				disabled: isEnrollmentLocked && !isMerchantEnrollmentAllowedPath(pinned.url),
 			})),
-		[pinnedUrls, can, enabledFeatureFlags, resolveNavHref, isEnrollmentLocked],
+		[pinnedUrls, isGranted, enabledFeatureFlags, resolveNavHref, isEnrollmentLocked],
 	);
 
 	const handleToggleExpand = React.useCallback(
@@ -147,11 +148,11 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, o
 	const profileMenuItems = React.useMemo(
 		() =>
 			merchantProfileMenuItems(
-				{ isEnrollmentLocked, canViewDashboard: can(MERCHANT_CAPABILITY.viewDashboard), canManageApiKeys: can(MERCHANT_CAPABILITY.manageApiKeys) },
+				{ isEnrollmentLocked, canViewDashboard: ability.can("READ", "TENANT"), canViewApiKeys: ability.can("READ", "API_KEY") },
 				{ account: accountPath, dashboard: dashboardPath, apiKeys: apiKeysPath, settings: settingsPath },
 				navigate,
 			),
-		[accountPath, apiKeysPath, can, dashboardPath, isEnrollmentLocked, navigate, settingsPath],
+		[ability, accountPath, apiKeysPath, dashboardPath, isEnrollmentLocked, navigate, settingsPath],
 	);
 	const showNoCapabilities = menuFilterCapabilities.length === 0 && activeMembership !== undefined && !view.isSearching && view.sections.length === 0;
 	return (

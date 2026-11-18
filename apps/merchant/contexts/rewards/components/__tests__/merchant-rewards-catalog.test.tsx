@@ -31,6 +31,7 @@ vi.mock("next/navigation", async (importOriginal) => {
 interface RenderCatalogOptions {
 	readonly isLoading?: boolean;
 	readonly canManageRewards?: boolean;
+	readonly canCreateRewards?: boolean;
 	/** What the page passes for its pager (a tab with more than one page). */
 	readonly pager?: React.ReactNode;
 }
@@ -44,7 +45,7 @@ interface CatalogHarnessProps extends RenderCatalogOptions {
  * The page's wiring around the catalog, with the API answered from `rewards`: the figures are their
  * per-status counts, the open tab is URL state, and the tab's page is the rewards in its statuses.
  */
-function CatalogHarness({ rewards, isLoading = false, canManageRewards = true, pager = null }: CatalogHarnessProps): React.JSX.Element {
+function CatalogHarness({ rewards, isLoading = false, canManageRewards = true, canCreateRewards = true, pager = null }: CatalogHarnessProps): React.JSX.Element {
 	const [urlState, updateUrlState] = useUrlState(REWARDS_URL_STATE);
 	const countsByStatus = MerchantRewardSummarySchema.shape.countsByStatus.parse(
 		Object.fromEntries(
@@ -71,6 +72,7 @@ function CatalogHarness({ rewards, isLoading = false, canManageRewards = true, p
 			pastEndAction={<button type="button">Go to the first page</button>}
 			pager={pager}
 			canManageRewards={canManageRewards}
+			canCreateRewards={canCreateRewards}
 			createRewardHref={CREATE_REWARD_HREF}
 		/>
 	);
@@ -294,7 +296,8 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		expect(within(panel()).getByRole("link", { name: "Create a reward" }).getAttribute("href")).toBe(CREATE_REWARD_HREF);
 
 		cleanup();
-		renderCatalog(false, onlyEnded, { canManageRewards: false });
+		// The empty tab offers "Create a reward" only to members who may create one (reward.create).
+		renderCatalog(false, onlyEnded, { canCreateRewards: false });
 		expect(within(panel()).queryByRole("link")).toBeNull();
 	});
 
@@ -391,6 +394,7 @@ describe("MerchantRewardsCatalog pages", () => {
 						pastEndAction={<button type="button">Go to the first page</button>}
 						pager={null}
 						canManageRewards
+						canCreateRewards
 						createRewardHref={CREATE_REWARD_HREF}
 					/>
 				</UiPreferencesStoreProvider>

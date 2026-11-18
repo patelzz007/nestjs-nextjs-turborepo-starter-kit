@@ -33,7 +33,7 @@ export interface SystemRlsContext extends RlsContextBase {
 
 /**
  * A merchant API key (POS till or integration), verified by the API-key guards. A machine principal:
- * no user, no bypass. The policies in prisma/rls/40-api-key-principal.sql let it reach only its own
+ * no user, no bypass. The API-key policies in prisma/security/table-policies.ts let it reach only its own
  * tenant's rows — and, for a store-scoped key, only its store's rows where a row has a store.
  */
 export interface ApiKeyRlsContext extends RlsContextBase {
@@ -132,7 +132,7 @@ export function systemRlsContext(operation: SystemOperation, actorUserId: string
 }
 
 /**
- * The session variables the RLS policies read (prisma/rls/10-policies.sql:
+ * The session variables the RLS policies read (prisma/security/table-policies.ts:
  * `app.current_user_id`, `app.current_tenant_id`, …). SQL has no
  * "absent" for a GUC, so a missing user / tenant is encoded as `''`
  * here — a database-encoding detail, not a domain value.

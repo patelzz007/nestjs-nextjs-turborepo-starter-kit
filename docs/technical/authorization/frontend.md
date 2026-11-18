@@ -1,7 +1,7 @@
 ---
 title: "Frontend Authorization"
 tags: ["authorization", "frontend", "react", "nextjs", "can", "sidebar", "admin", "merchant", "web"]
-description: "How the admin, merchant and web apps decide what to show: the shared can() API, the <Can> component, providers, route guards, sidebar filtering, UX rules, and per-app helpers."
+description: "How the admin, merchant and web apps decide what to show: the session's CASL ability, useAbility() and the <Can> component, providers, route guards, sidebar filtering, UX rules, and per-app helpers."
 order: 23
 author: "Platform Team"
 category: "Authorization"
@@ -23,18 +23,64 @@ coverImage: "/images/covers/technical/authorization/frontend.webp"
 
 ## 1. The one API every app uses
 
-Everything comes from `@workspace/client/lib/contexts/authorization` (`packages/client/src/lib/contexts/authorization/index.tsx`). The checker behind it (`createAuthorizationChecker`, `meetsRequirement`) lives in `@workspace/shared` (`lib/navigation-menu`); the Expo app has the same `useAuthorization()` / `<Can>` in `apps/mobile/src/features/authorization` over it, fed by `GET /auth/permissions` ([ADR 038](../../adr/038-mobile-app-drawer.md)).
+Every app shows and hides UI with a [CASL](https://casl.js.org) **ability**: an object that answers
+"may this session do *this action* on *this kind of thing*?". The words it uses are the permission
+catalogue's own (ADR 067): the action is a catalogue verb, the subject a catalogue noun, both upper-case.
 
-### 1.1 The hook: `useAuthorization()`
+```ts
+ability.can("DELETE", "PRODUCT")   // same question as "does the session hold platform:product.delete?"
+```
+
+| Piece | Where | What it does |
+|---|---|---|
+| `AppAbility`, `defineSessionAbility(capabilities, namespace)` | `@workspace/shared` (`packages/shared/src/authorization/ability.ts`) | builds the ability from the session's capability slugs; `namespace` is `"platform"` (admin, web, mobile) or `"merchant"` (merchant app) |
+| `permissionOfCapability(slug)` | same file | the catalogue permission (`{ action, resource }`) behind a slug, or `null` for an unknown slug |
+| `abilityAllowsCapability(ability, slug)` | same file | the same check for a slug you hold in a variable (a gate prop, a nav rule, a lookup table) |
+| `SessionAbilityProvider`, `<Can>`, `useAbility()` | `@workspace/client/lib/contexts/authorization` (`packages/client/src/lib/contexts/authorization/index.tsx`) | provides the ability and reads it, typed wrappers over `@casl/react` |
+| Mobile: `SessionCapabilitiesProvider`, `<Can>`, `useAbility()`, `useCapabilities()` | `apps/mobile/src/features/authorization` (import from `facade.ts`) | the same API on the phone, fed by `GET /auth/permissions` ([ADR 038](../../adr/038-mobile-app-drawer.md)) |
+
+The ability is a **copy of what the API already decided**, not a second set of rules. Each held slug
+becomes one plain "can": no conditions, no ownership, no store scope. The API and PostgreSQL row-level
+security still check every request.
+
+Why CASL, and why the catalogue's words: see the decision record
+[ADR 091 — CASL frontend ability](../../adr/091-casl-frontend-ability.md).
+
+### 1.1 The provider: `SessionAbilityProvider`
 
 ```tsx
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
-import { PERMISSION } from "@workspace/shared";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
+
+<SessionAbilityProvider capabilities={capabilities} namespace="platform">
+	{children}
+</SessionAbilityProvider>
+```
+
+| Prop | Meaning |
+|---|---|
+| `capabilities` | the granted slugs (`GET /auth/permissions`, or the merchant membership's). **Empty → nothing is allowed** (signed out, loading, failed) |
+| `namespace` | `"platform"` or `"merchant"`: only slugs with that prefix go into the ability |
+
+- A new capability list (sign-in, tenant switch, role change, sign-out) builds a new ability, so every
+  check re-renders.
+- Every app mounts one at its root (§2). Outside a provider, `useAbility()` and `<Can>` **deny everything**
+  (ADR 092): a check rendered where no provider is mounted hides what it guards instead of crashing the page. In a
+  test, wrap the component in a `SessionAbilityProvider` to allow something (see [testing](./recipes.md#frontend-tests)).
+- When the API refuses a request because of the session's capabilities (`PERMISSION_DENIED`,
+  `TENANT_ROLE_CAPABILITY_REQUIRED`), each app re-reads them (`useRefreshOnCapabilityRefusal`, and the merchant tenant
+  context), so the actions the member just lost disappear.
+- The ability object is built here (`defineSessionAbility`, from `@workspace/shared`'s `abilityRules`), not in
+  `@workspace/shared`, so the shared package never loads CASL at runtime.
+
+### 1.2 The hook: `useAbility()`
+
+```tsx
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 
 function RoleActions(): React.JSX.Element {
-	const { can, cannot, canAll, canAny } = useAuthorization();
+	const ability = useAbility();
 
-	if (can(PERMISSION.ROLE.UPDATE)) {
+	if (ability.can("UPDATE", "ROLE")) {
 		return <AssignRoleButton />;
 	} else {
 		return <AccessRestrictedNotice>You can view roles but not change them.</AccessRestrictedNotice>;
@@ -42,58 +88,79 @@ function RoleActions(): React.JSX.Element {
 }
 ```
 
-| Function | Meaning |
+| Call | Meaning |
 |---|---|
-| `can(permission)` | true when allowed |
-| `cannot(permission)` | `!can(...)` — reads better for `disabled={cannot(...)}` |
-| `canAll(permissions)` | every permission is allowed (AND) |
-| `canAny(permissions)` | at least one is allowed (OR) |
+| `ability.can(action, subject)` | true when allowed |
+| `ability.cannot(action, subject)` | `!can(...)` — reads better for `disabled={ability.cannot(...)}` |
+| several checks | plain JavaScript: `a && b` (all), `a \|\| b` (any) |
 
-- A check needs **that exact** capability: there is no catch-all action (ADR 067 retired `MANAGE`), so
-  holding `PERMISSION.USER.UPDATE` never makes `can(PERMISSION.USER.DELETE)` true.
-- `useCan()` is an alias kept for older code. Prefer `useAuthorization()`.
-- **Without a provider every check returns `false`** (deny by default).
+- A check needs **that exact** permission: there is no catch-all action (ADR 067 retired `MANAGE`), so
+  holding `UPDATE` on `USER` never makes `ability.can("DELETE", "USER")` true.
+- When the slug is in a variable (a gate's `capability` prop, a lookup table, a menu rule), use
+  `abilityAllowsCapability(ability, slug)` instead of splitting the slug yourself:
 
-### 1.2 The component: `<Can>`
+```tsx
+import { abilityAllowsCapability } from "@workspace/shared";
+
+const ability = useAbility();
+const allowed = abilityAllowsCapability(ability, ACTION_PERMISSION[action]);
+```
+
+### 1.3 The component: `<Can>`
 
 ```tsx
 import { Can } from "@workspace/client/lib/contexts/authorization";
 
-<Can permission={PERMISSION.USER.DELETE}>
+<Can I="DELETE" a="USER">
 	<DeleteUserButton />
 </Can>
 
-<Can permissions={[PERMISSION.ROLE.READ, PERMISSION.PERMISSION.READ]} mode="any" fallback={<AdminAccessDenied />}>
-	<AccessControlPanel />
+<Can not I="UPDATE" a="ROLE">
+	<AccessRestrictedNotice>You can view roles but not change them.</AccessRestrictedNotice>
+</Can>
+
+<Can I="APPROVE" a="MERCHANT_ORG" passThrough>
+	{({ isAllowed }): React.ReactNode => (isAllowed ? <ReviewForm /> : <AccessRestrictedNotice />)}
 </Can>
 ```
 
 | Prop | Meaning |
 |---|---|
-| `permission` | one required capability |
-| `Permission` + `mode` | several; `"any"` (default) or `"all"` |
-| `fallback` | what to render when denied (default: nothing) |
+| `I` + `a` | the action and the subject (both type-checked) |
+| `not` | render the children when **denied** instead |
+| `passThrough` + a function child | always call the function with `{ isAllowed }` — use it for a fallback |
 
-### 1.3 Decisions about one record
+### 1.4 Decisions about one record
 
-`can()` answers from the session's capabilities: "may this person delete users at all?". Whether
+`ability.can()` answers from the session's capabilities: "may this person delete users at all?". Whether
 they may act on **one** record (their own store, a reward in review) depends on rules the browser
 must not re-implement. Show the action when the capability is held, and let the API decide on the
 record: it answers `403` when the rule says no. For several checks at once, ask
 `POST /api/v1/authorization/decisions` ([backend §14](./backend.md#14-the-decisions-endpoint-for-uis)).
 
-### 1.4 Vocabulary — never type slugs by hand
+### 1.5 Vocabulary — never type slugs by hand
+
+The ability's actions and subjects are typed from the catalogue, so a typo does not compile:
+
+❌ `ability.can("DELTE", "USER")` — does not compile.
+✅ `ability.can("DELETE", "USER")`.
+
+When you hold a slug (gate props, menus, tests), take it from the constants:
 
 ```ts
 import { PERMISSION, MERCHANT_CAPABILITY } from "@workspace/shared";
 
-PERMISSION.USER.DELETE             // "platform:user.delete"
-PERMISSION.ADMIN_DASHBOARD.READ    // "platform:admin_dashboard.read"
-MERCHANT_CAPABILITY.manageRewards  // "merchant:manage_rewards"
+PERMISSION.USER.DELETE             // "platform:user.delete"        → ("DELETE", "USER")
+PERMISSION.ADMIN_DASHBOARD.READ    // "platform:admin_dashboard.read" → ("READ", "ADMIN_DASHBOARD")
+MERCHANT_CAPABILITY.manageRewards  // "merchant:manage_rewards"     → ("UPDATE", "REWARD")
 ```
 
-❌ `can("platform:user.delte")` compiles and silently denies forever.
-✅ `can(PERMISSION.USER.DELTE)` does not compile — the typo is caught.
+Merchant capabilities map to catalogue permissions through `MERCHANT_CAPABILITY_PERMISSION`
+(`packages/shared/src/authorization/permission.ts`), so in the merchant app
+`<Can I="UPDATE" a="REWARD">` means "holds `manageRewards`".
+
+❌ `abilityAllowsCapability(ability, "platform:user.delte")` compiles and silently denies forever.
+✅ `abilityAllowsCapability(ability, PERMISSION.USER.DELTE)` does not compile — the typo is caught.
 
 ---
 
@@ -102,8 +169,18 @@ MERCHANT_CAPABILITY.manageRewards  // "merchant:manage_rewards"
 | App | Source | Freshness |
 |---|---|---|
 | Admin | `GET /auth/permissions`, preloaded on the server in `app/(panel)/layout.tsx`, then `useSessionPermissionsQuery()` (`lib/session/capabilities.ts`) | refetch on window focus + every 60 s; **live data wins even when empty** (a user whose permissions were all revoked immediately sees nothing) |
-| Web | same endpoint, in `WebAuthorizationProvider` (`components/auth/web-authorization-provider.tsx`) mounted in `app/layout.tsx` | same rules; **guests never call the endpoint** and get an empty set |
+| Web | same endpoint, in `WebAuthorizationProvider` (`contexts/identity/components/web-authorization-provider.tsx`) mounted in `app/layout.tsx` | same rules; **guests never call the endpoint** and get an empty set |
 | Merchant | the active tenant membership (`api.tenants.membershipsBootstrap`) → its `capabilities` (the API's answer: role plus live grants, ADR 067), in `MerchantAuthorizationProvider`; the server page guard reads the same memberships per request | refetched with the memberships query |
+| Mobile | `GET /auth/permissions`, in `SessionCapabilitiesProvider` (`src/features/authorization/authorization.tsx`) mounted in `src/features/app-shell/app-shell.tsx` | nothing is allowed until the list has loaded, or when it fails |
+
+Each app turns that list into the session's ability with one `SessionAbilityProvider` at its root:
+
+| App | Root provider | Namespace |
+|---|---|---|
+| Admin | `SessionAbilityProvider` in `components/layout/dashboard-layout.tsx` | `platform` |
+| Web | `WebAuthorizationProvider` → `SessionAbilityProvider` | `platform` |
+| Merchant | `MerchantAuthorizationProvider` → `SessionAbilityProvider` | `merchant` |
+| Mobile | `SessionCapabilitiesProvider` → the mobile `SessionAbilityProvider` | `platform` (fixed) |
 
 Platform SuperAdmins receive **every** platform capability from `/auth/permissions`, because
 the backend lets them do everything.
@@ -131,7 +208,7 @@ the same as unauthorized (spec §25). Unauthorized items are removed, not disabl
 
 | Building block | File | What it does |
 |---|---|---|
-| Provider | `components/layout/dashboard-layout.tsx` | mounts `CapabilitiesProvider` with live capabilities |
+| Provider | `components/layout/dashboard-layout.tsx` | mounts `SessionAbilityProvider` (namespace `platform`) with live capabilities |
 | Page requirements | `lib/navigation/menu-authorization.ts` | `ADMIN_MENU_AUTHORIZATION`: sidebar URL → `PERMISSION.*` requirement, one line per page with a comment naming the API route it mirrors |
 | Route rules | `lib/navigation/route-authorization.ts` | built from the menu + explicit per-page rules (`ROUTE_PATTERNS` in `lib/routes.ts`: detail pages need READ, edit pages UPDATE); the most specific pattern wins (a literal segment beats `[id]`); disabled menu items create no rules; `superAdminOnly` rules for `@SuperAdminOnly` pages |
 | Route guard | `components/access/route-authorization-guard.tsx` | renders `AdminAccessDenied` when the current page's rule is not met — also during the server render (permissions are loaded server-side), so a denied page never flashes; while the permissions (or the super-admin flag) are still resolving it renders the content-area skeleton (`PanelContentSkeleton`, "Checking your access…") — never the page, never a denial |
@@ -143,7 +220,7 @@ the same as unauthorized (spec §25). Unauthorized items are removed, not disabl
 | Access denied page | `components/access/admin-access-denied.tsx` | full-page fallback |
 
 Pages never repeat their own route rule in-page (no `<Can>` wrapper, `canView` early return, or
-`enabled: can(...)` query flag for the permission the route already requires) — the route guard
+`enabled: ability.can(...)` query flag for the permission the route already requires) — the route guard
 is the single page-level check; in-page checks are only for finer-grained actions that need a
 *different* permission (e.g. the Edit link on a detail page needs `*.UPDATE`).
 
@@ -176,8 +253,8 @@ to the role's template only when a membership carries none (see the
 
 | Building block | File |
 |---|---|
-| Provider | `components/access/merchant-authorization-provider.tsx` — `MerchantAuthorizationProvider` (feeds `CapabilitiesProvider`), `useMerchantAuthorizationStatus()` (`isLoading`, `capabilities`) |
-| Capability gate | `components/access/merchant-capability-gate.tsx` — `MerchantCapabilityGate` (while the membership resolves it renders its `loading` prop — each page view passes its own page skeleton, the same one its `loading.tsx` draws — or a generic page skeleton announcing "Checking access…"; then `<Can fallback={<MerchantAccessDenied/>}>`), `MerchantAccessDenied`, `MerchantReadOnlyNotice` |
+| Provider | `contexts/tenancy/components/access/merchant-authorization-provider.tsx` — `MerchantAuthorizationProvider` (feeds `SessionAbilityProvider` with namespace `merchant`), `useMerchantAuthorizationStatus()` (`isLoading`, `capabilities`) |
+| Capability gate | `contexts/tenancy/components/access/merchant-capability-gate.tsx` — `MerchantCapabilityGate` (while the membership resolves it renders its `loading` prop — each page view passes its own page skeleton, the same one its `loading.tsx` draws — or a generic page skeleton announcing "Checking access…"; then `abilityAllowsCapability(ability, capability)`, denied → its `fallback`, default `MerchantAccessDenied`), `MerchantAccessDenied`, `MerchantReadOnlyNotice` |
 | Capability hook | `lib/org/capabilities.ts` — `useMerchantCapabilities()` (membership → capabilities) |
 | **Org route map** | `lib/navigation/org-route-authorization.ts` — `ORG_PAGE_RULES`: every page under `app/tenants/[orgSlug]/` → its capability requirement, or explicitly `open` with a reason |
 | **Server page guard** | `lib/org/org-page-guard.tsx` — `guardOrgPage(orgSlug, route)`; decision in `lib/org/org-page-access.ts` |
@@ -226,8 +303,12 @@ export default async function TenantTeamPage({ params }: Props): Promise<React.J
 | `/account` | open (personal account; enrollment sessions must reach it) | — |
 
 ```tsx
-const { can } = useAuthorization();
-{can(MERCHANT_CAPABILITY.manageRewards) ? <CreateRewardButton /> : <MerchantReadOnlyNotice>Only managers can create rewards.</MerchantReadOnlyNotice>}
+// manageRewards is ("UPDATE", "REWARD") in the catalogue
+<Can I="UPDATE" a="REWARD" passThrough>
+	{({ isAllowed }): React.ReactNode =>
+		isAllowed ? <CreateRewardButton /> : <MerchantReadOnlyNotice>Only managers can create rewards.</MerchantReadOnlyNotice>
+	}
+</Can>
 
 <MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageVerification}>
 	<KybForm />
@@ -240,8 +321,8 @@ const { can } = useAuthorization();
 
 | Building block | File |
 |---|---|
-| Provider | `components/auth/web-authorization-provider.tsx` — one provider for the whole app; `useWebSession()` |
-| Section gate | `components/auth/access-gate.tsx` — `AccessGate`: guest → sign-in prompt; signed in without permission → "not available for your account"; allowed → children; loading → nothing |
+| Provider | `contexts/identity/components/web-authorization-provider.tsx` — one provider for the whole app (wraps `SessionAbilityProvider`, namespace `platform`); `useWebSession()` |
+| Section gate | `contexts/identity/components/access-gate.tsx` — `AccessGate` (checks its `permission` / `permissions` slugs with `abilityAllowsCapability`): guest → sign-in prompt; signed in without permission → "not available for your account"; allowed → children; loading → nothing |
 | Fallback UI | `components/auth/access-fallback.tsx` |
 | Route table | `lib/navigation/route-access.ts` — `WEB_ROUTE_ACCESS`: every page's audience (public / guest-only / signed-in), optional capability, breadcrumb label; tested against `proxy.ts` and the pages on disk |
 | Route guard | `components/auth/route-access-guard.tsx` — `WebRouteAccessGuard` in the dashboard shell: sign-in prompt or "not available" for a page whose capability is missing |

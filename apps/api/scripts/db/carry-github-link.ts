@@ -15,6 +15,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { z } from "zod";
 
+import { getApiConfig } from "../../src/config/api-config";
 import { GITHUB_LINK_CARRY_OPERATION } from "../../src/contexts/integrations-github/infrastructure/github-link-carry.operation";
 
 /** Private to the user. The carry file holds a credential ciphertext. */
@@ -259,7 +260,7 @@ async function underCarry<T>(prisma: PrismaClient, run: (tx: Prisma.TransactionC
 }
 
 function openPrisma(): PrismaClient {
-	return new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+	return new PrismaClient({ adapter: new PrismaPg({ connectionString: getApiConfig().database.url }) });
 }
 
 async function main(): Promise<number> {

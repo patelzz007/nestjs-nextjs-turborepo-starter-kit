@@ -36,8 +36,8 @@ export interface ApiKeyListProps {
 	readonly onRetry: () => void;
 	/** The key whose revoke is in flight (its button shows progress). */
 	readonly revokingKeyId: string | null;
-	/** Asks to revoke a key (the parent confirms first). */
-	readonly onRevokeRequest: (apiKey: MerchantApiKeySummary) => void;
+	/** Asks to revoke a key (the parent confirms first); null hides the action (no api_key.delete). */
+	readonly onRevokeRequest: ((apiKey: MerchantApiKeySummary) => void) | null;
 	/** "Showing the newest N of M keys." — when one page doesn't hold them all. */
 	readonly truncationNote: string | null;
 }
@@ -144,13 +144,13 @@ function FilterButton({ option, isSelected, onSelect }: FilterButtonProps): Reac
 interface ApiKeyRowProps {
 	readonly apiKey: MerchantApiKeySummary;
 	readonly isRevoking: boolean;
-	readonly onRevokeRequest: (apiKey: MerchantApiKeySummary) => void;
+	readonly onRevokeRequest: ((apiKey: MerchantApiKeySummary) => void) | null;
 }
 
 function ApiKeyRow({ apiKey, isRevoking, onRevokeRequest }: ApiKeyRowProps): React.JSX.Element {
 	const isActive = isActiveApiKey(apiKey);
 	const handleRevoke = React.useCallback((): void => {
-		onRevokeRequest(apiKey);
+		onRevokeRequest?.(apiKey);
 	}, [apiKey, onRevokeRequest]);
 
 	return (
@@ -194,7 +194,7 @@ function ApiKeyRow({ apiKey, isRevoking, onRevokeRequest }: ApiKeyRowProps): Rea
 				)}
 			</div>
 			<div className="md:text-end">
-				{isActive ? (
+				{isActive && onRevokeRequest !== null ? (
 					<Button size="sm" variant="outline" loading={isRevoking} disabled={isRevoking} onClick={handleRevoke} aria-label={`Revoke ${apiKey.name}`}>
 						Revoke
 					</Button>

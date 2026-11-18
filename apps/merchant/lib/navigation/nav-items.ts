@@ -216,7 +216,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	},
 ];
 
-/** Capability predicate — pass `useAuthorization().can` so nav uses the shared checker. */
+/** Capability predicate — pass `(slug) => abilityAllowsCapability(ability, slug)` so nav reads the session's CASL ability. */
 export type MerchantCapabilityPredicate = (permission: CapabilitySlug) => boolean;
 
 /** The entries this member may open: the page's rule allows it, and its feature flag (if any) is on (ADR 087). */

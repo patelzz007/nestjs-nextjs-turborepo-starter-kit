@@ -28,6 +28,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import {
 	createTestPlatformRole,
 	dropTestPlatformRole,
@@ -55,7 +56,7 @@ import { countStatements } from "./support/sql-statement-counter";
  * the seeded ones — and removes every row it made afterwards.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const KANBAN = `${API_VERSION_PREFIX}/admin/kanban`;
 const FILES = `${API_VERSION_PREFIX}/files`;
 const ADMIN = { email: "admin@example.com", password: "Admin@123" };

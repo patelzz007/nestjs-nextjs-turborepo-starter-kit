@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
@@ -39,7 +39,7 @@ const retryPermissions = vi.fn<() => void>();
 function renderGuard({ pathname, capabilities, enabledFeatureFlags = [], permissionsStatus = "ready", superAdmin }: HarnessProps): void {
 	pathnameMock.mockReturnValue(pathname);
 	render(
-		<CapabilitiesProvider capabilities={capabilities}>
+		<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 			<RouteAuthorizationGuard
 				rules={RULES}
 				enabledFeatureFlags={enabledFeatureFlags}
@@ -48,7 +48,7 @@ function renderGuard({ pathname, capabilities, enabledFeatureFlags = [], permiss
 				superAdmin={superAdmin}>
 				<div>page-content</div>
 			</RouteAuthorizationGuard>
-		</CapabilitiesProvider>,
+		</SessionAbilityProvider>,
 		{ wrapper: UiKitTestProviders },
 	);
 }

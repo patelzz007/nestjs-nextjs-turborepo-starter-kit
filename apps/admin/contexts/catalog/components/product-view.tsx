@@ -14,11 +14,11 @@ import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { PRODUCTS_PAGE_SIZE_OPTIONS, PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "@/contexts/catalog/url-state/products";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { ALL_FILTER_OPTION, parseBooleanFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
-import { LIST_SLOT_INDEX, PERMISSION, productListQuery, type Envelope, type Product } from "@workspace/shared";
+import { LIST_SLOT_INDEX, productListQuery, type Envelope, type Product } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
@@ -61,11 +61,11 @@ export interface ProductViewProps {
 export default function ProductView({ initialPage }: ProductViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	// Each control mirrors its API route: GET /:id (READ), POST (CREATE), PATCH /:id (UPDATE), DELETE /:id + bulk-delete (DELETE).
-	const { can } = useAuthorization();
-	const canView = can(PERMISSION.PRODUCT.READ);
-	const canCreate = can(PERMISSION.PRODUCT.CREATE);
-	const canUpdate = can(PERMISSION.PRODUCT.UPDATE);
-	const canDelete = can(PERMISSION.PRODUCT.DELETE);
+	const ability = useAbility();
+	const canView = ability.can("READ", "PRODUCT");
+	const canCreate = ability.can("CREATE", "PRODUCT");
+	const canUpdate = ability.can("UPDATE", "PRODUCT");
+	const canDelete = ability.can("DELETE", "PRODUCT");
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useProgressRouter();
 	const queryClient = useQueryClient();

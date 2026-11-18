@@ -33,7 +33,7 @@ export class RotateWebhookSecretHandler implements ICommandHandler<RotateWebhook
 
 	public async execute(command: RotateWebhookSecretCommand): Promise<WebhookEndpointWithSecret> {
 		const { input } = command;
-		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId, "manage");
 		const now = this.clock.now();
 		const next = this.secrets.create(input.endpointId);
 		const previousSignsUntil = input.keepPreviousForHours === 0 ? null : epochMs(now + input.keepPreviousForHours * MS_PER_HOUR);

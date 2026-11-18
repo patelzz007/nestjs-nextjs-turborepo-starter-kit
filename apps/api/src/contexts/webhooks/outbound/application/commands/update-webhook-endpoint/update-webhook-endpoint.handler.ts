@@ -27,7 +27,7 @@ export class UpdateWebhookEndpointHandler implements ICommandHandler<UpdateWebho
 
 	public async execute(command: UpdateWebhookEndpointCommand): Promise<WebhookEndpointSummary> {
 		const { input } = command;
-		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId, "manage");
 		if (input.url !== undefined) {
 			const url = this.urls.check(input.url);
 			if (!url.ok) {

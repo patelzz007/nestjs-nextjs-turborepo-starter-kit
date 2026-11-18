@@ -4,6 +4,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import type { OperationsScope } from "../src/contexts/operations/application/operations-scope";
 import { OPS_MONITOR_COLLECT_OPERATION, OPS_UNIT_OF_WORK } from "../src/contexts/operations/application/ports/operations.tokens";
 import { alertAudienceOf, OpsAlertNotifier } from "../src/contexts/operations/application/services/ops-alert-notifier";
@@ -33,7 +34,7 @@ describe("operations alerts → notifications (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 	});
 
 	afterAll(async () => {

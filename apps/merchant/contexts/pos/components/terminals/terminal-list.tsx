@@ -43,16 +43,16 @@ export interface TerminalListProps {
 	readonly isLoading: boolean;
 	readonly isError: boolean;
 	readonly onRetry: () => void;
-	/** Opens the add-terminal dialog (the empty state's call to action). */
-	readonly onAddRequest: () => void;
+	/** Opens the add-terminal dialog (the empty state's call to action); null when the member may not register a till. */
+	readonly onAddRequest: (() => void) | null;
 	/** The terminal whose new pairing code is being issued (its button shows progress). */
 	readonly pairingTerminalId: string | null;
 	/** The terminal whose removal is in flight. */
 	readonly removingTerminalId: string | null;
-	/** Asks for a new pairing code (the parent confirms first for an active till). */
-	readonly onPairRequest: (terminal: MerchantTerminalSummary) => void;
-	/** Asks to remove a till (the parent confirms first). */
-	readonly onRemoveRequest: (terminal: MerchantTerminalSummary) => void;
+	/** Asks for a new pairing code (the parent confirms first for an active till); null hides the action. */
+	readonly onPairRequest: ((terminal: MerchantTerminalSummary) => void) | null;
+	/** Asks to remove a till (the parent confirms first); null hides the action. */
+	readonly onRemoveRequest: ((terminal: MerchantTerminalSummary) => void) | null;
 	/** "Showing the newest N of M terminals." — when one page doesn't hold them all. */
 	readonly truncationNote: string | null;
 }
@@ -121,12 +121,14 @@ export function TerminalList({
 							</EmptyTitle>
 							<EmptyDescription>Add a till to get a one-time pairing code. The till enters it once and is ready to validate redemptions.</EmptyDescription>
 						</EmptyHeader>
-						<EmptyContent>
-							<Button onClick={onAddRequest}>
-								<Plus className="size-4" aria-hidden="true" />
-								Add your first terminal
-							</Button>
-						</EmptyContent>
+						{onAddRequest === null ? null : (
+							<EmptyContent>
+								<Button onClick={onAddRequest}>
+									<Plus className="size-4" aria-hidden="true" />
+									Add your first terminal
+								</Button>
+							</EmptyContent>
+						)}
 					</Empty>
 				) : (
 					<ul className="divide-y divide-border" aria-label="Terminals">
@@ -151,8 +153,8 @@ interface TerminalRowProps {
 	readonly terminal: MerchantTerminalSummary;
 	readonly isIssuingCode: boolean;
 	readonly isRemoving: boolean;
-	readonly onPairRequest: (terminal: MerchantTerminalSummary) => void;
-	readonly onRemoveRequest: (terminal: MerchantTerminalSummary) => void;
+	readonly onPairRequest: ((terminal: MerchantTerminalSummary) => void) | null;
+	readonly onRemoveRequest: ((terminal: MerchantTerminalSummary) => void) | null;
 }
 
 function TerminalRow({ terminal, isIssuingCode, isRemoving, onPairRequest, onRemoveRequest }: TerminalRowProps): React.JSX.Element {
@@ -165,11 +167,11 @@ function TerminalRow({ terminal, isIssuingCode, isRemoving, onPairRequest, onRem
 	);
 
 	const handlePair = React.useCallback((): void => {
-		onPairRequest(terminal);
+		onPairRequest?.(terminal);
 	}, [onPairRequest, terminal]);
 
 	const handleRemove = React.useCallback((): void => {
-		onRemoveRequest(terminal);
+		onRemoveRequest?.(terminal);
 	}, [onRemoveRequest, terminal]);
 
 	return (
@@ -202,12 +204,16 @@ function TerminalRow({ terminal, isIssuingCode, isRemoving, onPairRequest, onRem
 				{terminal.lastSeenAt === null ? "Never" : <RelativeTime epochMs={terminal.lastSeenAt} region={PLATFORM_DISPLAY_REGION} />}
 			</p>
 			<div className="flex flex-wrap gap-2 lg:justify-end">
-				<Button size="sm" variant="outline" loading={isIssuingCode} disabled={isBusy} onClick={handlePair} aria-label={`${pairLabel} for ${terminal.name}`}>
-					{pairLabel}
-				</Button>
-				<Button size="sm" variant="ghost" loading={isRemoving} disabled={isBusy} onClick={handleRemove} aria-label={`Remove ${terminal.name}`}>
-					Remove
-				</Button>
+				{onPairRequest === null ? null : (
+					<Button size="sm" variant="outline" loading={isIssuingCode} disabled={isBusy} onClick={handlePair} aria-label={`${pairLabel} for ${terminal.name}`}>
+						{pairLabel}
+					</Button>
+				)}
+				{onRemoveRequest === null ? null : (
+					<Button size="sm" variant="ghost" loading={isRemoving} disabled={isBusy} onClick={handleRemove} aria-label={`Remove ${terminal.name}`}>
+						Remove
+					</Button>
+				)}
 			</div>
 		</li>
 	);

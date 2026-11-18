@@ -14,7 +14,7 @@ import { SystemOperationNameSchema } from "../platform/application/system-operat
 //     checkout (rls-pool.ts) both switch to `role` with `SET ROLE` — the
 //     role is enforced by PostgreSQL, not just documented here;
 //   - the operation name is written to `app.system_operation`, and
-//     `app_rls_bypass()` (prisma/rls/00-app-helpers.sql) refuses a bypass
+//     `app_rls_bypass()` (prisma/security/generator/functions/session.ts) refuses a bypass
 //     that does not name its operation;
 //   - every use is recorded: a structured `rls.system_operation` log line and,
 //     inside an HTTP request, the request's audit entry (`systemOperations`).
@@ -24,18 +24,18 @@ import { SystemOperationNameSchema } from "../platform/application/system-operat
 //
 // Each entry also declares the tables its bypass reaches (`scope`): every RLS
 // policy admits a system operation only through `app_rls_bypass_on('<table>')`,
-// generated from this registry (prisma/rls/system-operation-scopes.ts), so an
+// generated from this registry (prisma/security/system-operation-scopes.ts), so an
 // operation can read and write exactly the tables listed here.
 //
 // Adding a name: add it to `SystemOperationNameSchema` (platform/application) AND to `SYSTEM_OPERATIONS`
 // (the `Record` type makes a missing definition a compile error), give it the
-// narrowest role and table set that work, run `pnpm db:generate-system-operation-scopes`,
+// narrowest role and table set that work, run `pnpm db:security`,
 // and document it in docs/technical/authorization/tenancy-and-rls.md §3.1.
 
 /**
  * PostgreSQL roles a system operation may run as. Every role is created in
- * prisma/rls/00-app-helpers.sql (NOLOGIN, NOBYPASSRLS — policies always apply)
- * and granted in prisma/rls/99-app-runtime-grants.sql.
+ * prisma/security/roles.ts (NOLOGIN, NOBYPASSRLS — policies always apply), which
+ * also holds its grants; both are generated into prisma/rls/01-roles.sql and 05-grants.sql.
  */
 export const DatabaseRoleSchema = z.enum([
 	/** The application role: DML on every table, filtered by RLS policies. */
@@ -58,7 +58,7 @@ export type TableName = Prisma.ModelName;
 /**
  * Which tables an operation's bypass reaches. PostgreSQL enforces it: every policy admits a system
  * operation through `app_rls_bypass_on('<its table>')`, generated from this registry into
- * prisma/rls/00-system-operation-scopes.sql (prisma/rls/system-operation-scopes.ts).
+ * prisma/rls/02-functions.sql (prisma/security/system-operation-scopes.ts).
  */
 export interface SystemOperationScope {
 	readonly kind: "tables";
@@ -783,6 +783,10 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	"tenant.membership.leave": runtime(
 		"A member leaves a tenant (any membership status): soft-delete the membership and its location scope rows, with the tenant audit row",
 		tables("Tenant", "TenantSlugHistory", "Membership", "MembershipLocationScope", "TenantAuditLog"),
+	),
+	"tenant.membership.rename_own": runtime(
+		"A member renames their own membership (PATCH /members/me): lock and update the caller's own row only, read its store scope for the response, with the tenant audit row. Members hold no UPDATE on Membership (ADR 090)",
+		tables("Membership", "MembershipLocationScope", "TenantAuditLog"),
 	),
 	"tenant.lifecycle.admin_suspend": runtime(
 		"A platform admin suspends a tenant: compare-and-set on the lifecycle state, lifecycle event and tenant audit row, after the SUSPEND MERCHANT_ORG check",

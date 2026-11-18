@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { DeviceSessionsRevoked } from "../src/contexts/identity/domain/events/identity.events";
 import { createIdentityTransactionalPorts, type IdentityTransactionalPorts } from "../src/contexts/identity/infrastructure/persistence/identity-transactional-ports";
 import { TransactionalEventCollector } from "../src/platform/application/events/transactional-event-collector";
@@ -32,7 +33,7 @@ describe("createIdentityTransactionalPorts (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		const result = await pool.query<{ id: string }>(`SELECT id FROM public."User" WHERE email = $1`, [TARGET_EMAIL]);
 		const id = result.rows.at(0)?.id;
 		if (id === undefined) {

@@ -26,6 +26,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
 import {
@@ -74,19 +75,20 @@ export interface TerminalsPageViewProps {
 	readonly initialSettings?: Envelope<MerchantTerminalSettings> | undefined;
 }
 
-/** POS terminals route — list/add/pair/remove and the policy all require `merchant:manage_api_keys`. */
+/**
+ * POS terminals route — listing needs `merchant:view_terminals` (terminal.read); adding a till and issuing its pairing
+ * code `merchant:manage_terminals` (terminal.create); removing one `merchant:remove_terminals` (terminal.delete); the
+ * "registered terminals only" policy is read with `merchant:view_api_keys` and changed with `merchant:manage_api_keys`.
+ */
 export function TerminalsPageView(props: TerminalsPageViewProps): React.JSX.Element {
 	return (
 		<MerchantCapabilityGate
-			capability={MERCHANT_CAPABILITY.manageApiKeys}
+			capability={MERCHANT_CAPABILITY.viewTerminals}
 			loading={<MerchantTerminalsPageSkeleton />}
 			fallback={
 				<div className="space-y-8">
-					<MerchantPageHeader title="POS terminals" description="Tills that validate redemptions — owner or admin access required." />
-					<MerchantAccessDenied
-						title="Owner or admin access required"
-						description="Terminal management is limited to store owners and admins. Contact your account owner if a till needs pairing."
-					/>
+					<MerchantPageHeader title="POS terminals" description="Tills that validate redemptions." />
+					<MerchantAccessDenied title="Terminal access required" description="Your role can't see the store's tills. Contact your account owner if a till needs pairing." />
 				</div>
 			}>
 			<TerminalsPageContent {...props} />
@@ -97,6 +99,11 @@ export function TerminalsPageView(props: TerminalsPageViewProps): React.JSX.Elem
 function TerminalsPageContent({ tenantSlug, initialTerminals, initialSettings }: TerminalsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
+	const ability = useAbility();
+	const canRegister = ability.can("CREATE", "TERMINAL");
+	const canRemove = ability.can("DELETE", "TERMINAL");
+	const canViewPolicy = ability.can("READ", "API_KEY");
+	const canChangePolicy = ability.can("CREATE", "API_KEY");
 	const { locationId } = useActiveLocationFilter();
 	const { activeLocation, accessibleLocations } = useMerchantLocation();
 
@@ -128,7 +135,7 @@ function TerminalsPageContent({ tenantSlug, initialTerminals, initialSettings }:
 	const polledTerminal = pairing === null ? undefined : pairingStatusQuery.data?.data.find((terminal) => terminal.id === pairing.terminal.id);
 	const isPaired = pairing !== null && isPairingComplete(pairing.terminal, polledTerminal);
 
-	const settingsQuery = api.tenants.terminals.settings.useQuery({ tenantSlug }, initialDataOption(initialSettings));
+	const settingsQuery = api.tenants.terminals.settings.useQuery({ tenantSlug }, { ...initialDataOption(initialSettings), enabled: canViewPolicy });
 
 	/** Every terminal list of this tenant (any store, the pairing poll included) is stale after a change. */
 	const invalidateTerminals = React.useCallback((): void => {
@@ -300,10 +307,12 @@ function TerminalsPageContent({ tenantSlug, initialTerminals, initialSettings }:
 				title="POS terminals"
 				description="Register each till once with a one-time pairing code. Paired tills get their own key, so you can switch one off without touching the rest."
 				actions={
-					<Button onClick={handleOpenAdd}>
-						<Plus className="size-4" aria-hidden="true" />
-						Add terminal
-					</Button>
+					canRegister ? (
+						<Button onClick={handleOpenAdd}>
+							<Plus className="size-4" aria-hidden="true" />
+							Add terminal
+						</Button>
+					) : null
 				}
 			/>
 			<MerchantLocationScopeBanner filteredNote="Only this store's tills are listed and counted." allStoresNote="Listing the tills of every store you can access." />
@@ -343,23 +352,25 @@ function TerminalsPageContent({ tenantSlug, initialTerminals, initialSettings }:
 				isLoading={terminalsQuery.isPending}
 				isError={terminalsQuery.isError}
 				onRetry={handleRetryTerminals}
-				onAddRequest={handleOpenAdd}
+				onAddRequest={canRegister ? handleOpenAdd : null}
 				pairingTerminalId={pairingTerminalId}
 				removingTerminalId={removingTerminalId}
-				onPairRequest={handlePairRequest}
-				onRemoveRequest={setTerminalToRemove}
+				onPairRequest={canRegister ? handlePairRequest : null}
+				onRemoveRequest={canRemove ? setTerminalToRemove : null}
 				truncationNote={truncationNote}
 			/>
 
-			<TerminalSettingsCard
-				settings={settingsQuery.data?.data}
-				isLoading={settingsQuery.isPending}
-				isError={settingsQuery.isError}
-				onRetry={handleRetrySettings}
-				isSaving={updateSettingsMutation.isPending}
-				saveErrorMessage={updateSettingsMutation.error === null ? null : resolveAuthErrorMessage(updateSettingsMutation.error)}
-				onRequireRegisteredTerminalsChange={handleRequireRegisteredTerminalsChange}
-			/>
+			{canViewPolicy ? (
+				<TerminalSettingsCard
+					settings={settingsQuery.data?.data}
+					isLoading={settingsQuery.isPending}
+					isError={settingsQuery.isError}
+					onRetry={handleRetrySettings}
+					isSaving={updateSettingsMutation.isPending}
+					saveErrorMessage={updateSettingsMutation.error === null ? null : resolveAuthErrorMessage(updateSettingsMutation.error)}
+					onRequireRegisteredTerminalsChange={canChangePolicy ? handleRequireRegisteredTerminalsChange : null}
+				/>
+			) : null}
 
 			<TerminalPairingGuide apiBaseUrl={clientEnv.NEXT_PUBLIC_API_URL} />
 

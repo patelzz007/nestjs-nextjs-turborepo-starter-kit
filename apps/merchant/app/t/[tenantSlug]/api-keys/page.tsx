@@ -28,7 +28,7 @@ export default async function MerchantApiKeysPage({ params, searchParams }: Merc
 	if (denied !== null) {
 		return denied;
 	}
-	// `guardTenantPage` already denied any role without `merchant:manage_api_keys`.
+	// `guardTenantPage` already denied any role without `merchant:view_api_keys`.
 	const server = await loadTenantServerCaller(tenantSlug);
 	// The same store filter the client's first render derives, so the data lands under its query keys.
 	const locationId = toLocationQueryInput((await loadServerLocationScope(tenantSlug)).effectiveLocationId);

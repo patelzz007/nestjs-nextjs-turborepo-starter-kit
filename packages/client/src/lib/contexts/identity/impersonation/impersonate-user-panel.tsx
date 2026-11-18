@@ -1,6 +1,6 @@
 "use client";
 
-import { PERMISSION, type AdminUserDetail, type CapabilitySlug } from "@workspace/shared";
+import type { AdminUserDetail } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { useProgressRouter } from "../../../navigation/use-progress-router";
@@ -8,7 +8,7 @@ import { UserRoundSearch } from "lucide-react";
 import * as React from "react";
 
 import { readPaginatedHasNext, readPaginatedNextCursor } from "../../../api/envelope";
-import { useAuthorization } from "../../authorization/index";
+import { useAbility } from "../../authorization/index";
 import { useAuth } from "../index";
 import { useImpersonation } from "../session/use-impersonation";
 import { IMPERSONATE_USER_PANEL_LABELS, type ImpersonateUserPanelLabels } from "./impersonate-user-panel-labels";
@@ -16,12 +16,6 @@ import { ImpersonationUsersSkeleton } from "./impersonation-users-skeleton";
 
 /** Users one page of the panel lists. */
 const USERS_PAGE_SIZE = 10;
-
-/**
- * Capabilities the impersonation endpoints enforce (besides `@SuperAdminOnly`):
- * `GET /auth/admin/users` → `LIST USER`, `POST /auth/impersonate/:userId` → `CREATE USER`.
- */
-export const IMPERSONATION_PERMISSIONS: readonly CapabilitySlug[] = [PERMISSION.USER.LIST, PERMISSION.USER.CREATE];
 
 /** Shared empty list, so "no answer yet" keeps one identity across renders. */
 const NO_USERS: readonly AdminUserDetail[] = [];
@@ -39,10 +33,12 @@ export interface ImpersonateUserPanelProps {
  */
 export function ImpersonateUserPanel({ isImpersonating, labels = IMPERSONATE_USER_PANEL_LABELS }: ImpersonateUserPanelProps): React.JSX.Element | null {
 	const { user } = useAuth();
-	const { canAll } = useAuthorization();
+	const ability = useAbility();
 
+	// The impersonation endpoints enforce (besides `@SuperAdminOnly`): `GET /auth/admin/users` → LIST USER,
+	// `POST /auth/impersonate/:userId` → CREATE USER. The panel needs both.
 	const currentUserId = user?.id;
-	const allowed = user?.isSuperAdmin === true && !isImpersonating && canAll(IMPERSONATION_PERMISSIONS);
+	const allowed = user?.isSuperAdmin === true && !isImpersonating && ability.can("LIST", "USER") && ability.can("CREATE", "USER");
 
 	if (!allowed || currentUserId === undefined) {
 		return null;

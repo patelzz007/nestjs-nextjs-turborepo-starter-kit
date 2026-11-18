@@ -41,7 +41,7 @@ sends `POST /tenants/brew-bean-kl/rewards`.
 
 | # | Checkpoint | The question | What happens for Aina | Where |
 |---|---|---|---|---|
-| 0 | **The UI** | Should I show the "Create reward" button? | `can(MERCHANT_CAPABILITY.manageRewards)` is true, so the button shows. This is **not** security: anyone can call the API with curl. | `useAuthorization()` in `packages/client` |
+| 0 | **The UI** | Should I show the "Create reward" button? | She holds `MERCHANT_CAPABILITY.manageRewards`, so `ability.can("UPDATE", "REWARD")` is true and the button shows. This is **not** security: anyone can call the API with curl. | `useAbility()` / `<Can>` in `packages/client` (a CASL ability) |
 | 1 | **Authentication** | Who is this? | Her session cookie names her user. No valid session: 401. | `auth.guard.ts` |
 | 2 | **Tenancy** | Which merchant is she acting for, and is she really in it? | The tenant comes from the URL (`brew-bean-kl`), never from a header the browser chose. She is a member, so it continues. A non-member gets 404, so they can't even learn the merchant exists. | `tenant-reward-auth.service.ts` |
 | 3 | **RBAC** (role-based) | Does her **role** — or a live **grant** on top of it — allow this action? | The Owner role holds `reward.update`. A Cashier does not, and gets 403 unless an owner granted it, permanently or for 48 hours. | `AccessControlService` (ADR 067); templates in `TENANT_ROLE_TEMPLATES` |
@@ -126,10 +126,11 @@ Never do these:
 
 | App | Provider | Gate helpers |
 |---|---|---|
-| Shared (`packages/client`) | `CapabilitiesProvider` | `useAuthorization()` → `{ can, cannot, canAll, canAny }`, `<Can>` |
-| Admin (`apps/admin`) | mounted in `components/layout/dashboard-layout.tsx` | `RouteAuthorizationGuard`, `DisabledActionButton`, `AccessRestrictedNotice`, `useSuperAdminStatus()` |
-| Merchant (`apps/merchant`) | `MerchantAuthorizationProvider` | `guardOrgPage` + `ORG_PAGE_RULES` (server-side page guard), `MerchantCapabilityGate`, `useAuthorization()` |
-| Web (`apps/web`) | `WebAuthorizationProvider` (in `app/layout.tsx`) | `AccessGate`, `useWebSession()` |
+| Shared (`packages/client`, `packages/shared`) | `SessionAbilityProvider` (`capabilities`, `namespace`) | `useAbility()` → `ability.can("DELETE", "PRODUCT")`, `<Can I="UPDATE" a="REWARD">`, `abilityAllowsCapability(ability, slug)` |
+| Admin (`apps/admin`) | `SessionAbilityProvider` (`platform`) mounted in `components/layout/dashboard-layout.tsx` | `RouteAuthorizationGuard`, `DisabledActionButton`, `AccessRestrictedNotice`, `useSuperAdminStatus()` |
+| Merchant (`apps/merchant`) | `MerchantAuthorizationProvider` → `SessionAbilityProvider` (`merchant`) | `guardOrgPage` + `ORG_PAGE_RULES` (server-side page guard), `MerchantCapabilityGate`, `useAbility()`, `<Can>` |
+| Web (`apps/web`) | `WebAuthorizationProvider` → `SessionAbilityProvider` (`platform`), in `app/layout.tsx` | `AccessGate`, `useWebSession()` |
+| Mobile (`apps/mobile`) | `SessionCapabilitiesProvider` (`GET /auth/permissions`, `platform`) in the app shell | `useAbility()`, `<Can>`, `useCapabilities()` (raw list for the drawer) |
 
 ## The golden rules
 

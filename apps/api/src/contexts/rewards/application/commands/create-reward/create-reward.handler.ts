@@ -35,7 +35,7 @@ export class CreateRewardHandler implements ICommandHandler<CreateRewardCommand,
 
 	public async execute(command: CreateRewardCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.createRewards });
 		await assertMinimumTierAvailable(this.tiers, input.minimumTier);
 
 		// The merchant's name and logo after the commit (a read of its own: not inside this transaction).

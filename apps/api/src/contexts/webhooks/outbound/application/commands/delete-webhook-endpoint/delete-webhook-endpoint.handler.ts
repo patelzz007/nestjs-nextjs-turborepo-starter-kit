@@ -23,7 +23,7 @@ export class DeleteWebhookEndpointHandler implements ICommandHandler<DeleteWebho
 
 	public async execute(command: DeleteWebhookEndpointCommand): Promise<DeleteSuccessData> {
 		const { input } = command;
-		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId, "delete");
 		const now = this.clock.now();
 		await this.uow.run(member.actor, (scope: WebhooksScope) =>
 			changeLiveEndpoint(scope, input.tenantId, input.endpointId, (live): void => {

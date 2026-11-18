@@ -23,6 +23,7 @@ import {
 	LIST_SLOT_INDEX,
 	ApiPaginatedMetaSchema,
 	MERCHANT_API_KEYS_PAGE_SIZE,
+	MERCHANT_CAPABILITY,
 	MerchantApiKeySummarySchema,
 	MerchantErrorCodes,
 	type ApiPaginatedMeta,
@@ -204,17 +205,29 @@ async function chooseInSelect(scope: HTMLElement, label: string, option: string)
 }
 
 describe("MerchantApiKeysPageView authorization", () => {
-	it("shows create and revoke actions with merchant:manage_api_keys", () => {
+	it("shows create and revoke actions with merchant:manage_api_keys and merchant:revoke_api_keys", () => {
 		renderAsAdmin();
 
 		expect(screen.getByRole("button", { name: "Create API key" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Revoke Front counter" })).toBeTruthy();
 	});
 
-	it("renders the access-denied page and never lists keys without the capability", () => {
+	it("lists the keys but offers neither action to a member who may only see them (merchant:view_api_keys)", () => {
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, {
+			role: "MANAGER",
+			capabilities: [MERCHANT_CAPABILITY.viewApiKeys],
+			tenantContext: twoStoreSeed(null),
+		});
+
+		expect(apiKeysListQuery).toHaveBeenCalled();
+		expect(screen.queryByRole("button", { name: "Create API key" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Revoke Front counter" })).toBeNull();
+	});
+
+	it("renders the access-denied page and never lists keys without merchant:view_api_keys", () => {
 		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
 
-		expect(screen.getByText("Owner or admin access required")).toBeTruthy();
+		expect(screen.getByText("API key access required")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Create API key" })).toBeNull();
 		expect(apiKeysListQuery).not.toHaveBeenCalled();
 	});
@@ -223,7 +236,7 @@ describe("MerchantApiKeysPageView authorization", () => {
 		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { isLoading: true });
 
 		expect(busyRegionAnnouncements()).toEqual([MERCHANT_API_KEYS_LOADING_LABELS.loading]);
-		expect(screen.queryByText("Owner or admin access required")).toBeNull();
+		expect(screen.queryByText("API key access required")).toBeNull();
 	});
 });
 

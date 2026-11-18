@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { systemActor } from "../src/platform/application/actor-context";
 import { ACCOUNT_ERASURE_SERVICE } from "../src/contexts/privacy/application/ports/account-erasure.store";
 import type { AccountErasureService } from "../src/contexts/privacy/application/services/account-erasure.service";
@@ -70,7 +71,7 @@ describe("Account erasure (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 	});
 
 	afterAll(async () => {

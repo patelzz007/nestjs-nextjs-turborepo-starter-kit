@@ -73,7 +73,7 @@ them individually.
 | **Docs link check** | Every internal link and anchor in `docs/` resolves | `pnpm tools docs:check-links` |
 | **Database + API e2e** | See below | See below |
 | **Browser e2e (Playwright — web, admin, merchant)** | Seeds a fresh Postgres, starts the API, web, admin and merchant apps, waits for `/health/ready` and each login page, then runs the web, admin and merchant Playwright suites in Chromium (admin login: the public seed SuperAdmin; merchant: the public seed store owner). Every suite includes an accessibility sweep (axe, serious and critical fail) | `pnpm ci:local --e2e-only` (runs it against a throwaway `<name>_ci_local_browser` database) |
-| **Analytics consumer e2e (Postgres + Kafka)** | Postgres (`postgres:18.6`) and Kafka (`apache/kafka:4.3.1`, KRaft, broker auto-create off) service containers; `pnpm tools db:deploy` (creates the `analytics_consumer` role), then `pnpm --filter @workspace/analytics-consumer test:e2e`: inbox idempotency, binary-safe parking, least-privilege role checks, retention + advisory locks, login provisioning, topic provisioning and the consumer start position. The consumer login password is random per run | `pnpm docker:up && pnpm tools db:deploy`, set `apps/analytics-consumer/.env`, then `pnpm --filter @workspace/analytics-consumer test:e2e` (also part of `pnpm test:e2e`) |
+| **Analytics consumer e2e (Postgres + Kafka)** | Postgres (`postgres:18.7`) and Kafka (`apache/kafka:4.3.1`, KRaft, broker auto-create off) service containers; `pnpm tools db:deploy` (creates the `analytics_consumer` role), then `pnpm --filter @workspace/analytics-consumer test:e2e`: inbox idempotency, binary-safe parking, least-privilege role checks, retention + advisory locks, login provisioning, topic provisioning and the consumer start position. The consumer login password is random per run | `pnpm docker:up && pnpm tools db:deploy`, set `apps/analytics-consumer/.env`, then `pnpm --filter @workspace/analytics-consumer test:e2e` (also part of `pnpm test:e2e`) |
 
 The **Build** job sets the Next.js apps' public `NEXT_PUBLIC_*` config (local-dev origins, no
 secrets): the apps validate it with zod while prerendering, and CI has no `.env` files. When an app
@@ -99,7 +99,7 @@ is the review.
 
 ### Database + API e2e
 
-This job runs against a real PostgreSQL service container (`postgres:18.6`, the same image as
+This job runs against a real PostgreSQL service container (`postgres:18.7`, the same image as
 the local Docker stack in [Local infrastructure](./local-infrastructure.md)):
 
 1. Writes a throwaway `apps/api/.env`. Signing secrets are random per run and masked in logs.
@@ -220,7 +220,7 @@ The guard (`packages/tooling/src/migration-history/cli.ts`, rules in `packages/t
 | --- | --- |
 | Node.js | **26.13.1** (Node 26 LTS), in places that must agree: `.nvmrc` (`nvm use`), `NODE_VERSION` in every workflow (`ci.yml`, `dependency-review.yml`, `docs-deploy.yml`, `docs-sync.yml`, `load-nightly.yml`, `mobile-nightly.yml`), `build.base.node` in `apps/mobile/eas.json`, and `engines.node` (`>=26.13.1`; `engineStrict: true` in `pnpm-workspace.yaml` makes `pnpm install` refuse an older Node with `ERR_PNPM_UNSUPPORTED_ENGINE`). `ci-local-plan.test.ts` fails while they disagree; bump them together, with the Docker image (`infra/docker/Dockerfile`) and the Droplet script (`infra/droplet/setup-droplet.sh`). History: on 24.20.0 the garbage collector intermittently crashed Node (`SIGSEGV` in V8's `ClearStaleLeftTrimmedPointerVisitor`, reading a garbage pointer while walking a stack frame): one cold mobile Jest run in six lost a worker that way, and three more crash reports showed the same stack. 24.22.0 backports V8 `0b94a9fd23ba`, which fixes a builtin that left exactly such a value on the stack for the GC to find; on 24.22.1, 12 cold runs out of 12 passed with no crash. |
 | pnpm | `packageManager` in the root `package.json`, read by `pnpm/action-setup`. |
-| PostgreSQL | `postgres:18.6` — keep `ci.yml` and `compose.yml` on the same tag. |
+| PostgreSQL | `postgres:18.7` — keep `ci.yml` and `compose.yml` on the same tag. |
 
 ## Planned stages (not in CI yet)
 

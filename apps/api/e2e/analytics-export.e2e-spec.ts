@@ -10,13 +10,14 @@ import { z } from "zod";
 import { LIST_SLOT_INDEX, ANALYTICS_EXPORT_CONTENT_TYPES, ANALYTICS_EXPORT_RATE_LIMIT, API_VERSION_PREFIX, ApiErrorResponseSchema, JsonValueSchema } from "@workspace/shared";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
 import { REPORT_FONT_FAMILIES } from "../src/contexts/reporting/infrastructure/report/fonts/report-fonts";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { createE2eApp, grantSeedUsersFullSession, grantTenantPermission, login, revokeTenantGrant, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { pdfTextRuns } from "./support/report-files";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;

@@ -22,7 +22,7 @@ import { RequestContextService } from "../src/platform/infrastructure/context/re
  * key is simply acquired afresh.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 /** Comfortably past the grace period, so test clock drift cannot matter. */
 const LONG_AGO_MS: number = IDEMPOTENCY_PURGE_GRACE_MS * 2;
 const ONE_MINUTE_MS = 60_000;

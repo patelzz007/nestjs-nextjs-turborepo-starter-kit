@@ -2,11 +2,12 @@ import { Pool } from "pg";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { AuthorizationKernelService } from "../src/contexts/authorization/infrastructure/kernel/authorization-kernel.service";
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { createE2eApp } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 async function idFor(pool: Pool, sql: string, value: string): Promise<string> {
 	const result = await pool.query<{ id: string }>(sql, [value]);

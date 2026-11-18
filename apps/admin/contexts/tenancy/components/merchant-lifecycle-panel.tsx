@@ -1,9 +1,10 @@
 "use client";
 
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { Can } from "@workspace/client/lib/contexts/authorization";
+import { Can, useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import {
+	abilityAllowsCapability,
 	PERMISSION,
 	TENANT_LIFECYCLE,
 	TENANT_LIFECYCLE_TEXT_MAX_LENGTH,
@@ -112,7 +113,7 @@ function AppealRow({ tenantId, appeal }: AppealRowProps): React.JSX.Element {
 				</p>
 			) : null}
 			{appeal.status === "PENDING" ? (
-				<Can permission={PERMISSION.MERCHANT_ORG.REJECT}>
+				<Can I="REJECT" a="MERCHANT_ORG">
 					<div className="space-y-2">
 						<Label htmlFor={`appeal-note-${appeal.id}`}>Rejection note</Label>
 						<Textarea id={`appeal-note-${appeal.id}`} value={note} onChange={handleNoteChange} maxLength={TENANT_LIFECYCLE_TEXT_MAX_LENGTH} />
@@ -199,6 +200,7 @@ export const MerchantLifecyclePanel = React.forwardRef<HTMLDivElement, MerchantL
 	const action = lifecycleActionFor(lifecycle.lifecycleState);
 	const banAction = banActionFor(lifecycle.lifecycleState);
 	const { isSuperAdmin } = useSuperAdminStatus();
+	const ability = useAbility();
 
 	const refresh = React.useCallback(
 		async (title: string): Promise<void> => {
@@ -271,16 +273,14 @@ export const MerchantLifecyclePanel = React.forwardRef<HTMLDivElement, MerchantL
 						<p className="text-sm text-muted-foreground">The owner can cancel the deletion until {formatDateTime(lifecycle.deletionGraceEndsAt)}.</p>
 					) : null}
 
-					{action !== null ? (
-						<Can permission={ACTION_PERMISSION[action]}>
-							<div className="space-y-2">
-								<Label htmlFor="merchant-lifecycle-reason">{ACTION_COPY[action].field}</Label>
-								<Textarea id="merchant-lifecycle-reason" value={reason} onChange={handleReasonChange} maxLength={TENANT_LIFECYCLE_TEXT_MAX_LENGTH} />
-								<Button type="button" variant={action === "suspend" ? "destructive" : "default"} onClick={handleAction} disabled={isPending || reason.trim().length === 0}>
-									{ACTION_COPY[action].label}
-								</Button>
-							</div>
-						</Can>
+					{action !== null && abilityAllowsCapability(ability, ACTION_PERMISSION[action]) ? (
+						<div className="space-y-2">
+							<Label htmlFor="merchant-lifecycle-reason">{ACTION_COPY[action].field}</Label>
+							<Textarea id="merchant-lifecycle-reason" value={reason} onChange={handleReasonChange} maxLength={TENANT_LIFECYCLE_TEXT_MAX_LENGTH} />
+							<Button type="button" variant={action === "suspend" ? "destructive" : "default"} onClick={handleAction} disabled={isPending || reason.trim().length === 0}>
+								{ACTION_COPY[action].label}
+							</Button>
+						</div>
 					) : null}
 
 					{banAction !== null && isSuperAdmin ? <MerchantBanSection key={banAction} tenantId={lifecycle.tenantId} action={banAction} onDone={refresh} /> : null}

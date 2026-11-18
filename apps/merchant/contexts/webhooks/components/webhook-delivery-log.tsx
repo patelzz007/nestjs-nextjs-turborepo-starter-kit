@@ -31,13 +31,13 @@ interface DeliveryRowProps {
 	readonly delivery: WebhookDeliverySummary;
 	readonly showEndpoint: boolean;
 	readonly isRedelivering: boolean;
-	readonly onRedeliver: (delivery: WebhookDeliverySummary) => void;
+	readonly onRedeliver: ((delivery: WebhookDeliverySummary) => void) | null;
 }
 
 function DeliveryRow({ delivery, showEndpoint, isRedelivering, onRedeliver }: DeliveryRowProps): React.JSX.Element {
 	const status = DELIVERY_STATUS_PRESENTATION[delivery.status];
 	const handleRedeliver = React.useCallback((): void => {
-		onRedeliver(delivery);
+		onRedeliver?.(delivery);
 	}, [delivery, onRedeliver]);
 	return (
 		<li className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3">
@@ -60,7 +60,7 @@ function DeliveryRow({ delivery, showEndpoint, isRedelivering, onRedeliver }: De
 			</div>
 			<div className="flex items-center gap-3">
 				<RelativeTime className="text-xs text-muted-foreground" epochMs={delivery.createdAt} region={PLATFORM_DISPLAY_REGION} />
-				{canRedeliver(delivery.status) ? (
+				{canRedeliver(delivery.status) && onRedeliver !== null ? (
 					<Button variant="outline" size="sm" onClick={handleRedeliver} disabled={isRedelivering} aria-label={`Send ${delivery.eventType} again`}>
 						<RotateCw className="size-3.5" aria-hidden="true" />
 						{isRedelivering ? "Sending…" : "Send again"}
@@ -79,7 +79,8 @@ export interface WebhookDeliveryLogProps {
 	/** Whether each row names its endpoint (the tenant-wide log does; one endpoint's log does not). */
 	readonly showEndpoint: boolean;
 	readonly redeliveringId: string | null;
-	readonly onRedeliver: (delivery: WebhookDeliverySummary) => void;
+	/** Sends a delivery again; null hides "Send again" (no webhook.update). */
+	readonly onRedeliver: ((delivery: WebhookDeliverySummary) => void) | null;
 	/** An error from the last "Send again", shown above the list. */
 	readonly redeliverError: string | null;
 }

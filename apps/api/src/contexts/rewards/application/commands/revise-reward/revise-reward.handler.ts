@@ -33,7 +33,17 @@ export class ReviseRewardHandler implements ICommandHandler<ReviseRewardCommand,
 
 	public async execute(command: ReviseRewardCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		// Decided for THIS reward (ADR 067): reward.update, or an EDIT share of it.
+		const grant = await this.merchantAccess.assertCapability(actor, {
+			tenantId: input.tenantId,
+			capability: MERCHANT_CAPABILITY.manageRewards,
+			target: { resource: "REWARD", resourceId: input.rewardId },
+		});
+		// Its audience (the tenant's customer list) and images (the tenant's files) are tenant data a share does not
+		// reach: changing them needs reward.update itself.
+		if (input.audienceType !== undefined || input.imageFileIds !== undefined) {
+			await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		}
 		await assertMinimumTierAvailable(this.tiers, input.minimumTier);
 
 		// The merchant's name and logo after the commit (a read of its own: not inside this transaction).

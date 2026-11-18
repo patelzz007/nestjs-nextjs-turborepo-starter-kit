@@ -20,7 +20,7 @@ export class GetPosSettingsHandler implements IQueryHandler<GetPosSettingsQuery,
 
 	public async execute(query: GetPosSettingsQuery): Promise<MerchantTerminalSettings> {
 		const { actor, input } = query;
-		await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys });
+		await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.viewApiKeys });
 		const tenant = actingInTenant(actor, input.tenantId);
 		const requireRegisteredTerminals = await this.uow.run(tenant, async (scope: PosScope) => scope.posSettings.requireRegisteredTerminals(input.tenantId));
 		return { requireRegisteredTerminals: requireRegisteredTerminals ?? false };

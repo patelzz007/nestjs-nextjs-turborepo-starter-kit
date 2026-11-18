@@ -6,7 +6,7 @@ import { Can } from "@workspace/client/lib/contexts/authorization";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { formatRewardOffer, rewardTypeLabel } from "@workspace/client/lib/contexts/rewards/reward-offer";
-import { PERMISSION, type Envelope, type RewardResponse } from "@workspace/shared";
+import type { Envelope, RewardResponse } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
@@ -215,7 +215,7 @@ export default function RewardReviewDetailView({ rewardId, initialReward }: Rewa
 							<Check className="size-4" aria-hidden="true" />
 							Approve
 						</Button>
-						<Can permission={PERMISSION.REWARD.REJECT}>
+						<Can I="REJECT" a="REWARD">
 							<Button type="button" variant="outline" disabled={isBusy} onClick={handleOpenReject}>
 								<X className="size-4" aria-hidden="true" />
 								Reject

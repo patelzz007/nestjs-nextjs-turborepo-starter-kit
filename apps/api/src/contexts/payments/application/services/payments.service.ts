@@ -166,13 +166,13 @@ export class PaymentsService {
 	}
 
 	public async list(actor: ActorContext, tenantId: string, query: PaymentIntentListQuery): Promise<PaginatedServiceResult<PaymentIntentResponse>> {
-		await this.deps.merchantAccess.assertCapability(actor, { tenantId, capability: MERCHANT_CAPABILITY.managePayments });
+		await this.deps.merchantAccess.assertCapability(actor, { tenantId, capability: MERCHANT_CAPABILITY.viewPayments });
 		const page = await this.deps.uow.run(actor, (scope: PaymentsScope) => scope.payments.list(tenantId, query));
 		return { ...page, items: page.items.map(toPaymentIntentResponse) };
 	}
 
 	public async get(actor: ActorContext, tenantId: string, paymentId: string): Promise<PaymentIntentResponse> {
-		await this.deps.merchantAccess.assertCapability(actor, { tenantId, capability: MERCHANT_CAPABILITY.managePayments });
+		await this.deps.merchantAccess.assertCapability(actor, { tenantId, capability: MERCHANT_CAPABILITY.viewPayments });
 		return this.deps.uow.run(actor, async (scope: PaymentsScope): Promise<PaymentIntentResponse> =>
 			toPaymentIntentResponse(await this.requireIntent(scope, tenantId, paymentId)),
 		);
@@ -180,7 +180,7 @@ export class PaymentsService {
 
 	/** Refunds a paid payment through its gateway (CHIP); Billplz refunds only in its dashboard. */
 	public async refund(actor: ActorContext, tenantId: string, paymentId: string): Promise<PaymentRefundResponse> {
-		await this.deps.merchantAccess.assertCapability(actor, { tenantId, capability: MERCHANT_CAPABILITY.managePayments });
+		await this.deps.merchantAccess.assertCapability(actor, { tenantId, capability: MERCHANT_CAPABILITY.refundPayments });
 		const intent = await this.deps.uow.runSystemOperation(PAYMENT_REFUND_OPERATION, actor, (scope: PaymentsScope) => this.requireIntent(scope, tenantId, paymentId));
 		intent.assertRefundable();
 		const { provider, providerPaymentId, amountMinor } = intent.snapshot;

@@ -31,7 +31,7 @@ export function WebhookEndpointEditView(props: WebhookEndpointEditViewProps): Re
 		<MerchantCapabilityGate
 			capability={MERCHANT_CAPABILITY.manageWebhooks}
 			loading={<Skeleton className="h-96 rounded-xl" />}
-			fallback={<MerchantAccessDenied title="Webhook access required" description="Only members allowed to manage webhooks (owners, by default) can change endpoints." />}>
+			fallback={<MerchantAccessDenied title="Webhook access required" description="Only members allowed to change webhooks (owners, by default) can change endpoints." />}>
 			<WebhookEndpointEditLoader {...props} />
 		</MerchantCapabilityGate>
 	);

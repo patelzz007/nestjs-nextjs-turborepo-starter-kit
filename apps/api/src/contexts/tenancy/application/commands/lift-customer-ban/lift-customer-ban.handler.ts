@@ -29,7 +29,7 @@ export class LiftCustomerBanHandler implements ICommandHandler<LiftCustomerBanCo
 		const { actor, input } = command;
 		const staff = requireUserActor(actor);
 		const member = await this.directory.resolveMember(actor, input.tenantSlug);
-		await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		await this.merchantAccess.assertCapability(actor, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.liftCustomerBans });
 
 		await this.uow.runSystemOperation(TENANT_CUSTOMER_BAN_LIFT_OPERATION, actor, async (scope): Promise<void> => {
 			const ban = await scope.customerBans.findActiveForUpdate(member.tenantId, input.banId);

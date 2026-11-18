@@ -87343,6 +87343,21 @@
                             "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
+                          },
+                          "viewerCapabilities": {
+                            "properties": {
+                              "publish": {
+                                "type": "boolean"
+                              },
+                              "update": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "update",
+                              "publish"
+                            ],
+                            "type": "object"
                           }
                         },
                         "required": [
@@ -87841,6 +87856,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -88291,6 +88321,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -88956,6 +89001,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -131171,6 +131231,21 @@
                             "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
+                          },
+                          "viewerCapabilities": {
+                            "properties": {
+                              "publish": {
+                                "type": "boolean"
+                              },
+                              "update": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "update",
+                              "publish"
+                            ],
+                            "type": "object"
                           }
                         },
                         "required": [
@@ -131844,6 +131919,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -132410,6 +132500,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -132992,6 +133097,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -133442,6 +133562,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -142859,6 +142994,21 @@
                             "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
+                          },
+                          "viewerCapabilities": {
+                            "properties": {
+                              "publish": {
+                                "type": "boolean"
+                              },
+                              "update": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "update",
+                              "publish"
+                            ],
+                            "type": "object"
                           }
                         },
                         "required": [
@@ -143355,6 +143505,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -147033,7 +147198,30 @@
                                 "merchant:manage_broadcasts",
                                 "merchant:publish_broadcasts",
                                 "merchant:manage_payments",
-                                "merchant:manage_webhooks"
+                                "merchant:manage_webhooks",
+                                "merchant:create_rewards",
+                                "merchant:publish_rewards",
+                                "merchant:view_api_keys",
+                                "merchant:revoke_api_keys",
+                                "merchant:view_terminals",
+                                "merchant:manage_terminals",
+                                "merchant:remove_terminals",
+                                "merchant:view_team",
+                                "merchant:invite_members",
+                                "merchant:revoke_invites",
+                                "merchant:approve_access_requests",
+                                "merchant:reject_access_requests",
+                                "merchant:view_verification",
+                                "merchant:view_payments",
+                                "merchant:refund_payments",
+                                "merchant:view_webhooks",
+                                "merchant:create_webhooks",
+                                "merchant:delete_webhooks",
+                                "merchant:view_broadcasts",
+                                "merchant:create_broadcasts",
+                                "merchant:view_customer_bans",
+                                "merchant:ban_customers",
+                                "merchant:lift_customer_bans"
                               ],
                               "type": "string"
                             },
@@ -166270,6 +166458,21 @@
                             "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
+                          },
+                          "viewerCapabilities": {
+                            "properties": {
+                              "publish": {
+                                "type": "boolean"
+                              },
+                              "update": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "update",
+                              "publish"
+                            ],
+                            "type": "object"
                           }
                         },
                         "required": [
@@ -166964,6 +167167,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -167876,6 +168094,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -168478,6 +168711,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -169145,6 +169393,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -169615,6 +169878,21 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "viewerCapabilities": {
+                          "properties": {
+                            "publish": {
+                              "type": "boolean"
+                            },
+                            "update": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "update",
+                            "publish"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [

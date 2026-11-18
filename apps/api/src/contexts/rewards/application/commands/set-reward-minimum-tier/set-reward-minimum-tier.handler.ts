@@ -30,7 +30,12 @@ export class SetRewardMinimumTierHandler implements ICommandHandler<SetRewardMin
 
 	public async execute(command: SetRewardMinimumTierCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
-		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
+		// Decided for THIS reward (ADR 067): reward.update, or an EDIT share of it.
+		const grant = await this.merchantAccess.assertCapability(actor, {
+			tenantId: input.tenantId,
+			capability: MERCHANT_CAPABILITY.manageRewards,
+			target: { resource: "REWARD", resourceId: input.rewardId },
+		});
 		await assertMinimumTierAvailable(this.tiers, input.minimumTier);
 
 		// The merchant's name and logo after the commit (a read of its own: not inside this transaction).

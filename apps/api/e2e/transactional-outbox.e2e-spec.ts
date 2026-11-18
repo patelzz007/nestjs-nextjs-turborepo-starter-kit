@@ -23,7 +23,7 @@ import { TypedConfigService } from "../src/config/typed-config.service";
  * same RLS sessions production uses.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const CLAIM_LEASE_MS = 60_000;
 /** Test rows claimed by the dispatcher test sort ahead of any real backlog. */
 const ANCIENT_CREATED_AT_MS = 1;

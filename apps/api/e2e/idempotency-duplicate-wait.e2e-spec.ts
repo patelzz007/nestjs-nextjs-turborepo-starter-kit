@@ -25,7 +25,7 @@ import { TenantTransactionService } from "../src/prisma/tenant-transaction.servi
  * executes itself if the original failed — and gives up with 409 after 5 s.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 /** Long enough for every duplicate to reach its lock wait in Postgres. */
 const SETTLE_MS = 500;
 /** A wait well inside the 5 s cap, during which a polling waiter would have read the record many times. */

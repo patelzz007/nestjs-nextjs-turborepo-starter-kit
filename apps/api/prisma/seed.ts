@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { getApiConfig } from "../src/config/api-config";
 import { prisma } from "./seed/client";
 import { SEED_SCENARIO_RUNNERS } from "./seed/scenarios";
 import { formatSeedUsage, parseSeedArguments, SeedArgumentError, type SeedCommand } from "./seed/seed-options";
@@ -44,7 +45,8 @@ async function run(): Promise<void> {
 	}
 
 	try {
-		assertSeedAllowed(process.env, command.allowDestructive);
+		const config = getApiConfig();
+		assertSeedAllowed({ NODE_ENV: config.runtime.nodeEnv, DATABASE_URL: config.database.url }, command.allowDestructive);
 		seedLog(`🌱 Starting seed (scenario: ${command.scenario}, seed: ${String(command.seed)})...\n`);
 		await SEED_SCENARIO_RUNNERS[command.scenario](command);
 	} catch (error) {

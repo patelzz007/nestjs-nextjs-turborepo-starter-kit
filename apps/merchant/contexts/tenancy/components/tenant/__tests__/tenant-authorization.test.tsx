@@ -182,11 +182,11 @@ describe("TenantDashboardPageView authorization", () => {
 		expect(screen.queryByText("Business verification")).toBeNull();
 	});
 
-	it("shows admins the team shortcut but not business verification", () => {
+	it("shows admins the team and business verification shortcuts (verification to read)", () => {
 		renderAs(<TenantDashboardPageView tenantSlug={TEST_ORG_SLUG} context={null} />, "MANAGER");
 
 		expect(screen.getByText("Team & access")).toBeTruthy();
-		expect(screen.queryByText("Business verification")).toBeNull();
+		expect(screen.getByText("Business verification")).toBeTruthy();
 	});
 
 	it("hides operations shortcuts from members without merchant capabilities", () => {

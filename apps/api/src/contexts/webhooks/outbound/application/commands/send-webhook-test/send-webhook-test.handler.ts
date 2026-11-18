@@ -34,7 +34,7 @@ export class SendWebhookTestHandler implements ICommandHandler<SendWebhookTestCo
 
 	public async execute(command: SendWebhookTestCommand): Promise<WebhookDeliverySummary> {
 		const { input } = command;
-		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId, "manage");
 		const now = epochMs(this.clock.now());
 		const deliveryId = this.ids.next();
 		await this.uow.run(member.actor, async (scope: WebhooksScope): Promise<void> => {

@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { CryptoService } from "../src/contexts/identity/infrastructure/security/crypto.service";
 import { TokenService } from "../src/contexts/identity/infrastructure/security/token.service";
 import { createE2eApp, login, mutationHeaders, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
@@ -16,7 +17,7 @@ import { createE2eApp, login, mutationHeaders, uniqueClientIp, type InjectRespon
  * the stable error CODE, never the human-readable message.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const SUPER_ADMIN_EMAIL = "superadmin@example.com";
 const SUPER_ADMIN_PASSWORD = "SuperAdmin@123";
 const INITIAL_PASSWORD = "FlowTrack@123";

@@ -20,7 +20,7 @@ import { TenantTransactionService } from "../src/prisma/tenant-transaction.servi
  * can neither store its response nor release its successor's lease.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 interface StoredRow {
 	readonly leaseToken: string;

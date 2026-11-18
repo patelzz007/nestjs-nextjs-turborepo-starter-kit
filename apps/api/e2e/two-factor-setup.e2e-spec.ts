@@ -3,9 +3,10 @@ import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX, ApiErrorResponseSchema, BACKUP_CODE_COUNT, TwoFactorSetupResponseSchema } from "@workspace/shared";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type LoginResult } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const SETUP_URL = `${API_VERSION_PREFIX}/auth/2fa/setup`;
 const USER_EMAIL = "user@example.com";
 const HTTP_CREATED = 201;

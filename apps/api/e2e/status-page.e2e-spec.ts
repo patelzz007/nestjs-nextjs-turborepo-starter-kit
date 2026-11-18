@@ -4,6 +4,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, grantSeedUsersFullSession, login, mutationHeaders, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 const WAIT = { timeout: 20_000, interval: 100 };
@@ -45,7 +46,7 @@ describe("Public status page and its incidents (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		await grantSeedUsersFullSession(pool, ["superadmin@example.com", "alice.johnson@example.com"]);
 		superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123", "admin");
 		customer = await login(app, "alice.johnson@example.com", "Alice@123");

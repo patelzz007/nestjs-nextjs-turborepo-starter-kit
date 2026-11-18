@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { epochMs } from "@workspace/shared";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
+import { epochMs, PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,7 +18,6 @@ const { overviewQuery, overridesQuery, liftMutate, removeMutate, setMutate, gran
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => ({ ...(await importOriginal<object>()), useQueryClient: (): object => ({ invalidateQueries: vi.fn() }) }));
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({ useAuthorization: (): object => ({ can: (): boolean => granted.value }) }));
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
@@ -31,6 +31,20 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 		},
 	}),
 }));
+
+/** The permission the page checks (UPDATE RATE_LIMIT), held while `granted.value` is true. */
+const RATE_LIMIT_GRANTS: readonly CapabilitySlug[] = [PERMISSION.RATE_LIMIT.UPDATE];
+const NO_GRANTS: readonly CapabilitySlug[] = [];
+
+function Providers({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+	return (
+		<UiKitTestProviders>
+			<SessionAbilityProvider capabilities={granted.value ? RATE_LIMIT_GRANTS : NO_GRANTS} namespace="platform">
+				{children}
+			</SessionAbilityProvider>
+		</UiKitTestProviders>
+	);
+}
 
 const TENANT = "0193f2c4-0000-7000-8000-0000000000c1";
 const DRAFT: OverrideDraft = {
@@ -112,7 +126,7 @@ describe("toOverrideInput", () => {
 
 describe("RateLimitsView", () => {
 	it("lists the policies, who is refused most, exemptions and overrides", () => {
-		render(<RateLimitsView />, { wrapper: UiKitTestProviders });
+		render(<RateLimitsView />, { wrapper: Providers });
 
 		expect(screen.getByText("auth")).toBeTruthy();
 		expect(screen.getByText("203.0.113.•")).toBeTruthy();
@@ -122,7 +136,7 @@ describe("RateLimitsView", () => {
 	});
 
 	it("lifts a penalty and removes an override", () => {
-		render(<RateLimitsView />, { wrapper: UiKitTestProviders });
+		render(<RateLimitsView />, { wrapper: Providers });
 		act((): void => {
 			fireEvent.click(screen.getByRole("button", { name: "Lift penalty" }));
 			fireEvent.click(screen.getByRole("button", { name: "Remove" }));
@@ -134,14 +148,14 @@ describe("RateLimitsView", () => {
 
 	it("only shows changes to staff who may make them", () => {
 		granted.value = false;
-		render(<RateLimitsView />, { wrapper: UiKitTestProviders });
+		render(<RateLimitsView />, { wrapper: Providers });
 
 		expect(screen.queryByRole("button", { name: "Lift penalty" })).toBeNull();
 		expect(screen.queryByRole("form", { name: "Set an override" })).toBeNull();
 	});
 
 	it("explains a bad override instead of saving it", () => {
-		render(<RateLimitsView />, { wrapper: UiKitTestProviders });
+		render(<RateLimitsView />, { wrapper: Providers });
 		act((): void => {
 			fireEvent.click(screen.getByRole("button", { name: "Save override" }));
 		});

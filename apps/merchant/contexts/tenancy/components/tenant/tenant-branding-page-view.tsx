@@ -6,12 +6,12 @@ import { StoreLogoSkeleton, MERCHANT_BRANDING_LOADING_LABELS } from "@/component
 import { SettingsSectionHeader } from "@workspace/ui/components/settings-shell";
 import { STORE_LOGO_FILE_RULES, STORE_LOGO_HINT, STORE_LOGO_IMAGE_RULES, useRemoveStoreLogo, useUploadStoreLogo } from "@/contexts/tenancy/lib/tenant/use-store-logo";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
 import ImageCropDialogClientOnly from "@workspace/client/lib/storage/image-crop-dialog.client-only";
 import { ImageSlotField, type ImageSlotFieldLabels } from "@workspace/client/lib/storage/image-slot-field";
 import { useImagePick } from "@workspace/client/lib/storage/use-image-pick";
-import { MERCHANT_CAPABILITY, type TenantContextSummaryResponse } from "@workspace/shared";
+import type { TenantContextSummaryResponse } from "@workspace/shared";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
@@ -125,8 +125,8 @@ export interface TenantBrandingPageViewProps {
  */
 export function TenantBrandingPageView({ tenantSlug }: TenantBrandingPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
-	const canManage = can(MERCHANT_CAPABILITY.manageLocations);
+	const ability = useAbility();
+	const canManage = ability.can("UPDATE", "LOCATION");
 	const { isLoading: isAuthorizationLoading } = useMerchantAuthorizationStatus();
 	const contextQuery = api.tenants.context.useQuery({ tenantSlug });
 	const tenant = contextQuery.data?.data.tenant;

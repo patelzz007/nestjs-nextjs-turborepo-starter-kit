@@ -4,7 +4,7 @@ import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { Can } from "@workspace/client/lib/contexts/authorization";
-import { AdminLocationRequestResponseSchema, PERMISSION, type AdminLocationRequestResponse, type AdminLocationReviewInput, type Envelope } from "@workspace/shared";
+import { AdminLocationRequestResponseSchema, type AdminLocationRequestResponse, type AdminLocationReviewInput, type Envelope } from "@workspace/shared";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
 import { STORE_REQUEST_QUEUE_LOADING_LABELS } from "@/components/loading/loading-labels";
@@ -188,10 +188,14 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 								</div>
 
 								{/* `PATCH /admin/merchants/:id/locations/:locationId/review` requires APPROVE on MERCHANT_ORG. */}
-								<Can
-									permission={PERMISSION.MERCHANT_ORG.APPROVE}
-									fallback={<AccessRestrictedNotice description="Approving or rejecting store requests requires the merchant tenant manage permission." />}>
-									<StoreRequestReviewForm key={selectedRequest.id} isPending={reviewMutation.isPending} onReview={handleReview} />
+								<Can I="APPROVE" a="MERCHANT_ORG" passThrough>
+									{({ isAllowed }): React.ReactNode =>
+										isAllowed ? (
+											<StoreRequestReviewForm key={selectedRequest.id} isPending={reviewMutation.isPending} onReview={handleReview} />
+										) : (
+											<AccessRestrictedNotice description="Approving or rejecting store requests requires the merchant tenant manage permission." />
+										)
+									}
 								</Can>
 							</>
 						)}

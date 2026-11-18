@@ -4,8 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
+import { getApiConfig } from "../src/config/api-config";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 interface RlsSessionInput {
 	readonly userId: string;
@@ -80,17 +81,28 @@ describe("RLS hardening (integration)", () => {
 		});
 	});
 
-	it("restricts MLK cashier (SELECTED branch) to Beruang terminals only", async () => {
+	// Terminals need terminal.read (or api_key.create, which the terminal routes check) at the terminal's store; the
+	// Cashier template holds neither, so a cashier reads no terminal — not even at their own store (ADR 089 tightening).
+	it("shows the MLK cashier (SELECTED branch) no terminal, at their branch or another", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkCashierUser, tenantId: TENANT_SEED_IDS.mlkTenant, bypass: false }, async (client) => {
 			const beruang = await client.query(`SELECT "terminalId" FROM public."TenantTerminal" WHERE "terminalId" = $1`, ["MLK-BERUANG-01"]);
 			const katil = await client.query(`SELECT "terminalId" FROM public."TenantTerminal" WHERE "terminalId" = $1`, ["MLK-KATIL-01"]);
-			expect(beruang.rowCount).toBe(1);
+			expect(beruang.rowCount).toBe(0);
 			expect(katil.rowCount).toBe(0);
 		});
 	});
 
-	it("allows KL cashier (SELECTED KL location) to read KL terminals only", async () => {
+	it("shows the KL cashier no terminal of their tenant, and none of another tenant", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klCashierUser, tenantId: TENANT_SEED_IDS.klTenant, bypass: false }, async (client) => {
+			const kl = await client.query(`SELECT "terminalId" FROM public."TenantTerminal" WHERE "terminalId" = $1`, ["KL-REGISTER-01"]);
+			const mlk = await client.query(`SELECT "terminalId" FROM public."TenantTerminal" WHERE "terminalId" = $1`, ["MLK-BERUANG-01"]);
+			expect(kl.rowCount).toBe(0);
+			expect(mlk.rowCount).toBe(0);
+		});
+	});
+
+	it("shows the KL owner their own tenant's terminals and none of another tenant", async () => {
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klOwnerUser, tenantId: TENANT_SEED_IDS.klTenant, bypass: false }, async (client) => {
 			const kl = await client.query(`SELECT "terminalId" FROM public."TenantTerminal" WHERE "terminalId" = $1`, ["KL-REGISTER-01"]);
 			const mlk = await client.query(`SELECT "terminalId" FROM public."TenantTerminal" WHERE "terminalId" = $1`, ["MLK-BERUANG-01"]);
 			expect(kl.rowCount).toBe(1);

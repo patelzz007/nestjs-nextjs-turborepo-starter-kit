@@ -196,6 +196,9 @@ jobs:
         run: pnpm turbo run build --filter=@workspace/api^...
       - name: Check Prisma models ↔ RLS manifest ↔ RLS SQL
         run: pnpm --filter @workspace/api db:check-rls-manifest
+      # prisma/rls/*.sql is generated from prisma/security and committed: fail when it is stale.
+      - name: Check the generated security SQL is up to date
+        run: pnpm --filter @workspace/api db:check-security
 
   dependency-consistency:
     name: Dependency consistency
@@ -335,7 +338,7 @@ jobs:
     services:
       postgres:
         # Keep in step with compose.yml (local dev) — same major, same patch.
-        image: postgres:18.6
+        image: postgres:18.7
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -435,7 +438,7 @@ jobs:
     services:
       postgres:
         # Keep in step with compose.yml (local dev) — same major, same patch.
-        image: postgres:18.6
+        image: postgres:18.7
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -489,7 +492,7 @@ jobs:
     services:
       postgres:
         # Keep in step with compose.yml (local dev) — same major, same patch.
-        image: postgres:18.6
+        image: postgres:18.7
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -610,7 +613,7 @@ jobs:
     services:
       postgres:
         # Keep in step with compose.yml (local dev) — same major, same patch.
-        image: postgres:18.6
+        image: postgres:18.7
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

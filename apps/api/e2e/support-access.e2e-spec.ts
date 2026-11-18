@@ -7,6 +7,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { ApproveSupportAccessCommand } from "../src/contexts/authorization/application/commands/approve-support-access/approve-support-access.command";
 import { RequestSupportAccessCommand } from "../src/contexts/authorization/application/commands/request-support-access/request-support-access.command";
 import { RevokeSupportAccessCommand } from "../src/contexts/authorization/application/commands/revoke-support-access/revoke-support-access.command";
@@ -36,7 +37,7 @@ describe("Support access (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		superAdminId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = $1`, [SUPER_ADMIN_EMAIL])).rows.at(0)).id;
 		ownerId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = $1`, [OWNER_EMAIL])).rows.at(0)).id;
 		tenantId = MembershipRowSchema.parse(

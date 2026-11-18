@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
+import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +11,6 @@ import { CacheView, formatHitRatio, formatTtl } from "@/contexts/operations/comp
 const { cacheQuery, flushMutate } = vi.hoisted(() => ({ cacheQuery: vi.fn(), flushMutate: vi.fn() }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => ({ ...(await importOriginal<object>()), useQueryClient: (): object => ({ invalidateQueries: vi.fn() }) }));
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({ useAuthorization: (): object => ({ can: (): boolean => true }) }));
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: { operations: { cache: { useQuery: cacheQuery }, flushCache: { useMutation: (): object => ({ mutate: flushMutate, isPending: false }) } } },
@@ -17,6 +18,19 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 }));
 
 const MB = 1_048_576;
+
+/** The session may flush (DELETE CACHE) — the only permission the page checks. */
+const GRANTED: readonly CapabilitySlug[] = [PERMISSION.CACHE.DELETE];
+
+function Providers({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+	return (
+		<UiKitTestProviders>
+			<SessionAbilityProvider capabilities={GRANTED} namespace="platform">
+				{children}
+			</SessionAbilityProvider>
+		</UiKitTestProviders>
+	);
+}
 
 beforeEach((): void => {
 	cacheQuery.mockReturnValue({
@@ -65,7 +79,7 @@ describe("cache formatting", () => {
 
 describe("CacheView", () => {
 	it("shows each cache, Redis memory against its alert line, and an open circuit", () => {
-		render(<CacheView />, { wrapper: UiKitTestProviders });
+		render(<CacheView />, { wrapper: Providers });
 
 		expect(screen.getByText("reference-data")).toBeTruthy();
 		expect(screen.getByText("94%")).toBeTruthy();
@@ -75,7 +89,7 @@ describe("CacheView", () => {
 	});
 
 	it("flushes one cache with an audited reason", () => {
-		render(<CacheView />, { wrapper: UiKitTestProviders });
+		render(<CacheView />, { wrapper: Providers });
 		act((): void => {
 			fireEvent.click(screen.getByRole("button", { name: "Flush" }));
 		});
@@ -84,7 +98,7 @@ describe("CacheView", () => {
 	});
 
 	it("flushes a tenant only once its id and a reason are given", () => {
-		render(<CacheView />, { wrapper: UiKitTestProviders });
+		render(<CacheView />, { wrapper: Providers });
 		const button = screen.getByRole("button", { name: "Flush tenant" });
 		expect(button.hasAttribute("disabled")).toBe(true);
 

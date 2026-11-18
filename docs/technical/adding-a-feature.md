@@ -40,7 +40,9 @@ flowchart TD
 2. **Database** (`apps/api/prisma`)
    - Model in `schema.prisma` with `isDeleted` / `deletedAt` / `deletedBy`, epoch-ms timestamps,
      indexes for every filter and sort; `pnpm db:migrate:create --name <change>` ([Database](./database.md)).
-   - RLS: manifest entry in `prisma/rls/manifest-index.ts` and policies; `pnpm tools db:check-rls-manifest`.
+   - RLS: manifest entry in `prisma/security/manifest-index.ts` and policies in `prisma/security/table-policies.ts`
+     ([Adding a table](./database/adding-a-table.md)); `pnpm --filter @workspace/api db:security`, then
+     `pnpm tools db:check-rls-manifest`.
    - Seed rows for every new table and column (`db:check-seed-coverage` fails otherwise).
 3. **Authorization**
    - New permission(s) in `packages/shared/src/authorization/permission.ts` and the seed's permission

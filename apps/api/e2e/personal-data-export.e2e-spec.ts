@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, markSeedUserEmailVerified, uniqueClientIp, type LoginResult } from "./e2e-helpers";
 
 const EXPORT_URL = `${API_VERSION_PREFIX}/me/data-export`;
@@ -37,7 +38,7 @@ describe("Personal-data export (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		// A restricted session (email not verified) can't export: the export needs a fully verified sign-in.
 		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
 		alice = await login(app, "alice.johnson@example.com", "Alice@123");

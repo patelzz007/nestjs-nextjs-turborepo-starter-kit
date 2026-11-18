@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
+import { getApiConfig } from "../src/config/api-config";
 import { ApproveRewardCommand } from "../src/contexts/rewards/application/commands/approve-reward/approve-reward.command";
 import { AutoPublishDueRewardsCommand } from "../src/contexts/rewards/application/commands/auto-publish-due-rewards/auto-publish-due-rewards.command";
 import { RejectRewardCommand } from "../src/contexts/rewards/application/commands/reject-reward/reject-reward.command";
@@ -108,7 +109,7 @@ describe("Reward review races (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		reviewer = userActor(IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'superadmin@example.com'`)).rows.at(0)).id, true);
 		merchantUserId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 		owner = userActor(merchantUserId, false);

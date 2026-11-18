@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within, type RenderResult } from "@testing-library/react";
 import { ApiDownloadError, apiDownloads, type DownloadDef, type DownloadedFile } from "@workspace/client/lib/api/download";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION, type AdminRewardImagesArchivePathInput } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
@@ -170,9 +170,9 @@ function showReward(reward: RewardStub): void {
 function renderPage(): RenderResult {
 	return render(
 		<QueryClientProvider client={new QueryClient()}>
-			<CapabilitiesProvider capabilities={[PERMISSION.REWARD.APPROVE, PERMISSION.REWARD.REJECT]}>
+			<SessionAbilityProvider capabilities={[PERMISSION.REWARD.APPROVE, PERMISSION.REWARD.REJECT]} namespace="platform">
 				<RewardReviewDetailView rewardId={REWARD.id} />
-			</CapabilitiesProvider>
+			</SessionAbilityProvider>
 		</QueryClientProvider>,
 		{ wrapper: UiKitTestProviders },
 	);

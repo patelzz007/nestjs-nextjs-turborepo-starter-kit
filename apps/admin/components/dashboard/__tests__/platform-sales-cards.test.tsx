@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION, type AdminAnalyticsDashboard, type CapabilitySlug } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,9 +29,9 @@ function queryResult(overrides: Partial<DashboardQueryStub>): DashboardQueryStub
 
 function renderCards(capabilities: readonly CapabilitySlug[]): void {
 	render(
-		<CapabilitiesProvider capabilities={capabilities}>
+		<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 			<PlatformSalesCards />
-		</CapabilitiesProvider>,
+		</SessionAbilityProvider>,
 		{ wrapper: UiKitTestProviders },
 	);
 }

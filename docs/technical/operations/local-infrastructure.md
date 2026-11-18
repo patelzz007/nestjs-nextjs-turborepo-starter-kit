@@ -33,7 +33,7 @@ pnpm docker:down     # stop and remove containers (data volumes are kept)
 | `bull-board` | `venatum/bull-board:3.4.14` | `http://localhost:3030` | none | BullMQ dashboard |
 | `mailpit` | `axllent/mailpit:v1.31.3` | inbox + API `http://localhost:8025`, SMTP `localhost:1025` | none | local email (`EMAIL_PROVIDER=mailpit`, [Local email with Mailpit](../email/mailpit-local-inbox.md)) |
 
-**PostgreSQL is not started by default.** The `postgres` service (`postgres:18.6`, the same image
+**PostgreSQL is not started by default.** The `postgres` service (`postgres:18.7`, the same image
 CI uses) is commented out in `compose.yml`; use a native PostgreSQL 18 (Homebrew, apt, Postgres.app)
 or uncomment the service. Its defaults (`postgres` / `postgres`, database
 `nestjs-nextjs-turborepo-starter-kit`, port 5432) match `DATABASE_URL` in `apps/api/.env.example`.
@@ -72,9 +72,9 @@ pnpm db:seed                                 # development scenario — see Data
 ### Fresh clusters and the `app_runtime` role
 
 The API reaches tenant data through the `app_runtime` role (`SET ROLE`), which is subject to RLS.
-`pnpm tools db:apply-security` creates it in `prisma/rls/00-app-helpers.sql`, the first file it applies,
-so a brand-new cluster needs no manual bootstrap. The apply plan
-(`apps/api/prisma/rls/apply-plan.ts`) refuses to run if any file uses a role before the file that
+`pnpm tools db:apply-security` creates it in `prisma/rls/01-roles.sql` (generated from
+`prisma/security/roles.ts`), the first file it applies, so a brand-new cluster needs no manual
+bootstrap. The apply plan (`apps/api/prisma/security/apply-plan.ts`) refuses to run if any file uses a role before the file that
 creates it, so this can't regress unnoticed on long-lived dev clusters, where roles already exist
 cluster-wide.
 
@@ -128,7 +128,7 @@ exceptions behind Compose profiles:
 | --- | --- | --- |
 | 1 | **Fix the misplaced comment**: the Mailpit description sits above `load-runner` | Reads as if the load runner were the inbox |
 | 2 | **Drop every hard-coded `container_name`** and the fixed network name; Compose names them from the project name (`COMPOSE_PROJECT_NAME`, default `hello-world`), e.g. `hello-world-redis-1` | A fork and the starter kit can run side by side |
-| 3 | **`postgres` becomes a real service in the `db` profile** (`postgres:18.6`, as CI) | No commenting and uncommenting |
+| 3 | **`postgres` becomes a real service in the `db` profile** (`postgres:18.7`, as CI) | No commenting and uncommenting |
 | 4 | **Add `object-storage`: SeaweedFS** (`weed server -s3`) plus a one-shot `object-storage-init` container that creates the bucket and exits | Lets the S3 adapter (multipart, presigned URLs) run locally. MinIO Community Edition stopped publishing images in October 2025 and its repository has been archived since 2026 |
 | 5 | **Add the tool UIs**: Kafka UI and Redis Insight beside Bull Board | Inspect topics and keys without the CLI |
 | 6 | **Redis: explicit `maxmemory` and `maxmemory-policy noeviction`** (one Redis for queues and cache, [ADR 072](../../adr/072-distributed-cache.md)) | An evicted BullMQ key is a lost job; today Redis has no limit at all |

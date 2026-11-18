@@ -3,9 +3,10 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+import { getApiConfig } from "../../src/config/api-config";
 import { SEED_DEMO_DATASET_OPERATION } from "../../src/prisma/seed-demo-dataset.operation";
 import { DEFAULT_DATABASE_ROLE } from "../../src/prisma/system-operation.registry";
-import { ACTOR_SETTING, SEED_ACTOR } from "../rls/row-audit";
+import { ACTOR_SETTING, SEED_ACTOR } from "../security/row-audit";
 
 /**
  * The seed's `application_name`: the data-change trail (ADR 051) records it
@@ -24,7 +25,7 @@ export const SEED_RUN_CORRELATION_ID = `seed-run-${randomUUID()}`;
 /**
  * The session settings every seed connection starts with: its correlation id, its actor
  * (`app.actor = system:seed`, so the row audit triggers record every fixture row as created and
- * updated by the seed — prisma/rls/row-audit.ts), the role it acts as (`app_runtime`, reached with
+ * updated by the seed — prisma/security/row-audit.ts), the role it acts as (`app_runtime`, reached with
  * `SET ROLE` exactly as the API reaches it), and the named system operation it writes under
  * (`seed.demo_dataset`). Every table forces RLS, so the seed passes a policy only through that
  * operation's registry scope (D24) — never through table ownership or a superuser login.
@@ -40,7 +41,7 @@ export const SEED_SESSION_OPTIONS: string = [
 /** Shared PrismaClient for all seeders (disconnected by the orchestrator), on {@link SEED_SESSION_OPTIONS}. */
 export const prisma: PrismaClient = new PrismaClient({
 	adapter: new PrismaPg({
-		connectionString: process.env.DATABASE_URL,
+		connectionString: getApiConfig().database.url,
 		application_name: SEED_APPLICATION_NAME,
 		options: SEED_SESSION_OPTIONS,
 	}),

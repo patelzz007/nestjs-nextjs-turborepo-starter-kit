@@ -1,10 +1,10 @@
 "use client";
 
-import { MerchantAccessDenied, MerchantCapabilityGate } from "@/contexts/tenancy/components/access/merchant-capability-gate";
+import { MerchantAccessDenied } from "@/contexts/tenancy/components/access/merchant-capability-gate";
 import { tenantRoutes } from "@/lib/routes";
 import { readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { SettingsSectionHeader } from "@workspace/ui/components/settings-shell";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -31,51 +31,60 @@ export function describeTills(counts: { readonly total: number; readonly active:
 	return `${parts.join(" · ")} of ${String(counts.total)}`;
 }
 
-/** Integrations — tills and API keys at a glance (`merchant:manage_api_keys`), each managed on its own page. */
+/**
+ * Integrations — tills (`merchant:view_terminals`) and API keys (`merchant:view_api_keys`) at a glance, each managed
+ * on its own page. The page opens with either; each card shows only with its own capability.
+ */
 export function TenantIntegrationsView({ tenantSlug }: TenantIntegrationsViewProps): React.JSX.Element {
-	return (
-		<MerchantCapabilityGate
-			capability={MERCHANT_CAPABILITY.manageApiKeys}
-			fallback={
-				<div className="space-y-6">
-					<SettingsSectionHeader {...SECTION} />
-					<MerchantAccessDenied title="Integration access required" description="Your role can't connect tills or API keys. Contact your store owner if you need access." />
-				</div>
-			}>
-			<IntegrationsContent tenantSlug={tenantSlug} />
-		</MerchantCapabilityGate>
-	);
-}
-
-function IntegrationsContent({ tenantSlug }: TenantIntegrationsViewProps): React.JSX.Element {
-	const { api } = useAuth();
-	const routes = tenantRoutes(tenantSlug);
-	const tillsQuery = api.tenants.terminals.summary.useQuery({ tenantSlug });
-	// One row asked for: only the total (in `meta`) is shown.
-	const keysQuery = api.tenants.apiKeys.list.useQuery({ tenantSlug, page: 1, limit: 1 });
-	const tills = tillsQuery.data?.data;
-	const keyCount = readPaginatedTotal(keysQuery.data?.meta, 0);
-
+	const ability = useAbility();
+	const canViewTills = ability.can("READ", "TERMINAL");
+	const canViewKeys = ability.can("READ", "API_KEY");
+	if (!canViewTills && !canViewKeys) {
+		return (
+			<div className="space-y-6">
+				<SettingsSectionHeader {...SECTION} />
+				<MerchantAccessDenied title="Integration access required" description="Your role can't see tills or API keys. Contact your store owner if you need access." />
+			</div>
+		);
+	}
 	return (
 		<div className="space-y-6">
 			<SettingsSectionHeader {...SECTION} />
 			<div className="grid gap-4 md:grid-cols-2">
-				<IntegrationCard
-					icon={<MonitorSmartphone />}
-					title="Tills"
-					summary={tills === undefined ? null : describeTills({ total: tills.total, active: tills.byStatus.ACTIVE, awaitingPairing: tills.byStatus.AWAITING_PAIRING })}
-					href={routes.terminals}
-					actionLabel="Manage tills"
-				/>
-				<IntegrationCard
-					icon={<KeyRound />}
-					title="API keys"
-					summary={keysQuery.data === undefined ? null : keyCount === 1 ? "1 key in use" : `${String(keyCount)} keys in use`}
-					href={routes.apiKeys}
-					actionLabel="Manage API keys"
-				/>
+				{canViewTills ? <TillsCard tenantSlug={tenantSlug} /> : null}
+				{canViewKeys ? <ApiKeysCard tenantSlug={tenantSlug} /> : null}
 			</div>
 		</div>
+	);
+}
+
+function TillsCard({ tenantSlug }: TenantIntegrationsViewProps): React.JSX.Element {
+	const { api } = useAuth();
+	const tills = api.tenants.terminals.summary.useQuery({ tenantSlug }).data?.data;
+	return (
+		<IntegrationCard
+			icon={<MonitorSmartphone />}
+			title="Tills"
+			summary={tills === undefined ? null : describeTills({ total: tills.total, active: tills.byStatus.ACTIVE, awaitingPairing: tills.byStatus.AWAITING_PAIRING })}
+			href={tenantRoutes(tenantSlug).terminals}
+			actionLabel="Open tills"
+		/>
+	);
+}
+
+function ApiKeysCard({ tenantSlug }: TenantIntegrationsViewProps): React.JSX.Element {
+	const { api } = useAuth();
+	// One row asked for: only the total (in `meta`) is shown.
+	const keysQuery = api.tenants.apiKeys.list.useQuery({ tenantSlug, page: 1, limit: 1 });
+	const keyCount = readPaginatedTotal(keysQuery.data?.meta, 0);
+	return (
+		<IntegrationCard
+			icon={<KeyRound />}
+			title="API keys"
+			summary={keysQuery.data === undefined ? null : keyCount === 1 ? "1 key in use" : `${String(keyCount)} keys in use`}
+			href={tenantRoutes(tenantSlug).apiKeys}
+			actionLabel="Open API keys"
+		/>
 	);
 }
 

@@ -15,7 +15,8 @@ export interface MerchantProfileMenuAccess {
 	/** Enrollment is unfinished: only the personal account (where it is completed) is offered. */
 	readonly isEnrollmentLocked: boolean;
 	readonly canViewDashboard: boolean;
-	readonly canManageApiKeys: boolean;
+	/** The API keys page opens with api_key.read (`merchant:view_api_keys`). */
+	readonly canViewApiKeys: boolean;
 }
 
 /**
@@ -40,7 +41,7 @@ export function merchantProfileMenuItems(
 	if (access.canViewDashboard) {
 		items.push({ label: "Dashboard", icon: <LayoutDashboard className="size-4" aria-hidden="true" />, onClick: goTo(paths.dashboard) });
 	}
-	if (access.canManageApiKeys) {
+	if (access.canViewApiKeys) {
 		items.push({ label: "API keys", icon: <KeyRound className="size-4" aria-hidden="true" />, onClick: goTo(paths.apiKeys) });
 	}
 	items.push({ label: "Tenant settings", icon: <Settings className="size-4" aria-hidden="true" />, onClick: goTo(paths.settings) });

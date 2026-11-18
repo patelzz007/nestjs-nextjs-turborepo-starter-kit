@@ -2,10 +2,11 @@
 // scripts/db.ts — the database tooling, one command each (run through the `db:*` package scripts)
 // ============================================
 //   schema [--check]                    pnpm db:schema — write (or verify) the base model's managed blocks
-//   apply-security                      pnpm tools db:apply-security — RLS, grants, capture + audit triggers
+//   generate-security                   pnpm db:generate-security — write prisma/rls/*.sql from prisma/security
+//   check-security                      pnpm db:check-security — fail when the committed prisma/rls/*.sql is stale
+//   apply-security                      pnpm db:apply-security — apply the committed security SQL, capture + audit triggers
 //   check-rls-manifest                  pnpm tools db:check-rls-manifest — schema ⇄ manifest ⇄ RLS SQL drift
-//   generate-rls-policies               pnpm db:generate-rls-policies — render the standard policies SQL
-//   generate-system-operation-scopes    pnpm db:generate-system-operation-scopes — render the scopes SQL
+//   security-snapshot                   pnpm db:security-snapshot — what a fresh database enforces, as JSON
 //   check-drift                         pnpm db:check-drift — prisma/migrations reproduce schema.prisma
 //   check-seed-coverage                 pnpm db:check-seed-coverage — every table and column seeded
 //   provision-backup-login              pnpm db:provision-backup-login — the backup's own login (BACKUP_DATABASE_URL)
@@ -18,23 +19,30 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Prisma as PrismaNamespace } from "@prisma/client";
-import { PostgresUrlEnvSchema } from "@workspace/shared";
 import { Pool } from "pg";
-import { z } from "zod";
 
 import { applyBaseModel } from "../prisma/engine/schema-engine";
-import { buildRlsApplyPlan, stripSqlComments } from "../prisma/rls/apply-plan";
-import { applyRowLevelSecurity } from "../prisma/rls/apply";
+import { getApiConfig } from "../src/config/api-config";
+import { buildRlsApplyPlan, stripSqlComments } from "../prisma/security/apply-plan";
+import { applyRowLevelSecurity, getDatabaseUrl, policyDropsAllowed, runSqlScripts, type SqlScript } from "../prisma/security/apply";
+import { renderSecurityFiles, type GeneratedFile } from "../prisma/security/generator";
 import {
 	collectRlsEnabledTableNames,
 	computeRlsManifestDrift,
 	listAllManifestTables,
 	parsePrismaSchemaModels,
 	type RlsManifestDriftReport,
-} from "../prisma/rls/manifest-index";
-import { STANDARD_POLICIES_PATH, renderStandardPolicies } from "../prisma/rls/standard-policies";
-import { buildSystemOperationScopesSql, SYSTEM_OPERATION_SCOPES_SQL_PATH } from "../prisma/rls/system-operation-scopes";
-import { findHandWrittenAppRuntimeRevokes, findUnknownWithheldPrivilegeTables, listWithheldPrivileges } from "../prisma/rls/withheld-privileges";
+} from "../prisma/security/manifest-index";
+import { findStaleGeneratedFiles } from "../prisma/security/generated-files";
+import { explainTable } from "../prisma/security/explain";
+import { TABLE_POLICIES, type PolicyDeclaration } from "../prisma/security/table-policies";
+import {
+	APP_RUNTIME_WITHHELD_PRIVILEGES,
+	findHandWrittenAppRuntimeRevokes,
+	findUnknownWithheldPrivilegeTables,
+	listWithheldPrivileges,
+	type WithheldPrivilege,
+} from "../prisma/security/withheld-privileges";
 import { SEED_COVERAGE_EXEMPTIONS } from "../prisma/seed/coverage-exemptions";
 import { BackupLoginEnvSchema, backupLoginSql } from "./lib/backup-login";
 import { EXIT_FAILED, EXIT_OK, PROCESS_OUTPUT, runCli, type CliCommand } from "./lib/cli";
@@ -56,6 +64,22 @@ import {
 	type SeedCoverageSchema,
 } from "./lib/seed-coverage";
 import { BEGIN_READ_ONLY_AUDIT_SQL, parseSeedCoverageConnection, PgSeedCoverageCatalog } from "./lib/seed-coverage-catalog";
+import {
+	diffSnapshots,
+	formatDifferences,
+	normalizeSection,
+	parseSnapshot,
+	parseSnapshotOptions,
+	SecuritySnapshotSchema,
+	serializeSnapshot,
+	SNAPSHOT_QUERIES,
+	sqlFilesOfListing,
+	type SecuritySnapshot,
+	type SnapshotRow,
+	type SnapshotSection,
+} from "./lib/security-snapshot";
+import { benchmarkFixtureSql, formatBenchmark, overBudget, parseBenchmarkOptions, runBenchmark } from "./lib/rls-benchmark";
+import { startThrowawayPostgres, THROWAWAY_POSTGRES_IMAGE, type CommandResult } from "./lib/throwaway-postgres";
 
 const { out, err } = PROCESS_OUTPUT;
 
@@ -110,8 +134,25 @@ function schema(args: readonly string[]): number {
 
 // ── apply-security ────────────────────────────────────────────────────────
 
-async function applySecurity(): Promise<number> {
-	await applyRowLevelSecurity(out);
+async function applySecurity(args: readonly string[]): Promise<number> {
+	await applyRowLevelSecurity(out, getDatabaseUrl(), { allowPolicyDrops: policyDropsAllowed(args, getApiConfig().runtime.nodeEnv) });
+	return EXIT_OK;
+}
+
+// ── security-explain ──────────────────────────────────────────────────────
+
+function securityExplain(args: readonly string[]): number {
+	const [table] = args;
+	const policiesByTable = new Map<string, readonly PolicyDeclaration[]>(Object.entries(TABLE_POLICIES));
+	const withheldByTable = new Map<string, readonly WithheldPrivilege[] | undefined>(Object.entries(APP_RUNTIME_WITHHELD_PRIVILEGES));
+	const policies = table === undefined ? undefined : policiesByTable.get(table);
+	if (table === undefined || policies === undefined) {
+		err(`Usage: pnpm db:security-explain <Table>  (a Prisma model, for example Membership)${table === undefined ? "" : `. Unknown table: ${table}`}`);
+		return EXIT_FAILED;
+	}
+	for (const line of explainTable({ table, policies, withheld: withheldByTable.get(table) ?? [] })) {
+		out(line);
+	}
 	return EXIT_OK;
 }
 
@@ -139,7 +180,7 @@ function hasManifestIssues(report: RlsManifestDriftReport): boolean {
 	);
 }
 
-/** Fails when the Prisma models, the RLS manifest (prisma/rls/manifest-index.ts) and the RLS SQL disagree. */
+/** Fails when the Prisma models, the RLS manifest (prisma/security/manifest-index.ts) and the RLS SQL disagree. */
 function checkRlsManifest(): number {
 	// Fails fast on apply-order / helper-dependency drift before the table scan.
 	const applyPlan = buildRlsApplyPlan(apiDir);
@@ -166,7 +207,7 @@ function checkRlsManifest(): number {
 		formatSection("Models with tenant_id missing from manifest", report.tenantModelsMissingManifest),
 		formatSection("Location profile mismatches", report.locationProfileMismatch),
 		formatSection("Manifest tables not found in RLS SQL enable list", report.manifestNotInRlsSql),
-		formatSection("Withheld-privilege entries with no Prisma model (prisma/rls/withheld-privileges.ts)", unknownWithheldTables),
+		formatSection("Withheld-privilege entries with no Prisma model (prisma/security/withheld-privileges.ts)", unknownWithheldTables),
 		formatSection("Hand-written REVOKE … FROM app_runtime (undone by the blanket grant — declare the table in withheld-privileges.ts)", handWrittenRevokes),
 	]
 		.filter((section: string): boolean => section.length > 0)
@@ -175,27 +216,51 @@ function checkRlsManifest(): number {
 		out(body);
 	}
 	if (hasManifestIssues(report) || unknownWithheldTables.length > 0 || handWrittenRevokes.length > 0) {
-		err("RLS manifest drift detected — update manifest-index.ts and prisma/rls*.sql");
+		err("RLS manifest drift detected — update prisma/security (manifest-index.ts, table-policies.ts), then run db:security");
 		return EXIT_FAILED;
 	}
 	out("No RLS manifest drift detected.");
 	return EXIT_OK;
 }
 
-// ── generate-system-operation-scopes ──────────────────────────────────────
+// ── generate-security / check-security ────────────────────────────────────
 
-/** Renders prisma/rls/00-system-operation-scopes.sql from the registry; run after changing an operation's `scope`. */
-async function generateSystemOperationScopes(): Promise<number> {
+/**
+ * The security SQL the TypeScript in prisma/security renders now. The system-operation registry is loaded
+ * here, not at the top: it reads the generated Prisma client (`Prisma.ModelName`), which `db:schema` must
+ * run without.
+ */
+async function renderCurrentSecurityFiles(): Promise<GeneratedFile[]> {
 	const { SYSTEM_OPERATIONS } = await import("../src/prisma/system-operation.registry");
-	writeFileSync(resolve(apiDir, SYSTEM_OPERATION_SCOPES_SQL_PATH), buildSystemOperationScopesSql(SYSTEM_OPERATIONS, new Set(listAllManifestTables())));
-	out(`Wrote ${SYSTEM_OPERATION_SCOPES_SQL_PATH}`);
+	const knownTables = new Set(parsePrismaSchemaModels(readFileSync(schemaFile, "utf8")).map((model) => model.tableName));
+	return renderSecurityFiles({ operations: SYSTEM_OPERATIONS, knownTables });
+}
+
+/** The committed text of a generated file, or undefined when it does not exist yet. */
+function readCommitted(path: string): string | undefined {
+	const file = resolve(apiDir, path);
+	return existsSync(file) ? readFileSync(file, "utf8") : undefined;
+}
+
+/** Writes prisma/rls/*.sql from prisma/security; run after changing any of it, then commit both. */
+async function generateSecurity(): Promise<number> {
+	const files = await renderCurrentSecurityFiles();
+	const stale = new Set(findStaleGeneratedFiles(files, readCommitted));
+	for (const file of files) {
+		writeFileSync(resolve(apiDir, file.path), file.sql);
+		out(`${stale.has(file.path) ? "Wrote" : "Unchanged"} ${file.path}`);
+	}
 	return EXIT_OK;
 }
 
-/** Renders prisma/rls/97-standard-policies.sql from the table list; run after changing `table-policies.ts`. */
-function generateRlsPolicies(): number {
-	writeFileSync(resolve(apiDir, STANDARD_POLICIES_PATH), renderStandardPolicies());
-	out(`Wrote ${STANDARD_POLICIES_PATH}`);
+/** Fails when the committed prisma/rls/*.sql differs from what prisma/security renders (CI runs it; it writes nothing). */
+async function checkSecurity(): Promise<number> {
+	const stale = findStaleGeneratedFiles(await renderCurrentSecurityFiles(), readCommitted);
+	if (stale.length > 0) {
+		err(`Stale generated security SQL: ${stale.join(", ")}. Run \`pnpm --filter @workspace/api db:generate-security\` and commit the result.`);
+		return EXIT_FAILED;
+	}
+	out("The committed security SQL matches prisma/security.");
 	return EXIT_OK;
 }
 
@@ -236,8 +301,6 @@ function checkDrift(): number {
 
 // ── check-seed-coverage ───────────────────────────────────────────────────
 
-const SeedCoverageEnvSchema = z.object({ DATABASE_URL: PostgresUrlEnvSchema });
-
 async function auditSeedCoverage(databaseUrl: string, schemaTables: SeedCoverageSchema): Promise<SeedCoverageReport> {
 	const connection = parseSeedCoverageConnection(databaseUrl);
 	const pool = new Pool({ connectionString: connection.connectionString, max: 1 });
@@ -263,12 +326,7 @@ async function auditSeedCoverage(databaseUrl: string, schemaTables: SeedCoverage
  * READ ONLY transaction with `row_security = off`, so it never writes and never sees an RLS-filtered view.
  */
 async function checkSeedCoverage(): Promise<number> {
-	const env = SeedCoverageEnvSchema.safeParse(process.env);
-	if (!env.success) {
-		err(`Seed coverage check: DATABASE_URL is missing or invalid (${env.error.issues.map((issue): string => issue.message).join("; ")})`);
-		return EXIT_FAILED;
-	}
-	const report = await auditSeedCoverage(env.data.DATABASE_URL, {
+	const report = await auditSeedCoverage(getApiConfig().database.url, {
 		tables: schemaTablesFromDmmf((await loadPrisma()).dmmf.datamodel.models),
 		schemaFileModelNames: listSchemaFileModelNames(readFileSync(schemaFile, "utf8")),
 	});
@@ -281,6 +339,132 @@ async function checkSeedCoverage(): Promise<number> {
 	return EXIT_FAILED;
 }
 
+// ── security-snapshot ─────────────────────────────────────────────────────
+
+/** Runs a command to completion, capturing its output. */
+function captureCommand(command: string, args: readonly string[]): CommandResult {
+	const result = spawnSync(command, args, { cwd: apiDir, encoding: "utf8" });
+	return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+async function sleep(milliseconds: number): Promise<void> {
+	await new Promise<void>((resolveSleep) => {
+		setTimeout(resolveSleep, milliseconds);
+	});
+}
+
+/** The `prisma/rls/*.sql` of a git ref, read from git (the working tree is not touched), in apply order. */
+function sqlScriptsAtRef(ref: string): SqlScript[] {
+	const listing = captureCommand("git", ["ls-tree", "--name-only", ref, "prisma/rls/"]);
+	if (listing.status !== 0) {
+		throw new Error(`git ls-tree ${ref} failed: ${listing.stderr.trim()}`);
+	}
+	return sqlFilesOfListing(listing.stdout).map((path: string): SqlScript => {
+		const shown = captureCommand("git", ["show", `${ref}:./${path}`]);
+		if (shown.status !== 0) {
+			throw new Error(`git show ${ref}:${path} failed: ${shown.stderr.trim()}`);
+		}
+		return { path: `${ref}:${path}`, sql: shown.stdout };
+	});
+}
+
+/** Reads every catalog section of the database at `databaseUrl`. */
+async function readSecuritySnapshot(databaseUrl: string): Promise<SecuritySnapshot> {
+	const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+	try {
+		const sections: [SnapshotSection, SnapshotRow[]][] = [];
+		for (const query of SNAPSHOT_QUERIES) {
+			const result = await pool.query(query.sql);
+			sections.push([query.section, normalizeSection(query, result.rows)]);
+		}
+		return SecuritySnapshotSchema.parse(Object.fromEntries(sections));
+	} finally {
+		await pool.end();
+	}
+}
+
+/**
+ * Builds a fresh database in a throwaway PostgreSQL container — every migration, then (with
+ * `--upgrade-from <ref>`) the security SQL of an older release, then today's `db:apply-security` — and
+ * writes what the catalog then enforces to `--out`. With `--compare <file>` it fails unless the two match.
+ */
+async function securitySnapshot(args: readonly string[]): Promise<number> {
+	const options = parseSnapshotOptions(args);
+	const server = await startThrowawayPostgres(captureCommand, sleep);
+	try {
+		out(`Throwaway PostgreSQL ready (${THROWAWAY_POSTGRES_IMAGE}). Applying migrations ...`);
+		const prismaCli = createRequire(import.meta.url).resolve("prisma/build/index.js");
+		const migrate = spawnSync(process.execPath, [prismaCli, "migrate", "deploy"], {
+			cwd: apiDir,
+			stdio: "inherit",
+			env: { ...process.env, DATABASE_URL: server.databaseUrl },
+		});
+		if (migrate.status !== 0) {
+			err("prisma migrate deploy failed against the throwaway database.");
+			return EXIT_FAILED;
+		}
+		if (options.upgradeFrom !== undefined) {
+			out(`Applying the security SQL of ${options.upgradeFrom} first ...`);
+			await runSqlScripts(server.databaseUrl, sqlScriptsAtRef(options.upgradeFrom), out);
+		}
+		// A throwaway database: replacing an older release's policies is the point of --upgrade-from.
+		await applyRowLevelSecurity(out, server.databaseUrl, { allowPolicyDrops: true });
+		const snapshot = await readSecuritySnapshot(server.databaseUrl);
+		writeFileSync(resolve(process.cwd(), options.out), serializeSnapshot(snapshot));
+		out(`Wrote ${options.out}`);
+		if (options.compare === undefined) {
+			return EXIT_OK;
+		}
+		const differences = diffSnapshots(parseSnapshot(readFileSync(resolve(process.cwd(), options.compare), "utf8")), snapshot);
+		out(`Compared with ${options.compare}:\n${formatDifferences(differences)}`);
+		return differences.length === 0 ? EXIT_OK : EXIT_FAILED;
+	} finally {
+		server.stop();
+	}
+}
+
+// ── security-benchmark ────────────────────────────────────────────────────
+
+/**
+ * What the permission-level row-level security costs at volume, in a throwaway PostgreSQL container: every migration,
+ * the security SQL, `--rows` generated sales; each query timed as the superuser and as a member under RLS.
+ */
+async function securityBenchmark(args: readonly string[]): Promise<number> {
+	const options = parseBenchmarkOptions(args);
+	const server = await startThrowawayPostgres(captureCommand, sleep);
+	try {
+		out(`Throwaway PostgreSQL ready (${THROWAWAY_POSTGRES_IMAGE}). Applying migrations ...`);
+		const prismaCli = createRequire(import.meta.url).resolve("prisma/build/index.js");
+		const migrate = spawnSync(process.execPath, [prismaCli, "migrate", "deploy"], {
+			cwd: apiDir,
+			stdio: "inherit",
+			env: { ...process.env, DATABASE_URL: server.databaseUrl },
+		});
+		if (migrate.status !== 0) {
+			err("prisma migrate deploy failed against the throwaway database.");
+			return EXIT_FAILED;
+		}
+		await applyRowLevelSecurity(out, server.databaseUrl, { allowPolicyDrops: true });
+		const pool = new Pool({ connectionString: server.databaseUrl, max: 1 });
+		try {
+			out(`Generating ${String(options.rows)} sales ...`);
+			await pool.query(benchmarkFixtureSql(options.rows));
+			const results = await runBenchmark(pool, options.runs);
+			out(`Median of ${String(options.runs)} runs each:\n${formatBenchmark(results)}`);
+			const slow = overBudget(results, options.maxOverhead);
+			if (slow.length > 0) {
+				err(`Over the ×${String(options.maxOverhead)} budget: ${slow.map((result) => result.name).join("; ")}`);
+				return EXIT_FAILED;
+			}
+			return EXIT_OK;
+		} finally {
+			await pool.end();
+		}
+	} finally {
+		server.stop();
+	}
+}
+
 // ── provision-backup-login ────────────────────────────────────────────────
 
 /**
@@ -288,14 +472,14 @@ async function checkSeedCoverage(): Promise<number> {
  * (a role allowed to create roles). Run after `db:apply-security`, which creates the `app_backup` group.
  */
 async function provisionBackupLogin(): Promise<number> {
+	// BACKUP_DATABASE_URL is parsed into the login and password this command creates (not the API's own setting).
 	const env = BackupLoginEnvSchema.safeParse(process.env);
-	const admin = PostgresUrlEnvSchema.safeParse(process.env.DATABASE_URL);
-	if (!env.success || !admin.success) {
-		err(`Backup login: set DATABASE_URL and BACKUP_DATABASE_URL (${(env.error?.issues ?? admin.error?.issues ?? []).map((issue): string => issue.message).join("; ")})`);
+	if (!env.success) {
+		err(`Backup login: set BACKUP_DATABASE_URL (${env.error.issues.map((issue): string => issue.message).join("; ")})`);
 		return EXIT_FAILED;
 	}
 	const { login, password } = env.data.BACKUP_DATABASE_URL;
-	const pool = new Pool({ connectionString: admin.data, max: 1 });
+	const pool = new Pool({ connectionString: getApiConfig().database.url, max: 1 });
 	const client = await pool.connect();
 	try {
 		for (const statement of backupLoginSql(login, client.escapeLiteral(password))) {
@@ -313,13 +497,16 @@ async function provisionBackupLogin(): Promise<number> {
 
 const DB_COMMANDS: ReadonlyMap<string, CliCommand> = new Map<string, CliCommand>([
 	["schema", { summary: "Write the base model into every model of prisma/schema.prisma (--check: verify only)", run: schema }],
-	["apply-security", { summary: "Apply RLS, grants, withheld privileges, data-change capture and row audit triggers", run: applySecurity }],
+	["generate-security", { summary: "Write prisma/rls/*.sql (roles, functions, triggers, policies, grants) from the TypeScript in prisma/security", run: generateSecurity }],
+	["check-security", { summary: "Fail when the committed prisma/rls/*.sql differs from what prisma/security generates", run: checkSecurity }],
+	["apply-security", { summary: "Apply the generated security SQL, withheld privileges, data-change capture and row audit triggers", run: applySecurity }],
+	["security-benchmark", { summary: "What row-level security costs at volume, in a throwaway database ([--rows N] [--runs N] [--max-overhead X])", run: securityBenchmark }],
+	["security-explain", { summary: "Who may read and write a table, in plain words, from the security declarations (<Table>)", run: securityExplain }],
 	["check-rls-manifest", { summary: "Fail when the Prisma models, the RLS manifest and the RLS SQL disagree", run: checkRlsManifest }],
-	["generate-rls-policies", { summary: "Render prisma/rls/97-standard-policies.sql from prisma/rls/table-policies.ts", run: generateRlsPolicies }],
-	["generate-system-operation-scopes", { summary: "Render prisma/rls/00-system-operation-scopes.sql from the registry", run: generateSystemOperationScopes }],
 	["check-drift", { summary: "Fail when prisma/migrations does not reproduce prisma/schema.prisma", run: checkDrift }],
 	["check-seed-coverage", { summary: "Fail when a table or nullable column of the seeded database is empty", run: checkSeedCoverage }],
 	["provision-backup-login", { summary: "Create or update the backup's own login (BACKUP_DATABASE_URL) in the app_backup group", run: provisionBackupLogin }],
+	["security-snapshot", { summary: "What a fresh database enforces, as JSON (--out <file> [--compare <file>] [--upgrade-from <ref>])", run: securitySnapshot }],
 ]);
 
 process.exitCode = await runCli("db", DB_COMMANDS, process.argv.slice(2));

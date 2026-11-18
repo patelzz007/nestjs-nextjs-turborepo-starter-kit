@@ -7,8 +7,9 @@ import { z } from "zod";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
+import { getApiConfig } from "../src/config/api-config";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 /** The partial unique index from migration 20261002123150_tenant_terminal_live_unique. */
 const LIVE_TERMINAL_UNIQUE_INDEX = "TenantTerminal_tenantId_terminalId_key";

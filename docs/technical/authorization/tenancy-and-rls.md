@@ -88,8 +88,9 @@ interceptor. **Never read tenant ids from `request.headers` or the body yourself
 
 ## 3. PostgreSQL RLS — how the database knows who is asking
 
-Every tenant table has RLS enabled and **forced** (`prisma/rls/10-policies.sql`, helpers in
-`prisma/rls/*.sql`). Policies compare rows with session settings:
+Every tenant table has RLS enabled and **forced** (policies in `prisma/security/table-policies.ts`,
+helpers in `prisma/security/generator/functions/`, all generated into `prisma/rls/*.sql`; ADR 089).
+Policies compare rows with session settings:
 
 | Setting                           | Meaning                                                                |
 | --------------------------------- | ---------------------------------------------------------------------- |
@@ -147,8 +148,8 @@ names **one** purpose and the role it runs as. The database enforces it too:
   names an operation — an unnamed bypass is no bypass;
 - **a bypass reaches only the tables its operation lists.** Every policy admits a system operation
   through `(SELECT app_rls_bypass_on('<its own table>'))`, and `app_rls_bypass_on` is generated from
-  each registry entry's `scope` into `prisma/rls/00-system-operation-scopes.sql`
-  (`pnpm --filter @workspace/api db:generate-system-operation-scopes`; a spec fails when the file is
+  each registry entry's `scope` into `prisma/rls/02-functions.sql`
+  (`pnpm --filter @workspace/api db:security`; CI's `db:check-security` fails when the file is
   stale). `outbox.publish` can read and write `OutboxEvent` and nothing else; an operation name the
   registry does not list bypasses nothing. The tenant/ownership helpers (`app_owns`,
   `app_tenant_*`, `app_tenant_member_of`) never grant a bypass themselves;
@@ -230,12 +231,12 @@ registry, so no API code path can borrow them.
 | ------------------------ | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TenantAccessRequest`    | bypass, tenant members, or the requester                                                | INSERT: bypass or the requester; UPDATE (review): bypass only — the `tenant.access_request.review` system operation                                                                                                                          |
 | `TenantSuspensionAppeal` | bypass, or members of the tenant                                                        | bypass only — the `tenant.lifecycle.*` system operations                                                                                                                                                                                     |
-| `TenantCustomerBan`      | bypass, members of the tenant, or an API key of the tenant (`40-api-key-principal.sql`) | bypass only — `tenant.customer_ban.create` / `.lift` after the `merchant:manage_rewards` check. Claims (`claims.reward.claim`) and the tills read it to refuse a banned customer; the redemption log reads it under the member's own session |
+| `TenantCustomerBan`      | bypass, members of the tenant, or an API key of the tenant (`prisma/security/table-policies.ts`) | bypass only — `tenant.customer_ban.create` / `.lift` after the `merchant:manage_rewards` check. Claims (`claims.reward.claim`) and the tills read it to refuse a banned customer; the redemption log reads it under the member's own session |
 
 ### 4.0 Roles, grants and shares in Postgres (ADR 067)
 
 RLS is the primary enforcer, and it decides with the same rules as the API's `AccessControlService`.
-`prisma/rls/02-access-model.sql` defines two helpers, read by the policies in `prisma/rls/10-policies.sql`:
+`prisma/security/generator/functions/access-model.ts` defines two helpers, read by the policies in `prisma/security/table-policies.ts`:
 
 - `app_has_permission(resource, action, tenant, store)` — the caller's **active** membership in the
   tenant whose tenant role holds `resource.action` (role path), or a live grant of it (grant path, a
@@ -259,9 +260,10 @@ An API-key request is a **machine principal**, not anonymous and not a bypass. T
 the key (under `auth.api_key.lookup`), binds it to the request context
 (`RequestApiKeyPrincipal`: key id, tenant, location), and `RlsInterceptor` turns it into the
 `api_key` RLS context (`apiKeyRlsContext` in `src/prisma/rls-context.ts`; its session variables come
-from the one `rlsSessionVariables`). `prisma/rls/40-api-key-principal.sql` adds permissive
-policies for it — helpers `app_api_key_org_access(org)`, `app_api_key_store_access(org, store)`,
-`app_api_key_reward_access(reward)`:
+from the one `rlsSessionVariables`). `prisma/security/table-policies.ts` adds permissive
+policies for it (the `apiKey*` rules) — helpers `app_api_key_org_access(org)`,
+`app_api_key_store_access(org, store)`, `app_api_key_reward_access(reward)`, in
+`prisma/security/generator/functions/api-key.ts`:
 
 | Table                                                   | The key may              | Limited to                                                                                                   |
 | ------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
@@ -278,9 +280,9 @@ No policy lets a key DELETE anything, and a crafted id of another tenant or loca
 row (`e2e/api-key-rls-principal.e2e-spec.ts`). Published consumer rewards remain public
 marketplace data for every session.
 
-Every new tenant table must be added to `prisma/rls/manifest-index.ts` and get policies in
-`prisma/rls/10-policies.sql`. `pnpm --filter @workspace/api db:check-rls-manifest` fails if a table is
-missing. See [recipes → add a tenant table](./recipes.md#7-add-a-new-tenant-table-with-rls).
+Every new tenant table must be added to `prisma/security/manifest-index.ts` and get policies in
+`prisma/security/table-policies.ts`, then `pnpm --filter @workspace/api db:security`.
+`pnpm --filter @workspace/api db:check-rls-manifest` fails if a table is missing. See [recipes → add a tenant table](./recipes.md#7-add-a-new-tenant-table-with-rls).
 
 **Dynamic roles never create RLS policies** (spec §50). RLS protects stable concepts — tenant,
 location, user — and reads roles, grants and shares as *data* through the two helpers above, so a role
@@ -290,8 +292,8 @@ a tenant creates or edits needs no new policy.
 
 ## 5. Applying RLS safely (`db:apply-security`)
 
-`prisma/rls/apply.ts` runs the SQL files in `RLS_APPLY_ORDER`
-(`prisma/rls/apply-plan.ts`). Each file:
+`prisma/security/apply.ts` runs the generated SQL files in `RLS_APPLY_ORDER`
+(`prisma/security/apply-plan.ts`). Each file:
 
 1. runs on its own connection inside **one transaction**,
 2. with `SET LOCAL lock_timeout = '10s'`,
@@ -351,7 +353,7 @@ user bans and suspension appeals are `20261020224859_merge_store_into_location_b
 ## 8. Policy profiles and SQL helpers
 
 Every Prisma table appears in exactly one **profile** of `RLS_MANIFEST_PROFILES`
-(`apps/api/prisma/rls/manifest-index.ts`). A profile names the _shape_ of the data, so a new table
+(`apps/api/prisma/security/manifest-index.ts`). A profile names the _shape_ of the data, so a new table
 copies a known policy instead of inventing one; `db:check-rls-manifest` fails on a table that is in
 no profile.
 
@@ -360,50 +362,46 @@ no profile.
 | `ownership`                                                                                  | belongs to one user                                                                       | `app_owns(user_id)`                                                              |
 | `user_identity`                                                                              | is the `User` row itself                                                                  | `app_owns(id)` — the user's own row                                              |
 | `rbac_catalog`                                                                               | is the global role / permission / policy catalogue                                        | open `SELECT`; writes through system operations                                  |
-| `tenant_tenant`                                                                              | belongs to a tenant, no branch scope                                                      | `app_tenant_tenant_member_of(tenant_id)`                                         |
+| `tenant_tenant`                                                                              | belongs to a tenant, no branch scope                                                      | `app_tenant_member_of(tenant_id)`                                                |
 | `tenant_location`                                                                            | belongs to a tenant **and** a location (terminals, API keys)                              | `app_tenant_row_org_location_access(tenant_id, location_id)`                     |
 | `reward_user`                                                                                | is a customer's claim, sale, referral or notification                                     | `app_owns(user_id)` for the customer, plus read policies for the reward's tenant |
 | `bypass_only`                                                                                | is written by jobs or platform audit (outbox, inbox, `AuditLog`, `AuthorizationAudit`, …) | `app_rls_bypass_on('<table>')` only                                              |
-| `geo_reference`, `product_catalog`, `append_log`, `file_derived`, `authorization_simulation` | special-purpose tables                                                                    | see the policies in `prisma/rls/10-policies.sql`                                             |
+| `geo_reference`, `product_catalog`, `append_log`, `file_derived`, `authorization_simulation` | special-purpose tables                                                                    | see the policies in `prisma/security/table-policies.ts`                                             |
 
 SQL helpers (all `STABLE`, granted to `app_runtime`; each returns `false` — never "allow all" — when
 the session variables are missing). Only `app_rls_bypass()` / `app_rls_bypass_on()` ever admit a
-system operation; the relationship helpers answer for the session's user and tenant alone:
+system operation; the relationship helpers answer for the session's user and tenant alone. Files
+are under `apps/api/prisma/security/`, generated into `prisma/rls/02-functions.sql`:
 
 | Helper                                                                                                     | File                                         | True when                                                                                                                                           |
 | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app_rls_bypass()`                                                                                         | `00-app-helpers.sql`                         | `app.rls_bypass` is set **and** an `app.system_operation` is named                                                                                  |
-| `app_rls_bypass_on(table)`                                                                                 | `00-system-operation-scopes.sql` (generated) | `app_rls_bypass()` **and** the named operation's registry scope lists `table` — what every policy calls, as `(SELECT app_rls_bypass_on('<table>'))` |
-| `app_current_user_id()`, `app_current_tenant_id()`                                                         | `00-app-helpers.sql`                         | return the session values, `NULL` when unset                                                                                                        |
-| `app_owns(owner_id)`                                                                                       | `00-app-helpers.sql`                         | the row's owner is the session user                                                                                                                 |
-| `app_tenant_member_of(org)`                                                                                | `01-acl-location-access.sql`                 | the user has an ACTIVE membership in `org`, whatever the session tenant (ReBAC)                                                                     |
-| `app_tenant_tenant_member_of(org)`                                                                         | `01-acl-location-access.sql`                 | the session tenant **is** `org` and the user is an ACTIVE member — prefer this for new tables                                                       |
-| `app_tenant_org_member(org)`                                                                               | `01-acl-location-access.sql`                 | either of the two above (older reward tables)                                                                                                       |
-| `app_tenant_has_location_access(loc)`                                                                      | `01-acl-location-access.sql`                 | the location belongs to the session tenant and the membership has an `ALL_LOCATIONS` scope row or a `SELECTED` row for it                           |
-| `app_tenant_row_org_location_access(org, loc)`                                                             | `01-acl-location-access.sql`                 | the row's tenant is the session tenant and the user has scope for the row's location                                                                |
-| `app_api_key_org_access(org)`, `app_api_key_store_access(org, store)`, `app_api_key_reward_access(reward)` | `40-api-key-principal.sql`                   | the [API-key principal](#41-the-merchant-api-key-principal) owns the row                                                                            |
+| `app_rls_bypass()`                                                                                         | `generator/functions/session.ts`                         | `app.rls_bypass` is set **and** an `app.system_operation` is named                                                                                  |
+| `app_rls_bypass_on(table)`                                                                                 | `system-operation-scopes.ts` (from the registry) | `app_rls_bypass()` **and** the named operation's registry scope lists `table` — what every policy calls, as `(SELECT app_rls_bypass_on('<table>'))` |
+| `app_current_user_id()`, `app_current_tenant_id()`                                                         | `generator/functions/session.ts`                         | return the session values, `NULL` when unset                                                                                                        |
+| `app_owns(owner_id)`                                                                                       | `generator/functions/session.ts`                         | the row's owner is the session user                                                                                                                 |
+| `app_member_of(org)`                                                                                       | `generator/functions/membership.ts`                 | the user has an ACTIVE membership in `org`; when the session is bound to a tenant, only that tenant (ReBAC)                                         |
+| `app_tenant_member_of(org)`                                                                                | `generator/functions/membership.ts`                 | the session tenant **is** `org` and the user is an ACTIVE member — prefer this for new tables                                                       |
+| `app_tenant_org_member(org)`                                                                               | `generator/functions/membership.ts`                 | either of the two above (older reward tables)                                                                                                       |
+| `app_tenant_has_location_access(loc)`                                                                      | `generator/functions/membership.ts`                 | the location belongs to the session tenant and the membership has an `ALL_LOCATIONS` scope row or a `SELECTED` row for it                           |
+| `app_tenant_row_org_location_access(org, loc)`                                                             | `generator/functions/membership.ts`                 | the row's tenant is the session tenant and the user has scope for the row's location                                                                |
+| `app_api_key_org_access(org)`, `app_api_key_store_access(org, store)`, `app_api_key_reward_access(reward)` | `generator/functions/api-key.ts`                   | the [API-key principal](#41-the-merchant-api-key-principal) owns the row                                                                            |
 
 Membership helpers that read `TenantMembership` are `SECURITY DEFINER` with a pinned
 `search_path`, because a plain function would recurse through that table's own policies. Keep
 `SECURITY DEFINER` to such lookups.
 
-The standard location-scoped policy, idempotent so `db:apply-security` can re-run it:
+The standard location-scoped policy is one entry in `prisma/security/table-policies.ts`; the
+generator writes the idempotent SQL (`ENABLE` / `FORCE ROW LEVEL SECURITY`, `DROP POLICY IF EXISTS`,
+`CREATE POLICY … app_tenant_row_org_location_access(...)`) into `prisma/rls/04-policies.sql`:
 
-```sql
-ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.orders FORCE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS orders_tenant_acl ON public.orders;
-CREATE POLICY orders_tenant_acl ON public.orders
-  FOR ALL TO app_runtime
-  USING (app_tenant_row_org_location_access(tenant_id, location_id))
-  WITH CHECK (app_tenant_row_org_location_access(tenant_id, location_id));
+```ts
+Order: [{ name: "orders_tenant_acl", rule: "systemOrStoreAccess", column: "tenantId", storeColumn: "locationId" }],
 ```
 
 - Name policies `<table>_<purpose>` so they can be found and dropped idempotently.
-- Use `FOR ALL` only when reads and writes follow the same rule; split `SELECT` / `INSERT` /
-  `UPDATE` otherwise (e.g. public catalogue rows).
-- A new SQL file is `prisma/rls/NN-<name>.sql`, registered in `RLS_APPLY_ORDER`
-  (`apps/api/prisma/rls/apply-plan.ts`); the plan rejects unregistered files and helpers used
-  before the file that defines them. Never put RLS into `migrations/*/migration.sql`.
-- Folder-level reference: `apps/api/prisma/rls/README.md`.
+- Use one rule for reads and writes only when both follow the same rule; pick the per-command
+  rules (`...Read` / `...Insert` / `...Update`) otherwise (e.g. public catalogue rows).
+- Never write `prisma/rls/*.sql` by hand and never put RLS into `migrations/*/migration.sql`:
+  change `prisma/security/` and run `pnpm --filter @workspace/api db:security`
+  ([adding a table](../database/adding-a-table.md)).
+- Folder-level reference: `apps/api/prisma/security/README.md`.

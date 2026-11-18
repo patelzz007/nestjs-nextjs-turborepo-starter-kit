@@ -29,7 +29,7 @@ export class RedeliverWebhookHandler implements ICommandHandler<RedeliverWebhook
 
 	public async execute(command: RedeliverWebhookCommand): Promise<WebhookDeliverySummary> {
 		const { input } = command;
-		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId);
+		const member = await assertWebhookMember(this.merchantAccess, command.actor, input.tenantId, "manage");
 		const now = epochMs(this.clock.now());
 		await this.uow.run(member.actor, async (scope: WebhooksScope): Promise<void> => {
 			const delivery = await scope.deliveries.findInTenant(input.tenantId, input.deliveryId);

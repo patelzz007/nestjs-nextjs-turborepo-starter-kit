@@ -1,7 +1,7 @@
 import type { CapabilitySlug } from "@workspace/shared";
 
 import type { ActorContext } from "../../actor-context";
-import type { MerchantAccessGrant, MerchantAccessPort, MerchantAccessRequest } from "../../ports/authorization.port";
+import type { MerchantAccessGrant, MerchantAccessPort, MerchantAccessRequest, MerchantCapabilityQueryPort } from "../../ports/authorization.port";
 import { AuthorizationDeniedError } from "../../../domain/errors/authorization-denied.error";
 
 /** One capability request the fake was asked, with the actor that asked it. */
@@ -18,7 +18,7 @@ export interface RecordedMerchantAccessRequest {
  * narrowed to that one store, and refused when it lies outside the granted
  * stores, as the adapter does.
  */
-export class FakeMerchantAccessPort implements MerchantAccessPort {
+export class FakeMerchantAccessPort implements MerchantAccessPort, MerchantCapabilityQueryPort {
 	public readonly requests: RecordedMerchantAccessRequest[] = [];
 	private readonly denied: Set<CapabilitySlug> = new Set<CapabilitySlug>();
 	private locationIds: readonly string[] | null = null;
@@ -33,6 +33,12 @@ export class FakeMerchantAccessPort implements MerchantAccessPort {
 	public grantLocations(locationIds: readonly string[]): this {
 		this.locationIds = [...locationIds];
 		return this;
+	}
+
+	/** The same answer as {@link assertCapability}, as a yes/no (recorded like a check). */
+	public holds(actor: ActorContext, request: MerchantAccessRequest): Promise<boolean> {
+		this.requests.push({ actor, request });
+		return Promise.resolve(!this.denied.has(request.capability));
 	}
 
 	public assertCapability(actor: ActorContext, request: MerchantAccessRequest): Promise<MerchantAccessGrant> {

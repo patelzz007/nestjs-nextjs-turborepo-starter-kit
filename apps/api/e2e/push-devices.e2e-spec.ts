@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, grantSeedUsersFullSession, login, mutationHeaders, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 const DataSchema = z.object({ data: z.looseObject({}) });
@@ -40,7 +41,7 @@ describe("Push devices: the Firebase Installation ID (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		await grantSeedUsersFullSession(pool, ["alice.johnson@example.com"]);
 		customer = await login(app, "alice.johnson@example.com", "Alice@123");
 	});

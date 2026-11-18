@@ -54,8 +54,8 @@ describe("system-operation registry", () => {
 	});
 
 	it("runs every operation as a role that the RLS bundle creates and grants", () => {
-		const helpers: string = readFileSync(join(API_ROOT, "prisma", "rls", "00-app-helpers.sql"), "utf8");
-		const grants: string = readFileSync(join(API_ROOT, "prisma", "rls", "99-app-runtime-grants.sql"), "utf8");
+		const helpers: string = readFileSync(join(API_ROOT, "prisma", "rls", "01-roles.sql"), "utf8");
+		const grants: string = readFileSync(join(API_ROOT, "prisma", "rls", "05-grants.sql"), "utf8");
 
 		for (const role of DatabaseRoleSchema.options) {
 			expect(helpers).toMatch(new RegExp(`CREATE ROLE ${role} NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS`));

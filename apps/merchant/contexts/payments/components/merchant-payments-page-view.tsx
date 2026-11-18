@@ -6,6 +6,7 @@ import { formatPaymentAmount, PAYMENT_PROVIDER_LABELS } from "@/contexts/payment
 import { PAYMENTS_URL_STATE, toPaymentsQuery } from "@/contexts/payments/url-state/payments";
 import { tenantRoutes } from "@/lib/routes";
 import { keepPreviousData } from "@tanstack/react-query";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useUrlListPager } from "@workspace/client/lib/url-state/use-url-list-pager";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
@@ -32,9 +33,10 @@ export interface MerchantPaymentsPageViewProps {
 	readonly tenantSlug: string;
 }
 
-/** The store's payments (ADR 020), newest first, and the way to ask for one. */
+/** The store's payments (ADR 020), newest first, and — with `merchant:manage_payments` (payment.create) — the way to ask for one. */
 export function MerchantPaymentsPageView({ tenantSlug }: MerchantPaymentsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const canAsk = useAbility().can("CREATE", "PAYMENT");
 	const routes = tenantRoutes(tenantSlug).payments;
 	const [urlState, updateUrlState] = useUrlState(PAYMENTS_URL_STATE);
 	const paymentsQuery = api.tenantPayments.payments.useQuery({ tenantSlug, ...toPaymentsQuery(urlState) }, { placeholderData: keepPreviousData });
@@ -46,12 +48,14 @@ export function MerchantPaymentsPageView({ tenantSlug }: MerchantPaymentsPageVie
 				title="Payments"
 				description="Send a customer a link to pay by online banking, card or e-wallet. Each payment shows here as it's paid."
 				actions={
-					<Link href={appRoute(routes.new)} className={buttonVariants()}>
-						New payment
-					</Link>
+					canAsk ? (
+						<Link href={appRoute(routes.new)} className={buttonVariants()}>
+							New payment
+						</Link>
+					) : null
 				}
 			/>
-			<PaymentList tenantSlug={tenantSlug} payments={paymentsQuery.data?.data} isError={paymentsQuery.isError} newHref={routes.new} />
+			<PaymentList tenantSlug={tenantSlug} payments={paymentsQuery.data?.data} isError={paymentsQuery.isError} newHref={canAsk ? routes.new : null} />
 			{(paymentsQuery.data?.data.length ?? 0) > 0 ? (
 				<ListPager
 					page={pager.page}
@@ -72,7 +76,8 @@ interface PaymentListProps {
 	readonly tenantSlug: string;
 	readonly payments: readonly PaymentIntentResponse[] | undefined;
 	readonly isError: boolean;
-	readonly newHref: string;
+	/** Where to ask for a payment, or null when the member may not (no payment.create). */
+	readonly newHref: string | null;
 }
 
 function PaymentList({ tenantSlug, payments, isError, newHref }: PaymentListProps): React.JSX.Element {
@@ -96,11 +101,13 @@ function PaymentList({ tenantSlug, payments, isError, newHref }: PaymentListProp
 					<EmptyTitle>No payments yet</EmptyTitle>
 					<EmptyDescription>Enter an amount and the customer&apos;s details, and they get a secure page to pay on.</EmptyDescription>
 				</EmptyHeader>
-				<EmptyContent>
-					<Link href={appRoute(newHref)} className={buttonVariants()}>
-						Ask for your first payment
-					</Link>
-				</EmptyContent>
+				{newHref === null ? null : (
+					<EmptyContent>
+						<Link href={appRoute(newHref)} className={buttonVariants()}>
+							Ask for your first payment
+						</Link>
+					</EmptyContent>
+				)}
 			</Empty>
 		);
 	}

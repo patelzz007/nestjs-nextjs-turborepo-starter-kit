@@ -14,9 +14,10 @@ import { z } from "zod";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { DEMO_MERCHANT_API_KEYS } from "../prisma/seed/rewards";
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 /** Every terminal this file registers is named with this prefix, so cleanup finds exactly them. */
 const NAME_PREFIX = "E2E pairing";

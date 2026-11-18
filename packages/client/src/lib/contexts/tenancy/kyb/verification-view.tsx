@@ -31,9 +31,11 @@ import { describeDocumentProcessingFailure } from "../onboarding/onboarding-outc
 
 export interface MerchantKybVerificationViewProps {
 	readonly tenantSlug: string;
+	/** Whether the member may submit or change the details (kyb.update); otherwise they are shown read-only (kyb.read). */
+	readonly canEdit: boolean;
 }
 
-export function MerchantKybVerificationView({ tenantSlug }: MerchantKybVerificationViewProps): React.JSX.Element {
+export function MerchantKybVerificationView({ tenantSlug, canEdit }: MerchantKybVerificationViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const profileQuery = api.tenants.kyb.get.useQuery(
 		{ tenantSlug },
@@ -60,20 +62,21 @@ export function MerchantKybVerificationView({ tenantSlug }: MerchantKybVerificat
 		return <p className="text-sm text-destructive">Unable to load business verification details.</p>;
 	}
 
-	return <MerchantKybVerificationContent tenantSlug={tenantSlug} profile={profile} />;
+	return <MerchantKybVerificationContent tenantSlug={tenantSlug} profile={profile} canEdit={canEdit} />;
 }
 
 interface MerchantKybVerificationContentProps {
 	readonly tenantSlug: string;
 	readonly profile: MerchantKybProfileResponse;
+	readonly canEdit: boolean;
 }
 
-function MerchantKybVerificationContent({ tenantSlug, profile }: MerchantKybVerificationContentProps): React.JSX.Element {
+function MerchantKybVerificationContent({ tenantSlug, profile, canEdit }: MerchantKybVerificationContentProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const hasSubmitted = hasSubmittedMerchantKyb(profile);
 	const isApproved = profile.kybStatus === "APPROVED";
-	const canUpdate = !isApproved;
+	const canUpdate = !isApproved && canEdit;
 	const storedDocuments = readProfileKybDocuments(profile);
 
 	const [step, setStep] = React.useState<MerchantKybVerificationUpdateStep>("business");
@@ -304,8 +307,9 @@ function MerchantKybVerificationContent({ tenantSlug, profile }: MerchantKybVeri
 		<div className="space-y-6">
 			<MerchantKybVerificationStatusBanners profile={profile} rejectionReason={rejectionReason} successMessage={successMessage} />
 
-			{isApproved ? (
+			{!canUpdate ? (
 				<MerchantKybVerificationApprovedSection
+					reason={isApproved ? "approved" : "view-only"}
 					values={values}
 					storedDocuments={storedDocuments}
 					onViewStoredDocument={handleViewStoredDocument}

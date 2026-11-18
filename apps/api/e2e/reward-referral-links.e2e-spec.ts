@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import {
 	createE2eApp,
 	login,
@@ -66,7 +67,7 @@ describe("Reward referral links (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		referableRewardId = randomUUID();
 		closedRewardId = randomUUID();
 		const merchantUserId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;

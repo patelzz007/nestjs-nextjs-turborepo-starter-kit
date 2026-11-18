@@ -2,11 +2,10 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import {
 	describeRateLimitAllowance,
-	PERMISSION,
 	SetTenantRateLimitOverrideSchema,
 	TenantRateLimitPolicyNameSchema,
 	type RateLimitedSubject,
@@ -86,10 +85,10 @@ export function toOverrideInput(
 /** `/operations/rate-limits` (ADR 071): every policy and its refusals, the subjects hitting them, tenant overrides. */
 export function RateLimitsView(): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const overviewQuery = api.operations.rateLimits.useQuery(undefined);
 	const overridesQuery = api.operations.rateLimitOverrides.useQuery(undefined);
-	const canChange = can(PERMISSION.RATE_LIMIT.UPDATE);
+	const canChange = ability.can("UPDATE", "RATE_LIMIT");
 	const overview = overviewQuery.data?.data;
 
 	return (

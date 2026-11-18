@@ -6,6 +6,7 @@ import { useRequestScope } from "@/lib/session/request-scope";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import { subscribeToCapabilityRefusals } from "@workspace/client/lib/contexts/authorization/capability-refusals";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { createFeatureStoreContext } from "@workspace/client/lib/state/feature-store-context";
 import type { Envelope, TenantContextResponse, LocationResponse } from "@workspace/shared";
@@ -95,13 +96,20 @@ function TenantTenantContextProvider({ tenantSlug, initialLocationId, initialTen
 	);
 	// A store the API refuses for this member (403 TENANT_LOCATION_FORBIDDEN on any of this
 	// tenant's queries) is rejected: the choice resets, the cookie is rewritten, the context re-read.
-	const [handleMount] = React.useState(
-		() =>
-			(store: TenantContextStore): (() => void) =>
-				subscribeToLocationRejections(queryClient.getQueryCache(), tenantSlug, (locationId: string): void => {
-					store.dispatch(tenantContextActions.locationRejected(locationId));
-				}),
-	);
+	// A request refused for the member's capabilities (403 TENANT_ROLE_CAPABILITY_REQUIRED or PERMISSION_DENIED) means
+	// their role or grants changed: the context, which carries the capabilities, is re-read.
+	const [handleMount] = React.useState(() => (store: TenantContextStore): (() => void) => {
+		const stopLocations = subscribeToLocationRejections(queryClient.getQueryCache(), tenantSlug, (locationId: string): void => {
+			store.dispatch(tenantContextActions.locationRejected(locationId));
+		});
+		const stopCapabilities = subscribeToCapabilityRefusals(queryClient, (): void => {
+			void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.context.scopeKey({ tenantSlug }) });
+		});
+		return (): void => {
+			stopLocations();
+			stopCapabilities();
+		};
+	});
 	const scope = React.useMemo(
 		(): TenantScope => ({
 			tenantSlug,

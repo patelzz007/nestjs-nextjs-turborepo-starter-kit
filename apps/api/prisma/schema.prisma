@@ -25,7 +25,7 @@ datasource db {
 // model as a managed block — edit them HERE, never inside a model. A model overrides a field by declaring it again
 // below the managed block (e.g. an integer dataset id); a model with its own primary key gets no `id`. All times
 // are epoch milliseconds; `createdBy` / `updatedBy` / `deletedBy` and `updatedAt` are filled by the database's row
-// audit triggers (prisma/rls/row-audit.ts) from the session's actor. Engine: prisma/engine/schema-engine.ts.
+// audit triggers (prisma/security/row-audit.ts) from the session's actor. Engine: prisma/engine/schema-engine.ts.
 //
 // @base-model BaseModel
 //   id        String  @id @default(uuid(7))
@@ -47,7 +47,7 @@ datasource db {
 //
 // Prisma 7 PSL cannot emit CREATE ROLE, GRANT, ENABLE/FORCE RLS, or POLICY.
 // **Do not append RLS to migrations/*/migration.sql** — squashed migrations
-// would drop it. Canonical SQL: `prisma/rls/10-policies.sql` + `prisma/rls/*.sql`, applied
+// would drop it. Declared in `prisma/security/` and generated into `prisma/rls/*.sql`, applied
 // automatically by `pnpm db:migrate` / `db:reset` / `db:deploy` (`db:apply-security`).
 //
 // Schema-owned pieces (columns, indexes, maps) always land in this file first.
@@ -179,7 +179,7 @@ model User {
   tokenVersion Int @default(0)
 
   /// Epoch ms (database clock) of the last change to this account's access: stamped by the
-  /// `users_authorization_change_stamp` trigger (prisma/rls/30-authorization-change-stamp.sql)
+  /// `users_authorization_change_stamp` trigger (prisma/security/triggers.ts)
   /// whenever `tokenVersion`, `isActive` or `isDeleted` change, never by application code.
   /// Every API instance sweeps recent stamps and drops its cached authorization, so a change whose
   /// after-commit invalidation was lost (crash, Redis outage) stays stale for one sweep, not a TTL.
@@ -2768,7 +2768,7 @@ model RewardRedemption {
 /// merchant/admin sales analytics and the customer's spending breakdown.
 /// Money is stored in minor units (sen) with an explicit ISO-4217 currency.
 /// RLS: tenant-owned (`tenantId`): members of the tenant read its sales, the customer (`userId`) reads
-/// their own, and the tenant's API key reads and inserts (prisma/rls/40-api-key-principal.sql); every other
+/// their own, and the tenant's API key reads and inserts (prisma/security/table-policies.ts); every other
 /// write is bypass-only (`app_rls_bypass_on('RewardSale')`).
 /// @extends BaseModel
 model RewardSale {
@@ -2832,7 +2832,7 @@ enum CustomerTierChangeReason {
 
 /// A customer's tier as of their last evaluation (ADR 085). No row means Bronze: a row is written the first time a
 /// redemption or the nightly review evaluates them. The tiers context is the only writer.
-/// RLS: the customer reads their own row; the till's API key reads the rows of its tenant's customers (67-customer-tiers.sql);
+/// RLS: the customer reads their own row; the till's API key reads the rows of its tenant's customers (prisma/security/table-policies.ts);
 /// every write, and staff and merchant reads, go through `tiers.*` system operations.
 /// @extends BaseModel
 model CustomerTierStanding {
@@ -3641,7 +3641,7 @@ enum EmailDeliveryOutcome {
 // Geographical data (Country / State / City)
 // Source: dr5hn/countries-states-cities-database
 // Reference data: world-readable; written only by SuperAdmins through the
-// `geo.reference_data.write` system operation (prisma/rls/10-policies.sql). Soft-deleted,
+// `geo.reference_data.write` system operation (prisma/security/table-policies.ts). Soft-deleted,
 // never hard-deleted (a delete cascades the soft delete to the children).
 // Times are epoch milliseconds like every other table: `createdAt` / `updatedAt`
 // default to the insert time, and every write stamps `updatedAt` from the clock.
@@ -4185,7 +4185,7 @@ enum InboxDeadLetterReason {
 /// partition flowing; the unique Kafka coordinates make re-parking the same record a no-op.
 /// Operators inspect `rawValue` / `error`, fix the cause, and replay (docs/technical/messaging.md);
 /// the consumer purges rows older than ANALYTICS_DEAD_LETTER_RETENTION_DAYS.
-/// RLS: app_runtime bypass + the least-privilege analytics_consumer role (prisma/rls/90-analytics-consumer.sql).
+/// RLS: app_runtime bypass + the least-privilege analytics_consumer role (prisma/security/roles.ts, table-policies.ts).
 /// Seed: the development scenario parks one sample record (prisma/seed).
 /// @extends BaseModel
 model InboxDeadLetter {
@@ -4229,7 +4229,7 @@ model InboxDeadLetter {
 
 /// Analytics staging table populated by the analytics-consumer service.
 /// RLS: bypass-only for `app_runtime`; the `analytics_consumer` role inserts and reads its own staging rows
-/// (prisma/rls/90-analytics-consumer.sql).
+/// (prisma/security/roles.ts, table-policies.ts).
 /// @extends BaseModel
 model AnalyticsEvent {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -4456,7 +4456,7 @@ enum DataChangeActorKind {
 
 /// Row-level data-change trail (docs/adr/051-database-change-audit-trail.md): one row per
 /// INSERT / UPDATE / DELETE on every captured table, plus one per TRUNCATE, written by the
-/// generated `data_change_capture` triggers (prisma/rls/data-change-capture.ts) in the SAME
+/// generated `data_change_capture` triggers (prisma/security/data-change-capture.ts) in the SAME
 /// transaction as the change — so a change can never commit without its record. Captures writes
 /// from every path: HTTP requests, queue jobs, schedulers, consumers, CLIs and manual SQL.
 /// `oldData` / `newData` are the full row images, secret columns `[REDACTED]`, personal data
@@ -4526,7 +4526,7 @@ model DataChangeLog {
 /// `correlationId`), or, without a correlation id, one transaction (`groupKey` `tx:<transactionId>`).
 /// The audit trail's timeline lists these groups as its background entries, so a page reads one
 /// indexed row per group instead of aggregating every change ever captured. Maintained ONLY by the
-/// `data_change_group_track` trigger on `DataChangeLog` (prisma/rls/data-change-capture.ts): one
+/// `data_change_group_track` trigger on `DataChangeLog` (prisma/security/data-change-capture.ts): one
 /// upsert per group per inserted statement, keeping the group's first change and earliest time.
 /// RLS: INSERT/UPDATE only from inside a trigger; SELECT bypass-only (the audit readers) or from
 /// inside the trigger (its upsert reads the existing row); DELETE withheld from app_runtime.

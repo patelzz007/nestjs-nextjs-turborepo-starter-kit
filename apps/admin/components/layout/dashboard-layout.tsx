@@ -32,7 +32,7 @@ import { useCommandPaletteShortcut } from "@workspace/ui/components/app-shell-to
 import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
@@ -158,7 +158,7 @@ export function DashboardLayout({
 	}, []);
 
 	return (
-		<CapabilitiesProvider capabilities={capabilities}>
+		<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 			<AuthorizedNavigationProvider searchableItems={searchableItems} canAccessRoute={canAccessPath}>
 				<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>
 					{ADMIN_SHELL_LABELS.skipToContent}
@@ -209,6 +209,6 @@ export function DashboardLayout({
 					</RouteAuthorizationGuard>
 				</StoreBoundAppPanelShell>
 			</AuthorizedNavigationProvider>
-		</CapabilitiesProvider>
+		</SessionAbilityProvider>
 	);
 }

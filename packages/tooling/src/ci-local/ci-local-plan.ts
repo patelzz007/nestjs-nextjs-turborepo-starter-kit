@@ -133,6 +133,7 @@ export function staticSteps({ base, noCache, errorsOnly = false }: { base: strin
 		{ id: "build", job: "Build", command: "pnpm", args: [...turbo("build"), "--concurrency=3"], env: CI_BUILD_ENV },
 		{ id: "bundle-budgets", job: "Build", command: "pnpm", args: ["tools", "bundle:check"] },
 		{ id: "rls-manifest", job: "RLS manifest drift", command: "pnpm", args: ["--filter", ws.api, "db:check-rls-manifest"] },
+		{ id: "security-sql", job: "RLS manifest drift", command: "pnpm", args: ["--filter", ws.api, "db:check-security"] },
 		{ id: "deps", job: "Dependency consistency", command: "pnpm", args: ["turbo", "run", "deps:check"] },
 		{ id: "migration-history", job: "Migration history", command: "node", args: ["packages/tooling/src/migration-history/cli.ts", "--base", base, "--working-tree"] },
 		{ id: "audit", job: "Dependency audit", command: "pnpm", args: ["audit", "--audit-level=high"] },

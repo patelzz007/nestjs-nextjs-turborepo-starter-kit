@@ -38,7 +38,7 @@ const TERMINAL_ID_HEADER_DESCRIPTION =
  * key. Unknown backup codes additionally count toward the key's lockout.
  *
  * Database scope: no RLS bypass. After `MerchantApiKeyGuard` verifies the key, the request runs as the `api_key`
- * principal (prisma/rls/40-api-key-principal.sql): only the key's tenant — and, for a
+ * principal (prisma/security/table-policies.ts): only the key's tenant — and, for a
  * store-scoped key, its store's redemptions and sales — are visible or writable.
  */
 @ApiTags("Redemptions")

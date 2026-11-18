@@ -20,7 +20,7 @@ export interface BanCustomerControlProps {
 /**
  * `POST /tenants/:tenantSlug/customer-bans` from one row of the redemption log: asks for a reason
  * (kept for staff, never shown to the customer), then bans the customer behind the redemption from
- * the merchant's rewards. Shown only with `merchant:manage_rewards` (the API enforces it).
+ * the merchant's rewards. Shown only with `merchant:ban_customers` (customer_ban.create; the API enforces it).
  */
 export const BanCustomerControl = React.forwardRef<HTMLDivElement, BanCustomerControlProps>(function BanCustomerControl({ tenantSlug, redemptionId }, ref): React.JSX.Element {
 	const { api } = useAuth();

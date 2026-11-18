@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 
@@ -13,7 +14,7 @@ import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 // (e2e/setup-env.ts → TEST_E2E_STORAGE). No scanner exists, so a file must
 // become usable but be recorded NOT_SCANNED — never CLEAN.
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const FILES = `${API_VERSION_PREFIX}/files`;
 const ADMIN_EMAIL = "admin@example.com";
 const ADMIN_PASSWORD = "Admin@123";

@@ -2,8 +2,8 @@
 
 import { FeatureUnavailableNotice, SignInPrompt } from "@/contexts/identity/components/access-fallback";
 import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
-import { useAuthorization, type CapabilityCheckMode } from "@workspace/client/lib/contexts/authorization";
-import type { CapabilitySlug } from "@workspace/shared";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
+import { abilityAllowsCapability, type CapabilityCheckMode, type CapabilitySlug } from "@workspace/shared";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
@@ -34,7 +34,7 @@ export interface AccessGateProps {
 export function AccessGate({ feature, permission, permissions, mode = "any", returnTo, signInDescription, className, children }: AccessGateProps): React.JSX.Element | null {
 	const pathname = usePathname();
 	const { isAuthenticated, isResolved } = useWebSession();
-	const { can, canAll, canAny } = useAuthorization();
+	const ability = useAbility();
 
 	if (!isAuthenticated) {
 		return <SignInPrompt className={className} title="Sign in to continue" description={signInDescription ?? `Sign in to see ${feature}.`} returnTo={returnTo ?? pathname} />;
@@ -49,7 +49,9 @@ export function AccessGate({ feature, permission, permissions, mode = "any", ret
 		return null;
 	}
 
-	const allowed = permissions !== undefined ? (mode === "all" ? canAll(permissions) : canAny(permissions)) : permission !== undefined && can(permission);
+	const isAllowed = (slug: CapabilitySlug): boolean => abilityAllowsCapability(ability, slug);
+	const allowed =
+		permissions !== undefined ? (mode === "all" ? permissions.every(isAllowed) : permissions.some(isAllowed)) : permission !== undefined && isAllowed(permission);
 
 	if (!allowed) {
 		return <FeatureUnavailableNotice className={className} feature={feature} />;

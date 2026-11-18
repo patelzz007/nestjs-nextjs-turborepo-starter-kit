@@ -38,8 +38,8 @@ export interface TerminalSettingsCardProps {
 	readonly isSaving: boolean;
 	/** The last save's failure, if any. */
 	readonly saveErrorMessage: string | null;
-	/** Saves the new value — turning it ON is confirmed here first. */
-	readonly onRequireRegisteredTerminalsChange: (requireRegisteredTerminals: boolean) => void;
+	/** Saves the new value — turning it ON is confirmed here first; null shows the setting read-only (no api_key.create). */
+	readonly onRequireRegisteredTerminalsChange: ((requireRegisteredTerminals: boolean) => void) | null;
 }
 
 /** Tenant-wide "only registered terminals" policy. Presentational — the parent owns the query and mutation. */
@@ -60,14 +60,14 @@ export function TerminalSettingsCard({
 				setIsConfirmOpen(true);
 				return;
 			}
-			onRequireRegisteredTerminalsChange(false);
+			onRequireRegisteredTerminalsChange?.(false);
 		},
 		[onRequireRegisteredTerminalsChange],
 	);
 
 	const handleConfirm = React.useCallback((): void => {
 		setIsConfirmOpen(false);
-		onRequireRegisteredTerminalsChange(true);
+		onRequireRegisteredTerminalsChange?.(true);
 	}, [onRequireRegisteredTerminalsChange]);
 
 	return (
@@ -113,7 +113,7 @@ export function TerminalSettingsCard({
 							checked={settings.requireRegisteredTerminals}
 							onCheckedChange={handleCheckedChange}
 							loading={isSaving}
-							disabled={isSaving}
+							disabled={isSaving || onRequireRegisteredTerminalsChange === null}
 							aria-labelledby="require-registered-terminals-label"
 							aria-describedby="require-registered-terminals-hint"
 						/>

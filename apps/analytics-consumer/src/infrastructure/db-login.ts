@@ -3,9 +3,9 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { z } from "zod";
 
 /**
- * Group role holding the consumer's privileges — created, granted and given
- * its RLS policies by apps/api/prisma/rls/90-analytics-consumer.sql
- * (`pnpm tools db:apply-security`). NOLOGIN: the worker logs in as a separate
+ * Group role holding the consumer's privileges — created and granted in
+ * apps/api/prisma/security/roles.ts, its RLS policies in table-policies.ts
+ * (applied by `pnpm tools db:apply-security`). NOLOGIN: the worker logs in as a separate
  * LOGIN role that is a member of it.
  */
 export const ANALYTICS_CONSUMER_GROUP_ROLE = "analytics_consumer";

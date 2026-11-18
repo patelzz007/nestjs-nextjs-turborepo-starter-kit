@@ -17,6 +17,7 @@ import { z } from "zod";
 
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -25,7 +26,7 @@ import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, type Inject
  * `brew.cashier@…`, whom the development seed gives a 48-hour analytics grant, a permanent
  * customer-ban grant at the KL store, a lapsed grant, and the pending reward shared to edit.
  */
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const HOUR_MS = 3_600_000;
 
 describe("Tenant access administration (e2e)", () => {
@@ -281,14 +282,28 @@ describe("The access model in Postgres (RLS as app_runtime, ADR 067)", () => {
 		});
 	});
 
-	it("shows a tenant's own roles to its members only, beside the platform catalogue", async () => {
-		await asRuntime(pool, cashierInKl(), async (client) => {
-			const tenants = await client.query<{ tenantId: string | null }>(`SELECT DISTINCT "tenantId" FROM public."Role"`);
-			const visible = tenants.rows.map((row) => row.tenantId);
-			expect(visible).toContain(TENANT_SEED_IDS.klTenant);
-			expect(visible).toContain(null);
-			expect(visible).not.toContain(TENANT_SEED_IDS.mlkTenant);
-		});
+	it("shows a tenant's own roles only to members with role.read, beside the platform catalogue", async () => {
+		const visibleTenants = async (session: RlsSession): Promise<readonly (string | null)[]> =>
+			asRuntime(pool, session, async (client) => {
+				const tenants = await client.query<{ tenantId: string | null }>(`SELECT DISTINCT "tenantId" FROM public."Role"`);
+				return tenants.rows.map((row) => row.tenantId);
+			});
+		const ownerResult = await pool.query<{ userId: string }>(
+			`SELECT m."userId" FROM public."Membership" m JOIN public."Role" r ON r.id = m."roleId" WHERE m."tenantId" = $1 AND r."templateKey" = 'OWNER' AND m."isDeleted" = false`,
+			[TENANT_SEED_IDS.klTenant],
+		);
+		const ownerInKl: RlsSession = { userId: ownerResult.rows[LIST_SLOT_INDEX.first]?.userId ?? "", tenantId: TENANT_SEED_IDS.klTenant };
+
+		const asOwner = await visibleTenants(ownerInKl);
+		expect(asOwner).toContain(TENANT_SEED_IDS.klTenant);
+		expect(asOwner).toContain(null);
+		expect(asOwner).not.toContain(TENANT_SEED_IDS.mlkTenant);
+
+		// The Cashier template holds no role.read: only the platform catalogue (ADR 089 tightening).
+		const asCashier = await visibleTenants(cashierInKl());
+		expect(asCashier).toContain(null);
+		expect(asCashier).not.toContain(TENANT_SEED_IDS.klTenant);
+		expect(asCashier).not.toContain(TENANT_SEED_IDS.mlkTenant);
 	});
 
 	it("shows the cashier the shares made to them, not everyone's (no member.read)", async () => {

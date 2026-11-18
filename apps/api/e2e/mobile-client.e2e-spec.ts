@@ -35,7 +35,7 @@ import { createE2eApp, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, ty
  * native app has none, and client type `mobile` carries no ambient credential.
  */
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const PASSWORD = "MobileE2e@123";
 const MINIMUM_VERSION = "1.2.0";
 const CURRENT_VERSION = "1.4.0";

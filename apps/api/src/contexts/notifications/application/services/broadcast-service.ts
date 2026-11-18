@@ -106,7 +106,7 @@ export class BroadcastService {
 
 	public async create(actor: ActorContext, sender: BroadcastSender, draft: BroadcastDraftInput): Promise<BroadcastResponse> {
 		const authorUserId = userIdOf(actor);
-		await this.authorize(actor, sender, MERCHANT_CAPABILITY.manageBroadcasts);
+		await this.authorize(actor, sender, MERCHANT_CAPABILITY.createBroadcasts);
 		this.assertDraftFits(sender, draft);
 		const { stored, sources } = await this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			if (sender.kind === "tenant") {
@@ -134,7 +134,7 @@ export class BroadcastService {
 	}
 
 	public async get(actor: ActorContext, sender: BroadcastSender, broadcastId: string): Promise<BroadcastResponse> {
-		await this.authorize(actor, sender, MERCHANT_CAPABILITY.manageBroadcasts);
+		await this.authorize(actor, sender, MERCHANT_CAPABILITY.viewBroadcasts);
 		return this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			const stored = await this.ownBroadcast(scope, sender, broadcastId);
 			const [results, reports, sources] = await Promise.all([
@@ -147,7 +147,7 @@ export class BroadcastService {
 	}
 
 	public async list(actor: ActorContext, sender: BroadcastSender, query: BroadcastListQuery): Promise<PaginatedServiceResult<BroadcastResponse>> {
-		await this.authorize(actor, sender, MERCHANT_CAPABILITY.manageBroadcasts);
+		await this.authorize(actor, sender, MERCHANT_CAPABILITY.viewBroadcasts);
 		return this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, async (scope) => {
 			const page = await scope.broadcasts.list(sender.kind === "tenant" ? sender.tenantId : null, query);
 			const [reports, sources] = await Promise.all([
@@ -158,9 +158,12 @@ export class BroadcastService {
 		});
 	}
 
-	/** The live count while the sender edits the filters: never names, only how many and why some are left out. */
+	/**
+	 * The live count while the sender edits the filters: never names, only how many and why some are left out. A
+	 * composer's read (new or existing draft), so it needs `view_broadcasts`, like the customer picker and the allowance.
+	 */
 	public async previewAudience(actor: ActorContext, sender: BroadcastSender, audience: BroadcastAudience): Promise<BroadcastAudiencePreview> {
-		await this.authorize(actor, sender, MERCHANT_CAPABILITY.manageBroadcasts);
+		await this.authorize(actor, sender, MERCHANT_CAPABILITY.viewBroadcasts);
 		this.assertAudienceFits(sender, audience);
 		const resolution = await this.deps.uow.runSystemOperation(BROADCASTS_AUDIENCE_OPERATION, actor, (scope) => this.resolveAudience(scope, sender, audience));
 		return {
@@ -172,12 +175,12 @@ export class BroadcastService {
 
 	/** The tenant's customers, to pick recipients by hand (masked contact details, ADR 073). */
 	public async customers(actor: ActorContext, tenantId: string, query: TenantCustomerListQuery): Promise<PaginatedServiceResult<TenantCustomerEntry>> {
-		await this.authorize(actor, { kind: "tenant", tenantId }, MERCHANT_CAPABILITY.manageBroadcasts);
+		await this.authorize(actor, { kind: "tenant", tenantId }, MERCHANT_CAPABILITY.viewBroadcasts);
 		return this.deps.uow.runSystemOperation(BROADCASTS_AUDIENCE_OPERATION, actor, (scope) => scope.broadcasts.customers(tenantId, query));
 	}
 
 	public async allowance(actor: ActorContext, tenantId: string): Promise<BroadcastWeeklyAllowance> {
-		await this.authorize(actor, { kind: "tenant", tenantId }, MERCHANT_CAPABILITY.manageBroadcasts);
+		await this.authorize(actor, { kind: "tenant", tenantId }, MERCHANT_CAPABILITY.viewBroadcasts);
 		return this.deps.uow.runSystemOperation(BROADCASTS_WRITE_OPERATION, actor, (scope) => this.weeklyAllowance(scope, tenantId, this.deps.clock.now()));
 	}
 

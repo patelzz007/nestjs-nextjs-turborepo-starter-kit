@@ -4,9 +4,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX } from "@workspace/shared";
 
 import { SEED_TEAM_INVITE_TOKEN_KL_ALICE, TENANT_SEED_IDS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, login, mutationHeaders } from "./e2e-helpers";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const ORG_ID = TENANT_SEED_IDS.klTenant;
 /** The seeded invitee: an existing account with a pending Brew & Bean KL cashier invitation and no live membership. */
 const INVITEE_EMAIL = "alice.kl@kl-rewards.demo";

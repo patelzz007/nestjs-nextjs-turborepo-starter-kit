@@ -2,21 +2,13 @@
 
 import { keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { EmailPreviewBodySkeleton, EmailTemplateMetaSkeleton, EmailTemplatesPageSkeleton } from "@/components/loading/email-skeletons";
 import { EMAIL_PREVIEW_LOADING_LABELS, EMAIL_TEMPLATE_DETAILS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import {
-	LIST_SLOT_INDEX,
-	EmailTemplateKeySchema,
-	PERMISSION,
-	type Envelope,
-	type EmailPreview,
-	type EmailPreviewListResponse,
-	type EmailTemplateMeta,
-} from "@workspace/shared";
+import { LIST_SLOT_INDEX, EmailTemplateKeySchema, type Envelope, type EmailPreview, type EmailPreviewListResponse, type EmailTemplateMeta } from "@workspace/shared";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { EMAIL_TEMPLATES_URL_STATE } from "@/lib/url-state/selection";
 import { Badge } from "@workspace/ui/components/badge";
@@ -121,9 +113,9 @@ export default function EmailPreviewPage({
 	readonly initialDetail?: Envelope<EmailPreview> | undefined;
 }): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	// `POST /notifications/email-preview/:key/send` requires CREATE on EMAIL (previewing needs only READ).
-	const canSendTest = can(PERMISSION.EMAIL.CREATE);
+	const canSendTest = ability.can("CREATE", "EMAIL");
 
 	// The selected template is `?key=` (lib/url-state/selection): the URL is the
 	// only copy, so links, reloads and back/forward all show the same template.

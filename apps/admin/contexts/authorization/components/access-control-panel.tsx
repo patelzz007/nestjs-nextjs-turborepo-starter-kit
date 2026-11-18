@@ -12,9 +12,9 @@ import { PermissionGroupsSkeleton, RoleRowsSkeleton } from "@/components/loading
 import { PERMISSIONS_LOADING_LABELS, ROLES_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { PermissionCheckForm, PermissionCheckResult } from "@/contexts/authorization/components/permission-check-form";
 import { toastMutationError } from "@/lib/api/mutation-error";
-import { PERMISSION, type CheckPermissionInput, type CheckPermissionResponse, type Envelope, type PermissionListItem, type RoleListItem } from "@workspace/shared";
+import type { CheckPermissionInput, CheckPermissionResponse, Envelope, PermissionListItem, RoleListItem } from "@workspace/shared";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { ListPager } from "@workspace/ui/components/list-pager";
@@ -67,10 +67,10 @@ function firstPermittedTab(canListRoles: boolean, canListPermissions: boolean): 
  */
 export default function AccessControlPanel({ initialRoles, initialPermissions }: AccessControlPanelProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
-	const canListRoles = can(PERMISSION.ROLE.LIST);
-	const canListPermissions = can(PERMISSION.PERMISSION.LIST);
-	const canCheckPermissions = can(PERMISSION.PERMISSION.READ);
+	const ability = useAbility();
+	const canListRoles = ability.can("LIST", "ROLE");
+	const canListPermissions = ability.can("LIST", "PERMISSION");
+	const canCheckPermissions = ability.can("READ", "PERMISSION");
 	const defaultTab = firstPermittedTab(canListRoles, canListPermissions);
 
 	// Each list's page is URL state under its own keys (`?rolesPage=`, `?permissionsPage=`).

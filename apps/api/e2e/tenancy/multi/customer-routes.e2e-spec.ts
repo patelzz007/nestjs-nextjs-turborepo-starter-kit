@@ -2,8 +2,8 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { API_VERSION_PREFIX } from "@workspace/shared";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { z } from "zod";
 
+import { getApiConfig } from "../../../src/config/api-config";
 import { PrismaService } from "../../../src/prisma/prisma.service";
 import { createE2eApp, login, markSeedUserEmailVerified, uniqueClientIp } from "../../e2e-helpers";
 import { seedTwoTenantFixture } from "../../support/two-tenant-fixture";
@@ -25,7 +25,7 @@ describe("tenancy multi: customers", () => {
 		app = await createE2eApp();
 		await seedTwoTenantFixture(app.get(PrismaService));
 		// A full session (verified email), so the refusal below is the tenancy rule and not the restricted-session gate.
-		const pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		const pool = new Pool({ connectionString: getApiConfig().database.url });
 		await markSeedUserEmailVerified(pool, CUSTOMER_EMAIL);
 		await pool.end();
 		accessToken = (await login(app, CUSTOMER_EMAIL, CUSTOMER_PASSWORD)).accessToken;

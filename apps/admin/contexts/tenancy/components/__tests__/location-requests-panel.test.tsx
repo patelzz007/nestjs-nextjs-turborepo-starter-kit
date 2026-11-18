@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
@@ -111,9 +111,9 @@ const PATH = "/merchants/store-requests";
 function panel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient = new QueryClient()): React.JSX.Element {
 	return (
 		<QueryClientProvider client={queryClient}>
-			<CapabilitiesProvider capabilities={capabilities}>
+			<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 				<LocationRequestsPanel />
-			</CapabilitiesProvider>
+			</SessionAbilityProvider>
 		</QueryClientProvider>
 	);
 }

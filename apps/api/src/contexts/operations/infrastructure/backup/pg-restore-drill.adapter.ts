@@ -17,7 +17,7 @@ const STDERR_EXCERPT_LENGTH = 400;
 
 /**
  * Every application table (one per Prisma model). Each is also row-level secured: the RLS manifest lists every
- * model in exactly one profile (`prisma/rls/__tests__/manifest-index.spec.ts`), so this one list is both checks'
+ * model in exactly one profile (`prisma/security/__tests__/manifest-index.spec.ts`), so this one list is both checks'
  * subject, and the built API never reaches into the `prisma/` tooling for it.
  */
 const EXPECTED_TABLES: readonly string[] = Object.values(Prisma.ModelName);

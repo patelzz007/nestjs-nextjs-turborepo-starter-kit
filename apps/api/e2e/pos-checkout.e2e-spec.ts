@@ -17,6 +17,7 @@ import {
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { DEMO_MERCHANT_API_KEYS, REWARD_SEED_IDS } from "../prisma/seed/rewards";
+import { getApiConfig } from "../src/config/api-config";
 import { SweepReferrerCreditEmailsCommand } from "../src/contexts/claims/application/commands/sweep-referrer-credit-emails/sweep-referrer-credit-emails.command";
 import { POS_CODE_MAX_FAILURES } from "../src/contexts/pos/public-api";
 import { systemActor } from "../src/platform/application/actor-context";
@@ -26,7 +27,7 @@ import { RewardCodeHasher } from "../src/platform/infrastructure/crypto/reward-c
 import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { deleteNotificationsByPayload, notificationsByPayload, withRlsBypass } from "./support/notification-rows";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 
 /** Registered to the KL store in the seed (the KL demo key is scoped to that store too). */
 const KL_TERMINAL = "KL-REGISTER-01";

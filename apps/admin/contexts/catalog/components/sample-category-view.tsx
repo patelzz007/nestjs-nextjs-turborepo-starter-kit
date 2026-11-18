@@ -14,11 +14,11 @@ import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { CATEGORIES_PAGE_SIZE_OPTIONS, CATEGORIES_TABLE_URL_STATE, toCategoriesListQuery } from "@/contexts/catalog/url-state/categories";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { ALL_FILTER_OPTION, parseBooleanFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
-import { LIST_SLOT_INDEX, PERMISSION, sampleCategoryListQuery, type Envelope, type SampleCategory } from "@workspace/shared";
+import { LIST_SLOT_INDEX, sampleCategoryListQuery, type Envelope, type SampleCategory } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
@@ -55,11 +55,11 @@ export interface SampleCategoryViewProps {
 export default function SampleCategoryView({ initialPage }: SampleCategoryViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	// Each control mirrors its API route: GET /:id (READ), POST (CREATE), PATCH /:id (UPDATE), DELETE /:id + bulk-delete (DELETE).
-	const { can } = useAuthorization();
-	const canView = can(PERMISSION.SAMPLE_CATEGORY.READ);
-	const canCreate = can(PERMISSION.SAMPLE_CATEGORY.CREATE);
-	const canUpdate = can(PERMISSION.SAMPLE_CATEGORY.UPDATE);
-	const canDelete = can(PERMISSION.SAMPLE_CATEGORY.DELETE);
+	const ability = useAbility();
+	const canView = ability.can("READ", "SAMPLE_CATEGORY");
+	const canCreate = ability.can("CREATE", "SAMPLE_CATEGORY");
+	const canUpdate = ability.can("UPDATE", "SAMPLE_CATEGORY");
+	const canDelete = ability.can("DELETE", "SAMPLE_CATEGORY");
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useProgressRouter();
 	const queryClient = useQueryClient();

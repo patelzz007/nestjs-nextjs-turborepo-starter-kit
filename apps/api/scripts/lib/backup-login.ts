@@ -2,7 +2,7 @@
 // scripts/lib/backup-login.ts — the backup's own database login (ADR 068)
 // ============================================
 // `pg_dump` must read every row, and every table forces RLS, so backups connect with a LOGIN role of
-// their own: a member of the read-only `app_backup` group (prisma/rls/91-backup-reader.sql) carrying
+// their own: a member of the read-only `app_backup` group (prisma/security/roles.ts) carrying
 // BYPASSRLS itself (an attribute is never inherited from a group). Its name and password come from
 // BACKUP_DATABASE_URL, so credentials never live in the repository.
 

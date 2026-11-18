@@ -11,6 +11,7 @@ import { userSafeErrorMessage } from "@/lib/query/query-policy";
 import { tenantRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { DEFAULT_WEBHOOK_SECRET_GRACE_HOURS, MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type WebhookEndpointSummary } from "@workspace/shared";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
@@ -36,13 +37,17 @@ export interface WebhookEndpointDetailViewProps {
 	readonly endpointId: string;
 }
 
-/** One endpoint, read-only: its facts, its actions and its own delivery log. Editing is its own page. */
+/**
+ * One endpoint: its facts and its own delivery log (`merchant:view_webhooks`); testing, editing, switching it on or
+ * off, replacing its secret and sending a delivery again need `merchant:manage_webhooks`; removing it
+ * `merchant:delete_webhooks`. Editing is its own page.
+ */
 export function WebhookEndpointDetailView(props: WebhookEndpointDetailViewProps): React.JSX.Element {
 	return (
 		<MerchantCapabilityGate
-			capability={MERCHANT_CAPABILITY.manageWebhooks}
+			capability={MERCHANT_CAPABILITY.viewWebhooks}
 			loading={<Skeleton className="h-96 rounded-xl" />}
-			fallback={<MerchantAccessDenied title="Webhook access required" description="Only members allowed to manage webhooks (owners, by default) can see endpoints." />}>
+			fallback={<MerchantAccessDenied title="Webhook access required" description="Only members allowed to see webhooks (owners, by default) can see endpoints." />}>
 			<WebhookEndpointDetailContent {...props} />
 		</MerchantCapabilityGate>
 	);
@@ -95,6 +100,9 @@ function EndpointFacts({ endpoint }: { readonly endpoint: WebhookEndpointSummary
 
 function WebhookEndpointDetailContent({ tenantSlug, endpointId }: WebhookEndpointDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const ability = useAbility();
+	const canManage = ability.can("UPDATE", "WEBHOOK");
+	const canRemove = ability.can("DELETE", "WEBHOOK");
 	const router = useProgressRouter();
 	const queryClient = useQueryClient();
 	const routes = tenantRoutes(tenantSlug).webhooks;
@@ -209,16 +217,18 @@ function WebhookEndpointDetailContent({ tenantSlug, endpointId }: WebhookEndpoin
 				title={endpoint.description === "" ? "Webhook endpoint" : endpoint.description}
 				description={endpoint.url}
 				actions={
-					<div className="flex flex-wrap gap-2">
-						<Button onClick={handleTest} disabled={!isActive || testMutation.isPending}>
-							<Send className="size-4" aria-hidden="true" />
-							{testMutation.isPending ? "Sending…" : "Send test event"}
-						</Button>
-						<Button variant="outline" render={<Link href={appRoute(routes.edit(endpointId))} />}>
-							<Pencil className="size-4" aria-hidden="true" />
-							Edit
-						</Button>
-					</div>
+					canManage ? (
+						<div className="flex flex-wrap gap-2">
+							<Button onClick={handleTest} disabled={!isActive || testMutation.isPending}>
+								<Send className="size-4" aria-hidden="true" />
+								{testMutation.isPending ? "Sending…" : "Send test event"}
+							</Button>
+							<Button variant="outline" render={<Link href={appRoute(routes.edit(endpointId))} />}>
+								<Pencil className="size-4" aria-hidden="true" />
+								Edit
+							</Button>
+						</div>
+					) : null
 				}
 			/>
 
@@ -241,20 +251,28 @@ function WebhookEndpointDetailContent({ tenantSlug, endpointId }: WebhookEndpoin
 
 			<EndpointFacts endpoint={endpoint} />
 
-			<div className="flex flex-wrap gap-2">
-				<Button variant="outline" onClick={handleToggle} disabled={isToggling}>
-					{isActive ? <PowerOff className="size-4" aria-hidden="true" /> : <Power className="size-4" aria-hidden="true" />}
-					{isActive ? "Switch off" : "Switch on"}
-				</Button>
-				<Button variant="outline" onClick={handleOpenRotate}>
-					<KeyRound className="size-4" aria-hidden="true" />
-					Replace signing secret
-				</Button>
-				<Button variant="outline" onClick={handleOpenRemove}>
-					<Trash2 className="size-4" aria-hidden="true" />
-					Remove
-				</Button>
-			</div>
+			{canManage || canRemove ? (
+				<div className="flex flex-wrap gap-2">
+					{canManage ? (
+						<>
+							<Button variant="outline" onClick={handleToggle} disabled={isToggling}>
+								{isActive ? <PowerOff className="size-4" aria-hidden="true" /> : <Power className="size-4" aria-hidden="true" />}
+								{isActive ? "Switch off" : "Switch on"}
+							</Button>
+							<Button variant="outline" onClick={handleOpenRotate}>
+								<KeyRound className="size-4" aria-hidden="true" />
+								Replace signing secret
+							</Button>
+						</>
+					) : null}
+					{canRemove ? (
+						<Button variant="outline" onClick={handleOpenRemove}>
+							<Trash2 className="size-4" aria-hidden="true" />
+							Remove
+						</Button>
+					) : null}
+				</div>
+			) : null}
 
 			<WebhookDeliveryLog
 				deliveries={deliveriesQuery.data?.data ?? []}
@@ -263,7 +281,7 @@ function WebhookEndpointDetailContent({ tenantSlug, endpointId }: WebhookEndpoin
 				onRetry={handleRetryDeliveries}
 				showEndpoint={false}
 				redeliveringId={redelivery.redeliveringId}
-				onRedeliver={redelivery.redeliver}
+				onRedeliver={canManage ? redelivery.redeliver : null}
 				redeliverError={redelivery.error}
 			/>
 

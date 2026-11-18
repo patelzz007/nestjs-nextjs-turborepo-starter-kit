@@ -22,7 +22,7 @@ export class GetKybProfileHandler implements IQueryHandler<GetKybProfileQuery, M
 	public async execute(query: GetKybProfileQuery): Promise<MerchantKybProfileResponse> {
 		const user = requireUserActor(query.actor);
 		const member = await this.directory.resolveMember(user, query.input.tenantSlug);
-		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageVerification });
+		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.viewVerification });
 		const profile = await this.kyb.getProfile(actingInTenant(user, member.tenantId), member.tenantId);
 		if (profile === null) {
 			throw merchantNotFound();

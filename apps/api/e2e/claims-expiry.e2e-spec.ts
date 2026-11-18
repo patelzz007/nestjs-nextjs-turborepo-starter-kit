@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
+import { getApiConfig } from "../src/config/api-config";
 import { ExpireOverdueClaimsCommand } from "../src/contexts/claims/application/commands/expire-overdue-claims/expire-overdue-claims.command";
 import { systemActor } from "../src/platform/application/actor-context";
 import { SystemCommandDispatcher } from "../src/platform/application/system-command-dispatcher";
@@ -36,7 +37,7 @@ describe("Claim expiry (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		const ownerId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 		await withTenantMember(app, ownerId, TENANT_SEED_IDS.klTenant, (tx) =>
 			tx.reward.create({

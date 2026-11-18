@@ -2,9 +2,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { KANBAN_PARENT_TYPE, kanbanColumnIsDone, PERMISSION, type Envelope, type KanbanTaskDetail } from "@workspace/shared";
+import { KANBAN_PARENT_TYPE, kanbanColumnIsDone, type Envelope, type KanbanTaskDetail } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { toastMessage } from "@workspace/ui/components/toast";
@@ -113,12 +113,12 @@ export interface KanbanTaskDetailViewProps {
  */
 export function KanbanTaskDetailView({ taskId, initialTask }: KanbanTaskDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const router = useProgressRouter();
 	const queryClient = useQueryClient();
-	const canUpdate = can(PERMISSION.KANBAN_TASK.UPDATE);
-	const canDelete = can(PERMISSION.KANBAN_TASK.DELETE);
-	const canCreate = can(PERMISSION.KANBAN_TASK.CREATE);
+	const canUpdate = ability.can("UPDATE", "KANBAN_TASK");
+	const canDelete = ability.can("DELETE", "KANBAN_TASK");
+	const canCreate = ability.can("CREATE", "KANBAN_TASK");
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const taskQuery = api.kanban.task.useQuery({ taskId }, initialDataOption(initialTask));
 	const task = taskQuery.data?.data;

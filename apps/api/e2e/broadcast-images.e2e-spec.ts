@@ -7,6 +7,7 @@ import { z } from "zod";
 import { BROADCAST_SEED_IMAGE_ID } from "../prisma/seed/broadcast-images";
 import { NOTIFICATION_SEED_IDS } from "../prisma/seed/notifications-demo";
 import { TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 import { createE2eApp, grantSeedUsersFullSession, login, mutationHeaders, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 const DataSchema = z.object({ data: z.looseObject({}) });
@@ -61,7 +62,7 @@ describe("Pictures in broadcasts (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		await grantSeedUsersFullSession(pool, [OWNER_EMAIL]);
 		owner = await login(app, OWNER_EMAIL, "BrewOwner@123", "merchant");
 	});

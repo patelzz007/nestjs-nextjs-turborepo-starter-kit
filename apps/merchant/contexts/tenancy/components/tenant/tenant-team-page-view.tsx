@@ -20,6 +20,7 @@ import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useUrlListPager } from "@workspace/client/lib/url-state/use-url-list-pager";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
@@ -76,11 +77,16 @@ export interface TenantTeamPageViewProps {
 	readonly tenantSlug: string;
 }
 
-/** Team & permissions — the roster, invitations and roles; needs `merchant:manage_team` (the API decides every call). */
+/**
+ * Team & permissions — the roster and pending invitations need `merchant:view_team` (member.read); inviting
+ * `merchant:invite_members`, revoking an invitation `merchant:revoke_invites`, and the roles tab `merchant:manage_team`
+ * (as the roles pages). The API
+ * decides every call.
+ */
 export function TenantTeamPageView({ tenantSlug }: TenantTeamPageViewProps): React.JSX.Element {
 	return (
 		<MerchantCapabilityGate
-			capability={MERCHANT_CAPABILITY.manageTeam}
+			capability={MERCHANT_CAPABILITY.viewTeam}
 			loading={<MerchantTeamPageSkeleton />}
 			fallback={
 				<div className="space-y-6">
@@ -96,8 +102,13 @@ export function TenantTeamPageView({ tenantSlug }: TenantTeamPageViewProps): Rea
 function TenantTeamPageContent({ tenantSlug }: TenantTeamPageViewProps): React.JSX.Element {
 	const { api, user } = useAuth();
 	const queryClient = useQueryClient();
+	const ability = useAbility();
+	const canInvite = ability.can("CREATE", "INVITE");
+	const canRevokeInvites = ability.can("DELETE", "INVITE");
+	// The roles pages' own gate (merchant:manage_team, ORG_PAGE_RULES "/settings/team/roles"); the API decides each role call.
+	const canReadRoles = ability.can("UPDATE", "MEMBER");
 	const contextQuery = api.tenants.context.useQuery({ tenantSlug });
-	const rolesQuery = api.tenantAccess.roles.useQuery({ tenantSlug });
+	const rolesQuery = api.tenantAccess.roles.useQuery({ tenantSlug }, { enabled: canReadRoles });
 	const [tabState, updateTabState] = useUrlState(TEAM_TAB_URL_STATE);
 	// Each list's page is URL state (`?membersPage=` / `?invitesPage=`).
 	const [membersUrlState, updateMembersUrlState] = useUrlState(TEAM_MEMBERS_URL_STATE);
@@ -163,10 +174,12 @@ function TenantTeamPageContent({ tenantSlug }: TenantTeamPageViewProps): React.J
 			<SettingsSectionHeader
 				{...SECTION}
 				action={
-					<Button type="button" onClick={openInvite}>
-						<UserPlus data-icon="inline-start" />
-						Invite teammate
-					</Button>
+					canInvite ? (
+						<Button type="button" onClick={openInvite}>
+							<UserPlus data-icon="inline-start" />
+							Invite teammate
+						</Button>
+					) : null
 				}
 			/>
 
@@ -178,9 +191,11 @@ function TenantTeamPageContent({ tenantSlug }: TenantTeamPageViewProps): React.J
 					<TabsTrigger value="invites" className="gap-2">
 						Pending invites <TabCount count={inviteCount} />
 					</TabsTrigger>
-					<TabsTrigger value="roles" className="gap-2">
-						Roles <TabCount count={roles.length} />
-					</TabsTrigger>
+					{canReadRoles ? (
+						<TabsTrigger value="roles" className="gap-2">
+							Roles <TabCount count={roles.length} />
+						</TabsTrigger>
+					) : null}
 				</TabsList>
 
 				<TabsContent value="members" className="mt-5 space-y-6">
@@ -207,7 +222,7 @@ function TenantTeamPageContent({ tenantSlug }: TenantTeamPageViewProps): React.J
 							labels={MEMBER_PAGER_LABELS}
 						/>
 					) : null}
-					<RoleCapabilityMatrix roles={roles} onCustomise={showRolesTab} />
+					{canReadRoles ? <RoleCapabilityMatrix roles={roles} onCustomise={showRolesTab} /> : null}
 				</TabsContent>
 
 				<TabsContent value="invites" className="mt-5 space-y-4">
@@ -231,7 +246,7 @@ function TenantTeamPageContent({ tenantSlug }: TenantTeamPageViewProps): React.J
 										invite={invite}
 										locationLabel={formatLocationAccess(invite, locations)}
 										disabled={revokeMutation.isPending}
-										onRevoke={handleRevokeInvite}
+										onRevoke={canRevokeInvites ? handleRevokeInvite : null}
 									/>
 								))}
 							</ul>
@@ -251,9 +266,11 @@ function TenantTeamPageContent({ tenantSlug }: TenantTeamPageViewProps): React.J
 					) : null}
 				</TabsContent>
 
-				<TabsContent value="roles" className="mt-5">
-					<TeamRolesList tenantSlug={tenantSlug} />
-				</TabsContent>
+				{canReadRoles ? (
+					<TabsContent value="roles" className="mt-5">
+						<TeamRolesList tenantSlug={tenantSlug} />
+					</TabsContent>
+				) : null}
 			</Tabs>
 
 			{inviting ? <InviteTeammateDialog tenantSlug={tenantSlug} locations={locations} onClose={setInviting} onInvited={invalidateTeamQueries} /> : null}
@@ -473,12 +490,13 @@ interface PendingInviteRowProps {
 	readonly invite: TenantMemberInviteResponse;
 	readonly locationLabel: string;
 	readonly disabled: boolean;
-	readonly onRevoke: (inviteId: string) => void;
+	/** Revokes the invitation; null hides the action (no invite.delete). */
+	readonly onRevoke: ((inviteId: string) => void) | null;
 }
 
 function PendingInviteRow({ invite, locationLabel, disabled, onRevoke }: PendingInviteRowProps): React.JSX.Element {
 	const handleRevoke = React.useCallback((): void => {
-		onRevoke(invite.id);
+		onRevoke?.(invite.id);
 	}, [invite.id, onRevoke]);
 
 	return (
@@ -495,9 +513,11 @@ function PendingInviteRow({ invite, locationLabel, disabled, onRevoke }: Pending
 					</p>
 				</div>
 			</div>
-			<Button type="button" variant="outline" size="sm" onClick={handleRevoke} disabled={disabled}>
-				Revoke
-			</Button>
+			{onRevoke === null ? null : (
+				<Button type="button" variant="outline" size="sm" onClick={handleRevoke} disabled={disabled}>
+					Revoke
+				</Button>
+			)}
 		</li>
 	);
 }

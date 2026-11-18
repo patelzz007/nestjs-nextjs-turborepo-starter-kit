@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { LIST_SLOT_INDEX, KybDocumentScanStatusSchema, PERMISSION, type CapabilitySlug, type KybDocumentScanStatus } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -161,9 +161,9 @@ const PATH = "/merchants/verification";
 function panel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient = new QueryClient()): React.JSX.Element {
 	return (
 		<QueryClientProvider client={queryClient}>
-			<CapabilitiesProvider capabilities={capabilities}>
+			<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 				<KybReviewPanel />
-			</CapabilitiesProvider>
+			</SessionAbilityProvider>
 		</QueryClientProvider>
 	);
 }

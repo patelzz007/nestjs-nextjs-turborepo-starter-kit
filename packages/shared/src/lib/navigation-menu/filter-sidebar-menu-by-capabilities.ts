@@ -66,7 +66,7 @@ function resolveRequirement(item: SidebarFilterNode, inheritedCascade: SidebarAu
 
 /**
  * Evaluates a declarative `{ permissions, mode }` requirement with a
- * permission predicate (e.g. `useAuthorization().can`). An empty list is
+ * slug predicate (e.g. `(slug) => abilityAllowsCapability(ability, slug)`). An empty list is
  * satisfied. Shared by the menu filter and the route guard so both agree.
  */
 export function evaluateSidebarAuthorization(authorization: PermissionRequirement, isGranted: (permission: CapabilitySlug) => boolean): boolean {

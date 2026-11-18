@@ -5,6 +5,7 @@ import { z } from "zod";
 import { LIST_SLOT_INDEX, getPermissionDefinitions } from "@workspace/shared";
 
 import { RequestContextService } from "../src/platform/infrastructure/context/request-context";
+import { getApiConfig } from "../src/config/api-config";
 import type { TypedConfigService } from "../src/config/typed-config.service";
 import { createSuperAdminBootstrap } from "../src/contexts/identity/superadmin-bootstrap.composition";
 import { SuperAdminRoleMissingError } from "../src/contexts/identity/domain/errors/identity.errors";
@@ -57,7 +58,7 @@ describe("Reference data sync (integration, scratch database)", () => {
 	}
 
 	beforeAll(async () => {
-		database = await createScratchDatabase(process.env.DATABASE_URL ?? "", "refdata_e2e");
+		database = await createScratchDatabase(getApiConfig().database.url, "refdata_e2e");
 		pool = database.pool;
 		config = createTestTypedConfig({ DATABASE_URL: database.url });
 		prisma = new PrismaService(config);

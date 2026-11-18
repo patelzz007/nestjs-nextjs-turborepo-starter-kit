@@ -180,7 +180,7 @@ export function nextSteps(name: string): string[] {
 	const n = contextNames(name);
 	return [
 		`Model the data in apps/api/prisma/schema.prisma (\`/// @extends BaseModel\`), then \`pnpm --filter @workspace/api db:migrate:create\` (rules/08, rules/24 §2)`,
-		`Seed every new column (prisma/seed) and add RLS policies for the new tables (prisma/rls, rules/10 and rules/31)`,
+		`Seed every new column (prisma/seed) and add RLS policies for the new tables (prisma/security/table-policies.ts, then \`pnpm --filter @workspace/api db:security\`; rules/10 and rules/31)`,
 		`Implement ${n.pascal}Reader in infrastructure/persistence/prisma-${n.kebab}.reader.ts and bind ${n.constant}_READER in ${n.kebab}.module.ts (rules/24 §4)`,
 		`Add the shared contract in packages/shared/src/contexts/${n.kebab}/ (schemas, routes, contract; rules/05, rules/24 §1)`,
 		`Add the controller in presentation/http with explicit permissions per endpoint (rules/10, rules/24 §6)`,

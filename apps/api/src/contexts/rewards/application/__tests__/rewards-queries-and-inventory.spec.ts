@@ -175,13 +175,27 @@ describe("merchant reward queries", () => {
 	it("answers 404 for a reward not offered at the caller's stores, and nothing at all without the capability", async () => {
 		const access = new FakeMerchantAccessPort();
 		const reads = new FixedRewardReads([]);
-		await expect(new GetTenantRewardHandler(access, reads).execute(new GetTenantRewardQuery(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }))).rejects.toThrow(
-			RewardNotFoundError,
-		);
+		await expect(
+			new GetTenantRewardHandler(access, access, reads).execute(new GetTenantRewardQuery(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID })),
+		).rejects.toThrow(RewardNotFoundError);
 		access.deny("merchant:view_rewards");
-		await expect(new GetTenantRewardHandler(access, reads).execute(new GetTenantRewardQuery(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }))).rejects.toThrow(
-			AuthorizationDeniedError,
+		await expect(
+			new GetTenantRewardHandler(access, access, reads).execute(new GetTenantRewardQuery(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID })),
+		).rejects.toThrow(AuthorizationDeniedError);
+	});
+
+	it("decides the read for this reward, and tells a member what this reward allows them", async () => {
+		const access = new FakeMerchantAccessPort().deny("merchant:publish_rewards");
+		const reward = await new GetTenantRewardHandler(access, access, new FixedRewardReads([VISIBLE])).execute(
+			new GetTenantRewardQuery(userActor(), { tenantId: TENANT_ID, rewardId: VISIBLE.id }),
 		);
+		expect(reward.viewerCapabilities).toEqual({ update: true, publish: false });
+		const target = { resource: "REWARD", resourceId: VISIBLE.id };
+		expect(access.requests.map((recorded) => recorded.request)).toEqual([
+			{ tenantId: TENANT_ID, capability: "merchant:view_rewards", target },
+			{ tenantId: TENANT_ID, capability: "merchant:manage_rewards", target },
+			{ tenantId: TENANT_ID, capability: "merchant:publish_rewards", target },
+		]);
 	});
 });
 

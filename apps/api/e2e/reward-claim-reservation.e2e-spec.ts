@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
+import { getApiConfig } from "../src/config/api-config";
 import { ClaimRewardCommand } from "../src/contexts/claims/application/commands/claim-reward/claim-reward.command";
 import { ActorContextSchema, systemActor, type ActorContext } from "../src/platform/application/actor-context";
 import { createE2eApp, withTenantMember } from "./e2e-helpers";
@@ -91,7 +92,7 @@ describe("Reward claim reservation (integration)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		merchantUserId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 		const rows = await pool.query(
 			`SELECT id, phone, "phoneVerifiedAt"::text AS "phoneVerifiedAt" FROM public."User"

@@ -2,7 +2,7 @@
 
 import { useSessionPermissionsQuery } from "@/lib/session/capabilities";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { StaticFeatureFlagsProvider } from "@workspace/client/lib/contexts/feature-flags";
 import type { CapabilitySlug, Envelope, FeatureFlagBundle, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
@@ -12,7 +12,7 @@ export interface WebSessionState {
 	readonly isAuthenticated: boolean;
 	/** True once the capability set is known — gates wait instead of flashing a denial. */
 	readonly isResolved: boolean;
-	/** Same list `CapabilitiesProvider` receives (sidebar filtering needs the raw slugs). */
+	/** Same list the session's CASL ability is built from (sidebar filtering needs the raw slugs). */
 	readonly capabilities: readonly CapabilitySlug[];
 	/** Latest `GET /auth/permissions` answer — `undefined` for guests. */
 	readonly session: SessionPermissionsResponse | undefined;
@@ -37,8 +37,8 @@ export interface WebAuthorizationProviderProps {
 
 /**
  * Single live capability source for the whole web app. Mounted once in the
- * root layout; wraps children in `CapabilitiesProvider` so `useAuthorization()`
- * and `<Can>` work on every page. Guests get an empty capability set (every
+ * root layout; wraps children in `SessionAbilityProvider` (namespace
+ * "platform") so `useAbility()` and `<Can>` work on every page. Guests get an empty capability set (every
  * gated control denies). Purely advisory UX — the API remains authoritative.
  */
 export function WebAuthorizationProvider({ sessionActive, initialSessionPermissions, children }: WebAuthorizationProviderProps): React.JSX.Element {
@@ -54,7 +54,9 @@ export function WebAuthorizationProvider({ sessionActive, initialSessionPermissi
 
 	return (
 		<WebSessionContext.Provider value={value}>
-			<CapabilitiesProvider capabilities={capabilities}>{children}</CapabilitiesProvider>
+			<SessionAbilityProvider capabilities={capabilities} namespace="platform">
+				{children}
+			</SessionAbilityProvider>
 		</WebSessionContext.Provider>
 	);
 }
@@ -75,9 +77,9 @@ export interface WebSessionTestProviderProps {
 export function WebSessionTestProvider({ session, featureFlags = null, children }: WebSessionTestProviderProps): React.JSX.Element {
 	return (
 		<WebSessionContext.Provider value={session}>
-			<CapabilitiesProvider capabilities={session.capabilities}>
+			<SessionAbilityProvider capabilities={session.capabilities} namespace="platform">
 				<StaticFeatureFlagsProvider bundle={featureFlags}>{children}</StaticFeatureFlagsProvider>
-			</CapabilitiesProvider>
+			</SessionAbilityProvider>
 		</WebSessionContext.Provider>
 	);
 }

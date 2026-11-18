@@ -1,8 +1,8 @@
 "use client";
 
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION, type KanbanSearchResult } from "@workspace/shared";
+import type { KanbanSearchResult } from "@workspace/shared";
 import { CommandGroup, CommandItem } from "@workspace/ui/components/command";
 import * as React from "react";
 
@@ -18,9 +18,9 @@ export const KANBAN_PALETTE_MIN_QUERY_LENGTH = 2;
 /** The palette's item matches for `query`, ranked by the API (exact key, key prefix, title); none without LIST on KANBAN_TASK. */
 export function useKanbanPaletteSearch(query: string): readonly KanbanSearchResult[] {
 	const { api } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const text = query.trim();
-	const enabled = can(PERMISSION.KANBAN_TASK.LIST) && text.length >= KANBAN_PALETTE_MIN_QUERY_LENGTH;
+	const enabled = ability.can("LIST", "KANBAN_TASK") && text.length >= KANBAN_PALETTE_MIN_QUERY_LENGTH;
 	const search = api.kanban.search.useQuery({ q: text, limit: KANBAN_PALETTE_RESULT_LIMIT }, { enabled });
 	return enabled ? (search.data?.data.results ?? []) : [];
 }

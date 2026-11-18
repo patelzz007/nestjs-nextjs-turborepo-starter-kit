@@ -169,7 +169,8 @@ describe("tenant page rules per membership role", () => {
 	const EXPECTED_SETTINGS_ACCESS: readonly [MembershipRole | undefined, boolean, boolean, boolean, boolean][] = [
 		// role,         settings index, team,  locations, verification
 		["OWNER", true, true, true, true],
-		["MANAGER", true, true, true, false],
+		// Managers read the verification; submitting it stays the owner's (merchant:manage_verification, in-page).
+		["MANAGER", true, true, true, true],
 		["CASHIER", true, false, true, false],
 		[undefined, false, false, false, false],
 	];
@@ -185,11 +186,13 @@ describe("tenant page rules per membership role", () => {
 		expect(isTenantPageRuleSatisfied(ORG_PAGE_RULES["/settings/verification"], isGranted)).toBe(verification);
 	});
 
-	it("gates POS terminals exactly like API keys (a paired till receives an API key)", () => {
-		expect(ORG_PAGE_RULES["/terminals"]).toEqual(ORG_PAGE_RULES["/api-keys"]);
+	it("opens POS terminals and API keys to the members who may see them, not only to those who may change them", () => {
+		expect(ORG_PAGE_RULES["/terminals"]).toEqual({ kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewTerminals] } });
+		expect(ORG_PAGE_RULES["/api-keys"]).toEqual({ kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewApiKeys] } });
 		for (const role of ROLES_AND_GUEST) {
 			const isGranted = predicateFor(role);
-			expect(isTenantPageRuleSatisfied(ORG_PAGE_RULES["/terminals"], isGranted)).toBe(isGranted(MERCHANT_CAPABILITY.manageApiKeys));
+			expect(isTenantPageRuleSatisfied(ORG_PAGE_RULES["/terminals"], isGranted)).toBe(isGranted(MERCHANT_CAPABILITY.viewTerminals));
+			expect(isTenantPageRuleSatisfied(ORG_PAGE_RULES["/api-keys"], isGranted)).toBe(isGranted(MERCHANT_CAPABILITY.viewApiKeys));
 		}
 	});
 
@@ -257,12 +260,12 @@ describe("merchant sidebar ↔ tenant route map", () => {
 		expect(visible).not.toContain("/rewards/new");
 	});
 
-	it("hides only Verification from admins", () => {
+	it("shows admins Team, Locations and Verification (to read)", () => {
 		const visible = visibleSidebarUrls("MANAGER");
 
 		expect(visible).toContain("/settings/team");
 		expect(visible).toContain("/settings/locations");
-		expect(visible).not.toContain("/settings/verification");
+		expect(visible).toContain("/settings/verification");
 	});
 
 	it("shows owners every tenant setting", () => {
@@ -273,9 +276,11 @@ describe("merchant sidebar ↔ tenant route map", () => {
 		expect(visibleSidebarUrls(undefined)).toEqual(["/account"]);
 	});
 
-	it("gates the settings pages on the new tenant capabilities", () => {
-		expect(ORG_PAGE_RULES["/settings/team"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] } });
+	it("gates each settings page on reading it; its changes need their own capability in-page", () => {
+		expect(ORG_PAGE_RULES["/settings/team"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.viewTeam] } });
+		expect(ORG_PAGE_RULES["/settings/team/roles"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] } });
 		expect(ORG_PAGE_RULES["/settings/locations"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } });
-		expect(ORG_PAGE_RULES["/settings/verification"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.manageVerification] } });
+		expect(ORG_PAGE_RULES["/settings/verification"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.viewVerification] } });
+		expect(ORG_PAGE_RULES["/settings/banned-customers"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.viewCustomerBans] } });
 	});
 });

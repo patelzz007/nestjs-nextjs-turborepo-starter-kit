@@ -1,9 +1,9 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION, type ConfigRevisionContent, type DynamicConfigDetail, type DynamicConfigKey, type Revision, type SubjectContext } from "@workspace/shared";
+import type { ConfigRevisionContent, DynamicConfigDetail, DynamicConfigKey, Revision, SubjectContext } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -63,7 +63,7 @@ export function DynamicConfigDetailView({ configKey }: { readonly configKey: Dyn
 
 function ConfigDetailLoaded({ config, revisions }: { readonly config: DynamicConfigDetail; readonly revisions: readonly Revision[] | undefined }): React.JSX.Element {
 	const { api, user } = useAuth();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const queryClient = useQueryClient();
 	const decide = api.featureFlags.decideConfigRevision.useMutation({
 		onSuccess: async (): Promise<void> => {
@@ -111,7 +111,7 @@ function ConfigDetailLoaded({ config, revisions }: { readonly config: DynamicCon
 				</div>
 				<div className="flex flex-wrap gap-2">
 					{config.live === null ? null : <ExportRulesButton query={{ kind: "CONFIG", key: config.key }} />}
-					{can(PERMISSION.DYNAMIC_CONFIG.UPDATE) && pending === null ? (
+					{ability.can("UPDATE", "DYNAMIC_CONFIG") && pending === null ? (
 						<Button render={<Link href={ROUTES.releases.editConfig(config.key)} />} nativeButton={false}>
 							<Pencil className="size-4" />
 							Edit values and rules
@@ -131,7 +131,7 @@ function ConfigDetailLoaded({ config, revisions }: { readonly config: DynamicCon
 				<PendingRevisionCard
 					revision={pending}
 					preview={<ConfigContentSummary content={contentOf(pending)} now={now} />}
-					canDecide={can(PERMISSION.DYNAMIC_CONFIG.APPROVE)}
+					canDecide={ability.can("APPROVE", "DYNAMIC_CONFIG")}
 					isOwn={isOwnPending}
 					pending={decide.isPending}
 					onDecide={decidePending}

@@ -34,6 +34,7 @@ import { tenantRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
@@ -77,18 +78,21 @@ export interface MerchantApiKeysPageViewProps {
 	readonly initialKeys?: LocationScopedPrefetch<ApiKeysPagePrefetch> | undefined;
 }
 
-/** POS API keys route — list/create/revoke all require `merchant:manage_api_keys`. */
+/**
+ * POS API keys route — listing needs `merchant:view_api_keys` (api_key.read); creating a key
+ * `merchant:manage_api_keys` (api_key.create); revoking one `merchant:revoke_api_keys` (api_key.delete).
+ */
 export function MerchantApiKeysPageView(props: MerchantApiKeysPageViewProps): React.JSX.Element {
 	return (
 		<MerchantCapabilityGate
-			capability={MERCHANT_CAPABILITY.manageApiKeys}
+			capability={MERCHANT_CAPABILITY.viewApiKeys}
 			loading={<MerchantApiKeysPageSkeleton />}
 			fallback={
 				<div className="space-y-8">
-					<MerchantPageHeader title="POS API keys" description="Keys for redemption terminals — owner or admin access required." />
+					<MerchantPageHeader title="POS API keys" description="Keys for redemption terminals." />
 					<MerchantAccessDenied
-						title="Owner or admin access required"
-						description="API key management is limited to store owners and admins. Contact your account owner if you need a new terminal key."
+						title="API key access required"
+						description="Your role can't see the store's API keys. Contact your account owner if you need a new terminal key."
 					/>
 				</div>
 			}>
@@ -122,6 +126,9 @@ function storesCoveredCard(stats: ApiKeyStats | undefined): { readonly value: st
 function MerchantApiKeysPageContent({ tenantSlug, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
+	const ability = useAbility();
+	const canCreate = ability.can("CREATE", "API_KEY");
+	const canRevoke = ability.can("DELETE", "API_KEY");
 	const { locationId } = useActiveLocationFilter();
 	const { activeLocation, accessibleLocations, hasTenantWideAccess } = useMerchantLocation();
 
@@ -301,19 +308,21 @@ function MerchantApiKeysPageContent({ tenantSlug, initialKeys }: MerchantApiKeys
 				</div>
 			)}
 
-			<CreateApiKeyCard
-				name={name}
-				onNameChange={handleNameChange}
-				storeChoice={storeChoice}
-				onStoreChoiceChange={handleStoreChoiceChange}
-				storeChoices={storeChoices}
-				scope={scope}
-				onScopeChange={handleScopeChange}
-				canSubmit={createInput !== undefined}
-				onSubmit={handleCreate}
-				isPending={createMutation.isPending}
-				submissionError={createMutation.error === null ? null : toFormSubmissionError(createMutation.error, CREATE_API_KEY_FIELD_ERRORS, CREATE_KEY_FAILED_MESSAGE)}
-			/>
+			{canCreate ? (
+				<CreateApiKeyCard
+					name={name}
+					onNameChange={handleNameChange}
+					storeChoice={storeChoice}
+					onStoreChoiceChange={handleStoreChoiceChange}
+					storeChoices={storeChoices}
+					scope={scope}
+					onScopeChange={handleScopeChange}
+					canSubmit={createInput !== undefined}
+					onSubmit={handleCreate}
+					isPending={createMutation.isPending}
+					submissionError={createMutation.error === null ? null : toFormSubmissionError(createMutation.error, CREATE_API_KEY_FIELD_ERRORS, CREATE_KEY_FAILED_MESSAGE)}
+				/>
+			) : null}
 
 			<ApiKeyList
 				keys={keys}
@@ -323,7 +332,7 @@ function MerchantApiKeysPageContent({ tenantSlug, initialKeys }: MerchantApiKeys
 				isError={listQuery.isError}
 				onRetry={handleRetry}
 				revokingKeyId={isRevoking ? (keyToRevoke?.id ?? null) : null}
-				onRevokeRequest={handleRevokeRequest}
+				onRevokeRequest={canRevoke ? handleRevokeRequest : null}
 				truncationNote={truncationNote}
 			/>
 

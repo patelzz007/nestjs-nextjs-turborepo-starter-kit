@@ -8,6 +8,7 @@ import { userSafeErrorMessage } from "@/lib/query/query-policy";
 import { tenantRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { MERCHANT_CAPABILITY, PAYMENT_PROVIDER_REFUNDS, type PaymentIntentResponse } from "@workspace/shared";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
@@ -32,10 +33,13 @@ export interface MerchantPaymentDetailPageViewProps {
 	readonly paymentId: string;
 }
 
-/** `/t/:tenantSlug/payments/:paymentId` — one payment: where it stands, its checkout link while it can be paid, and its refund. */
+/**
+ * `/t/:tenantSlug/payments/:paymentId` — one payment: where it stands, its checkout link while it can be paid, and its
+ * refund. Viewing needs `merchant:view_payments`; the refund button `merchant:refund_payments` (payment.update).
+ */
 export function MerchantPaymentDetailPageView(props: MerchantPaymentDetailPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.managePayments} loading={<MerchantRewardDetailPageSkeleton />}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewPayments} loading={<MerchantRewardDetailPageSkeleton />}>
 			<PaymentDetailContent {...props} />
 		</MerchantCapabilityGate>
 	);
@@ -103,6 +107,7 @@ export function describePaymentNextStep(payment: PaymentIntentResponse): string 
 function PaymentDetail({ tenantSlug, payment }: { readonly tenantSlug: string; readonly payment: PaymentIntentResponse }): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
+	const canRefund = useAbility().can("UPDATE", "PAYMENT");
 	const [confirmingRefund, setConfirmingRefund] = React.useState(false);
 	const { isCopied, copyToClipboard } = useCopyToClipboard({
 		onError: (): void => {
@@ -146,7 +151,7 @@ function PaymentDetail({ tenantSlug, payment }: { readonly tenantSlug: string; r
 					<h1 className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">{amount}</h1>
 					<p className="text-sm text-muted-foreground">{payment.description}</p>
 				</div>
-				{payment.refundable ? (
+				{payment.refundable && canRefund ? (
 					<Button type="button" variant="outline" onClick={handleRefundRequest} disabled={refund.isPending}>
 						Refund
 					</Button>

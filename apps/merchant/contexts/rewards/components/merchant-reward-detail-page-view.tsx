@@ -16,7 +16,7 @@ import { isRewardEditable, useMerchantReward } from "@/contexts/rewards/lib/use-
 import { tenantRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useAbility } from "@workspace/client/lib/contexts/authorization";
 import { formatRewardOffer, rewardTypeLabel } from "@workspace/client/lib/contexts/rewards/reward-offer";
 import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type Envelope, type RewardResponse } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
@@ -41,7 +41,11 @@ export interface MerchantRewardDetailPageViewProps {
 	readonly initialReward?: Envelope<RewardResponse> | undefined;
 }
 
-/** Reward page — viewing needs `merchant:view_rewards`; its edit and submit actions need `merchant:manage_rewards`. */
+/**
+ * Reward page — viewing needs `merchant:view_rewards`. What this one reward allows comes from the API, decided per
+ * record (`viewerCapabilities`: a share of it counts): changing its minimum tier (update) and submitting it for review
+ * (publish). The full editor needs `merchant:manage_rewards` itself.
+ */
 export function MerchantRewardDetailPageView(props: MerchantRewardDetailPageViewProps): React.JSX.Element {
 	return (
 		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards} loading={<MerchantRewardDetailPageSkeleton />}>
@@ -124,12 +128,16 @@ function RewardAudienceSummary({ tenantSlug, reward }: MerchantRewardDetailProps
 function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const routes = tenantRoutes(tenantSlug);
-	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
+	const canManageRewards = ability.can("UPDATE", "REWARD");
+	// What THIS reward allows the member, decided by the API per record (ADR 067: a share of it counts); the session
+	// ability is the fallback for a response without it.
+	const allowed = reward.viewerCapabilities ?? { update: canManageRewards, publish: ability.can("PUBLISH", "REWARD") };
 	const tiersEnabled = useTiersEnabled();
+	// The full editor also changes the audience and images (tenant data a share does not reach): reward.update itself.
 	const canEdit = canManageRewards && isRewardEditable(reward.status);
-	const canSubmit = canManageRewards && reward.status === "DRAFT";
+	const canSubmit = allowed.publish && reward.status === "DRAFT";
 	const ended = isRewardEnded(reward.status);
 	const stores = describeRewardStores(reward);
 	// The tenant's zone, for share end dates (the context is the member-wide, already-cached tenant read).
@@ -252,7 +260,7 @@ function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps)
 							</DetailRow>
 							{tiersEnabled ? (
 								<DetailRow term="Minimum tier">
-									<MerchantRewardMinimumTier tenantSlug={tenantSlug} reward={reward} canManage={canManageRewards} />
+									<MerchantRewardMinimumTier tenantSlug={tenantSlug} reward={reward} canManage={allowed.update} />
 								</DetailRow>
 							) : null}
 							<DetailRow term="Category">

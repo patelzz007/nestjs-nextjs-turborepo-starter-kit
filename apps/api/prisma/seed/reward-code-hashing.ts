@@ -1,4 +1,4 @@
-import { RewardCodeHashKeysEnvSchema } from "../../src/config/api-env.fields";
+import { getApiConfig } from "../../src/config/api-config";
 import { RewardCodeHasher } from "../../src/platform/infrastructure/crypto/reward-code-hasher";
 
 let hasher: RewardCodeHasher | null = null;
@@ -9,6 +9,6 @@ let hasher: RewardCodeHasher | null = null;
  * the demo codes printed by the seed actually work at the POS.
  */
 export function seedCodeHash(code: string): string {
-	hasher ??= new RewardCodeHasher(RewardCodeHashKeysEnvSchema.parse(process.env.REWARD_CODE_HASH_KEYS));
+	hasher ??= new RewardCodeHasher(getApiConfig().encryption.rewardCodeHashKeys);
 	return hasher.hash(code);
 }

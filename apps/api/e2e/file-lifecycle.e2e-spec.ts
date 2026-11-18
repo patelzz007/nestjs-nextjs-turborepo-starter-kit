@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getApiConfig } from "../src/config/api-config";
 import { LocalTransferTokenService } from "../src/platform/infrastructure/storage/adapters/local/local-transfer-token.service";
 import { MALWARE_SCANNER } from "../src/platform/infrastructure/storage/domain/storage.tokens";
 import { EICAR_TEST_SIGNATURE, EicarSignatureTestScanner } from "./support/eicar-signature-test-scanner";
@@ -16,7 +17,7 @@ import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 // TEST_E2E_STORAGE). The configured scanner is MALWARE_SCANNER=none; this spec
 // swaps in the TEST-ONLY EICAR scanner so both verdicts can be exercised.
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const FILES = `${API_VERSION_PREFIX}/files`;
 const ADMIN_EMAIL = "admin@example.com";
 const ADMIN_PASSWORD = "Admin@123";

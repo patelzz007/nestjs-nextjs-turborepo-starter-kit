@@ -20,7 +20,8 @@ export default async function MerchantTerminalsPage({ params }: MerchantTerminal
 	if (denied !== null) {
 		return denied;
 	}
-	// `guardTenantPage` already denied any role without `merchant:manage_api_keys`.
+	// `guardTenantPage` already denied any role without `merchant:view_terminals`; the settings read needs
+	// `merchant:view_api_keys`, and a role without it gets an access answer, which leaves the card hidden.
 	const server = await loadTenantServerCaller(tenantSlug);
 	// The same store filter the client's first render derives, so the list lands under its query key.
 	const locationId = toLocationQueryInput((await loadServerLocationScope(tenantSlug)).effectiveLocationId);

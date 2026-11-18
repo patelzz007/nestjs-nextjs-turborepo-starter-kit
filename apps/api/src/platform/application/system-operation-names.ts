@@ -146,6 +146,7 @@ export const SystemOperationNameSchema = z.enum([
 	"tenant.lifecycle.appeal",
 	"tenant.lifecycle.reactivate",
 	"tenant.membership.leave",
+	"tenant.membership.rename_own",
 	"tenant.lifecycle.admin_suspend",
 	"tenant.lifecycle.admin_ban",
 	"tenant.customer_ban.create",

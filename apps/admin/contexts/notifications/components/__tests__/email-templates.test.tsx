@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import {
 	EmailPreviewListResponseSchema,
 	epochMs,
@@ -96,9 +96,9 @@ const LIST_ENVELOPE: Envelope<EmailPreviewListResponse> = {
 
 function view(capabilities: readonly CapabilitySlug[]): React.JSX.Element {
 	return (
-		<CapabilitiesProvider capabilities={capabilities}>
+		<SessionAbilityProvider capabilities={capabilities} namespace="platform">
 			<EmailPreviewView initialList={LIST_ENVELOPE} />
-		</CapabilitiesProvider>
+		</SessionAbilityProvider>
 	);
 }
 

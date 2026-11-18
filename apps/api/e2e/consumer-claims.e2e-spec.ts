@@ -16,6 +16,7 @@ import { z } from "zod";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
+import { getApiConfig } from "../src/config/api-config";
 import { ClaimRewardCommand } from "../src/contexts/claims/application/commands/claim-reward/claim-reward.command";
 import { createClaimsTransactionalPorts } from "../src/contexts/claims/public-api";
 import { ActorContextSchema } from "../src/platform/application/actor-context";
@@ -88,7 +89,7 @@ describe("Consumer claims (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		rewardId = randomUUID();
 		merchantUserId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 		await withTenantMember(app, merchantUserId, TENANT_SEED_IDS.klTenant, (tx) =>

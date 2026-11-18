@@ -20,7 +20,7 @@ export class ListMembersHandler implements IQueryHandler<ListMembersQuery, Pagin
 	public async execute(query: ListMembersQuery): Promise<PaginatedServiceResult<TenantMemberRosterResponse>> {
 		const user = requireUserActor(query.actor);
 		const member = await this.directory.resolveMember(user, query.input.tenantSlug);
-		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageTeam });
+		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.viewTeam });
 		return this.team.listMembers(actingInTenant(user, member.tenantId), member.tenantId, query.input.query);
 	}
 }

@@ -118,7 +118,7 @@ describe("webhook member commands", () => {
 		it("checks the member's capability, seals a fresh secret and answers it once", async () => {
 			const result = await createHandler().execute(new CreateWebhookEndpointCommand(member(), CREATE_INPUT));
 
-			expect(access.checks).toEqual([{ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.manageWebhooks }]);
+			expect(access.checks).toEqual([{ tenantId: TENANT_ID, capability: MERCHANT_CAPABILITY.createWebhooks }]);
 			expect(result.secret).toBe("whsec_secret1");
 			expect(result.endpoint).toMatchObject({ url: CREATE_INPUT.url, status: "ACTIVE", secretHint: "ret1", eventTypes: ["sale.completed"] });
 			expect(JSON.stringify(result.endpoint)).not.toContain("whsec_secret1");

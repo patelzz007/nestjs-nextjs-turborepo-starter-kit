@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within, type RenderResult } from "@testing-library/react";
-import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
 import { LIST_SLOT_INDEX, ApiPaginatedMetaSchema, PERMISSION, type ApiPaginatedMeta } from "@workspace/shared";
 import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import * as React from "react";
@@ -100,9 +100,9 @@ function pageMeta(page: number, total: number, totalPages: number): ApiPaginated
 function renderPanel(): RenderResult {
 	return render(
 		<QueryClientProvider client={new QueryClient()}>
-			<CapabilitiesProvider capabilities={[PERMISSION.REWARD.APPROVE, PERMISSION.REWARD.REJECT]}>
+			<SessionAbilityProvider capabilities={[PERMISSION.REWARD.APPROVE, PERMISSION.REWARD.REJECT]} namespace="platform">
 				<PendingRewardsPanel />
-			</CapabilitiesProvider>
+			</SessionAbilityProvider>
 		</QueryClientProvider>,
 		{ wrapper: ClientTestProviders },
 	);

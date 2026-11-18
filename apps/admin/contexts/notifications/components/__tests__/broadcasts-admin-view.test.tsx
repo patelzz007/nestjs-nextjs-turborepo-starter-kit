@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { epochMs, type BroadcastResponse } from "@workspace/shared";
+import { SessionAbilityProvider } from "@workspace/client/lib/contexts/authorization";
+import { epochMs, PERMISSION, type BroadcastResponse, type CapabilitySlug } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,7 +17,6 @@ const { broadcastsQuery, reportsQuery, approveMutate, cancelMutate, reviewMutate
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => ({ ...(await importOriginal<object>()), useQueryClient: (): object => ({ invalidateQueries: vi.fn() }) }));
-vi.mock("@workspace/client/lib/contexts/authorization", () => ({ useAuthorization: (): object => ({ can: (): boolean => true }) }));
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
@@ -30,6 +30,25 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 		},
 	}),
 }));
+
+/** Every permission the page checks: create, approve and cancel broadcasts; list and review reports. */
+const BROADCAST_GRANTS: readonly CapabilitySlug[] = [
+	PERMISSION.BROADCAST.CREATE,
+	PERMISSION.BROADCAST.APPROVE,
+	PERMISSION.BROADCAST.DELETE,
+	PERMISSION.BROADCAST_REPORT.LIST,
+	PERMISSION.BROADCAST_REPORT.UPDATE,
+];
+
+function Providers({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+	return (
+		<UiKitTestProviders>
+			<SessionAbilityProvider capabilities={BROADCAST_GRANTS} namespace="platform">
+				{children}
+			</SessionAbilityProvider>
+		</UiKitTestProviders>
+	);
+}
 
 const ID = "0193f2c4-0000-7000-8000-0000000000b1";
 const NOTICE: BroadcastResponse = {
@@ -93,7 +112,7 @@ afterEach((): void => {
 
 describe("BroadcastsAdminView", () => {
 	it("approves a notice waiting for a second person, and can still cancel it", () => {
-		render(<BroadcastsAdminView />, { wrapper: UiKitTestProviders });
+		render(<BroadcastsAdminView />, { wrapper: Providers });
 		expect(screen.getByText("Waiting for approval")).toBeTruthy();
 		act((): void => {
 			fireEvent.click(screen.getByRole("button", { name: "Approve" }));
@@ -105,7 +124,7 @@ describe("BroadcastsAdminView", () => {
 	});
 
 	it("reads the message on demand", () => {
-		render(<BroadcastsAdminView />, { wrapper: UiKitTestProviders });
+		render(<BroadcastsAdminView />, { wrapper: Providers });
 		act((): void => {
 			fireEvent.click(screen.getByRole("button", { name: "Read message" }));
 		});
@@ -114,7 +133,7 @@ describe("BroadcastsAdminView", () => {
 	});
 
 	it("reviews an open report", () => {
-		render(<BroadcastsAdminView />, { wrapper: UiKitTestProviders });
+		render(<BroadcastsAdminView />, { wrapper: Providers });
 		expect(screen.getByText("Spam · Flash sale")).toBeTruthy();
 		act((): void => {
 			fireEvent.click(screen.getByRole("button", { name: "Uphold" }));

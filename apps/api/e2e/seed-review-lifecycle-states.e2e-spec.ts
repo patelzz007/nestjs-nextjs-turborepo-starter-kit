@@ -2,8 +2,9 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
+import { getApiConfig } from "../src/config/api-config";
 
-const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+const DATABASE_URL: string = getApiConfig().database.url;
 const MS_PER_DAY = 86_400_000;
 /** Owner-requested deletion keeps a tenant recoverable this long (`TenantLifecycleService`). */
 const DELETION_GRACE_DAYS = 30;

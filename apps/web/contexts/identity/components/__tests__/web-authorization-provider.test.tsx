@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { Can, useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { Can, useAbility } from "@workspace/client/lib/contexts/authorization";
 import { LIST_SLOT_INDEX, PERMISSION, type SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -54,26 +55,29 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 }));
 
 function Probe(): React.JSX.Element {
-	const { can } = useAuthorization();
+	const ability = useAbility();
 	const { isAuthenticated } = useWebSession();
 	return (
 		<div>
 			<span>{isAuthenticated ? "signed-in" : "guest"}</span>
-			<span>{can(PERMISSION.REWARD.CREATE) ? "can-create-reward" : "cannot-create-reward"}</span>
-			<Can permission={PERMISSION.REWARD.DELETE} fallback={<span>no-delete</span>}>
-				<button type="button">Delete reward</button>
+			<span>{ability.can("CREATE", "REWARD") ? "can-create-reward" : "cannot-create-reward"}</span>
+			<Can I="DELETE" a="REWARD" passThrough>
+				{({ isAllowed }: { readonly isAllowed: boolean }): React.ReactNode => (isAllowed ? <button type="button">Delete reward</button> : <span>no-delete</span>)}
 			</Can>
 		</div>
 	);
 }
 
 function renderProvider(sessionActive: boolean, initialSessionPermissions?: SessionPermissionsResponse): void {
+	// The provider also watches the query client for capability refusals (ADR 092), so it renders inside one.
 	render(
-		<WebAuthorizationProvider
-			sessionActive={sessionActive}
-			initialSessionPermissions={initialSessionPermissions === undefined ? undefined : sessionPermissionsEnvelope(initialSessionPermissions)}>
-			<Probe />
-		</WebAuthorizationProvider>,
+		<QueryClientProvider client={new QueryClient()}>
+			<WebAuthorizationProvider
+				sessionActive={sessionActive}
+				initialSessionPermissions={initialSessionPermissions === undefined ? undefined : sessionPermissionsEnvelope(initialSessionPermissions)}>
+				<Probe />
+			</WebAuthorizationProvider>
+		</QueryClientProvider>,
 	);
 }
 

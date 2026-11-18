@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { GithubAccountLinkStatus, PrismaClient } from "@prisma/client";
 import { createBullMqConnection } from "@workspace/messaging";
-import { CaughtValueSchema, EmailRenderContextSchema, HttpUrlEnvSchema, QUEUE_NAMES } from "@workspace/shared";
+import { CaughtValueSchema, EmailRenderContextSchema, QUEUE_NAMES } from "@workspace/shared";
 import { Queue } from "bullmq";
 
 import { getApiConfig } from "../src/config/api-config";
@@ -50,7 +50,7 @@ const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const apiEnvPath = resolve(apiDir, ".env");
 
 function refuseInProduction(command: string): boolean {
-	if (process.env.NODE_ENV === "production") {
+	if (getApiConfig().runtime.isProduction) {
 		err(`${command}: refused — this is development tooling. In production, configure the API's own https address instead.`);
 		return true;
 	}
@@ -198,8 +198,8 @@ async function waitForTunnelUrl(): Promise<string | null> {
  */
 async function repointResendWebhook(emailWebhookUrl: string): Promise<void> {
 	const pasteHint = `Paste this URL in the Resend dashboard: ${emailWebhookUrl}`;
-	const apiKey = process.env.RESEND_API_KEY;
-	if (apiKey === undefined || apiKey.length === 0) {
+	const apiKey = getApiConfig().email.resendApiKey;
+	if (apiKey === null || apiKey.length === 0) {
 		out(`RESEND_API_KEY is not set — skipping the Resend webhook re-point. ${pasteHint}`);
 		return;
 	}
@@ -255,8 +255,6 @@ async function tunnel(): Promise<number> {
 
 // ── mail ──────────────────────────────────────────────────────────────────
 
-const DEFAULT_MAILPIT_URL = "http://localhost:8025";
-
 async function requestMailpit(url: string): Promise<Response> {
 	try {
 		return await fetch(url);
@@ -273,7 +271,7 @@ async function requestMailpit(url: string): Promise<Response> {
  */
 async function mail(args: readonly string[]): Promise<number> {
 	const inbox = parseInboxArgs(args);
-	const mailpitUrl = HttpUrlEnvSchema.parse(process.env.MAILPIT_URL ?? DEFAULT_MAILPIT_URL);
+	const mailpitUrl = getApiConfig().email.mailpitUrl;
 	// Mailpit's alias for the newest message in the inbox.
 	let messageId = "latest";
 	if (inbox.to !== null) {
@@ -323,7 +321,7 @@ async function postWebhook(url: string, headers: ReadonlyMap<string, string>, bo
  * to WEBHOOK_URL (default: the local API), after printing the headers for Swagger's "Try it out" and a curl.
  */
 async function webhookSignature(): Promise<number> {
-	const secret = process.env.RESEND_WEBHOOK_SECRET ?? "";
+	const secret = getApiConfig().email.resendWebhookSecret ?? "";
 	const url = process.env.WEBHOOK_URL ?? DEFAULT_EMAIL_WEBHOOK_URL;
 	const id = `msg_test_${String(Date.now())}`;
 	const payload = JSON.stringify({ type: "email.delivered", data: { email_id: "e5e8d669-9ef0-44de-98f9-4097dcab36d8" } });

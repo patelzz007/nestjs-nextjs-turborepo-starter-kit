@@ -2,7 +2,7 @@
 // pg-audit-trail-signals.adapter.ts - the audit trail's live signal
 // ============================================
 // Every audit entry the database writes NOTIFYs `audit_trail`
-// (prisma/rls/95-audit-trail-notify.sql) — requests through the API and
+// (prisma/security/triggers.ts) — requests through the API and
 // background writes alike. This service holds ONE listening connection while
 // at least one admin has the audit log open, and turns each notification into
 // a "something changed" signal; the page then refetches through the normal,

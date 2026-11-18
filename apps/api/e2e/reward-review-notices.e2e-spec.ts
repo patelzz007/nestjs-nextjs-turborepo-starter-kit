@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
+import { getApiConfig } from "../src/config/api-config";
 import { ApproveRewardCommand } from "../src/contexts/rewards/application/commands/approve-reward/approve-reward.command";
 import { RejectRewardCommand } from "../src/contexts/rewards/application/commands/reject-reward/reject-reward.command";
 import { ActorContextSchema, type ActorContext } from "../src/platform/application/actor-context";
@@ -64,7 +65,7 @@ describe("Reward review notices (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		pool = new Pool({ connectionString: getApiConfig().database.url });
 		ownerId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 		const superAdminId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'superadmin@example.com'`)).rows.at(0)).id;
 		reviewer = ActorContextSchema.parse({
