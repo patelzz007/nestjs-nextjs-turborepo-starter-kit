@@ -1,9 +1,13 @@
-import { KafkaJS } from "@confluentinc/kafka-javascript";
+import type { EventEmitter } from "node:events";
+
+import { compatibilityPartitioner, stringSerializers, type BaseOptions, type ProducerOptions } from "@platformatic/kafka";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Logger } from "@nestjs/common";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_KAFKA_REQUEST_TIMEOUT_MS, KAFKA_BROKER_FAILED_EVENT, KAFKA_CLIENT_RETRIES, KAFKA_CLIENT_RETRY_DELAY_MS } from "../../../kafka/kafka-client-config";
 import { DEFAULT_KAFKA_CONNECT_BACKOFF, kafkaConnectRetryDelayMs } from "../../../kafka/kafka-connect-backoff";
+import { KafkaDeadlineExceededError } from "../../../kafka/kafka-deadline";
 import { KAFKA_PLAINTEXT_SECURITY } from "../../../kafka/kafka-security";
 import type { MessageEnvelope } from "../../../schemas/outbox";
 import type { ResolvedMessagingOptions } from "../../messaging-options";
@@ -11,6 +15,7 @@ import {
 	KAFKA_CLIENT_BACKEND,
 	KAFKA_EVENT_ID_HEADER,
 	KAFKA_EVENT_TYPE_HEADER,
+	KAFKA_HEALTH_PROBE_TIMEOUT_MS,
 	KafkaHealthIndicator,
 	KafkaProducerDisabledError,
 	KafkaProducerNotConnectedError,
@@ -18,83 +23,113 @@ import {
 	KafkaPublishError,
 } from "../kafka-producer.service";
 
-interface SentRecord {
+interface SentMessage {
 	readonly topic: string;
-	readonly messages: readonly { readonly key: string; readonly value: string; readonly headers: Readonly<Record<string, string>> }[];
+	readonly key: string;
+	readonly value: string;
+	readonly headers: Readonly<Record<string, string>>;
 }
 
-interface FakeClient {
-	connect(): Promise<void>;
-	disconnect(): Promise<void>;
-}
-
-interface FakeProducer extends FakeClient {
-	send(record: SentRecord): Promise<void>;
-}
-
-interface FakeAdmin extends FakeClient {
-	listTopics(): Promise<string[]>;
+interface SentRecord {
+	readonly messages: readonly SentMessage[];
 }
 
 /** Shared state the mocked client writes to and the tests steer. */
 interface KafkaMockState {
 	readonly sent: SentRecord[];
-	readonly producerConfigs: KafkaJS.ProducerConstructorConfig[];
-	readonly clientConfigs: KafkaJS.CommonConstructorConfig[];
+	readonly producerOptions: ProducerOptions<string, string, string, string>[];
+	readonly adminOptions: BaseOptions[];
+	/** Every client the service created, in order, to emit client events on. */
+	readonly clients: EventEmitter[];
 	sendFailure: Error | null;
-	connectFailure: Error | null;
+	/** `true`: a send never settles (a broker that never acknowledges). */
+	sendHangs: boolean;
 	listTopicsFailure: Error | null;
+	/** `true`: a topic listing never settles (a broker that accepts the connection but never answers). */
+	listTopicsHangs: boolean;
 	listTopicsCalls: number;
+	closedClients: number;
 }
 
 const kafka = vi.hoisted((): KafkaMockState => ({
 	sent: [],
-	producerConfigs: [],
-	clientConfigs: [],
+	producerOptions: [],
+	adminOptions: [],
+	clients: [],
 	sendFailure: null,
-	connectFailure: null,
+	sendHangs: false,
 	listTopicsFailure: null,
+	listTopicsHangs: false,
 	listTopicsCalls: 0,
+	closedClients: 0,
 }));
 
-vi.mock("@confluentinc/kafka-javascript", () => ({
-	KafkaJS: {
-		logLevel: { NOTHING: 0, ERROR: 1, WARN: 2, INFO: 3, DEBUG: 4 },
-		Kafka: class {
-			public constructor(config: KafkaJS.CommonConstructorConfig) {
-				kafka.clientConfigs.push(config);
-			}
+vi.mock("@platformatic/kafka", async () => {
+	const { EventEmitter: Emitter } = await import("node:events");
 
-			public producer(config: KafkaJS.ProducerConstructorConfig): FakeProducer {
-				kafka.producerConfigs.push(config);
-				return {
-					connect: async (): Promise<void> => (kafka.connectFailure === null ? Promise.resolve() : Promise.reject(kafka.connectFailure)),
-					disconnect: async (): Promise<void> => Promise.resolve(),
-					send: async (record: SentRecord): Promise<void> => {
-						if (kafka.sendFailure !== null) {
-							return Promise.reject(kafka.sendFailure);
-						}
-						kafka.sent.push(record);
-						return Promise.resolve();
-					},
-				};
-			}
+	class FakeProducer extends Emitter {
+		public constructor(options: ProducerOptions<string, string, string, string>) {
+			super();
+			kafka.producerOptions.push(options);
+			kafka.clients.push(this);
+		}
 
-			public admin(): FakeAdmin {
-				return {
-					connect: async (): Promise<void> => Promise.resolve(),
-					disconnect: async (): Promise<void> => Promise.resolve(),
-					listTopics: async (): Promise<string[]> => {
-						kafka.listTopicsCalls += 1;
-						return kafka.listTopicsFailure === null ? Promise.resolve(["platform.sessions"]) : Promise.reject(kafka.listTopicsFailure);
-					},
-				};
+		public listApis(): Promise<readonly object[]> {
+			return Promise.resolve([]);
+		}
+
+		public send(record: SentRecord): Promise<object> {
+			if (kafka.sendHangs) {
+				return new Promise<object>(() => undefined);
 			}
-		},
-	},
-}));
+			if (kafka.sendFailure !== null) {
+				return Promise.reject(kafka.sendFailure);
+			}
+			kafka.sent.push(record);
+			return Promise.resolve({});
+		}
+
+		public close(): Promise<void> {
+			kafka.closedClients += 1;
+			return Promise.resolve();
+		}
+	}
+
+	class FakeAdmin extends Emitter {
+		public constructor(options: BaseOptions) {
+			super();
+			kafka.adminOptions.push(options);
+			kafka.clients.push(this);
+		}
+
+		public listTopics(): Promise<string[]> {
+			kafka.listTopicsCalls += 1;
+			if (kafka.listTopicsHangs) {
+				return new Promise<string[]>(() => undefined);
+			}
+			return kafka.listTopicsFailure === null ? Promise.resolve(["platform.sessions"]) : Promise.reject(kafka.listTopicsFailure);
+		}
+
+		public close(): Promise<void> {
+			kafka.closedClients += 1;
+			return Promise.resolve();
+		}
+	}
+
+	return {
+		Producer: FakeProducer,
+		Admin: FakeAdmin,
+		ProduceAcks: { ALL: -1, NO_RESPONSE: 0, LEADER: 1 },
+		SASLMechanisms: { PLAIN: "PLAIN", SCRAM_SHA_256: "SCRAM-SHA-256", SCRAM_SHA_512: "SCRAM-SHA-512" },
+		compatibilityPartitioner: (): number => 0,
+		stringSerializers: { key: String, value: String, headerKey: String, headerValue: String },
+	};
+});
 
 const DELIVERY_TIMEOUT_MS = 12_345;
+/** A delivery budget shorter than one default request, so it caps the request timeout. */
+const SHORT_DELIVERY_TIMEOUT_MS = 2_000;
+const BROKER_FAILURE = { broker: { host: "127.0.0.1", port: 9092 } };
 
 /** Upper / lower jitter bound of the delay after failed attempt `attempt`. */
 function maxDelayMs(attempt: number): number {
@@ -113,7 +148,7 @@ const ENVELOPE: MessageEnvelope = {
 	payload: { userId: "user-1" },
 };
 
-function options(kafkaBrokers: readonly string[] | undefined): ResolvedMessagingOptions {
+function options(kafkaBrokers: readonly string[] | undefined, kafkaDeliveryTimeoutMs = DELIVERY_TIMEOUT_MS): ResolvedMessagingOptions {
 	return {
 		clientId: "test",
 		connectionName: "test",
@@ -122,7 +157,7 @@ function options(kafkaBrokers: readonly string[] | undefined): ResolvedMessaging
 		redisUrl: undefined,
 		kafkaBrokers,
 		kafkaSecurity: KAFKA_PLAINTEXT_SECURITY,
-		kafkaDeliveryTimeoutMs: DELIVERY_TIMEOUT_MS,
+		kafkaDeliveryTimeoutMs,
 		kafkaConnectBackoff: DEFAULT_KAFKA_CONNECT_BACKOFF,
 		rabbitmqUrl: undefined,
 		healthQueueName: undefined,
@@ -130,13 +165,22 @@ function options(kafkaBrokers: readonly string[] | undefined): ResolvedMessaging
 }
 
 /** Boots the producer and waits for the background connect loop to succeed. */
-async function connectedProducer(): Promise<KafkaProducerService> {
-	const producer = new KafkaProducerService(options(["localhost:9092"]));
+async function connectedProducer(deliveryTimeoutMs = DELIVERY_TIMEOUT_MS): Promise<KafkaProducerService> {
+	const producer = new KafkaProducerService(options(["localhost:9092"], deliveryTimeoutMs));
 	producer.onModuleInit();
 	await vi.waitFor((): void => {
 		expect(producer.getState()).toBe("connected");
 	});
 	return producer;
+}
+
+/** The producer client the service created. */
+function producerClient(): EventEmitter {
+	const client = kafka.clients.at(LIST_SLOT_INDEX.first);
+	if (client === undefined) {
+		throw new Error("the service created no Kafka client");
+	}
+	return client;
 }
 
 /** Lets pending promise callbacks run (the connect loop's awaits) without advancing timers. */
@@ -149,12 +193,15 @@ async function flushMicrotasks(): Promise<void> {
 describe("KafkaProducerService", () => {
 	beforeEach(() => {
 		kafka.sent.length = 0;
-		kafka.producerConfigs.length = 0;
-		kafka.clientConfigs.length = 0;
+		kafka.producerOptions.length = 0;
+		kafka.adminOptions.length = 0;
+		kafka.clients.length = 0;
 		kafka.sendFailure = null;
-		kafka.connectFailure = null;
+		kafka.sendHangs = false;
 		kafka.listTopicsFailure = null;
+		kafka.listTopicsHangs = false;
 		kafka.listTopicsCalls = 0;
+		kafka.closedClients = 0;
 	});
 
 	describe("publish", () => {
@@ -165,9 +212,9 @@ describe("KafkaProducerService", () => {
 
 			expect(kafka.sent).toEqual([
 				{
-					topic: "platform.sessions",
 					messages: [
 						{
+							topic: "platform.sessions",
 							key: "user-1",
 							value: JSON.stringify(ENVELOPE),
 							headers: { [KAFKA_EVENT_ID_HEADER]: ENVELOPE.eventId, [KAFKA_EVENT_TYPE_HEADER]: "session.action" },
@@ -177,16 +224,30 @@ describe("KafkaProducerService", () => {
 			]);
 		});
 
-		it("creates an idempotent acks=all producer that never auto-creates topics and bounds delivery time", async () => {
+		it("creates an idempotent acks=all producer that never auto-creates topics and hashes keys like the Java client", async () => {
 			await connectedProducer();
 
-			expect(kafka.producerConfigs).toEqual([
+			expect(kafka.producerOptions).toEqual([
 				{
-					kafkaJS: { idempotent: true, acks: -1, allowAutoTopicCreation: false },
-					"message.timeout.ms": DELIVERY_TIMEOUT_MS,
-					partitioner: "murmur2_random",
+					clientId: "test",
+					bootstrapBrokers: ["localhost:9092"],
+					timeout: DEFAULT_KAFKA_REQUEST_TIMEOUT_MS,
+					retries: KAFKA_CLIENT_RETRIES,
+					retryDelay: KAFKA_CLIENT_RETRY_DELAY_MS,
+					idempotent: true,
+					acks: -1,
+					autocreateTopics: false,
+					partitioner: compatibilityPartitioner,
+					serializers: stringSerializers,
 				},
 			]);
+		});
+
+		it("never lets one request outlast a delivery budget shorter than the default request timeout", async () => {
+			await connectedProducer(SHORT_DELIVERY_TIMEOUT_MS);
+
+			expect(kafka.producerOptions.at(LIST_SLOT_INDEX.first)?.timeout).toBe(SHORT_DELIVERY_TIMEOUT_MS);
+			expect(kafka.adminOptions.at(LIST_SLOT_INDEX.first)?.timeout).toBe(SHORT_DELIVERY_TIMEOUT_MS);
 		});
 
 		it("falls back to the correlation id as the message key", async () => {
@@ -194,7 +255,15 @@ describe("KafkaProducerService", () => {
 
 			await producer.publish("platform.sessions", ENVELOPE);
 
-			expect(kafka.sent[LIST_SLOT_INDEX.first]?.messages[LIST_SLOT_INDEX.first]?.key).toBe("corr-1");
+			expect(kafka.sent.at(LIST_SLOT_INDEX.first)?.messages.at(LIST_SLOT_INDEX.first)?.key).toBe("corr-1");
+		});
+
+		it("falls back to the event type as the key when there is no correlation id", async () => {
+			const producer = await connectedProducer();
+
+			await producer.publish("platform.sessions", { ...ENVELOPE, correlationId: null });
+
+			expect(kafka.sent.at(LIST_SLOT_INDEX.first)?.messages.at(LIST_SLOT_INDEX.first)?.key).toBe("session.action");
 		});
 
 		it("refuses an envelope without a uuid eventId (consumers could not dedupe it)", async () => {
@@ -212,6 +281,7 @@ describe("KafkaProducerService", () => {
 			expect(producer.isEnabled()).toBe(false);
 			expect(producer.getState()).toBe("disabled");
 			expect(kafka.sent).toEqual([]);
+			expect(kafka.clients).toEqual([]);
 		});
 
 		it("fails with KafkaProducerNotConnectedError before the producer connected", async () => {
@@ -221,17 +291,19 @@ describe("KafkaProducerService", () => {
 			expect(kafka.sent).toEqual([]);
 		});
 
-		it("fails with KafkaProducerNotConnectedError after shutdown disconnected it", async () => {
+		it("fails with KafkaProducerNotConnectedError after shutdown closed it", async () => {
 			const producer = await connectedProducer();
 			await producer.onModuleDestroy();
 
 			await expect(producer.publish("platform.sessions", ENVELOPE)).rejects.toBeInstanceOf(KafkaProducerNotConnectedError);
 			expect(producer.isConnected()).toBe(false);
 			expect(kafka.sent).toEqual([]);
+			expect(kafka.closedClients).toBe(2);
 		});
 
 		it("refuses to publish with KafkaProducerNotConnectedError while the broker is unreachable (the outbox keeps the event)", async () => {
-			kafka.listTopicsFailure = new Error("Local: Broker transport failure");
+			vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+			kafka.listTopicsFailure = new Error("Connection to broker localhost:9092 failed");
 			const producer = new KafkaProducerService(options(["localhost:9092"]));
 			producer.onModuleInit();
 			await flushMicrotasks();
@@ -239,11 +311,12 @@ describe("KafkaProducerService", () => {
 			await expect(producer.publish("platform.sessions", ENVELOPE)).rejects.toMatchObject({ name: "KafkaProducerNotConnectedError", state: "connecting" });
 			expect(kafka.sent).toEqual([]);
 			await producer.onModuleDestroy();
+			vi.restoreAllMocks();
 		});
 
 		it("wraps a broker failure in KafkaPublishError, keeping the cause", async () => {
 			const producer = await connectedProducer();
-			const cause = new Error("Local: Message timed out");
+			const cause = new Error("Unknown topic platform.sessions.");
 			kafka.sendFailure = cause;
 
 			const failure = producer.publish("platform.sessions", ENVELOPE);
@@ -251,20 +324,23 @@ describe("KafkaProducerService", () => {
 			await expect(failure).rejects.toBeInstanceOf(KafkaPublishError);
 			await expect(failure).rejects.toMatchObject({ topic: "platform.sessions", eventId: ENVELOPE.eventId, cause });
 		});
+
+		it("fails with KafkaPublishError once the delivery budget runs out without an acknowledgement — it never waits forever", async () => {
+			const producer = await connectedProducer();
+			vi.useFakeTimers();
+			kafka.sendHangs = true;
+
+			const failure = producer.publish("platform.sessions", ENVELOPE);
+			const assertion = expect(failure).rejects.toMatchObject({ name: "KafkaPublishError", topic: "platform.sessions" });
+			await vi.advanceTimersByTimeAsync(DELIVERY_TIMEOUT_MS);
+
+			await assertion;
+			await expect(failure).rejects.toHaveProperty("cause", new KafkaDeadlineExceededError("Kafka publish to platform.sessions", DELIVERY_TIMEOUT_MS));
+			vi.useRealTimers();
+		});
 	});
 
 	describe("connection state and client diagnostics", () => {
-		/** The logger the producer handed to the (mocked) client. */
-		function clientLogger(): KafkaJS.Logger {
-			const logger = kafka.clientConfigs.at(0)?.kafkaJS?.logger;
-			if (logger === undefined) {
-				throw new Error("the producer did not configure a client logger");
-			}
-			return logger;
-		}
-
-		const REFUSED = "127.0.0.1:9092/bootstrap: Connect to ipv4#127.0.0.1:9092 failed: Connection refused";
-
 		afterEach(() => {
 			vi.restoreAllMocks();
 		});
@@ -280,7 +356,7 @@ describe("KafkaProducerService", () => {
 		it("never reports connected while the broker does not answer", async () => {
 			const log = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
 			vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
-			kafka.listTopicsFailure = new Error("all broker connections are down");
+			kafka.listTopicsFailure = new Error("Connection to broker localhost:9092 failed");
 			const producer = new KafkaProducerService(options(["localhost:9092"]));
 			producer.onModuleInit();
 			await flushMicrotasks();
@@ -289,49 +365,50 @@ describe("KafkaProducerService", () => {
 			await producer.onModuleDestroy();
 		});
 
-		it("pins the client to WARN, so the library's own INFO lines ('Producer connected') are not logged", async () => {
-			await connectedProducer();
-
-			expect(kafka.clientConfigs[LIST_SLOT_INDEX.first]?.kafkaJS?.logLevel).toBe(KafkaJS.logLevel.WARN);
-		});
-
-		it("logs a repeated connection error once, then its repeat count when the client shuts down", async () => {
-			const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+		it("logs a broker that keeps failing once, then its repeat count when the client shuts down", async () => {
+			const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
 			const producer = await connectedProducer();
 
 			for (let attempt = 1; attempt <= 3; attempt += 1) {
-				clientLogger().error(`${REFUSED} (after ${String(attempt)}ms in state CONNECT)`, { fac: "FAIL" });
+				producerClient().emit(KAFKA_BROKER_FAILED_EVENT, BROKER_FAILURE);
 			}
-			expect(error).toHaveBeenCalledTimes(1);
+			expect(warn).toHaveBeenCalledTimes(1);
 
 			await producer.onModuleDestroy();
 
-			expect(error).toHaveBeenCalledTimes(2);
-			expect(error).toHaveBeenLastCalledWith(
+			expect(warn).toHaveBeenCalledTimes(2);
+			expect(warn).toHaveBeenLastCalledWith(
 				JSON.stringify({
 					event: "kafka.client_log",
-					namespace: null,
-					facility: "FAIL",
-					message: `${REFUSED} (after 1ms in state CONNECT)`,
+					namespace: "producer",
+					clientEvent: KAFKA_BROKER_FAILED_EVENT,
+					message: "Connection to broker 127.0.0.1:9092 failed",
 					repeatCount: 2,
 					repeatWindowMs: 60_000,
 				}),
 			);
 		});
 
-		it("flushes pending repeat counts when shutdown comes before the broker was ever reached", async () => {
+		it("logs a client error at error level instead of crashing on an unheard `error` event", async () => {
 			const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
-			vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+			await connectedProducer();
+
+			producerClient().emit("error", new Error("socket hang up"));
+
+			expect(error).toHaveBeenCalledWith(JSON.stringify({ event: "kafka.client_log", namespace: "producer", clientEvent: "error", message: "socket hang up" }));
+		});
+
+		it("flushes pending repeat counts when shutdown comes before the broker was ever reached", async () => {
+			const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
 			kafka.listTopicsFailure = new Error("broker unreachable");
 			const producer = new KafkaProducerService(options(["localhost:9092"]));
 			producer.onModuleInit();
-			clientLogger().error(REFUSED, { fac: "FAIL" });
-			clientLogger().error(REFUSED, { fac: "FAIL" });
+			producerClient().emit(KAFKA_BROKER_FAILED_EVENT, BROKER_FAILURE);
+			producerClient().emit(KAFKA_BROKER_FAILED_EVENT, BROKER_FAILURE);
 
 			await producer.onModuleDestroy();
 
-			expect(error).toHaveBeenCalledTimes(2);
-			expect(String(error.mock.lastCall?.[LIST_SLOT_INDEX.first])).toContain('"repeatCount":1');
+			expect(warn.mock.calls.flat().join("\n")).toContain('"repeatCount":1');
 		});
 	});
 
@@ -348,7 +425,7 @@ describe("KafkaProducerService", () => {
 		});
 
 		it("returns from onModuleInit at once and stays `connecting` while no broker answers", async () => {
-			kafka.listTopicsFailure = new Error("Local: Broker transport failure");
+			kafka.listTopicsFailure = new Error("Connection to broker localhost:9092 failed");
 			const producer = new KafkaProducerService(options(["localhost:9092"]));
 
 			producer.onModuleInit();
@@ -361,15 +438,27 @@ describe("KafkaProducerService", () => {
 			await producer.onModuleDestroy();
 		});
 
+		it("counts a probe that never answers as a failed attempt once the probe budget runs out", async () => {
+			kafka.listTopicsHangs = true;
+			const producer = new KafkaProducerService(options(["localhost:9092"]));
+			producer.onModuleInit();
+
+			await vi.advanceTimersByTimeAsync(KAFKA_HEALTH_PROBE_TIMEOUT_MS);
+
+			expect(producer.getState()).toBe("connecting");
+			expect(producer.getFailedConnectAttempts()).toBe(1);
+			await producer.onModuleDestroy();
+		});
+
 		it("retries with backoff and turns `connected` once the broker answers — no restart", async () => {
-			kafka.listTopicsFailure = new Error("Local: Broker transport failure");
+			kafka.listTopicsFailure = new Error("Connection to broker localhost:9092 failed");
 			const producer = new KafkaProducerService(options(["localhost:9092"]));
 			const indicator = new KafkaHealthIndicator(producer);
 			producer.onModuleInit();
 			await flushMicrotasks();
 
 			await expect(indicator.isHealthy()).resolves.toBe(false);
-			await expect(indicator.getReport()).resolves.toMatchObject({ state: "connecting", lastFailure: "producer connecting: Local: Broker transport failure" });
+			await expect(indicator.getReport()).resolves.toMatchObject({ state: "connecting", lastFailure: "producer connecting: Connection to broker localhost:9092 failed" });
 
 			// Next attempt after initial delay ± jitter (≤ 1.2 s); still down → second attempt.
 			await vi.advanceTimersByTimeAsync(maxDelayMs(1));
@@ -386,7 +475,7 @@ describe("KafkaProducerService", () => {
 		});
 
 		it("does not retry sooner than the backoff allows", async () => {
-			kafka.listTopicsFailure = new Error("Local: Broker transport failure");
+			kafka.listTopicsFailure = new Error("Connection to broker localhost:9092 failed");
 			const producer = new KafkaProducerService(options(["localhost:9092"]));
 			producer.onModuleInit();
 			await flushMicrotasks();
@@ -399,7 +488,7 @@ describe("KafkaProducerService", () => {
 		});
 
 		it("shutdown cancels the reconnect loop at once — no attempt after it", async () => {
-			kafka.listTopicsFailure = new Error("Local: Broker transport failure");
+			kafka.listTopicsFailure = new Error("Connection to broker localhost:9092 failed");
 			const producer = new KafkaProducerService(options(["localhost:9092"]));
 			producer.onModuleInit();
 			await flushMicrotasks();
@@ -416,7 +505,7 @@ describe("KafkaProducerService", () => {
 	});
 
 	describe("health", () => {
-		it("is healthy while connected and the broker answers a metadata request", async () => {
+		it("is healthy while connected and the broker answers a topic listing", async () => {
 			const indicator = new KafkaHealthIndicator(await connectedProducer());
 
 			await expect(indicator.isHealthy()).resolves.toBe(true);
@@ -425,10 +514,10 @@ describe("KafkaProducerService", () => {
 
 		it("is unhealthy, with the reason, when the broker does not answer", async () => {
 			const indicator = new KafkaHealthIndicator(await connectedProducer());
-			kafka.listTopicsFailure = new Error("Local: Timed out");
+			kafka.listTopicsFailure = new Error("Request timed out");
 
 			await expect(indicator.isHealthy()).resolves.toBe(false);
-			await expect(indicator.getReport()).resolves.toMatchObject({ state: "connected", lastFailure: "Local: Timed out" });
+			await expect(indicator.getReport()).resolves.toMatchObject({ state: "connected", lastFailure: "Request timed out" });
 		});
 
 		it("is unhealthy when the producer is not connected", async () => {
@@ -458,5 +547,6 @@ describe("KafkaProducerService without brokers", () => {
 		expect(disabled.getState()).toBe("disabled");
 		expect(disabled.isConnected()).toBe(false);
 		await expect(disabled.ping()).resolves.toEqual({ reachable: false, reason: "producer disabled" });
+		await expect(disabled.onModuleDestroy()).resolves.toBeUndefined();
 	});
 });

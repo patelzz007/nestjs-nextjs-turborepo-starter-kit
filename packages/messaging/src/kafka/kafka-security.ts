@@ -10,7 +10,7 @@ import { z } from "zod";
  * {@link toKafkaSecurityOptions}. This package still never reads `process.env`.
  */
 
-/** SASL mechanisms the Confluent client supports with a username/password. */
+/** SASL mechanisms the Kafka client supports with a username/password. */
 export const KafkaSaslMechanismSchema = z.enum(["plain", "scram-sha-256", "scram-sha-512"]);
 
 export type KafkaSaslMechanism = z.output<typeof KafkaSaslMechanismSchema>;

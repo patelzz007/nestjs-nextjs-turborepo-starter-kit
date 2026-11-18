@@ -1,9 +1,8 @@
-import { KafkaJS } from "@confluentinc/kafka-javascript";
 import { z } from "zod";
 
 /**
  * Explicit topic provisioning. Clients in this repo never auto-create topics
- * (`allowAutoTopicCreation: false`): a topic auto-created by a broker gets the
+ * (`autocreateTopics: false`): a topic auto-created by a broker gets the
  * broker defaults (often 1 partition, replication factor 1), silently. Topics
  * are created up front, from configuration, by a deliberate provisioning step.
  */
@@ -17,8 +16,45 @@ export interface KafkaTopicSpec {
 	readonly retentionMs: number;
 }
 
-/** The admin calls provisioning needs (satisfied by the Confluent `KafkaJS.Admin`). */
-export type KafkaTopicAdmin = Pick<KafkaJS.Admin, "listTopics" | "createTopics" | "fetchTopicMetadata">;
+/** One partition as the broker's metadata describes it. */
+export interface KafkaPartitionMetadata {
+	/** Broker id of the partition leader; negative while none is elected. */
+	readonly leader: number;
+	readonly replicas: readonly number[];
+}
+
+/** One topic as the broker's metadata describes it. */
+export interface KafkaTopicMetadata {
+	readonly partitions: readonly KafkaPartitionMetadata[];
+}
+
+/** The cluster metadata provisioning reads: every requested topic, by name. */
+export interface KafkaClusterTopicsMetadata {
+	readonly topics: ReadonlyMap<string, KafkaTopicMetadata>;
+}
+
+/** A topic configuration entry sent with `createTopics`. */
+export interface KafkaTopicConfigEntry {
+	readonly name: string;
+	readonly value: string;
+}
+
+/**
+ * One `createTopics` request: the topics share its configuration entries. The
+ * arrays are mutable because the client's `createTopics` declares them so — a
+ * readonly array would not satisfy its signature.
+ */
+export interface KafkaCreateTopicsRequest {
+	readonly topics: { readonly topic: string; readonly partitions: number; readonly replicas: number }[];
+	readonly configs: KafkaTopicConfigEntry[];
+}
+
+/** The admin calls provisioning needs (satisfied by `@platformatic/kafka`'s `Admin`). */
+export interface KafkaTopicAdmin {
+	listTopics(): Promise<string[]>;
+	createTopics(request: KafkaCreateTopicsRequest): Promise<readonly object[]>;
+	metadata(options: { readonly topics: string[]; readonly forceUpdate: boolean }): Promise<KafkaClusterTopicsMetadata>;
+}
 
 /** Topic config key for how long the broker keeps a record. */
 export const KAFKA_RETENTION_MS_CONFIG = "retention.ms";
@@ -63,13 +99,20 @@ export class KafkaTopicDriftError extends Error {
 
 /**
  * Thrown when a topic this run created still has a partition without a leader
- * (or with a partition error) when the timeout runs out — producing to it would
- * fail with "Unknown topic or partition".
+ * when the timeout runs out — producing to it would fail.
  */
 export class KafkaTopicNotReadyError extends Error {
 	public constructor(public readonly topics: readonly string[]) {
 		super(`Kafka topics created but not ready (partitions without a leader): ${topics.join(", ")}`);
 		this.name = "KafkaTopicNotReadyError";
+	}
+}
+
+/** Thrown when the broker does not report metadata for a topic that should now exist. */
+export class KafkaTopicMissingError extends Error {
+	public constructor(public readonly topics: readonly string[]) {
+		super(`Kafka topics missing after provisioning: ${topics.join(", ")}`);
+		this.name = "KafkaTopicMissingError";
 	}
 }
 
@@ -95,42 +138,41 @@ export interface KafkaTopicProvisioningOptions {
 	readonly clock?: KafkaProvisioningClock;
 }
 
-/** The partition error code a healthy partition reports. */
-const KAFKA_NO_ERROR = 0;
+/**
+ * How the client reports a topic the broker does not know: a `UserError`
+ * ("Unknown topic <name>.") once its retries are spent, or the broker's own
+ * `UNKNOWN_TOPIC_OR_PARTITION` protocol error.
+ */
+const UnknownTopicErrorSchema = z.union([
+	z.object({ code: z.literal("PLT_KFK_USER"), message: z.string().startsWith("Unknown topic ") }),
+	z.object({ apiId: z.literal("UNKNOWN_TOPIC_OR_PARTITION") }),
+]);
 
-/** The broker error code for a topic it does not (yet) know. */
-const KAFKA_UNKNOWN_TOPIC_OR_PARTITION: number = KafkaJS.ErrorCodes.ERR_UNKNOWN_TOPIC_OR_PART;
-
-/** The broker error code a Kafka client error carries. */
-const KafkaErrorCodeSchema = z.object({ code: z.number() });
+/** A failure that wraps the errors of every attempt (the client's `MultipleErrors`). */
+const AggregatedErrorsSchema = z.object({ errors: z.array(z.instanceof(Error)) });
 
 /**
  * Whether an admin call failed because the broker does not know a topic yet.
  * Right after `createTopics`, a broker whose metadata has not caught up with the
- * controller answers a metadata read for the new topic with this error instead
- * of returning it.
+ * controller answers a metadata read for the new topic this way instead of
+ * returning it.
  */
-function isUnknownTopicError(error: Error): boolean {
-	const parsed = KafkaErrorCodeSchema.safeParse(error);
-	return parsed.success && parsed.data.code === KAFKA_UNKNOWN_TOPIC_OR_PARTITION;
-}
-
-/** Thrown when the broker does not report metadata for a topic that should now exist. */
-export class KafkaTopicMissingError extends Error {
-	public constructor(public readonly topics: readonly string[]) {
-		super(`Kafka topics missing after provisioning: ${topics.join(", ")}`);
-		this.name = "KafkaTopicMissingError";
+export function isUnknownKafkaTopicError(error: Error): boolean {
+	if (UnknownTopicErrorSchema.safeParse(error).success) {
+		return true;
 	}
+	const aggregated = AggregatedErrorsSchema.safeParse(error);
+	return aggregated.success && aggregated.data.errors.some((inner: Error): boolean => isUnknownKafkaTopicError(inner));
 }
 
-function minReplicationFactor(metadata: KafkaJS.ITopicMetadata): number {
+function minReplicationFactor(metadata: KafkaTopicMetadata): number {
 	if (metadata.partitions.length === 0) {
 		return 0;
 	}
-	return Math.min(...metadata.partitions.map((partition: KafkaJS.PartitionMetadata): number => partition.replicas.length));
+	return Math.min(...metadata.partitions.map((partition: KafkaPartitionMetadata): number => partition.replicas.length));
 }
 
-function findDrift(spec: KafkaTopicSpec, metadata: KafkaJS.ITopicMetadata): KafkaTopicDrift | null {
+function findDrift(spec: KafkaTopicSpec, metadata: KafkaTopicMetadata): KafkaTopicDrift | null {
 	const actualPartitions: number = metadata.partitions.length;
 	const actualReplicationFactor: number = minReplicationFactor(metadata);
 	if (actualPartitions >= spec.partitions && actualReplicationFactor >= spec.replicationFactor) {
@@ -139,17 +181,9 @@ function findDrift(spec: KafkaTopicSpec, metadata: KafkaJS.ITopicMetadata): Kafk
 	return { topic: spec.topic, expectedPartitions: spec.partitions, actualPartitions, expectedReplicationFactor: spec.replicationFactor, actualReplicationFactor };
 }
 
-/** A partition can take traffic once it reports no error and has an elected leader. */
-function isTopicReady(metadata: KafkaJS.ITopicMetadata | undefined): boolean {
-	return (
-		metadata !== undefined &&
-		metadata.partitions.length > 0 &&
-		metadata.partitions.every((partition: KafkaJS.PartitionMetadata): boolean => partition.partitionErrorCode === KAFKA_NO_ERROR && partition.leader >= 0)
-	);
-}
-
-function byTopicName(metadata: readonly KafkaJS.ITopicMetadata[]): ReadonlyMap<string, KafkaJS.ITopicMetadata> {
-	return new Map(metadata.map((entry: KafkaJS.ITopicMetadata): [string, KafkaJS.ITopicMetadata] => [entry.name, entry]));
+/** A partition can take traffic once it has an elected leader. */
+function isTopicReady(metadata: KafkaTopicMetadata | undefined): boolean {
+	return metadata !== undefined && metadata.partitions.length > 0 && metadata.partitions.every((partition: KafkaPartitionMetadata): boolean => partition.leader >= 0);
 }
 
 /**
@@ -158,8 +192,8 @@ function byTopicName(metadata: readonly KafkaJS.ITopicMetadata[]): ReadonlyMap<s
  * request — before the new partitions have leaders, and before every broker's
  * metadata even knows the topic — so a producer that sends right after
  * provisioning would otherwise race the leader election. A read the broker
- * rejects with "unknown topic or partition" while topics this run created are
- * still propagating counts as "not ready yet"; at the deadline it surfaces as
+ * rejects with "unknown topic" while topics this run created are still
+ * propagating counts as "not ready yet"; at the deadline it surfaces as
  * `KafkaTopicNotReadyError`. Every other error propagates at once.
  */
 async function fetchMetadataOnceReady(
@@ -169,14 +203,14 @@ async function fetchMetadataOnceReady(
 	timeoutMs: number,
 	pollIntervalMs: number,
 	clock: KafkaProvisioningClock,
-): Promise<ReadonlyMap<string, KafkaJS.ITopicMetadata>> {
+): Promise<ReadonlyMap<string, KafkaTopicMetadata>> {
 	const deadline = clock.now() + timeoutMs;
 	for (;;) {
-		let metadata: ReadonlyMap<string, KafkaJS.ITopicMetadata> | null = null;
+		let metadata: ReadonlyMap<string, KafkaTopicMetadata> | null = null;
 		try {
-			metadata = byTopicName(await admin.fetchTopicMetadata({ topics: [...topics], timeout: timeoutMs }));
+			metadata = (await admin.metadata({ topics: [...topics], forceUpdate: true })).topics;
 		} catch (error) {
-			const propagating = created.length > 0 && error instanceof Error && isUnknownTopicError(error);
+			const propagating = created.length > 0 && error instanceof Error && isUnknownKafkaTopicError(error);
 			if (!propagating) {
 				throw error;
 			}
@@ -201,6 +235,8 @@ async function fetchMetadataOnceReady(
  * Idempotent: re-running creates nothing new. A topic with MORE
  * partitions/replicas than its spec is accepted (scaled up by an operator).
  * On return, every created topic can be produced to and consumed from.
+ * `timeoutMs` bounds the wait for new topics; each broker request is bounded by
+ * the admin client's own request timeout.
  */
 export async function provisionKafkaTopics(
 	admin: KafkaTopicAdmin,
@@ -209,18 +245,14 @@ export async function provisionKafkaTopics(
 	options: KafkaTopicProvisioningOptions = {},
 ): Promise<KafkaTopicProvisioningResult> {
 	const { pollIntervalMs = DEFAULT_KAFKA_TOPIC_READY_POLL_INTERVAL_MS, clock = SYSTEM_KAFKA_PROVISIONING_CLOCK } = options;
-	const existing: ReadonlySet<string> = new Set(await admin.listTopics({ timeout: timeoutMs }));
+	const existing: ReadonlySet<string> = new Set(await admin.listTopics());
 	const missing: KafkaTopicSpec[] = specs.filter((spec: KafkaTopicSpec): boolean => !existing.has(spec.topic));
 
-	if (missing.length > 0) {
+	// One request per topic: a request's configuration entries apply to every topic in it, and each spec has its own retention.
+	for (const spec of missing) {
 		await admin.createTopics({
-			timeout: timeoutMs,
-			topics: missing.map((spec: KafkaTopicSpec): KafkaJS.ITopicConfig => ({
-				topic: spec.topic,
-				numPartitions: spec.partitions,
-				replicationFactor: spec.replicationFactor,
-				configEntries: [{ name: KAFKA_RETENTION_MS_CONFIG, value: String(spec.retentionMs) }],
-			})),
+			topics: [{ topic: spec.topic, partitions: spec.partitions, replicas: spec.replicationFactor }],
+			configs: [{ name: KAFKA_RETENTION_MS_CONFIG, value: String(spec.retentionMs) }],
 		});
 	}
 

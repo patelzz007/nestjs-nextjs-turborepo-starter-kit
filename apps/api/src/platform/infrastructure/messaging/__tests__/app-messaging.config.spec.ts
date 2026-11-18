@@ -75,7 +75,7 @@ describe("buildAppMessagingConfig", () => {
 		expect(error.message).not.toContain("kafka-password-for-tests");
 	});
 
-	it("rejects a delivery timeout below librdkafka's 1 s floor", () => {
+	it("rejects a delivery timeout below the 1 s floor", () => {
 		expect(captureEnvError({ KAFKA_DELIVERY_TIMEOUT_MS: "999" }).variables).toEqual(["KAFKA_DELIVERY_TIMEOUT_MS"]);
 	});
 

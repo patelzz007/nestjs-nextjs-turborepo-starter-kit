@@ -152,7 +152,7 @@ export const DEFAULT_MESSAGING_CLIENT_ID = "api";
 export const DEFAULT_BULLMQ_PREFIX = "bull";
 /** Kafka publish budget (retries included) before the outbox dispatcher sees a failure and backs off. */
 export const DEFAULT_KAFKA_DELIVERY_TIMEOUT_MS = 30 * MS_PER_SECOND;
-/** librdkafka's floor for `message.timeout.ms` (1 s). */
+/** Floor for the publish budget (1 s): below it a healthy broker's acknowledgement can miss the deadline. */
 export const MIN_KAFKA_DELIVERY_TIMEOUT_MS = MS_PER_SECOND;
 
 /** The image `pg_dump` runs from when the installed client is older than the server (ADR 068). Matches compose.yml's PostgreSQL. */

@@ -4,9 +4,6 @@ packages:
   - "infra/*"
 
 allowBuilds:
-  # Kafka client (librdkafka binding): its install script fetches the prebuilt
-  # librdkafka binary for this platform (falls back to a node-gyp build).
-  '@confluentinc/kafka-javascript': true
   '@firebase/util': true
   "@nestjs/swagger": true
   "@prisma/engines": true

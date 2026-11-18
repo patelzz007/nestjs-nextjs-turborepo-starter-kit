@@ -23,8 +23,8 @@ export interface MessagingModuleOptions {
 	/** TLS / SASL for the Kafka connection (`KAFKA_PLAINTEXT_SECURITY` for the local broker). */
 	readonly kafkaSecurity: KafkaSecurityOptions;
 	/**
-	 * Upper bound (ms) on one publish, retries included (librdkafka
-	 * `message.timeout.ms`). Past it the publish fails instead of hanging.
+	 * Upper bound (ms) on one publish, retries included. Past it the publish
+	 * fails instead of hanging; one broker request never outlasts it either.
 	 */
 	readonly kafkaDeliveryTimeoutMs: number;
 	/**

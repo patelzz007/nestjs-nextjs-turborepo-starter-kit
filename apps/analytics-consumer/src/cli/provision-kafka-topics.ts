@@ -17,8 +17,7 @@ async function run(): Promise<void> {
 	try {
 		const env = loadTopicProvisioningEnv();
 		const kafkaClient = createKafkaClient(env.kafka, logger);
-		const admin = kafkaClient.kafka.admin();
-		await admin.connect();
+		const admin = kafkaClient.admin();
 		try {
 			const specs = platformTopicSpecs(env.partitions, env.replicationFactor, env.kafka.topicRetentionDays);
 			const result = await provisionKafkaTopics(admin, specs, env.kafka.adminTimeoutMs);
@@ -31,7 +30,7 @@ async function run(): Promise<void> {
 				retentionDays: env.kafka.topicRetentionDays,
 			});
 		} finally {
-			await admin.disconnect();
+			await admin.close();
 			kafkaClient.flushLogs();
 		}
 	} catch (error) {

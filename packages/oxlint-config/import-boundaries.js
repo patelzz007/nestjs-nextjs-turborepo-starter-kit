@@ -22,8 +22,7 @@ const APP_WORKSPACES = ["admin", "analytics-consumer", "api", "aws-infrastructur
 const SERVER_ONLY_WORKSPACES = ["messaging"];
 
 /** Server/Node-only npm packages (database, queues, NestJS, native crypto). */
-const SERVER_ONLY_PACKAGE_PATTERN =
-	"^(@prisma/|prisma$|\\.prisma/|@nestjs/|bullmq$|ioredis$|@confluentinc/kafka-javascript$|kafkajs$|amqplib$|amqp-connection-manager$|bcrypt$|pg$)";
+const SERVER_ONLY_PACKAGE_PATTERN = "^(@prisma/|prisma$|\\.prisma/|@nestjs/|bullmq$|ioredis$|@platformatic/kafka$|amqplib$|amqp-connection-manager$|bcrypt$|pg$)";
 
 /** Patterns every workspace (frontend and backend) obeys. */
 export const UNIVERSAL_RESTRICTED_IMPORT_PATTERNS = [

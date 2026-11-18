@@ -15,7 +15,11 @@ order: 24
 
 ## Status
 
-Accepted (2026-10-03). Operational guide: [Messaging infrastructure](../technical/messaging.md#kafka-client).
+Accepted (2026-10-03). **Client choice superseded by [ADR 088](./088-platformatic-kafka-client.md)**
+(2026-11-18): the Confluent binding ships no build for Node 26, so both clients moved to the
+pure-JavaScript `@platformatic/kafka`. The other decisions here (provisioned topics, the security
+env contract, typed publish failures) still apply. Operational guide:
+[Messaging infrastructure](../technical/messaging.md#kafka-client).
 
 ## Context
 

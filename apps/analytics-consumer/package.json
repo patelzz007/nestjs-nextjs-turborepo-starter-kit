@@ -15,7 +15,7 @@
 		"test:e2e": "dotenv run -q -- vitest run --config vitest.config.e2e.ts"
 	},
 	"dependencies": {
-		"@confluentinc/kafka-javascript": "1.11.0",
+		"@platformatic/kafka": "2.16.0",
 		"@workspace/messaging": "workspace:*",
 		"@workspace/shared": "workspace:*",
 		"pg": "^8.23.1",

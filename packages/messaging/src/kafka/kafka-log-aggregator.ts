@@ -22,15 +22,6 @@ const KafkaLogAggregationOptionsSchema = z.object({
 /** Options of {@link AggregatingKafkaLogSink}. */
 export type KafkaLogAggregationOptions = z.input<typeof KafkaLogAggregationOptionsSchema>;
 
-/**
- * librdkafka decorates a repeated connection error with how long the attempt
- * took and how many identical errors it already folded in:
- * `… Connection refused (after 2ms in state CONNECT, 3 identical error(s) suppressed)`.
- * Those parts change on every retry of the SAME failure, so they are not part
- * of a diagnostic's identity.
- */
-const VOLATILE_RETRY_DETAIL = /\(after \d+ms in state ([A-Za-z_-]+)(?:, \d+ identical error\(s\) suppressed)?\)/gu;
-
 type KafkaLogLevel = keyof KafkaLogSink;
 
 interface PendingRepeats {
@@ -41,15 +32,14 @@ interface PendingRepeats {
 	readonly timer: NodeJS.Timeout;
 }
 
-/** Identity of a diagnostic: level + client component + facility + message without per-retry details. */
+/** Identity of a diagnostic: level + client + client event + message (which names the broker). */
 export function kafkaLogKey(level: KafkaLogLevel, message: string, context: KafkaLogContext): string {
-	const normalized = message.replace(VOLATILE_RETRY_DETAIL, "(in state $1)");
-	return JSON.stringify([level, context.namespace, context.facility, normalized]);
+	return JSON.stringify([level, context.namespace, context.clientEvent, message]);
 }
 
 /**
- * Sink decorator that collapses librdkafka's retry storms (a broker that is
- * down produces the same connection error every reconnect backoff) into:
+ * Sink decorator that collapses the client's retry storms (a broker that is
+ * down fails the same way on every reconnect attempt) into:
  *
  * 1. the FIRST occurrence, forwarded immediately and unchanged; then
  * 2. at the end of the window, ONE line with the same level, message and

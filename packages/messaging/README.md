@@ -82,7 +82,7 @@ export class EmailSendProcessor extends WorkerHost {
 
 - **Redis** — `REDIS_PUBLISHER`, `REDIS_SUBSCRIBER` (ioredis, or `null` if no URL)
 - **BullMQ** — registers all `queueNames`, exports `BullModule`
-- **Kafka** — `KafkaProducerService.publish(topic, envelope, partitionKey?)` on `@confluentinc/kafka-javascript` (librdkafka; [ADR 024](../../docs/adr/024-confluent-kafka-client.md)): idempotent producer, `acks = all`, no topic auto-creation. It resolves only once the broker acknowledged the record and rejects with `KafkaProducerDisabledError` (no brokers), `KafkaProducerNotConnectedError` (still connecting in the background — boot never waits for Kafka, retries use `kafkaConnectBackoff` — or after shutdown) or `KafkaPublishError` (not acknowledged within `kafkaDeliveryTimeoutMs`). Every message carries the envelope's stable `eventId` in the body and in the `event-id` header (`KAFKA_EVENT_ID_HEADER`), plus `event-type` (`KAFKA_EVENT_TYPE_HEADER`). `KafkaHealthIndicator` is unhealthy while the producer is not connected or a metadata request fails (report: `state`, `lastFailure`).
+- **Kafka** — `KafkaProducerService.publish(topic, envelope, partitionKey?)` on `@platformatic/kafka` (pure JavaScript, no native build; [ADR 088](../../docs/adr/088-platformatic-kafka-client.md)): idempotent producer, `acks = all`, no topic auto-creation. It resolves only once the broker acknowledged the record and rejects with `KafkaProducerDisabledError` (no brokers), `KafkaProducerNotConnectedError` (still connecting in the background — boot never waits for Kafka, retries use `kafkaConnectBackoff` — or after shutdown) or `KafkaPublishError` (not acknowledged within `kafkaDeliveryTimeoutMs`). Every message carries the envelope's stable `eventId` in the body and in the `event-id` header (`KAFKA_EVENT_ID_HEADER`), plus `event-type` (`KAFKA_EVENT_TYPE_HEADER`). `KafkaHealthIndicator` is unhealthy while the producer is not connected or a metadata request fails (report: `state`, `lastFailure`).
 - **RabbitMQ** — placeholder service + health (logs when URL set, no consumers)
 
 ---
@@ -100,7 +100,7 @@ through `MessagingModuleOptions`:
 | `redisUrl` | Enables Redis + BullMQ (`undefined` disables) |
 | `kafkaBrokers` | Kafka bootstrap servers (`undefined` disables) |
 | `kafkaSecurity` | TLS (`caLocation`) / SASL (`plain` needs TLS, `scram-sha-256`, `scram-sha-512`) — build it with `toKafkaSecurityOptions(env)` |
-| `kafkaDeliveryTimeoutMs` | librdkafka `message.timeout.ms`: the publish budget, retries included |
+| `kafkaDeliveryTimeoutMs` | The publish budget, retries included (a deadline in `publish`; also caps one request's timeout) |
 | `rabbitmqUrl` | Placeholder health only (`undefined` disables) |
 
 ---

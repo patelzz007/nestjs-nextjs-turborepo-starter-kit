@@ -135,7 +135,7 @@ async function seedOutbox(actors: PlatformRecordsActors): Promise<number> {
 			),
 			status: failed,
 			attempts: OUTBOX_DEAD_LETTER_ATTEMPTS,
-			lastError: "KafkaJSNumberOfRetriesExceeded: broker unavailable after 5 attempts",
+			lastError: "Kafka publish of event to platform.rewards failed: Connection to broker kafka:29092 failed",
 			availableAt: at(62),
 			publishedAt: null,
 			updatedAt: at(62),

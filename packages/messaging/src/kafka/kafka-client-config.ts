@@ -1,7 +1,8 @@
-import { KafkaJS } from "@confluentinc/kafka-javascript";
-import { z } from "zod";
+import { readFileSync } from "node:fs";
 
-import type { KafkaSecurityOptions } from "./kafka-security";
+import { SASLMechanisms, type BaseOptions, type SASLMechanismValue } from "@platformatic/kafka";
+
+import type { KafkaSaslMechanism, KafkaSecurityOptions } from "./kafka-security";
 
 /** Where the Kafka client's own diagnostics go (one structured line each). */
 export interface KafkaLogSink {
@@ -13,10 +14,10 @@ export interface KafkaLogSink {
 
 /** Structured context attached to every client log line. */
 export interface KafkaLogContext {
-	/** Client-side component (`producer`, `consumer`, `admin`, …) when the library names one. */
+	/** The client that reported it (`producer`, `admin`, `consumer`). */
 	readonly namespace: string | null;
-	/** librdkafka log facility (`BROKERFAIL`, `REQTMOUT`, …) when present. */
-	readonly facility: string | null;
+	/** The client event behind the line (`client:broker:failed`, `consumer:heartbeat:error`, …). */
+	readonly clientEvent: string | null;
 	/**
 	 * `null` on a line as the client emitted it. Set on the summary line an
 	 * aggregating sink emits for a diagnostic that repeated inside its window
@@ -35,7 +36,7 @@ export interface KafkaLogRepeats {
 export interface KafkaClientLogEntry {
 	readonly event: "kafka.client_log";
 	readonly namespace: string | null;
-	readonly facility: string | null;
+	readonly clientEvent: string | null;
 	readonly message: string;
 	readonly repeatCount?: number;
 	readonly repeatWindowMs?: number;
@@ -53,7 +54,7 @@ export function kafkaLogSinkFrom(writers: Readonly<Record<keyof KafkaLogSink, Ka
 	const entry = (message: string, context: KafkaLogContext): KafkaClientLogEntry => ({
 		event: "kafka.client_log",
 		namespace: context.namespace,
-		facility: context.facility,
+		clientEvent: context.clientEvent,
 		message,
 		...(context.repeats === null ? {} : { repeatCount: context.repeats.count, repeatWindowMs: context.repeats.windowMs }),
 	});
@@ -73,81 +74,92 @@ export function kafkaLogSinkFrom(writers: Readonly<Record<keyof KafkaLogSink, Ka
 	};
 }
 
-/** The fields librdkafka attaches to a log line that are worth keeping. */
-const KafkaLogExtraSchema = z.object({ fac: z.string().optional() });
-
-function facilityOf(extra: object | undefined): string | null {
-	const parsed = KafkaLogExtraSchema.safeParse(extra);
-	return parsed.success ? (parsed.data.fac ?? null) : null;
+/** A broker address as the client reports it. */
+export interface KafkaBrokerAddress {
+	readonly host: string;
+	readonly port: number;
 }
+
+/** What the client hands to a `client:broker:failed` listener (the part worth logging). */
+export interface KafkaBrokerFailure {
+	readonly broker: KafkaBrokerAddress;
+}
+
+/** Client events every Kafka client (producer, admin, consumer) emits that are worth a log line. */
+export interface KafkaClientEventSource {
+	on(event: "client:broker:failed", listener: (payload: KafkaBrokerFailure) => void): void;
+	on(event: "error", listener: (error: Error) => void): void;
+}
+
+/** The client event names {@link observeKafkaClient} listens to. */
+export const KAFKA_BROKER_FAILED_EVENT = "client:broker:failed";
+export const KAFKA_CLIENT_ERROR_EVENT = "error";
 
 /**
- * Adapts a structured sink to the client's logger interface, so its
- * diagnostics land in the app's JSON logs instead of raw console output.
- * `setLogLevel` filters lines below the chosen level.
+ * Routes a client's own diagnostics into a structured sink: a broker it could
+ * not reach (warn — the client retries) and any `error` it emits (error — and
+ * an `error` with no listener would crash the process). A broker that stays
+ * down fails every retry; pass an `AggregatingKafkaLogSink` to fold that storm.
  */
-export function createKafkaLogger(sink: KafkaLogSink, initialLevel: KafkaJS.logLevel, namespace: string | null = null): KafkaJS.Logger {
-	let level: KafkaJS.logLevel = initialLevel;
-	const context = (extra: object | undefined): KafkaLogContext => ({ namespace, facility: facilityOf(extra), repeats: null });
-	return {
-		error: (message: string, extra?: object): void => {
-			if (level >= KafkaJS.logLevel.ERROR) sink.error(message, context(extra));
-		},
-		warn: (message: string, extra?: object): void => {
-			if (level >= KafkaJS.logLevel.WARN) sink.warn(message, context(extra));
-		},
-		info: (message: string, extra?: object): void => {
-			if (level >= KafkaJS.logLevel.INFO) sink.info(message, context(extra));
-		},
-		debug: (message: string, extra?: object): void => {
-			if (level >= KafkaJS.logLevel.DEBUG) sink.debug(message, context(extra));
-		},
-		namespace: (childNamespace: string, childLevel?: KafkaJS.logLevel): KafkaJS.Logger => createKafkaLogger(sink, childLevel ?? level, childNamespace),
-		setLogLevel: (nextLevel: KafkaJS.logLevel): void => {
-			level = nextLevel;
-		},
-	};
+export function observeKafkaClient(client: KafkaClientEventSource, sink: KafkaLogSink, namespace: string): void {
+	client.on(KAFKA_BROKER_FAILED_EVENT, (payload: KafkaBrokerFailure): void => {
+		sink.warn(`Connection to broker ${payload.broker.host}:${String(payload.broker.port)} failed`, { namespace, clientEvent: KAFKA_BROKER_FAILED_EVENT, repeats: null });
+	});
+	client.on(KAFKA_CLIENT_ERROR_EVENT, (error: Error): void => {
+		sink.error(error.message, { namespace, clientEvent: KAFKA_CLIENT_ERROR_EVENT, repeats: null });
+	});
 }
 
-/** Where the client's diagnostics go, and from which level on. */
-export interface KafkaClientLogOptions {
-	readonly sink: KafkaLogSink;
-	readonly level: KafkaJS.logLevel;
-}
+/** Budget for one broker request (ms) when the caller sets none — the client's own default. */
+export const DEFAULT_KAFKA_REQUEST_TIMEOUT_MS = 5_000;
+
+/**
+ * How many times the client retries a failed request, and how long it waits in between.
+ * Always set explicitly: with the client's defaults (`@platformatic/kafka` 2.16.0), a
+ * send to — or a metadata read of — a topic the broker does not know never settled
+ * (measured: still pending after 140 s); with these it fails within a second.
+ */
+export const KAFKA_CLIENT_RETRIES = 3;
+export const KAFKA_CLIENT_RETRY_DELAY_MS = 250;
 
 /** Everything needed to open a Kafka client — passed explicitly, never read from the environment. */
 export interface KafkaConnectionOptions {
 	readonly clientId: string;
 	readonly brokers: readonly string[];
 	readonly security: KafkaSecurityOptions;
-	readonly log: KafkaClientLogOptions;
+	/** Budget for one broker request (ms); {@link DEFAULT_KAFKA_REQUEST_TIMEOUT_MS} when unset. */
+	readonly requestTimeoutMs?: number;
 }
 
+/** The client options every Kafka client in the repo shares (connection, security, retries). */
+export type KafkaClientOptions = Pick<BaseOptions, "clientId" | "bootstrapBrokers" | "timeout" | "retries" | "retryDelay" | "tls" | "sasl">;
+
+const SASL_MECHANISM_VALUES: Readonly<Record<KafkaSaslMechanism, SASLMechanismValue>> = {
+	plain: SASLMechanisms.PLAIN,
+	"scram-sha-256": SASLMechanisms.SCRAM_SHA_256,
+	"scram-sha-512": SASLMechanisms.SCRAM_SHA_512,
+};
+
+/** Reads the CA bundle a TLS connection verifies the brokers against. */
+export type KafkaCaFileReader = (path: string) => Buffer;
+
+const readCaFile: KafkaCaFileReader = (path: string): Buffer => readFileSync(path);
+
 /**
- * Builds the Confluent client config: the KafkaJS-compatible block (brokers,
- * client id, TLS on/off, SASL, logger + level) plus the librdkafka properties
- * the compat block cannot carry (the CA file). TLS certificate verification
- * stays ON — there is deliberately no switch to disable it.
- *
- * The level is set in TWO places on purpose, from one value: on the logger
- * adapter and as the compat block's `logLevel`. Every client (producer,
- * consumer, admin) calls `logger.setLogLevel(<librdkafka log_level>)` when it
- * connects, and without `logLevel` that is INFO — which would silently
- * override the adapter's level and let INFO chatter through.
+ * Builds the shared client options: brokers, client id, request timeout,
+ * explicit retries, TLS and SASL. TLS verifies the broker certificates (against
+ * the CA file when one is set, otherwise the system trust store) — there is
+ * deliberately no switch to turn verification off.
  */
-export function buildKafkaClientConfig(options: KafkaConnectionOptions): KafkaJS.CommonConstructorConfig {
+export function buildKafkaClientOptions(options: KafkaConnectionOptions, readCa: KafkaCaFileReader = readCaFile): KafkaClientOptions {
 	const { tls, sasl } = options.security;
-	const caLocation: string | null = tls?.caLocation ?? null;
-	const kafkaJS: KafkaJS.KafkaConfig = {
-		clientId: options.clientId,
-		brokers: [...options.brokers],
-		logger: createKafkaLogger(options.log.sink, options.log.level),
-		logLevel: options.log.level,
-		...(tls === null ? {} : { ssl: true }),
-		...(sasl === null ? {} : { sasl: { mechanism: sasl.mechanism, username: sasl.username, password: sasl.password } }),
-	};
 	return {
-		kafkaJS,
-		...(caLocation === null ? {} : { "ssl.ca.location": caLocation }),
+		clientId: options.clientId,
+		bootstrapBrokers: [...options.brokers],
+		timeout: options.requestTimeoutMs ?? DEFAULT_KAFKA_REQUEST_TIMEOUT_MS,
+		retries: KAFKA_CLIENT_RETRIES,
+		retryDelay: KAFKA_CLIENT_RETRY_DELAY_MS,
+		...(tls === null ? {} : { tls: tls.caLocation === null ? {} : { ca: readCa(tls.caLocation) } }),
+		...(sasl === null ? {} : { sasl: { mechanism: SASL_MECHANISM_VALUES[sasl.mechanism], username: sasl.username, password: sasl.password } }),
 	};
 }

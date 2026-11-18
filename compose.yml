@@ -101,8 +101,8 @@ services:
       # only to their bootstrap address. Advertise the exact address the port is
       # published on (127.0.0.1 — IPv4 only, like every port in this file) and
       # follow KAFKA_PORT: `localhost` resolves to ::1 first on macOS and many
-      # Linux hosts, and librdkafka then logs a refused IPv6 connection (and
-      # "all broker connections are down") on every (re)connect.
+      # Linux hosts, and a client then logs a refused IPv6 connection on every
+      # (re)connect.
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://127.0.0.1:${KAFKA_PORT:-9092}
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT

@@ -42,7 +42,7 @@ describe("import boundaries (apps/web effective lint config)", () => {
 		["NestJS", "@nestjs/common"],
 		["the Node-only messaging package", "@workspace/messaging"],
 		["a queue client", "bullmq"],
-		["the Kafka client", "@confluentinc/kafka-javascript"],
+		["the Kafka client", "@platformatic/kafka"],
 	])("rejects importing %s", (_label: string, specifier: string) => {
 		const code = `import * as forbidden from "${specifier}";\nexport const probe = forbidden;\n`;
 		expect(boundaryViolations(code, "components/probe.tsx")).toContain("workspace/restricted-imports");

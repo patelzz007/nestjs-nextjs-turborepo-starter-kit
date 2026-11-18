@@ -13,7 +13,9 @@ import {
 	type AbortableSleep,
 	type MessageHandlerDeps,
 } from "@workspace/messaging/inbox";
-import { assertTopicsExist, buildConsumerConfig, createKafkaClient } from "./infrastructure/kafka";
+import type { MessagesStream } from "@platformatic/kafka";
+
+import { assertTopicsExist, buildConsumeOptions, consumePlatformEvents, createKafkaClient } from "./infrastructure/kafka";
 import { createConsoleJsonLogger } from "./infrastructure/logger";
 import { projectPlatformEvent } from "./projections/platform-events/platform-events.projection";
 
@@ -44,9 +46,10 @@ pool.on("error", (error: Error): void => {
 });
 
 const kafkaClient = createKafkaClient(env.kafka, logger);
-const kafka = kafkaClient.kafka;
 // The group id doubles as the inbox consumer id — each logical consumer dedupes on its own.
-const consumer = kafka.consumer(buildConsumerConfig(ANALYTICS_CONSUMER_ID, env.startFrom));
+const consumer = kafkaClient.consumer(ANALYTICS_CONSUMER_ID);
+/** The subscription's record stream, once `main` opened it; closed at shutdown. */
+let stream: MessagesStream<Buffer, Buffer, Buffer, Buffer> | null = null;
 const inboxStore = new PgInboxStore(pool);
 const shutdownSignal = new AbortController();
 
@@ -81,12 +84,11 @@ let shutdownStarted = false;
 
 /** Topics are provisioned explicitly — refuse to start (with the provisioning hint) if one is missing. */
 async function verifyTopics(): Promise<void> {
-	const admin = kafka.admin();
-	await admin.connect();
+	const admin = kafkaClient.admin();
 	try {
-		await assertTopicsExist(admin, KAFKA_TOPICS, env.kafka.adminTimeoutMs);
+		await assertTopicsExist(admin, KAFKA_TOPICS);
 	} finally {
-		await admin.disconnect();
+		await admin.close();
 	}
 }
 
@@ -106,7 +108,8 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 	// A record waiting between retries is released un-committed (redelivered after restart).
 	shutdownSignal.abort();
 	try {
-		await consumer.disconnect();
+		await stream?.close();
+		await consumer.close();
 		await retention.stop();
 		await flagAnalytics.stop();
 		await pool.end();
@@ -135,18 +138,21 @@ async function main(): Promise<void> {
 	registerGracefulShutdown();
 
 	await verifyTopics();
-	await consumer.connect();
-	await consumer.subscribe({ topics: [...KAFKA_TOPICS] });
+	const records = await consumer.consume(buildConsumeOptions(KAFKA_TOPICS, env.startFrom));
+	stream = records;
 	logger.info({ event: "analytics.subscribed", topics: KAFKA_TOPICS.join(","), groupId: ANALYTICS_CONSUMER_ID, startFrom: env.startFrom });
 
-	await consumer.run({
-		// At-least-once: the offset is stored only after the handler resolves —
-		// applied, deduplicated, or durably parked. The handler retries
-		// transient failures itself (bounded), so it only rejects when parking
-		// is impossible or shutdown interrupts it; the record is then redelivered.
-		eachMessage: async ({ topic, partition, message }): Promise<void> => {
-			await projectPlatformEvent({ topic, partition, message }, handlerDeps);
-		},
+	// At-least-once: an offset is committed only after the handler resolves —
+	// applied, deduplicated, or durably parked. The handler retries transient
+	// failures itself (bounded), so it only rejects when parking is impossible
+	// or shutdown interrupts it; the record is then redelivered after a restart.
+	consumePlatformEvents(records, (record) => projectPlatformEvent(record, handlerDeps)).catch((error: unknown): void => {
+		if (shutdownStarted) {
+			return;
+		}
+		kafkaClient.flushLogs();
+		logger.error({ event: "analytics.consume_failed", error: error instanceof Error ? error.message : String(error) });
+		process.exit(1);
 	});
 
 	retention.start();

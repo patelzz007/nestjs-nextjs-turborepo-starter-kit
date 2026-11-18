@@ -1,9 +1,17 @@
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import { KafkaJS } from "@confluentinc/kafka-javascript";
+import { Admin, ProduceAcks, Producer, compatibilityPartitioner, stringSerializers } from "@platformatic/kafka";
 
 import type { MessagingHealthIndicator } from "../../core/health";
-import { buildKafkaClientConfig, kafkaLogSinkFrom, type KafkaClientLogEntry, type KafkaLogSink } from "../../kafka/kafka-client-config";
+import {
+	DEFAULT_KAFKA_REQUEST_TIMEOUT_MS,
+	buildKafkaClientOptions,
+	kafkaLogSinkFrom,
+	observeKafkaClient,
+	type KafkaClientLogEntry,
+	type KafkaLogSink,
+} from "../../kafka/kafka-client-config";
 import { kafkaConnectRetryDelayMs } from "../../kafka/kafka-connect-backoff";
+import { withKafkaDeadline } from "../../kafka/kafka-deadline";
 import { AggregatingKafkaLogSink } from "../../kafka/kafka-log-aggregator";
 import { MessageEnvelopeSchema, type MessageEnvelope } from "../../schemas/outbox";
 
@@ -16,20 +24,15 @@ export const KAFKA_EVENT_ID_HEADER = "event-id";
 /** Kafka header carrying the event type (routing / filtering without parsing the body). */
 export const KAFKA_EVENT_TYPE_HEADER = "event-type";
 
-/** Wait for every in-sync replica before a publish counts as delivered. */
-const ACKS_ALL_IN_SYNC_REPLICAS = -1;
-
-/** Java-client-compatible key hashing, so every client maps a key to the same partition. */
-const JAVA_COMPATIBLE_PARTITIONER = "murmur2_random";
-
 /** Budget (ms) for the health probe's metadata request. */
 export const KAFKA_HEALTH_PROBE_TIMEOUT_MS = 5_000;
 
-/** Library log level: warnings and errors only (connection trouble), routed to the Nest logger. */
-const CLIENT_LOG_LEVEL: KafkaJS.logLevel = KafkaJS.logLevel.WARN;
-
 /** Backend name reported by the health indicator. */
-export const KAFKA_CLIENT_BACKEND = "confluent-kafka-javascript";
+export const KAFKA_CLIENT_BACKEND = "platformatic-kafka";
+
+/** The client names the producer's diagnostics carry. */
+const PRODUCER_NAMESPACE = "producer";
+const ADMIN_NAMESPACE = "admin";
 
 /**
  * Producer lifecycle. Only `connected` can publish:
@@ -56,7 +59,7 @@ export class KafkaProducerNotConnectedError extends Error {
 	}
 }
 
-/** The broker did not acknowledge the message (timeout, missing topic, authorization, …). */
+/** The broker did not acknowledge the message (deadline, missing topic, authorization, …). */
 export class KafkaPublishError extends Error {
 	public constructor(
 		public readonly topic: string,
@@ -107,19 +110,24 @@ function waitOrAbort(delayMs: number, signal: AbortSignal): Promise<void> {
 	});
 }
 
+/** The producer and admin clients, keyed and valued as strings. */
+type StringProducer = Producer<string, string, string, string>;
+
 /**
- * Publishes validated JSON envelopes to Kafka (Confluent client, librdkafka).
+ * Publishes validated JSON envelopes to Kafka (`@platformatic/kafka`, pure JavaScript).
  *
  * - Boot never waits for Kafka: `onModuleInit` starts a background connect
- *   loop and returns. Each attempt needs a real metadata round trip
- *   (bounded by {@link KAFKA_HEALTH_PROBE_TIMEOUT_MS}); failures are retried
- *   with capped exponential backoff + jitter (`kafkaConnectBackoff`). Until
- *   the first success the state is `connecting`, health is DOWN with the
- *   last failure, and `publish()` rejects (the outbox keeps its rows).
- *   Shutdown cancels the loop.
+ *   loop and returns. Each attempt needs real round trips (a topic listing
+ *   through the admin client, the producer's API versions), each bounded by
+ *   {@link KAFKA_HEALTH_PROBE_TIMEOUT_MS}; failures are retried with capped
+ *   exponential backoff + jitter (`kafkaConnectBackoff`). Until the first
+ *   success the state is `connecting`, health is DOWN with the last failure,
+ *   and `publish()` rejects (the outbox keeps its rows). Shutdown cancels the loop.
  * - Idempotent producer, `acks = all`: a retried send never duplicates a
  *   record inside one producer session.
  * - Topics are never auto-created — they are provisioned explicitly.
+ * - Keys map to partitions with the Java client's murmur2 hashing, so every
+ *   client puts a key on the same partition.
  * - `publish()` resolves only once the broker acknowledged the record, and
  *   REJECTS with a typed error otherwise: disabled, not connected, or not
  *   acknowledged within `kafkaDeliveryTimeoutMs`. It never reports a
@@ -128,9 +136,9 @@ function waitOrAbort(delayMs: number, signal: AbortSignal): Promise<void> {
 @Injectable()
 export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 	private readonly logger: Logger = new Logger(KafkaProducerService.name);
-	private producer: KafkaJS.Producer | null = null;
-	private admin: KafkaJS.Admin | null = null;
-	/** Collapses librdkafka retry storms; flushed (never dropped) when the client shuts down. */
+	private producer: StringProducer | null = null;
+	private admin: Admin | null = null;
+	/** Collapses the client's retry storms; flushed (never dropped) when the client shuts down. */
 	private clientLogs: AggregatingKafkaLogSink | null = null;
 	private state: KafkaProducerState;
 	/** Why the last connect attempt failed; `null` once connected. */
@@ -160,7 +168,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 		return this.failedConnectAttempts;
 	}
 
-	/** Starts the background connect loop and returns at once — an unreachable broker never blocks boot. */
+	/** Creates the clients and starts the background connect loop, then returns at once — an unreachable broker never blocks boot. */
 	public onModuleInit(): void {
 		const brokers = this.options.kafkaBrokers;
 		if (brokers === undefined || this.connectLoop !== null) {
@@ -168,19 +176,27 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 		}
 		const clientLogs = new AggregatingKafkaLogSink(nestKafkaLogSink(this.logger));
 		this.clientLogs = clientLogs;
-		const kafka = new KafkaJS.Kafka(
-			buildKafkaClientConfig({
-				clientId: this.options.clientId,
-				brokers,
-				security: this.options.kafkaSecurity,
-				log: { sink: clientLogs, level: CLIENT_LOG_LEVEL },
-			}),
-		);
+		// One attempt of a send never outlasts the delivery budget (the deadline in `publish` bounds the retries).
+		const requestTimeoutMs = Math.min(DEFAULT_KAFKA_REQUEST_TIMEOUT_MS, this.options.kafkaDeliveryTimeoutMs);
+		const connection = { clientId: this.options.clientId, brokers, security: this.options.kafkaSecurity, requestTimeoutMs };
+		const producer: StringProducer = new Producer({
+			...buildKafkaClientOptions(connection),
+			idempotent: true,
+			acks: ProduceAcks.ALL,
+			autocreateTopics: false,
+			partitioner: compatibilityPartitioner,
+			serializers: stringSerializers,
+		});
+		const admin = new Admin(buildKafkaClientOptions(connection));
+		observeKafkaClient(producer, clientLogs, PRODUCER_NAMESPACE);
+		observeKafkaClient(admin, clientLogs, ADMIN_NAMESPACE);
+		this.producer = producer;
+		this.admin = admin;
 		this.state = "connecting";
-		this.connectLoop = this.connectUntilReady(kafka, brokers);
+		this.connectLoop = this.connectUntilReady(producer, admin, brokers);
 	}
 
-	/** Cancels the connect loop (waits at most for the attempt in flight), then disconnects. */
+	/** Cancels the connect loop (waits at most for the attempt in flight), then closes the clients. */
 	public async onModuleDestroy(): Promise<void> {
 		if (this.state === "disabled") {
 			return;
@@ -189,11 +205,11 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 		this.shutdown.abort();
 		try {
 			await this.connectLoop;
-			if (this.admin !== null) {
-				await this.admin.disconnect();
-			}
 			if (this.producer !== null) {
-				await this.producer.disconnect();
+				await this.producer.close();
+			}
+			if (this.admin !== null) {
+				await this.admin.close();
 			}
 		} finally {
 			this.clientLogs?.dispose();
@@ -205,11 +221,11 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 		}
 	}
 
-	private async connectUntilReady(kafka: KafkaJS.Kafka, brokers: readonly string[]): Promise<void> {
+	private async connectUntilReady(producer: StringProducer, admin: Admin, brokers: readonly string[]): Promise<void> {
 		const signal = this.shutdown.signal;
 		while (!this.isShuttingDown()) {
 			try {
-				await this.attemptConnect(kafka);
+				await this.attemptConnect(producer, admin);
 			} catch (error) {
 				this.failedConnectAttempts += 1;
 				this.lastConnectFailure = error instanceof Error ? error.message : String(error);
@@ -234,28 +250,16 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 	}
 
 	/**
-	 * One attempt: a metadata round trip through the admin client (bounded by
-	 * {@link KAFKA_HEALTH_PROBE_TIMEOUT_MS}), then the producer connect (which
-	 * itself resolves only after a successful metadata request). A producer
-	 * whose connect failed cannot be reused, so each attempt creates one.
+	 * One attempt: a topic listing through the admin client (the same probe as
+	 * {@link ping}), then the producer's own API-versions round trip — so the
+	 * producer's connection (and its TLS / SASL handshake) is proven, not only the admin's.
 	 */
-	private async attemptConnect(kafka: KafkaJS.Kafka): Promise<void> {
-		if (this.admin === null) {
-			const admin = kafka.admin();
-			await admin.connect();
-			this.admin = admin;
-		}
-		await this.admin.listTopics({ timeout: KAFKA_HEALTH_PROBE_TIMEOUT_MS });
+	private async attemptConnect(producer: StringProducer, admin: Admin): Promise<void> {
+		await withKafkaDeadline(admin.listTopics(), "Kafka topic listing", KAFKA_HEALTH_PROBE_TIMEOUT_MS);
 		if (this.isShuttingDown()) {
 			return;
 		}
-		const producer = kafka.producer({
-			kafkaJS: { idempotent: true, acks: ACKS_ALL_IN_SYNC_REPLICAS, allowAutoTopicCreation: false },
-			"message.timeout.ms": this.options.kafkaDeliveryTimeoutMs,
-			partitioner: JAVA_COMPATIBLE_PARTITIONER,
-		});
-		await producer.connect();
-		this.producer = producer;
+		await withKafkaDeadline(producer.listApis(), "Kafka producer handshake", KAFKA_HEALTH_PROBE_TIMEOUT_MS);
 	}
 
 	/**
@@ -263,7 +267,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 	 *
 	 * @throws {KafkaProducerDisabledError} no brokers configured.
 	 * @throws {KafkaProducerNotConnectedError} not connected (yet / any more).
-	 * @throws {KafkaPublishError} the broker did not acknowledge the record.
+	 * @throws {KafkaPublishError} the broker did not acknowledge the record in time.
 	 */
 	public async publish(topic: string, envelope: MessageEnvelope, partitionKey: string | null = null): Promise<void> {
 		if (this.state === "disabled") {
@@ -276,26 +280,30 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 		const validated = MessageEnvelopeSchema.parse(envelope);
 		const messageKey = partitionKey ?? validated.correlationId ?? validated.type;
 		try {
-			await producer.send({
-				topic,
-				messages: [
-					{
-						key: messageKey,
-						value: JSON.stringify(validated),
-						headers: {
-							[KAFKA_EVENT_ID_HEADER]: validated.eventId,
-							[KAFKA_EVENT_TYPE_HEADER]: validated.type,
+			await withKafkaDeadline(
+				producer.send({
+					messages: [
+						{
+							topic,
+							key: messageKey,
+							value: JSON.stringify(validated),
+							headers: {
+								[KAFKA_EVENT_ID_HEADER]: validated.eventId,
+								[KAFKA_EVENT_TYPE_HEADER]: validated.type,
+							},
 						},
-					},
-				],
-			});
+					],
+				}),
+				`Kafka publish to ${topic}`,
+				this.options.kafkaDeliveryTimeoutMs,
+			);
 		} catch (error) {
 			throw new KafkaPublishError(topic, validated.eventId, { cause: error instanceof Error ? error : new Error(String(error)) });
 		}
 	}
 
 	/**
-	 * Broker reachability: the producer is connected AND a metadata request
+	 * Broker reachability: the producer is connected AND a topic listing
 	 * answers within {@link KAFKA_HEALTH_PROBE_TIMEOUT_MS}. The failure reason
 	 * is kept for the health report.
 	 */
@@ -305,7 +313,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 			return { reachable: false, reason: this.lastConnectFailure === null ? `producer ${this.state}` : `producer ${this.state}: ${this.lastConnectFailure}` };
 		}
 		try {
-			await admin.listTopics({ timeout: KAFKA_HEALTH_PROBE_TIMEOUT_MS });
+			await withKafkaDeadline(admin.listTopics(), "Kafka topic listing", KAFKA_HEALTH_PROBE_TIMEOUT_MS);
 			return { reachable: true };
 		} catch (error) {
 			return { reachable: false, reason: error instanceof Error ? error.message : String(error) };

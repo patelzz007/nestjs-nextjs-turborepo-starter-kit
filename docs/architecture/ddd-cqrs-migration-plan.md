@@ -226,7 +226,7 @@ Modules by size, in files:
 
 - **Outbox** (ADR 015), in `apps/api/src/infrastructure/outbox/`:
   - `platform-outbox.service.ts` writes through the caller's `tx`.
-  - The dispatcher (`outbox-dispatcher.ts`) claims, leases, retries and dead-letters records. It is driven by BullMQ and publishes to Kafka (`@confluentinc/kafka-javascript`, ADR 024).
+  - The dispatcher (`outbox-dispatcher.ts`) claims, leases, retries and dead-letters records. It is driven by BullMQ and publishes to Kafka (`@platformatic/kafka`, ADR 088).
   - The envelope and topics are defined in `packages/shared/src/schemas/infrastructure/{outbox,kafka}.ts`.
 - **In-process events** (hand-written):
   - `modules/authorization/events/authorization.events.ts` (`AuthorizationEventEmitter`)
