@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { Pool } from "pg";
+import { Pool, type QueryResult } from "pg";
 
 import { countStatements } from "../sql-statement-counter";
 import { createScratchDatabase } from "../scratch-database";
@@ -70,10 +70,11 @@ describe("sql-statement-counter", () => {
 		}
 		const database = await createScratchDatabase(serverUrl, "sql_counter_background");
 		scratch = database;
-		let backgroundQueries = 0;
+		// Every background query is kept, so the test waits for the ones still queued on the pool before
+		// afterEach ends it; one left running would reject with "Cannot use a pool after calling end".
+		const backgroundQueries: Promise<QueryResult>[] = [];
 		const background: NodeJS.Timeout = setInterval((): void => {
-			backgroundQueries += 1;
-			void database.pool.query("SELECT 'background' AS sweep");
+			backgroundQueries.push(database.pool.query("SELECT 'background' AS sweep"));
 		}, 1);
 		try {
 			const measured = await countStatements(database.pool, async (): Promise<void> => {
@@ -82,9 +83,10 @@ describe("sql-statement-counter", () => {
 				}
 			});
 			expect(measured).toBe(SMALL_PAGE + 2);
-			expect(backgroundQueries).toBeGreaterThan(0);
+			expect(backgroundQueries.length).toBeGreaterThan(0);
 		} finally {
 			clearInterval(background);
+			await Promise.all(backgroundQueries);
 		}
 	}, 60_000);
 
