@@ -1,8 +1,7 @@
-import { Controller, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { Get, HttpStatus, Patch, Post } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	MessageResponseSchema,
 	TenantAccessRequestCreateSchema,
 	TenantAccessRequestParamSchema,
@@ -59,6 +58,7 @@ import {
 	type ReviewTenantAccessRequestInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -73,28 +73,30 @@ import { RequestTenantAccessCommand } from "../../application/commands/request-t
 import { ResubmitLocationCommand } from "../../application/commands/resubmit-location/resubmit-location.command";
 import { ReviewAccessRequestCommand } from "../../application/commands/review-access-request/review-access-request.command";
 import { RevokeInviteCommand } from "../../application/commands/revoke-invite/revoke-invite.command";
-import { GetTenantContextQuery } from "../../application/queries/get-tenant-context/get-tenant-context.query";
+import { TenantContextApplicationService } from "../../application/services/tenant-context.application-service";
+import { TenantLifecycleApplicationService } from "../../application/services/tenant-lifecycle.application-service";
 import { TenantLifecycleRoute } from "./tenant-lifecycle-route.decorator";
 import { LeaveTenantCommand } from "../../application/commands/leave-tenant/leave-tenant.command";
 import { ReactivateTenantCommand } from "../../application/commands/reactivate-tenant/reactivate-tenant.command";
 import { SubmitSuspensionAppealCommand } from "../../application/commands/submit-suspension-appeal/submit-suspension-appeal.command";
-import { GetTenantLifecycleQuery } from "../../application/queries/get-tenant-lifecycle/get-tenant-lifecycle.query";
 import { ListMembersQuery } from "../../application/queries/list-members/list-members.query";
 import { ListPendingInvitesQuery } from "../../application/queries/list-pending-invites/list-pending-invites.query";
 
 @ApiTags("Tenants")
-@Controller(apiPath("/tenants"))
+@ApiController("/tenants")
 export class TenantController {
 	public constructor(
 		private readonly commandBus: CommandBus,
 		private readonly queryBus: QueryBus,
+		private readonly contexts: TenantContextApplicationService,
+		private readonly lifecycles: TenantLifecycleApplicationService,
 	) {}
 
 	@TenantLifecycleRoute()
 	@Get(":tenantSlug/context")
 	@ZodResponse(TenantContextResponseSchema, { description: "Tenant context for the signed-in member" })
 	public getContext(@CurrentActor() actor: ActorContext, @ZodParams(TenantSlugParamSchema) params: { tenantSlug: string }): Promise<TenantContextResponse> {
-		return this.queryBus.execute(new GetTenantContextQuery(actor, params));
+		return this.contexts.getContext(actor, params);
 	}
 
 	// ── Lifecycle routes (MT-23): they run while the tenant is suspended or pending deletion. ──
@@ -103,7 +105,7 @@ export class TenantController {
 	@Get(":tenantSlug/lifecycle")
 	@ZodResponse(TenantLifecycleResponseSchema, { description: "The tenant's lifecycle state, current suspension and appeals" })
 	public getLifecycle(@CurrentActor() actor: ActorContext, @ZodParams(TenantSlugParamSchema) params: { tenantSlug: string }): Promise<TenantLifecycleResponse> {
-		return this.queryBus.execute(new GetTenantLifecycleQuery(actor, params));
+		return this.lifecycles.getForMember(actor, params);
 	}
 
 	@TenantLifecycleRoute()

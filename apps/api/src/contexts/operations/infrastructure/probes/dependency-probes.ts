@@ -102,11 +102,6 @@ export class PostgresProbe implements DependencyProbe {
 	}
 }
 
-/** Bytes per day between two sizes `elapsedMs` apart. */
-export function growthPerDay(olderBytes: number, newerBytes: number, elapsedMs: number): number {
-	return elapsedMs <= 0 ? 0 : ((newerBytes - olderBytes) / elapsedMs) * MS_PER_DAY;
-}
-
 // ── Redis ───────────────────────────────────────────────────────────────────
 
 /** `key:value` lines of Redis `INFO`. */

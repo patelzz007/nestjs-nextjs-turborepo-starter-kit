@@ -141,8 +141,6 @@ export type {
 } from "./runtime/http-headers";
 export { JsonObjectSchema, JsonPrimitiveSchema, JsonRecordSchema, JsonValueSchema } from "./runtime/json";
 export type { JsonObject, JsonObjectNode, JsonPrimitive, JsonValue, JsonValueInput, JsonValueNode } from "./runtime/json";
-export { PrismaQueryEventSchema, PrismaQuerySubscriberSchema } from "./runtime/prisma-query";
-export type { PrismaQueryEvent } from "./runtime/prisma-query";
 export { NonEmptyStringSchema, StringRecordNullableSchema, StringRecordSchema, StringValueSchema, ThrownErrorSchema } from "./runtime/primitives";
 export type { NonEmptyString, StringRecord, StringRecordNullable, StringValue, ThrownError } from "./runtime/primitives";
 export { SystemOperationContextSchema, TenantJobContextSchema } from "./infrastructure/tenant-job-context";

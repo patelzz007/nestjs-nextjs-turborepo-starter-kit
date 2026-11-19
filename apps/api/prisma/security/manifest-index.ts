@@ -162,21 +162,6 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 	],
 };
 
-/** @deprecated Use `RLS_MANIFEST_PROFILES.ownership` — kept for existing imports. */
-export const RLS_OWNERSHIP_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.ownership;
-
-/** @deprecated Use `RLS_MANIFEST_PROFILES.rbac_catalog`. */
-export const RLS_RBAC_CATALOG_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.rbac_catalog;
-
-/** @deprecated Use `RLS_MANIFEST_PROFILES.tenant`. */
-export const RLS_TENANT_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.tenant;
-
-/** @deprecated Use `RLS_MANIFEST_PROFILES.location`. */
-export const RLS_LOCATION_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.location;
-
-/** @deprecated Use `RLS_MANIFEST_PROFILES.bypass_only`. */
-export const RLS_BYPASS_ONLY_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.bypass_only;
-
 export interface PrismaTableModel {
 	readonly tableName: string;
 	readonly hasTenantId: boolean;

@@ -1,10 +1,9 @@
-import { Controller, Get, HttpStatus, Patch, Post, Put, UseInterceptors } from "@nestjs/common";
+import { Get, HttpStatus, Patch, Post, Put, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import {
 	apiContract,
-	apiPath,
 	MerchantCreateRewardSchema,
 	MerchantRewardListQuerySchema,
 	MerchantRewardSummaryQuerySchema,
@@ -28,6 +27,7 @@ import {
 	type RewardCustomerListQuery,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { GetMerchantActor } from "../../../../platform/presentation/http/security/decorators/get-merchant-actor.decorator";
@@ -55,7 +55,7 @@ import { RewardsEmptyBodyDto } from "./rewards-empty-body.dto";
 @ApiTags("Tenant Rewards")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/tenants/:tenantSlug/rewards"))
+@ApiController("/tenants/:tenantSlug/rewards")
 export class TenantRewardsController {
 	public constructor(
 		private readonly commandBus: CommandBus,

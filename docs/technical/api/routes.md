@@ -63,8 +63,9 @@ export const apiRoutes = {
 - Every leaf is a plain path string; a parameterized segment is a `:param` placeholder. The client
   router (`endpoints.ts`) fills the placeholders from the contract's validated input, and the
   controller's `@ZodParams` schema must cover every `:segment`.
-- Paths do **not** contain the version prefix: `apiPath()` adds `/api/v1` on the server and the
-  client transport adds the same `API_VERSION_PREFIX` ([architecture §6](../architecture.md#6-api-versioning)).
+- Paths do **not** contain the version prefix: `@ApiController()` serves each route at every version's
+  `/api/<version>` path on the server, and the client transport adds its pinned version's prefix
+  ([ADR 094](../../adr/094-per-endpoint-api-versioning.md)).
 
 ## 3. How each layer consumes it
 
@@ -73,7 +74,7 @@ flowchart TD
     R[api-routes.ts] --> C[contracts/index.ts<br/>apiContract.rewards.detail.path]
     C --> E[packages/client endpoints.ts<br/>apiRouter.rewards.detail]
     C --> N[NestJS controller<br/>@ZodParams apiContract.rewards.detail.input]
-    R --> N2["@Controller(apiPath('/rewards'))"]
+    R --> N2["@ApiController('/rewards')"]
 ```
 
 **Contract** (`packages/shared/src/contracts/index.ts`) — method, path, input and response schema:
@@ -91,7 +92,7 @@ detail: defineContract({
 **Controller** (`apps/api/src/contexts/rewards/presentation/http/consumer-rewards.controller.ts`):
 
 ```ts
-@Controller(apiPath("/rewards"))
+@ApiController("/rewards")
 export class ConsumerRewardsController {
   @Public()
   @Get(":rewardId")
@@ -134,7 +135,7 @@ and the API reference.
 
 `packages/shared/src/__tests__/api-routes.test.ts` covers the tree shape: the core groups exist, and every
 leaf is a non-empty absolute path (static or `:param` template). The API e2e suite calls
-every `apiContract` leaf under `/api/v1` and fails on a 404 (a controller that forgot `apiPath()`).
+every `apiContract` leaf under `/api/v1` and fails on a 404 (a controller that is not an `@ApiController`).
 
 ```bash
 pnpm --filter @workspace/shared test
@@ -378,7 +379,7 @@ fails while the committed file is stale; `openapi:export` is that spec run with 
 ## 10. Idempotency
 
 Non-idempotent endpoints that clients may retry (creates, charges, submits) opt in with
-`@Idempotent()` (`apps/api/src/platform/idempotency/idempotent.decorator.ts`); `POST /product`
+`@Idempotent()` (`apps/api/src/platform/presentation/http/idempotency/idempotent.decorator.ts`); `POST /product`
 is the reference usage. The decorator only records metadata: `IdempotencyInterceptor` is a
 global interceptor (AppModule), between the audit and response interceptors, so it stores and
 replays the exact wire body. Works for user sessions AND API-key (POS) callers.

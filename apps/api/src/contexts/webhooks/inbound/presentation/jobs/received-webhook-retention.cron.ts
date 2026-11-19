@@ -19,7 +19,7 @@ export class ReceivedWebhookRetentionCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async prune(): Promise<void> {
 		const actor = systemActor(WEBHOOKS_INBOUND_RECORD_OPERATION, "cron", null, "Prune received webhooks past their retention", null);
 		const pruned = await this.dispatcher.dispatch(new PruneReceivedWebhooksCommand(actor), { kind: "cron", name: RETENTION_CRON_NAME });

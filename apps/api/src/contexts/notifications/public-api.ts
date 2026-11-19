@@ -24,22 +24,18 @@
  */
 export { NotificationsTransactionalPortsFactory } from "./infrastructure/adapters/transactional-email-requests.adapter";
 export type { EmailRequestTransactionalPort, EmailSendAudit, EmailSendOptions, NotificationsTransactionalPorts } from "./application/ports/email-request.port";
-export { EmailRequested } from "./domain/events/email-requested.event";
 
 // ── Notifying a person (ADR 070) ─────────────────────────────────────────────
 // PREFERRED over a bare email: `ports.notifications.notify({ type, recipient, payload, dedupeKey, tenantId })`
 // in YOUR unit of work's transaction. The types below are the catalog: copy lives in their renderers.
 export type { NotificationRecipient, NotifyRequest, NotifyResult, NotifyTransactionalPort } from "./application/ports/notify.port";
-export { NotifyRequestError } from "./application/ports/notify.port";
 export type { LegacyInboxImportPort, LegacyInboxNotice } from "./application/ports/legacy-inbox-import.port";
-export { NEW_SIGN_IN_NOTIFICATION, PASSWORD_CHANGED_NOTIFICATION, PHONE_CODE_NOTIFICATION } from "./domain/catalog/types/security.types";
 export {
 	alertDetailLinesOf as operationsAlertDetailLinesOf,
 	alertTitleOf as operationsAlertTitleOf,
 	OPERATIONS_ALERT_NOTIFICATION,
 } from "./domain/catalog/types/operations.types";
 export {
-	LEGACY_REWARD_NOTICE,
 	REFERRER_CREDITED_NOTIFICATION,
 	REWARD_APPROVED_NOTIFICATION,
 	REWARD_AUTO_PUBLISHED_NOTIFICATION,
@@ -49,31 +45,24 @@ export {
 export { WEBHOOK_ENDPOINT_AUTO_DISABLED_NOTIFICATION } from "./domain/catalog/types/webhooks.types";
 export { TIER_DEMOTED_NOTIFICATION, TIER_DEMOTION_WARNING_NOTIFICATION, TIER_PROMOTED_NOTIFICATION } from "./domain/catalog/types/tiers.types";
 export { EMAIL_LOG_ID_TAG } from "./domain/value-objects/email-log-id-tag.value-object";
-export { NotificationsHealthIndicator } from "./infrastructure/adapters/notifications-health.adapter";
 
 // Email templates: the message types other contexts request.
 export { BaseEmailTemplate, type BaseEmailProps } from "./domain/templates/base/base-email-template";
 export { EMAIL_TEMPLATE_REGISTRY, buildEmailPreviewFromTemplate, type EmailTemplateEntry } from "./domain/templates/email-template.registry";
 export { AccountLockedEmailTemplate } from "./domain/templates/account-locked-email.template";
 export { AdminAlertEmailTemplate } from "./domain/templates/admin-alert-email.template";
-export { ApiKeyCreatedEmailTemplate } from "./domain/templates/api-key-created-email.template";
 export { LoginVerificationEmailTemplate } from "./domain/templates/login-verification-email.template";
 export { MerchantInviteEmailTemplate } from "./domain/templates/merchant-invite-email.template";
 export { PasswordChangedEmailTemplate } from "./domain/templates/password-changed-email.template";
 export { PasswordResetEmailTemplate } from "./domain/templates/password-reset-email.template";
 export { ReferrerRewardCreditedEmailTemplate } from "./domain/templates/referrer-reward-credited-email.template";
 export { RewardClaimOtpEmailTemplate } from "./domain/templates/reward-claim-otp-email.template";
-export { SecurityAlertEmailTemplate } from "./domain/templates/security-alert-email.template";
 export { TeamMemberInviteEmailTemplate } from "./domain/templates/team-member-invite-email.template";
 export { TwoFactorDisabledEmailTemplate } from "./domain/templates/two-factor-disabled-email.template";
 export { PasskeyAddedEmailTemplate } from "./domain/templates/passkey-added-email.template";
 export { PasskeyRemovedEmailTemplate } from "./domain/templates/passkey-removed-email.template";
 export { TwoFactorEnabledEmailTemplate } from "./domain/templates/two-factor-enabled-email.template";
 export { VerificationEmailTemplate } from "./domain/templates/verification-email.template";
-export { WelcomeEmailTemplate } from "./domain/templates/welcome-email.template";
-
-// Email-log list translators: the shared list-query grammar → Prisma (cross-context list-translator spec).
-export { buildEmailLogListOrder, buildEmailLogListWhere } from "./infrastructure/persistence/prisma-email-log.read-repository";
 
 // ── The Nest module ─────────────────────────────────────────────────────────
 export { NotificationsModule } from "./notifications.module";

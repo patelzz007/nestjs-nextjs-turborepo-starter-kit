@@ -1,17 +1,15 @@
-import { PATH_METADATA } from "@nestjs/common/constants";
 import { Reflector } from "@nestjs/core";
-import { QueryBus } from "@nestjs/cqrs";
 import { Test } from "@nestjs/testing";
-import { API_VERSION_PREFIX, HttpAuditLogDetailSchema, HttpAuditLogListQuerySchema, HttpAuditLogSummarySchema, LIST_SLOT_INDEX } from "@workspace/shared";
+import { API_VERSION_PREFIX, HttpAuditLogDetailSchema, HttpAuditLogListQuerySchema, HttpAuditLogSummarySchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { AdminAccessOnly } from "../../../../../platform/presentation/http/security/decorators/admin-access.decorator";
 import { getResponseContract } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
-import { GetHttpAuditLogQuery } from "../../../application/queries/get-http-audit-log/get-http-audit-log.query";
-import { ListHttpAuditLogsQuery } from "../../../application/queries/list-http-audit-logs/list-http-audit-logs.query";
+import { AuditApplicationService } from "../../../application/services/audit.application-service";
 import { AuditLogsController } from "../audit-logs.controller";
-import { RecordingQueryBus } from "./recording-query-bus";
+import { RecordingAuditService } from "./recording-audit-service";
+import { servedPathOf } from "../../../../../../e2e/support/route-metadata";
 import { expectOwnMetadataLike, REQUIRED_PERMISSION_METADATA_KEY } from "./route-metadata";
 
 const reflector = new Reflector();
@@ -46,7 +44,7 @@ AdminAccessOnly("Admin access required to view the audit log.")(ExpectedAdminAcc
 
 describe("AuditLogsController authorization", () => {
 	it("is served under the versioned admin prefix", () => {
-		expect(reflector.get<string>(PATH_METADATA, AuditLogsController)).toBe(`${API_VERSION_PREFIX}/admin/audit-logs`);
+		expect(servedPathOf(AuditLogsController)).toBe(`${API_VERSION_PREFIX}/admin/audit-logs`);
 	});
 
 	it("requires admin-panel access, with the same refusal message, for every route", () => {
@@ -67,29 +65,26 @@ describe("AuditLogsController authorization", () => {
 	});
 });
 
-describe("AuditLogsController dispatch", () => {
-	async function controllerWith(bus: RecordingQueryBus): Promise<AuditLogsController> {
-		const moduleRef = await Test.createTestingModule({ controllers: [AuditLogsController], providers: [{ provide: QueryBus, useValue: bus }] }).compile();
+describe("AuditLogsController reads", () => {
+	async function controllerWith(audit: RecordingAuditService): Promise<AuditLogsController> {
+		const moduleRef = await Test.createTestingModule({ controllers: [AuditLogsController], providers: [{ provide: AuditApplicationService, useValue: audit }] }).compile();
 		return moduleRef.get(AuditLogsController);
 	}
 
-	it("dispatches exactly one ListHttpAuditLogsQuery with the actor and the validated query", async () => {
-		const bus = new RecordingQueryBus();
+	it("lists through the audit application service with the actor and the validated query, once", async () => {
+		const audit = new RecordingAuditService();
 		const query = HttpAuditLogListQuerySchema.parse({});
 
-		await (await controllerWith(bus)).list(VIEWER, query);
+		await (await controllerWith(audit)).list(VIEWER, query);
 
-		expect(bus.executed).toHaveLength(1);
-		expect(bus.executed[LIST_SLOT_INDEX.first]).toEqual(new ListHttpAuditLogsQuery(VIEWER, query));
-		expect(bus.executed[LIST_SLOT_INDEX.first]).toBeInstanceOf(ListHttpAuditLogsQuery);
+		expect(audit.calls).toEqual([{ method: "listHttpAuditLogs", actor: VIEWER, input: query }]);
 	});
 
-	it("dispatches exactly one GetHttpAuditLogQuery for one record", async () => {
-		const bus = new RecordingQueryBus();
+	it("opens one record through the audit application service, once", async () => {
+		const audit = new RecordingAuditService();
 
-		await (await controllerWith(bus)).get(VIEWER, { id: RECORD_ID });
+		await (await controllerWith(audit)).get(VIEWER, { id: RECORD_ID });
 
-		expect(bus.executed).toEqual([new GetHttpAuditLogQuery(VIEWER, { id: RECORD_ID })]);
-		expect(bus.executed[LIST_SLOT_INDEX.first]).toBeInstanceOf(GetHttpAuditLogQuery);
+		expect(audit.calls).toEqual([{ method: "getHttpAuditLog", actor: VIEWER, input: { id: RECORD_ID } }]);
 	});
 });

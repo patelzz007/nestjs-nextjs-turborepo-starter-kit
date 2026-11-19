@@ -1,8 +1,9 @@
-import { Controller, Delete, Get, Put } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Delete, Get, Put } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiContract, apiPath, GithubAccountStatusSchema, type GithubAccountStatus, type LinkGithubAccountInput } from "@workspace/shared";
+import { apiContract, GithubAccountStatusSchema, type GithubAccountStatus, type LinkGithubAccountInput } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { ZodBody } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
@@ -11,7 +12,7 @@ import { AdminAccessOnly } from "../../../../platform/presentation/http/security
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { LinkGithubAccountCommand } from "../../application/commands/link-github-account/link-github-account.command";
 import { UnlinkGithubAccountCommand } from "../../application/commands/unlink-github-account/unlink-github-account.command";
-import { GetGithubAccountStatusQuery } from "../../application/queries/get-github-account-status/get-github-account-status.query";
+import { GithubLinkedCredentials } from "../../application/services/github-linked-credentials";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 
 /**
@@ -23,11 +24,11 @@ import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/
 @ApiTags("GitHub pull requests")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for GitHub pull requests.")
-@Controller(apiPath("/github/account"))
+@ApiController("/github/account")
 export class GithubAccountController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly credentials: GithubLinkedCredentials,
 	) {}
 
 	@RequirePermission("READ", "GITHUB_PULL_REQUEST")
@@ -38,8 +39,8 @@ export class GithubAccountController {
 			"`off` when this server has no GITHUB_CREDENTIAL_ENCRYPTION_KEYS (pull requests are not set up), `unlinked` before you link a token, otherwise the account your token belongs to — never the token.",
 	})
 	@ZodResponse(GithubAccountStatusSchema, { description: "Your GitHub link" })
-	public async status(@CurrentActor() actor: ActorContext): Promise<GithubAccountStatus> {
-		return this.queryBus.execute(new GetGithubAccountStatusQuery(actor));
+	public status(@CurrentActor() actor: ActorContext): Promise<GithubAccountStatus> {
+		return this.credentials.status(actor);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)

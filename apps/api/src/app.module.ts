@@ -6,6 +6,8 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { GlobalExceptionFilter } from "./platform/presentation/http/errors/global-exception.filter";
 import { ResponseInterceptor } from "./platform/presentation/http/interceptors/response.interceptor";
 import { PerformanceInterceptor } from "./platform/presentation/http/interceptors/performance.interceptor";
+import { EventStreamShutdownInterceptor } from "./platform/presentation/http/interceptors/event-stream-shutdown.interceptor";
+import { HttpServerClosing } from "./platform/presentation/http/lifecycle/http-server-closing";
 import { RequestContextModule } from "./platform/infrastructure/context/request-context.module";
 import { ActorContextSecurityModule } from "./platform/presentation/http/security/actor-context-security.module";
 import { HttpSecurityModule } from "./platform/presentation/http/security/http-security.module";
@@ -146,8 +148,10 @@ if (observeConfig !== null) {
 			provide: APP_FILTER,
 			useClass: GlobalExceptionFilter,
 		},
+		// The HTTP server's "closing" signal: `registerHttpShutdown` fires it, event streams end on it (ADR 095).
+		HttpServerClosing,
 		// Global interceptors run in this order (outermost first):
-		//   RLS scope → audit trail → Idempotency-Key → response contract/envelope → timing.
+		//   RLS scope → audit trail → Idempotency-Key → response contract/envelope → timing → event-stream shutdown.
 		// The audit and idempotency interceptors sit OUTSIDE the response
 		// interceptor so they see (and store) the exact wire body; an idempotent
 		// replay is audited like any other request.
@@ -170,6 +174,10 @@ if (observeConfig !== null) {
 		{
 			provide: APP_INTERCEPTOR,
 			useClass: PerformanceInterceptor,
+		},
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: EventStreamShutdownInterceptor,
 		},
 		// Order is APP_GUARD_ORDER: outdated app, pre-auth IP throttler, optional API key, JWT, principal throttlers, restricted session, authorization.
 		...APP_GUARD_ORDER.map((guard) => ({

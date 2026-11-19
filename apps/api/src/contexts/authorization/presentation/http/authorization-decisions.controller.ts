@@ -1,8 +1,7 @@
-import { Controller, Get, Post } from "@nestjs/common";
+import { Get, Post } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	AuthorizationDecisionsRequestSchema,
 	AuthorizationDecisionsResponseSchema,
 	AuthorizationExplainQuerySchema,
@@ -13,6 +12,7 @@ import {
 	type AuthorizationResult,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
@@ -21,7 +21,7 @@ import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/
 import { ZodBody, ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { DecideAuthorizationQuery } from "../../application/queries/decide-authorization/decide-authorization.query";
-import { ExplainAuthorizationQuery } from "../../application/queries/explain-authorization/explain-authorization.query";
+import { AuthorizationExplanationApplicationService } from "../../application/services/authorization-explanation.application-service";
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
 /**
@@ -31,9 +31,12 @@ import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/sha
  */
 @ApiTags("Authorization")
 @ApiBearerAuth()
-@Controller(apiPath("/authorization/decisions"))
+@ApiController("/authorization/decisions")
 export class AuthorizationDecisionsController {
-	public constructor(private readonly queryBus: QueryBus) {}
+	public constructor(
+		private readonly queryBus: QueryBus,
+		private readonly explanations: AuthorizationExplanationApplicationService,
+	) {}
 
 	@Post()
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
@@ -52,6 +55,6 @@ export class AuthorizationDecisionsController {
 	@ApiOperation({ summary: "Admin: step-by-step explanation of an authorization decision" })
 	@ZodResponse(AuthorizationResultSchema, { description: "The decision with every evaluation step" })
 	public async explain(@CurrentActor() actor: ActorContext, @ZodQuery(AuthorizationExplainQuerySchema) query: AuthorizationExplainQuery): Promise<AuthorizationResult> {
-		return this.queryBus.execute(new ExplainAuthorizationQuery(actor, query));
+		return this.explanations.explain(actor, query);
 	}
 }

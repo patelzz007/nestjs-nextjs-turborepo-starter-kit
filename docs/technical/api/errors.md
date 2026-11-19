@@ -120,7 +120,7 @@ pure function `mapException()` (`exception-mapper.ts`):
 | Prisma initialization error (database unreachable) | 503 | `SERVICE_UNAVAILABLE` | generic |
 | Fastify framework errors (oversized body, bad content type, unknown route) | 413 / 415 / 404 … | standard code | the framework's safe message |
 | Malformed JSON body | 400 | `BAD_REQUEST` | generic |
-| `@fastify/rate-limit` rejection | 429 | `RATE_LIMITED` | retry hint + `details.retryAfterSeconds` + `Retry-After` header |
+| Rate-limit rejection (`RateLimitError` from the throttler guards, ADR 071) | 429 | `RATE_LIMITED` | retry hint + `details.retryAfterSeconds` + `Retry-After` header |
 | Anything else (a bug, a `ZodError` from server-side parsing, a thrown string) | 500 | `INTERNAL_ERROR` | generic (`development` adds `details.debug.{name,message}`, never a stack) |
 
 A server-side `ZodError` is deliberately a **500**: client input is validated by the pipe before

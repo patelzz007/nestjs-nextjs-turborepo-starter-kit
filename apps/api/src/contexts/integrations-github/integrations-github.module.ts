@@ -50,12 +50,6 @@ import {
 } from "./application/ports/github.tokens";
 import { CheckLiveUpdatesStreamHandler } from "./application/queries/check-live-updates-stream/check-live-updates-stream.handler";
 import { GetContentEditHistoryHandler } from "./application/queries/get-content-edit-history/get-content-edit-history.handler";
-import { GetGithubAccountStatusHandler } from "./application/queries/get-github-account-status/get-github-account-status.handler";
-import { GetGithubCommitHandler } from "./application/queries/get-github-commit/get-github-commit.handler";
-import { GetGithubCommitPageHandler } from "./application/queries/get-github-commit-page/get-github-commit-page.handler";
-import { GetGithubContributorStatsHandler } from "./application/queries/get-github-contributor-stats/get-github-contributor-stats.handler";
-import { GetGithubRepositorySummaryHandler } from "./application/queries/get-github-repository-summary/get-github-repository-summary.handler";
-import { GetLiveUpdatesStatusHandler } from "./application/queries/get-live-updates-status/get-live-updates-status.handler";
 import { GetPullRequestCommitHandler } from "./application/queries/get-pull-request-commit/get-pull-request-commit.handler";
 import { GetPullRequestCommitsHandler } from "./application/queries/get-pull-request-commits/get-pull-request-commits.handler";
 import { GetPullRequestDetailHandler } from "./application/queries/get-pull-request-detail/get-pull-request-detail.handler";
@@ -65,9 +59,9 @@ import { GetPullRequestStatusHandler } from "./application/queries/get-pull-requ
 import { GetPullRequestTimelineHandler } from "./application/queries/get-pull-request-timeline/get-pull-request-timeline.handler";
 import { GetRepositoryPictureHandler } from "./application/queries/get-repository-picture/get-repository-picture.handler";
 import { GetUploadedPictureHandler } from "./application/queries/get-uploaded-picture/get-uploaded-picture.handler";
-import { ListGithubRepositoriesHandler } from "./application/queries/list-github-repositories/list-github-repositories.handler";
 import { ListPullRequestsHandler } from "./application/queries/list-pull-requests/list-pull-requests.handler";
 import { GithubCommentPictures } from "./application/services/github-comment-pictures";
+import { GithubContributionsApplicationService } from "./application/services/github-contributions.application-service";
 import { GithubLinkedCredentials } from "./application/services/github-linked-credentials";
 import { GithubLiveUpdatesStatusReader } from "./application/services/github-live-updates-status";
 import { CommentPictureUploadsAdapter } from "./infrastructure/adapters/comment-picture-uploads.adapter";
@@ -170,12 +164,7 @@ import { GithubWebhookDeliveryRetentionCron } from "./presentation/jobs/github-w
 		GithubLinkedCredentials,
 		GithubCommentPictures,
 		GithubLiveUpdatesStatusReader,
-		ListGithubRepositoriesHandler,
-		GetGithubRepositorySummaryHandler,
-		GetGithubCommitPageHandler,
-		GetGithubCommitHandler,
-		GetGithubContributorStatsHandler,
-		GetGithubAccountStatusHandler,
+		GithubContributionsApplicationService,
 		ListPullRequestsHandler,
 		GetPullRequestDetailHandler,
 		GetPullRequestTimelineHandler,
@@ -187,7 +176,6 @@ import { GithubWebhookDeliveryRetentionCron } from "./presentation/jobs/github-w
 		GetContentEditHistoryHandler,
 		GetRepositoryPictureHandler,
 		GetUploadedPictureHandler,
-		GetLiveUpdatesStatusHandler,
 		CheckLiveUpdatesStreamHandler,
 		LinkGithubAccountHandler,
 		UnlinkGithubAccountHandler,

@@ -1,7 +1,8 @@
 import { RequestMethod } from "@nestjs/common";
-import { GUARDS_METADATA, INTERCEPTORS_METADATA, METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
+import { GUARDS_METADATA, INTERCEPTORS_METADATA, METHOD_METADATA, PATH_METADATA, VERSION_METADATA } from "@nestjs/common/constants";
 import { Reflector } from "@nestjs/core";
 import { DECORATORS } from "@nestjs/swagger";
+import { API_VERSION, API_VERSION_PREFIX, ApiVersionSchema } from "@workspace/shared";
 import { z } from "zod";
 
 import { getResponseContract, type RouteResponseContract } from "../../src/platform/presentation/http/validation/decorators/zod-response.decorators";
@@ -57,10 +58,32 @@ export function routeOf(prototype: object, name: string): RouteMetadata {
 	};
 }
 
-/** A controller class's path and class-level interceptors. */
+/** The versions a handler is served at (`@ApiController` sets them); none for an unversioned route. */
+const HandlerVersionsSchema = z.array(ApiVersionSchema).optional();
+
+/**
+ * Where the current API version serves a controller: `/api/v1/<path>` when every route of it is served at
+ * `API_VERSION` (an `@ApiController`), else its path as written (an unversioned `@Controller`).
+ */
+export function servedPathOf(controller: MetadataTarget): string | undefined {
+	const path: string | undefined = reflector.get<string | undefined>(PATH_METADATA, controller);
+	const prototype = z.custom<object>((value) => z.looseObject({}).safeParse(value).success).parse(Object.getOwnPropertyDescriptor(controller, "prototype")?.value);
+	const routes = Object.getOwnPropertyNames(prototype)
+		.filter((name: string): boolean => name !== "constructor")
+		.map((name: string): MetadataTarget => handlerOf(prototype, name))
+		.filter((handler: MetadataTarget): boolean => reflector.get<RequestMethod | undefined>(METHOD_METADATA, handler) !== undefined);
+	const isVersioned =
+		routes.length > 0 &&
+		routes.every(
+			(handler: MetadataTarget): boolean => HandlerVersionsSchema.parse(reflector.get<string[] | undefined>(VERSION_METADATA, handler))?.includes(API_VERSION) === true,
+		);
+	return isVersioned && path !== undefined ? `${API_VERSION_PREFIX}${path}` : path;
+}
+
+/** A controller class's served path (`servedPathOf`) and class-level interceptors. */
 export function controllerOf(controller: MetadataTarget): { readonly path: string | undefined; readonly interceptors: readonly object[] } {
 	return {
-		path: reflector.get<string | undefined>(PATH_METADATA, controller),
+		path: servedPathOf(controller),
 		interceptors: reflector.get<object[] | undefined>(INTERCEPTORS_METADATA, controller) ?? [],
 	};
 }

@@ -42,11 +42,8 @@ import { UpdateKanbanColumnHandler } from "../commands/update-kanban-column/upda
 import { WatchKanbanTaskCommand } from "../commands/watch-kanban-task/watch-kanban-task.command";
 import { WatchKanbanTaskHandler } from "../commands/watch-kanban-task/watch-kanban-task.handler";
 import type { KanbanScope } from "../kanban-scope";
-import { ListKanbanActivityHandler } from "../queries/list-kanban-activity/list-kanban-activity.handler";
-import { ListKanbanActivityQuery } from "../queries/list-kanban-activity/list-kanban-activity.query";
-import { ListKanbanItemsHandler } from "../queries/list-kanban-items/list-kanban-items.handler";
-import { ListKanbanItemsQuery } from "../queries/list-kanban-items/list-kanban-items.query";
 import { ListKanbanPeopleHandler } from "../queries/list-kanban-people/list-kanban-people.handler";
+import { KanbanApplicationService } from "../services/kanban.application-service";
 import { ListKanbanPeopleQuery } from "../queries/list-kanban-people/list-kanban-people.query";
 import { emptyPage, FakeKanbanReads, taskDetail } from "./fakes/kanban-read.fakes";
 import {
@@ -453,10 +450,12 @@ describe("lookups", () => {
 		const reads = new FakeKanbanReads();
 		const query: KanbanActivityListQuery = { page: 1, limit: 20 };
 
-		await expect(new ListKanbanItemsHandler(reads).execute(new ListKanbanItemsQuery(staff(), { page: 1, limit: 20, search: "refund" }))).resolves.toBe(reads.itemsPage);
+		const kanban = new KanbanApplicationService(reads);
+
+		await expect(kanban.listItems(staff(), { page: 1, limit: 20, search: "refund" })).resolves.toBe(reads.itemsPage);
 		reads.activityPages.set("story", emptyPage());
-		await expect(new ListKanbanActivityHandler(reads).execute(new ListKanbanActivityQuery(staff(), "story", query))).resolves.toEqual(emptyPage());
-		await expect(new ListKanbanActivityHandler(reads).execute(new ListKanbanActivityQuery(staff(), "missing", query))).rejects.toThrow(KanbanTaskNotFoundError);
+		await expect(kanban.activity(staff(), "story", query)).resolves.toEqual(emptyPage());
+		await expect(kanban.activity(staff(), "missing", query)).rejects.toThrow(KanbanTaskNotFoundError);
 		expect(reads.asked.map((ask) => ask.read)).toEqual(["items:refund", "activity:20", "activity:20"]);
 	});
 });

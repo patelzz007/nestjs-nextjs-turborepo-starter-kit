@@ -21,7 +21,7 @@ export class SignupReferralMaintenanceCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async maintain(): Promise<void> {
 		const codes = await this.dispatcher.dispatch(
 			new MaintainSignupReferralCodesCommand(systemActor(MAINTENANCE_SIGNUP_REFERRAL_CODES_OPERATION, "cron", null, "Issue due signup referral codes", null)),

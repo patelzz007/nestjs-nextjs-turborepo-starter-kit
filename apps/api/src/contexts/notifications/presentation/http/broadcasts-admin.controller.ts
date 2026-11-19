@@ -3,10 +3,9 @@
 // ============================================
 // Platform staff write product or account notices to users (`BROADCAST` permissions); a notice to every
 // user waits for a second staff member's approval.
-import { Controller, Get, HttpStatus, Inject, Post, Put } from "@nestjs/common";
+import { Get, HttpStatus, Inject, Post, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	BroadcastAudiencePreviewSchema,
 	BroadcastAudienceSchema,
 	BroadcastDraftSchema,
@@ -22,6 +21,7 @@ import {
 	type PaginatedServiceResult,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -39,7 +39,7 @@ const PLATFORM: BroadcastSender = { kind: "platform" };
 @ApiTags("Broadcasts")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for broadcasts.")
-@Controller(apiPath("/admin/broadcasts"))
+@ApiController("/admin/broadcasts")
 export class BroadcastsAdminController {
 	public constructor(@Inject(BROADCAST_SERVICE) private readonly broadcasts: BroadcastService) {}
 

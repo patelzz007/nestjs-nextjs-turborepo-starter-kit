@@ -1,5 +1,5 @@
 // ============================================
-// lib/rewards/customer-analytics.ts - the customer's "My Activity" dashboard, mapped for the shared primitives
+// contexts/reporting/lib/customer-analytics.ts -the customer's "My Activity" dashboard, mapped for the shared primitives
 // ============================================
 // `GET /claims/analytics/dashboard` (the signed-in customer's own activity) →
 // props of the packages/ui analytics primitives. Days are UTC (the API cuts a

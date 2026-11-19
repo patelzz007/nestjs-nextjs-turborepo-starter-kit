@@ -1,5 +1,5 @@
 // ============================================
-// lib/auth/demo-account-list.ts - seeded merchant demo logins (server-only)
+// contexts/identity/lib/demo-account-list.ts -seeded merchant demo logins (server-only)
 // ============================================
 // The credentials of the accounts `prisma db seed` creates (apps/api/prisma/
 // seed), offered as one-click logins in development only. `server-only` makes

@@ -1,9 +1,8 @@
-import { Controller, Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { z } from "zod";
 
 import {
-	apiPath,
 	BulkCreateSampleCategoryResponseSchema,
 	BulkCreateSampleCategorySchema,
 	BulkDeleteIdsSchema,
@@ -18,6 +17,7 @@ import {
 	UpdateSampleCategorySchema,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { Idempotent } from "../../../../platform/presentation/http/idempotency/idempotent.decorator";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -35,7 +35,7 @@ import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/
  * for layering kernel checks (ACL, policies, ownership) on top.
  */
 @ApiTags("SampleCategory", "Sample Category")
-@Controller(apiPath("/sample-category"))
+@ApiController("/sample-category")
 export class SampleCategoryController {
 	public constructor(private readonly service: SampleCategoryApplicationService) {}
 

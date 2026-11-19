@@ -3,10 +3,9 @@
 // ============================================
 // Owners and managers: `merchant:manage_broadcasts` to write, `merchant:publish_broadcasts` to schedule and
 // cancel (both checked in the service). The audience is everyone the filters match, or people picked by hand.
-import { Controller, Get, HttpStatus, Inject, Post, Put, UseInterceptors } from "@nestjs/common";
+import { Get, HttpStatus, Inject, Post, Put, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	BroadcastAudiencePreviewSchema,
 	BroadcastDraftSchema,
 	BroadcastListQuerySchema,
@@ -28,6 +27,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { MerchantActor } from "../../../../platform/presentation/http/security/api-keys/merchant-actor";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -46,7 +46,7 @@ type TenantBroadcastParams = z.output<typeof TenantBroadcastParamsSchema>;
 @ApiTags("Broadcasts")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/tenants/:tenantSlug/broadcasts"))
+@ApiController("/tenants/:tenantSlug/broadcasts")
 export class TenantBroadcastsController {
 	public constructor(@Inject(BROADCAST_SERVICE) private readonly broadcasts: BroadcastService) {}
 

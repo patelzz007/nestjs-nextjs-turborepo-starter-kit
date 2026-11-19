@@ -7,9 +7,6 @@ import { RATE_LIMIT_THROTTLER_KEY, throttleTrackerFunction } from "./throttle-tr
 /** Reflector key the coverage test reads to see which named policy a route declared. */
 export const RATE_LIMIT_POLICY_KEY = "rate_limit_policy";
 
-/** Reflector key for an explicit skip. The value is the reason the route is not limited. */
-export const RATE_LIMIT_SKIP_REASON_KEY = "rate_limit_skip_reason";
-
 export { RATE_LIMIT_POLICY };
 
 /**

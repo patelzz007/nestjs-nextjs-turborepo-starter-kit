@@ -1,25 +1,19 @@
 // ============================================
 // lint-rules/no-unversioned-controller.js
 // ============================================
-// Custom rule: business controllers must build their path with `apiPath()`
-// from `@workspace/shared` so routes serve under the versioned prefix
-// (`/api/v1/...`). The client transport prepends the SAME prefix, so a
-// controller that forgets the helper silently serves a path the apps can
-// never reach — exactly the `/session` 404 regression. Unversioned routes
-// are explicitly allowlisted (root, health, the Resend webhook, and the
-// version manifest).
+// Custom rule: a business controller is an `@ApiController(path)` (ADR 094), which serves it at every API
+// version's literal path (`/api/v1/…`, `/api/v2/…`). A plain `@Controller` serves its path as written, outside
+// every version, so the apps (whose transport prepends `/api/<version>`) could never reach it — the `/session`
+// 404 regression. Only the unversioned routes keep `@Controller`: the root, health, the version manifest and
+// the Resend webhook.
 //
-// Plain JavaScript on purpose: oxlint loads it as an ESLint-API JS plugin
-// (lint-rules/index.js), and a rule needs nothing beyond the AST — node
-// kinds are compared as plain strings.
+// Plain JavaScript on purpose: oxlint loads it as an ESLint-API JS plugin (lint-rules/index.js), and a rule
+// needs nothing beyond the AST — node kinds are compared as plain strings.
 
-// Mirrors UNVERSIONED_ROUTE_PREFIXES in @workspace/shared/contracts. Keep in
-// sync — the shared constant is the source of truth; this is a fast-path copy
-// for the lint check (the values here are the same list, pre-normalized).
+// Mirrors UNVERSIONED_ROUTE_PREFIXES in @workspace/shared/contracts (the source of truth), pre-normalized.
 const UNVERSIONED_PREFIXES = new Set(["", "health", "notifications/email-webhook", "version"]);
 
-// Strips a leading "/" so `@Controller("/health")` and `@Controller("health")`
-// compare equally.
+// Strips a leading "/" so `@Controller("/health")` and `@Controller("health")` compare equally.
 function normalizePath(value) {
 	return value.startsWith("/") ? value.slice(1) : value;
 }
@@ -29,13 +23,12 @@ export const noUnversionedController = {
 	meta: {
 		type: "problem",
 		docs: {
-			description: "Business controllers must build their path with apiPath() so routes live under the versioned prefix",
+			description: "Business controllers are @ApiController(path); @Controller is only for the unversioned routes",
 			recommended: "error",
 		},
 		messages: {
-			unversioned:
-				'Controller path "{{ path }}" is unversioned — the client transport prepends `/api/v1`, so this route is unreachable from the apps. Use apiPath("/{{ path }}") to serve it under the versioned prefix.',
-			nonLiteral: "Controller path must be a plain string literal or apiPath(...) — build it with apiPath() from @workspace/shared so it stays under the versioned prefix.",
+			useApiController:
+				"A business controller is @ApiController(path) (ADR 094), which serves it under every /api/<version>. @Controller is only for the unversioned routes (root, health, version, the email webhook).",
 		},
 		schema: [],
 	},
@@ -48,27 +41,12 @@ export const noUnversionedController = {
 				if (callee.type !== "Identifier" || callee.name !== "Controller") return;
 
 				const first = node.expression.arguments[0];
-				// Bare @Controller() — root-level controllers (welcome `/`,
-				// `/health`) are explicitly allowlisted.
+				// Bare @Controller() — the root.
 				if (first === undefined) return;
 
-				// @Controller(apiPath("/auth")) — versioned via the helper.
-				if (first.type === "CallExpression") {
-					const called = first.callee;
-					if (called.type === "Identifier" && called.name === "apiPath") return;
-				}
+				if (first.type === "Literal" && typeof first.value === "string" && UNVERSIONED_PREFIXES.has(normalizePath(first.value))) return;
 
-				// @Controller("some/string") — allow only the unversioned allowlist.
-				if (first.type === "Literal" && typeof first.value === "string") {
-					if (!UNVERSIONED_PREFIXES.has(normalizePath(first.value))) {
-						context.report({ node: first, messageId: "unversioned", data: { path: first.value } });
-					}
-					return;
-				}
-
-				// Template literals, concatenations, dynamic paths — can't prove
-				// versioning, so require the helper explicitly.
-				context.report({ node: first, messageId: "nonLiteral" });
+				context.report({ node: first, messageId: "useApiController" });
 			},
 		};
 	},

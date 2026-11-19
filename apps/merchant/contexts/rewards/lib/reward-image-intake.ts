@@ -2,7 +2,7 @@ import { REWARD_IMAGE_RULES } from "@/contexts/rewards/lib/use-upload-reward-ima
 import { takeImage, type ImageIntake } from "@workspace/client/lib/storage/image-intake";
 
 // ============================================
-// lib/rewards/reward-image-intake.ts — what happens to a reward photo the merchant picks
+// contexts/rewards/lib/reward-image-intake.ts —what happens to a reward photo the merchant picks
 // ============================================
 // The shared intake (`takeImage`) under the reward-image rules: too small for a
 // Full HD image even zoomed out → refused; already 16:9 → prepared at once; any

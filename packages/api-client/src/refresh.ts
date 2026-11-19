@@ -14,7 +14,7 @@
 //   refresh — a refresh token is single-use, rotating it twice would end the
 //   session.
 
-import { apiContract, RefreshTokenBodySchema, type AuthClientType } from "@workspace/shared";
+import { apiContract, RefreshTokenBodySchema, type ApiVersion, type AuthClientType } from "@workspace/shared";
 import { z } from "zod";
 
 import { BodyTokenRefreshResponseSchema, type BodyTokenPair } from "./body-token-contract";
@@ -95,6 +95,8 @@ export interface BodyTokenRefreshOptions {
 	readonly baseUrl: string;
 	readonly clientType: AuthClientType;
 	readonly appVersion?: string | undefined;
+	/** The client's pinned API version (ADR 094): the refresh goes where every other call goes. */
+	readonly apiVersion?: ApiVersion | undefined;
 	/** Static headers of the client (`ApiClientConfig.headers`), sent with the refresh too. */
 	readonly headers?: Readonly<Record<string, string>> | undefined;
 	readonly tokenProvider: TokenProvider;
@@ -114,9 +116,8 @@ export interface BodyTokenRefreshOptions {
  *   unreachable, or it answered anything else (5xx, 429, 426).
  */
 export function createBodyTokenRefresh(options: BodyTokenRefreshOptions): RefreshCall {
-	const { baseUrl, clientType, appVersion, headers, tokenProvider } = options;
-	const route = apiContract.auth.refresh;
-	const url: string = buildUrl(baseUrl, route.path, route.version);
+	const { baseUrl, clientType, appVersion, apiVersion, headers, tokenProvider } = options;
+	const url: string = buildUrl(baseUrl, apiContract.auth.refresh.path, apiVersion);
 
 	return async (): Promise<RefreshResult> => {
 		let refreshToken: string | null;

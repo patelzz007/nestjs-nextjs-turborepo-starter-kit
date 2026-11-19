@@ -27,8 +27,6 @@ export interface MinuteRequestStats {
 	readonly slowestEndpoints: readonly OpsSlowEndpoint[];
 }
 
-export const EMPTY_MINUTE: MinuteRequestStats = { count: 0, serverErrors: 0, clientErrors: 0, p50Ms: null, p95Ms: null, p99Ms: null, slowestEndpoints: [] };
-
 export class RequestMetricsRecorder {
 	private durations = new Reservoir(MINUTE_SAMPLE_SIZE);
 	private endpoints = new Map<string, Reservoir>();

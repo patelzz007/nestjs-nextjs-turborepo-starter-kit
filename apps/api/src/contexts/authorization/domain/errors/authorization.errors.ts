@@ -1,27 +1,5 @@
 import { DomainError } from "../../../../platform/domain/errors/domain-error";
-import { DomainErrorCodeSchema, type DomainErrorCode } from "../../../../platform/domain/errors/error-codes";
-
-/**
- * Every code the authorization context throws. The generic codes (`CONFLICT`, `NOT_FOUND`, `FORBIDDEN`,
- * `VALIDATION_ERROR`, `PERMISSION_DENIED`) are what clients already receive for these failures, so they
- * stay exactly as they were before the move to domain errors.
- */
-export const AuthorizationErrorCodeSchema = DomainErrorCodeSchema.extract([
-	"PERMISSION_DENIED",
-	"FORBIDDEN",
-	"CONFLICT",
-	"NOT_FOUND",
-	"VALIDATION_ERROR",
-	"CORRUPT_AGGREGATE_STATE",
-	"SUPPORT_ACCESS_APPROVER_NOT_OWNER",
-	"SUPPORT_ACCESS_GRANT_NOT_PENDING",
-	"SUPPORT_ACCESS_GRANT_NOT_REVOCABLE",
-	"TENANT_OWNER_PROTECTED",
-	"TENANT_OWNER_REQUIRED",
-	"TENANT_SCOPE_ESCALATION",
-]);
-
-export type AuthorizationErrorCode = (typeof AuthorizationErrorCodeSchema)["options"][number];
+import type { DomainErrorCode } from "../../../../platform/domain/errors/error-codes";
 
 /** The one client-facing message for every refused authorization decision. It never says which rule failed. */
 export const PERMISSION_DENIED_MESSAGE = "You do not have permission to perform this action.";

@@ -7,7 +7,6 @@
  * - The pos domain error codes, for the HTTP status map.
  * - The key format and backup-code lockout limits the seed data and the e2e suite build fixtures with.
  */
-export { PosDomainErrorCodeSchema, type PosDomainErrorCode } from "./domain/errors/pos.errors";
 export { PosAccessModule } from "./infrastructure/pos-access.module";
 export { API_KEY_PREFIX_LENGTH } from "./domain/value-objects/api-key-format.value-object";
 export { POS_CODE_LOCKOUT_MS, POS_CODE_MAX_FAILURES } from "./domain/policies/code-lockout.policy";

@@ -1,8 +1,7 @@
-import { Controller, Get, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Get, HttpStatus, Inject, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	NotificationDeliveryEntrySchema,
 	NotificationProvidersResponseSchema,
 	NotificationSuppressionEntrySchema,
@@ -21,6 +20,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -42,7 +42,7 @@ type Contract = typeof apiContract.notificationsAdmin;
 @ApiTags("Notifications (admin)")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for notifications.")
-@Controller(apiPath("/admin/notifications"))
+@ApiController("/admin/notifications")
 export class NotificationsAdminController {
 	public constructor(@Inject(NOTIFICATION_ADMIN) private readonly admin: NotificationAdminService) {}
 

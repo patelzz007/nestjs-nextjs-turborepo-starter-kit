@@ -1,11 +1,10 @@
-import { Controller, Get, HttpStatus, Post, Res } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Get, HttpStatus, Post, Res } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import {
 	AdminRewardImageDownloadResponseSchema,
 	apiContract,
-	apiPath,
 	RewardResponseSchema,
 	UuidParamSchema,
 	type AdminRewardImageDownloadResponse,
@@ -14,6 +13,7 @@ import {
 } from "@workspace/shared";
 import type { FastifyReply } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
@@ -25,21 +25,20 @@ import { REWARDS_ADMIN_REVIEW_OPERATION } from "../../application/ports/rewards.
 import { ApproveRewardCommand } from "../../application/commands/approve-reward/approve-reward.command";
 import { RejectRewardCommand } from "../../application/commands/reject-reward/reject-reward.command";
 import type { RewardImagesArchive } from "../../application/ports/reward-read.port";
-import { GetRewardForAdminQuery } from "../../application/queries/get-reward-for-admin/get-reward-for-admin.query";
-import { GetRewardImageDownloadUrlQuery } from "../../application/queries/get-reward-image-download-url/get-reward-image-download-url.query";
-import { GetRewardImagesArchiveQuery } from "../../application/queries/get-reward-images-archive/get-reward-images-archive.query";
-import { ListRewardsPendingReviewQuery } from "../../application/queries/list-rewards-pending-review/list-rewards-pending-review.query";
+import { RewardApplicationService } from "../../application/services/reward.application-service";
+import { RewardImageApplicationService } from "../../application/services/reward-image.application-service";
 import { sendRewardFileAttachment } from "./file-attachment.response";
 import { RewardsEmptyBodyDto } from "./rewards-empty-body.dto";
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
 @PlatformOperation(REWARDS_ADMIN_REVIEW_OPERATION)
-@Controller(apiPath("/admin/rewards"))
+@ApiController("/admin/rewards")
 export class RewardsAdminRewardsController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly rewards: RewardApplicationService,
+		private readonly images: RewardImageApplicationService,
 	) {}
 
 	@RequirePermission("APPROVE", "REWARD")
@@ -50,7 +49,7 @@ export class RewardsAdminRewardsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.rewardsAdmin.pendingRewards.input) query: z.output<typeof apiContract.rewardsAdmin.pendingRewards.input>,
 	): Promise<PaginatedServiceResult<RewardResponse>> {
-		return this.queryBus.execute(new ListRewardsPendingReviewQuery(actor, query));
+		return this.rewards.listPendingReview(actor, query);
 	}
 
 	// Fastify matches the static `pending` segment before `:rewardId`, whatever the declaration order.
@@ -62,7 +61,7 @@ export class RewardsAdminRewardsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodParams(apiContract.rewardsAdmin.getReward.input) params: z.output<typeof apiContract.rewardsAdmin.getReward.input>,
 	): Promise<RewardResponse> {
-		return this.queryBus.execute(new GetRewardForAdminQuery(actor, params));
+		return this.rewards.getForReview(actor, params);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
@@ -84,7 +83,7 @@ export class RewardsAdminRewardsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodParams(apiContract.rewardsAdmin.downloadRewardImage.input) params: z.output<typeof apiContract.rewardsAdmin.downloadRewardImage.input>,
 	): Promise<AdminRewardImageDownloadResponse> {
-		return this.queryBus.execute(new GetRewardImageDownloadUrlQuery(actor, params));
+		return this.images.downloadUrl(actor, params);
 	}
 
 	/** Reviewers save every photo of a reward at once: one ZIP of the original uploads, streamed. */
@@ -97,7 +96,7 @@ export class RewardsAdminRewardsController {
 		@ZodParams(apiContract.rewardsAdmin.downloadRewardImagesArchive.input) params: z.output<typeof apiContract.rewardsAdmin.downloadRewardImagesArchive.input>,
 		@Res() reply: FastifyReply,
 	): Promise<void> {
-		const archive: RewardImagesArchive = await this.queryBus.execute(new GetRewardImagesArchiveQuery(actor, params));
+		const archive: RewardImagesArchive = await this.images.archive(actor, params);
 		await sendRewardFileAttachment(reply, archive);
 	}
 

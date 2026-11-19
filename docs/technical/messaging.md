@@ -329,13 +329,20 @@ retention — is registered with `registerMaintenanceScheduler`
 
 ### Graceful shutdown
 
-On `SIGTERM` / `SIGINT` / `SIGHUP` the API (`common/lifecycle/graceful-shutdown.ts`) marks
-itself not-ready, then **drains the BullMQ workers** (`BullMqWorkerDrainService` from
-`@workspace/messaging/nest`: no new jobs, running jobs finish) and only then calls
-`app.close()`. The order matters: Nest's teardown ends the Prisma pool and the Kafka / Redis
-clients in `onModuleDestroy`, while `@nestjs/bullmq` closes its workers only in the last phase
-(`onApplicationShutdown`) — a job still running then fails with "Cannot use a pool after
-calling end on the pool".
+On `SIGTERM` / `SIGINT` / `SIGHUP` the API (`platform/infrastructure/lifecycle/graceful-shutdown.ts`)
+marks itself not-ready and calls `app.close()`, which is graceful on its own
+([ADR 095](../adr/095-shutdown-finishes-work-before-closing-connections.md)):
+
+| Phase | What finishes |
+|---|---|
+| `onModuleDestroy` | BullMQ workers stop taking jobs; their running jobs finish. |
+| `beforeApplicationShutdown` | Crons (all declared `waitForCompletion: true`) and interval sweeps stop; a running tick finishes. |
+| HTTP server close | Event streams end, in-flight requests get their answer with `Connection: close`, new requests get 503. |
+| `onApplicationShutdown` | Buffers flush, then Prisma, Kafka, Redis and the queues close: last, so nothing in flight loses them. |
+
+A new periodic job follows the same rule: a `@Cron` declares `{ waitForCompletion: true }`, and a
+hand-made interval stops its timer and awaits its `InFlightWork` in `beforeApplicationShutdown`.
+Anything that owns a connection closes it in `onApplicationShutdown`.
 
 ## Correlation IDs
 

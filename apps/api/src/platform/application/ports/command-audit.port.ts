@@ -13,8 +13,6 @@ export type SystemCommandOrigin = z.output<typeof SystemCommandOriginSchema>;
 
 export const SystemCommandOutcomeSchema = z.enum(["success", "failure"]);
 
-export type SystemCommandOutcome = z.output<typeof SystemCommandOutcomeSchema>;
-
 /** One system command execution, after secrets and personal data have been removed from `input`. */
 export const SystemCommandAuditEntrySchema = z.object({
 	originKind: SystemOriginSchema,

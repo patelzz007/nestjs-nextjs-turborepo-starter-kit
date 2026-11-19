@@ -1,9 +1,8 @@
-import { Controller, Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiTags } from "@nestjs/swagger";
 import {
 	AdminPermissionResponseSchema,
-	apiPath,
 	CheckPermissionResponseSchema,
 	PermissionGroupsResponseSchema,
 	PermissionListItemSchema,
@@ -19,6 +18,7 @@ import {
 	type RbacMessageResponse,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
@@ -35,20 +35,19 @@ import { RevisePermissionCommand } from "../../application/commands/revise-permi
 import { RevokeUserPermissionCommand } from "../../application/commands/revoke-user-permission/revoke-user-permission.command";
 import { SyncUserPermissionsCommand } from "../../application/commands/sync-user-permissions/sync-user-permissions.command";
 import { RBAC_CATALOG_READ_OPERATION, RBAC_MUTATE_OPERATION } from "../../application/ports/authorization.tokens";
-import { CheckPermissionQuery } from "../../application/queries/check-permission/check-permission.query";
-import { GetPermissionQuery } from "../../application/queries/get-permission/get-permission.query";
-import { ListPermissionGroupsQuery } from "../../application/queries/list-permission-groups/list-permission-groups.query";
-import { ListPermissionsQuery } from "../../application/queries/list-permissions/list-permissions.query";
+import { PermissionCheckApplicationService } from "../../application/services/permission-check.application-service";
+import { RbacCatalogApplicationService } from "../../application/services/rbac-catalog.application-service";
 import { CheckPermissionDto, CreatePermissionDto, GrantPermissionToUserDto, SyncUserPermissionsDto, UpdatePermissionDto } from "./dtos/permission.dto";
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
-/** Permission catalog and direct user grants. Every route makes exactly one bus call. */
-@Controller(apiPath("/admin/permissions"))
+/** Permission catalog and direct user grants. Every route makes exactly one call: a command, or a read of an application service. */
+@ApiController("/admin/permissions")
 @ApiTags("Permissions")
 export class PermissionsController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly catalog: RbacCatalogApplicationService,
+		private readonly permissionCheck: PermissionCheckApplicationService,
 	) {}
 
 	@Get()
@@ -60,7 +59,7 @@ export class PermissionsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(PermissionListQuerySchema) query: PermissionListQuery,
 	): Promise<PaginatedServiceResult<PermissionListItem>> {
-		return this.queryBus.execute(new ListPermissionsQuery(actor, query));
+		return this.catalog.listPermissions(actor, query);
 	}
 
 	@Post()
@@ -77,7 +76,7 @@ export class PermissionsController {
 	@PlatformOperation(RBAC_CATALOG_READ_OPERATION)
 	@ZodResponse(AdminPermissionResponseSchema, { description: "Permission detail (404 NOT_FOUND when no live permission has that id)" })
 	public async detail(@CurrentActor() actor: ActorContext, @ZodParam("id", UuidParamSchema) id: string): Promise<AdminPermissionResponse> {
-		return this.queryBus.execute(new GetPermissionQuery(actor, id));
+		return this.catalog.getPermission(actor, id);
 	}
 
 	@Patch(":id")
@@ -123,7 +122,7 @@ export class PermissionsController {
 	@PlatformOperation(RBAC_CATALOG_READ_OPERATION)
 	@ZodResponse(PermissionGroupsResponseSchema, { description: "List of permission groups" })
 	public async listGroups(@CurrentActor() actor: ActorContext): Promise<PermissionGroupsResponse> {
-		return this.queryBus.execute(new ListPermissionGroupsQuery(actor));
+		return this.catalog.listPermissionGroups(actor);
 	}
 
 	/** A read (no state change): limited like any authenticated POST, not as a security mutation. */
@@ -132,8 +131,8 @@ export class PermissionsController {
 	@RequirePermission("READ", "PERMISSION")
 	@PlatformOperation(PRINCIPAL_LOOKUP_OPERATION)
 	@ZodResponse(CheckPermissionResponseSchema, { status: HttpStatus.CREATED, description: "Permission check result with grant provenance" })
-	public async checkPermission(@CurrentActor() actor: ActorContext, @ZodBody(CheckPermissionDto.schema) body: CheckPermissionDto): Promise<CheckPermissionResponse> {
-		return this.queryBus.execute(new CheckPermissionQuery(actor, { userId: body.userId, action: body.action, resource: body.resource }));
+	public async checkPermission(@ZodBody(CheckPermissionDto.schema) body: CheckPermissionDto): Promise<CheckPermissionResponse> {
+		return this.permissionCheck.check({ userId: body.userId, action: body.action, resource: body.resource });
 	}
 
 	@Post("user/grant")

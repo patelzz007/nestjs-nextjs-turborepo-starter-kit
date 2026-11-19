@@ -1,5 +1,5 @@
 // ============================================
-// lib/analytics/admin-analytics.ts - the platform dashboard's KPIs, series and breakdowns, mapped for the shared primitives
+// contexts/reporting/lib/admin-analytics.ts -the platform dashboard's KPIs, series and breakdowns, mapped for the shared primitives
 // ============================================
 // `GET /admin/analytics/dashboard` (READ ANALYTICS) → props of the packages/ui
 // analytics primitives. Colour slots are fixed per entity across the page:

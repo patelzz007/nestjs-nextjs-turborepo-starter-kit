@@ -143,19 +143,20 @@ runs in a transaction whose PostgreSQL settings name the user, tenant and store 
 
 ## 6. API versioning
 
-`packages/shared/src/contracts/versioning.ts` is the single source of truth:
-`API_VERSION = "v1"`, `API_VERSION_PREFIX = "/api/v1"`, `apiPath()` and `apiDocsPath()` (`/v1/docs`).
+[ADR 094](../adr/094-per-endpoint-api-versioning.md) decides it; `packages/shared/src/contracts/versioning.ts` holds the
+constants: `API_VERSIONS` (every served version, oldest first), `API_VERSION` (the build's default), and the URL builders
+`apiPath()` and `apiDocsPath()` for clients and scripts.
 
-- Business controllers use `@Controller(apiPath("/auth"))`; the client transport prepends the
-  same prefix. Only `/`, `/health*`, `/version` and `POST /notifications/email-webhook` are
-  unversioned (the webhook URL is registered at Resend and must not move).
-- An e2e drift test calls every `apiContract` leaf under `/api/v1` and fails on a 404; the lint
-  rule `api/no-unversioned-controller` rejects a controller path that skips `apiPath()`.
-- `GET /version` returns the version manifest; on a 404 the client retries against the current
-  version. `Accept-version: v2` rewrites the path for clients that cannot change URLs.
-  Deprecated versions get a `Sunset` header.
-- Adding v2: add it to the `ApiVersion` union, annotate changed contract leaves with
-  `version: "v2"`, serve both versions during the migration, then deprecate v1.
+- A version belongs to one endpoint, and a newer version inherits every route it does not replace. Business
+  controllers are `@ApiController("/auth")`, served at each version's literal path (`/api/v1/auth`, `/api/v2/auth`);
+  a handler that replaces an older one is marked `@SinceApiVersion("v2")`. Only `/`, `/health*`, `/version` and
+  `POST /notifications/email-webhook` are unversioned (the webhook URL is registered at Resend and must not move).
+- The lint rule `api/no-unversioned-controller` requires `@ApiController` for every other controller; an e2e drift
+  test calls every `apiContract` leaf under `/api/v1` and fails on a 404.
+- A client pins one version (`ApiClientConfig.apiVersion`, default `API_VERSION`); a direct call may override it
+  (`ProcedureCallOptions.apiVersion`), which sends `Accept-version` and is marked `(override)` in the access log.
+- `GET /version` lists every served version; a deprecated one's responses carry a `Sunset` header. Swagger serves one
+  document per version (`/v1/docs`, `/v2/docs`).
 
 ## 7. Build and module resolution
 

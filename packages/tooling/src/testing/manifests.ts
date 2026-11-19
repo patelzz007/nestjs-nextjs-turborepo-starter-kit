@@ -42,9 +42,6 @@ const EasConfigSchema = z.looseObject({
 	),
 });
 
-/** One step of a workflow job. */
-export type WorkflowStep = z.output<typeof WorkflowStepSchema>;
-
 /** A `package.json`'s text, parsed. */
 export function packageManifest(text: string): z.output<typeof PackageManifestSchema> {
 	return PackageManifestSchema.parse(JSON.parse(text));

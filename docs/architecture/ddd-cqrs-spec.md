@@ -371,7 +371,7 @@ Examples:
 - `GetRewardById`.
 - `ListRewards`.
 - `GetOrderSummary`.
-- `GetAdminDashboard`.
+- `GetMerchantDashboard`.
 
 A query MUST NOT:
 

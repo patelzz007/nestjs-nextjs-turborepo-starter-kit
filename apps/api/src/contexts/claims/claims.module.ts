@@ -37,8 +37,7 @@ import { RequestReferrerCreditEmailOnReferrerCredited } from "./application/even
 import type { ClaimCodesPort } from "./application/ports/claim-codes.port";
 import type { ClaimReadPort } from "./application/ports/claims-read.port";
 import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIM_READS, CLAIMS_UNIT_OF_WORK } from "./application/ports/claims.tokens";
-import { GetMyClaimHandler } from "./application/queries/get-my-claim/get-my-claim.handler";
-import { ListMyClaimsHandler } from "./application/queries/list-my-claims/list-my-claims.handler";
+import { ConsumerClaimsApplicationService } from "./application/services/consumer-claims.application-service";
 import { ClaimCodesAdapter } from "./infrastructure/adapters/claim-codes.adapter";
 import { UuidClaimIdGenerator } from "./infrastructure/adapters/uuid-claim-id.generator";
 import { ClaimsRegistrations } from "./infrastructure/claims-registrations";
@@ -97,8 +96,7 @@ const claimsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [Cl
 		DeliverSignupSuccessNoticeOnSignupReferralSucceeded,
 		SignupSuccessNoticesCron,
 		LegacyRewardNoticesCron,
-		ListMyClaimsHandler,
-		GetMyClaimHandler,
+		ConsumerClaimsApplicationService,
 	],
 })
 export class ClaimsModule implements OnModuleInit {

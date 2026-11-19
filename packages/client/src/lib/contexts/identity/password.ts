@@ -1,5 +1,5 @@
 // ============================================
-// lib/password.ts - Password strength scoring
+// lib/contexts/identity/password.ts -Password strength scoring
 // ============================================
 // Pure, testable helper powering the PasswordStrengthMeter in both apps.
 // Deliberately mirrors the same rules as `strongPassword` in the shared

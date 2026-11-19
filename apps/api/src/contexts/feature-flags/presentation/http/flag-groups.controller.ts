@@ -4,10 +4,9 @@
 // Platform staff only, under their own permission: a listed group can hold user ids (FEATURE_FLAG_GROUP:LIST to
 // read, UPDATE to change). Every change carries a reason; a group a live or pending rule names can't be removed.
 
-import { Controller, Get, HttpCode, HttpStatus, Inject, Post, Put } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Inject, Post, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	ChangeFlagGroupMembersResultSchema,
 	ChangeFlagGroupMembersSchema,
 	CreateFlagGroupSchema,
@@ -33,6 +32,7 @@ import {
 	type UpdateFlagGroupInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -48,7 +48,7 @@ import { FLAG_GROUPS } from "../../feature-flags.tokens";
 @ApiTags("Flag groups")
 @ApiBearerAuth()
 @AdminAccessOnly("Flag groups are for the admin console.")
-@Controller(apiPath("/admin/flag-groups"))
+@ApiController("/admin/flag-groups")
 export class FlagGroupsController {
 	public constructor(@Inject(FLAG_GROUPS) private readonly groups: FlagGroupService) {}
 

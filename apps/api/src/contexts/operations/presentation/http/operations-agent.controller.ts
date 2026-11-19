@@ -6,11 +6,12 @@
 // server) are left out of the HTTP audit log — ADR 068, exception 1 — while the server's last-seen
 // time is recorded, and registering, re-keying and removing servers are audited.
 
-import { Controller, Headers, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import { Headers, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, OpsAgentReportAckSchema, OpsAgentReportSchema, type OpsAgentReport, type OpsAgentReportAck } from "@workspace/shared";
+import { OpsAgentReportAckSchema, OpsAgentReportSchema, type OpsAgentReport, type OpsAgentReportAck } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
@@ -24,7 +25,7 @@ import { OPS_AGENT_REPORT_OPERATION } from "../../application/ports/operations.t
 import { bearerToken } from "../../domain/policies/agent-token.policy";
 
 @ApiTags("Operations")
-@Controller(apiPath("/operations"))
+@ApiController("/operations")
 export class OperationsAgentController {
 	public constructor(private readonly commandBus: CommandBus) {}
 

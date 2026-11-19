@@ -29,7 +29,8 @@ import {
 import { EmailAddress } from "../../domain/value-objects/email-address.value-object";
 import { LockoutState } from "../../domain/value-objects/lockout-state.value-object";
 import { TokenVersion } from "../../domain/value-objects/token-version.value-object";
-import { GetPasskeyAppAssociationsHandler } from "../queries/get-passkey-app-associations/get-passkey-app-associations.handler";
+import { PasskeyAppAssociationsApplicationService } from "../services/passkey-app-associations.application-service";
+import { AccountApplicationService } from "../services/account.application-service";
 import { CompletePasskeyRegistrationCommand } from "../commands/complete-passkey-registration/complete-passkey-registration.command";
 import { CompletePasskeyRegistrationHandler } from "../commands/complete-passkey-registration/complete-passkey-registration.handler";
 import { CompletePasskeySecondFactorCommand } from "../commands/complete-passkey-second-factor/complete-passkey-second-factor.command";
@@ -48,8 +49,6 @@ import { StartPasskeySecondFactorCommand } from "../commands/start-passkey-secon
 import { StartPasskeySecondFactorHandler } from "../commands/start-passkey-second-factor/start-passkey-second-factor.handler";
 import { StartPasswordlessPasskeyLoginCommand } from "../commands/start-passwordless-passkey-login/start-passwordless-passkey-login.command";
 import { StartPasswordlessPasskeyLoginHandler } from "../commands/start-passwordless-passkey-login/start-passwordless-passkey-login.handler";
-import { ListMyPasskeysQuery } from "../queries/list-my-passkeys/list-my-passkeys.query";
-import { ListMyPasskeysHandler } from "../queries/list-my-passkeys/list-my-passkeys.handler";
 import type { CeremonyVerification, ChallengeCheck, PasskeyAccountRef, PasskeyCredentialRef, StoredPasskeyKey, WebAuthnPort } from "../ports/web-authn.port";
 import { MfaLoginCompletion } from "../services/mfa-login-completion";
 import { InMemoryIdentityReads } from "./fakes/identity-reads.fakes";
@@ -311,7 +310,7 @@ describe("Managing passkeys", () => {
 		const view: Passkey = { id: "mine", name: "Phone", deviceType: "MULTI_DEVICE", backedUp: true, transports: ["internal"], createdAt: NOW, lastUsedAt: null };
 		reads.passkeys.set(USER_ID, [view]);
 
-		await expect(new ListMyPasskeysHandler(reads).execute(new ListMyPasskeysQuery(userActor(USER_ID), { userId: USER_ID }))).resolves.toEqual({ passkeys: [view] });
+		await expect(new AccountApplicationService(reads).passkeys(userActor(USER_ID), USER_ID)).resolves.toEqual({ passkeys: [view] });
 	});
 
 	it("retires challenges an hour past their expiry", async () => {
@@ -517,8 +516,8 @@ describe("A passwordless passkey sign-in", () => {
 	});
 });
 
-describe("GetPasskeyAppAssociationsHandler", () => {
-	it("answers the relying party's native-app associations as the WebAuthn port states them", async () => {
-		await expect(new GetPasskeyAppAssociationsHandler(new FakeWebAuthn()).execute()).resolves.toStrictEqual(ASSOCIATIONS);
+describe("PasskeyAppAssociationsApplicationService", () => {
+	it("answers the relying party's native-app associations as the WebAuthn port states them", () => {
+		expect(new PasskeyAppAssociationsApplicationService(new FakeWebAuthn()).appAssociations()).toStrictEqual(ASSOCIATIONS);
 	});
 });

@@ -1,20 +1,23 @@
 import { CaughtValueSchema } from "@workspace/shared";
-import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, type BeforeApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 
 import { AUTHORIZATION_CHANGE_SWEEP_INTERVAL_MS, AuthorizationChangeSweep, type AuthorizationChangeSweepResult } from "../../application/services/authorization-change-sweep";
 import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
+import { InFlightWork } from "../../../../platform/application/in-flight-work";
 
 export const AUTHORIZATION_CHANGE_SWEEP_SCHEDULER_ID = "identity.authorization-change-sweep";
 
 /**
  * Runs {@link AuthorizationChangeSweep} on EVERY instance (not a queue job: each instance cleans its own
  * caches). A sweep still running when the next tick fires is not overlapped — that tick is skipped. A failed
- * sweep is logged at `error` and the next tick retries; the timer itself never dies.
+ * sweep is logged at `error` and the next tick retries; the timer itself never dies. Shutdown stops the timer
+ * and waits for a sweep in progress (ADR 095).
  */
 @Injectable()
-export class AuthorizationChangeSweepScheduler implements OnModuleInit, OnApplicationShutdown {
+export class AuthorizationChangeSweepScheduler implements OnModuleInit, BeforeApplicationShutdown {
 	private readonly logger: Logger = new Logger(AuthorizationChangeSweepScheduler.name);
+	private readonly ticks = new InFlightWork();
 	private running = false;
 
 	public constructor(
@@ -24,16 +27,17 @@ export class AuthorizationChangeSweepScheduler implements OnModuleInit, OnApplic
 
 	public onModuleInit(): void {
 		const timer: NodeJS.Timeout = setInterval((): void => {
-			void this.runOnce();
+			void this.ticks.track(() => this.runOnce());
 		}, AUTHORIZATION_CHANGE_SWEEP_INTERVAL_MS);
 		timer.unref();
 		this.schedulerRegistry.addInterval(AUTHORIZATION_CHANGE_SWEEP_SCHEDULER_ID, timer);
 	}
 
-	public onApplicationShutdown(): void {
+	public async beforeApplicationShutdown(): Promise<void> {
 		if (this.schedulerRegistry.doesExist("interval", AUTHORIZATION_CHANGE_SWEEP_SCHEDULER_ID)) {
 			this.schedulerRegistry.deleteInterval(AUTHORIZATION_CHANGE_SWEEP_SCHEDULER_ID);
 		}
+		await this.ticks.settled();
 	}
 
 	/** One sweep, unless one is already running. Never rejects: a failure is logged and retried on the next tick. */

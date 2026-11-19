@@ -4,6 +4,7 @@ import { Reflector } from "@nestjs/core";
 import { API_VERSION_PREFIX, epochMs, type PermissionAction } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
+import { servedPathOf } from "../../../../../e2e/support/route-metadata";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { TransactionalEventCollector } from "../../../../platform/application/events/transactional-event-collector";
 import { FixedClock } from "../../../../platform/application/__tests__/fixed-clock";
@@ -88,7 +89,7 @@ function handlerOf(name: RouteName): GeoController[RouteName] {
 
 describe("GeoController routes", () => {
 	it("is served under the versioned /geo prefix", () => {
-		expect(reflector.get<string>(PATH_METADATA, GeoController)).toBe(`${API_VERSION_PREFIX}/geo`);
+		expect(servedPathOf(GeoController)).toBe(`${API_VERSION_PREFIX}/geo`);
 	});
 
 	it("has exactly the routes it had before the migration", () => {

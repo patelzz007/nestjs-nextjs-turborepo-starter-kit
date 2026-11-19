@@ -1,8 +1,7 @@
-import { Controller, HttpCode, HttpStatus, Inject, Post, Req } from "@nestjs/common";
+import { HttpCode, HttpStatus, Inject, Post, Req } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	NotificationWebhookReceivedResponseSchema,
 	OneClickUnsubscribeBodySchema,
 	TwilioCallbackBodySchema,
@@ -16,6 +15,7 @@ import {
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
@@ -33,7 +33,7 @@ import type { NotificationWebhookReception } from "../../application/services/no
 const RECEIVED: NotificationWebhookReceivedResponse = { received: true };
 /** Session-less unsubscribe (ADR 070): the web page's call and RFC 8058 one-click, both with a signed token. */
 @ApiTags("Notification webhooks")
-@Controller(apiPath("/notifications"))
+@ApiController("/notifications")
 export class NotificationUnsubscribeController {
 	public constructor(@Inject(NOTIFICATION_ACCOUNT) private readonly account: NotificationAccountService) {}
 
@@ -73,7 +73,7 @@ export class NotificationUnsubscribeController {
  * The OpenAPI body is the form as Twilio posts it; what is signed, and read, is the raw body.
  */
 @ApiTags("Notification webhooks")
-@Controller(apiPath("/webhooks/twilio"))
+@ApiController("/webhooks/twilio")
 export class TwilioWebhooksController {
 	public constructor(@Inject(NOTIFICATION_WEBHOOK_RECEPTION) private readonly reception: Pick<NotificationWebhookReception, "receiveTwilioStatus" | "receiveTwilioInbound">) {}
 

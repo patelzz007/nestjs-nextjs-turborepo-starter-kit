@@ -236,12 +236,3 @@ export function resolvePinnedMerchantNavItems(
 	const allowedItems = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can, enabledFeatureFlags);
 	return pinnedUrls.map((url) => allowedItems.find((item) => item.url === url)).filter((item): item is MerchantNavItem => item !== undefined);
 }
-
-export function matchesMerchantNavQuery(item: MerchantNavItem, query: string): boolean {
-	const normalized = query.trim().toLowerCase();
-	if (normalized.length === 0) {
-		return true;
-	}
-	const haystack = [item.title, item.description, item.section, ...item.keywords].join(" ").toLowerCase();
-	return haystack.includes(normalized);
-}

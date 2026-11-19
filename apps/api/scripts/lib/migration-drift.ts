@@ -48,8 +48,6 @@ export const MigrationDriftEnvSchema = z
 		when: (payload: z.core.ParsePayload): boolean => payload.issues.length === 0,
 	});
 
-export type MigrationDriftEnv = z.infer<typeof MigrationDriftEnvSchema>;
-
 export interface MigrationDriftPaths {
 	readonly migrationsDir: string;
 	readonly schemaFile: string;

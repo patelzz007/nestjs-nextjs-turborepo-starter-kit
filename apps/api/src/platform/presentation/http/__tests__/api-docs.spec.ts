@@ -9,6 +9,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { Public } from "../security/decorators/public.decorator";
+import { ApiController, SinceApiVersion } from "../versioning/api-controller.decorator";
+import { enableApiVersioning } from "../versioning/enable-api-versioning";
 import {
 	BEARER_SECURITY_SCHEME,
 	buildOpenApiDocument,
@@ -104,6 +106,70 @@ describe("setupApiDocs (public Swagger)", () => {
 
 		expect(response.statusCode).toBe(HttpStatus.OK);
 		expect(response.headers["content-type"]).toContain("text/html");
+	});
+});
+
+/** A versioned controller: `ping` replaced in v2, `list` inherited by v2. */
+class VersionedDocsProbeController {
+	public ping(): string {
+		return "pong v1";
+	}
+
+	public pingV2(): string {
+		return "pong v2";
+	}
+
+	public list(): string {
+		return "list";
+	}
+}
+
+function probeHandler(name: string): PropertyDescriptor {
+	const descriptor: PropertyDescriptor | undefined = Object.getOwnPropertyDescriptor(VersionedDocsProbeController.prototype, name);
+	if (descriptor === undefined) throw new Error(`probe handler ${name} missing`);
+	return descriptor;
+}
+
+Get("ping")(VersionedDocsProbeController.prototype, "ping", probeHandler("ping"));
+Get("ping")(VersionedDocsProbeController.prototype, "pingV2", probeHandler("pingV2"));
+SinceApiVersion("v2")(VersionedDocsProbeController.prototype, "pingV2", probeHandler("pingV2"));
+Get("list")(VersionedDocsProbeController.prototype, "list", probeHandler("list"));
+Public()(VersionedDocsProbeController.prototype, "list", probeHandler("list"));
+ApiController("/product")(VersionedDocsProbeController);
+
+class VersionedDocsProbeModule {}
+Module({ controllers: [VersionedDocsProbeController, DocsProbeController] })(VersionedDocsProbeModule);
+
+describe("buildOpenApiDocument (one document per API version)", () => {
+	let app: NestFastifyApplication;
+
+	beforeAll(async () => {
+		const moduleRef = await Test.createTestingModule({ imports: [VersionedDocsProbeModule] }).compile();
+		app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+		enableApiVersioning(app);
+		await app.init();
+	});
+
+	afterAll(async () => {
+		await app.close();
+	});
+
+	it("lists a version's own paths, the routes it inherits, and every unversioned path", () => {
+		expect(Object.keys(buildOpenApiDocument(app, "v1").paths).sort()).toEqual(["/api/v1/product/list", "/api/v1/product/ping", "/docs-probe/ping", "/docs-probe/status"]);
+		expect(Object.keys(buildOpenApiDocument(app, "v2").paths).sort()).toEqual(["/api/v2/product/list", "/api/v2/product/ping", "/docs-probe/ping", "/docs-probe/status"]);
+	});
+
+	it("names each operation after its handler, without a version suffix", () => {
+		const v1 = buildOpenApiDocument(app, "v1");
+		const v2 = buildOpenApiDocument(app, "v2");
+
+		expect(v1.paths["/api/v1/product/ping"]?.get?.operationId).toBe("VersionedDocsProbeController_ping");
+		expect(v2.paths["/api/v2/product/ping"]?.get?.operationId).toBe("VersionedDocsProbeController_pingV2");
+		expect(v2.paths["/api/v2/product/list"]?.get?.operationId).toBe("VersionedDocsProbeController_list");
+	});
+
+	it("keeps an inherited @Public() route public in the newer version's document", () => {
+		expect(buildOpenApiDocument(app, "v2").paths["/api/v2/product/list"]?.get?.security).toEqual([{}, { [CLIENT_TYPE_SECURITY_SCHEME]: [] }]);
 	});
 });
 

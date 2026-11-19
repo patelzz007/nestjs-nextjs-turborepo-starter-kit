@@ -1,9 +1,8 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
+import { Delete, Get, HttpCode, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	CreateWebhookEndpointSchema,
 	DeleteSuccessDataSchema,
 	RotateWebhookSecretSchema,
@@ -23,6 +22,7 @@ import {
 import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
 
+import { ApiController } from "../../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { MerchantActor } from "../../../../../platform/presentation/http/security/api-keys/merchant-actor";
 import { CurrentActor } from "../../../../../platform/presentation/http/security/current-actor.decorator";
@@ -60,7 +60,7 @@ type DeliveryParams = z.output<typeof DeliveryParams>;
 @ApiTags("Tenant Webhooks")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/tenants"))
+@ApiController("/tenants")
 export class TenantWebhooksController {
 	public constructor(
 		private readonly commandBus: CommandBus,

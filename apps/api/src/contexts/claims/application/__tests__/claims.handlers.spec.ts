@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { DAY_MS, epochMs, type RewardClaimListQuery, type RewardClaimResponse, type PaginatedServiceResult } from "@workspace/shared";
+import { DAY_MS, epochMs, RewardClaimListQuerySchema, type RewardClaimListQuery, type RewardClaimResponse, type PaginatedServiceResult } from "@workspace/shared";
 
 import { systemActor, type ActorContext } from "../../../../platform/application/actor-context";
 import { ReferrerCredited } from "../../../referrals/public-api";
@@ -28,9 +28,8 @@ import { RequestClaimOtpCommand } from "../commands/request-claim-otp/request-cl
 import { RequestClaimOtpHandler } from "../commands/request-claim-otp/request-claim-otp.handler";
 import { RecordNotificationOnReferrerCredited, RecordOwnerNoticesOnRewardReview } from "../event-handlers/in-transaction/record-reward-notices.in-transaction-handlers";
 import type { ClaimReadPort } from "../ports/claims-read.port";
-import { GetMyClaimHandler } from "../queries/get-my-claim/get-my-claim.handler";
-import { GetMyClaimQuery } from "../queries/get-my-claim/get-my-claim.query";
 import { ClaimRedemptionApplicationService } from "../services/claim-redemption.application-service";
+import { ConsumerClaimsApplicationService } from "../services/consumer-claims.application-service";
 import { FakeClaimCodes, InMemoryClaimsStore, InMemoryInventory, NOW, SequentialIds, claimantProfile, customer } from "./fakes/claims.fakes";
 
 const USER = "user-1";
@@ -320,14 +319,36 @@ describe("Reward notices (ADR 070)", () => {
 	});
 });
 
-describe("GetMyClaimHandler", () => {
-	it("answers not found when the read model has no such claim for the caller", async () => {
-		const reads: ClaimReadPort = {
-			listForUser: (_actor: ActorContext, _userId: string, _query: RewardClaimListQuery): Promise<PaginatedServiceResult<RewardClaimResponse>> =>
-				Promise.reject(new Error("not used")),
-			findForUser: (): Promise<RewardClaimResponse | null> => Promise.resolve(null),
+describe("ConsumerClaimsApplicationService", () => {
+	/** The read model as the caller sees it: whose claims were asked for, and with which page. */
+	function recordingReads(found: RewardClaimResponse | null): ClaimReadPort & { readonly asked: { readonly userId: string; readonly what: string }[] } {
+		const asked: { readonly userId: string; readonly what: string }[] = [];
+		return {
+			asked,
+			listForUser: (_actor: ActorContext, userId: string, query: RewardClaimListQuery): Promise<PaginatedServiceResult<RewardClaimResponse>> => {
+				asked.push({ userId, what: `page ${String(query.page)}` });
+				return Promise.resolve({ items: [], total: 0, page: query.page, limit: query.limit, totalPages: 1, nextCursor: null, hasNext: false, hasPrevious: false });
+			},
+			findForUser: (_actor: ActorContext, userId: string, claimId: string): Promise<RewardClaimResponse | null> => {
+				asked.push({ userId, what: claimId });
+				return Promise.resolve(found);
+			},
 		};
+	}
 
-		await expect(new GetMyClaimHandler(reads).execute(new GetMyClaimQuery(customer(USER), { claimId: "claim-9" }))).rejects.toBeInstanceOf(ClaimNotFoundError);
+	it("answers not found when the read model has no such claim for the caller", async () => {
+		await expect(new ConsumerClaimsApplicationService(recordingReads(null)).getMyClaim(customer(USER), { claimId: "claim-9" })).rejects.toBeInstanceOf(ClaimNotFoundError);
+	});
+
+	it("reads the caller's own claims, the caller being the scope", async () => {
+		const reads = recordingReads(null);
+		const service = new ConsumerClaimsApplicationService(reads);
+
+		await expect(service.listMyClaims(customer(USER), RewardClaimListQuerySchema.parse({ page: "2" }))).resolves.toMatchObject({ items: [], page: 2 });
+		await expect(service.getMyClaim(customer(USER), { claimId: "claim-9" })).rejects.toBeInstanceOf(ClaimNotFoundError);
+		expect(reads.asked).toEqual([
+			{ userId: USER, what: "page 2" },
+			{ userId: USER, what: "claim-9" },
+		]);
 	});
 });

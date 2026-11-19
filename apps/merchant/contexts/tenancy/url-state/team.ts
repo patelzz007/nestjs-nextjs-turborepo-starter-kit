@@ -10,7 +10,6 @@ import { z } from "zod";
 
 /** The three tabs of Team & permissions: who is in, who is invited, and the roles. */
 export const TeamTabSchema = z.enum(["members", "invites", "roles"]);
-export type TeamTab = z.output<typeof TeamTabSchema>;
 
 /** `?tab=` — the open tab (members by default), shareable and undone by Back. */
 export const TEAM_TAB_URL_STATE = defineUrlState({ tab: urlParamWithDefault(TeamTabSchema, "members") });

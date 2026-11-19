@@ -1,9 +1,8 @@
-import { Controller, Delete, Get, HttpStatus, Inject, Patch, Post, Put, Sse, type MessageEvent } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Inject, Patch, Post, Put, Sse, type MessageEvent } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
 import {
 	apiContract,
-	apiPath,
 	InAppNotificationResponseSchema,
 	NotificationPreferencesResponseSchema,
 	NotificationStreamQuerySchema,
@@ -26,6 +25,7 @@ import {
 import { interval, map, merge, Observable } from "rxjs";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { self } from "../../../../platform/presentation/http/security/decorators/permission-target";
@@ -48,7 +48,7 @@ type Contract = typeof apiContract.notifications;
 /** The signed-in person's own inbox, preferences and push devices (ADR 070), from any app. */
 @ApiTags("Notifications")
 @ApiBearerAuth()
-@Controller(apiPath("/notifications"))
+@ApiController("/notifications")
 export class NotificationsController {
 	public constructor(
 		@Inject(NOTIFICATION_ACCOUNT) private readonly account: NotificationAccountService,

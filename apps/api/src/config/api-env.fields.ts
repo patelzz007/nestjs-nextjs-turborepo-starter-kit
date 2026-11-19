@@ -35,9 +35,6 @@ export const OptionalToggleEnvSchema = z
 	.transform((value: z.output<typeof ToggleValueSchema>): boolean => value === "1" || value === "true")
 	.optional();
 
-/** On/off switch whose unset value is `false` (features are opt-in). */
-export const ToggleEnvSchema = OptionalToggleEnvSchema.transform((value: boolean | undefined): boolean => value ?? false);
-
 // ── Secrets ────────────────────────────────────────────────────────────────
 
 /** Minimum length for an HMAC / JWT signing secret. */

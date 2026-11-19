@@ -1,5 +1,5 @@
 // ============================================
-// lib/notifications/audit-trail-live.ts - live audit log updates (SSE)
+// contexts/notifications/lib/audit-trail-live.ts -live audit log updates (SSE)
 // ============================================
 "use client";
 

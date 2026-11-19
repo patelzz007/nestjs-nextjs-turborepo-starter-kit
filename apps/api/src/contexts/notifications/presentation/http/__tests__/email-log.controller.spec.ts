@@ -1,23 +1,32 @@
 import type { MessageEvent } from "@nestjs/common";
-import { LIST_SLOT_INDEX, type EmailLogEntry, type EmailLogUpdatedEvent, type PaginatedServiceResult } from "@workspace/shared";
+import {
+	EmailLogListQuerySchema,
+	LIST_SLOT_INDEX,
+	type EmailLogEntry,
+	type EmailLogListQuery,
+	type EmailLogUpdatedEvent,
+	type PaginatedServiceResult,
+} from "@workspace/shared";
 import { Subject, type Observable } from "rxjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ListEmailLogQuery } from "../../../application/queries/list-email-log/list-email-log.query";
+import type { ActorContext } from "../../../../../platform/application/actor-context";
+import type { EmailLogReadPort } from "../../../application/ports/email-log-read.port";
 import type { EmailLogSignalPort } from "../../../application/ports/email-log-signal.port";
-import { EmailLogController, type EmailLogListDispatch } from "../email-log.controller";
+import { EmailLogApplicationService } from "../../../application/services/email-log.application-service";
+import { EmailLogController } from "../email-log.controller";
 
-/** The list route only dispatches; the SSE tests below never call it. */
-class RecordingQueries implements EmailLogListDispatch {
-	public readonly queries: ListEmailLogQuery[] = [];
+/** TEST-ONLY email log read model: an empty log, keeping each page asked for. */
+class EmptyEmailLog implements EmailLogReadPort {
+	public readonly asked: { readonly actor: ActorContext; readonly query: EmailLogListQuery }[] = [];
 
-	public execute(query: ListEmailLogQuery): Promise<PaginatedServiceResult<EmailLogEntry>> {
-		this.queries.push(query);
+	public list(actor: ActorContext, query: EmailLogListQuery): Promise<PaginatedServiceResult<EmailLogEntry>> {
+		this.asked.push({ actor, query });
 		return Promise.resolve({ items: [], limit: 20, total: 0, page: 1, totalPages: 0, nextCursor: null, hasNext: false, hasPrevious: false });
 	}
 }
 
-const serviceStub = new RecordingQueries();
+const serviceStub = new EmailLogApplicationService(new EmptyEmailLog());
 
 /** TEST-ONLY signal: a plain Subject, so only subscribers present at emit time get a frame (the adapter's own spec covers its emitter). */
 class SubjectEmailLogSignal implements EmailLogSignalPort {
@@ -31,6 +40,17 @@ class SubjectEmailLogSignal implements EmailLogSignalPort {
 		return this.updates.asObservable();
 	}
 }
+
+describe("EmailLogController (list)", () => {
+	it("reads one page of the log through the email log application service, as the caller", async () => {
+		const log = new EmptyEmailLog();
+		const actor: ActorContext = { kind: "anonymous", tenantId: null, request: { requestId: "corr-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null } };
+		const query = EmailLogListQuerySchema.parse({});
+
+		await expect(new EmailLogController(new EmailLogApplicationService(log), new SubjectEmailLogSignal()).list(actor, query)).resolves.toMatchObject({ items: [], total: 0 });
+		expect(log.asked).toEqual([{ actor, query }]);
+	});
+});
 
 describe("EmailLogController (SSE stream)", () => {
 	afterEach(() => {

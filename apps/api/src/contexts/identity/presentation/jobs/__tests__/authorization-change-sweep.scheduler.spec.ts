@@ -6,7 +6,7 @@ import { firstLoggedFailure } from "../../../../../../e2e/support/logged-failure
 
 import type { UserInvalidationTrigger } from "../../../../authorization/public-api";
 import type { AuthorizationChange, AuthorizationChangeFeedPort } from "../../../application/ports/authorization-change-feed.port";
-import { AuthorizationChangeSweep } from "../../../application/services/authorization-change-sweep";
+import { AUTHORIZATION_CHANGE_SWEEP_INTERVAL_MS, AuthorizationChangeSweep } from "../../../application/services/authorization-change-sweep";
 import { AUTHORIZATION_CHANGE_SWEEP_SCHEDULER_ID, AuthorizationChangeSweepScheduler } from "../authorization-change-sweep.scheduler";
 
 /** TEST-ONLY feed whose next read is controlled by the test: resolve, reject, or hold until released. */
@@ -44,14 +44,43 @@ describe("AuthorizationChangeSweepScheduler", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("registers one in-process interval on every instance and removes it on shutdown", () => {
+	it("registers one in-process interval on every instance and removes it on shutdown", async () => {
 		const { scheduler, registry } = setup();
 
 		scheduler.onModuleInit();
 		expect(registry.doesExist("interval", AUTHORIZATION_CHANGE_SWEEP_SCHEDULER_ID)).toBe(true);
 
-		scheduler.onApplicationShutdown();
+		await scheduler.beforeApplicationShutdown();
 		expect(registry.doesExist("interval", AUTHORIZATION_CHANGE_SWEEP_SCHEDULER_ID)).toBe(false);
+	});
+
+	it("lets a sweep the timer started finish before shutdown moves on", async () => {
+		vi.useFakeTimers();
+		try {
+			const { scheduler, feed } = setup();
+			let release: (changes: readonly AuthorizationChange[]) => void = (): void => undefined;
+			feed.next = (): Promise<readonly AuthorizationChange[]> =>
+				new Promise<readonly AuthorizationChange[]>((resolve): void => {
+					release = resolve;
+				});
+			scheduler.onModuleInit();
+			await vi.advanceTimersByTimeAsync(AUTHORIZATION_CHANGE_SWEEP_INTERVAL_MS);
+			expect(feed.reads).toBe(1);
+
+			let shutDown = false;
+			const shutdown = scheduler.beforeApplicationShutdown().then((): void => {
+				shutDown = true;
+			});
+			await vi.advanceTimersByTimeAsync(AUTHORIZATION_CHANGE_SWEEP_INTERVAL_MS);
+			expect(shutDown).toBe(false);
+			expect(feed.reads).toBe(1);
+
+			release([]);
+			await shutdown;
+			expect(shutDown).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it("runs one sweep and reports what it dropped", async () => {

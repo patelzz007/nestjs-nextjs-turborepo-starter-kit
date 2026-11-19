@@ -13,13 +13,14 @@ import { PLATFORM_OPERATION_KEY } from "../../../../../platform/presentation/htt
 import { REQUIRED_PERMISSION_KEY } from "../../../../../platform/presentation/http/security/decorators/route-requirements.metadata";
 import { AdminAccessGuard } from "../../../../../platform/presentation/http/security/guards/admin-access.guard";
 import { ResponseContract } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
-import { handlerOf } from "../../../../../../e2e/support/route-metadata";
+import { handlerOf, servedPathOf } from "../../../../../../e2e/support/route-metadata";
 import { AddKanbanCommentCommand } from "../../../application/commands/add-kanban-comment/add-kanban-comment.command";
 import { DeleteKanbanTaskCommand } from "../../../application/commands/delete-kanban-task/delete-kanban-task.command";
 import { MoveKanbanTaskCommand } from "../../../application/commands/move-kanban-task/move-kanban-task.command";
 import { RemoveKanbanAttachmentCommand } from "../../../application/commands/remove-kanban-attachment/remove-kanban-attachment.command";
 import { WatchKanbanTaskCommand } from "../../../application/commands/watch-kanban-task/watch-kanban-task.command";
-import { GetKanbanBoardQuery } from "../../../application/queries/get-kanban-board/get-kanban-board.query";
+import { KanbanApplicationService } from "../../../application/services/kanban.application-service";
+import { FakeKanbanReads } from "../../../application/__tests__/fakes/kanban-read.fakes";
 import { KanbanController } from "../kanban.controller";
 
 const reflector = new Reflector();
@@ -78,7 +79,7 @@ const ROUTES: readonly (readonly [
 
 describe("KanbanController routes", () => {
 	it("serves the board under the versioned /admin/kanban prefix, to admin-panel sessions only", () => {
-		expect(reflector.get<string>(PATH_METADATA, KanbanController)).toBe(`${API_VERSION_PREFIX}/admin/kanban`);
+		expect(servedPathOf(KanbanController)).toBe(`${API_VERSION_PREFIX}/admin/kanban`);
 		expect(reflector.get<readonly object[]>(GUARDS_METADATA, KanbanController)).toContain(AdminAccessGuard);
 	});
 
@@ -112,16 +113,16 @@ describe("KanbanController dispatch", () => {
 		await close();
 	});
 
-	it("reads the board the query names through the query bus as the caller", async () => {
-		const execute = vi.spyOn(queryBus, "execute").mockResolvedValueOnce({ board: "PLANNING", columns: [] });
+	it("reads the board the query names through the kanban application service as the caller", async () => {
+		const reads = new FakeKanbanReads();
 
-		await expect(new KanbanController(commandBus, queryBus).board(ACTOR, { board: "PLANNING" })).resolves.toEqual({ board: "PLANNING", columns: [] });
-		expect(execute).toHaveBeenCalledWith(new GetKanbanBoardQuery(ACTOR, "PLANNING"));
+		await expect(new KanbanController(commandBus, queryBus, new KanbanApplicationService(reads)).board(ACTOR, { board: "PLANNING" })).resolves.toBe(reads.boardView);
+		expect(reads.asked).toEqual([{ read: "board:PLANNING", actor: ACTOR }]);
 	});
 
 	it("watches and unwatches as the caller, through one command", async () => {
 		const execute = vi.spyOn(commandBus, "execute").mockResolvedValue({ id: TASK_ID });
-		const kanban = new KanbanController(commandBus, queryBus);
+		const kanban = new KanbanController(commandBus, queryBus, new KanbanApplicationService(new FakeKanbanReads()));
 
 		await kanban.watch(ACTOR, { taskId: TASK_ID });
 		await kanban.unwatch(ACTOR, { taskId: TASK_ID });
@@ -135,14 +136,14 @@ describe("KanbanController dispatch", () => {
 		const execute = vi.spyOn(commandBus, "execute").mockResolvedValueOnce({ columns: [] });
 		const body = { columnId: "0199d0c0-0000-7000-8000-0000000000a2", afterTaskId: null, version: 3 };
 
-		await new KanbanController(commandBus, queryBus).moveTask(ACTOR, { taskId: TASK_ID }, body);
+		await new KanbanController(commandBus, queryBus, new KanbanApplicationService(new FakeKanbanReads())).moveTask(ACTOR, { taskId: TASK_ID }, body);
 
 		expect(execute).toHaveBeenCalledWith(new MoveKanbanTaskCommand(ACTOR, TASK_ID, body));
 	});
 
 	it("answers success after a delete or an attachment removal", async () => {
 		const execute = vi.spyOn(commandBus, "execute").mockResolvedValue(undefined);
-		const kanban = new KanbanController(commandBus, queryBus);
+		const kanban = new KanbanController(commandBus, queryBus, new KanbanApplicationService(new FakeKanbanReads()));
 
 		await expect(kanban.deleteTask(ACTOR, { taskId: TASK_ID })).resolves.toEqual({ success: true });
 		await expect(kanban.removeAttachment(ACTOR, { taskId: TASK_ID, attachmentId: ATTACHMENT_ID })).resolves.toEqual({ success: true });
@@ -154,7 +155,11 @@ describe("KanbanController dispatch", () => {
 	it("comments as the caller on the path's task", async () => {
 		const execute = vi.spyOn(commandBus, "execute").mockResolvedValueOnce({ id: "comment-1" });
 
-		await new KanbanController(commandBus, queryBus).addComment(ACTOR, { taskId: TASK_ID }, { body: "Looks good", fileIds: [] });
+		await new KanbanController(commandBus, queryBus, new KanbanApplicationService(new FakeKanbanReads())).addComment(
+			ACTOR,
+			{ taskId: TASK_ID },
+			{ body: "Looks good", fileIds: [] },
+		);
 
 		expect(execute).toHaveBeenCalledWith(new AddKanbanCommentCommand(ACTOR, TASK_ID, { body: "Looks good", fileIds: [] }));
 	});

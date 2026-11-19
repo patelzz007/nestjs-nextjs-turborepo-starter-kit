@@ -40,18 +40,15 @@ import {
 	type IdGenerator,
 } from "./application/ports/rewards.tokens";
 import type { RewardMerchantDisplayPort } from "./application/ports/reward-merchant-display.port";
-import { GetLegalAcceptanceStatusHandler } from "./application/queries/get-legal-acceptance-status/get-legal-acceptance-status.handler";
 import { GetRewardAudienceHandler } from "./application/queries/get-reward-audience/get-reward-audience.handler";
 import { GetTenantRewardHandler } from "./application/queries/get-tenant-reward/get-tenant-reward.handler";
 import { ListRewardCustomersHandler } from "./application/queries/list-reward-customers/list-reward-customers.handler";
-import { GetPublishedRewardHandler } from "./application/queries/get-published-reward/get-published-reward.handler";
-import { GetRewardForAdminHandler } from "./application/queries/get-reward-for-admin/get-reward-for-admin.handler";
-import { GetRewardImageDownloadUrlHandler } from "./application/queries/get-reward-image-download-url/get-reward-image-download-url.handler";
-import { GetRewardImagesArchiveHandler } from "./application/queries/get-reward-images-archive/get-reward-images-archive.handler";
 import { ListMarketplaceRewardsHandler } from "./application/queries/list-marketplace-rewards/list-marketplace-rewards.handler";
 import { ListTenantRewardsHandler } from "./application/queries/list-tenant-rewards/list-tenant-rewards.handler";
 import { SummarizeTenantRewardsHandler } from "./application/queries/summarize-tenant-rewards/summarize-tenant-rewards.handler";
-import { ListRewardsPendingReviewHandler } from "./application/queries/list-rewards-pending-review/list-rewards-pending-review.handler";
+import { LegalAcceptanceApplicationService } from "./application/services/legal-acceptance.application-service";
+import { RewardApplicationService } from "./application/services/reward.application-service";
+import { RewardImageApplicationService } from "./application/services/reward-image.application-service";
 import type { RewardsScope } from "./application/rewards-scope";
 import { RewardImageDeliveryAdapter } from "./infrastructure/adapters/reward-image-delivery.adapter";
 import { UuidIdGenerator } from "./infrastructure/adapters/uuid-id-generator";
@@ -90,13 +87,7 @@ const QUERY_HANDLERS: readonly Provider[] = [
 	GetTenantRewardHandler,
 	GetRewardAudienceHandler,
 	ListRewardCustomersHandler,
-	ListRewardsPendingReviewHandler,
-	GetRewardForAdminHandler,
-	GetRewardImageDownloadUrlHandler,
-	GetRewardImagesArchiveHandler,
 	ListMarketplaceRewardsHandler,
-	GetPublishedRewardHandler,
-	GetLegalAcceptanceStatusHandler,
 ];
 
 /**
@@ -149,6 +140,10 @@ const QUERY_HANDLERS: readonly Provider[] = [
 		RewardsFileRegistrations,
 		...COMMAND_HANDLERS,
 		...QUERY_HANDLERS,
+		// Single-port reads (ADR 096).
+		RewardApplicationService,
+		RewardImageApplicationService,
+		LegalAcceptanceApplicationService,
 	],
 	exports: [REWARDS_UNIT_OF_WORK, RewardsScopeFactory],
 })

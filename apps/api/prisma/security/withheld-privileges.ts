@@ -119,7 +119,7 @@ export function buildWithheldPrivilegeRevocationSql(entries: readonly WithheldPr
 		}
 		return `REVOKE ${[...new Set(entry.privileges)].join(", ")} ON TABLE public."${entry.table}" FROM ${role};`;
 	});
-	return ["-- Generated from prisma/rls/withheld-privileges.ts (APP_RUNTIME_WITHHELD_PRIVILEGES)", ...statements].join("\n");
+	return ["-- Generated from prisma/security/withheld-privileges.ts (APP_RUNTIME_WITHHELD_PRIVILEGES)", ...statements].join("\n");
 }
 
 /** Declared tables that are not Prisma tables (typo, renamed or dropped table) — each is a manifest error. */

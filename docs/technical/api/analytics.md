@@ -230,9 +230,12 @@ flowchart LR
 - `domain/value-objects/analytics-scope.value-object.ts` — `AnalyticsScope` (`platform` /
   `tenant` + store scope / `customer`); `domain/policies/` — the comparison and weekly math.
 - `application/queries/<use-case>/` — `GetMerchantAnalytics`, `GetMerchantDashboard`,
-  `ExportMerchantReport`, `GetAdminSalesAnalytics`, `GetAdminDashboard`, `ExportPlatformReport`,
-  `GetConsumerClaimAnalytics`, `GetConsumerDashboard`. A merchant handler asks the merchant access
+  `ExportMerchantReport`, `ExportPlatformReport`. A merchant handler asks the merchant access
   port first; a store-limited caller's scope is never "no filter".
+- `application/assemblers/` — `WeeklyAnalyticsAssembler` and `AnalyticsDashboardAssembler`. The
+  platform and customer routes call them directly (ADR 096): `adminSalesAnalytics`, `adminDashboard`,
+  `customerAnalytics`, `customerDashboard`. A customer read takes the actor and refuses anyone but a
+  signed-in user; the user id is never client input.
 - `infrastructure/persistence/analytics-sql-conditions.ts` — the SQL filters for each fact table;
   `analytics-sql.ts` — the Postgres bucket generator, the statement-time budget, timeout mapping.
 - `application/reports/analytics-report.ts` — the one report model;

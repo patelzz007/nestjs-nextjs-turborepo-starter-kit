@@ -4,9 +4,9 @@ import {
 	API_DEPRECATED_VERSIONS,
 	API_VERSION,
 	API_VERSION_PREFIX,
+	API_VERSIONS,
 	ApiVersionManifestSchema,
 	apiDocsPath,
-	apiVersionPrefix,
 	type ApiVersion,
 	type ApiVersionManifest,
 } from "@workspace/shared";
@@ -21,8 +21,8 @@ import { Public } from "../security/decorators/public.decorator";
  * learn the new prefix), so it must never move when a major bumps — like
  * `/health`, it lives at the root without `apiPath()`.
  *
- * Returns the current version, the full supported list (with sunset dates for
- * deprecated ones), and the docs/prefix locations so a client can switch its
+ * Returns the current version, every served version (with the sunset date of a
+ * deprecated one), and the docs/prefix locations so a client can switch its
  * pinned version without hardcoding anything.
  *
  * Sent RAW — no `{ success, data, meta }` envelope (`@ZodRawResponse`): its
@@ -40,27 +40,12 @@ export class VersionController {
 		return {
 			current: API_VERSION,
 			default: API_VERSION,
-			supported: [{ version: API_VERSION }, ...API_DEPRECATED_VERSIONS.map((entry) => ({ version: entry.version, sunsetAt: entry.sunsetAt }))],
+			supported: API_VERSIONS.map((version: ApiVersion) => {
+				const deprecated = API_DEPRECATED_VERSIONS.find((entry) => entry.version === version);
+				return deprecated === undefined ? { version } : { version, sunsetAt: deprecated.sunsetAt };
+			}),
 			docs: apiDocsPath(),
 			prefix: API_VERSION_PREFIX,
 		};
-	}
-
-	/**
-	 * Build a supported-version lookup used by the Accept-version rewrite.
-	 * Kept as a static helper so main.ts can resolve `Accept-version` against
-	 * the same list without instantiating the controller.
-	 */
-	public static isSupportedVersion(version: string): version is ApiVersion {
-		return version === API_VERSION || API_DEPRECATED_VERSIONS.some((entry) => entry.version === version);
-	}
-
-	public static toApiVersion(headerValue: string): ApiVersion | undefined {
-		const candidate: string = headerValue.startsWith("v") ? headerValue : `v${headerValue}`;
-		return VersionController.isSupportedVersion(candidate) ? candidate : undefined;
-	}
-
-	public static prefixFor(version: ApiVersion): string {
-		return apiVersionPrefix(version);
 	}
 }

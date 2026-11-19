@@ -1,6 +1,5 @@
 import { PATH_METADATA } from "@nestjs/common/constants";
 import { Reflector } from "@nestjs/core";
-import { CqrsModule } from "@nestjs/cqrs";
 import { Test } from "@nestjs/testing";
 import { API_VERSION_PREFIX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
@@ -8,14 +7,11 @@ import { describe, expect, it } from "vitest";
 import { REQUIRED_PERMISSION_KEY } from "../../../../../platform/presentation/http/security/decorators/route-requirements.metadata";
 import { ResponseContract } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { GITHUB_CONTRIBUTIONS } from "../../../application/ports/github.tokens";
-import { GetGithubCommitHandler } from "../../../application/queries/get-github-commit/get-github-commit.handler";
-import { GetGithubCommitPageHandler } from "../../../application/queries/get-github-commit-page/get-github-commit-page.handler";
-import { GetGithubContributorStatsHandler } from "../../../application/queries/get-github-contributor-stats/get-github-contributor-stats.handler";
-import { GetGithubRepositorySummaryHandler } from "../../../application/queries/get-github-repository-summary/get-github-repository-summary.handler";
-import { ListGithubRepositoriesHandler } from "../../../application/queries/list-github-repositories/list-github-repositories.handler";
+import { GithubContributionsApplicationService } from "../../../application/services/github-contributions.application-service";
 import { FakeContributions, SUMMARY } from "../../../application/__tests__/fakes/github-contributions.fake";
-import { HEAD_SHA, REPOSITORY, userActor } from "../../../application/__tests__/fakes/github-contract.fixtures";
+import { HEAD_SHA, REPOSITORY } from "../../../application/__tests__/fakes/github-contract.fixtures";
 import { GithubController } from "../github.controller";
+import { servedPathOf } from "../../../../../../e2e/support/route-metadata";
 import { handlerOf } from "./route-metadata";
 
 const reflector = new Reflector();
@@ -26,7 +22,7 @@ const HANDLERS: readonly HandlerName[] = ["listRepositories", "getRepositorySumm
 
 describe("GithubController", () => {
 	it("is served under the versioned /github/repositories prefix", () => {
-		expect(reflector.get<string>(PATH_METADATA, GithubController)).toBe(`${API_VERSION_PREFIX}/github/repositories`);
+		expect(servedPathOf(GithubController)).toBe(`${API_VERSION_PREFIX}/github/repositories`);
 	});
 
 	it.each(HANDLERS)("requires READ GITHUB for %s, with one response contract", (name: HandlerName) => {
@@ -45,28 +41,20 @@ describe("GithubController", () => {
 		expect(reflector.get<string>(PATH_METADATA, handlerOf(GithubController.prototype, name))).toBe(path);
 	});
 
-	it("dispatches one query per route, with the caller and the validated input, and answers what the query answered", async () => {
+	it("answers each route from the contributions service, with the validated input", async () => {
 		const contributions = new FakeContributions();
 		const moduleRef = await Test.createTestingModule({
-			imports: [CqrsModule.forRoot()],
 			controllers: [GithubController],
-			providers: [
-				ListGithubRepositoriesHandler,
-				GetGithubRepositorySummaryHandler,
-				GetGithubCommitPageHandler,
-				GetGithubCommitHandler,
-				GetGithubContributorStatsHandler,
-				{ provide: GITHUB_CONTRIBUTIONS, useValue: contributions },
-			],
+			providers: [GithubContributionsApplicationService, { provide: GITHUB_CONTRIBUTIONS, useValue: contributions }],
 		}).compile();
 		await moduleRef.init();
 		const controller = moduleRef.get(GithubController);
 
-		await expect(controller.listRepositories(userActor())).resolves.toEqual({ source: "off", account: null, repositories: [] });
-		await expect(controller.getRepositorySummary(userActor(), REPOSITORY)).resolves.toBe(SUMMARY);
-		await expect(controller.getCommitPage(userActor(), REPOSITORY, { limit: 5, cursor: "c" })).resolves.toMatchObject({ items: [] });
-		await expect(controller.getCommit(userActor(), { ...REPOSITORY, sha: HEAD_SHA })).resolves.toMatchObject({ sha: HEAD_SHA });
-		await expect(controller.getContributorStats(userActor(), REPOSITORY)).resolves.toMatchObject({ status: "ready" });
+		await expect(controller.listRepositories()).resolves.toEqual({ source: "off", account: null, repositories: [] });
+		await expect(controller.getRepositorySummary(REPOSITORY)).resolves.toBe(SUMMARY);
+		await expect(controller.getCommitPage(REPOSITORY, { limit: 5, cursor: "c" })).resolves.toMatchObject({ items: [] });
+		await expect(controller.getCommit({ ...REPOSITORY, sha: HEAD_SHA })).resolves.toMatchObject({ sha: HEAD_SHA });
+		await expect(controller.getContributorStats(REPOSITORY)).resolves.toMatchObject({ status: "ready" });
 		expect(contributions.asked).toEqual(["list", "summary", "page:5:c", `commit:${HEAD_SHA}`, "contributors"]);
 	});
 });

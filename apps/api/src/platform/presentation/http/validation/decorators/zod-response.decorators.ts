@@ -40,9 +40,6 @@ import type { z } from "zod";
 
 import { ApiErrorResponseDto } from "../../dto/api-response.dto";
 
-/** How the response interceptor wraps (or does not wrap) a handler result. */
-export type ResponseEnvelopeKind = "single" | "paginated" | "raw";
-
 /** The response contract of ONE route handler, as enforced by `ResponseInterceptor`. */
 export type RouteResponseContract =
 	| {

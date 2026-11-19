@@ -298,7 +298,6 @@ export type SharedColors = z.infer<typeof SharedColorsSchema>;
 // ─── Non-colour values ────────────────────────────────────────────────────
 
 export const LengthUnitSchema = z.enum(["rem", "px"]);
-export type LengthUnit = z.infer<typeof LengthUnitSchema>;
 
 export const LengthSchema = z.strictObject({
 	kind: z.literal("length"),
@@ -344,7 +343,6 @@ export type Radius = z.infer<typeof RadiusSchema>;
 
 /** Tailwind's radius steps (`rounded-sm` … `rounded-4xl`). */
 export const RadiusStepSchema = z.enum(["sm", "md", "lg", "xl", "2xl", "3xl", "4xl"]);
-export type RadiusStep = z.infer<typeof RadiusStepSchema>;
 
 /** Each radius step as a multiple of the base `--radius`. */
 export const RadiusScaleSchema = z.record(RadiusStepSchema, z.number().positive());
@@ -353,7 +351,6 @@ export type RadiusScale = z.infer<typeof RadiusScaleSchema>;
 // ─── Typography ───────────────────────────────────────────────────────────
 
 export const FontRoleSchema = z.enum(["font-button", "font-sidebar"]);
-export type FontRole = z.infer<typeof FontRoleSchema>;
 
 export const TextSizeNameSchema = z.enum([
 	"text-sidebar-caption",
@@ -367,7 +364,6 @@ export const TextSizeNameSchema = z.enum([
 	"text-toast-countdown",
 	"text-calendar-caption",
 ]);
-export type TextSizeName = z.infer<typeof TextSizeNameSchema>;
 
 export const TypographySchema = z.strictObject({
 	fonts: z.record(FontRoleSchema, FontReferenceSchema),
@@ -378,7 +374,6 @@ export type Typography = z.infer<typeof TypographySchema>;
 // ─── Layout (web chrome) ──────────────────────────────────────────────────
 
 export const StackLevelNameSchema = z.enum(["z-overlay", "z-popover", "z-toast", "z-sidebar", "z-sidebar-rail", "z-sticky"]);
-export type StackLevelName = z.infer<typeof StackLevelNameSchema>;
 
 export const SizeNameSchema = z.enum([
 	"sidebar-width",
@@ -421,7 +416,6 @@ export type Layout = z.infer<typeof LayoutSchema>;
 // ─── Motion ───────────────────────────────────────────────────────────────
 
 export const EasingNameSchema = z.enum(["ease-overlay-emphasized", "ease-drawer-backdrop", "ease-drawer-content", "ease-emphasized-enter", "ease-emphasized-exit"]);
-export type EasingName = z.infer<typeof EasingNameSchema>;
 
 export const MotionSchema = z.record(EasingNameSchema, CubicBezierSchema);
 export type Motion = z.infer<typeof MotionSchema>;
@@ -435,7 +429,6 @@ export const TailwindAliasSchema = z.strictObject({
 	name: CssIdentifierSchema,
 	token: z.union([StackLevelNameSchema, SizeNameSchema, FontRoleSchema]),
 });
-export type TailwindAlias = z.infer<typeof TailwindAliasSchema>;
 
 /** One `box-shadow` layer; offsets, blur and spread are in px, the colour is a colour token. */
 export const ShadowLayerSchema = z.strictObject({
@@ -501,11 +494,9 @@ export const AppBrandRoleSchema = z.enum([
 	"auth-brand-to",
 	"link",
 ]);
-export type AppBrandRole = z.infer<typeof AppBrandRoleSchema>;
 
 /** Per theme, an app's re-maps of its brand roles (any theme, any subset of the roles). */
 export const AppThemeOverridesSchema = z.partialRecord(ThemeNameSchema, z.partialRecord(AppBrandRoleSchema, ColorValueSchema));
-export type AppThemeOverrides = z.infer<typeof AppThemeOverridesSchema>;
 
 /**
  * The Expo app's own visual system (ADR 079): unlike a web app, which re-maps only its brand roles, the
@@ -573,7 +564,6 @@ export type MobileTextRole = z.infer<typeof MobileTextRoleSchema>;
 
 /** The four weights the phone uses: Regular, Medium, Semibold, Bold — each its own Geist family. */
 export const MobileFontWeightSchema = z.union([z.literal(400), z.literal(500), z.literal(600), z.literal(700)]);
-export type MobileFontWeight = z.infer<typeof MobileFontWeightSchema>;
 
 export const MobileTextStyleSchema = z.strictObject({
 	size: LengthSchema,

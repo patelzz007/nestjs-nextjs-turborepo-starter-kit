@@ -1,9 +1,8 @@
-import { Controller, HttpStatus, Post } from "@nestjs/common";
+import { HttpStatus, Post } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	CompleteFileUploadResponseSchema,
 	CreateFileUploadUrlResponseSchema,
 	MerchantOnboardingCompleteResponseSchema,
@@ -29,6 +28,7 @@ import {
 	type MerchantOnboardingValidateTokenInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
@@ -54,7 +54,7 @@ import {
 } from "../../application/ports/tenants.tokens";
 
 @ApiTags("Tenant Onboarding")
-@Controller(apiPath("/tenants/onboarding"))
+@ApiController("/tenants/onboarding")
 export class MerchantOnboardingController {
 	public constructor(
 		private readonly commandBus: CommandBus,

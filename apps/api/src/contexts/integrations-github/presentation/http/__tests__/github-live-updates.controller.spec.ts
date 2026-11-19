@@ -8,21 +8,35 @@ import type { ActorContext } from "../../../../../platform/application/actor-con
 import { ActorContextFactory } from "../../../../../platform/presentation/http/security/actor-context.factory";
 import { userActor } from "../../../application/__tests__/fakes/github-contract.fixtures";
 import { ManualChangeSignals } from "../../../application/__tests__/fakes/github-fakes";
+import { githubHarness, type GithubHarness } from "../../../application/__tests__/fakes/github-harness";
 import { GITHUB_CHANGE_SIGNALS } from "../../../application/ports/github.tokens";
+import { GithubLiveUpdatesStatusReader } from "../../../application/services/github-live-updates-status";
 import { GITHUB_LIVE_UPDATES_KEEPALIVE_MS, GithubLiveUpdatesController } from "../github-live-updates.controller";
 
-async function controllerWith(signals: ManualChangeSignals): Promise<GithubLiveUpdatesController> {
+async function controllerWith(signals: ManualChangeSignals, harness: GithubHarness = githubHarness()): Promise<GithubLiveUpdatesController> {
 	const moduleRef = await Test.createTestingModule({
 		imports: [CqrsModule.forRoot()],
 		controllers: [GithubLiveUpdatesController],
 		providers: [
 			{ provide: GITHUB_CHANGE_SIGNALS, useValue: signals },
+			{ provide: GithubLiveUpdatesStatusReader, useValue: harness.liveUpdates },
 			// The stream route's visibility guard is its own spec; this one never opens it.
 			{ provide: ActorContextFactory, useValue: { fromHttpRequest: (): ActorContext => userActor() } },
 		],
 	}).compile();
 	return moduleRef.get(GithubLiveUpdatesController);
 }
+
+describe("GithubLiveUpdatesController.status", () => {
+	it("answers the caller's live updates of the repository from the status reader", async () => {
+		const harness = githubHarness();
+		const controller = await controllerWith(new ManualChangeSignals(), harness);
+
+		await expect(controller.status(userActor(), { owner: "octo-org", repository: "hello-world" })).resolves.toEqual({ status: "disabled" });
+		harness.endpoint.settings = null;
+		await expect(controller.status(userActor(), { owner: "octo-org", repository: "hello-world" })).resolves.toEqual({ status: "off" });
+	});
+});
 
 describe("GithubLiveUpdatesController.stream", () => {
 	afterEach(() => {

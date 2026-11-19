@@ -47,7 +47,7 @@ A one-page checklist. Each line links to the rule that explains *why*; the ruleb
 - ✅ `@ZodBody` / `@ZodQuery` / `@ZodParams` + `@ZodResponse` on every route, schemas from
   `@workspace/shared` ([response contracts](./api/response-contracts.md)).
 - ✅ Throw `AppError` subclasses with stable codes; clients branch on `error.code` ([errors](./api/errors.md)).
-- ✅ Paths come from `apiRoutes`; controllers use `apiPath()` ([routes](./api/routes.md)).
+- ✅ Paths come from `apiRoutes`; controllers are `@ApiController(path)` ([routes](./api/routes.md), [ADR 094](../adr/094-per-endpoint-api-versioning.md)).
 - ✅ Read configuration through `TypedConfigService`; add new variables to the zod env schema,
   `.env.example` and the docs ([configuration](./configuration/api.md)).
 - ❌ No `process.env` outside `src/config`; no silent fallbacks for secrets.

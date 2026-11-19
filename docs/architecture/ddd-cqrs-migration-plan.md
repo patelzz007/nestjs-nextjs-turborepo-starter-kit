@@ -428,7 +428,10 @@ Is this use case in §7? ── yes ──► use what §7 says. Stop.
         │ no (new feature after the migration)
         ▼
 Does it change state?
-   no ──► Query + QueryHandler (always; even trivial reads), read port returns a DTO.
+   no ──► More than ONE collaborator (several ports, another context, credentials,
+          merchant access, the clock, crypto, a unit of work)?
+            yes ─► Query + QueryHandler, read port returns a DTO.
+            no  ─► Application service method of that read model (ADR 096).
    yes ─► Does ANY of these hold?
             • a state transition / invariant (status machine, counters, limits)
             • resource-level authorization beyond the endpoint permission
@@ -439,7 +442,7 @@ Does it change state?
           no  ─► Application service method (simple path), e.g. catalog CRUD.
 ```
 
-**Why queries always get a handler:** query handlers are cheap and give every read an explicit place for authorization, projection and N+1 discipline (§11). The selectivity rule (§spec-4.6) is about *commands*, where handler-per-field boilerplate is the real cost.
+**Which reads get a handler (changed 2026-11-19, [ADR 096](../adr/096-single-port-reads-are-application-services.md)):** a read that composes collaborators gets a Query + QueryHandler; composing them is the use case. A read through one read port is a method of that read model's application service: the explicit place for authorization, projection and N+1 discipline (§11) is that method, and the Query, handler and bus dispatch around one port call added nothing. (Until then this plan gave every read a handler; 64 of the 119 were converted and 55 stay.)
 
 ---
 
@@ -909,6 +912,8 @@ Never export aggregates, repositories, mappers, Prisma types or controllers. **W
 
 ## 7. Use-case classification (decided; do not reclassify)
 
+**Reclassified once, by the owner (2026-11-19, [ADR 096](../adr/096-single-port-reads-are-application-services.md)):** every `Q` row whose handler reads through one read port is now `S`, a method of the named application service. The rows below show the result.
+
 **Legend:**
 - **Type:**
   - **C** = Command + handler + aggregate
@@ -935,16 +940,16 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 | POST /orgs/:orgSlug/rewards | :createReward | C | CreateReward | Reward (+ referrer child) | uniq; `lock` image files via `FileReferencePort` | M1 none | **D02**: ONE transaction for consumer + referrer + scopes + link |
 | PATCH /orgs/:orgSlug/rewards/:rewardId | :updateReward | C | ReviseReward | Reward | CAS-status (DRAFT\|PENDING_REVIEW) | — | **D03**; referrer child updated inside the aggregate |
 | POST /orgs/:orgSlug/rewards/:rewardId/publish | :publishReward | C | SubmitRewardForReview | Reward | CAS-status DRAFT | — | **D04**: consumer + referrer in one tx |
-| GET /admin/rewards/pending | rewards-admin.service.ts:listPendingRewards | Q | ListRewardsPendingReview | — | — | — | |
-| GET /admin/rewards/:rewardId | :getReward | Q | GetRewardForAdmin | — | — | — | |
-| GET /admin/rewards/:rewardId/images/:fileId/download | :getRewardImageDownload | Q | GetRewardImageDownloadUrl | — | — | — | via `FileReferencePort` |
-| GET /admin/rewards/:rewardId/images/archive | :getRewardImagesArchive | Q | GetRewardImagesArchive | — | — | — | stream stays in presentation |
+| GET /admin/rewards/pending | rewards-admin.service.ts:listPendingRewards | S | `RewardApplicationService.listPendingReview` | — | — | — | |
+| GET /admin/rewards/:rewardId | :getReward | S | `RewardApplicationService.getForReview` | — | — | — | |
+| GET /admin/rewards/:rewardId/images/:fileId/download | :getRewardImageDownload | S | `RewardImageApplicationService.downloadUrl` | — | — | — | via `FileReferencePort` |
+| GET /admin/rewards/:rewardId/images/archive | :getRewardImagesArchive | S | `RewardImageApplicationService.archive` | — | — | — | stream stays in presentation |
 | POST /admin/rewards/:rewardId/approve | :approveReward | C | ApproveReward | Reward | CAS-status PENDING_REVIEW | outbox `reward.platform`/`reward.approved` (**new**) | **D01**; owner notification email via `EmailRequestPort` |
 | POST /admin/rewards/:rewardId/reject | :rejectReward | C | RejectReward | Reward | CAS-status PENDING_REVIEW | outbox `reward.platform`/`reward.rejected` (**new**) | **D01** |
 | BullMQ `rewardsAutoPublish` | rewards-queue.processors.ts:RewardsAutoPublishProcessor | J→C | AutoPublishDueRewards | Reward | CAS-status PENDING_REVIEW **inside** tx | outbox `reward.platform`/`reward.auto_published` (keep) | **D10**: re-check status in tx; skip rows whose CAS returns 0 |
 | GET /rewards (public) | consumer-rewards.service.ts:listMarketplace | Q | ListMarketplaceRewards | — | — | — | N+1 test (§11) |
-| GET /rewards/:rewardId (public) | :getPublishedReward | Q | GetPublishedReward | — | — | — | |
-| GET /legal/status | reward-legal.service.ts:getCheckoutStatus | Q | GetLegalAcceptanceStatus | — | — | — | |
+| GET /rewards/:rewardId (public) | :getPublishedReward | S | `RewardApplicationService.getPublished` | — | — | — | |
+| GET /legal/status | reward-legal.service.ts:getCheckoutStatus | S | `LegalAcceptanceApplicationService.checkoutStatus` | — | — | — | |
 | POST /legal/accept | :accept | C | AcceptLegalTerms | RewardLegalAcceptance | uniq (user, version) if index exists, else append | — | append-only; keep "new row each call" semantics |
 | (dead) rewards-admin.service.ts:runScheduledJobs | — | — | **delete** | — | — | — | **D11** |
 
@@ -970,10 +975,10 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 |---|---|---|---|---|---|---|---|
 | POST /claims/otp | claim.service.ts:requestOtp → reward-otp.service.ts:sendClaimOtp | C | RequestClaimOtp | RewardOtpChallenge | — | email via `EmailRequestPort` (durable) | reward must be claimable (read via `RewardInventoryPort.assertClaimable`) |
 | POST /claims | claim.service.ts:createClaim | C | ClaimReward | RewardClaim + OtpChallenge | `CAS` stock via `RewardInventoryPort.reserve`; **D08** per-user limit under `lock` on the user's claim-limit row (see D08); **D09** OTP attempts CAS | — | OTP verify moves **inside** the same transaction |
-| GET /claims | :listClaims | Q | ListMyClaims | — | — | — | N+1 test |
-| **GET /claims/:claimId** (new) | — | Q | GetMyClaim | — | — | — | **new route** (decision #59): claim details for the SSR QR page (reward title, status, expiry, store); own claims only, else 404; never returns token or backup-code values. Request/response schemas added to `contexts/claims` in `packages/shared`, built from existing claim schemas |
-| GET /claims/analytics | rewards-analytics.service.ts:getUserAnalytics | Q (reporting) | GetConsumerClaimAnalytics | — | — | — | handler lives in **reporting** |
-| GET /claims/analytics/dashboard | analytics-dashboard.service.ts:getCustomerDashboard | Q (reporting) | GetConsumerDashboard | — | — | — | reporting |
+| GET /claims | :listClaims | S | `ConsumerClaimsApplicationService.listMyClaims` | — | — | — | N+1 test |
+| **GET /claims/:claimId** (new) | — | S | `ConsumerClaimsApplicationService.getMyClaim` | — | — | — | **new route** (decision #59): claim details for the SSR QR page (reward title, status, expiry, store); own claims only, else 404; never returns token or backup-code values. Request/response schemas added to `contexts/claims` in `packages/shared`, built from existing claim schemas |
+| GET /claims/analytics | rewards-analytics.service.ts:getUserAnalytics | S (reporting) | `WeeklyAnalyticsAssembler.customerAnalytics` | — | — | — | lives in **reporting** |
+| GET /claims/analytics/dashboard | analytics-dashboard.service.ts:getCustomerDashboard | S (reporting) | `AnalyticsDashboardAssembler.customerDashboard` | — | — | — | reporting |
 | **POST** /claims/:claimId/qr (was GET) | :getClaimQr | C | IssueClaimQrCodes | RewardClaim | CAS-status PENDING + unexpired | — | **D07**, API change (decision #39) |
 | GET /reward-notifications | reward-notification.service.ts:listForUser | Q | ListMyRewardNotifications | — | — | — | |
 | POST /reward-notifications/read | :markRead | C | MarkRewardNotificationsRead | (set-based) | idempotent set `readAt` where null | — | set-based update is fine; no aggregate hydration for N rows |
@@ -1020,7 +1025,7 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 | Endpoint / entry | Today | Type | New name | Aggregate | Conc | Notes |
 |---|---|---|---|---|---|---|
 | GET /auth/signup-referrals/dashboard | signup-referral.service.ts:getDashboard | Q | GetMySignupReferralDashboard | — | — | route path unchanged |
-| GET /auth/signup-referrals/referees | :listReferees | Q | ListMyReferees | — | — | system op `auth.signup_referrals.list_referees` (keep name) |
+| GET /auth/signup-referrals/referees | :listReferees | S | `SignupRefereeApplicationService.listMyReferees` | — | — | system op `auth.signup_referrals.list_referees` (keep name) |
 | port (from identity signup) | :acceptCodeForSignup, :attachSignupReferralInTx, :issueFirstCodeInTx | port | `SignupReferralPort` (transactional) | SignupReferralCode, SignupReferral | `FOR SHARE` + revalidate (keep) | called inside identity's `SignUp` UnitOfWork |
 | port (from identity provisioning, bootstrap) | SignupReferralRepository.insertCodeInTx, signup-referral-code.issuer.ts | port | `SignupReferralPort.issueFirstCode` | SignupReferralCode | uniq + bounded retry (keep 8, named) | |
 | port (from identity admin list) | findAdminSummariesForReferees | read port | `ReferralSummaryReadPort` | — | — | batched (one query for a page of users) |
@@ -1035,8 +1040,8 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 
 | Endpoint / entry | Today | Type | New name | Aggregate | Conc |
 |---|---|---|---|---|---|
-| GET /orgs/memberships, GET /orgs/:orgSlug/memberships | organization-reward-auth.service.ts:listMembershipsForUser | Q | ListMyMemberships | — | — |
-| GET /orgs/:orgSlug/context | organization-context.service.ts:getContext | Q | GetOrganizationContext | — | — |
+| GET /orgs/memberships, GET /orgs/:orgSlug/memberships | organization-reward-auth.service.ts:listMembershipsForUser | S | `TenantContextApplicationService.listMyMemberships` | — | — |
+| GET /orgs/:orgSlug/context | organization-context.service.ts:getContext | S | `TenantContextApplicationService.getContext` | — | — |
 | POST /orgs/:orgSlug/access-requests | organization-membership.service.ts:createAccessRequest | C | RequestOrganizationAccess | AccessRequest | uniq (keep) |
 | POST /orgs/:orgSlug/access-requests/:requestId/review | :reviewAccessRequest | C | ReviewAccessRequest | AccessRequest (+ Membership created) | CAS-status PENDING (keep) |
 | POST /orgs/:orgSlug/locations | organization-location.service.ts:createMerchantLocation | C | ProposeLocation | Location | adv per org (keep) |
@@ -1053,11 +1058,11 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 | POST /orgs/invites/register-and-accept | :registerAndAcceptTeamInvite | C | RegisterAndAcceptTeamInvite | Invitation + Membership (+ identity `AccountProvisioningPort`) | CAS + uniq (keep) |
 | POST /admin/organizations/invites | organization-provisioning.service.ts:provisionFromPlatformInvite | C | ProvisionOrganizationFromPlatformInvite | Organization + Invitation | uniq slug; **D24** add `@Idempotent()` |
 | POST /admin/invites (rewards admin) | rewards-admin.service.ts:createMerchantInvite → provisionFromDashboardAdminInvite | C | ProvisionMerchantFromAdminInvite | Organization + Invitation | uniq; email durable |
-| GET /admin/invites/preview-email | :previewMerchantInviteEmail | Q (notifications) | PreviewMerchantInviteEmail | — | — |
-| GET /admin/location-requests | location:listAdminLocationRequests | Q | ListLocationRequests | — | — |
+| GET /admin/invites/preview-email | :previewMerchantInviteEmail | S | `MerchantInviteApplicationService.previewInviteEmail` | — | — |
+| GET /admin/location-requests | location:listAdminLocationRequests | S | `MerchantAdminApplicationService.listLocationRequests` | — | — |
 | POST /admin/merchants/:organizationId/locations | :createAdminLocation | C | CreateLocationAsAdmin | Location | adv (keep) |
 | PATCH /admin/merchants/:organizationId/locations/:locationId/review | :reviewAdminLocation | C | ReviewLocation | Location | CAS (keep) |
-| GET /admin/merchants, GET /admin/merchants/:organizationId | rewards-admin.service.ts:listMerchants/getMerchantDetail | Q | ListMerchants, GetMerchantDetail | — | — (N+1 test) |
+| GET /admin/merchants, GET /admin/merchants/:organizationId | rewards-admin.service.ts:listMerchants/getMerchantDetail | S | `MerchantAdminApplicationService.listMerchants`, `.getMerchantDetail` | — | — (N+1 test) |
 | GET /orgs/:orgSlug/kyb | rewards/services/merchant-kyb.service.ts:getProfile | Q | GetKybProfile | — | — |
 | PATCH /orgs/:orgSlug/kyb | :submitKyb | C | SubmitKyb | MerchantVerification (on MerchantProfile) | CAS `kybStatus≠APPROVED` + lock (keep); **D06** audit in tx |
 | GET /orgs/:orgSlug/kyb/documents/:documentId/download, GET /admin/merchants/:organizationId/documents/:documentId/download | merchant-kyb-document.service.ts:getDownloadUrl | Q | GetKybDocumentDownloadUrl | — | — |
@@ -1103,23 +1108,23 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 | POST /auth/2fa/setup | two-factor.service.ts:generateSetup | C | StartTwoFactorSetup | TwoFactorEnrollment | upsert (keep) |
 | POST /auth/2fa/enable | :enableTwoFactor | C | EnableTwoFactor | TwoFactorEnrollment | **D16** token-version bump in tx + cross-instance invalidation |
 | POST /auth/2fa/rotate | :rotateTwoFactor | C | RotateTwoFactor | TwoFactorEnrollment | **D16**, **D17** one tx; consume backup code |
-| GET /auth/2fa/backup-codes/remaining | :getBackupCodesRemaining | Q | CountRemainingBackupCodes | — | — |
+| GET /auth/2fa/backup-codes/remaining | :getBackupCodesRemaining | S | `AccountApplicationService.remainingBackupCodes` | — | — |
 | POST /auth/2fa/verify-backup-code | :verifyBackupCode | Q | CheckBackupCode | — | does not consume (keep) |
 | POST /auth/login/2fa | :completeLoginWithTotp | C | CompleteTotpLogin | TwoFactorLoginChallenge | **D13** honour CAS results |
 | POST /auth/login/backup-code | :completeLoginWithBackupCode | C | CompleteBackupCodeLogin | TwoFactorLoginChallenge + BackupCode | CAS (keep) |
 | POST /auth/mfa/recovery | mfa-recovery.service.ts:initiateRecovery | C | RequestMfaRecovery | MfaRecoveryRequest | adv (keep) |
-| GET /auth/mfa/recovery/status | :getRecoveryStatus | Q | GetMyMfaRecoveryStatus | — | — |
-| GET /auth/admin/mfa/recovery/requests | :listAdminRecoveryRequests | Q | ListMfaRecoveryRequests | — | — |
+| GET /auth/mfa/recovery/status | :getRecoveryStatus | S | `AccountApplicationService.mfaRecoveryStatus` | — | — |
+| GET /auth/admin/mfa/recovery/requests | :listAdminRecoveryRequests | S | `AccountApplicationService.mfaRecoveryRequests` | — | — |
 | POST /auth/admin/mfa/recovery/review | :adminApprove/adminDeny | C | ReviewMfaRecovery | MfaRecoveryRequest | CAS (keep) |
 | @Cron every 10 min | task-schedule.service.ts:processMfaRecoveryUnlocks | J→C | CompleteDueMfaRecoveries | MfaRecoveryRequest | CAS (keep) |
 | @Cron hourly | :cleanupExpiredResetTokens | J→C | PurgeStalePasswordResetTokens | — (set-based soft delete) | — |
-| GET /auth/profile | own-profile.service.ts:getOwnProfile | Q | GetOwnProfile | — | — |
+| GET /auth/profile | own-profile.service.ts:getOwnProfile | S | `AccountApplicationService.ownProfile` | — | — |
 | PATCH /auth/profile | :updateOwnProfile | C | UpdateOwnProfile | UserProfile | CAS-ver `profileVersion` (keep) |
 | CLI `pnpm admin:bootstrap-superadmin` | auth/bootstrap/* | J→C | BootstrapSuperAdmin | UserAccount | adv + uniq (keep); keep the non-Nest composition (`composition.ts`) but route through the same handler class instantiated manually |
 | POST /auth/refresh | sessions.service.ts:refreshToken | C | RefreshSession | DeviceSession | CAS (keep); reuse-detection path revokes all in same tx (keep) |
 | POST /auth/logout | :logoutDevice | C | LogOutDevice | DeviceSession | CAS (keep) |
 | POST /auth/logout-all | :logoutAllDevices | C | LogOutAllDevices | UserAccount + sessions | — |
-| GET /auth/sessions | :getSessions | Q | ListMySessions | — | — |
+| GET /auth/sessions | :getSessions | S | `AccountApplicationService.activeSessions` | — | — |
 | POST /auth/sessions/:sessionId/revoke | :revokeSession | C | RevokeMySession | DeviceSession | CAS (keep) |
 | GET /session | session-status.controller.ts | presentation only | — | — | no DB, stays a controller method |
 | POST /auth/impersonate/:userId | impersonation.service.ts:impersonateUser | C | StartImpersonation | ImpersonationSession | **D36** partial-unique or CAS so an admin can't open two live sessions concurrently (use a `lock` on the impersonator's user row) |
@@ -1132,14 +1137,14 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 
 | Endpoint / entry | Today | Type | New name | Notes |
 |---|---|---|---|---|
-| Permissions CRUD + restore (`/admin/permissions*`) | permission.service.ts | C/Q | CreatePermission, RevisePermission, RemovePermission, RestorePermission, ListPermissions, GetPermission, ListPermissionGroups | every C runs inside `RbacMutationScope` (below) |
-| POST /admin/permissions/check | AuthorizationCheckerService | Q | CheckPermission | |
+| Permissions CRUD + restore (`/admin/permissions*`) | permission.service.ts | C/S | CreatePermission, RevisePermission, RemovePermission, RestorePermission; reads: `RbacCatalogApplicationService.listPermissions`, `.getPermission`, `.listPermissionGroups` | every C runs inside `RbacMutationScope` (below) |
+| POST /admin/permissions/check | AuthorizationCheckerService | S | `PermissionCheckApplicationService.check` | |
 | POST /admin/permissions/user/grant, revoke, sync | permission.service.ts | C | GrantUserPermission, RevokeUserPermission, SyncUserPermissions | |
-| Roles CRUD, assign, remove, sync, parent, permissions, restore (`/admin/roles*`) | role.service.ts | C/Q | CreateRole, ReviseRole, RemoveRole, RestoreRole, ReparentRole, SyncRolePermissions, AssignRole, UnassignRole, SyncUserRoles, ListRoles, GetRole | |
+| Roles CRUD, assign, remove, sync, parent, permissions, restore (`/admin/roles*`) | role.service.ts | C/S | CreateRole, ReviseRole, RemoveRole, RestoreRole, ReparentRole, SyncRolePermissions, AssignRole, UnassignRole, SyncUserRoles; reads: `RbacCatalogApplicationService.listRoles`, `.getRole` | |
 | POST /admin/roles/:id/validate-assignment, POST /admin/roles/preview | conflict-detection / role-assignment-preview | Q | ValidateRoleAssignment, PreviewRoleAssignment | system op `authorization.rbac.inspect` (keep) |
-| GET /admin/audit | permission-audit-log-query.service.ts | Q | ListPermissionAuditLog | |
-| GET /capabilities/catalog | capability-definition.service.ts:listCatalog | Q | GetCapabilityCatalog | |
-| POST /authorization/decisions, GET /authorization/decisions/explain | kernel | Q | DecideAuthorization, ExplainAuthorization | |
+| GET /admin/audit | permission-audit-log-query.service.ts | S | `PermissionAuditLogApplicationService.list` | |
+| GET /capabilities/catalog | capability-definition.service.ts:listCatalog | S | `CapabilityCatalogApplicationService.getCatalog` | |
+| POST /authorization/decisions, GET /authorization/decisions/explain | kernel | Q/S | DecideAuthorization (Q: kernel plus grants); `AuthorizationExplanationApplicationService.explain` (S) | |
 | POST /policies/drafts, /simulate, /publish | policy-control-plane.service.ts | C | CreatePolicyDraft, SimulatePolicyDraft, PublishPolicy | publish keeps advisory locks and four-eyes check; **D37** simulate in one tx (today 3 SysOps) |
 | POST /support-access/request, /:grantId/approve, /:grantId/revoke | support-access.service.ts | C | RequestSupportAccess, ApproveSupportAccess, RevokeSupportAccess | CAS (keep) |
 | (dead) support-access.service.ts:assertActiveReadGrant | — | **delete** (**D23**) | | |
@@ -1169,8 +1174,8 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 | DELETE /files/:fileId | files | C | DeleteFile | asks `FileReferenceGuard`s; soft-deletes; dispatch of physical delete after commit (M2 → existing queue) (**D28**) |
 | local storage transfer endpoints | files | presentation (driver-only) | — | stay in `files/presentation/http/local-storage-transfer.controller.ts` |
 | BullMQ scan / cleanup / delete / cdn-invalidate | files | J→C | ScanFile, CleanUpStaleUploads, PurgeFileObject, InvalidateFileCdn | keep jobIds and retry options |
-| GET /notifications/email-log (+ SSE) | notifications | Q | ListEmailLog | SSE stays presentation |
-| GET /notifications/email-preview(/:key) | notifications | Q | ListEmailTemplates, PreviewEmailTemplate | |
+| GET /notifications/email-log (+ SSE) | notifications | S | `EmailLogApplicationService.list` | SSE stays presentation |
+| GET /notifications/email-preview(/:key) | notifications | S | `EmailPreviewApplicationService.listTemplates`, `.preview` | |
 | POST /notifications/email-preview/:key/send | notifications | C | SendTestEmail | uses `EmailRequestPort` |
 | POST /notifications/email-webhook | notifications | C | ApplyEmailDeliveryEvent | CAS + webhookId unique (keep); **D32** parse status with zod |
 | BullMQ `emailSend` | notifications | J→C | DeliverEmail | skips non-pending (keep) |
@@ -1178,11 +1183,11 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 | `/product*`, `/sample-category*` (8 endpoints each) | catalog | S | `ProductApplicationService`, `SampleCategoryApplicationService` | **D29** `@Idempotent()` on sample-category create |
 | `/geo*` reads | reference-data | Q via service | `GeographyApplicationService` read methods | simple path |
 | `/geo*` writes, import, validate | reference-data | S | same service | keep SysOp `GEO_WRITE_OPERATION` + audit in tx, advisory lock on import |
-| `/admin/audit-logs*`, `/admin/data-changes*`, `/admin/audit-trail*` | audit | Q | ListHttpAuditLogs, GetHttpAuditLog, ListDataChanges, GetDataChange, ListAuditTrail | the sensitive-read audit write stays (allowed by §spec-4.3) |
+| `/admin/audit-logs*`, `/admin/data-changes*`, `/admin/audit-trail*` | audit | S | `AuditApplicationService.listHttpAuditLogs`, `.getHttpAuditLog`, `.listDataChanges`, `.getDataChange`, `.listAuditTrail` | the sensitive-read audit write stays (allowed by §spec-4.3) |
 | SSE `/admin/audit-trail/events` | audit | presentation | — | LISTEN/NOTIFY unchanged |
-| all `/orgs/:orgSlug/analytics*`, `/admin/analytics/*`, `/claims/analytics*` | reporting | Q | GetMerchantAnalytics, GetMerchantDashboard, ExportMerchantReport, GetAdminSalesAnalytics, GetAdminDashboard, ExportPlatformReport, GetConsumerClaimAnalytics, GetConsumerDashboard | keep `statement_timeout` transactions and export rate limit guard |
+| all `/orgs/:orgSlug/analytics*`, `/admin/analytics/*`, `/claims/analytics*` | reporting | Q/S | Q: GetMerchantAnalytics, GetMerchantDashboard (merchant access plus the read), ExportMerchantReport, ExportPlatformReport; S: `WeeklyAnalyticsAssembler.adminSalesAnalytics`, `.customerAnalytics`, `AnalyticsDashboardAssembler.adminDashboard`, `.customerDashboard` | keep `statement_timeout` transactions and export rate limit guard |
 | `apps/analytics-consumer` | reporting | projection | — | reorganise `src/` into `projections/platform-events/` + `infrastructure/`; logic unchanged |
-| `/github/*` reads | integrations-github | Q | (one query per endpoint) | GitHub API adapter stays in infrastructure |
+| `/github/*` reads | integrations-github | Q/S | Q: the pull-request, picture and content-edit reads (each needs the caller's linked token or several ports); S: `GithubContributionsApplicationService` (repositories, summary, commits, contributors), `GithubLinkedCredentials.status`, `GithubLiveUpdatesStatusReader.statusFor` | GitHub API adapter stays in infrastructure |
 | PUT/DELETE /github/account | integrations-github | C | LinkGithubAccount, UnlinkGithubAccount | |
 | POST comments/reviews/merge/pictures, PUT reactions | integrations-github | C | CommentOnPullRequest, SubmitPullRequestReview, MergePullRequest, AttachPullRequestPicture, SetPullRequestReaction | keep `@Idempotent({ required: true })` |
 | live-updates enable/disable, webhook receive | integrations-github | C | EnableLiveUpdates, DisableLiveUpdates, RecordGithubWebhookDelivery | keep ON CONFLICT claims |
@@ -1818,7 +1823,7 @@ Each task: the §16 definition of done.
 **T19: claims + the QR API change**
 - Implement §7.2, including the M1 notification handlers. Fix D08 and D09.
 - **D07, end to end in this task:**
-  1. Backend: `POST /claims/:claimId/qr`. Delete the GET route. Add the new query route `GET /claims/:claimId` (`GetMyClaim`, §7.2). It's a read, so the global `default` throttler applies with no `@RateLimit` decorator.
+  1. Backend: `POST /claims/:claimId/qr`. Delete the GET route. Add the new read route `GET /claims/:claimId` (`ConsumerClaimsApplicationService.getMyClaim`, §7.2). It's a read, so the global `default` throttler applies with no `@RateLimit` decorator.
   2. `packages/shared`: `claims.qr` method POST, plus the new `claims.get` contract and route. **Update the snapshot test**: these two entries are the only allowed snapshot changes.
   3. `packages/api-client`: `claims.qr` → `defineMutation`; new `claims.get` → `defineQuery` with scope `["claims", "detail", claimId]`.
   4. `apps/web`: §14.6.

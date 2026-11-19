@@ -35,7 +35,6 @@ import {
 	isStringPrimitive,
 	type ApiAccess,
 	type ApiContractDef,
-	type ApiVersion,
 	type DataValue,
 	type Envelope,
 	type RestMethod,
@@ -154,13 +153,6 @@ export interface QueryDef<Input extends SerializableInput, Resp extends DataValu
 	/** Path template; `:name` segments are filled from the input. */
 	readonly path: string;
 	/**
-	 * API version for this leaf — `undefined` means the current default
-	 * (`API_VERSION`). Set from the shared contract (`defineContract({ version: "v2" })`)
-	 * so the transport derives `/api/v2/<path>` and the query key is
-	 * namespaced — server and client can never drift.
-	 */
-	readonly version?: ApiVersion | undefined;
-	/**
 	 * Who may call the route, from the contract (`"public"` = `@Public()` on the
 	 * API). The SSR caller fetches a public route even without a session cookie.
 	 */
@@ -195,8 +187,6 @@ export interface MutationDef<Input extends SerializableInput, Resp extends DataV
 	readonly kind: "mutation";
 	readonly method: Exclude<RestMethod, "GET">;
 	readonly path: string;
-	/** API version for this leaf — see `QueryDef.version`. */
-	readonly version?: ApiVersion | undefined;
 	readonly inputSchema: ZodType<Input>;
 	readonly responseSchema: ZodType<Resp>;
 	readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
@@ -345,11 +335,6 @@ export function assertCompleteRouterTree<R extends object, TTree>(
 	});
 }
 
-/** Prefixes a query key with the version when a leaf opts out of the default — v2 keys can never collide with v1 cache entries. */
-function versionedKey(version: ApiVersion | undefined, base: ApiQueryKey): ApiQueryKey {
-	return version === undefined ? base : [version, ...base];
-}
-
 /**
  * Declares a GET procedure from its shared contract leaf. The contract owns
  * method + path + input + response envelope; this layer adds the cache scope.
@@ -363,12 +348,11 @@ export function defineQuery<Input extends SerializableInput & Scope, Data extend
 		readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
 	},
 ): ScopedQueryDef<Input, Envelope<Data>, Scope> {
-	const scopeKey = (scope: Scope): ApiQueryKey => versionedKey(contract.version, opts.scope(scope));
+	const scopeKey = (scope: Scope): ApiQueryKey => opts.scope(scope);
 	return {
 		kind: "query",
 		method: "GET",
 		path: contract.path,
-		version: contract.version,
 		access: contract.access ?? "authenticated",
 		inputSchema: contract.input,
 		responseSchema: contract.response.envelope,
@@ -395,7 +379,6 @@ export function defineMutation<Input extends SerializableInput, Data extends Dat
 		kind: "mutation",
 		method: contract.method,
 		path: contract.path,
-		version: contract.version,
 		inputSchema: contract.input,
 		responseSchema: contract.response.envelope,
 		baseOptions: opts.baseOptions,

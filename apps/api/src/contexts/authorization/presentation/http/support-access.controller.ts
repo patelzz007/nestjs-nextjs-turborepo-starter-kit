@@ -1,9 +1,8 @@
-import { Controller, Get, HttpStatus, Post } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Get, HttpStatus, Post } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	MessageResponseSchema,
 	SupportAccessGrantDetailListSchema,
 	SupportAccessGrantDetailSchema,
@@ -19,6 +18,7 @@ import {
 	type SupportAccessGrantResponse,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -28,8 +28,7 @@ import { SuperAdminOnly } from "../../../../platform/presentation/http/security/
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ZodBody, ZodListQuery, ZodParam, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
-import { ListSupportAccessGrantsQuery } from "../../application/queries/list-support-access-grants/list-support-access-grants.query";
-import { ListTenantSupportAccessGrantsQuery } from "../../application/queries/list-tenant-support-access-grants/list-tenant-support-access-grants.query";
+import { SupportAccessApplicationService } from "../../application/services/support-access.application-service";
 import { ApproveSupportAccessCommand } from "../../application/commands/approve-support-access/approve-support-access.command";
 import { RequestSupportAccessCommand } from "../../application/commands/request-support-access/request-support-access.command";
 import { RevokeSupportAccessCommand } from "../../application/commands/revoke-support-access/revoke-support-access.command";
@@ -42,11 +41,11 @@ import {
 } from "../../application/ports/authorization.tokens";
 
 @ApiTags("Support Access")
-@Controller(apiPath("/support-access"))
+@ApiController("/support-access")
 export class SupportAccessController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly supportAccess: SupportAccessApplicationService,
 	) {}
 
 	@Get()
@@ -58,7 +57,7 @@ export class SupportAccessController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.supportAccess.list.input) query: SupportAccessGrantListQuery,
 	): Promise<PaginatedServiceResult<SupportAccessGrantDetail>> {
-		return this.queryBus.execute(new ListSupportAccessGrantsQuery(actor, query));
+		return this.supportAccess.listGrants(actor, query);
 	}
 
 	@Post("request")
@@ -105,9 +104,9 @@ export class SupportAccessController {
 
 /** The tenant owner's side of support access: their tenant's grants, to approve the pending ones. */
 @ApiTags("Support Access")
-@Controller(apiPath("/tenants"))
+@ApiController("/tenants")
 export class TenantSupportAccessController {
-	public constructor(private readonly queryBus: QueryBus) {}
+	public constructor(private readonly supportAccess: SupportAccessApplicationService) {}
 
 	/** Resource-scoped like approval: only an active OWNER of the tenant (checked in the read itself) gets the list. */
 	@Get(":tenantSlug/support-access")
@@ -115,6 +114,6 @@ export class TenantSupportAccessController {
 	@ZodResponse(SupportAccessGrantDetailListSchema, { description: "The tenant's support access grants, newest first" })
 	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "No such tenant, or the caller is not its active owner" })
 	public async list(@CurrentActor() actor: ActorContext, @ZodParams(TenantSlugParamSchema) params: { tenantSlug: string }): Promise<readonly SupportAccessGrantDetail[]> {
-		return this.queryBus.execute(new ListTenantSupportAccessGrantsQuery(actor, params));
+		return this.supportAccess.listTenantGrants(actor, params);
 	}
 }

@@ -1,5 +1,5 @@
 // ============================================
-// lib/notifications/email-log-live.ts - live EmailLog updates (SSE)
+// contexts/notifications/lib/email-log-live.ts -live EmailLog updates (SSE)
 // ============================================
 "use client";
 

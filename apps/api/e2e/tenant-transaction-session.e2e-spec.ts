@@ -81,7 +81,7 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await prisma.onModuleDestroy();
+		await prisma.onApplicationShutdown();
 	});
 
 	it("stamps a tenant user's RLS session and clears the policy version", async () => {
@@ -223,7 +223,7 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 			await expect(holder).resolves.toBeUndefined();
 			await expect(waiter).resolves.toMatchObject({ tenantId: TENANT_SEED_IDS.klTenant });
 		} finally {
-			await single.onModuleDestroy();
+			await single.onApplicationShutdown();
 		}
 	});
 
@@ -251,7 +251,7 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 			// Waiting changes when a read runs, never its answer. The job without a seed has no rewards, so no fixed figure holds.
 			await expect(rlsStorage.run(owner, countRewards)).resolves.toBe(queued);
 		} finally {
-			await single.onModuleDestroy();
+			await single.onApplicationShutdown();
 		}
 	});
 
@@ -273,7 +273,7 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 			).rejects.toThrow(/db-005 rollback/);
 			await expect(readConnectionAfterTransaction(single)).resolves.toEqual({ tenantId: "", visibleTenants: 0 });
 		} finally {
-			await single.onModuleDestroy();
+			await single.onApplicationShutdown();
 		}
 	});
 });

@@ -1,8 +1,7 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, Put } from "@nestjs/common";
+import { Delete, Get, HttpCode, HttpStatus, Patch, Post, Put } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	AttachKanbanFileSchema,
 	CreateKanbanCommentSchema,
 	CreateKanbanLinkSchema,
@@ -70,6 +69,7 @@ import {
 	type UpdateKanbanTaskInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { Idempotent } from "../../../../platform/presentation/http/idempotency/idempotent.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -97,13 +97,8 @@ import { WatchKanbanTaskCommand } from "../../application/commands/watch-kanban-
 import { KANBAN_READ_OPERATION, KANBAN_WRITE_OPERATION } from "../../application/ports/kanban.tokens";
 import { PreviewKanbanImportQuery } from "../../application/queries/preview-kanban-import/preview-kanban-import.query";
 import { GetKanbanAttachmentDownloadQuery } from "../../application/queries/get-kanban-attachment-download/get-kanban-attachment-download.query";
-import { GetKanbanBoardQuery } from "../../application/queries/get-kanban-board/get-kanban-board.query";
-import { GetKanbanTaskQuery } from "../../application/queries/get-kanban-task/get-kanban-task.query";
-import { ListKanbanActivityQuery } from "../../application/queries/list-kanban-activity/list-kanban-activity.query";
-import { ListKanbanCommentsQuery } from "../../application/queries/list-kanban-comments/list-kanban-comments.query";
-import { ListKanbanItemsQuery } from "../../application/queries/list-kanban-items/list-kanban-items.query";
 import { ListKanbanPeopleQuery } from "../../application/queries/list-kanban-people/list-kanban-people.query";
-import { SearchKanbanItemsQuery } from "../../application/queries/search-kanban-items/search-kanban-items.query";
+import { KanbanApplicationService } from "../../application/services/kanban.application-service";
 
 /**
  * The platform staff's two linked kanban boards (planning: epics and features;
@@ -115,11 +110,12 @@ import { SearchKanbanItemsQuery } from "../../application/queries/search-kanban-
 @ApiTags("Kanban")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for the kanban board.")
-@Controller(apiPath("/admin/kanban"))
+@ApiController("/admin/kanban")
 export class KanbanController {
 	public constructor(
 		private readonly commandBus: CommandBus,
 		private readonly queryBus: QueryBus,
+		private readonly reads: KanbanApplicationService,
 	) {}
 
 	@RequirePermission("LIST", "KANBAN_TASK")
@@ -128,7 +124,7 @@ export class KanbanController {
 	@ApiOperation({ summary: "One board: its columns left to right, each with its items top to bottom" })
 	@ZodResponse(KanbanBoardSchema, { description: "The board" })
 	public board(@CurrentActor() actor: ActorContext, @ZodQuery(KanbanBoardQuerySchema) query: KanbanBoardQuery): Promise<KanbanBoard> {
-		return this.queryBus.execute(new GetKanbanBoardQuery(actor, query.board));
+		return this.reads.board(actor, query.board);
 	}
 
 	@RequirePermission("LIST", "KANBAN_TASK")
@@ -146,7 +142,7 @@ export class KanbanController {
 	@ApiOperation({ summary: "Live items of either board, by type and title (a parent or link picker), paginated" })
 	@ZodPaginatedResponse(KanbanItemSummarySchema, { description: "One page of items" })
 	public items(@CurrentActor() actor: ActorContext, @ZodListQuery(KanbanItemListQuerySchema) query: KanbanItemListQuery): Promise<PaginatedServiceResult<KanbanItemSummary>> {
-		return this.queryBus.execute(new ListKanbanItemsQuery(actor, query));
+		return this.reads.listItems(actor, query);
 	}
 
 	@RequirePermission("LIST", "KANBAN_TASK")
@@ -155,7 +151,7 @@ export class KanbanController {
 	@ApiOperation({ summary: "Live items ranked for a lookup: the exact key first, then keys that start with the text, then titles that contain it" })
 	@ZodResponse(KanbanSearchResultsSchema, { description: "The best matches, best first" })
 	public search(@CurrentActor() actor: ActorContext, @ZodQuery(KanbanSearchQuerySchema) query: KanbanSearchQuery): Promise<KanbanSearchResults> {
-		return this.queryBus.execute(new SearchKanbanItemsQuery(actor, query));
+		return this.reads.search(actor, query);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
@@ -197,7 +193,7 @@ export class KanbanController {
 	@ApiOperation({ summary: "One item with its column, children, links, checklists, watchers and attachments" })
 	@ZodResponse(KanbanTaskDetailSchema, { description: "The task" })
 	public task(@CurrentActor() actor: ActorContext, @ZodParams(KanbanTaskPathSchema) params: KanbanTaskPath): Promise<KanbanTaskDetail> {
-		return this.queryBus.execute(new GetKanbanTaskQuery(actor, params.taskId));
+		return this.reads.task(actor, params.taskId);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
@@ -294,7 +290,7 @@ export class KanbanController {
 		@ZodParams(KanbanTaskPathSchema) params: KanbanTaskPath,
 		@ZodListQuery(KanbanCommentListQuerySchema) query: KanbanCommentListQuery,
 	): Promise<PaginatedServiceResult<KanbanComment>> {
-		return this.queryBus.execute(new ListKanbanCommentsQuery(actor, params.taskId, query));
+		return this.reads.comments(actor, params.taskId, query);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
@@ -322,7 +318,7 @@ export class KanbanController {
 		@ZodParams(KanbanTaskPathSchema) params: KanbanTaskPath,
 		@ZodListQuery(KanbanActivityListQuerySchema) query: KanbanActivityListQuery,
 	): Promise<PaginatedServiceResult<KanbanActivity>> {
-		return this.queryBus.execute(new ListKanbanActivityQuery(actor, params.taskId, query));
+		return this.reads.activity(actor, params.taskId, query);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)

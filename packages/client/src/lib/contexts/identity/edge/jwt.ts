@@ -1,5 +1,5 @@
 // ============================================
-// lib/jwt.ts - JWT decode utility (Edge-safe)
+// lib/contexts/identity/edge/jwt.ts -JWT decode utility (Edge-safe)
 // ============================================
 
 import { JwtPayloadSchema, type JwtPayload } from "@workspace/shared";

@@ -1,5 +1,5 @@
 // ============================================
-// lib/auth/demo-accounts.ts - which demo logins the merchant login page offers
+// contexts/identity/lib/demo-accounts.ts -which demo logins the merchant login page offers
 // ============================================
 // Demo logins are offered in development and never otherwise, decided on the
 // server per request by the shared policy (no flag exists to turn them on).

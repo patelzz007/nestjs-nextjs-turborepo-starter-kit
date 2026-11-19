@@ -2,7 +2,9 @@
 
 Goal: remove needless code, indirection and noise from the whole repository without changing behaviour, security, contracts or accepted architecture decisions.
 
-Status: plan only. Nothing in the source tree has been changed yet.
+Status: plan only. Nothing in the source tree has been changed yet. No source edit starts until the owner says go.
+
+Same phase: per-endpoint API versioning, `PLAN-2026-11-19-endpoint-versioning.md`. Its section 9 gives the order of the two pieces of work.
 
 ## 1. What the reconnaissance found
 
@@ -39,7 +41,7 @@ Work that does not depend on these starts without waiting.
 
 | # | Question | Options | Recommendation |
 |---|---|---|---|
-| D1 | 82 query handlers only forward one call to a port (example: `list-roles.handler.ts`). ADR 059 says plain CRUD reads belong in an application service, not on the bus. Convert them? | (a) leave as they are; (b) convert to application services, context by context | (a) for this pass. Converting touches controllers, modules and tests in about 20 contexts and reverses work the DDD + CQRS migration did on purpose. It should be its own task with its own ADR amendment. |
+| D1 | 82 query handlers only forward one call to a port (example: `list-roles.handler.ts`). ADR 059 says plain CRUD reads belong in an application service, not on the bus. Convert them? | (a) leave as they are; (b) convert to application services, context by context | **Decided by the owner (2026-11-18): (b), in this pass.** **Withdrawn on 2026-11-19, before any code changed: the question's premise was wrong.** ADR 059 does not say reads belong in an application service. It says "use a query when the read model is not the aggregate", and `rules/23` (line 14) plus the approved migration plan §4.4 say "no state change → Query + QueryHandler (always; even trivial reads)". The stated reason is one explicit place per read for authorization, projection and N+1 discipline. The handlers follow that rule (38 are pure one-call forwards; 82 was a looser count), so they stay under rule 3 below. Converting them would need a rule change to `rules/23` and the plan first; the owner was told. **Re-decided by the owner (2026-11-19): change the rule, then convert.** [ADR 096](../adr/096-single-port-reads-are-application-services.md): a read through one read port (or one existing application service) becomes an application-service method; a read that composes collaborators stays a Query + QueryHandler. `rules/23` and migration plan §4.4 changed first. **Done (2026-11-19):** 64 of 119 handlers converted across 12 contexts, 55 kept; migration plan §7 rows say `S` with the service. |
 | D2 | The working tree has 366 uncommitted files. A repo-wide cleanup on top of them cannot be told apart in `git diff`. | (a) owner commits first; (b) I work on top and keep a baseline patch to diff against | (a). Until then I use (b) and never touch a file only to reformat it. |
 | D3 | `apps/admin/components/component-showcase/examples/**` and the large UI kit files (`data-grid`, `gantt`, `event-calendar`, `time-picker`) follow the upstream ReUI / shadcn shape. | (a) treat as vendored: dead code and comments only; (b) restructure them too | (a). Restructuring them makes every future upstream update a hand merge. |
 

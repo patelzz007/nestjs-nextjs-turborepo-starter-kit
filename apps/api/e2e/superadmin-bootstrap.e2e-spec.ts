@@ -57,7 +57,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 		const prisma = new PrismaService(config);
 		prisma.onModuleInit();
 		await prisma.ensureConnected();
-		database.track((): Promise<void> => prisma.onModuleDestroy());
+		database.track((): Promise<void> => prisma.onApplicationShutdown());
 		return createSuperAdminBootstrap(config, prisma);
 	}
 

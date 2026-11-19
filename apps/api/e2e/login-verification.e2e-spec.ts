@@ -9,6 +9,7 @@ import { AppModule } from "../src/app.module";
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
 import { HealthService } from "../src/platform/presentation/http/health/health.service";
+import { enableApiVersioning } from "../src/platform/presentation/http/versioning/enable-api-versioning";
 import { CryptoService } from "../src/contexts/identity/infrastructure/security/crypto.service";
 import { extractCookie, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
@@ -32,6 +33,7 @@ describe("Login verification ON (e2e)", () => {
 			.useValue(new TypedConfigService({ ...base, auth: { ...base.auth, loginVerificationMode: "always" } }))
 			.compile();
 		app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), { rawBody: true });
+		enableApiVersioning(app);
 		await app.register(fastifyCookie);
 		await app.init();
 		app.get(HealthService).markReady();

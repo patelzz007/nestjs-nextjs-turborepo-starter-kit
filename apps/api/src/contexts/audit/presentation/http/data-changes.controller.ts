@@ -1,10 +1,8 @@
-import { Controller, Get } from "@nestjs/common";
-import { QueryBus } from "@nestjs/cqrs";
+import { Get } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import {
 	apiContract,
-	apiPath,
 	DataChangeLogDetailSchema,
 	DataChangeLogSummarySchema,
 	type DataChangeLogDetail,
@@ -14,6 +12,7 @@ import {
 	type PaginatedServiceResult,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -21,9 +20,8 @@ import { PlatformOperation } from "../../../../platform/presentation/http/securi
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { GetDataChangeQuery } from "../../application/queries/get-data-change/get-data-change.query";
-import { ListDataChangesQuery } from "../../application/queries/list-data-changes/list-data-changes.query";
 import { DATA_CHANGE_READ_OPERATION } from "../../application/audit-read-operations";
+import { AuditApplicationService } from "../../application/services/audit.application-service";
 
 /**
  * Admin viewer for the row-level data-change trail (`DataChangeLog`,
@@ -33,14 +31,14 @@ import { DATA_CHANGE_READ_OPERATION } from "../../application/audit-read-operati
  * Authorization: the same as the HTTP audit viewer — admin-panel access AND
  * the `AUDIT_LOG` permission (`LIST` for the table, `READ` for one complete
  * record with its row images). Every call is itself recorded as a sensitive
- * read. The controller only validates and dispatches one query.
+ * read. The controller only validates and calls the audit application service.
  */
 @ApiTags("Audit Log")
 @AdminAccessOnly("Admin access required to view the data-change trail.")
 @PlatformOperation(DATA_CHANGE_READ_OPERATION)
-@Controller(apiPath("/admin/data-changes"))
+@ApiController("/admin/data-changes")
 export class DataChangesController {
-	public constructor(private readonly queryBus: QueryBus) {}
+	public constructor(private readonly audit: AuditApplicationService) {}
 
 	@RequirePermission("LIST", "AUDIT_LOG")
 	@Get()
@@ -50,7 +48,7 @@ export class DataChangesController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.dataChanges.list.input) query: DataChangeLogListQuery,
 	): Promise<PaginatedServiceResult<DataChangeLogSummary>> {
-		return this.queryBus.execute(new ListDataChangesQuery(actor, query));
+		return this.audit.listDataChanges(actor, query);
 	}
 
 	@RequirePermission("READ", "AUDIT_LOG")
@@ -58,6 +56,6 @@ export class DataChangesController {
 	@ApiOperation({ summary: "Get one complete row-change record", description: "Includes the redacted row images before and after the change." })
 	@ZodResponse(DataChangeLogDetailSchema, { description: "The complete row-change record" })
 	public async get(@CurrentActor() actor: ActorContext, @ZodParams(apiContract.dataChanges.detail.input) params: DataChangeLogIdParam): Promise<DataChangeLogDetail> {
-		return this.queryBus.execute(new GetDataChangeQuery(actor, params));
+		return this.audit.getDataChange(actor, params);
 	}
 }

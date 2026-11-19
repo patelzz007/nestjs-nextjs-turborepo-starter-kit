@@ -1,5 +1,5 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiVersionPrefix, type ApiVersion, StringValueSchema, sunsetHeaderValue } from "@workspace/shared";
+import { API_DEPRECATED_VERSIONS, API_VERSION_OVERRIDE_HEADER, ApiVersionSchema, StringValueSchema, sunsetHeaderValue } from "@workspace/shared";
 import { z } from "zod";
 
 import { HTTP_SERVER_ERROR_MIN_STATUS } from "../platform/application/errors/http-status";
@@ -9,7 +9,6 @@ import { parsePreSerializationValue, serializePreSerializationValue, type PreSer
 import { LogService } from "../platform/infrastructure/logging/logs.service";
 import { UNAUDITED_PROBE_ROUTES } from "../platform/infrastructure/http/probe-routes";
 import { RequestMetricsRecorder } from "../contexts/operations/public-api";
-import { VersionController } from "../platform/presentation/http/health/version.controller";
 import { apiVersionOfUrl } from "./fastify-api-version";
 
 /** CSP nonce pair stamped by `@fastify/helmet` on HTML responses. */
@@ -25,7 +24,7 @@ type CspNonce = z.output<typeof CspNonceSchema>;
 /** Per-route config tweaks applied in the onRoute hook. */
 interface FastifyRouteOptions {
 	readonly url?: string;
-	config?: Record<string, string | number | boolean | { readonly max: number; readonly timeWindow: string }>;
+	config?: Record<string, string | number | boolean>;
 }
 
 function readCspNonce(reply: object): CspNonce | undefined {
@@ -43,31 +42,12 @@ export function registerFastifyHooks(app: NestFastifyApplication): void {
 	server.addHook("onRoute", (routeOptions: FastifyRouteOptions): void => {
 		const url: string = routeOptions.url ?? "";
 
-		if (url === "/notifications/email-webhook") {
-			routeOptions.config = {
-				...(routeOptions.config ?? {}),
-				rateLimit: { max: 60, timeWindow: "1 minute" },
-			};
-		}
-
 		if (url.includes("/stream") || url.includes("/events")) {
 			routeOptions.config = {
 				...(routeOptions.config ?? {}),
 				requestTimeout: 0,
 			};
 		}
-	});
-
-	server.addHook("onRequest", (request, _reply, done): void => {
-		const acceptVersion: string | undefined = readFirstHeader(request.headers["accept-version"]);
-		if (acceptVersion !== undefined) {
-			const requested: ApiVersion | undefined = VersionController.toApiVersion(acceptVersion);
-			if (requested !== undefined && requested !== API_VERSION) {
-				const rewritten: string = request.url.replace(API_VERSION_PREFIX, apiVersionPrefix(requested));
-				request.raw.url = rewritten;
-			}
-		}
-		done();
 	});
 
 	server.addHook("onSend", (request, reply, payload, done): void => {
@@ -111,9 +91,10 @@ export function registerFastifyHooks(app: NestFastifyApplication): void {
 		}
 		const logService: LogService = app.get(LogService);
 		const servedVersion: string | undefined = apiVersionOfUrl(request.url);
-		logService.info(
-			`HTTP ${request.method} ${servedVersion === undefined ? "" : `${servedVersion} `}${redactUrl(request.url)} ${String(reply.statusCode)} ${reply.elapsedTime.toFixed(1)}ms (${request.id})`,
-		);
+		// A call that left its app's pinned version names it in `Accept-version` (ADR 094): the line says so.
+		const isOverride: boolean = ApiVersionSchema.safeParse(readFirstHeader(request.headers[API_VERSION_OVERRIDE_HEADER])).success;
+		const version: string = servedVersion === undefined ? "" : `${servedVersion}${isOverride ? " (override)" : ""} `;
+		logService.info(`HTTP ${request.method} ${version}${redactUrl(request.url)} ${String(reply.statusCode)} ${reply.elapsedTime.toFixed(1)}ms (${request.id})`);
 		done();
 	});
 

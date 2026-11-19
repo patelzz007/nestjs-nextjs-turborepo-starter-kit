@@ -15,8 +15,7 @@ import type { SignupReferralDashboardFacts, SignupReferralReadPort } from "../po
 import type { SignupReferralSummary } from "../ports/signup-referral.port";
 import { GetMySignupReferralDashboardQuery } from "../queries/get-my-signup-referral-dashboard/get-my-signup-referral-dashboard.query";
 import { GetMySignupReferralDashboardHandler } from "../queries/get-my-signup-referral-dashboard/get-my-signup-referral-dashboard.handler";
-import { ListMyRefereesQuery } from "../queries/list-my-referees/list-my-referees.query";
-import { ListMyRefereesHandler } from "../queries/list-my-referees/list-my-referees.handler";
+import { SignupRefereeApplicationService } from "../services/signup-referee.application-service";
 
 const NOW = epochMs(1_800_000_000_000);
 const REQUEST = { requestId: "req-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null };
@@ -101,12 +100,12 @@ describe("GetMySignupReferralDashboardHandler", () => {
 	});
 });
 
-describe("ListMyRefereesHandler", () => {
+describe("SignupRefereeApplicationService.listMyReferees", () => {
 	it("pages the caller's own referees (the caller is the scope, never input)", async () => {
 		const reads = new ScriptedReads({ latestCode: null, account: null });
 		const query = SignupReferralRefereeListQuerySchema.parse({ page: "2", limit: "1" });
 
-		await expect(new ListMyRefereesHandler(reads).execute(new ListMyRefereesQuery(REFERRER, query))).resolves.toEqual({
+		await expect(new SignupRefereeApplicationService(reads).listMyReferees(REFERRER, query)).resolves.toEqual({
 			items: [REFEREE],
 			total: 3,
 			page: 2,
@@ -122,9 +121,7 @@ describe("ListMyRefereesHandler", () => {
 	it("is for signed-in users only", async () => {
 		const reads = new ScriptedReads({ latestCode: null, account: null });
 
-		await expect(new ListMyRefereesHandler(reads).execute(new ListMyRefereesQuery(KEY, SignupReferralRefereeListQuerySchema.parse({})))).rejects.toBeInstanceOf(
-			AuthenticationError,
-		);
+		await expect(new SignupRefereeApplicationService(reads).listMyReferees(KEY, SignupReferralRefereeListQuerySchema.parse({}))).rejects.toBeInstanceOf(AuthenticationError);
 		expect(reads.asked).toEqual([]);
 	});
 });

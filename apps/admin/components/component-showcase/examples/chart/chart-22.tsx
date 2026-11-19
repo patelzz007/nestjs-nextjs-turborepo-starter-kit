@@ -34,7 +34,8 @@ function renderSector({ cx, cy, innerRadius, outerRadius, startAngle, endAngle, 
 			startAngle={startAngle}
 			endAngle={endAngle}
 			cornerRadius={cornerRadius ?? 0}
-			fill={fill}
+			// A slice without its own fill keeps Sector's default instead of an explicit `undefined`.
+			{...(fill === undefined ? {} : { fill })}
 			stroke={stroke}
 			strokeWidth={strokeWidth}
 		/>

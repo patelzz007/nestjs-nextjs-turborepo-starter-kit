@@ -5,12 +5,11 @@
 // reason (the request audit keeps it). The distribution is an analytics figure (ANALYTICS:READ), and one customer's
 // tier sits on their user page (USER:READ). There is no override: a tier is always what its rules give.
 
-import { Controller, Get, Inject, Put } from "@nestjs/common";
+import { Get, Inject, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	AdminUserTierPathSchema,
 	AdminUserTierSchema,
-	apiPath,
 	TierDistributionSchema,
 	TierSettingsResponseSchema,
 	UpdateTierSettingsSchema,
@@ -21,6 +20,7 @@ import {
 	type UpdateTierSettingsInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -36,7 +36,7 @@ import type { TierSettingsService } from "../../application/services/tier-settin
 @ApiTags("Tiers")
 @ApiBearerAuth()
 @AdminAccessOnly("Tier rules and figures are for the admin console.")
-@Controller(apiPath("/admin/tiers"))
+@ApiController("/admin/tiers")
 export class AdminTiersController {
 	public constructor(
 		@Inject(TIER_SETTINGS_SERVICE) private readonly settings: TierSettingsService,
@@ -76,7 +76,7 @@ export class AdminTiersController {
 @ApiTags("Tiers")
 @ApiBearerAuth()
 @AdminAccessOnly("A customer's tier is shown in the admin console.")
-@Controller(apiPath("/admin/users"))
+@ApiController("/admin/users")
 export class AdminUserTierController {
 	public constructor(@Inject(TIER_READ_SERVICE) private readonly reads: Pick<TierReadService, "userTier">) {}
 

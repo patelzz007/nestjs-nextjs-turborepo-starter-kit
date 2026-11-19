@@ -20,7 +20,7 @@ export class LegacyRewardNoticesCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async migrate(): Promise<void> {
 		const result = await this.dispatcher.dispatch(
 			new MigrateLegacyRewardNoticesCommand(systemActor(LEGACY_REWARD_NOTICE_MIGRATION_OPERATION, "cron", null, "Move the earlier reward inbox into the unified inbox", null)),

@@ -19,17 +19,29 @@ import { z } from "zod";
 
 import type { EpochMs } from "../schemas/api/common";
 
-/** The API versions that exist. Add `"v3"` here before any new major. */
+/** The API versions that exist, oldest first. Add `"v3"` at the end before any new major. */
 export const ApiVersionSchema = z.enum(["v1", "v2"]);
 
 export type ApiVersion = z.output<typeof ApiVersionSchema>;
 
+/** Every served version, oldest first: each one serves every route (a route it does not replace, it inherits). */
+export const API_VERSIONS: readonly ApiVersion[] = ApiVersionSchema.options;
+
 /** The current default version served by the API. */
 export const API_VERSION: ApiVersion = "v1";
 
+/** What precedes the version in a URL (`api/` + `v1`): the server's URI-versioning prefix, and the clients' too. */
+export const API_URI_VERSION_PREFIX = "api/";
+
+/**
+ * The header a call sends when it leaves its app's pinned version (the per-call override, ADR 094). The URL still
+ * decides which handler answers; the header makes the override visible in the API's access log.
+ */
+export const API_VERSION_OVERRIDE_HEADER = "accept-version";
+
 /** Build a versioned path prefix (`"v1"` → `"/api/v1"`). */
 export function apiVersionPrefix(version: ApiVersion): string {
-	return `/api/${version}`;
+	return `/${API_URI_VERSION_PREFIX}${version}`;
 }
 
 export const API_VERSION_PREFIX: string = apiVersionPrefix(API_VERSION);

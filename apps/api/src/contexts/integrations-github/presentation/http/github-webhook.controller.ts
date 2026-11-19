@@ -1,10 +1,10 @@
-import { Controller, Get, HttpCode, HttpStatus, Post, Req, type RawBodyRequest } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Post, Req, type RawBodyRequest } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { FastifyRequest } from "fastify";
-import { apiPath } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
@@ -35,7 +35,7 @@ type GithubWebhookInfo = z.output<typeof GithubWebhookInfoSchema>;
  * receives no webhooks.
  */
 @ApiTags("GitHub pull requests")
-@Controller(apiPath("/github/webhook"))
+@ApiController("/github/webhook")
 export class GithubWebhookController {
 	public constructor(private readonly commandBus: CommandBus) {}
 

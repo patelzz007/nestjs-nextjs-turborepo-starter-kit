@@ -65,16 +65,13 @@ import { SubmitKybHandler } from "./application/commands/submit-kyb/submit-kyb.h
 import { SubmitOnboardingDocumentsHandler } from "./application/commands/submit-onboarding-documents/submit-onboarding-documents.handler";
 import { GetKybDocumentDownloadUrlHandler } from "./application/queries/get-kyb-document-download-url/get-kyb-document-download-url.handler";
 import { GetKybProfileHandler } from "./application/queries/get-kyb-profile/get-kyb-profile.handler";
-import { GetMerchantDetailHandler } from "./application/queries/get-merchant-detail/get-merchant-detail.handler";
 import { GetOnboardingDocumentStatusHandler } from "./application/queries/get-onboarding-document-status/get-onboarding-document-status.handler";
-import { GetTenantContextHandler } from "./application/queries/get-tenant-context/get-tenant-context.handler";
-import { ListLocationRequestsHandler } from "./application/queries/list-location-requests/list-location-requests.handler";
 import { ListMembersHandler } from "./application/queries/list-members/list-members.handler";
-import { ListMerchantsHandler } from "./application/queries/list-merchants/list-merchants.handler";
-import { ListMyMembershipsHandler } from "./application/queries/list-my-memberships/list-my-memberships.handler";
 import { ListPendingInvitesHandler } from "./application/queries/list-pending-invites/list-pending-invites.handler";
-import { GetMerchantInviteAvailabilityHandler } from "./application/queries/get-merchant-invite-availability/get-merchant-invite-availability.handler";
-import { PreviewMerchantInviteEmailHandler } from "./application/queries/preview-merchant-invite-email/preview-merchant-invite-email.handler";
+import { MerchantAdminApplicationService } from "./application/services/merchant-admin.application-service";
+import { MerchantInviteApplicationService } from "./application/services/merchant-invite.application-service";
+import { TenantContextApplicationService } from "./application/services/tenant-context.application-service";
+import { TenantLifecycleApplicationService } from "./application/services/tenant-lifecycle.application-service";
 import { PreviewOnboardingInviteHandler } from "./application/queries/preview-onboarding-invite/preview-onboarding-invite.handler";
 import { PreviewTeamInviteHandler } from "./application/queries/preview-team-invite/preview-team-invite.handler";
 import { RandomInviteTokens } from "./infrastructure/adapters/invite-tokens.adapter";
@@ -99,8 +96,6 @@ import { UnbanTenantHandler } from "./application/commands/unban-tenant/unban-te
 import { RejectSuspensionAppealHandler } from "./application/commands/reject-suspension-appeal/reject-suspension-appeal.handler";
 import { SubmitSuspensionAppealHandler } from "./application/commands/submit-suspension-appeal/submit-suspension-appeal.handler";
 import { SuspendTenantHandler } from "./application/commands/suspend-tenant/suspend-tenant.handler";
-import { GetTenantLifecycleForAdminHandler } from "./application/queries/get-tenant-lifecycle-for-admin/get-tenant-lifecycle-for-admin.handler";
-import { GetTenantLifecycleHandler } from "./application/queries/get-tenant-lifecycle/get-tenant-lifecycle.handler";
 import { PrismaMerchantAdminReadRepository } from "./infrastructure/persistence/prisma-merchant-admin.read-repository";
 import { PrismaTeamReadRepository } from "./infrastructure/persistence/prisma-team.read-repository";
 import { MerchantOnboardingController } from "./presentation/http/merchant-onboarding.controller";
@@ -137,16 +132,9 @@ const HANDLERS = [
 	SubmitOnboardingDocumentsHandler,
 	GetKybDocumentDownloadUrlHandler,
 	GetKybProfileHandler,
-	GetMerchantDetailHandler,
 	GetOnboardingDocumentStatusHandler,
-	GetTenantContextHandler,
-	ListLocationRequestsHandler,
 	ListMembersHandler,
-	ListMerchantsHandler,
-	ListMyMembershipsHandler,
 	ListPendingInvitesHandler,
-	PreviewMerchantInviteEmailHandler,
-	GetMerchantInviteAvailabilityHandler,
 	PreviewOnboardingInviteHandler,
 	PreviewTeamInviteHandler,
 	SuspendTenantHandler,
@@ -160,8 +148,6 @@ const HANDLERS = [
 	SubmitSuspensionAppealHandler,
 	ReactivateTenantHandler,
 	LeaveTenantHandler,
-	GetTenantLifecycleHandler,
-	GetTenantLifecycleForAdminHandler,
 ];
 
 /**
@@ -185,6 +171,11 @@ const HANDLERS = [
 	],
 	providers: [
 		DropTenantRouteOnLifecycleChangedHandler,
+		// Single-port reads (ADR 096).
+		MerchantAdminApplicationService,
+		MerchantInviteApplicationService,
+		TenantContextApplicationService,
+		TenantLifecycleApplicationService,
 		{
 			provide: TENANTS_SCOPE_FACTORY,
 			inject: [LOCATION_CLOSURE_FACTORY, REDEMPTION_CUSTOMER_FACTORY, TENANT_AUDIT, StoredFileAccess, NotificationsTransactionalPortsFactory, TypedConfigService, LogService],

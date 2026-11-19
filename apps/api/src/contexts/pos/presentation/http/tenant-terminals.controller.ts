@@ -1,9 +1,8 @@
-import { Controller, Delete, Get, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	MerchantCreateTerminalSchema,
 	MerchantTerminalListQuerySchema,
 	MerchantTerminalPairingSchema,
@@ -26,6 +25,7 @@ import {
 } from "@workspace/shared";
 import type { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { MerchantActor } from "../../../../platform/presentation/http/security/api-keys/merchant-actor";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -57,7 +57,7 @@ type TerminalParams = z.output<typeof apiContract.tenants.terminals.remove.input
 @ApiTags("Tenant POS Terminals")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/tenants/:tenantSlug/terminals"))
+@ApiController("/tenants/:tenantSlug/terminals")
 export class TenantTerminalsController {
 	public constructor(
 		private readonly commandBus: CommandBus,
@@ -173,7 +173,7 @@ export class TenantTerminalsController {
  */
 @ApiTags("POS")
 @SkipMutationIntent()
-@Controller(apiPath("/integration/terminals"))
+@ApiController("/integration/terminals")
 export class PosTerminalsController {
 	public constructor(private readonly commandBus: CommandBus) {}
 

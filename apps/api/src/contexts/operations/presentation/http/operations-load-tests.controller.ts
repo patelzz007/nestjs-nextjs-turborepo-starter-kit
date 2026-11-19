@@ -4,12 +4,11 @@
 // LOAD_TEST permissions (the Platform Developer role holds all but the purge); the caps and the purge
 // are SuperAdmin only.
 
-import { Controller, Delete, Get, HttpStatus, Inject, Post, Put } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Inject, Post, Put } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	LoadTestCapsInputSchema,
-	apiPath,
 	LoadTestCapsSchema,
 	LoadTestOverviewSchema,
 	LoadTestPurgeResultSchema,
@@ -26,6 +25,7 @@ import {
 	type StartLoadTestInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -48,7 +48,7 @@ import type { OperationsReadService } from "../../application/services/operation
 @ApiTags("Operations")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for load tests.")
-@Controller(apiPath("/admin/operations"))
+@ApiController("/admin/operations")
 export class OperationsLoadTestsController {
 	public constructor(
 		private readonly commandBus: CommandBus,

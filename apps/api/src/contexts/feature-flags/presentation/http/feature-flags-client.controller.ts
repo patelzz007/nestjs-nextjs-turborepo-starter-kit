@@ -5,11 +5,10 @@
 // The live stream: the catalogue version, signed in only (a refetch is the client's answer to a new version).
 // Exposures: batches of "this subject was given this value", attributed by the API, never by the client.
 
-import { Controller, Get, Header, HttpCode, HttpStatus, Inject, Post, Req, Sse, type MessageEvent } from "@nestjs/common";
+import { Get, Header, HttpCode, HttpStatus, Inject, Post, Req, Sse, type MessageEvent } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
 import {
-	apiPath,
 	APP_VERSION_HEADER,
 	AppVersionSchema,
 	CLIENT_PLATFORM_HEADER,
@@ -29,6 +28,7 @@ import type { FastifyRequest } from "fastify";
 import { interval, map, merge, Observable } from "rxjs";
 import type { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { actingUserId, type ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { OptionalAuth } from "../../../../platform/presentation/http/security/decorators/optional-auth.decorator";
@@ -57,7 +57,7 @@ function header<T>(request: FastifyRequest, name: string, schema: z.ZodType<T>):
 }
 
 @ApiTags("Feature flags")
-@Controller(apiPath("/feature-flags"))
+@ApiController("/feature-flags")
 export class FeatureFlagsClientController {
 	public constructor(
 		@Inject(FLAG_EVALUATION) private readonly evaluation: FlagEvaluationService,

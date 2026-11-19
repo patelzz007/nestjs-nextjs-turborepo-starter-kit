@@ -1,10 +1,9 @@
-import { Controller, Get, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
+import { Get, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBody, ApiOperation, ApiSecurity, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import {
 	apiContract,
-	apiPath,
 	MerchantCreateRewardSchema,
 	MerchantRewardListQuerySchema,
 	MerchantRewardSummaryQuerySchema,
@@ -19,6 +18,7 @@ import {
 	type RewardResponse,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AllowApiKeyAuth } from "../../../../platform/presentation/http/security/decorators/allow-api-key-auth.decorator";
@@ -48,7 +48,7 @@ const RewardIdParamsSchema = z.object({ rewardId: UuidParamSchema }).strict();
 @ApiSecurity("merchantApiKey")
 @AllowApiKeyAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/integration/rewards"))
+@ApiController("/integration/rewards")
 export class IntegrationRewardsController {
 	public constructor(
 		private readonly commandBus: CommandBus,

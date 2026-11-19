@@ -3,8 +3,6 @@
 import { toIsoTimestamp } from "@workspace/ui/lib/format/date-time";
 import { isBigIntPrimitive, isBooleanPrimitive, isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
 import {
-	DATA_GRID_CLIPBOARD_LINE_BREAK,
-	DATA_GRID_CLIPBOARD_QUOTE_NEEDED,
 	escapeDataGridClipboardHtml,
 	parseDataGridClipboardText,
 	renderDataGridClipboardHtml,
@@ -16,8 +14,6 @@ import { type DataGridColumn, type DataGridColumnCellEdit, type DataGridCoreTabl
 import type { CellData, RowData } from "@tanstack/react-table";
 
 export {
-	DATA_GRID_CLIPBOARD_QUOTE_NEEDED as CLIPBOARD_QUOTE_NEEDED,
-	DATA_GRID_CLIPBOARD_LINE_BREAK as CLIPBOARD_LINE_BREAK,
 	serializeDataGridClipboardField,
 	serializeDataGridClipboardText,
 	parseDataGridClipboardText,

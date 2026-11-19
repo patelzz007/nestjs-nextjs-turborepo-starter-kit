@@ -1,9 +1,8 @@
-import { Controller, Get, Res } from "@nestjs/common";
+import { Get, Res } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
 import {
-	apiPath,
 	apiRoutes,
 	GITHUB_PICTURES_PATH,
 	GithubRepositoryFileSchema,
@@ -15,6 +14,7 @@ import {
 } from "@workspace/shared";
 import type { FastifyReply } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { SkipEnvelope } from "../../../../platform/presentation/http/validation/decorators/skip-envelope.decorator";
@@ -57,7 +57,7 @@ async function sendPicture(reply: FastifyReply, picture: GithubPicture): Promise
 @ApiTags("GitHub pull requests")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for GitHub pull requests.")
-@Controller(apiPath(GITHUB_PICTURES_PATH))
+@ApiController(GITHUB_PICTURES_PATH)
 export class GithubPicturesController {
 	public constructor(private readonly queryBus: QueryBus) {}
 

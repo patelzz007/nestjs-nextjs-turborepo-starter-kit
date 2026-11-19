@@ -1,5 +1,5 @@
 // ============================================
-// lib/session-status-badge.ts - Session badge stream pipeline
+// lib/session/status-badge.ts -Session badge stream pipeline
 // ============================================
 
 import { z } from "zod";

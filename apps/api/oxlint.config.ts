@@ -74,11 +74,10 @@ export default composeConfigs(nestjsConfig, {
 			],
 			rules: { "nestjs/injectable-should-be-provided": "off" },
 		},
-		// Versioning guard: every controller builds its path with `apiPath()` from
-		// `@workspace/shared` (→ `/api/v1/...`). The client transport prepends the SAME
-		// prefix, so an unversioned controller is unreachable from the apps (the `/session`
-		// 404 regression). Root/health/webhook stay unversioned by allowlist; test-only
-		// `*.probe.ts` controllers are excluded.
+		// Versioning guard (ADR 094): a business controller is `@ApiController(path)`, served under every
+		// `/api/<version>`; a plain `@Controller` would be unreachable from the apps (the `/session` 404
+		// regression). Root/health/version/webhook stay unversioned by allowlist; test-only `*.probe.ts`
+		// controllers are excluded.
 		{
 			files: ["src/**/*.controller.ts"],
 			excludeFiles: ["**/*.probe.ts"],

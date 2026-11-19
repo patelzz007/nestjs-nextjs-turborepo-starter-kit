@@ -316,15 +316,15 @@ The real actor id is written to the audit log (never `"system"`).
 
 ### 11.1 The RBAC mutation contract
 
-Every role / permission / assignment change goes through `RoleService` / `PermissionService`
-(injected directly — both are exported by the global `AuthorizationModule`) and needs the
+Every role / permission / assignment change is a command of the authorization context
+(`contexts/authorization/application/commands/`) sent through the `CommandBus`, and every one takes the
 authenticated actor — there is no actor-less or `"system"` overload:
 
 ```ts
-// actor = the AuthenticatedUser from @CurrentUser() ({ id, isSuperAdmin })
-await this.roles.assignToUser(actor, userId, roleId);              // RoleService
-await this.roles.syncPermissions(actor, roleId, permissionIds);    // RoleService
-await this.permissions.giveToUser(actor, { userId, permissionId, effect: "ALLOW", expiresAt: undefined }); // PermissionService
+// actor = the ActorContext from @CurrentActor()
+await this.commandBus.execute(new AssignRoleCommand(actor, { userId, roleId }));
+await this.commandBus.execute(new SyncRolePermissionsCommand(actor, roleId, permissionIds));
+await this.commandBus.execute(new GrantUserPermissionCommand(actor, { userId, permissionId, effect: "ALLOW", expiresAt: undefined }));
 ```
 
 Account provisioning (signup, merchant onboarding, invite registration) is the only other path: it

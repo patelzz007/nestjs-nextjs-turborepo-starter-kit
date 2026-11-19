@@ -1,25 +1,4 @@
-import { DomainErrorCodeSchema } from "../../../../platform/domain/errors/error-codes";
-
 import { DomainError } from "../../../../platform/domain/errors/domain-error";
-
-/** Every code the claims domain throws; codes and messages clients already saw are kept byte for byte. */
-export const ClaimsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
-	"CLAIM_NOT_FOUND",
-	"CLAIM_NOT_ACTIVE",
-	"CLAIM_EXPIRED",
-	"CLAIM_LIMIT_REACHED",
-	"CLAIM_HOLD_LIMIT_REACHED",
-	"LEGAL_ACCEPTANCE_REQUIRED",
-	"OTP_REQUIRED",
-	"OTP_INVALID",
-	"OTP_RATE_LIMITED",
-	"CLAIM_CUSTOMER_BANNED",
-	"REWARD_NOT_FOUND",
-	"USER_NOT_FOUND",
-	"CORRUPT_AGGREGATE_STATE",
-]);
-
-export type ClaimsDomainErrorCode = (typeof ClaimsDomainErrorCodeSchema)["options"][number];
 
 /** Missing, deleted or someone else's claim — answered alike, so a claim id is no oracle. */
 export class ClaimNotFoundError extends DomainError {

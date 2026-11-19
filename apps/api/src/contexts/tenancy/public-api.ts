@@ -28,7 +28,6 @@
  *   `TenantAuditModule` (also re-exported by `TenantAccessModule`).
  */
 export type { TenantDisplayData, TenantReadPort } from "./application/ports/tenant-read.port";
-export type { TenantExistencePort } from "./application/ports/tenant-existence.port";
 export type { MerchantPosSettingsPort, TenantsTransactionalPorts, TillTenantFacts } from "./application/ports/merchant-pos-settings.port";
 export type { CustomerStandingPort } from "./application/ports/customer-standing.port";
 export type { ReviewNoticeFacts, ReviewNoticeFactsPort } from "./application/ports/review-notice-facts.port";
@@ -47,7 +46,6 @@ export {
 	REDEMPTION_CUSTOMER_FACTORY,
 } from "./application/ports/tenants.tokens";
 export type { LocationClosureFactory, RedemptionCustomerFactory } from "./infrastructure/persistence/tenants-scope.factory";
-export { TenantsDomainErrorCodeSchema, type TenantsDomainErrorCode } from "./domain/errors/tenants.errors";
 export { MembershipInactiveError, TenantBannedError, TenantRouteNotActiveError, TenantSuspendedError } from "./domain/errors/tenants.errors";
 export { decideTenantLifecycle, type TenantLifecycleRouteKind } from "./domain/policies/tenant-lifecycle.policy";
 export { TENANT_LIFECYCLE_ROUTE_KEY } from "./presentation/http/tenant-lifecycle-route.decorator";
@@ -56,7 +54,5 @@ export { TenantAuditModule } from "./infrastructure/audit/tenant-audit.module";
 export { createTenantAuditPort, type TenantAuditTransaction } from "./infrastructure/audit/tenant-audit.adapter";
 export { createTenantsTransactionalPorts } from "./infrastructure/persistence/tenants-transactional-ports";
 
-// ── Helpers the seed and authorization's policy repository use ──────────────
-// The seed writes tenant audit rows outside Nest; the policy control plane maps a membership's location scope.
-export { TenantAuditService } from "./infrastructure/audit/tenant-audit.adapter";
+// ── The helper authorization's policy repository uses to map a membership's location scope ──
 export { mapMembershipLocationScope } from "./infrastructure/persistence/tenant-membership.mapper";

@@ -1,9 +1,8 @@
-import { Controller, Delete, Get, Put } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Delete, Get, Put } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
 import {
-	apiPath,
 	SetUserPreferenceBodySchema,
 	UserPreferencePathSchema,
 	UserPreferenceSchema,
@@ -15,6 +14,7 @@ import {
 	type UserPreferences,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
@@ -24,15 +24,15 @@ import { ZodBody, ZodParams } from "../../../../platform/presentation/http/valid
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { ResetOwnPreferenceCommand } from "../../application/commands/reset-own-preference/reset-own-preference.command";
 import { SetOwnPreferenceCommand } from "../../application/commands/set-own-preference/set-own-preference.command";
-import { ListOwnPreferencesQuery } from "../../application/queries/list-own-preferences/list-own-preferences.query";
+import { AccountApplicationService } from "../../application/services/account.application-service";
 
 /** The signed-in user's remembered choices (a board's grouping, "Show subtasks"), checked against the shared registry. */
 @ApiTags("Auth")
-@Controller(apiPath("/auth"))
+@ApiController("/auth")
 export class PreferencesController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly accounts: AccountApplicationService,
 	) {}
 
 	// Page-load reads and ordinary authenticated edits: not credential endpoints, so only the `default` throttler applies.
@@ -43,7 +43,7 @@ export class PreferencesController {
 	@ApiOperation({ summary: "The signed-in user's preferences; a key that is absent uses the page's default" })
 	@ZodResponse(UserPreferencesSchema, { description: "The stored preferences the registry still accepts" })
 	public list(@GetUser() user: AccessTokenPayload, @CurrentActor() actor: ActorContext): Promise<UserPreferences> {
-		return this.queryBus.execute(new ListOwnPreferencesQuery(actor, user.sub));
+		return this.accounts.ownPreferences(actor, user.sub);
 	}
 
 	@SkipThrottle({ strict: true })

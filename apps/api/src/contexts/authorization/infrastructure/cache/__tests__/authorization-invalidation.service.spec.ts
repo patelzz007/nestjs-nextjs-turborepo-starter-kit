@@ -1,49 +1,14 @@
 import { Logger } from "@nestjs/common";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
-import Redis from "ioredis";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import type { AccessTokenStatePort } from "../../../../../platform/application/ports/access-token.port";
+import { FakeRedis } from "../../../../../../e2e/support/fake-redis";
 import { createTestTypedConfig } from "../../../../../../e2e/support/test-api-env";
 import { AuthorizationCacheService, type CachedAuthorization } from "../authorization-cache.service";
 import { AUTHORIZATION_INVALIDATION_CHANNEL, AuthorizationInvalidationService, MAX_USER_IDS_PER_INVALIDATION_MESSAGE } from "../authorization-invalidation.service";
 import { localAppCache } from "../../../../../../e2e/support/local-app-cache";
-
-/**
- * A real ioredis client that never connects (`lazyConnect`), with its network
- * calls stubbed: `publish` records, `subscribe` / `unsubscribe` track the
- * channel list, and incoming messages are simulated with `emit("message", …)`.
- */
-class FakeRedis {
-	public readonly client: Redis = new Redis({ lazyConnect: true });
-	public readonly published: { readonly channel: string; readonly payload: string }[] = [];
-	public readonly subscriptions: string[] = [];
-	public failPublish = false;
-
-	public constructor() {
-		vi.spyOn(this.client, "connect").mockResolvedValue(undefined);
-		vi.spyOn(this.client, "publish").mockImplementation((channel: string | Buffer, payload: string | Buffer | number) => {
-			if (this.failPublish) {
-				return Promise.reject(new Error("redis down"));
-			}
-			this.published.push({ channel: String(channel), payload: String(payload) });
-			return Promise.resolve(1);
-		});
-		vi.spyOn(this.client, "subscribe").mockImplementation((channel: string | Buffer) => {
-			this.subscriptions.push(String(channel));
-			return Promise.resolve(1);
-		});
-		vi.spyOn(this.client, "unsubscribe").mockImplementation((channel: string | Buffer) => {
-			this.subscriptions.splice(this.subscriptions.indexOf(String(channel)), 1);
-			return Promise.resolve(0);
-		});
-	}
-
-	public emit(channel: string, payload: string): void {
-		this.client.emit("message", channel, payload);
-	}
-}
 
 const REDIS_CONFIG = { REDIS_URL: "redis://cache:6379", REDIS_NAMESPACE: "tenant-a" };
 /** The channel instances in REDIS_CONFIG's namespace share. */

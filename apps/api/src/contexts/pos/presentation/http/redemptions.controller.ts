@@ -1,10 +1,9 @@
-import { Controller, HttpStatus, Post, UseGuards } from "@nestjs/common";
+import { HttpStatus, Post, UseGuards } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
 import {
 	apiContract,
-	apiPath,
 	RedemptionCheckoutResponseSchema,
 	RedemptionPreviewResponseSchema,
 	type RedemptionCheckoutResponse,
@@ -12,6 +11,7 @@ import {
 } from "@workspace/shared";
 import type { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
@@ -43,7 +43,7 @@ const TERMINAL_ID_HEADER_DESCRIPTION =
  */
 @ApiTags("Redemptions")
 @SkipMutationIntent()
-@Controller(apiPath("/integration/redemptions"))
+@ApiController("/integration/redemptions")
 export class RedemptionsController {
 	public constructor(private readonly commandBus: CommandBus) {}
 

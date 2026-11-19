@@ -53,13 +53,13 @@
 		"eslint-plugin-react": "^7.37.5",
 		"eslint-plugin-react-hooks": "^7.1.1",
 		"eslint-plugin-react-native": "^5.0.0",
-		"eslint-plugin-turbo": "^2.11.10",
-		"oxlint": "1.93.0",
+		"eslint-plugin-turbo": "^2.11.11",
+		"oxlint": "1.94.0",
 		"zod": "4.6.7"
 	},
 	"devDependencies": {
-		"oxfmt": "0.78.0",
-		"oxlint-tsgolint": "7.0.2006",
+		"oxfmt": "0.79.0",
+		"oxlint-tsgolint": "7.0.2007",
 		"react": "19.3.0",
 		"vitest": "^5.1.0"
 	}

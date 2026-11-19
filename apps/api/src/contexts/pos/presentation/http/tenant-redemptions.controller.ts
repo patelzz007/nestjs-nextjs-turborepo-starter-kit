@@ -1,8 +1,7 @@
-import { Controller, Get, UseInterceptors } from "@nestjs/common";
+import { Get, UseInterceptors } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	MerchantRedemptionListItemSchema,
 	MerchantRedemptionListQuerySchema,
 	TenantSlugParamSchema,
@@ -11,6 +10,7 @@ import {
 } from "@workspace/shared";
 import type { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { MerchantActor } from "../../../../platform/presentation/http/security/api-keys/merchant-actor";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -28,7 +28,7 @@ import { ListTenantRedemptionsQuery } from "../../application/queries/list-tenan
 @ApiTags("Tenant Redemptions")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/tenants/:tenantSlug/redemptions"))
+@ApiController("/tenants/:tenantSlug/redemptions")
 export class TenantRedemptionsController {
 	public constructor(private readonly queryBus: QueryBus) {}
 

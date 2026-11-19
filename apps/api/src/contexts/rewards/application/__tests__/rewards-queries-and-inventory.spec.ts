@@ -34,8 +34,6 @@ import { CUSTOMER_ID, NOW, REFERRER_ID, referrerRow, REWARD_ID, rewardState, STO
 import { AcceptLegalTermsCommand } from "../commands/accept-legal-terms/accept-legal-terms.command";
 import { AcceptLegalTermsHandler } from "../commands/accept-legal-terms/accept-legal-terms.handler";
 import type { DueForAutoPublish, LegalAcceptanceReadPort, RewardImageDeliveryPort, RewardImagesArchive, RewardReadPort } from "../ports/reward-read.port";
-import { GetLegalAcceptanceStatusQuery } from "../queries/get-legal-acceptance-status/get-legal-acceptance-status.query";
-import { GetLegalAcceptanceStatusHandler } from "../queries/get-legal-acceptance-status/get-legal-acceptance-status.handler";
 import { GetRewardAudienceHandler } from "../queries/get-reward-audience/get-reward-audience.handler";
 import { GetRewardAudienceQuery } from "../queries/get-reward-audience/get-reward-audience.query";
 import { ListRewardCustomersHandler } from "../queries/list-reward-customers/list-reward-customers.handler";
@@ -44,22 +42,15 @@ import { RewardAudience } from "../../domain/value-objects/reward-audience.value
 import { REWARD_CUSTOMERS_READ_OPERATION } from "../ports/rewards.tokens";
 import { GetTenantRewardQuery } from "../queries/get-tenant-reward/get-tenant-reward.query";
 import { GetTenantRewardHandler } from "../queries/get-tenant-reward/get-tenant-reward.handler";
-import { GetPublishedRewardQuery } from "../queries/get-published-reward/get-published-reward.query";
-import { GetPublishedRewardHandler } from "../queries/get-published-reward/get-published-reward.handler";
-import { GetRewardForAdminQuery } from "../queries/get-reward-for-admin/get-reward-for-admin.query";
-import { GetRewardForAdminHandler } from "../queries/get-reward-for-admin/get-reward-for-admin.handler";
-import { GetRewardImageDownloadUrlQuery } from "../queries/get-reward-image-download-url/get-reward-image-download-url.query";
-import { GetRewardImageDownloadUrlHandler } from "../queries/get-reward-image-download-url/get-reward-image-download-url.handler";
-import { GetRewardImagesArchiveQuery } from "../queries/get-reward-images-archive/get-reward-images-archive.query";
-import { GetRewardImagesArchiveHandler } from "../queries/get-reward-images-archive/get-reward-images-archive.handler";
 import { ListMarketplaceRewardsQuery } from "../queries/list-marketplace-rewards/list-marketplace-rewards.query";
 import { ListMarketplaceRewardsHandler } from "../queries/list-marketplace-rewards/list-marketplace-rewards.handler";
 import { ListTenantRewardsQuery } from "../queries/list-tenant-rewards/list-tenant-rewards.query";
 import { ListTenantRewardsHandler } from "../queries/list-tenant-rewards/list-tenant-rewards.handler";
 import { SummarizeTenantRewardsHandler } from "../queries/summarize-tenant-rewards/summarize-tenant-rewards.handler";
 import { SummarizeTenantRewardsQuery } from "../queries/summarize-tenant-rewards/summarize-tenant-rewards.query";
-import { ListRewardsPendingReviewQuery } from "../queries/list-rewards-pending-review/list-rewards-pending-review.query";
-import { ListRewardsPendingReviewHandler } from "../queries/list-rewards-pending-review/list-rewards-pending-review.handler";
+import { LegalAcceptanceApplicationService } from "../services/legal-acceptance.application-service";
+import { RewardApplicationService } from "../services/reward.application-service";
+import { RewardImageApplicationService } from "../services/reward-image.application-service";
 import { RewardInventoryApplicationService } from "../services/reward-inventory.application-service";
 import type { RewardsScope } from "../rewards-scope";
 import { fakeRewardResponse, fakeRewardsScope } from "./fakes/rewards-scope.fakes";
@@ -201,20 +192,18 @@ describe("merchant reward queries", () => {
 
 describe("review and marketplace queries", () => {
 	it("returns the moderation queue page and a reward in full; a missing reward is 404", async () => {
-		const reads = new FixedRewardReads([VISIBLE]);
-		const page = await new ListRewardsPendingReviewHandler(reads).execute(new ListRewardsPendingReviewQuery(userActor(), { limit: 25, page: 1 }));
+		const rewards = new RewardApplicationService(new FixedRewardReads([VISIBLE]));
+		const page = await rewards.listPendingReview(userActor(), { limit: 25, page: 1 });
 		expect(page.items).toEqual([VISIBLE]);
-		await expect(new GetRewardForAdminHandler(reads).execute(new GetRewardForAdminQuery(userActor(), { rewardId: REWARD_ID }))).resolves.toEqual(VISIBLE);
-		await expect(new GetRewardForAdminHandler(new FixedRewardReads([])).execute(new GetRewardForAdminQuery(userActor(), { rewardId: REWARD_ID }))).rejects.toThrow(
-			RewardNotFoundError,
-		);
+		await expect(rewards.getForReview(userActor(), { rewardId: REWARD_ID })).resolves.toEqual(VISIBLE);
+		await expect(new RewardApplicationService(new FixedRewardReads([])).getForReview(userActor(), { rewardId: REWARD_ID })).rejects.toThrow(RewardNotFoundError);
 	});
 
 	it("serves only published rewards publicly", async () => {
 		const draft = fakeRewardResponse(REWARD_ID, TENANT_ID, "DRAFT", "Hidden");
-		await expect(new GetPublishedRewardHandler(new FixedRewardReads([draft])).execute(new GetPublishedRewardQuery(userActor(), { rewardId: REWARD_ID }))).rejects.toThrow(
-			RewardNotFoundError,
-		);
+		const published = fakeRewardResponse(REWARD_ID, TENANT_ID, "PUBLISHED", "Free coffee");
+		await expect(new RewardApplicationService(new FixedRewardReads([draft])).getPublished(userActor(), { rewardId: REWARD_ID })).rejects.toThrow(RewardNotFoundError);
+		await expect(new RewardApplicationService(new FixedRewardReads([published])).getPublished(userActor(), { rewardId: REWARD_ID })).resolves.toEqual(published);
 		const empty = await new ListMarketplaceRewardsHandler(new FixedRewardReads([]), new FakeCustomerTierAccess()).execute(
 			new ListMarketplaceRewardsQuery(userActor(), { limit: 25, page: 1 }),
 		);
@@ -231,18 +220,12 @@ describe("review and marketplace queries", () => {
 
 	it("downloads a reward's image and archive; any other file or reward is 404", async () => {
 		const file: AdminRewardImageDownloadResponse = { fileId: STORE_A, fileName: "coffee.jpg", downloadUrl: "https://cdn.example.com/coffee.jpg", expiresAt: epochMs(NOW) };
-		const delivery = new FixedImageDelivery(file);
-		await expect(
-			new GetRewardImageDownloadUrlHandler(delivery).execute(new GetRewardImageDownloadUrlQuery(userActor(), { rewardId: REWARD_ID, fileId: STORE_A })),
-		).resolves.toEqual(file);
-		await expect(
-			new GetRewardImageDownloadUrlHandler(delivery).execute(new GetRewardImageDownloadUrlQuery(userActor(), { rewardId: REWARD_ID, fileId: REWARD_ID })),
-		).rejects.toThrow(RewardImageNotFoundError);
-		const archive = await new GetRewardImagesArchiveHandler(delivery).execute(new GetRewardImagesArchiveQuery(userActor(), { rewardId: REWARD_ID }));
+		const images = new RewardImageApplicationService(new FixedImageDelivery(file));
+		await expect(images.downloadUrl(userActor(), { rewardId: REWARD_ID, fileId: STORE_A })).resolves.toEqual(file);
+		await expect(images.downloadUrl(userActor(), { rewardId: REWARD_ID, fileId: REWARD_ID })).rejects.toThrow(RewardImageNotFoundError);
+		const archive = await images.archive(userActor(), { rewardId: REWARD_ID });
 		expect(archive.fileName).toBe("free-coffee-photos.zip");
-		await expect(
-			new GetRewardImagesArchiveHandler(new FixedImageDelivery(null)).execute(new GetRewardImagesArchiveQuery(userActor(), { rewardId: REWARD_ID })),
-		).rejects.toThrow(RewardImageNotFoundError);
+		await expect(new RewardImageApplicationService(new FixedImageDelivery(null)).archive(userActor(), { rewardId: REWARD_ID })).rejects.toThrow(RewardImageNotFoundError);
 	});
 });
 
@@ -266,10 +249,10 @@ describe("legal acceptance", () => {
 				return Promise.resolve(status);
 			},
 		};
-		await expect(new GetLegalAcceptanceStatusHandler(reads).execute(new GetLegalAcceptanceStatusQuery(userActor("cccccccc-cccc-4ccc-8ccc-cccccccccccc")))).resolves.toEqual(
-			status,
-		);
+		const legal = new LegalAcceptanceApplicationService(reads);
+		await expect(legal.checkoutStatus(userActor("cccccccc-cccc-4ccc-8ccc-cccccccccccc"))).resolves.toEqual(status);
 		expect(asked).toEqual(["cccccccc-cccc-4ccc-8ccc-cccccccccccc"]);
+		await expect(legal.checkoutStatus(apiKeyActor(TENANT_ID))).rejects.toThrow(AuthenticationError);
 	});
 });
 

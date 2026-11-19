@@ -62,7 +62,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
 ### 0.3 Done since (identity step 2 is mostly complete; the app boots)
 
 - **Referrals, signup half (part of step 6):** `src/contexts/referrals/` is built in full DDD/CQRS layout.
-  - Queries `GetMySignupReferralDashboard` and `ListMyReferees`.
+  - Queries `GetMySignupReferralDashboard` and `ListMyReferees`. (Since ADR 096, `ListMyReferees` is `SignupRefereeApplicationService.listMyReferees`.)
   - Commands `MaintainSignupReferralCodes` and `SweepSignupSuccessNotifications`.
   - An hourly cron through `SystemCommandDispatcher`.
   - `SignupReferralApplicationService` behind `SIGNUP_REFERRALS`, and `createReferralsTransactionalPorts(db)` (`signupReferrals`, `signupSuccess`).

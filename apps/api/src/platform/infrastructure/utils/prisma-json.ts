@@ -32,10 +32,3 @@ export function parsePrismaNullableDataValue(value: DataValue | null): Prisma.In
 
 	return PrismaInputJsonValueSchema.parse(value);
 }
-
-/** Parses nullable JSON payloads for required Prisma `Json` columns (JSON null literal). */
-export function parsePrismaRequiredJson(value: JsonValueInput): Prisma.InputJsonValue | typeof Prisma.JsonNull {
-	if (value === null) return Prisma.JsonNull;
-
-	return parsePrismaInputJson(value);
-}

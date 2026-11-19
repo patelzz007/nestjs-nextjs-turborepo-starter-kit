@@ -6,10 +6,10 @@
 // this subscription is ours.
 
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { REDIS_SUBSCRIBER } from "@workspace/messaging/nest";
 import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { REDIS_SUBSCRIBER } from "../redis/redis.tokens";
 import { cacheInvalidationChannel } from "./cache-keys";
 import { CacheInvalidationMessageSchema, type CacheInvalidationMessage, type CacheInvalidationSource } from "./tiered-app-cache";
 

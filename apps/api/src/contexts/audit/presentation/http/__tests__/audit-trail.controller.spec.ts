@@ -1,7 +1,6 @@
 import type { MessageEvent } from "@nestjs/common";
 import { PATH_METADATA, SSE_METADATA } from "@nestjs/common/constants";
 import { Reflector } from "@nestjs/core";
-import { QueryBus } from "@nestjs/cqrs";
 import { Test } from "@nestjs/testing";
 import { API_VERSION_PREFIX, AuditTrailEntrySchema, AuditTrailListQuerySchema } from "@workspace/shared";
 import { Subject, type Observable } from "rxjs";
@@ -11,9 +10,10 @@ import type { ActorContext } from "../../../../../platform/application/actor-con
 import { AdminAccessOnly } from "../../../../../platform/presentation/http/security/decorators/admin-access.decorator";
 import { getResponseContract } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { AUDIT_TRAIL_SIGNALS, type AuditTrailSignalsPort } from "../../../application/ports/audit-trail-signals.port";
-import { ListAuditTrailQuery } from "../../../application/queries/list-audit-trail/list-audit-trail.query";
+import { AuditApplicationService } from "../../../application/services/audit.application-service";
 import { AUDIT_TRAIL_KEEPALIVE_MS, AUDIT_TRAIL_SIGNAL_THROTTLE_MS, AuditTrailController } from "../audit-trail.controller";
-import { RecordingQueryBus } from "./recording-query-bus";
+import { RecordingAuditService } from "./recording-audit-service";
+import { servedPathOf } from "../../../../../../e2e/support/route-metadata";
 import { expectOwnMetadataLike, REQUIRED_PERMISSION_METADATA_KEY } from "./route-metadata";
 
 const reflector = new Reflector();
@@ -54,11 +54,11 @@ class ManualSignals implements AuditTrailSignalsPort {
 	}
 }
 
-async function controllerWith(signals: Subject<void>, bus: RecordingQueryBus = new RecordingQueryBus()): Promise<AuditTrailController> {
+async function controllerWith(signals: Subject<void>, audit: RecordingAuditService = new RecordingAuditService()): Promise<AuditTrailController> {
 	const moduleRef = await Test.createTestingModule({
 		controllers: [AuditTrailController],
 		providers: [
-			{ provide: QueryBus, useValue: bus },
+			{ provide: AuditApplicationService, useValue: audit },
 			{ provide: AUDIT_TRAIL_SIGNALS, useValue: new ManualSignals(signals) },
 		],
 	}).compile();
@@ -67,7 +67,7 @@ async function controllerWith(signals: Subject<void>, bus: RecordingQueryBus = n
 
 describe("AuditTrailController authorization", () => {
 	it("is served under the versioned admin prefix and needs admin-panel access", () => {
-		expect(reflector.get<string>(PATH_METADATA, AuditTrailController)).toBe(`${API_VERSION_PREFIX}/admin/audit-trail`);
+		expect(servedPathOf(AuditTrailController)).toBe(`${API_VERSION_PREFIX}/admin/audit-trail`);
 		expectOwnMetadataLike(AuditTrailController, ExpectedAdminAccess);
 	});
 
@@ -85,13 +85,13 @@ describe("AuditTrailController authorization", () => {
 });
 
 describe("AuditTrailController.list", () => {
-	it("dispatches exactly one ListAuditTrailQuery with the actor and the validated query", async () => {
-		const bus = new RecordingQueryBus();
+	it("lists through the audit application service with the actor and the validated query, once", async () => {
+		const audit = new RecordingAuditService();
 		const query = AuditTrailListQuerySchema.parse({});
 
-		await (await controllerWith(new Subject<void>(), bus)).list(VIEWER, query);
+		await (await controllerWith(new Subject<void>(), audit)).list(VIEWER, query);
 
-		expect(bus.executed).toEqual([new ListAuditTrailQuery(VIEWER, query)]);
+		expect(audit.calls).toEqual([{ method: "listAuditTrail", actor: VIEWER, input: query }]);
 	});
 });
 

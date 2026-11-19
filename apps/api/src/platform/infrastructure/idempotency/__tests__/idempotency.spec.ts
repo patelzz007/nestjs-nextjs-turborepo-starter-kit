@@ -31,7 +31,7 @@ import {
 } from "../idempotency.constants";
 import { IdempotencyKeyReusedError, IdempotencyRequestInProgressError } from "../idempotency.errors";
 import { IdempotencyInterceptor } from "../idempotency.interceptor";
-import { Idempotent } from "../idempotent.decorator";
+import { Idempotent } from "../../../presentation/http/idempotency/idempotent.decorator";
 
 /** One stored row, plus the fencing token of its current lease. */
 interface InMemoryRow extends IdempotencyRecordSnapshot {

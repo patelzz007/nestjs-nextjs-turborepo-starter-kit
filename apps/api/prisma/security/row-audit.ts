@@ -18,7 +18,7 @@
  * Both functions pin `search_path`, because the trigger also fires inside other SECURITY DEFINER functions (the
  * data-change capture writes `DataChangeLog` rows) whose own search path does not include `public`.
  *
- * `prisma/rls/apply.ts` plans the triggers against the live catalog after the RLS files, installs them and
+ * `prisma/security/apply.ts` plans the triggers against the live catalog after the RLS files, installs them and
  * verifies them; a table missing a base column fails the apply (every model must extend `BaseModel`).
  */
 

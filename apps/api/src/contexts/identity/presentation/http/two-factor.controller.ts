@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Post, Req, UseInterceptors } from "@nestjs/common";
+import { Get, HttpStatus, Post, Req, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type {
@@ -18,7 +18,6 @@ import type {
 } from "@workspace/shared";
 import {
 	apiContract,
-	apiPath,
 	BackupCodesRemainingResponseSchema,
 	LoginClientResponseSchema,
 	TwoFactorMessageResponseSchema,
@@ -27,6 +26,7 @@ import {
 } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
@@ -45,7 +45,7 @@ import { EnableTwoFactorCommand } from "../../application/commands/enable-two-fa
 import { RotateTwoFactorCommand } from "../../application/commands/rotate-two-factor/rotate-two-factor.command";
 import { StartTwoFactorSetupCommand } from "../../application/commands/start-two-factor-setup/start-two-factor-setup.command";
 import { CheckBackupCodeQuery } from "../../application/queries/check-backup-code/check-backup-code.query";
-import { CountRemainingBackupCodesQuery } from "../../application/queries/count-remaining-backup-codes/count-remaining-backup-codes.query";
+import { AccountApplicationService } from "../../application/services/account.application-service";
 import { TOKEN_DELIVERY_DESCRIPTION } from "./token-delivery.constants";
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
@@ -53,11 +53,12 @@ const PUBLIC_ACTOR = { allowAnonymous: true };
 
 /** TOTP enrollment, rotation and backup codes for the signed-in user, and the second step of a 2FA login. Every route dispatches one command or query. */
 @ApiTags("Auth")
-@Controller(apiPath("/auth"))
+@ApiController("/auth")
 export class TwoFactorController {
 	public constructor(
 		private readonly commandBus: CommandBus,
 		private readonly queryBus: QueryBus,
+		private readonly accounts: AccountApplicationService,
 	) {}
 
 	/**
@@ -115,7 +116,7 @@ export class TwoFactorController {
 	@ApiOperation({ summary: "Count unused backup codes for the authenticated user" })
 	@ZodResponse(BackupCodesRemainingResponseSchema, { description: "Unused backup code count" })
 	public async getBackupCodesRemaining(@GetUser("sub") userId: string, @CurrentActor() actor: ActorContext): Promise<BackupCodesRemainingResponse> {
-		return this.queryBus.execute(new CountRemainingBackupCodesQuery(actor, { userId }));
+		return this.accounts.remainingBackupCodes(actor, userId);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)

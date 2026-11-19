@@ -49,7 +49,7 @@ describe("System operations are enforced by the database (integration)", () => {
 	});
 
 	afterAll(async () => {
-		await prisma.onModuleDestroy();
+		await prisma.onApplicationShutdown();
 		await pool.end();
 	});
 

@@ -1,9 +1,8 @@
-import { Controller, Get, Req, Res, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Get, Req, Res, UseGuards, UseInterceptors } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	MerchantAnalyticsDashboardQuerySchema,
 	MerchantAnalyticsDashboardSchema,
 	MerchantAnalyticsExportQuerySchema,
@@ -16,6 +15,7 @@ import {
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { RequireFeatureFlag } from "../../../feature-flags/public-api";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -41,7 +41,7 @@ import { sendReportFile } from "./report-file.reply";
 @RequireFeatureFlag("merchant-analytics")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/tenants/:tenantSlug/analytics"))
+@ApiController("/tenants/:tenantSlug/analytics")
 export class TenantAnalyticsController {
 	public constructor(private readonly queryBus: QueryBus) {}
 

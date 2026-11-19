@@ -35,9 +35,8 @@ import {
 	EMAIL_REQUEST_RELAY,
 	NOTIFICATIONS_UNIT_OF_WORK,
 } from "./application/ports/notifications.tokens";
-import { ListEmailLogHandler } from "./application/queries/list-email-log/list-email-log.handler";
-import { ListEmailTemplatesHandler } from "./application/queries/list-email-templates/list-email-templates.handler";
-import { PreviewEmailTemplateHandler } from "./application/queries/preview-email-template/preview-email-template.handler";
+import { EmailLogApplicationService } from "./application/services/email-log.application-service";
+import { EmailPreviewApplicationService } from "./application/services/email-preview.application-service";
 import { EmailDeliveryAdapter } from "./infrastructure/adapters/email-delivery.adapter";
 import { EmailRequestHandOff } from "./infrastructure/adapters/email-hand-off.adapter";
 import { EmailLogEventsService } from "./infrastructure/adapters/email-log-signal.adapter";
@@ -146,9 +145,8 @@ const notificationsQueueImports = usesRedis ? [NotificationsQueueModule] : [Noti
 		DeliverEmailHandler,
 		ApplyEmailDeliveryEventHandler,
 		SendTestEmailHandler,
-		ListEmailLogHandler,
-		ListEmailTemplatesHandler,
-		PreviewEmailTemplateHandler,
+		EmailLogApplicationService,
+		EmailPreviewApplicationService,
 		HandOffRequestedEmailOnEmailRequested,
 		SignalEmailLogChanged,
 		// ── Provider callbacks through the shared inbound receiver (ADR 081) ──

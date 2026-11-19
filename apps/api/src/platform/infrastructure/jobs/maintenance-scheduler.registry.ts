@@ -1,6 +1,7 @@
-import { Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common";
+import { Injectable, Logger, type BeforeApplicationShutdown, type OnApplicationBootstrap } from "@nestjs/common";
 
 import type { ModuleHealthIndicator, ModuleHealthReport } from "../../presentation/http/health/health.service";
+import { InFlightWork } from "../../application/in-flight-work";
 import { registerMaintenanceScheduler, type MaintenanceSchedulerDefinition, type MaintenanceSchedulerQueue } from "./maintenance-scheduler";
 
 /** How long the first registration of every scheduler may take before readiness stops waiting for it. */
@@ -26,11 +27,13 @@ interface SchedulerRegistration {
  * 503 until that first attempt settles. A failure or timeout does not hold the instance out of rotation:
  * it is reported (`retrying`, with the failed scheduler ids) and retried every
  * {@link MAINTENANCE_SCHEDULER_RETRY_MS} — a Redis blip at boot must not become an API outage, and
- * `upsertJobScheduler` is idempotent, so retrying an already-registered scheduler is harmless.
+ * `upsertJobScheduler` is idempotent, so retrying an already-registered scheduler is harmless. Shutdown stops
+ * the retries and waits for an attempt in progress, before the queues close (ADR 095).
  */
 @Injectable()
-export class MaintenanceSchedulerRegistry implements OnApplicationBootstrap, OnApplicationShutdown, ModuleHealthIndicator {
+export class MaintenanceSchedulerRegistry implements OnApplicationBootstrap, BeforeApplicationShutdown, ModuleHealthIndicator {
 	private readonly logger: Logger = new Logger(MaintenanceSchedulerRegistry.name);
+	private readonly attempts = new InFlightWork();
 	private readonly registrations: SchedulerRegistration[] = [];
 	private state: MaintenanceSchedulerState = "pending";
 	private failedSchedulerIds: readonly string[] = [];
@@ -43,12 +46,13 @@ export class MaintenanceSchedulerRegistry implements OnApplicationBootstrap, OnA
 	}
 
 	public onApplicationBootstrap(): void {
-		void this.registerAll();
+		void this.attempts.track(() => this.registerAll());
 	}
 
-	public onApplicationShutdown(): void {
+	public async beforeApplicationShutdown(): Promise<void> {
 		this.stopped = true;
 		clearTimeout(this.retryTimer);
+		await this.attempts.settled();
 	}
 
 	public get currentState(): MaintenanceSchedulerState {
@@ -91,7 +95,7 @@ export class MaintenanceSchedulerRegistry implements OnApplicationBootstrap, OnA
 			return;
 		}
 		this.retryTimer = setTimeout((): void => {
-			void this.registerAll();
+			void this.attempts.track(() => this.registerAll());
 		}, MAINTENANCE_SCHEDULER_RETRY_MS);
 		this.retryTimer.unref();
 	}

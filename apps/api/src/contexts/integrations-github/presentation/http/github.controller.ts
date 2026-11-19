@@ -1,8 +1,6 @@
-import { Controller, Get } from "@nestjs/common";
-import { QueryBus } from "@nestjs/cqrs";
+import { Get } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	GithubCommitDetailSchema,
 	GithubCommitHistoryQuerySchema,
 	GithubCommitPageSchema,
@@ -21,16 +19,11 @@ import {
 	type GithubRepositorySummary,
 } from "@workspace/shared";
 
-import type { ActorContext } from "../../../../platform/application/actor-context";
-import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { ZodParams, ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
-import { GetGithubCommitQuery } from "../../application/queries/get-github-commit/get-github-commit.query";
-import { GetGithubCommitPageQuery } from "../../application/queries/get-github-commit-page/get-github-commit-page.query";
-import { GetGithubContributorStatsQuery } from "../../application/queries/get-github-contributor-stats/get-github-contributor-stats.query";
-import { GetGithubRepositorySummaryQuery } from "../../application/queries/get-github-repository-summary/get-github-repository-summary.query";
-import { ListGithubRepositoriesQuery } from "../../application/queries/list-github-repositories/list-github-repositories.query";
+import { GithubContributionsApplicationService } from "../../application/services/github-contributions.application-service";
 
 /**
  * Read-only contributions of the GitHub repositories the API may read —
@@ -50,9 +43,9 @@ const GITHUB_READ_ERRORS =
 
 @ApiTags("GitHub")
 @ApiBearerAuth()
-@Controller(apiPath("/github/repositories"))
+@ApiController("/github/repositories")
 export class GithubController {
-	public constructor(private readonly queryBus: QueryBus) {}
+	public constructor(private readonly contributions: GithubContributionsApplicationService) {}
 
 	@RequirePermission("READ", "GITHUB")
 	@Get()
@@ -62,19 +55,16 @@ export class GithubController {
 			"`configured`: the ones pinned in GITHUB_REPOSITORIES, in that order. `discovered` (GITHUB_REPOSITORIES empty): the token account's own public repositories (no forks) and the public repositories it recently contributed to, most recently pushed first. `off`: no GITHUB_TOKEN, an empty list. Discovery reads GitHub: 503 SERVICE_UNAVAILABLE / 502 EXTERNAL_SERVICE_ERROR when it fails and no earlier list can be served.",
 	})
 	@ZodResponse(GithubRepositoryListSchema, { description: "The repositories the API may read (empty when the integration is off)" })
-	public async listRepositories(@CurrentActor() actor: ActorContext): Promise<GithubRepositoryList> {
-		return this.queryBus.execute(new ListGithubRepositoriesQuery(actor));
+	public listRepositories(): Promise<GithubRepositoryList> {
+		return this.contributions.repositories();
 	}
 
 	@RequirePermission("READ", "GITHUB")
 	@Get(":owner/:repository")
 	@ApiOperation({ summary: "Summary of a configured repository: stars, forks, languages, commit count, last push", description: GITHUB_READ_ERRORS })
 	@ZodResponse(GithubRepositorySummarySchema, { description: "Repository summary" })
-	public async getRepositorySummary(
-		@CurrentActor() actor: ActorContext,
-		@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams,
-	): Promise<GithubRepositorySummary> {
-		return this.queryBus.execute(new GetGithubRepositorySummaryQuery(actor, params));
+	public getRepositorySummary(@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams): Promise<GithubRepositorySummary> {
+		return this.contributions.repositorySummary(params);
 	}
 
 	@RequirePermission("READ", "GITHUB")
@@ -84,12 +74,11 @@ export class GithubController {
 		description: `Newest first; pass \`nextCursor\` back as \`cursor\` for the next (older) page. ${GITHUB_READ_ERRORS}`,
 	})
 	@ZodResponse(GithubCommitPageSchema, { description: "Commits, newest first, and the cursor of the next page" })
-	public async getCommitPage(
-		@CurrentActor() actor: ActorContext,
+	public getCommitPage(
 		@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams,
 		@ZodQuery(GithubCommitHistoryQuerySchema) query: GithubCommitHistoryQuery,
 	): Promise<GithubCommitPage> {
-		return this.queryBus.execute(new GetGithubCommitPageQuery(actor, { params, query }));
+		return this.contributions.commitPage(params, query);
 	}
 
 	@RequirePermission("READ", "GITHUB")
@@ -102,8 +91,8 @@ export class GithubController {
 			GITHUB_READ_ERRORS,
 	})
 	@ZodResponse(GithubCommitDetailSchema, { description: "The commit and its changed files" })
-	public async getCommit(@CurrentActor() actor: ActorContext, @ZodParams(GithubCommitParamsSchema) params: GithubCommitParams): Promise<GithubCommitDetail> {
-		return this.queryBus.execute(new GetGithubCommitQuery(actor, params));
+	public getCommit(@ZodParams(GithubCommitParamsSchema) params: GithubCommitParams): Promise<GithubCommitDetail> {
+		return this.contributions.commit(params);
 	}
 
 	@RequirePermission("READ", "GITHUB")
@@ -113,10 +102,7 @@ export class GithubController {
 		description: `From GitHub's contributor statistics (\`basis.kind: "statistics"\`, the whole default branch). GitHub recomputes those after every push; until they are ready the API counts the default branch's latest commits itself, at most 1,000 (\`basis.kind: "history"\`, \`complete\` when that is all of them). Merge commits and commits by authors without a GitHub account are credited to no one. ${GITHUB_READ_ERRORS}`,
 	})
 	@ZodResponse(GithubContributorStatsSchema, { description: "Contributor totals, most commits first, and what they were counted from" })
-	public async getContributorStats(
-		@CurrentActor() actor: ActorContext,
-		@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams,
-	): Promise<GithubContributorStats> {
-		return this.queryBus.execute(new GetGithubContributorStatsQuery(actor, params));
+	public getContributorStats(@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams): Promise<GithubContributorStats> {
+		return this.contributions.contributorStats(params);
 	}
 }

@@ -1,9 +1,10 @@
-import { Controller, Get, Patch, Put } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Get, Patch, Put } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
-import { apiContract, apiPath, OwnProfileSchema, type AccessTokenPayload, type OwnProfile, type SetOwnLanguageInput, type UpdateOwnProfileInput } from "@workspace/shared";
+import { apiContract, OwnProfileSchema, type AccessTokenPayload, type OwnProfile, type SetOwnLanguageInput, type UpdateOwnProfileInput } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
@@ -13,15 +14,15 @@ import { ZodBody } from "../../../../platform/presentation/http/validation/decor
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { SetOwnLanguageCommand } from "../../application/commands/set-own-language/set-own-language.command";
 import { UpdateOwnProfileCommand } from "../../application/commands/update-own-profile/update-own-profile.command";
-import { GetOwnProfileQuery } from "../../application/queries/get-own-profile/get-own-profile.query";
+import { AccountApplicationService } from "../../application/services/account.application-service";
 
 /** The signed-in user's own profile (name, avatar, optimistic-lock version). */
 @ApiTags("Auth")
-@Controller(apiPath("/auth"))
+@ApiController("/auth")
 export class ProfileController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly accounts: AccountApplicationService,
 	) {}
 
 	// A page-load read and an ordinary authenticated edit: not credential endpoints, so only the `default` throttler applies.
@@ -32,7 +33,7 @@ export class ProfileController {
 	@ApiOperation({ summary: "Get the signed-in user's own profile (name, avatar, optimistic-lock version)" })
 	@ZodResponse(OwnProfileSchema, { description: "The signed-in user's own profile" })
 	public async getOwnProfile(@GetUser() user: AccessTokenPayload, @CurrentActor() actor: ActorContext): Promise<OwnProfile> {
-		return this.queryBus.execute(new GetOwnProfileQuery(actor, { userId: user.sub }));
+		return this.accounts.ownProfile(actor, user.sub);
 	}
 
 	@SkipThrottle({ strict: true })

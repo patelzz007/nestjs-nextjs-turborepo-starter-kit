@@ -3,6 +3,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { ThrottlerStorage } from "@nestjs/throttler";
+import { REDIS_PUBLISHER } from "@workspace/messaging/nest";
 import { describe, expect, it } from "vitest";
 
 import { RecordingRateLimiter } from "../../../../../../../e2e/support/recording-rate-limiter";
@@ -10,7 +11,6 @@ import { ConfigModule } from "../../../../../../config/config.module";
 import { RATE_LIMITER } from "../../../../../application/ports/rate-limiter.port";
 import { FailoverRateLimiter } from "../../../../../infrastructure/rate-limiting/failover-rate-limiter";
 import { RateLimitingModule } from "../../../../../infrastructure/rate-limiting/rate-limiting.module";
-import { REDIS_PUBLISHER } from "../../../../../infrastructure/redis/redis.tokens";
 import { RateLimiterThrottlerStorage } from "../../../../../infrastructure/throttling/rate-limiter-throttler.storage";
 import { PreAuthThrottlerGuard, PrincipalThrottlerGuard } from "../scoped-throttler.guards";
 import { ThrottlingModule } from "../throttling.module";

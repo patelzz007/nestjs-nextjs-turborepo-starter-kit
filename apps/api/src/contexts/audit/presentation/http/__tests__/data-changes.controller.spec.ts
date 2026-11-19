@@ -1,17 +1,15 @@
-import { PATH_METADATA } from "@nestjs/common/constants";
 import { Reflector } from "@nestjs/core";
-import { QueryBus } from "@nestjs/cqrs";
 import { Test } from "@nestjs/testing";
-import { API_VERSION_PREFIX, DataChangeLogDetailSchema, DataChangeLogListQuerySchema, DataChangeLogSummarySchema, LIST_SLOT_INDEX } from "@workspace/shared";
+import { API_VERSION_PREFIX, DataChangeLogDetailSchema, DataChangeLogListQuerySchema, DataChangeLogSummarySchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { AdminAccessOnly } from "../../../../../platform/presentation/http/security/decorators/admin-access.decorator";
 import { getResponseContract } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
-import { GetDataChangeQuery } from "../../../application/queries/get-data-change/get-data-change.query";
-import { ListDataChangesQuery } from "../../../application/queries/list-data-changes/list-data-changes.query";
+import { AuditApplicationService } from "../../../application/services/audit.application-service";
 import { DataChangesController } from "../data-changes.controller";
-import { RecordingQueryBus } from "./recording-query-bus";
+import { RecordingAuditService } from "./recording-audit-service";
+import { servedPathOf } from "../../../../../../e2e/support/route-metadata";
 import { expectOwnMetadataLike, REQUIRED_PERMISSION_METADATA_KEY } from "./route-metadata";
 
 const reflector = new Reflector();
@@ -46,7 +44,7 @@ AdminAccessOnly("Admin access required to view the data-change trail.")(Expected
 
 describe("DataChangesController authorization", () => {
 	it("is served under the versioned admin prefix", () => {
-		expect(reflector.get<string>(PATH_METADATA, DataChangesController)).toBe(`${API_VERSION_PREFIX}/admin/data-changes`);
+		expect(servedPathOf(DataChangesController)).toBe(`${API_VERSION_PREFIX}/admin/data-changes`);
 	});
 
 	it("requires admin-panel access, with the same refusal message, for every route", () => {
@@ -67,29 +65,26 @@ describe("DataChangesController authorization", () => {
 	});
 });
 
-describe("DataChangesController dispatch", () => {
-	async function controllerWith(bus: RecordingQueryBus): Promise<DataChangesController> {
-		const moduleRef = await Test.createTestingModule({ controllers: [DataChangesController], providers: [{ provide: QueryBus, useValue: bus }] }).compile();
+describe("DataChangesController reads", () => {
+	async function controllerWith(audit: RecordingAuditService): Promise<DataChangesController> {
+		const moduleRef = await Test.createTestingModule({ controllers: [DataChangesController], providers: [{ provide: AuditApplicationService, useValue: audit }] }).compile();
 		return moduleRef.get(DataChangesController);
 	}
 
-	it("dispatches exactly one ListDataChangesQuery with the actor and the validated query", async () => {
-		const bus = new RecordingQueryBus();
+	it("lists through the audit application service with the actor and the validated query, once", async () => {
+		const audit = new RecordingAuditService();
 		const query = DataChangeLogListQuerySchema.parse({});
 
-		await (await controllerWith(bus)).list(VIEWER, query);
+		await (await controllerWith(audit)).list(VIEWER, query);
 
-		expect(bus.executed).toHaveLength(1);
-		expect(bus.executed[LIST_SLOT_INDEX.first]).toEqual(new ListDataChangesQuery(VIEWER, query));
-		expect(bus.executed[LIST_SLOT_INDEX.first]).toBeInstanceOf(ListDataChangesQuery);
+		expect(audit.calls).toEqual([{ method: "listDataChanges", actor: VIEWER, input: query }]);
 	});
 
-	it("dispatches exactly one GetDataChangeQuery for one record", async () => {
-		const bus = new RecordingQueryBus();
+	it("opens one record through the audit application service, once", async () => {
+		const audit = new RecordingAuditService();
 
-		await (await controllerWith(bus)).get(VIEWER, { id: RECORD_ID });
+		await (await controllerWith(audit)).get(VIEWER, { id: RECORD_ID });
 
-		expect(bus.executed).toEqual([new GetDataChangeQuery(VIEWER, { id: RECORD_ID })]);
-		expect(bus.executed[LIST_SLOT_INDEX.first]).toBeInstanceOf(GetDataChangeQuery);
+		expect(audit.calls).toEqual([{ method: "getDataChange", actor: VIEWER, input: { id: RECORD_ID } }]);
 	});
 });

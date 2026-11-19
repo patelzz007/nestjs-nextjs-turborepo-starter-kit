@@ -8,5 +8,4 @@ export { FEATURE_FLAGS_EVALUATE_OPERATION } from "./application/ports/feature-fl
 export { SUBJECT_FACTS } from "./feature-flags.tokens";
 export type { SubjectFactsRegistry } from "./application/services/subject-facts.registry";
 export type { SubjectFactSource } from "./application/ports/subject-facts.port";
-export { RequireFeatureFlag, FeatureFlagGuard } from "./presentation/http/require-feature-flag";
-export { FeatureUnavailableError } from "./domain/errors/feature-flag.errors";
+export { RequireFeatureFlag } from "./presentation/http/require-feature-flag";

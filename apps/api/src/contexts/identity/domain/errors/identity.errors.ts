@@ -336,15 +336,6 @@ export class MfaChallengePurposeMismatchError extends DomainError {
 	}
 }
 
-/** The challenge that was just created is gone before its reference was signed. */
-export class MfaChallengeMissingError extends DomainError {
-	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.badRequest;
-
-	public constructor() {
-		super("Invalid MFA challenge");
-	}
-}
-
 // ── Passkeys (WebAuthn, ADR 080) ────────────────────────────────────────────
 
 /** No live passkey with that id belongs to the caller (any other account's id answers the same 404). */

@@ -299,7 +299,7 @@ declarations (`__tests__/declarations.test.js` keeps each `.d.ts` in step with i
 | `src/**` except `src/config/api-config.ts`: `no-restricted-properties` | The env boundary (§3.2) |
 | Repositories, storage-queue processors and three cache/queue services: `nestjs/injectable-should-be-provided` off | Registered through spread arrays or conditionally |
 | `src/common/ajv-warmup.ts`: `typescript/no-unsafe-argument` off | Walks the dynamic `apiContract` tree |
-| `src/**/*.controller.ts` (not `*.probe.ts`): `api/no-unversioned-controller` | Every controller builds its path with `apiPath()` (`lint-rules/no-unversioned-controller.js`) |
+| `src/**/*.controller.ts` (not `*.probe.ts`): `api/no-unversioned-controller` | Every controller is an `@ApiController(path)`; a plain `@Controller` is allowed only bare or on the unversioned probe/webhook paths (`lint-rules/no-unversioned-controller.js`, [ADR 094](../../adr/094-per-endpoint-api-versioning.md)) |
 
 The API's type-aware rules use `apps/api/tsconfig.json`, which is the **full** program (src, specs,
 test, prisma, scripts, tool configs) with `noEmit`. `tsconfig.typecheck.json` is the production

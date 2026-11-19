@@ -28,15 +28,3 @@ export class FileVerdictReached extends DomainEvent {
 		super(occurredAt);
 	}
 }
-
-export function fileVerdictReached(input: {
-	readonly fileId: string;
-	readonly category: FileCategory;
-	readonly tenantId: string | null;
-	readonly uploadedById: string;
-	readonly outcome: FileVerdictOutcome;
-	readonly productId: string | null;
-	readonly occurredAt: EpochMs;
-}): FileVerdictReached {
-	return new FileVerdictReached(input.occurredAt, input.fileId, input.category, input.tenantId, input.uploadedById, input.outcome, input.productId);
-}

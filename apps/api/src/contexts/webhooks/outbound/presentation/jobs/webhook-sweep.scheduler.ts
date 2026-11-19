@@ -1,8 +1,9 @@
-import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, Logger, type BeforeApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { Cron, CronExpression, SchedulerRegistry } from "@nestjs/schedule";
 import { CaughtValueSchema } from "@workspace/shared";
 
 import { caughtErrorLogFields } from "../../../../../platform/application/errors/caught-error-log";
+import { InFlightWork } from "../../../../../platform/application/in-flight-work";
 import { WEBHOOK_DELIVERY_ENGINE } from "../../application/ports/webhook-delivery-engine.token";
 import type { SweepResult, WebhookDeliveryEngine } from "../../application/services/webhook-delivery-engine";
 
@@ -14,10 +15,12 @@ export const WEBHOOK_SWEEP_INTERVAL_MS = 5_000;
  * Runs the outgoing-webhook sweep on every instance (a claim's lease keeps two instances from sending one delivery
  * twice). A sweep still running when the next tick fires is not overlapped; a failed one is logged and the next
  * tick retries. Once a day each instance also purges events past their retention (a bounded, idempotent delete).
+ * Shutdown stops the timer and waits for a sweep in progress (ADR 095).
  */
 @Injectable()
-export class WebhookSweepScheduler implements OnModuleInit, OnApplicationShutdown {
+export class WebhookSweepScheduler implements OnModuleInit, BeforeApplicationShutdown {
 	private readonly logger: Logger = new Logger(WebhookSweepScheduler.name);
+	private readonly ticks = new InFlightWork();
 	private running = false;
 
 	public constructor(
@@ -27,16 +30,17 @@ export class WebhookSweepScheduler implements OnModuleInit, OnApplicationShutdow
 
 	public onModuleInit(): void {
 		const timer: NodeJS.Timeout = setInterval((): void => {
-			void this.runOnce();
+			void this.ticks.track(() => this.runOnce());
 		}, WEBHOOK_SWEEP_INTERVAL_MS);
 		timer.unref();
 		this.schedulerRegistry.addInterval(WEBHOOK_SWEEP_SCHEDULER_ID, timer);
 	}
 
-	public onApplicationShutdown(): void {
+	public async beforeApplicationShutdown(): Promise<void> {
 		if (this.schedulerRegistry.doesExist("interval", WEBHOOK_SWEEP_SCHEDULER_ID)) {
 			this.schedulerRegistry.deleteInterval(WEBHOOK_SWEEP_SCHEDULER_ID);
 		}
+		await this.ticks.settled();
 	}
 
 	/** One sweep, unless one is already running. Never rejects. */
@@ -59,7 +63,7 @@ export class WebhookSweepScheduler implements OnModuleInit, OnApplicationShutdow
 		}
 	}
 
-	@Cron(CronExpression.EVERY_DAY_AT_3AM)
+	@Cron(CronExpression.EVERY_DAY_AT_3AM, { waitForCompletion: true })
 	public async purge(): Promise<number> {
 		try {
 			const purged = await this.engine.purgeExpired();

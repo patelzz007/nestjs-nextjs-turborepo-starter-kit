@@ -19,12 +19,8 @@ export const KYB_REVIEW_URL_STATE = defineUrlState(
 	{ urlKeys: { tenantId: MERCHANT_VERIFICATION_TENANT_PARAM } },
 );
 
-export type KybReviewUrlState = typeof KYB_REVIEW_URL_STATE.defaults;
-
 /** `/emails/templates?key=` — the template open in the preview. */
 export const EMAIL_TEMPLATES_URL_STATE = defineUrlState({ key: optionalUrlParam(EmailTemplateKeySchema) }, { urlKeys: { key: EMAIL_TEMPLATE_KEY_PARAM } });
-
-export type EmailTemplatesUrlState = typeof EMAIL_TEMPLATES_URL_STATE.defaults;
 
 /** `/merchants/store-requests?requestId=` — the store location request open in the review panel. */
 export const STORE_REQUESTS_URL_STATE = defineUrlState(
@@ -32,17 +28,11 @@ export const STORE_REQUESTS_URL_STATE = defineUrlState(
 	{ urlKeys: { requestId: REVIEW_REQUEST_PARAM } },
 );
 
-export type StoreRequestsUrlState = typeof STORE_REQUESTS_URL_STATE.defaults;
-
 /** `/audit-logs?record=` — the audit record open in the drawer (kept apart from the table state, so opening one never resets paging). */
 export const AUDIT_LOG_RECORD_URL_STATE = defineUrlState({ record: optionalUrlParam(HttpAuditLogSummarySchema.shape.id) }, { urlKeys: { record: AUDIT_LOG_RECORD_PARAM } });
-
-export type AuditLogRecordUrlState = typeof AUDIT_LOG_RECORD_URL_STATE.defaults;
 
 /** `/audit-logs?change=` — the background row change open in the drawer (kept apart from the table state, so opening one never resets paging). */
 export const DATA_CHANGE_RECORD_URL_STATE = defineUrlState(
 	{ change: optionalUrlParam(DataChangeLogSummarySchema.shape.id) },
 	{ urlKeys: { change: DATA_CHANGE_RECORD_PARAM } },
 );
-
-export type DataChangeRecordUrlState = typeof DATA_CHANGE_RECORD_URL_STATE.defaults;

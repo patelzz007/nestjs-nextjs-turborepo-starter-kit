@@ -2,45 +2,8 @@
 
 import { USER_DETAIL_PAGE_BUTTON_CLASS } from "@/contexts/identity";
 import { Button } from "@workspace/ui/components/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@workspace/ui/components/collapsible";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { ChevronRight } from "lucide-react";
 import * as React from "react";
-
-export interface AccessHierarchySectionProps {
-	readonly title: string;
-	readonly count?: number | undefined;
-	readonly description?: string | undefined;
-	readonly defaultOpen?: boolean | undefined;
-	readonly children: React.ReactNode;
-}
-
-/**
- * Collapsible branch in the access hierarchy (roles, direct grants, etc.).
- */
-export const AccessHierarchySection = React.forwardRef<HTMLDivElement, AccessHierarchySectionProps>(function AccessHierarchySection(
-	{ title, count, description, defaultOpen = true, children },
-	ref,
-): React.JSX.Element {
-	const [open, setOpen] = React.useState(defaultOpen);
-	const countLabel = count !== undefined ? ` (${String(count)})` : "";
-
-	return (
-		<Collapsible open={open} onOpenChange={setOpen} className="rounded-lg border bg-card" ref={ref}>
-			<CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted/50 [&[data-panel-open]]:bg-muted/30">
-				<ChevronRight className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
-				<span className="flex-1">
-					{title}
-					{countLabel}
-				</span>
-			</CollapsibleTrigger>
-			{description !== undefined ? <p className="px-3 pb-2 text-xs text-muted-foreground">{description}</p> : null}
-			<CollapsibleContent className="border-t px-4 py-4">
-				<div className="space-y-4">{children}</div>
-			</CollapsibleContent>
-		</Collapsible>
-	);
-});
 
 export interface AccessHierarchyRowProps {
 	readonly label: string;
@@ -71,41 +34,6 @@ export const AccessHierarchyRow = React.forwardRef<HTMLDivElement, AccessHierarc
 					Remove
 				</Button>
 			) : null}
-		</div>
-	);
-});
-
-export interface AccessHierarchyGroupProps {
-	readonly title: string;
-	readonly count?: number | undefined;
-	readonly defaultOpen?: boolean | undefined;
-	readonly children: React.ReactNode;
-	readonly depth?: number | undefined;
-}
-
-/**
- * Nested group under a resource (e.g. USER → READ, UPDATE).
- */
-export const AccessHierarchyGroup = React.forwardRef<HTMLDivElement, AccessHierarchyGroupProps>(function AccessHierarchyGroup(
-	{ title, count, defaultOpen = true, children, depth = 0 },
-	ref,
-): React.JSX.Element {
-	const [open, setOpen] = React.useState(defaultOpen);
-	const paddingLeft = depth > 0 ? `${String(depth * 1.25)}rem` : undefined;
-	const countLabel = count !== undefined ? ` (${String(count)})` : "";
-
-	return (
-		<div ref={ref} style={{ paddingLeft }}>
-			<Collapsible open={open} onOpenChange={setOpen}>
-				<CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md py-1.5 text-left text-sm font-medium text-foreground hover:bg-muted/40">
-					<ChevronRight className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
-					<span className="font-mono text-xs">
-						{title}
-						{countLabel}
-					</span>
-				</CollapsibleTrigger>
-				<CollapsibleContent className="space-y-0.5 pb-1">{children}</CollapsibleContent>
-			</Collapsible>
 		</div>
 	);
 });

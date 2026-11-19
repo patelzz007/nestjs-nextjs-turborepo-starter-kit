@@ -21,7 +21,7 @@ export class TierReviewCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_DAY_AT_3AM, { timeZone: PLATFORM_DISPLAY_REGION.timeZone })
+	@Cron(CronExpression.EVERY_DAY_AT_3AM, { timeZone: PLATFORM_DISPLAY_REGION.timeZone, waitForCompletion: true })
 	public async review(): Promise<void> {
 		const result = await this.dispatcher.dispatch(
 			new ReviewCustomerTiersCommand(systemActor(TIER_STANDING_EVALUATE_OPERATION, "cron", null, "Nightly customer tier review", null)),

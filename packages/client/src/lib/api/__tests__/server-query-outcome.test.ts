@@ -1,5 +1,5 @@
 // ============================================
-// lib/api/server-query-outcome.test.ts - expected vs unexpected SSR failures
+// lib/api/__tests__/server-query-outcome.test.ts -expected vs unexpected SSR failures
 // ============================================
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { LIST_SLOT_INDEX } from "@workspace/shared";

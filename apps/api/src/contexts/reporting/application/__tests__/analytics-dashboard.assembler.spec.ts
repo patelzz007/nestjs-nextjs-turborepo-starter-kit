@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { selectedAnalyticsLocations } from "../../domain/value-objects/analytics-scope.value-object";
 import { AnalyticsDashboardAssembler, AnalyticsMerchantSummaryMissingError, AnalyticsTenantMissingError } from "../assemblers/analytics-dashboard.assembler";
 import type { ActivityBucket, ActivityTotals } from "../ports/analytics-facts.port";
+import { userActor } from "./fakes/analytics-actors";
 import { FrozenClock, InMemoryAnalyticsBreakdowns, InMemoryAnalyticsFacts, InMemoryAnalyticsTenants, InMemorySales } from "./fakes/analytics-read-fakes";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
@@ -110,7 +111,7 @@ describe("AnalyticsDashboardAssembler", () => {
 				[OTHER_ORG_ID, { name: "Jonker", category: "cafe" }],
 			]);
 
-			const dashboard = await assembler.customerDashboard(USER_ID, {});
+			const dashboard = await assembler.customerDashboard(userActor(USER_ID), {});
 
 			expect(facts.seriesCalls.map((call) => [call.scope, call.window.timeZone])).toEqual([[{ kind: "customer", userId: USER_ID }, "UTC"]]);
 			expect(sales.summaryCalls).toEqual([{ tenantIds: [ORG_ID, OTHER_ORG_ID], actorUserId: USER_ID }]);
@@ -135,7 +136,7 @@ describe("AnalyticsDashboardAssembler", () => {
 			];
 			facts.referralTotals = { current: { sent: 4, credited: 2, rewardsEarned: 2 }, previous: { sent: 2, credited: 0, rewardsEarned: 0 } };
 
-			const dashboard = await assembler.customerDashboard(USER_ID, {});
+			const dashboard = await assembler.customerDashboard(userActor(USER_ID), {});
 
 			const window = { fromMs: NOW - DEFAULT_RANGE_DAYS * DAY_MS, toMs: NOW, timeZone: "UTC", interval: "day" };
 			expect(facts.claimStatusCalls).toEqual([{ userId: USER_ID, range: window }]);
@@ -155,7 +156,7 @@ describe("AnalyticsDashboardAssembler", () => {
 		it("fails loudly when a merchant the customer paid cannot be named", async () => {
 			breakdowns.merchantBuckets = [{ tenantId: ORG_ID, startMs: NOW - DAY_MS, salesMinor: 1_000, bills: 1 }];
 
-			await expect(assembler.customerDashboard(USER_ID, {})).rejects.toBeInstanceOf(AnalyticsMerchantSummaryMissingError);
+			await expect(assembler.customerDashboard(userActor(USER_ID), {})).rejects.toBeInstanceOf(AnalyticsMerchantSummaryMissingError);
 		});
 	});
 });

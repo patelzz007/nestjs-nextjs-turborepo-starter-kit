@@ -56,7 +56,7 @@ describe("createBodyTokenRefresh", () => {
 		await expect(bodyTokenRefresh(tokens)()).resolves.toBe("ok");
 
 		const { input, init } = firstFetchCall(fetchMock);
-		expect(inputUrl(input)).toBe(buildUrl(BASE_URL, apiContract.auth.refresh.path, apiContract.auth.refresh.version));
+		expect(inputUrl(input)).toBe(buildUrl(BASE_URL, apiContract.auth.refresh.path));
 		expect(init.body).toBe(JSON.stringify({ refreshToken: PAIR.refreshToken }));
 		expect(tokens.savedPairs).toEqual([ROTATED]);
 	});

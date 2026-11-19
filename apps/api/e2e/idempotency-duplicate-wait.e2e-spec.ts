@@ -92,8 +92,8 @@ describe("Idempotent duplicate: wait on the key lock, then replay (e2e)", () => 
 	afterAll(async () => {
 		await verifier.query('DELETE FROM public."PlatformResourceIdempotencyRecord" WHERE scope = $1', [scope]);
 		await verifier.end();
-		await locks.onModuleDestroy();
-		await prisma.onModuleDestroy();
+		await locks.onApplicationShutdown();
+		await prisma.onApplicationShutdown();
 	});
 
 	it("(a) blocks a duplicate while the original runs, then replays its stored response", async () => {

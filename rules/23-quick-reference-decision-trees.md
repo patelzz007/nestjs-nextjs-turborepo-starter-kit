@@ -11,7 +11,11 @@ Is this use case in §7? ── yes ──► use what §7 says. Stop.
         │ no (new feature after the migration)
         ▼
 Does it change state?
-   no ──► Query + QueryHandler (always; even trivial reads). The read port returns a DTO.
+   no ──► Does the read need more than ONE collaborator (several ports, another context,
+          credentials, merchant access, the clock, crypto, a unit of work)?
+            yes ─► Query + QueryHandler. The read port returns a DTO.
+            no  ─► Application service method of that read model (ADR 096): a precondition on the
+                   caller or input, one read-port call, not-found handling. The read port returns a DTO.
    yes ─► Does ANY of these hold?
             • a state transition or invariant (status machine, counters, limits)
             • resource-level authorization beyond the endpoint permission

@@ -91,19 +91,15 @@ import { SetOwnLanguageHandler } from "./application/commands/set-own-language/s
 import { UpdateOwnProfileHandler } from "./application/commands/update-own-profile/update-own-profile.handler";
 import { ResetOwnPreferenceHandler } from "./application/commands/reset-own-preference/reset-own-preference.handler";
 import { SetOwnPreferenceHandler } from "./application/commands/set-own-preference/set-own-preference.handler";
-import { ListOwnPreferencesHandler } from "./application/queries/list-own-preferences/list-own-preferences.handler";
 import { VerifyEmailHandler } from "./application/commands/verify-email/verify-email.handler";
 import { VerifyNewDeviceLoginHandler } from "./application/commands/verify-new-device-login/verify-new-device-login.handler";
 import { CheckBackupCodeHandler } from "./application/queries/check-backup-code/check-backup-code.handler";
 import { CheckPasswordResetTokenHandler } from "./application/queries/check-password-reset-token/check-password-reset-token.handler";
-import { CountRemainingBackupCodesHandler } from "./application/queries/count-remaining-backup-codes/count-remaining-backup-codes.handler";
 import { GetMeHandler } from "./application/queries/get-me/get-me.handler";
-import { GetMyMfaRecoveryStatusHandler } from "./application/queries/get-my-mfa-recovery-status/get-my-mfa-recovery-status.handler";
-import { GetOwnProfileHandler } from "./application/queries/get-own-profile/get-own-profile.handler";
 import { GetSessionPermissionsHandler } from "./application/queries/get-session-permissions/get-session-permissions.handler";
 import { GetUserForAdminHandler } from "./application/queries/get-user-for-admin/get-user-for-admin.handler";
-import { ListMfaRecoveryRequestsHandler } from "./application/queries/list-mfa-recovery-requests/list-mfa-recovery-requests.handler";
-import { ListMySessionsHandler } from "./application/queries/list-my-sessions/list-my-sessions.handler";
+import { AccountApplicationService } from "./application/services/account.application-service";
+import { PasskeyAppAssociationsApplicationService } from "./application/services/passkey-app-associations.application-service";
 import { ListUsersForAdminHandler } from "./application/queries/list-users-for-admin/list-users-for-admin.handler";
 import { InvalidateAccessTokenStateHandler } from "./application/event-handlers/after-commit/invalidate-access-token-state.event-handler";
 import { InvalidateMeCacheOnAuthorizationChanged } from "./application/event-handlers/after-commit/invalidate-me-cache-on-authorization-changed.event-handler";
@@ -148,8 +144,6 @@ import { RenamePasskeyHandler } from "./application/commands/rename-passkey/rena
 import { StartPasskeyRegistrationHandler } from "./application/commands/start-passkey-registration/start-passkey-registration.handler";
 import { StartPasskeySecondFactorHandler } from "./application/commands/start-passkey-second-factor/start-passkey-second-factor.handler";
 import { StartPasswordlessPasskeyLoginHandler } from "./application/commands/start-passwordless-passkey-login/start-passwordless-passkey-login.handler";
-import { GetPasskeyAppAssociationsHandler } from "./application/queries/get-passkey-app-associations/get-passkey-app-associations.handler";
-import { ListMyPasskeysHandler } from "./application/queries/list-my-passkeys/list-my-passkeys.handler";
 import { SimpleWebAuthnAdapter } from "./infrastructure/security/simple-web-authn.adapter";
 import { PasskeysController } from "./presentation/http/passkeys.controller";
 import { IdentityMaintenanceCron } from "./presentation/jobs/identity-maintenance.cron";
@@ -188,19 +182,13 @@ const HANDLERS = [
 	SetOwnLanguageHandler,
 	SetOwnPreferenceHandler,
 	ResetOwnPreferenceHandler,
-	ListOwnPreferencesHandler,
 	VerifyEmailHandler,
 	VerifyNewDeviceLoginHandler,
 	CheckBackupCodeHandler,
 	CheckPasswordResetTokenHandler,
-	CountRemainingBackupCodesHandler,
 	GetMeHandler,
-	GetMyMfaRecoveryStatusHandler,
-	GetOwnProfileHandler,
 	GetSessionPermissionsHandler,
 	GetUserForAdminHandler,
-	ListMfaRecoveryRequestsHandler,
-	ListMySessionsHandler,
 	ListUsersForAdminHandler,
 	InvalidateAccessTokenStateHandler,
 	InvalidateMeCacheOnAuthorizationChanged,
@@ -215,8 +203,6 @@ const HANDLERS = [
 	StartPasskeyRegistrationHandler,
 	StartPasskeySecondFactorHandler,
 	StartPasswordlessPasskeyLoginHandler,
-	ListMyPasskeysHandler,
-	GetPasskeyAppAssociationsHandler,
 ];
 
 /**
@@ -259,6 +245,9 @@ const HANDLERS = [
 		// Referrals' share-link attribution writer (identity owns `User`); global, so referrals imports no context.
 		{ provide: REFEREE_ATTRIBUTION_FACTORY, useValue: IDENTITY_REFEREE_ATTRIBUTION_FACTORY },
 		PublicUrlResolver,
+		// Single-port reads (ADR 096).
+		AccountApplicationService,
+		PasskeyAppAssociationsApplicationService,
 		PrismaImpersonationTenantFacts,
 		{ provide: IMPERSONATION_TENANT_FACTS, useExisting: PrismaImpersonationTenantFacts },
 		// ── Unit of work and reads ──────────────────────────────────────

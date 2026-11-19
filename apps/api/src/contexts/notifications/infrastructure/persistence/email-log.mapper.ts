@@ -14,7 +14,7 @@ export function toEmailLog(row: EmailLogAggregateRow): EmailLog {
 /**
  * Row → the public `EmailLogEntry` contract (the admin list projection).
  * Same rule as commands: an unknown stored status throws `CORRUPT_AGGREGATE_STATE`
- * — the shared contract has no "unknown" status to show it with (see ListEmailLogHandler).
+ * — the shared contract has no "unknown" status to show it with (see `EmailLogApplicationService.list`).
  */
 export function toEmailLogEntry(row: EmailLogRow): EmailLogEntry {
 	return EmailLogEntrySchema.parse({

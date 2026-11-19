@@ -10,5 +10,3 @@ import { ApiKeyFilterSchema, DEFAULT_API_KEY_FILTER } from "@/contexts/pos/lib/a
 
 /** `/t/[tenantSlug]/api-keys?status=revoked|all` — absent means active keys. */
 export const API_KEYS_URL_STATE = defineUrlState({ status: urlParamWithDefault(ApiKeyFilterSchema, DEFAULT_API_KEY_FILTER) });
-
-export type ApiKeysUrlState = typeof API_KEYS_URL_STATE.defaults;

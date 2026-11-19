@@ -1,8 +1,7 @@
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { compileMenu } from "@workspace/client/lib/sidebar/sidebar-menu-compile";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem, SidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug, type FeatureFlagKey } from "@workspace/shared";
+import { createGrantedCapabilities, isCapabilityGranted, LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug, type FeatureFlagKey } from "@workspace/shared";
 import { samplePathForPattern } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
 import { describe, expect, it } from "vitest";
 

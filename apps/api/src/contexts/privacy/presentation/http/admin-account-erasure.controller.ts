@@ -3,14 +3,14 @@
 // ============================================
 // For someone who asked another way (for example by email). The same permission as banning an account
 // (`DELETE USER`, super admins), and a recorded reason; the request (with the reason) is in the audit log.
-import { Controller, Get, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { ACCOUNT_ERASURE_REQUEST_OPERATION } from "../../../../platform/application/personal-data/personal-data-erasure.registry";
 import {
 	AccountErasureResponseSchema,
 	AccountErasureUserParamsSchema,
-	apiPath,
 	OwnAccountErasureResponseSchema,
 	RequestAccountErasureBySupportSchema,
 	type AccountErasureResponse,
@@ -35,7 +35,7 @@ type UserParams = z.output<typeof AccountErasureUserParamsSchema>;
 
 @ApiTags("Privacy")
 @ApiBearerAuth()
-@Controller(apiPath("/admin/users"))
+@ApiController("/admin/users")
 export class AdminAccountErasureController {
 	public constructor(@Inject(ACCOUNT_ERASURE_SERVICE) private readonly erasures: AccountErasureService) {}
 

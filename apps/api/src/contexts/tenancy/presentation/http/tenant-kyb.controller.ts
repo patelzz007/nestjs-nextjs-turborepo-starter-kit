@@ -1,8 +1,7 @@
-import { Controller, Get, Patch } from "@nestjs/common";
+import { Get, Patch } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	FileDownloadDispositionSchema,
 	MerchantKybDocumentDownloadResponseSchema,
 	MerchantKybProfileResponseSchema,
@@ -14,6 +13,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { SkipAuthThrottle } from "../../../../platform/presentation/http/security/decorators/skip-auth-throttle.decorator";
@@ -27,7 +27,7 @@ import { GetKybProfileQuery } from "../../application/queries/get-kyb-profile/ge
 
 @ApiTags("Tenant KYB")
 @ApiBearerAuth()
-@Controller(apiPath("/tenants/:tenantSlug/kyb"))
+@ApiController("/tenants/:tenantSlug/kyb")
 export class TenantKybController {
 	public constructor(
 		private readonly commandBus: CommandBus,

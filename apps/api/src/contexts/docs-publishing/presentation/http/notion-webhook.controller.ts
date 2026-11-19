@@ -1,10 +1,11 @@
-import { Controller, HttpCode, HttpStatus, Post, Req, type RawBodyRequest } from "@nestjs/common";
+import { HttpCode, HttpStatus, Post, Req, type RawBodyRequest } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, NOTION_WEBHOOK_PATH } from "@workspace/shared";
+import { NOTION_WEBHOOK_PATH } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
@@ -27,7 +28,7 @@ type NotionWebhookReceived = z.output<typeof NotionWebhookReceivedSchema>;
  * nothing else.
  */
 @ApiTags("Docs publishing")
-@Controller(apiPath(NOTION_WEBHOOK_PATH))
+@ApiController(NOTION_WEBHOOK_PATH)
 export class NotionWebhookController {
 	public constructor(private readonly commandBus: CommandBus) {}
 

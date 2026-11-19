@@ -69,12 +69,6 @@ overrides:
   # packages. Remove each override once a Prisma release ships the patched dep.
   "@prisma/config>deepmerge-ts": "8.0.2" # GHSA: deepmerge-ts <8.0.0
   "prisma>mysql2": "3.24.5" # GHSA: mysql2 <3.23.1 (MySQL driver, unused with Postgres)
-  # gaxios@6 (via firebase-admin@14 → @google-cloud/storage@8 → google-auth-library@9) still
-  # depends on uuid ^9; it only uses `require("uuid").v4()`, which uuid 11 (CJS + ESM) keeps.
-  # packages/tooling/src/repo-guards/__tests__/dependency-overrides.test.ts loads uuid from the parent's
-  # install and calls v4() the way it does, so a breaking override fails the tests.
-  # (google-gax and teeny-request dropped uuid in the versions firebase-admin@14 pulls.)
-  "gaxios>uuid": "11.1.1" # GHSA: uuid <11.1.1
   # @react-native-firebase/app depends on the `firebase` JS SDK, whose @firebase/firestore pins @grpc/grpc-js ~1.9.0.
   # The app never loads it (React Native Firebase uses the native SDKs; Firestore isn't used at all), so this only
   # keeps the vulnerable copy out of the install. Firestore's Node build uses grpc-js's stable 1.x client API, which
@@ -91,6 +85,12 @@ overrides:
 # react-native-keyboard-controller 1.22.7, react-native-view-shot 6.1.1. Move them only with the SDK.
 # metro 0.88: @expo/metro 58 bundles metro 0.87.1 (.syncpackrc.json pins apps/mobile + ui-native to it).
 # @babel/plugin-transform-dynamic-import 8: a Babel 8 plugin; babel-preset-expo 58 runs on Babel 7.
+# Expo 58.0.26 still pins react-native-reanimated 4.7.1 (4.7.2 is out) next to the pins above.
+# fontkit 3 (re-checked 2026-11-19): PDFKit 0.20.2 (latest) renders with fontkit ^2.0.4, and apps/api's
+# report-font registry validates the bundled fonts with fontkit before PDFKit draws them, so both must be the
+# same engine. Move fontkit with PDFKit.
+# eslint 10: only the peer of the oxlint JS plugins (eslint-plugin-react 7.37, jsx-a11y 6.10, …), whose peer
+# ranges stop at ^9. It follows them.
 
 # nestjs-zod@5.6.0 (latest) has not yet widened its peer ranges to Nest 12.
 # It is exercised end to end by the API unit + e2e suites on Nest 12; remove
@@ -136,6 +136,12 @@ auditConfig:
     # review-by: 2026-11-25
     - GHSA-fc5q-39xc-vjpf
 
+# Agent skills a dependency ships (pnpm's `permissions`): denied. The repository's own skills and rules are the
+# agent's instructions; a package must not add to them through an install.
 permissions:
+  '@tanstack/react-router':
+    skills: false
+  '@tanstack/react-start':
+    skills: false
   '@tanstack/react-table':
     skills: false

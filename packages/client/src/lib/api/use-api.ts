@@ -1,5 +1,5 @@
 // ============================================
-// lib/use-api.ts - Cookie-based API hook (endpoint-agnostic)
+// lib/api/use-api.ts -Cookie-based API hook (endpoint-agnostic)
 // ============================================
 // The web binding of `@workspace/api-client`: the client is built from the
 // injected config with the COOKIE transport (`credentials: "include"`), its

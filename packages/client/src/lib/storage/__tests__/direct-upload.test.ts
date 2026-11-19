@@ -1,7 +1,7 @@
 import { LIST_SLOT_INDEX, type CreateFileUploadUrlResponse } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { FetchImpl } from "../../test-utils";
+import type { FetchImpl } from "@workspace/api-client/testing";
 import { DirectUploadError, uploadFileWithTicket } from "../direct-upload";
 
 const FILE_ID = "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f";

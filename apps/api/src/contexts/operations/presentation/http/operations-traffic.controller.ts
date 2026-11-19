@@ -3,10 +3,9 @@
 // ============================================
 // RATE_LIMIT and CACHE permissions (the Platform Developer role reads both; changing them is the Admin's).
 // Every change is a state-changing request, so the audit trail records it with its reason.
-import { Controller, Delete, Get, HttpStatus, Inject, Post, Put } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Inject, Post, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	CacheOverviewSchema,
 	FlushCacheSchema,
 	LiftRateLimitPenaltySchema,
@@ -25,6 +24,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { AuthorizationError } from "../../../../platform/application/errors/app-error";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -50,7 +50,7 @@ function staffUserId(actor: ActorContext): string {
 @ApiTags("Operations")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for rate limits and the cache.")
-@Controller(apiPath("/admin/operations"))
+@ApiController("/admin/operations")
 export class OperationsTrafficController {
 	public constructor(@Inject(OPERATIONS_TRAFFIC) private readonly traffic: OperationsTrafficService) {}
 

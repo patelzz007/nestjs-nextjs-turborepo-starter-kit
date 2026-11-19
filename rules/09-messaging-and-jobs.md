@@ -315,17 +315,20 @@ Beyond the general integration-testing guidance (`11-testing-vitest.md`), specif
 
 ```ts
 @Injectable()
-export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
+export class OutboxWorker implements OnModuleInit, BeforeApplicationShutdown {
   private timer: NodeJS.Timeout | null = null;
   private isProcessing = false; // prevents overlapping polls in this instance
+  private readonly ticks = new InFlightWork(); // the polls still running, so shutdown can wait for them
 
   public constructor(private readonly prisma: PrismaService, private readonly publisher: EventPublisher) {}
 
   public onModuleInit(): void {
-    this.timer = setInterval(() => { void this.tick(); }, OUTBOX_POLL_INTERVAL_MS);
+    this.timer = setInterval(() => { void this.ticks.track(() => this.tick()); }, OUTBOX_POLL_INTERVAL_MS);
   }
-  public onModuleDestroy(): void {
+  // Stop polling, then let a poll in progress finish while the pool and the broker are still open (ADR 095).
+  public async beforeApplicationShutdown(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
+    await this.ticks.settled();
   }
 
   private async tick(): Promise<void> {

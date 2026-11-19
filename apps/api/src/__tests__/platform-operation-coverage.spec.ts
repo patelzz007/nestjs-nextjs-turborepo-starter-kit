@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { Reflector } from "@nestjs/core";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { AUDIT_READ_OPERATION, AUDIT_TRAIL_READ_OPERATION, DATA_CHANGE_READ_OPERATION } from "../contexts/audit/application/audit-read-operations";
 import { AuditLogsController } from "../contexts/audit/presentation/http/audit-logs.controller";
@@ -118,13 +118,13 @@ const NO_SYSTEM_OPERATION_ROUTES: ReadonlyMap<string, string> = new Map<string, 
 	["SavedViewsController.remove", "Soft-deletes the caller's own SavedListView (user-owned RLS)"],
 ]);
 
+/**
+ * Loaded while the file is collected, not in a hook: importing every controller is a module-graph load (seconds on a
+ * busy machine, with coverage on) that no hook timeout should be measuring — a static import would not be timed either.
+ */
+const routes: readonly ControllerRoute[] = await discoverControllerRoutes(resolve(import.meta.dirname, ".."));
+
 describe("PLAT-005: every admin-console route declares its platform operation", () => {
-	let routes: readonly ControllerRoute[] = [];
-
-	beforeAll(async () => {
-		routes = await discoverControllerRoutes(resolve(import.meta.dirname, ".."));
-	});
-
 	it("discovers the API's controllers", () => {
 		expect(routes.filter(isAdminConsoleRoute).length).toBeGreaterThan(NO_SYSTEM_OPERATION_ROUTES.size);
 	});

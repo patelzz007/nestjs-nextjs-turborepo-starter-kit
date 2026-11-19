@@ -1,7 +1,6 @@
-import { Controller, Delete, Get, HttpStatus, Patch, Post, Put } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Patch, Post, Put } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	OkResponseSchema,
 	TenantGrantCreateSchema,
 	TenantGrantListResponseSchema,
@@ -33,6 +32,7 @@ import {
 	type TenantShareResponse,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -49,7 +49,7 @@ import { TenantAccessService } from "../../application/services/tenant-access.se
  * or stores) are checked in the same transaction as the write.
  */
 @ApiTags("Tenant Access")
-@Controller(apiPath("/tenants"))
+@ApiController("/tenants")
 @ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "The caller's role does not allow this, or it would give more than their own role or stores" })
 @ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "No such tenant, role, member, grant or share in it" })
 export class TenantAccessController {

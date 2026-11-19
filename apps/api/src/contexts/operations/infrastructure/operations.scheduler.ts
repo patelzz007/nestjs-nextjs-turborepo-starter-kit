@@ -5,7 +5,7 @@
 // on whichever instance wins the minute's lock. Every hour: the history rollup and retention, and
 // the backup schedule and the weekly restore drill. Each tick never rejects: a failure is logged and the next tick retries.
 
-import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, Logger, type BeforeApplicationShutdown, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { OPS_HOUR_MS, OPS_MINUTE_MS, OPS_SAMPLE_INTERVAL_MS, CaughtValueSchema } from "@workspace/shared";
 
@@ -18,6 +18,7 @@ import type { InstanceReporter } from "../application/services/instance-reporter
 import type { OperationsMonitor } from "../application/services/operations-monitor";
 import { BACKUP_RUNNER, HISTORY_MAINTAINER, INSTANCE_REPORTER, OPERATIONS_MONITOR, OPS_RESTORE_DRILL_OPERATION } from "../application/ports/operations.tokens";
 import { caughtErrorLogFields } from "../../../platform/application/errors/caught-error-log";
+import { InFlightWork } from "../../../platform/application/in-flight-work";
 
 const HEARTBEAT_INTERVAL_ID = "operations.heartbeat";
 const MINUTE_INTERVAL_ID = "operations.minute";
@@ -26,8 +27,9 @@ const HOUR_INTERVAL_ID = "operations.hour";
 const FIRST_HOURLY_RUN_DELAY_MS = OPS_MINUTE_MS;
 
 @Injectable()
-export class OperationsScheduler implements OnModuleInit, OnApplicationShutdown {
+export class OperationsScheduler implements OnModuleInit, BeforeApplicationShutdown, OnApplicationShutdown {
 	private readonly logger: Logger = new Logger(OperationsScheduler.name);
+	private readonly ticks = new InFlightWork();
 	private firstHourly: NodeJS.Timeout | undefined;
 
 	public constructor(
@@ -46,19 +48,24 @@ export class OperationsScheduler implements OnModuleInit, OnApplicationShutdown 
 		});
 		this.every(HOUR_INTERVAL_ID, OPS_HOUR_MS, () => this.hourly());
 		this.firstHourly = setTimeout((): void => {
-			void this.safely("operations.hourly", () => this.hourly());
+			void this.ticks.track(() => this.safely("operations.hourly", () => this.hourly()));
 		}, FIRST_HOURLY_RUN_DELAY_MS);
 		this.firstHourly.unref();
 	}
 
-	/** A clean shutdown: the timers stop and this instance leaves the list (so it is not reported Down). */
-	public async onApplicationShutdown(): Promise<void> {
+	/** Shutdown, first half: the timers stop, and a tick in progress finishes while its connections are open (ADR 095). */
+	public async beforeApplicationShutdown(): Promise<void> {
 		clearTimeout(this.firstHourly);
 		for (const id of [HEARTBEAT_INTERVAL_ID, MINUTE_INTERVAL_ID, HOUR_INTERVAL_ID]) {
 			if (this.registry.doesExist("interval", id)) {
 				this.registry.deleteInterval(id);
 			}
 		}
+		await this.ticks.settled();
+	}
+
+	/** Shutdown, second half: this instance leaves the list (so it is not reported Down), before the shared Redis clients close. */
+	public async onApplicationShutdown(): Promise<void> {
 		await this.safely("operations.leave", () => this.reporter.leave());
 	}
 
@@ -71,7 +78,7 @@ export class OperationsScheduler implements OnModuleInit, OnApplicationShutdown 
 
 	private every(id: string, intervalMs: number, work: () => Promise<void>): void {
 		const timer: NodeJS.Timeout = setInterval((): void => {
-			void this.safely(id, work);
+			void this.ticks.track(() => this.safely(id, work));
 		}, intervalMs);
 		timer.unref();
 		this.registry.addInterval(id, timer);

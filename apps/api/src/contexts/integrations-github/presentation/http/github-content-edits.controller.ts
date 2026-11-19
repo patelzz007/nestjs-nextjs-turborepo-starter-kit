@@ -1,8 +1,9 @@
-import { Controller, Get } from "@nestjs/common";
+import { Get } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, GithubContentEditHistorySchema, GithubContentEditParamsSchema, type GithubContentEditHistory, type GithubContentEditParams } from "@workspace/shared";
+import { GithubContentEditHistorySchema, GithubContentEditParamsSchema, type GithubContentEditHistory, type GithubContentEditParams } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
@@ -16,7 +17,7 @@ import { GetContentEditHistoryQuery } from "../../application/queries/get-conten
 @ApiTags("GitHub pull requests")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for GitHub pull requests.")
-@Controller(apiPath("/github/content-edits"))
+@ApiController("/github/content-edits")
 export class GithubContentEditsController {
 	public constructor(private readonly queryBus: QueryBus) {}
 

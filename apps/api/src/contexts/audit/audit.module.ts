@@ -10,11 +10,7 @@ import { PurgeExpiredAuditRecordsHandler } from "./application/commands/purge-ex
 import { AUDIT_READ_SESSION, type AuditReadSession } from "./application/ports/audit-read-session.port";
 import { AUDIT_RETENTION, type AuditRetentionPort } from "./application/ports/audit-retention.port";
 import { AUDIT_TRAIL_SIGNALS } from "./application/ports/audit-trail-signals.port";
-import { GetDataChangeHandler } from "./application/queries/get-data-change/get-data-change.handler";
-import { GetHttpAuditLogHandler } from "./application/queries/get-http-audit-log/get-http-audit-log.handler";
-import { ListAuditTrailHandler } from "./application/queries/list-audit-trail/list-audit-trail.handler";
-import { ListDataChangesHandler } from "./application/queries/list-data-changes/list-data-changes.handler";
-import { ListHttpAuditLogsHandler } from "./application/queries/list-http-audit-logs/list-http-audit-logs.handler";
+import { AuditApplicationService } from "./application/services/audit.application-service";
 import { AUDIT_TRAIL_LISTEN_CONNECTION } from "./infrastructure/adapters/audit-trail-listen-connection";
 import { PgAuditTrailSignals } from "./infrastructure/adapters/pg-audit-trail-signals.adapter";
 import { PrismaAuditReadSession } from "./infrastructure/persistence/prisma-audit-read-session";
@@ -28,8 +24,8 @@ import { DataChangesController } from "./presentation/http/data-changes.controll
  * The audit context: the read side of both audit stores — the HTTP request
  * trail (`AuditLog`, ADR 025) and the row-level data-change trail
  * (`DataChangeLog`, ADR 051) — served to the admin audit log as one
- * timeline (`/admin/audit-trail`) plus each store's complete records. Queries,
- * plus the one write ADR 078 allows: removing records past the ten-year retention
+ * timeline (`/admin/audit-trail`) plus each store's complete records. Reads
+ * (`AuditApplicationService`, ADR 096), plus the one write ADR 078 allows: removing records past the ten-year retention
  * through `app_purge_audit_batch` (the weekly `AuditRecordRetentionCron`). The write sides are the global `AuditLogModule` in
  * `platform/infrastructure/audit` (HTTP) and the database capture triggers
  * (row changes); this context never writes an audit row except the
@@ -46,11 +42,7 @@ import { DataChangesController } from "./presentation/http/data-changes.controll
 			inject: [TenantTransactionService, AuditTrailService],
 			useFactory: (transactions: TenantTransactionService, auditTrail: AuditTrailService): AuditReadSession => new PrismaAuditReadSession(transactions, auditTrail),
 		},
-		ListHttpAuditLogsHandler,
-		GetHttpAuditLogHandler,
-		ListDataChangesHandler,
-		GetDataChangeHandler,
-		ListAuditTrailHandler,
+		AuditApplicationService,
 		{
 			provide: AUDIT_RETENTION,
 			inject: [TenantTransactionService],

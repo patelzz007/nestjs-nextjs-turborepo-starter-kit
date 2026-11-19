@@ -1,14 +1,14 @@
-import { Controller, HttpStatus, Post } from "@nestjs/common";
+import { HttpStatus, Post } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiTags } from "@nestjs/swagger";
 import {
 	AdminCreateTenantInviteSchema,
 	AdminTenantInviteCreatedResponseSchema,
-	apiPath,
 	type AdminCreateTenantInviteInput,
 	type AdminTenantInviteCreatedResponse,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { Idempotent } from "../../../../platform/presentation/http/idempotency/idempotent.decorator";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -22,7 +22,7 @@ import { ProvisionTenantFromPlatformInviteCommand } from "../../application/comm
 import { PROVISION_PLATFORM_INVITE_OPERATION } from "../../application/ports/tenants.tokens";
 
 @ApiTags("Tenants")
-@Controller(apiPath("/admin/tenants"))
+@ApiController("/admin/tenants")
 export class TenantAdminController {
 	public constructor(private readonly commandBus: CommandBus) {}
 

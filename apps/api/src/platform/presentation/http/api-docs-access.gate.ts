@@ -9,7 +9,7 @@
 // token) of a platform SuperAdmin whose session is still valid.
 
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { ApiErrorCodes, apiDocsPath } from "@workspace/shared";
+import { API_VERSIONS, ApiErrorCodes, apiDocsPath, type ApiVersion } from "@workspace/shared";
 
 import { readBearerToken } from "./security/guards/auth.guard";
 import type { AccessTokenStatePort, AccessTokenVerifierPort } from "../../application/ports/access-token.port";
@@ -25,10 +25,12 @@ const ADMIN_ACCESS_TOKEN_COOKIE = "adminAccessToken";
 /** Legacy docs entry point that redirects to the versioned path. */
 const LEGACY_DOCS_PATH = "/docs";
 
-/** True for a path under the Swagger mount (UI, document, assets, legacy redirect). */
+/** Every Swagger mount (one per API version, ADR 094) and the legacy redirect. */
+const DOCS_PREFIXES: readonly string[] = [...API_VERSIONS.map((version: ApiVersion): string => apiDocsPath(version)), LEGACY_DOCS_PATH];
+
+/** True for a path under a Swagger mount (UI, document, assets, legacy redirect), whatever its version. */
 export function isApiDocsPath(path: string): boolean {
-	const docsPath: string = apiDocsPath();
-	return [docsPath, LEGACY_DOCS_PATH].some((prefix: string): boolean => path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}-`));
+	return DOCS_PREFIXES.some((prefix: string): boolean => path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}-`));
 }
 
 /**

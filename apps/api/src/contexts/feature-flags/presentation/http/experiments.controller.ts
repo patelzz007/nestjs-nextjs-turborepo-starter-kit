@@ -4,10 +4,9 @@
 // Platform staff only: EXPERIMENT:LIST to read plans and results, UPDATE to plan, start and stop (with a reason;
 // stopping also records the conclusion). Results are worked out by the analytics consumer.
 
-import { Controller, Get, HttpCode, HttpStatus, Inject, Post, Put } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Inject, Post, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	CreateExperimentSchema,
 	ExperimentDetailSchema,
 	ExperimentListSchema,
@@ -26,6 +25,7 @@ import {
 	type UpdateExperimentInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -41,7 +41,7 @@ import { EXPERIMENTS } from "../../feature-flags.tokens";
 @ApiTags("Experiments")
 @ApiBearerAuth()
 @AdminAccessOnly("Experiments are for the admin console.")
-@Controller(apiPath("/admin/experiments"))
+@ApiController("/admin/experiments")
 export class ExperimentsController {
 	public constructor(@Inject(EXPERIMENTS) private readonly experiments: ExperimentService) {}
 

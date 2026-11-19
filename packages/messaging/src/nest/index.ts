@@ -8,7 +8,6 @@ import { registerRedisInfrastructureModule } from "./redis/redis-infrastructure.
 import { MESSAGING_OPTIONS } from "./tokens";
 
 export { BullMqHealthIndicator, BullMqInfrastructureModule, registerBullMqInfrastructureModule } from "./bullmq/bullmq-infrastructure.module";
-export { BullMqWorkerDrainService } from "./bullmq/bullmq-worker-drain.service";
 export { MONITORED_WORKER_OPTIONS } from "./bullmq/monitored-worker-options";
 export { KafkaInfrastructureModule, registerKafkaInfrastructureModule } from "./kafka/kafka-infrastructure.module";
 export {

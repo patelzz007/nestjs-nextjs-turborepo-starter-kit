@@ -14,7 +14,7 @@ export class AuditLogRetentionCron {
 
 	public constructor(private readonly dispatcher: SystemCommandDispatcher) {}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async purgeOldAuditLogs(): Promise<void> {
 		const actor = authorizationSystemActor(AUDIT_LOG_RETENTION_OPERATION, "cron", "Soft-delete permission audit rows past retention");
 		const retired: number = await this.dispatcher.dispatch(new PurgeOldPermissionAuditLogsCommand(actor), { kind: "cron", name: "permission-audit-log-retention" });

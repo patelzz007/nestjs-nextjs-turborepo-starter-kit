@@ -30,8 +30,6 @@ export const BackupLoginEnvSchema = z.object({
 	}),
 });
 
-export type BackupLogin = z.output<typeof BackupLoginEnvSchema>["BACKUP_DATABASE_URL"];
-
 /**
  * The idempotent SQL that creates (or updates) the login. `passwordLiteral` is the password already
  * quoted as a SQL literal by the database driver; the login name was validated by

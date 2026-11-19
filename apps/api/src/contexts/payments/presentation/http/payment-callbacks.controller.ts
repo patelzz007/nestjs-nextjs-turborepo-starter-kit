@@ -5,12 +5,13 @@
 // (ADR 081): an unsigned or forged callback answers 401 and changes nothing; every request is logged in the
 // received-webhook log. A verified one answers 200 even for a payment the platform doesn't know, so the
 // gateway stops retrying it (the service logs it); a redelivery answers 200 without being applied again.
-import { Controller, HttpCode, HttpStatus, Inject, Post, Req } from "@nestjs/common";
+import { HttpCode, HttpStatus, Inject, Post, Req } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, PaymentCallbackResponseSchema, type PaymentCallbackResponse, type PaymentProviderName } from "@workspace/shared";
+import { PaymentCallbackResponseSchema, type PaymentCallbackResponse, type PaymentProviderName } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
@@ -25,7 +26,7 @@ import type { PaymentCallbackReception } from "../../application/services/paymen
 const RECEIVED: PaymentCallbackResponse = { received: true };
 
 @ApiTags("Payments")
-@Controller(apiPath("/payments/callbacks"))
+@ApiController("/payments/callbacks")
 export class PaymentCallbacksController {
 	public constructor(@Inject(PAYMENT_CALLBACK_RECEPTION) private readonly reception: Pick<PaymentCallbackReception, "receive">) {}
 

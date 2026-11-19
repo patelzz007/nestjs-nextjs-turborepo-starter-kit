@@ -11,8 +11,7 @@ import {
 	RECEIVED_WEBHOOK_STORE,
 	WEBHOOK_FAILURE_READER,
 } from "./application/ports/webhooks-inbound.tokens";
-import { GetReceivedWebhookHandler } from "./application/queries/get-received-webhook/get-received-webhook.handler";
-import { ListReceivedWebhooksHandler } from "./application/queries/list-received-webhooks/list-received-webhooks.handler";
+import { ReceivedWebhookApplicationService } from "./application/services/received-webhook.application-service";
 import { InboundWebhookReceiver } from "./application/services/inbound-webhook-receiver";
 import { HttpWebhookFailureReader } from "./infrastructure/adapters/http-webhook-failure.reader";
 import { PrismaReceivedWebhookReadRepository } from "./infrastructure/persistence/prisma-received-webhook.read-repository";
@@ -40,8 +39,7 @@ import { ReceivedWebhookRetentionCron } from "./presentation/jobs/received-webho
 		{ provide: RECEIVED_WEBHOOK_RETENTION_DAYS, inject: [TypedConfigService], useFactory: (config: TypedConfigService): number => config.inboundWebhooks.retentionDays },
 		InboundWebhookReceiver,
 		{ provide: INBOUND_WEBHOOK_RECEIVER, useExisting: InboundWebhookReceiver },
-		ListReceivedWebhooksHandler,
-		GetReceivedWebhookHandler,
+		ReceivedWebhookApplicationService,
 		PruneReceivedWebhooksHandler,
 		ReceivedWebhookRetentionCron,
 	],

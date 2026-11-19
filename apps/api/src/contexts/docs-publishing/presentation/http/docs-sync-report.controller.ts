@@ -1,8 +1,9 @@
-import { Controller, Headers, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import { Headers, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, DOCS_SYNC_REPORT_PATH, DocsSyncRunAckSchema, DocsSyncRunReportSchema, type DocsSyncRunAck, type DocsSyncRunReport } from "@workspace/shared";
+import { DOCS_SYNC_REPORT_PATH, DocsSyncRunAckSchema, DocsSyncRunReportSchema, type DocsSyncRunAck, type DocsSyncRunReport } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
 import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { SkipMutationIntent } from "../../../../platform/presentation/http/security/decorators/skip-mutation-intent.decorator";
@@ -20,7 +21,7 @@ function bearerToken(authorization: string | undefined): string | null {
 
 /** Where the docs sync reports (ADR 084). Not a session route: it presents `DOCS_SYNC_REPORT_TOKEN`, checked by the command. */
 @ApiTags("Docs publishing")
-@Controller(apiPath(DOCS_SYNC_REPORT_PATH))
+@ApiController(DOCS_SYNC_REPORT_PATH)
 export class DocsSyncReportController {
 	public constructor(private readonly commandBus: CommandBus) {}
 

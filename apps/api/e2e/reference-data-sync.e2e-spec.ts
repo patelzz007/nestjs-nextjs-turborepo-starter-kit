@@ -64,7 +64,7 @@ describe("Reference data sync (integration, scratch database)", () => {
 		prisma = new PrismaService(config);
 		prisma.onModuleInit();
 		await prisma.ensureConnected();
-		database.track((): Promise<void> => prisma.onModuleDestroy());
+		database.track((): Promise<void> => prisma.onApplicationShutdown());
 	}, SCRATCH_SETUP_TIMEOUT_MS);
 
 	afterAll(async () => {

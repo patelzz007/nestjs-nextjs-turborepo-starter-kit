@@ -31,12 +31,32 @@ const PUBLIC_OBJECT_ACTIONS: readonly string[] = ["s3:PutObject", "s3:DeleteObje
  * passed where an `IBucket` is expected (e.g. `S3BucketOrigin.withOriginAccessControl`)
  * with that compiler flag on. This narrows the getter to the documented `@default false`
  * — every CDK consumer only tests it for truthiness, so the synthesized template is
- * unchanged. Remove once aws-cdk-lib aligns the two declarations.
+ * unchanged.
+ *
+ * `Bucket#encryption` (aws-cdk-lib 2.277) has the same mismatch: a getter returning
+ * `BucketEncryption | undefined` against `IBucket#encryption?: BucketEncryption`. There
+ * `undefined` means "not known at synthesis", which no default may stand in for (a consumer
+ * decides key grants from it). This bucket is always created with `S3_MANAGED`, so its mode
+ * is known; if it ever is not, synthesis stops instead of guessing.
+ *
+ * Remove once aws-cdk-lib aligns the declarations.
  */
 class OriginBucket extends s3.Bucket {
 	public override get isWebsite(): boolean {
 		return super.isWebsite ?? false;
 	}
+
+	public override get encryption(): s3.BucketEncryption {
+		return knownBucketEncryption(super.encryption, this.node.path);
+	}
+}
+
+/** A bucket's encryption mode, which must be known at synthesis: `undefined` stops synthesis rather than being guessed. */
+export function knownBucketEncryption(mode: s3.BucketEncryption | undefined, bucketPath: string): s3.BucketEncryption {
+	if (mode === undefined) {
+		throw new Error(`The encryption mode of origin bucket ${bucketPath} is not known at synthesis; it must be set explicitly.`);
+	}
+	return mode;
 }
 
 export interface StoragePlatformStackProps extends cdk.StackProps {

@@ -1,11 +1,11 @@
 import { Global, Logger, Module, type OnModuleInit } from "@nestjs/common";
+import { REDIS_PUBLISHER } from "@workspace/messaging/nest";
 import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { describeTokenBucket, RateLimitPolicyRegistry } from "../../application/rate-limiting/rate-limit-policy-registry";
 import { RATE_LIMITER, type RateLimiter } from "../../application/ports/rate-limiter.port";
 import { RATE_LIMIT_EXEMPTION_LIST, RATE_LIMIT_REFUSALS } from "../../application/ports/rate-limit-insights.port";
-import { REDIS_PUBLISHER } from "../redis/redis.tokens";
 import { FailoverRateLimiter } from "./failover-rate-limiter";
 import { MemoryRateLimiter } from "./memory-rate-limiter";
 import { RateLimitExemptions } from "./rate-limit-exemptions";

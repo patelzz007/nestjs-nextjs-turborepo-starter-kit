@@ -92,7 +92,7 @@ export abstract class BaseController {
 
 // ✅ DO — composition; each controller uses only what it needs, no forced
 // shared shape that has to anticipate every future controller's needs
-@Controller('payments')
+@ApiController('/payments')
 export class PaymentsController {
   public constructor(
     private readonly validator: RequestValidator,
@@ -145,7 +145,7 @@ export class OrdersController {
 }
 
 // ✅ DO — three separate reasons to change, three separate classes
-@Controller('orders') export class OrdersController { /* HTTP concerns only */ }
+@ApiController('/orders') export class OrdersController { /* HTTP concerns only */ }
 export class OrderEligibilityPolicy { /* business rule concerns only */ }
 export class OrdersRepository { /* persistence concerns only */ }
 ```

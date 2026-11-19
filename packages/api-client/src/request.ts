@@ -13,6 +13,8 @@
 // travels is the context's transport (`transport.ts`).
 
 import {
+	API_VERSION,
+	API_VERSION_OVERRIDE_HEADER,
 	isStringPrimitive,
 	RefreshTokenBodySchema,
 	type ApiVersion,
@@ -70,6 +72,8 @@ export interface ApiRequestContext {
 	readonly transport?: RequestTransport | undefined;
 	/** Sent as `X-App-Version` on every request (mobile only, ADR 033). */
 	readonly appVersion?: string | undefined;
+	/** The API version this client is pinned to (ADR 094); omitted = `API_VERSION`. */
+	readonly apiVersion?: ApiVersion | undefined;
 	/** Static headers sent with every request (`ApiClientConfig.headers`); a per-call header of the same name wins. */
 	readonly headers?: Readonly<Record<string, string>> | undefined;
 	/**
@@ -146,6 +150,22 @@ export type ApiResponseKind = ApiResponse<null>["kind"];
 export interface ProcedureCallOptions {
 	readonly signal?: AbortSignal | undefined;
 	readonly headers?: Record<string, string> | undefined;
+	/**
+	 * The escape hatch (ADR 094): this one call goes to another API version than the client's pin, and says so
+	 * in `Accept-version` so the API logs the override. A cached query keeps the pin; use it on direct calls.
+	 */
+	readonly apiVersion?: ApiVersion | undefined;
+}
+
+/** The version one call goes to: its override, else the client's pin, else the build's `API_VERSION`. */
+function callVersion(context: ApiRequestContext, options: ProcedureCallOptions | undefined): ApiVersion {
+	return options?.apiVersion ?? context.apiVersion ?? API_VERSION;
+}
+
+/** `Accept-version` when a call leaves its client's pin; nothing otherwise. */
+function versionOverrideHeader(context: ApiRequestContext, options: ProcedureCallOptions | undefined): Record<string, string> {
+	const version: ApiVersion = callVersion(context, options);
+	return version === (context.apiVersion ?? API_VERSION) ? {} : { [API_VERSION_OVERRIDE_HEADER]: version };
 }
 
 // ── tRPC-style caller leaves ─────────────────────────────────────────────────
@@ -363,6 +383,7 @@ function procedureHeaders<Input extends SerializableInput, Resp extends DataValu
 			...context.requestHeaders?.(),
 			...def.baseOptions?.headers,
 			...options?.headers,
+			...versionOverrideHeader(context, options),
 		},
 		context.appVersion,
 	);
@@ -388,7 +409,7 @@ export function fetchQuery<Input extends SerializableInput, Resp extends DataVal
 		onUnauthorized: context.onUnauthorized,
 		onRefresh: context.onRefresh,
 		transport: context.transport,
-		version: def.version,
+		version: callVersion(context, options),
 	});
 }
 
@@ -420,7 +441,7 @@ export function fetchMutation<Input extends SerializableInput, Resp extends Data
 		onUnauthorized: context.onUnauthorized,
 		onRefresh: context.onRefresh,
 		transport: context.transport,
-		version: def.version,
+		version: callVersion(context, options),
 	});
 }
 

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { Get, HttpStatus, Patch, Post } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
@@ -19,7 +19,6 @@ import {
 	AdminLocationReviewPathInputSchema,
 	AdminLocationReviewSchema,
 	apiContract,
-	apiPath,
 	EmailPreviewSchema,
 	FileDownloadDispositionSchema,
 	MerchantKybDocumentDownloadResponseSchema,
@@ -38,6 +37,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
@@ -58,13 +58,10 @@ import { ReinstateTenantCommand } from "../../application/commands/reinstate-ten
 import { SuspendTenantCommand } from "../../application/commands/suspend-tenant/suspend-tenant.command";
 import { BanTenantCommand } from "../../application/commands/ban-tenant/ban-tenant.command";
 import { UnbanTenantCommand } from "../../application/commands/unban-tenant/unban-tenant.command";
-import { GetTenantLifecycleForAdminQuery } from "../../application/queries/get-tenant-lifecycle-for-admin/get-tenant-lifecycle-for-admin.query";
 import { GetKybDocumentDownloadUrlQuery } from "../../application/queries/get-kyb-document-download-url/get-kyb-document-download-url.query";
-import { GetMerchantInviteAvailabilityQuery } from "../../application/queries/get-merchant-invite-availability/get-merchant-invite-availability.query";
-import { GetMerchantDetailQuery } from "../../application/queries/get-merchant-detail/get-merchant-detail.query";
-import { ListLocationRequestsQuery } from "../../application/queries/list-location-requests/list-location-requests.query";
-import { ListMerchantsQuery } from "../../application/queries/list-merchants/list-merchants.query";
-import { PreviewMerchantInviteEmailQuery } from "../../application/queries/preview-merchant-invite-email/preview-merchant-invite-email.query";
+import { MerchantAdminApplicationService } from "../../application/services/merchant-admin.application-service";
+import { MerchantInviteApplicationService } from "../../application/services/merchant-invite.application-service";
+import { TenantLifecycleApplicationService } from "../../application/services/tenant-lifecycle.application-service";
 import {
 	KYB_ADMIN_DECIDE_OPERATION,
 	LOCATION_ADMIN_CREATE_OPERATION,
@@ -82,11 +79,11 @@ import {
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
-@Controller(apiPath("/admin/invites"))
+@ApiController("/admin/invites")
 export class RewardsAdminInvitesController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly invites: MerchantInviteApplicationService,
 	) {}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
@@ -110,8 +107,8 @@ export class RewardsAdminInvitesController {
 		description: "False on a single-tenant deployment, which serves only its configured tenant; POST /admin/invites is then refused with 403 TENANT_PROVISIONING_DISABLED.",
 	})
 	@ZodResponse(AdminMerchantInviteAvailabilitySchema, { description: "Invite availability" })
-	public getInviteAvailability(@CurrentActor() actor: ActorContext): Promise<AdminMerchantInviteAvailability> {
-		return this.queryBus.execute(new GetMerchantInviteAvailabilityQuery(actor));
+	public getInviteAvailability(): AdminMerchantInviteAvailability {
+		return this.invites.availability();
 	}
 
 	// A pure render (no state change), so a GET: the admin page re-renders it live as the form is typed.
@@ -124,19 +121,18 @@ export class RewardsAdminInvitesController {
 	})
 	@ZodResponse(EmailPreviewSchema, { description: "Rendered invite email preview" })
 	public previewInviteEmail(
-		@CurrentActor() actor: ActorContext,
 		@ZodQuery(apiContract.rewardsAdmin.previewInviteEmail.input) query: z.output<typeof apiContract.rewardsAdmin.previewInviteEmail.input>,
-	): Promise<EmailPreview> {
-		return this.queryBus.execute(new PreviewMerchantInviteEmailQuery(actor, query));
+	): EmailPreview {
+		return this.invites.previewInviteEmail(query);
 	}
 }
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
 @PlatformOperation(LOCATION_ADMIN_LIST_OPERATION)
-@Controller(apiPath("/admin/location-requests"))
+@ApiController("/admin/location-requests")
 export class RewardsAdminLocationRequestsController {
-	public constructor(private readonly queryBus: QueryBus) {}
+	public constructor(private readonly merchants: MerchantAdminApplicationService) {}
 
 	@RequirePermission("LIST", "MERCHANT_ORG")
 	@Get()
@@ -146,17 +142,19 @@ export class RewardsAdminLocationRequestsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.rewardsAdmin.listLocationRequests.input) query: z.output<typeof apiContract.rewardsAdmin.listLocationRequests.input>,
 	): Promise<PaginatedServiceResult<AdminLocationRequestResponse>> {
-		return this.queryBus.execute(new ListLocationRequestsQuery(actor, query));
+		return this.merchants.listLocationRequests(actor, query);
 	}
 }
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
-@Controller(apiPath("/admin/merchants"))
+@ApiController("/admin/merchants")
 export class RewardsAdminMerchantsController {
 	public constructor(
 		private readonly commandBus: CommandBus,
 		private readonly queryBus: QueryBus,
+		private readonly merchants: MerchantAdminApplicationService,
+		private readonly lifecycles: TenantLifecycleApplicationService,
 	) {}
 
 	@RequirePermission("LIST", "MERCHANT_ORG")
@@ -168,7 +166,7 @@ export class RewardsAdminMerchantsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.rewardsAdmin.listTenants.input) query: z.output<typeof apiContract.rewardsAdmin.listTenants.input>,
 	): Promise<PaginatedServiceResult<MerchantTenantResponse>> {
-		return this.queryBus.execute(new ListMerchantsQuery(actor, query));
+		return this.merchants.listMerchants(actor, query);
 	}
 
 	@RequirePermission("LIST", "MERCHANT_ORG")
@@ -180,7 +178,7 @@ export class RewardsAdminMerchantsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodParams(apiContract.rewardsAdmin.getTenant.input) params: { tenantId: string },
 	): Promise<AdminMerchantDetailResponse> {
-		return this.queryBus.execute(new GetMerchantDetailQuery(actor, params));
+		return this.merchants.getMerchantDetail(actor, params);
 	}
 
 	@RequirePermission("LIST", "MERCHANT_ORG")
@@ -251,11 +249,8 @@ export class RewardsAdminMerchantsController {
 	@Get(":tenantId/lifecycle")
 	@ApiOperation({ summary: "Read a tenant's lifecycle state, current suspension and appeals" })
 	@ZodResponse(TenantLifecycleResponseSchema, { description: "Tenant lifecycle" })
-	public getLifecycle(
-		@CurrentActor() actor: ActorContext,
-		@ZodParams(apiContract.rewardsAdmin.getTenant.input) params: { tenantId: string },
-	): Promise<TenantLifecycleResponse> {
-		return this.queryBus.execute(new GetTenantLifecycleForAdminQuery(actor, params));
+	public getLifecycle(@ZodParams(apiContract.rewardsAdmin.getTenant.input) params: { tenantId: string }): Promise<TenantLifecycleResponse> {
+		return this.lifecycles.getForPlatform(params);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)

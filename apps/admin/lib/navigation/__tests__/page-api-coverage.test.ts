@@ -1,5 +1,4 @@
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
-import { IMPLICIT_SELF_GRANTS, PERMISSION, toPlatformCapabilitySlug, type CapabilitySlug } from "@workspace/shared";
+import { createGrantedCapabilities, IMPLICIT_SELF_GRANTS, isCapabilityGranted, PERMISSION, toPlatformCapabilitySlug, type CapabilitySlug } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { ADMIN_ROUTE_AUTHORIZATION, resolveRouteAuthorization, type RouteAuthorizationRule } from "@/lib/navigation/route-authorization";

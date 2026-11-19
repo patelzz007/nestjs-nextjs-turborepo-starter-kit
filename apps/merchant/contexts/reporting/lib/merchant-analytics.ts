@@ -1,5 +1,5 @@
 // ============================================
-// lib/analytics/merchant-analytics.ts - the merchant dashboard's KPIs, series and breakdowns, mapped for the shared primitives
+// contexts/reporting/lib/merchant-analytics.ts -the merchant dashboard's KPIs, series and breakdowns, mapped for the shared primitives
 // ============================================
 // `GET /t/:tenantSlug/analytics/dashboard` (merchant:view_analytics) → props of
 // the packages/ui analytics primitives. Colour slots are fixed per entity on

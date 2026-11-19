@@ -1,9 +1,8 @@
-import { Controller, Get, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	DocsSyncOverviewSchema,
 	DocsSyncRunDetailSchema,
 	DocsSyncRunSummarySchema,
@@ -20,6 +19,7 @@ import {
 	type StartDocsSync,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -40,7 +40,7 @@ import { GetDocsSyncOverviewQuery, GetDocsSyncRunQuery, ListDocsSyncRunsQuery } 
 @ApiTags("Docs publishing")
 @AdminAccessOnly("Admin access required for docs publishing.")
 @PlatformOperation(DOCS_PUBLISHING_READ_OPERATION)
-@Controller(apiPath("/admin/docs-publishing"))
+@ApiController("/admin/docs-publishing")
 export class DocsPublishingAdminController {
 	public constructor(
 		private readonly commandBus: CommandBus,

@@ -1,5 +1,5 @@
 // ============================================
-// lib/query-provider.tsx - QueryClient Provider
+// lib/api/query-provider.tsx -QueryClient Provider
 // ============================================
 "use client";
 

@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { SystemOperationNameSchema } from "../platform/application/system-operation-names";
 import { IS_PUBLIC_KEY } from "../platform/presentation/http/security/decorators/public.decorator";
@@ -52,13 +52,13 @@ function replacementOf(route: ControllerRoute): Replacement | undefined {
 	return publicFlow === undefined ? undefined : { decorator: "public", operation: SystemOperationNameSchema.parse(publicFlow) };
 }
 
+/**
+ * Loaded while the file is collected, not in a hook: importing every controller is a module-graph load (seconds on a
+ * busy machine, with coverage on) that no hook timeout should be measuring — a static import would not be timed either.
+ */
+const routes: readonly ControllerRoute[] = await discoverControllerRoutes(resolve(import.meta.dirname, ".."));
+
 describe("MT-43: public operations replace the route-wide RLS bypass", () => {
-	let routes: readonly ControllerRoute[] = [];
-
-	beforeAll(async () => {
-		routes = await discoverControllerRoutes(resolve(import.meta.dirname, ".."));
-	});
-
 	it("gives every handler that was @RlsBypass its own named operation", () => {
 		const byId: ReadonlyMap<string, ControllerRoute> = new Map(routes.map((route): [string, ControllerRoute] => [route.id, route]));
 		for (const [id, expected] of FORMER_RLS_BYPASS_HANDLERS) {

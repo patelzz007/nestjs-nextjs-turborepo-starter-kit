@@ -67,23 +67,18 @@ import {
 	SUPPORT_ACCESS_READ,
 } from "./application/ports/authorization.tokens";
 import type { ReferenceDataSyncPort } from "./application/ports/catalog-sync.port";
-import { CheckPermissionHandler } from "./application/queries/check-permission/check-permission.handler";
 import { DecideAuthorizationHandler } from "./application/queries/decide-authorization/decide-authorization.handler";
-import { ExplainAuthorizationHandler } from "./application/queries/explain-authorization/explain-authorization.handler";
-import { GetCapabilityCatalogHandler } from "./application/queries/get-capability-catalog/get-capability-catalog.handler";
-import { GetPermissionHandler } from "./application/queries/get-permission/get-permission.handler";
-import { GetRoleHandler } from "./application/queries/get-role/get-role.handler";
-import { ListPermissionAuditLogHandler } from "./application/queries/list-permission-audit-log/list-permission-audit-log.handler";
-import { ListPermissionGroupsHandler } from "./application/queries/list-permission-groups/list-permission-groups.handler";
-import { ListPermissionsHandler } from "./application/queries/list-permissions/list-permissions.handler";
-import { ListRolesHandler } from "./application/queries/list-roles/list-roles.handler";
 import { PreviewRoleAssignmentHandler } from "./application/queries/preview-role-assignment/preview-role-assignment.handler";
 import { ValidateRoleAssignmentHandler } from "./application/queries/validate-role-assignment/validate-role-assignment.handler";
+import { AuthorizationExplanationApplicationService } from "./application/services/authorization-explanation.application-service";
+import { CapabilityCatalogApplicationService } from "./application/services/capability-catalog.application-service";
+import { PermissionAuditLogApplicationService } from "./application/services/permission-audit-log.application-service";
+import { PermissionCheckApplicationService } from "./application/services/permission-check.application-service";
+import { RbacCatalogApplicationService } from "./application/services/rbac-catalog.application-service";
 import { RbacMutationGuard } from "./application/services/rbac-mutation-guard";
 import { RbacMutationScope } from "./application/services/rbac-mutation-scope";
+import { SupportAccessApplicationService } from "./application/services/support-access.application-service";
 import { SupportAccessGrantLocator } from "./application/services/support-access-grant-locator";
-import { ListSupportAccessGrantsHandler } from "./application/queries/list-support-access-grants/list-support-access-grants.handler";
-import { ListTenantSupportAccessGrantsHandler } from "./application/queries/list-tenant-support-access-grants/list-tenant-support-access-grants.handler";
 import { PrismaSupportAccessReadRepository } from "./infrastructure/read/prisma-support-access.read-repository";
 import { AccountDefaultRoleAdapter } from "./infrastructure/adapters/account-default-role.adapter";
 import { AuthorizationPortAdapter } from "./infrastructure/adapters/authorization-port.adapter";
@@ -151,8 +146,7 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		RbacMutationScope,
 		RbacMutationGuard,
 		SupportAccessGrantLocator,
-		ListSupportAccessGrantsHandler,
-		ListTenantSupportAccessGrantsHandler,
+		SupportAccessApplicationService,
 		PrismaSupportAccessReadRepository,
 		{ provide: SUPPORT_ACCESS_READ, useExisting: PrismaSupportAccessReadRepository },
 		CreatePermissionHandler,
@@ -179,18 +173,14 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		RequestSupportAccessHandler,
 		ApproveSupportAccessHandler,
 		RevokeSupportAccessHandler,
-		ListPermissionsHandler,
-		GetPermissionHandler,
-		ListPermissionGroupsHandler,
-		CheckPermissionHandler,
-		ListRolesHandler,
-		GetRoleHandler,
+		RbacCatalogApplicationService,
+		PermissionCheckApplicationService,
+		PermissionAuditLogApplicationService,
+		CapabilityCatalogApplicationService,
+		AuthorizationExplanationApplicationService,
 		ValidateRoleAssignmentHandler,
 		PreviewRoleAssignmentHandler,
-		ListPermissionAuditLogHandler,
-		GetCapabilityCatalogHandler,
 		DecideAuthorizationHandler,
-		ExplainAuthorizationHandler,
 		InvalidateAuthorizationOnUserAuthorizationChanged,
 		// ── Access decisions (ADR 067): one service, four allow paths ──
 		AccessControlService,
@@ -254,7 +244,14 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 	],
 	exports: [
 		ACCESS_CONTROL,
+		// The application services the controllers of `AuthorizationHttpModule` call (ADR 096).
 		TenantAccessService,
+		RbacCatalogApplicationService,
+		SupportAccessApplicationService,
+		PermissionCheckApplicationService,
+		PermissionAuditLogApplicationService,
+		CapabilityCatalogApplicationService,
+		AuthorizationExplanationApplicationService,
 		AUTHORIZATION_PORT,
 		AUTHORIZATION_KERNEL,
 		SUPER_ADMIN_BYPASS_AUDIT,

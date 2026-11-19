@@ -1,6 +1,7 @@
 import { exposureDedupeKey, EXPOSURE_BATCH_MAX } from "@workspace/shared";
-import type { OnModuleDestroy } from "@nestjs/common";
+import type { OnApplicationShutdown } from "@nestjs/common";
 
+import { InFlightWork } from "../../../../platform/application/in-flight-work";
 import type { ExposureRecorder } from "../../application/ports/exposure-recorder.port";
 import type { ServerExposure, ServerExposures } from "../../application/ports/server-exposures.port";
 
@@ -14,19 +15,21 @@ const DEDUPE_MAX_ENTRIES = 50_000;
 /**
  * Exposures of the API's own checks (a till's redemption, customer tiers, `@RequireFeatureFlag`): each new decision
  * per subject is noted once an hour and the notes go out in batches every 10 seconds or every 50, whichever comes
- * first, so a busy check never writes an outbox row per call. Whatever is pending is sent on shutdown.
+ * first, so a busy check never writes an outbox row per call. Whatever is pending is sent on shutdown, once the
+ * HTTP server has closed (no request can note another one) and before the database pool closes (ADR 095).
  */
-export class BufferedServerExposures implements ServerExposures, OnModuleDestroy {
+export class BufferedServerExposures implements ServerExposures, OnApplicationShutdown {
 	private readonly seen = new Map<string, number>();
 	private pending: ServerExposure[] = [];
 	private readonly timer: NodeJS.Timeout;
+	private readonly flushes = new InFlightWork();
 
 	public constructor(
 		private readonly recorder: ExposureRecorder,
 		private readonly now: () => number,
 	) {
 		this.timer = setInterval((): void => {
-			void this.flush();
+			void this.flushes.track(() => this.flush());
 		}, SERVER_EXPOSURE_FLUSH_MS);
 		this.timer.unref();
 	}
@@ -41,7 +44,7 @@ export class BufferedServerExposures implements ServerExposures, OnModuleDestroy
 		this.remember(key, at);
 		this.pending.push(exposure);
 		if (this.pending.length >= EXPOSURE_BATCH_MAX) {
-			void this.flush();
+			void this.flushes.track(() => this.flush());
 		}
 	}
 
@@ -53,8 +56,9 @@ export class BufferedServerExposures implements ServerExposures, OnModuleDestroy
 		}
 	}
 
-	public async onModuleDestroy(): Promise<void> {
+	public async onApplicationShutdown(): Promise<void> {
 		clearInterval(this.timer);
+		await this.flushes.settled();
 		await this.flush();
 	}
 

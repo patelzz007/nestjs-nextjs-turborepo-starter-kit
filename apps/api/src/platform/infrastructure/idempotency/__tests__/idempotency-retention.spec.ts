@@ -247,7 +247,7 @@ describe("IdempotencyRetentionIntervalScheduler (no Redis)", () => {
 		return { scheduler: new IdempotencyRetentionIntervalScheduler(registry, retention), registry };
 	}
 
-	it("registers ONE in-process interval so retention runs even without Redis, and removes it on shutdown", () => {
+	it("registers ONE in-process interval so retention runs even without Redis, and removes it on shutdown", async () => {
 		vi.spyOn(Logger.prototype, "log").mockImplementation((): void => undefined);
 		const { scheduler, registry } = intervalSchedulerWith(() =>
 			Promise.resolve({ deleted: 0, batches: 1, durationMs: 1, stoppedBy: "drained", cutoffEpochMs: START_EPOCH_MS }),
@@ -256,8 +256,35 @@ describe("IdempotencyRetentionIntervalScheduler (no Redis)", () => {
 		scheduler.onModuleInit();
 		expect(registry.doesExist("interval", IDEMPOTENCY_PURGE_SCHEDULER_ID)).toBe(true);
 
-		scheduler.onApplicationShutdown();
+		await scheduler.beforeApplicationShutdown();
 		expect(registry.doesExist("interval", IDEMPOTENCY_PURGE_SCHEDULER_ID)).toBe(false);
+	});
+
+	it("lets a purge the timer started finish before shutdown moves on", async () => {
+		vi.useFakeTimers();
+		vi.spyOn(Logger.prototype, "log").mockImplementation((): void => undefined);
+		let release: () => void = (): void => undefined;
+		const { scheduler } = intervalSchedulerWith(
+			(): Promise<IdempotencyRetentionSummary> =>
+				new Promise((resolve): void => {
+					release = (): void => {
+						resolve({ deleted: 0, batches: 1, durationMs: 1, stoppedBy: "drained", cutoffEpochMs: START_EPOCH_MS });
+					};
+				}),
+		);
+		scheduler.onModuleInit();
+		await vi.advanceTimersByTimeAsync(IDEMPOTENCY_PURGE_INTERVAL_MS);
+
+		let shutDown = false;
+		const shutdown = scheduler.beforeApplicationShutdown().then((): void => {
+			shutDown = true;
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(shutDown).toBe(false);
+
+		release();
+		await shutdown;
+		expect(shutDown).toBe(true);
 	});
 
 	it("fires a purge every interval inside the idempotency.retention system scope", async () => {
@@ -271,7 +298,7 @@ describe("IdempotencyRetentionIntervalScheduler (no Redis)", () => {
 
 		scheduler.onModuleInit();
 		await vi.advanceTimersByTimeAsync(IDEMPOTENCY_PURGE_INTERVAL_MS * 2);
-		scheduler.onApplicationShutdown();
+		await scheduler.beforeApplicationShutdown();
 
 		expect(operations).toEqual([IDEMPOTENCY_RETENTION_OPERATION, IDEMPOTENCY_RETENTION_OPERATION]);
 	});

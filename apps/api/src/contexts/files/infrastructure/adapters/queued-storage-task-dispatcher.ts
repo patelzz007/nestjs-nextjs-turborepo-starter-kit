@@ -19,8 +19,6 @@ export const STORAGE_SCAN_QUEUE = QUEUE_NAMES.storageScan;
 export const STORAGE_DELETE_QUEUE = QUEUE_NAMES.storageDelete;
 /** `storage.cdn-invalidate` queue. */
 export const STORAGE_CDN_INVALIDATE_QUEUE = QUEUE_NAMES.storageCdnInvalidate;
-/** `storage.cleanup` queue (hourly sweep). */
-export const STORAGE_CLEANUP_QUEUE = QUEUE_NAMES.storageCleanup;
 
 /** The one queue operation the dispatcher needs (a BullMQ `Queue<T>` satisfies it). */
 export interface StorageJobQueue<T> {

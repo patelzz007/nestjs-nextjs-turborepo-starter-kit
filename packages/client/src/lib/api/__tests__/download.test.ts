@@ -2,7 +2,7 @@
 import { ANALYTICS_EXPORT_CONTENT_TYPES, apiContract, EpochMsSchema } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchCalls, firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../../test-utils";
+import { fetchCalls, firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "@workspace/api-client/testing";
 import { createApiRequestContext, type OnRefresh } from "../api-request";
 import { apiDownloads, ApiDownloadError, defineDownload, fetchDownload, fileNameFromContentDisposition, saveDownloadedFile } from "../download";
 

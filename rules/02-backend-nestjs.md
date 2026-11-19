@@ -59,7 +59,7 @@ export class OrdersController {
 }
 
 // ✅ DO — controller only orchestrates; everything else has a home
-@Controller('orders')
+@ApiController('/orders')
 export class OrdersController {
   public constructor(private readonly ordersService: OrdersService) {}
 
@@ -492,13 +492,28 @@ NestJS supports request-scoped providers (`{ scope: Scope.REQUEST }`), which get
 ❌ DON'T — change the meaning of an existing field or endpoint in place,
    silently, and hope every consumer updates at the same time.
 
-✅ DO — for a breaking change, introduce it under a new version
-   (URI versioning: /v2/orders, or header-based versioning, whichever
-   this project has standardized on) and keep the old version
-   functioning until every consumer (web, mobile — remembering mobile
-   clients can lag for weeks, per 01-repository-architecture.md) has
-   migrated, per an explicit, communicated deprecation timeline.
+✅ DO — for a breaking change, add a new version of THAT endpoint only
+   and keep the old one functioning until every consumer (web, mobile —
+   remembering mobile clients can lag for weeks, per
+   01-repository-architecture.md) has migrated, per an explicit,
+   communicated deprecation timeline.
 ```
+
+This project versions per endpoint, in the URI (ADR 094). Every business controller is `@ApiController(path)`, which serves each route at every version's literal path (`/api/v1/orders`, `/api/v2/orders`). A newer version inherits every route it does not replace, so a client pinned to v2 still reaches the endpoints that never changed:
+
+```ts
+@ApiController('/orders')
+export class OrdersController {
+  @Get(':id')                     // v1, and every later version until replaced
+  public get(...): Promise<Order> { ... }
+
+  @Get(':id')
+  @SinceApiVersion('v2')          // replaces it from v2 on; the suffix goes on the new name
+  public getV2(...): Promise<OrderV2> { ... }
+}
+```
+
+Never hand-write a version in a controller path, and never use a plain `@Controller` for a business route: the lint rule `api/no-unversioned-controller` allows it only for the unversioned probe and webhook paths. When the old version is removed, delete its handler and schema and drop the `V2` suffix from the survivor in the same change; URLs do not move.
 
 ## Rate limiting
 
@@ -527,15 +542,21 @@ export class KafkaProducerService {
 // ✅ DO — NestJS's lifecycle hooks, which the framework awaits properly
 // as part of application bootstrap/shutdown
 @Injectable()
-export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
+export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown {
   public async onModuleInit(): Promise<void> {
     await this.client.connect(); // app won't finish starting until this succeeds
   }
-  public async onModuleDestroy(): Promise<void> {
+  // The LAST phase: jobs, cron ticks and HTTP requests in flight have finished by then (ADR 095).
+  public async onApplicationShutdown(): Promise<void> {
     await this.client.disconnect(); // graceful shutdown, not an abrupt kill
   }
 }
 ```
+
+Which hook is not a matter of taste (ADR 095): something that owns a connection (a database pool, a broker client)
+closes it in `onApplicationShutdown`; something that consumes work (a worker, a timer, a subscription) stops in
+`onModuleDestroy` or `beforeApplicationShutdown` and waits for the run it started. A connection closed in
+`onModuleDestroy` can end under a queue job or an HTTP request that is still using it.
 
 Graceful shutdown matters specifically for anything mid-flight during a deploy (`13-ci-cd-and-quality-gates.md`) — a service that's killed abruptly mid-request or mid-message-processing, with no chance to finish or cleanly hand off, is a direct source of the exact race conditions and inconsistent states this document spends so much effort elsewhere trying to prevent.
 
@@ -597,14 +618,15 @@ Building directly on `05-contracts-zod-api.md`'s "zod drives Swagger" rule, the 
 // apps/api/src/platform/presentation/http/api-docs.ts → buildOpenApiDocument(app), called from bootstrap
 const config = new DocumentBuilder()
   .setTitle('Orders API')
-  .setVersion('1.0')
+  .setVersion(version) // one document per API version: buildOpenApiDocument(app, version)
   .addBearerAuth()
   .build();
 return cleanupOpenApiDoc(
   SwaggerModule.createDocument(app, config, { standardSchemaConverter: zodStandardSchemaConverter }),
 ); // request inputs from @ZodBody/@ZodQuery/@ZodParams/@ZodParam, responses from @ZodResponse/@ZodPaginatedResponse (ADR 022) — no hand-written schema duplication
 // The document is built on the FIRST docs request, not at boot (setupApiDocs passes a factory):
-SwaggerModule.setup('v1/docs', app, () => buildOpenApiDocument(app));
+// setupApiDocs mounts every version's docs path (/v1/docs, /v2/docs, …), each with its own document.
+SwaggerModule.setup('v1/docs', app, () => buildOpenApiDocument(app, 'v1'));
 ```
 
 Keep the Swagger UI disabled or authenticated in production if the API surface itself is not meant to be publicly browsable — treat the decision of "is our API documentation public" as a deliberate one, not a default left over from local development convenience.
@@ -688,7 +710,7 @@ export class CancelOrderService {
 }
 
 // modules/orders/presentation/http/orders.controller.ts
-@Controller('orders')
+@ApiController('/orders')
 export class OrdersController {
   public constructor(private readonly cancelOrder: CancelOrderService) {}
 

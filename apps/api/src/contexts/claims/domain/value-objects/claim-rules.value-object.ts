@@ -6,8 +6,6 @@ export const RewardClaimStatusSchema = z.enum(["PENDING", "REDEEMED", "EXPIRED"]
 
 export type RewardClaimStatus = z.output<typeof RewardClaimStatusSchema>;
 
-export const REWARD_CLAIM_STATUSES: readonly RewardClaimStatus[] = RewardClaimStatusSchema.options;
-
 /** Statuses that count toward a reward's per-customer limit (an expired claim returned its unit and does not). */
 export const LIMIT_COUNTED_CLAIM_STATUSES: readonly RewardClaimStatus[] = ["PENDING", "REDEEMED"];
 

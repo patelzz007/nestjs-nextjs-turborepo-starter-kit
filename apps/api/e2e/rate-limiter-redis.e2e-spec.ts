@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
+import { REDIS_PUBLISHER } from "@workspace/messaging/nest";
 import type Redis from "ioredis";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -10,7 +11,6 @@ import { rateLimitKeyFamily } from "../src/platform/infrastructure/rate-limiting
 import { RateLimitRefusalLog } from "../src/platform/infrastructure/rate-limiting/rate-limit-refusal-log";
 import { ioredisScriptClient, RedisRateLimiter } from "../src/platform/infrastructure/rate-limiting/redis-rate-limiter";
 import { SECURITY_PENALTY, SECURITY_PENALTY_STEPS_MS, SECURITY_STRIKE_THRESHOLD } from "../src/platform/infrastructure/rate-limiting/security-penalty";
-import { REDIS_PUBLISHER } from "../src/platform/infrastructure/redis/redis.tokens";
 import { createE2eApp } from "./e2e-helpers";
 
 const LIMIT = 3;

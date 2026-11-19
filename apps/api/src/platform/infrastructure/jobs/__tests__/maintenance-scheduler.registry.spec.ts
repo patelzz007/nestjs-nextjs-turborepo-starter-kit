@@ -59,7 +59,44 @@ describe("MaintenanceSchedulerRegistry", () => {
 
 		expect(registry.currentState).toBe("registered");
 		expect(flaky.upsertJobScheduler).toHaveBeenCalledTimes(2);
-		registry.onApplicationShutdown();
+		await registry.beforeApplicationShutdown();
+	});
+
+	it("on shutdown waits for the attempt in progress and never retries after it", async () => {
+		vi.useFakeTimers();
+		const registry = new MaintenanceSchedulerRegistry();
+		const slow = fakeMaintenanceQueue();
+		let release: () => void = (): void => undefined;
+		slow.upsertJobScheduler.mockRejectedValueOnce(new Error("redis down"));
+		registry.add(slow, definition("slow"));
+		registry.onApplicationBootstrap();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(registry.currentState).toBe("retrying");
+
+		// The retry is still talking to Redis when shutdown begins, and then fails as well.
+		slow.upsertJobScheduler.mockReturnValueOnce(
+			new Promise((_resolve, reject): void => {
+				release = (): void => {
+					reject(new Error("redis down"));
+				};
+			}),
+		);
+		await vi.advanceTimersByTimeAsync(MAINTENANCE_SCHEDULER_RETRY_MS);
+		expect(slow.upsertJobScheduler).toHaveBeenCalledTimes(2);
+
+		let shutDown = false;
+		const shutdown = registry.beforeApplicationShutdown().then((): void => {
+			shutDown = true;
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(shutDown).toBe(false);
+
+		release();
+		await vi.advanceTimersByTimeAsync(0);
+		await shutdown;
+		expect(shutDown).toBe(true);
+		await vi.advanceTimersByTimeAsync(MAINTENANCE_SCHEDULER_RETRY_MS * 2);
+		expect(slow.upsertJobScheduler).toHaveBeenCalledTimes(2);
 	});
 
 	it("stops waiting after the timeout and counts every scheduler as not yet registered", async () => {
@@ -75,7 +112,7 @@ describe("MaintenanceSchedulerRegistry", () => {
 
 		expect(registry.currentState).toBe("retrying");
 		await expect(registry.getReport()).resolves.toMatchObject({ failed: "hung" });
-		registry.onApplicationShutdown();
+		await registry.beforeApplicationShutdown();
 	});
 
 	it("is ready at once when no module added a scheduler (BullMQ off)", async () => {

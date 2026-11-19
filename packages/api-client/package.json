@@ -57,7 +57,7 @@
 		}
 	},
 	"devDependencies": {
-		"@tanstack/react-query": "^5.107.1",
+		"@tanstack/react-query": "^5.108.0",
 		"@testing-library/dom": "^10.4.2",
 		"@testing-library/react": "^16.3.3",
 		"@types/react": "^19.3.0",
@@ -65,14 +65,14 @@
 		"@vitejs/plugin-react": "^6.3.0",
 		"@workspace/oxlint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
-		"jsdom": "^31.0.0",
-		"oxfmt": "0.78.0",
-		"oxlint": "1.93.0",
-		"oxlint-tsgolint": "7.0.2006",
+		"jsdom": "^31.0.1",
+		"oxfmt": "0.79.0",
+		"oxlint": "1.94.0",
+		"oxlint-tsgolint": "7.0.2007",
 		"react": "19.3.0",
 		"react-dom": "19.3.0",
 		"tsc-alias": "^1.9.10",
-		"tsrs": "0.24.0-ts7.1.0-beta",
+		"tsrs": "7.1.0-beta.tsrs2",
 		"typescript": "7.0.2",
 		"vitest": "^5.1.0"
 	}

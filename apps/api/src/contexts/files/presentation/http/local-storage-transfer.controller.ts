@@ -1,10 +1,11 @@
-import { Controller, Get, HttpStatus, Inject, Post, Req, Res } from "@nestjs/common";
+import { Get, HttpStatus, Inject, Post, Req, Res } from "@nestjs/common";
 import { SkipThrottle } from "@nestjs/throttler";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, FileVariantKindSchema, SuccessAckResponseSchema, UuidParamSchema, type SuccessAckResponse } from "@workspace/shared";
+import { FileVariantKindSchema, SuccessAckResponseSchema, UuidParamSchema, type SuccessAckResponse } from "@workspace/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { SkipEnvelope } from "../../../../platform/presentation/http/validation/decorators/skip-envelope.decorator";
 import { ZodParams, ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
@@ -54,7 +55,7 @@ async function sendObject(reply: FastifyReply, download: LocalObjectDownload, ca
  * the file row. They answer 404 unless STORAGE_PROVIDER=local.
  */
 @ApiTags("Files")
-@Controller(apiPath("/files"))
+@ApiController("/files")
 export class LocalStorageTransferController {
 	public constructor(@Inject(LOCAL_STORAGE_TRANSFER) private readonly transfers: LocalStorageTransferPort) {}
 

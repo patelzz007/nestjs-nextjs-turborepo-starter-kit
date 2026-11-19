@@ -1,11 +1,11 @@
-import { Controller, Get, Inject, Sse } from "@nestjs/common";
+import { Get, Inject, Sse } from "@nestjs/common";
 import type { MessageEvent } from "@nestjs/common";
-import { QueryBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { interval, map, merge, type Observable } from "rxjs";
 
-import { apiContract, apiPath, EmailLogEntrySchema, nowEpochMs, type EmailLogEntry, type EmailLogListQuery, type PaginatedServiceResult } from "@workspace/shared";
+import { apiContract, EmailLogEntrySchema, nowEpochMs, type EmailLogEntry, type EmailLogListQuery, type PaginatedServiceResult } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -16,7 +16,7 @@ import { ZodListQuery } from "../../../../platform/presentation/http/validation/
 import { ZodPaginatedResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import type { EmailLogSignalPort } from "../../application/ports/email-log-signal.port";
 import { EMAIL_LOG_LIST_OPERATION, EMAIL_LOG_SIGNAL } from "../../application/ports/notifications.tokens";
-import { ListEmailLogQuery } from "../../application/queries/list-email-log/list-email-log.query";
+import { EmailLogApplicationService } from "../../application/services/email-log.application-service";
 
 /** Keep-alive ping interval of the SSE stream, below common proxy idle timeouts (30 s+). */
 const SSE_KEEP_ALIVE_INTERVAL_MS = 25_000;
@@ -32,17 +32,12 @@ const SSE_KEEP_ALIVE_INTERVAL_MS = 25_000;
  * committed row write pushes a frame, and the admin panel refetches its list —
  * so status changes show up the instant they land, no polling and no manual refresh.
  */
-/** The one QueryBus capability the controller uses (the bus satisfies it). */
-export interface EmailLogListDispatch {
-	execute(query: ListEmailLogQuery): Promise<PaginatedServiceResult<EmailLogEntry>>;
-}
-
 @ApiTags("Email Log")
 @AdminAccessOnly("Admin access required to view email logs.")
-@Controller(apiPath("/notifications/email-log"))
+@ApiController("/notifications/email-log")
 export class EmailLogController {
 	public constructor(
-		@Inject(QueryBus) private readonly queryBus: EmailLogListDispatch,
+		private readonly emailLog: EmailLogApplicationService,
 		@Inject(EMAIL_LOG_SIGNAL) private readonly emailLogSignal: EmailLogSignalPort,
 	) {}
 
@@ -59,7 +54,7 @@ export class EmailLogController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.email.logList.input) query: EmailLogListQuery,
 	): Promise<PaginatedServiceResult<EmailLogEntry>> {
-		return this.queryBus.execute(new ListEmailLogQuery(actor, query));
+		return this.emailLog.list(actor, query);
 	}
 
 	/**

@@ -1,10 +1,8 @@
-import { Controller, Get } from "@nestjs/common";
-import { QueryBus } from "@nestjs/cqrs";
+import { Get } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import {
 	apiContract,
-	apiPath,
 	HttpAuditLogDetailSchema,
 	HttpAuditLogSummarySchema,
 	type HttpAuditLogDetail,
@@ -14,6 +12,7 @@ import {
 	type PaginatedServiceResult,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -21,9 +20,8 @@ import { PlatformOperation } from "../../../../platform/presentation/http/securi
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { GetHttpAuditLogQuery } from "../../application/queries/get-http-audit-log/get-http-audit-log.query";
-import { ListHttpAuditLogsQuery } from "../../application/queries/list-http-audit-logs/list-http-audit-logs.query";
 import { AUDIT_READ_OPERATION } from "../../application/audit-read-operations";
+import { AuditApplicationService } from "../../application/services/audit.application-service";
 
 /**
  * Admin viewer for the global HTTP audit trail (`AuditLog`, ADR 025): every
@@ -33,14 +31,14 @@ import { AUDIT_READ_OPERATION } from "../../application/audit-read-operations";
  * Authorization: admin-panel access AND the `AUDIT_LOG` permission — `LIST`
  * for the table, `READ` for one complete record (payloads included). Admin,
  * Manager and SuperAdmin hold both. Every call is itself recorded as a
- * sensitive read. The controller only validates and dispatches one query.
+ * sensitive read. The controller only validates and calls the audit application service.
  */
 @ApiTags("Audit Log")
 @AdminAccessOnly("Admin access required to view the audit log.")
 @PlatformOperation(AUDIT_READ_OPERATION)
-@Controller(apiPath("/admin/audit-logs"))
+@ApiController("/admin/audit-logs")
 export class AuditLogsController {
-	public constructor(private readonly queryBus: QueryBus) {}
+	public constructor(private readonly audit: AuditApplicationService) {}
 
 	@RequirePermission("LIST", "AUDIT_LOG")
 	@Get()
@@ -50,7 +48,7 @@ export class AuditLogsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.auditLogs.list.input) query: HttpAuditLogListQuery,
 	): Promise<PaginatedServiceResult<HttpAuditLogSummary>> {
-		return this.queryBus.execute(new ListHttpAuditLogsQuery(actor, query));
+		return this.audit.listHttpAuditLogs(actor, query);
 	}
 
 	@RequirePermission("READ", "AUDIT_LOG")
@@ -58,6 +56,6 @@ export class AuditLogsController {
 	@ApiOperation({ summary: "Get one complete audit record", description: "Includes the redacted request params, request body and response body." })
 	@ZodResponse(HttpAuditLogDetailSchema, { description: "The complete audit record" })
 	public async get(@CurrentActor() actor: ActorContext, @ZodParams(apiContract.auditLogs.detail.input) params: HttpAuditLogIdParam): Promise<HttpAuditLogDetail> {
-		return this.queryBus.execute(new GetHttpAuditLogQuery(actor, params));
+		return this.audit.getHttpAuditLog(actor, params);
 	}
 }

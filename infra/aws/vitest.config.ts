@@ -7,7 +7,7 @@ export default defineConfig({
 		coverage: {
 			provider: "v8",
 			reporter: ["text-summary"],
-			thresholds: { lines: 88, statements: 86, functions: 75, branches: 68 },
+			thresholds: { lines: 90, statements: 88, functions: 84, branches: 74 },
 		},
 		environment: "node",
 		// Tests live in a `__tests__/` folder (rules/11 → "Where tests live").

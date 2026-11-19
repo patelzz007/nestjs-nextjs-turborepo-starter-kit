@@ -10,7 +10,7 @@
 // the silent-refresh pipeline once, and an error answer becomes a typed
 // `ApiDownloadError` (code, status, Retry-After) — never a corrupt file.
 
-import { apiContract, isStringPrimitive, type ApiFileContractDef, type ApiVersion, type SerializableInput } from "@workspace/shared";
+import { apiContract, isStringPrimitive, type ApiFileContractDef, type SerializableInput } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 
 import {
@@ -33,7 +33,6 @@ export interface DownloadDef<Input extends SerializableInput> {
 	readonly kind: "download";
 	readonly method: "GET";
 	readonly path: string;
-	readonly version?: ApiVersion | undefined;
 	readonly inputSchema: ZodType<Input>;
 	/** The media types the endpoint may answer with; anything else is refused as a contract break. */
 	readonly contentTypes: readonly string[];
@@ -45,7 +44,6 @@ export function defineDownload<Input extends SerializableInput>(contract: ApiFil
 		kind: "download",
 		method: contract.method,
 		path: contract.path,
-		version: contract.version,
 		inputSchema: contract.input,
 		contentTypes: contract.response.contentTypes,
 	};
@@ -188,7 +186,7 @@ export async function fetchDownload<Input extends SerializableInput>(
 	options: DownloadOptions & { readonly fallbackFileName?: string | undefined } = {},
 ): Promise<DownloadedFile> {
 	const parsed: Input = def.inputSchema.parse(input);
-	const url = buildUrl(context.baseUrl, resolveRequest(def.path, parsed).url, def.version);
+	const url = buildUrl(context.baseUrl, resolveRequest(def.path, parsed).url, context.apiVersion);
 	const acceptedTypes = new Set(def.contentTypes.map(mediaTypeOf));
 	let retryAfterHeader: string | null = null;
 

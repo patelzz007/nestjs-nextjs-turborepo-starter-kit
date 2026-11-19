@@ -1,5 +1,5 @@
 // ============================================================
-// lib/shortcut.ts
+// lib/core/shortcut.ts
 //
 // Shared keyboard-shortcut parsing for open-and-focus "⌘K"-style
 // features (used by Combobox and Select). SSR-safe by construction:

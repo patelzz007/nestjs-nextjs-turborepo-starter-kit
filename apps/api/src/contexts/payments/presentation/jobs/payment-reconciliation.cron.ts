@@ -13,7 +13,7 @@ export class PaymentReconciliationCron {
 
 	public constructor(private readonly dispatcher: SystemCommandDispatcher) {}
 
-	@Cron(CronExpression.EVERY_10_MINUTES)
+	@Cron(CronExpression.EVERY_10_MINUTES, { waitForCompletion: true })
 	public async reconcile(): Promise<void> {
 		const actor = systemActor(PAYMENT_RECONCILE_OPERATION, "cron", null, "Ask payment gateways about payments still open", null);
 		const run = await this.dispatcher.dispatch(new ReconcilePaymentsCommand(actor), { kind: "cron", name: "payment-reconciliation" });

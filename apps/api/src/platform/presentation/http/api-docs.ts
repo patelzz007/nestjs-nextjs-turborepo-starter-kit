@@ -15,7 +15,7 @@ import type { INestApplication } from "@nestjs/common";
 import { METHOD_METADATA } from "@nestjs/common/constants.js";
 import { MetadataScanner, ModulesContainer, Reflector } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject, type OperationObject, type PathItemObject } from "@nestjs/swagger";
-import { apiDocsPath, type AuthClientType } from "@workspace/shared";
+import { API_URI_VERSION_PREFIX, API_VERSION, API_VERSIONS, apiDocsPath, apiVersionPrefix, type ApiVersion, type AuthClientType } from "@workspace/shared";
 import { cleanupOpenApiDoc } from "nestjs-zod";
 import { z } from "zod";
 
@@ -79,10 +79,21 @@ type RouteHandler = Parameters<Reflector["get"]>[1];
 const CallableSchema = z.function();
 const RouteHandlerSchema = z.custom<RouteHandler>((value) => CallableSchema.safeParse(value).success, "route handler function");
 
+/** Nest Swagger's operationId, without the version suffix it adds to versioned routes: each document holds one version. */
+function operationIdOf(controllerKey: string, methodKey: string): string {
+	return `${controllerKey}_${methodKey}`;
+}
+
+/** Whether `version`'s document lists `path`: its own versioned paths, and every unversioned one. */
+function isServedPathOf(path: string, version: ApiVersion): boolean {
+	return !path.startsWith(`/${API_URI_VERSION_PREFIX}`) || path.startsWith(`${apiVersionPrefix(version)}/`);
+}
+
 /**
- * Build the OpenAPI document for `app` — the ONE builder used by bootstrap
- * (served at `/v1/docs-json`) and by `e2e/openapi-document.e2e-spec.ts`, so
- * what the regression test asserts is exactly what developers see.
+ * Build the OpenAPI document of one API version for `app` — the ONE builder used by bootstrap (served at
+ * `/<version>/docs-json`) and by `e2e/openapi-document.e2e-spec.ts`, so what the regression test asserts is
+ * exactly what developers see. It lists that version's paths (each route a version inherits included) and the
+ * unversioned ones.
  *
  *   1. `SwaggerModule.createDocument` scans every controller. Request bodies,
  *      query and path parameters come from the zod schema each Zod request
@@ -93,11 +104,11 @@ const RouteHandlerSchema = z.custom<RouteHandler>((value) => CallableSchema.safe
  *      schemas: strips its internal `x-nestjs_zod-*` markers, lifts nested
  *      definitions into `components`, and applies OpenAPI 3.0 `nullable`.
  */
-export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
+export function buildOpenApiDocument(app: INestApplication, version: ApiVersion = API_VERSION): OpenAPIObject {
 	const config = new DocumentBuilder()
 		.setTitle("REST API")
 		.setDescription("Every HTTP endpoint of the API, generated from its zod contracts")
-		.setVersion("1.0")
+		.setVersion(version)
 		.addBearerAuth()
 		.addApiKey(
 			{
@@ -109,7 +120,8 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
 			CLIENT_TYPE_SECURITY_SCHEME,
 		)
 		.build();
-	const document = cleanupOpenApiDoc(SwaggerModule.createDocument(app, config, { standardSchemaConverter: zodStandardSchemaConverter }));
+	const scanned = cleanupOpenApiDoc(SwaggerModule.createDocument(app, config, { standardSchemaConverter: zodStandardSchemaConverter, operationIdFactory: operationIdOf }));
+	const document: OpenAPIObject = { ...scanned, paths: Object.fromEntries(Object.entries(scanned.paths).filter(([path]): boolean => isServedPathOf(path, version))) };
 	applyOperationSecurity(document, collectPublicOperationIds(app));
 	return document;
 }
@@ -161,24 +173,26 @@ export function applyOperationSecurity(document: OpenAPIObject, publicOperationI
 }
 
 /**
- * Mount Swagger at the version-derived docs path (`apiDocsPath()` → `/v1/docs`).
+ * Mount Swagger once per API version, at its docs path (`apiDocsPath("v1")` → `/v1/docs`).
  *
- * `buildDocument` runs on the FIRST request for the document (the UI's init
+ * `buildDocument` runs on the FIRST request for a version's document (the UI's init
  * script, `-json` or `-yaml`), and its result is kept for every later one
  * (`SwaggerModule.setup` takes a document factory). Building it scans every
  * route and converts every contract schema, a few hundred milliseconds that
  * serving the API itself never needs, so the API is ready without it. The
  * routes are still registered here, before `listen`, as Fastify requires.
  */
-export function setupApiDocs(app: INestApplication, buildDocument: () => OpenAPIObject): void {
-	SwaggerModule.setup(apiDocsPath().replace(/^\//, ""), app, buildDocument, {
-		customSiteTitle: "REST API",
-		swaggerOptions: {
-			withCredentials: true,
-			// Keep what was entered under "Authorize" across page reloads.
-			persistAuthorization: true,
-			// Default `X-Client-Type: admin`, so the admin session cookie authenticates "Try it out".
-			requestInterceptor: swaggerClientTypeInterceptor,
-		},
-	});
+export function setupApiDocs(app: INestApplication, buildDocument: (version: ApiVersion) => OpenAPIObject): void {
+	for (const version of API_VERSIONS) {
+		SwaggerModule.setup(apiDocsPath(version).replace(/^\//, ""), app, (): OpenAPIObject => buildDocument(version), {
+			customSiteTitle: `REST API ${version}`,
+			swaggerOptions: {
+				withCredentials: true,
+				// Keep what was entered under "Authorize" across page reloads.
+				persistAuthorization: true,
+				// Default `X-Client-Type: admin`, so the admin session cookie authenticates "Try it out".
+				requestInterceptor: swaggerClientTypeInterceptor,
+			},
+		});
+	}
 }

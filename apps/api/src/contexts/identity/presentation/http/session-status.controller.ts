@@ -1,7 +1,8 @@
-import { Controller, Get } from "@nestjs/common";
+import { Get } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { SessionStatusSchema, apiPath, epochMs, nowEpochMs, type AccessTokenPayload, type EpochMs, type SessionStatus } from "@workspace/shared";
+import { SessionStatusSchema, epochMs, nowEpochMs, type AccessTokenPayload, type EpochMs, type SessionStatus } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
@@ -12,7 +13,7 @@ import { ZodResponse } from "../../../../platform/presentation/http/validation/d
  * token. Every field comes from the verified JWT: presentation only, no database (plan §7.6).
  */
 @ApiTags("Sessions")
-@Controller(apiPath("/session"))
+@ApiController("/session")
 export class SessionStatusController {
 	@ApiBearerAuth()
 	@Get()

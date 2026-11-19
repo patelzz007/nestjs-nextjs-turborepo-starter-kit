@@ -6,8 +6,7 @@ import { ResetOwnPreferenceCommand } from "../commands/reset-own-preference/rese
 import { ResetOwnPreferenceHandler } from "../commands/reset-own-preference/reset-own-preference.handler";
 import { SetOwnPreferenceCommand } from "../commands/set-own-preference/set-own-preference.command";
 import { SetOwnPreferenceHandler } from "../commands/set-own-preference/set-own-preference.handler";
-import { ListOwnPreferencesHandler } from "../queries/list-own-preferences/list-own-preferences.handler";
-import { ListOwnPreferencesQuery } from "../queries/list-own-preferences/list-own-preferences.query";
+import { AccountApplicationService } from "../services/account.application-service";
 import { InMemoryIdentityReads } from "./fakes/identity-reads.fakes";
 import { InMemoryIdentityStore, NOW, userActor } from "./fakes/identity.fakes";
 
@@ -64,12 +63,12 @@ describe("ResetOwnPreferenceHandler", () => {
 	});
 });
 
-describe("ListOwnPreferencesHandler", () => {
+describe("AccountApplicationService.ownPreferences", () => {
 	it("answers the reader's preferences", async () => {
 		const reads = new InMemoryIdentityReads();
 		reads.preferences.set(USER_ID, [{ key: "board.execution.groupBy", value: "epic", version: 2 }]);
 
-		await expect(new ListOwnPreferencesHandler(reads).execute(new ListOwnPreferencesQuery(userActor(USER_ID), USER_ID))).resolves.toEqual({
+		await expect(new AccountApplicationService(reads).ownPreferences(userActor(USER_ID), USER_ID)).resolves.toEqual({
 			preferences: [{ key: "board.execution.groupBy", value: "epic", version: 2 }],
 		});
 	});

@@ -1,5 +1,5 @@
 // ============================================
-// lib/server-api.test.ts - SSR prefetch helper coverage
+// lib/api/__tests__/server-api.test.ts -SSR prefetch helper coverage
 // ============================================
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -17,7 +17,7 @@ import {
 } from "../server-api";
 import { LIST_SLOT_INDEX, singleResponse } from "@workspace/shared";
 
-import { headersOf, type FetchImpl } from "../../test-utils";
+import { headersOf, type FetchImpl } from "@workspace/api-client/testing";
 import { apiRouter, defineMutation, defineQuery, resolveRequest } from "../endpoints";
 import { ApiResponseContractError } from "@workspace/api-client";
 

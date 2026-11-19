@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, OnApplicationShutdown } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { Pool, type PoolConfig } from "pg";
@@ -43,7 +43,7 @@ export function buildSystemPoolConfig(config: TypedConfigService): PoolConfig {
  * services that genuinely need system-level access.
  */
 @Injectable()
-export class SystemPrismaService extends PrismaClient<Prisma.PrismaClientOptions, Prisma.LogLevel> implements OnModuleDestroy {
+export class SystemPrismaService extends PrismaClient<Prisma.PrismaClientOptions, Prisma.LogLevel> implements OnApplicationShutdown {
 	private readonly logger: Logger = new Logger(SystemPrismaService.name);
 	private readonly pool: Pool;
 
@@ -64,7 +64,8 @@ export class SystemPrismaService extends PrismaClient<Prisma.PrismaClientOptions
 		}
 	}
 
-	public async onModuleDestroy(): Promise<void> {
+	/** Closes in the last shutdown phase, after every job, tick and request that could use the pool (ADR 095). */
+	public async onApplicationShutdown(): Promise<void> {
 		await closePrismaConnections(this, this.pool, this.logger, { closing: "Closing system database connection…", closed: "System database connection closed" });
 	}
 }

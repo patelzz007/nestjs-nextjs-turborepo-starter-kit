@@ -22,6 +22,7 @@ import {
 	type MerchantBusinessCategory,
 } from "@workspace/shared";
 
+import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CLOCK, type Clock } from "../../../../platform/application/clock.port";
 import { compare, conversionRate, seriesFor } from "../../domain/policies/analytics-math.policy";
 import type { AnalyticsLocationScope, AnalyticsScope, AnalyticsTimeRange, AnalyticsWindow } from "../../domain/value-objects/analytics-scope.value-object";
@@ -30,6 +31,7 @@ import type { ActivityBucket, AnalyticsFactsReadPort } from "../ports/analytics-
 import type { AnalyticsTenantReadPort, MerchantDashboardSubject } from "../ports/analytics-tenant-read.port";
 import { ANALYTICS_BREAKDOWN_READ, ANALYTICS_FACTS_READ, ANALYTICS_TENANT_READ, SALES_READ } from "../ports/reporting.tokens";
 import type { SalesReadPort } from "../ports/sales-read.port";
+import { requireCustomer } from "./analytics-actor";
 
 /** The range fields of any dashboard / export request. */
 export interface AnalyticsRangeRequest {
@@ -185,8 +187,12 @@ export class AnalyticsDashboardAssembler {
 		};
 	}
 
-	/** The signed-in customer's own dashboard (`userId` comes from the access token — self only). Buckets in UTC: a customer spends across merchants and zones. */
-	public async customerDashboard(userId: string, query: AnalyticsRangeRequest): Promise<CustomerAnalyticsDashboard> {
+	/**
+	 * The signed-in customer's own dashboard: self only, the user is the actor and never client input, and any other
+	 * caller is refused. Buckets in UTC: a customer spends across merchants and zones.
+	 */
+	public async customerDashboard(actor: ActorContext, query: AnalyticsRangeRequest): Promise<CustomerAnalyticsDashboard> {
+		const userId = requireCustomer(actor);
 		const request = this.resolve(query, UTC_TIME_ZONE);
 		const scope: AnalyticsScope = { kind: "customer", userId };
 

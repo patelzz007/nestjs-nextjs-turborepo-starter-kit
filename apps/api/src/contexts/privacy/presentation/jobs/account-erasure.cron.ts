@@ -13,7 +13,7 @@ export class AccountErasureCron {
 
 	public constructor(private readonly dispatcher: SystemCommandDispatcher) {}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async run(): Promise<void> {
 		const actor = systemActor(ACCOUNT_ERASE_OPERATION, "cron", null, "Carry out account erasures past their grace period", null);
 		const run = await this.dispatcher.dispatch(new CompleteDueErasuresCommand(actor), { kind: "cron", name: "account-erasure" });

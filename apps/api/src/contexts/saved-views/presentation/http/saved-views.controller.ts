@@ -4,10 +4,9 @@
 // Admin staff only: a view is the person's own, and shared ones reach the other staff. Saving and removing
 // are state-changing requests, so the audit trail records them.
 
-import { Controller, Delete, Get, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Inject, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	CreateSavedListViewSchema,
 	DeleteSuccessDataSchema,
 	SavedListViewListSchema,
@@ -22,6 +21,7 @@ import {
 	type SavedListViewsQuery,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -34,7 +34,7 @@ import type { SavedViewsService } from "../../application/services/saved-views.s
 @ApiTags("Saved views")
 @ApiBearerAuth()
 @AdminAccessOnly("Saved views are for the admin console's lists.")
-@Controller(apiPath("/me"))
+@ApiController("/me")
 export class SavedViewsController {
 	public constructor(@Inject(SAVED_VIEWS_SERVICE) private readonly views: SavedViewsService) {}
 

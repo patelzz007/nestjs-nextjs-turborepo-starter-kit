@@ -16,7 +16,7 @@ export class DocsSyncRunRetentionCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_DAY_AT_3AM)
+	@Cron(CronExpression.EVERY_DAY_AT_3AM, { waitForCompletion: true })
 	public async prune(): Promise<void> {
 		const actor = systemActor(DOCS_PUBLISHING_RECORD_OPERATION, "cron", null, "Prune docs sync runs past their retention", null);
 		const pruned = await this.dispatcher.dispatch(new PruneDocsSyncRunsCommand(actor), { kind: "cron", name: RETENTION_CRON_NAME });

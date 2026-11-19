@@ -1,8 +1,7 @@
-import { Controller, Get, HttpStatus, Post } from "@nestjs/common";
+import { Get, HttpStatus, Post } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	OkResponseSchema,
 	TenantCustomerBanCreateSchema,
 	TenantCustomerBanListQuerySchema,
@@ -17,6 +16,7 @@ import {
 	type TenantCustomerBanResponse,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -32,7 +32,7 @@ import { ListCustomerBansQuery } from "../../application/queries/list-customer-b
  * tenant's redemptions; merchants never learn who the customer is.
  */
 @ApiTags("Tenant Customer Bans")
-@Controller(apiPath("/tenants"))
+@ApiController("/tenants")
 export class TenantCustomerBansController {
 	public constructor(
 		private readonly commandBus: CommandBus,

@@ -1,5 +1,4 @@
 import type { Prisma } from "@prisma/client";
-import { z } from "zod";
 
 import type { PaginationInput } from "@workspace/shared";
 
@@ -8,10 +7,6 @@ import type { PrismaService } from "../../../prisma/prisma.service";
 import type { CascadeSoftDeletePorts } from "./cascade-soft-delete";
 import type { ListKeyset } from "./list-query/keyset-cursor";
 import type { ListOrder } from "./list-query/list-order";
-
-/** Repositories that expose create/update only through dedicated methods use this input for BaseRepository ports. */
-export const EmptyMutationInputSchema = z.object({}).strict();
-export type EmptyMutationInput = z.output<typeof EmptyMutationInputSchema>;
 
 /** Repository list result before the service applies pagination metadata. */
 export interface RepositoryListResult<TEntity> {
@@ -72,19 +67,6 @@ export interface RepositoryPorts<TEntity, TCreate, TUpdate, TQuery extends Pagin
 	readonly cascadeSoftDelete?: CascadeSoftDeletePorts;
 }
 
-/** Repository surface consumed by a context application service. */
-export interface RepositoryInstance<TEntity, TCreate, TUpdate, TQuery extends PaginationInput> {
-	readonly list: (query: TQuery) => Promise<RepositoryListResult<TEntity>>;
-	readonly findById: (id: string) => Promise<TEntity | null>;
-	readonly create: (input: TCreate) => Promise<TEntity>;
-	readonly update: (id: string, input: TUpdate) => Promise<TEntity>;
-	readonly delete: (id: string) => Promise<void>;
-	readonly createMany: (inputs: readonly TCreate[]) => Promise<readonly TEntity[]>;
-	readonly deleteMany: (ids: readonly string[]) => Promise<number>;
-	readonly softDelete: (id: string) => Promise<void>;
-	readonly restore: (id: string) => Promise<TEntity>;
-}
-
 /**
  * The Prisma model delegate operations {@link BaseRepository} uses. `TUpdateInput`
  * must be the model's update-MANY input (`Prisma.<Model>UpdateManyMutationInput`,
@@ -102,12 +84,6 @@ export interface PrismaModelDelegate<TRow, TWhere, TOrderBy, TCreateInput, TUpda
 	delete(args: { where: TDeleteWhere }): Promise<TRow>;
 }
 
-/**
- * Picks the model delegate off a Prisma client — the request-scoped
- * `PrismaService` or an interactive transaction client — e.g.
- * `(db) => db.product`. Bulk mutations run every row through the
- * transaction's delegate so the whole batch commits or rolls back together.
- */
 /** A root client or an interactive transaction. The `kind` tag is how a repository tells them apart. */
 export type RepositoryDb<TTransactionClient = Prisma.TransactionClient> =
 	| { readonly kind: "root"; readonly client: PrismaService }
@@ -137,7 +113,8 @@ export async function runInRepositoryTransaction<TClient, TResult>(
 
 /**
  * Picks the model delegate off a Prisma client — the root `PrismaService` or an
- * interactive transaction client — e.g. `(db) => db.product`.
+ * interactive transaction client — e.g. `(db) => db.product`. Bulk mutations run
+ * every row through the transaction's delegate so the whole batch commits or rolls back together.
  */
 export type PrismaModelDelegateSelector<TRow, TWhere, TOrderBy, TCreateInput, TUpdateInput, TUpdateWhere, TTransactionClient = Prisma.TransactionClient> = (
 	db: PrismaService | Prisma.TransactionClient | TTransactionClient,

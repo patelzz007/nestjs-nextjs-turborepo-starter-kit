@@ -1,9 +1,8 @@
-import { Controller, Get, HttpStatus, Post, Put } from "@nestjs/common";
+import { Get, HttpStatus, Post, Put } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	AddGithubPullRequestCommentSchema,
-	apiPath,
 	GithubCommentSchema,
 	GithubCommitDetailSchema,
 	GithubCursorQuerySchema,
@@ -52,6 +51,7 @@ import {
 	type GithubReactionState,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { ZodBody, ZodParams, ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
@@ -86,7 +86,7 @@ import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/
 @ApiTags("GitHub pull requests")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for GitHub pull requests.")
-@Controller(apiPath("/github/pull-requests"))
+@ApiController("/github/pull-requests")
 export class GithubPullRequestsController {
 	public constructor(
 		private readonly commandBus: CommandBus,

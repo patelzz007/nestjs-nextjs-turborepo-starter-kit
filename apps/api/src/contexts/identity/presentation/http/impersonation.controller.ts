@@ -1,10 +1,11 @@
-import { BadRequestException, Controller, HttpStatus, Post, Req, UnauthorizedException, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, HttpStatus, Post, Req, UnauthorizedException, UseInterceptors } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { AccessTokenPayload, ImpersonateServiceResponse, RefreshTokenPayload, StopImpersonationServiceResponse } from "@workspace/shared";
-import { AccessTokenPayloadSchema, ImpersonateResponseSchema, StopImpersonationResponseSchema, UuidParamSchema, apiPath } from "@workspace/shared";
+import { AccessTokenPayloadSchema, ImpersonateResponseSchema, StopImpersonationResponseSchema, UuidParamSchema } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -37,7 +38,7 @@ function requireAccessToken(user: AccessTokenPayload | RefreshTokenPayload | und
 
 /** SuperAdmin impersonation: start a time-boxed session as another user, and stop it to restore the admin. */
 @ApiTags("Impersonation")
-@Controller(apiPath("/auth"))
+@ApiController("/auth")
 export class ImpersonationController {
 	public constructor(private readonly commandBus: CommandBus) {}
 

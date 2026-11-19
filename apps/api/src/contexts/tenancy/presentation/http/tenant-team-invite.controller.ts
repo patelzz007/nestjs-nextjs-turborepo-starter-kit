@@ -1,8 +1,7 @@
-import { Controller, Headers, HttpStatus, Post, Req, UseInterceptors } from "@nestjs/common";
+import { Headers, HttpStatus, Post, Req, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	LoginClientResponseSchema,
 	TenantTeamInviteAcceptResponseSchema,
 	TenantTeamInvitePreviewSchema,
@@ -19,6 +18,7 @@ import {
 } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
@@ -38,7 +38,7 @@ import { TENANT_INVITATION_REGISTER_AND_ACCEPT_OPERATION, TENANT_INVITATION_RESO
 const DEFAULT_STAFF_CLIENT_TYPE = "merchant";
 
 @ApiTags("Tenants")
-@Controller(apiPath("/tenants/invites"))
+@ApiController("/tenants/invites")
 export class TenantTeamInviteController {
 	public constructor(
 		private readonly commandBus: CommandBus,

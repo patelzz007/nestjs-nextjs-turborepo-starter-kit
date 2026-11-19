@@ -9,6 +9,7 @@
 
 import {
 	APP_VERSION_HEADER,
+	ApiVersionSchema,
 	AppVersionSchema,
 	AuthClientTypeSchema,
 	CLIENT_TYPE_HEADER,
@@ -102,6 +103,8 @@ export const ApiClientConfigSchema = z
 		transport: ApiClientTransportSchema,
 		/** Mobile only: the app's semantic version, sent as `X-App-Version` (ADR 033) — the shared `AppVersionSchema` the API checks. */
 		appVersion: AppVersionSchema.optional(),
+		/** The API version every call of this client goes to (ADR 094); omitted = `API_VERSION`, the one this build was made with. */
+		apiVersion: ApiVersionSchema.optional(),
 		/** The session ended for good (refresh refused or session revoked); the app routes to sign-in. */
 		onSessionExpired: OnSessionExpiredSchema.optional(),
 		/** Static headers for every request of this client (see {@link ApiClientHeadersSchema}). */
@@ -163,18 +166,19 @@ export function createApiClientContext(input: ApiClientConfig): ApiRequestContex
 	if (!parsed.success) {
 		throw new InvalidApiClientConfigError(parsed.error.issues.map(toConfigIssue));
 	}
-	const { baseUrl, clientType, transport, appVersion, onSessionExpired, headers } = parsed.data;
+	const { baseUrl, clientType, transport, appVersion, apiVersion, onSessionExpired, headers } = parsed.data;
 
 	switch (transport.kind) {
 		case "cookie":
-			return { baseUrl, clientType, headers, onUnauthorized: onSessionExpired, onRefresh: transport.refreshSession, transport: COOKIE_REQUEST_TRANSPORT };
+			return { baseUrl, clientType, apiVersion, headers, onUnauthorized: onSessionExpired, onRefresh: transport.refreshSession, transport: COOKIE_REQUEST_TRANSPORT };
 		case "token":
 			return {
 				baseUrl,
 				clientType,
 				appVersion,
+				apiVersion,
 				headers,
-				transport: createTokenRequestTransport({ baseUrl, clientType, appVersion, headers, tokenProvider: transport.tokenProvider, onSessionExpired }),
+				transport: createTokenRequestTransport({ baseUrl, clientType, appVersion, apiVersion, headers, tokenProvider: transport.tokenProvider, onSessionExpired }),
 			};
 	}
 }

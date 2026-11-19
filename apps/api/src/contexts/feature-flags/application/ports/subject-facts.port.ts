@@ -18,7 +18,5 @@ export interface SubjectFactSources {
 	worksAt(userId: string, tenantId: string, locationId: string | null): Promise<boolean>;
 }
 
-export type SubjectFactName = keyof SubjectFactSources;
-
 /** One context's part of the facts. */
 export type SubjectFactSource = Partial<SubjectFactSources>;

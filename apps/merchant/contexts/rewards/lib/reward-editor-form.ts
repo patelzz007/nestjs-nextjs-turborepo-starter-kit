@@ -58,8 +58,6 @@ export type RewardEditorField = keyof RewardEditorInput;
 /** The fields typed into a text box: one change handler serves them all, by the input's `name`. */
 export const RewardEditorTextFieldSchema = z.enum(["title", "description", "termsConditions", "rewardValue", "freeItemName", "freeItemSku", "minPurchase", "quantityTotal"]);
 
-export type RewardEditorTextField = z.output<typeof RewardEditorTextFieldSchema>;
-
 const RewardEditorFieldSchema = RewardEditorInputSchema.keyof();
 
 /** A number field's text as the schema reads it: blank is `NaN` (reported missing by the schema), never 0. */

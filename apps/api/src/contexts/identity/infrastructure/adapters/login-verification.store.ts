@@ -1,10 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { REDIS_PUBLISHER } from "@workspace/messaging/nest";
 import { BoundedTtlCache } from "@workspace/shared";
 import type Redis from "ioredis";
 import { z } from "zod";
 
 import { TypedConfigService } from "../../../../config/typed-config.service";
-import { REDIS_PUBLISHER } from "../../../../platform/infrastructure/redis/redis.tokens";
 import type { LoginVerificationRecord, LoginVerificationStorePort } from "../../application/ports/login-verification-store.port";
 import { PendingSignInMethodSchema } from "../../application/services/pending-sign-in";
 

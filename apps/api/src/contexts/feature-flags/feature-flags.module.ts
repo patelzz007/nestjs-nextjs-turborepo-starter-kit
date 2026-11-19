@@ -1,4 +1,5 @@
 import { Module, type OnModuleInit } from "@nestjs/common";
+import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "@workspace/messaging/nest";
 import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../config/typed-config.service";
@@ -8,7 +9,6 @@ import { PersonalDataExportRegistry } from "../../platform/application/personal-
 import { APP_CACHE, type AppCache } from "../../platform/application/ports/app-cache.port";
 import { OutboxModule } from "../../platform/infrastructure/outbox/outbox.module";
 import { PlatformOutboxService } from "../../platform/infrastructure/outbox/platform-outbox.service";
-import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../platform/infrastructure/redis/redis.tokens";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
 import { EXPERIMENT_STORE, type ExperimentStore } from "./application/ports/experiment.store";

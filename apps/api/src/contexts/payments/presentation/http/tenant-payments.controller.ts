@@ -3,10 +3,9 @@
 // ============================================
 // Owners and managers (`merchant:manage_payments`, checked in the service): ask for a payment through a
 // configured gateway (Billplz, CHIP), send the payer to its checkout, follow it, refund it (CHIP).
-import { Controller, Get, HttpStatus, Inject, Post, UseInterceptors } from "@nestjs/common";
+import { Get, HttpStatus, Inject, Post, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	CreatePaymentIntentSchema,
 	PaymentIntentIdParamsSchema,
 	PaymentIntentListQuerySchema,
@@ -23,6 +22,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { MerchantActor } from "../../../../platform/presentation/http/security/api-keys/merchant-actor";
 import { Idempotent } from "../../../../platform/presentation/http/idempotency/idempotent.decorator";
@@ -42,7 +42,7 @@ type TenantPaymentParams = z.output<typeof TenantPaymentParamsSchema>;
 @ApiTags("Payments")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/tenants/:tenantSlug/payments"))
+@ApiController("/tenants/:tenantSlug/payments")
 export class TenantPaymentsController {
 	public constructor(@Inject(PAYMENTS_SERVICE) private readonly payments: PaymentsService) {}
 

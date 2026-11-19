@@ -1,13 +1,13 @@
 // The request core on its default (cookie) transport — exactly the web's
 // behavior — and its platform-neutral failure mapping.
-import { APP_VERSION_HEADER, CLIENT_TYPE_HEADER, DataValueSchema, singleResponse } from "@workspace/shared";
+import { API_VERSION, API_VERSION_OVERRIDE_HEADER, apiVersionPrefix, APP_VERSION_HEADER, CLIENT_TYPE_HEADER, DataValueSchema, singleResponse } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { AUTHORIZATION_HEADER, NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR } from "../http";
-import { createApiRequestContext, createUncheckedApiRequestContext, fetchMutationUnchecked, fetchQuery } from "../request";
+import { createApiRequestContext, createUncheckedApiRequestContext, fetchMutation, fetchMutationUnchecked, fetchQuery } from "../request";
 import { defineMutation, defineQuery } from "../router";
-import { firstFetchCall, headersOf, jsonResponse, type FetchImpl } from "../testing";
+import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../testing";
 
 const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };
 const meDef = defineQuery({ method: "GET", path: "/auth/me", input: z.undefined(), response: singleResponse(DataValueSchema) }, { scope: () => ["auth", "me"] });
@@ -48,6 +48,52 @@ describe("cookie transport (the default)", () => {
 
 		expect(result).toMatchObject({ kind: "httpError", status: 401 });
 		expect(firstFetchCall(fetchMock).init.credentials).toBe("include");
+	});
+});
+
+describe("API version (ADR 094)", () => {
+	function stubFetch(): ReturnType<typeof vi.fn<FetchImpl>> {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { id: "u1" }, meta: META }));
+		vi.stubGlobal("fetch", fetchMock);
+		return fetchMock;
+	}
+
+	it("sends every call to the build's API version when the client pins none, without an override header", async () => {
+		const fetchMock = stubFetch();
+
+		await fetchQuery(createApiRequestContext("http://api.test", "web"), meDef, undefined);
+
+		const { input, init } = firstFetchCall(fetchMock);
+		expect(inputUrl(input)).toBe(`http://api.test${apiVersionPrefix(API_VERSION)}/auth/me`);
+		expect(headersOf(init)).not.toHaveProperty(API_VERSION_OVERRIDE_HEADER);
+	});
+
+	it("sends every call to the client's pinned version, without an override header", async () => {
+		const fetchMock = stubFetch();
+
+		await fetchMutation({ ...createApiRequestContext("http://api.test", "web"), apiVersion: "v2" }, logoutDef, {});
+
+		const { input, init } = firstFetchCall(fetchMock);
+		expect(inputUrl(input)).toBe(`http://api.test${apiVersionPrefix("v2")}/auth/logout`);
+		expect(headersOf(init)).not.toHaveProperty(API_VERSION_OVERRIDE_HEADER);
+	});
+
+	it("sends an overriding call to its own version and names it in Accept-version", async () => {
+		const fetchMock = stubFetch();
+
+		await fetchQuery(createApiRequestContext("http://api.test", "web"), meDef, undefined, { apiVersion: "v2" });
+
+		const { input, init } = firstFetchCall(fetchMock);
+		expect(inputUrl(input)).toBe(`http://api.test${apiVersionPrefix("v2")}/auth/me`);
+		expect(headersOf(init)[API_VERSION_OVERRIDE_HEADER]).toBe("v2");
+	});
+
+	it("sends no override header when a call names the version its client is pinned to", async () => {
+		const fetchMock = stubFetch();
+
+		await fetchQuery({ ...createApiRequestContext("http://api.test", "web"), apiVersion: "v2" }, meDef, undefined, { apiVersion: "v2" });
+
+		expect(headersOf(firstFetchCall(fetchMock).init)).not.toHaveProperty(API_VERSION_OVERRIDE_HEADER);
 	});
 });
 

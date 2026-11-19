@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException, ServiceUnavailableException } fr
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { inMemoryWebhookReceiver, ManualClock } from "../../../../../e2e/support/in-memory-received-webhooks";
+import { AuthenticationError } from "../../../../platform/application/errors/app-error";
 
 import { githubWebhookSignature } from "../../domain/policies/github-webhook-signature.policy";
 import { DisableLiveUpdatesCommand } from "../commands/disable-live-updates/disable-live-updates.command";
@@ -18,8 +19,6 @@ import { RecordGithubWebhookDeliveryHandler } from "../commands/record-github-we
 import { GITHUB_LIVE_UPDATES_OFF_CODE, GITHUB_WEBHOOK_SIGNATURE_INVALID_CODE, GithubAccountNotLinkedError, GithubWriteRejectedError } from "../errors/github.errors";
 import { CheckLiveUpdatesStreamHandler } from "../queries/check-live-updates-stream/check-live-updates-stream.handler";
 import { CheckLiveUpdatesStreamQuery } from "../queries/check-live-updates-stream/check-live-updates-stream.query";
-import { GetLiveUpdatesStatusHandler } from "../queries/get-live-updates-status/get-live-updates-status.handler";
-import { GetLiveUpdatesStatusQuery } from "../queries/get-live-updates-status/get-live-updates-status.query";
 import { anonymousActor, AT, userActor } from "./fakes/github-contract.fixtures";
 import { githubHarness, linkToken, type GithubHarness } from "./fakes/github-harness";
 
@@ -188,16 +187,20 @@ describe("RecordGithubWebhookDeliveryHandler", () => {
 describe("live updates on and off", () => {
 	it("is off without webhook settings, otherwise disabled or enabled per repository", async () => {
 		const harness = githubHarness();
-		const status = new GetLiveUpdatesStatusHandler(harness.liveUpdates);
+		const status = harness.liveUpdates;
 
-		await expect(status.execute(new GetLiveUpdatesStatusQuery(userActor(), REPO))).resolves.toEqual({ status: "disabled" });
+		await expect(status.statusFor(userActor(), REPO)).resolves.toEqual({ status: "disabled" });
 		await harness.store.claim(REPO, 7n);
-		await expect(status.execute(new GetLiveUpdatesStatusQuery(userActor(), { owner: "octo-org", repository: "hello-world" }))).resolves.toEqual({
+		await expect(status.statusFor(userActor(), { owner: "octo-org", repository: "hello-world" })).resolves.toEqual({
 			status: "enabled",
 			enabledAt: AT,
 		});
 		harness.endpoint.settings = null;
-		await expect(status.execute(new GetLiveUpdatesStatusQuery(userActor(), REPO))).resolves.toEqual({ status: "off" });
+		await expect(status.statusFor(userActor(), REPO)).resolves.toEqual({ status: "off" });
+	});
+
+	it("refuses the status to any actor but a signed-in user, as a rejection", async () => {
+		await expect(githubHarness().liveUpdates.statusFor(anonymousActor(), REPO)).rejects.toBeInstanceOf(AuthenticationError);
 	});
 
 	it("registers the webhook with the caller's token and claims the repository", async () => {

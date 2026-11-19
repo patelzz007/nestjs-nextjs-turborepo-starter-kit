@@ -6,7 +6,7 @@
 // which streams the stored file to whoever presents that ticket — like a signed URL, it is the
 // ticket that authorises it, and the request is audited like every other.
 
-import { Controller, Delete, Get, HttpStatus, Inject, Post, Put, Res } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Inject, Post, Put, Res } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
@@ -15,7 +15,6 @@ import {
 	OPS_BACKUP_FILE_CONTENT_TYPE,
 	OpsBackupFileInputSchema,
 	AccessTokenPayloadSchema,
-	apiPath,
 	DeleteSuccessDataSchema,
 	epochMs,
 	OpsBackupDownloadSchema,
@@ -37,6 +36,7 @@ import {
 import type { FastifyReply } from "fastify";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
@@ -70,7 +70,7 @@ function mfaAssuredAtOf(user: AccessTokenPayload | RefreshTokenPayload | undefin
 }
 
 @ApiTags("Operations")
-@Controller(apiPath("/admin/operations"))
+@ApiController("/admin/operations")
 export class OperationsBackupsController {
 	public constructor(
 		private readonly commandBus: CommandBus,
@@ -164,7 +164,7 @@ export class OperationsBackupsController {
  * lives five minutes), and the request is audited like every other.
  */
 @ApiTags("Operations")
-@Controller(apiPath("/operations"))
+@ApiController("/operations")
 export class OperationsBackupFileController {
 	public constructor(
 		@Inject(OPERATIONS_READ) private readonly reads: OperationsReadService,

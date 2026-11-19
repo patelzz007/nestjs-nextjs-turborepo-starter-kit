@@ -1,5 +1,5 @@
 // ============================================
-// lib/server-request.ts - SSR tRPC-style caller (procedure-first, no router deps)
+// lib/api/server-request.ts -SSR tRPC-style caller (procedure-first, no router deps)
 // ============================================
 import "server-only";
 
@@ -33,7 +33,6 @@ import {
 } from "@workspace/api-client";
 import {
 	LIST_SLOT_INDEX,
-	apiVersionPrefix,
 	AUTH_COOKIE_NAMES,
 	clientTypeHeader,
 	DEVICE_ID_COOKIE,
@@ -374,12 +373,11 @@ export async function fetchServerQuery<Input extends SerializableInput, Resp ext
 		// a public route is fetched anonymously — guests get server-rendered public data.
 		if (accessToken === undefined && def.access !== "public") throw new PrefetchNoCookieError();
 
-		const prefix: string = def.version === undefined ? API_URL_PREFIX : apiVersionPrefix(def.version);
 		const deadline: AbortSignal = AbortSignal.timeout(config.deadlineMs);
 		const resp: Resp = await firstValueFrom(
 			createPrefetchObservable(
 				{
-					url: new URL(`${prefix}${resolveRequest(def.path, parsed).url}`, API_BASE_URL).toString(),
+					url: new URL(`${API_URL_PREFIX}${resolveRequest(def.path, parsed).url}`, API_BASE_URL).toString(),
 					headers: {
 						...def.baseOptions?.headers,
 						...readForwardedHeaders(await headers()),

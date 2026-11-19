@@ -1,9 +1,10 @@
-import { Controller, Get, UseInterceptors } from "@nestjs/common";
+import { Get, UseInterceptors } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiSecurity, ApiTags } from "@nestjs/swagger";
-import { apiPath, MerchantRedemptionListItemSchema, MerchantRedemptionListQuerySchema, type MerchantRedemptionListItem, type PaginatedServiceResult } from "@workspace/shared";
+import { MerchantRedemptionListItemSchema, MerchantRedemptionListQuerySchema, type MerchantRedemptionListItem, type PaginatedServiceResult } from "@workspace/shared";
 import type { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { MerchantActor } from "../../../../platform/presentation/http/security/api-keys/merchant-actor";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -24,7 +25,7 @@ import { ListTenantRedemptionsQuery } from "../../application/queries/list-tenan
 @ApiSecurity("merchantApiKey")
 @AllowApiKeyAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/integration/redemptions"))
+@ApiController("/integration/redemptions")
 export class IntegrationRedemptionsController {
 	public constructor(private readonly queryBus: QueryBus) {}
 

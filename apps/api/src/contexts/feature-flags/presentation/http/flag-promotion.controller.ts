@@ -5,10 +5,9 @@
 // revision (pending in production). FEATURE_FLAG:LIST to export and preview, UPDATE to import (with a reason).
 // Config files need the same permissions: promotion is one workflow for both kinds.
 
-import { Controller, Get, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	PromotionExportQuerySchema,
 	PromotionFileSchema,
 	PromotionImportInputSchema,
@@ -23,6 +22,7 @@ import {
 	type Revision,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -38,7 +38,7 @@ import { PROMOTIONS } from "../../feature-flags.tokens";
 @ApiTags("Feature flags")
 @ApiBearerAuth()
 @AdminAccessOnly("Rule promotion is for the admin console.")
-@Controller(apiPath("/admin/feature-flags"))
+@ApiController("/admin/feature-flags")
 export class FlagPromotionController {
 	public constructor(@Inject(PROMOTIONS) private readonly promotions: PromotionService) {}
 

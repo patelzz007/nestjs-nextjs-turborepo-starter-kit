@@ -16,7 +16,7 @@ import { z } from "zod";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import type { RateLimitSubject, RateLimitSubjectKind } from "../../application/ports/rate-limiter.port";
 import type { RateLimitRefusalsPort } from "../../application/ports/rate-limit-insights.port";
-import { REDIS_PUBLISHER } from "../redis/redis.tokens";
+import { REDIS_PUBLISHER } from "@workspace/messaging/nest";
 import { RateLimitSubjectKindSchema } from "@workspace/shared";
 
 /** Entries the stream keeps (approximate trim, `MAXLEN ~`). */

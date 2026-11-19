@@ -1,10 +1,9 @@
 // ============================================
 // notifications/presentation/http/broadcast-reports-admin.controller.ts — reports staff decide on (ADR 073)
 // ============================================
-import { Controller, Get, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Get, HttpStatus, Inject, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	BroadcastReportEntrySchema,
 	BroadcastReportListQuerySchema,
 	OkResponseSchema,
@@ -17,6 +16,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -34,7 +34,7 @@ const ReportIdParamsSchema = z.object({ reportId: z.uuid() }).strict();
 @ApiTags("Broadcasts")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for broadcast reports.")
-@Controller(apiPath("/admin/broadcast-reports"))
+@ApiController("/admin/broadcast-reports")
 export class BroadcastReportsAdminController {
 	public constructor(@Inject(BROADCAST_SERVICE) private readonly broadcasts: BroadcastService) {}
 

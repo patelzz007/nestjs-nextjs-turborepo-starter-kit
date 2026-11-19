@@ -34,6 +34,31 @@ describe("env boundary (apps/api effective lint config)", () => {
 	});
 });
 
+describe("controller versioning (apps/api effective lint config)", () => {
+	const CONTROLLER_PATH = "src/contexts/catalog/presentation/http/probe.controller.ts";
+	const VERSIONING_RULE = "api/no-unversioned-controller";
+
+	function versioningViolations(decorator: string): string[] {
+		const code = `${decorator}\nexport class ProbeController {}\n`;
+		return ruleIdsFor(config, code, CONTROLLER_PATH).filter((ruleId: string): boolean => ruleId === VERSIONING_RULE);
+	}
+
+	it("accepts a business controller declared with @ApiController", () => {
+		expect(versioningViolations('@ApiController("/product")')).toEqual([]);
+	});
+
+	it.each(['@Controller("product")', '@Controller(apiPath("/product"))', "@Controller(`product`)"])("rejects a business controller declared with %s", (decorator: string) => {
+		expect(versioningViolations(decorator)).toEqual([VERSIONING_RULE]);
+	});
+
+	it.each(["@Controller()", '@Controller("health")', '@Controller("/version")', '@Controller("notifications/email-webhook")'])(
+		"accepts the unversioned route %s",
+		(decorator: string) => {
+			expect(versioningViolations(decorator)).toEqual([]);
+		},
+	);
+});
+
 describe("import boundaries (apps/api effective lint config)", () => {
 	it("allows backend and shared imports", () => {
 		const code =

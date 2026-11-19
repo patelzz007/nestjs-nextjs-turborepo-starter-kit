@@ -36,7 +36,7 @@ export class BroadcastSchedulerCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_MINUTE)
+	@Cron(CronExpression.EVERY_MINUTE, { waitForCompletion: true })
 	public async everyMinute(): Promise<void> {
 		const started = await this.dispatcher.dispatch(new StartDueBroadcastsCommand(systemActor(BROADCASTS_SEND_OPERATION, "cron", null, "Start due broadcasts", null)), {
 			kind: "cron",

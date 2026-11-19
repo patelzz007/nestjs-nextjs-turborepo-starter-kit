@@ -4,9 +4,8 @@
 
 import { z, type ZodType } from "zod";
 
-import type { DataValue, EpochMs } from "../schemas/api/common";
+import type { DataValue } from "../schemas/api/common";
 import type { ApiFileResponseContract, ApiResponseContract } from "./response";
-import type { ApiVersion } from "./versioning";
 
 /**
  * Every procedure input is either a plain JSON object (path params + query
@@ -29,10 +28,7 @@ export type ApiAccess = z.output<typeof ApiAccessSchema>;
  * `Input` is constrained to JSON so the schema is a valid contract input on
  * both sides, and `Data` is the envelope's `data` type the client parses.
  *
- * `version` defaults to `API_VERSION` at the transport; a leaf can override it
- * (`version: "v2"`) so a single contract describes a v1+v2 migration without
- * forking the whole tree. `deprecatedSince`/`sunsetAt` are metadata for the
- * `Sunset` header and client-side deprecation warnings.
+ * A leaf names no API version: the client sends every call to the version its app pins (ADR 094).
  *
  * `access` mirrors the API: `"public"` exactly when the route is `@Public()`
  * (no session needed — `test/openapi-document.e2e-spec.ts` holds the two
@@ -47,11 +43,6 @@ export interface ApiContractDef<Input extends SerializableInput, M extends RestM
 	readonly response: ApiResponseContract<Data>;
 	/** Who may call the route; omitted = `"authenticated"`. */
 	readonly access?: ApiAccess;
-	readonly version?: ApiVersion;
-	/** Epoch ms the route was deprecated. */
-	readonly deprecatedSince?: EpochMs;
-	/** Epoch ms after which the route is removed (sent as the `Sunset` header, see `sunsetHeaderValue`). */
-	readonly sunsetAt?: EpochMs;
 }
 
 /** Declares one route in the contract. */
@@ -75,7 +66,6 @@ export interface ApiFileContractDef<Input extends SerializableInput> {
 	readonly response: ApiFileResponseContract;
 	/** Who may call the route; omitted = `"authenticated"`. */
 	readonly access?: ApiAccess;
-	readonly version?: ApiVersion;
 }
 
 /** Declares one file download route. */

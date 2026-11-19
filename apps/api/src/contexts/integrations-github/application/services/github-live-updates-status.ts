@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { epochMs, type GithubLiveUpdatesParams, type GithubLiveUpdatesStatus } from "@workspace/shared";
 
+import type { ActorContext } from "../../../../platform/application/actor-context";
+import { githubUserIdOf } from "../github-user-actor";
 import type { GithubWebhookEndpointPort, GithubWebhookStorePort } from "../ports/github-live-updates.port";
 import { GITHUB_WEBHOOK_ENDPOINT, GITHUB_WEBHOOK_STORE } from "../ports/github.tokens";
 
@@ -11,6 +13,12 @@ export class GithubLiveUpdatesStatusReader {
 		@Inject(GITHUB_WEBHOOK_ENDPOINT) private readonly endpoint: GithubWebhookEndpointPort,
 		@Inject(GITHUB_WEBHOOK_STORE) private readonly subscriptions: GithubWebhookStorePort,
 	) {}
+
+	/** The signed-in caller's live updates of the repository; any other actor is refused. */
+	public async statusFor(actor: ActorContext, params: GithubLiveUpdatesParams): Promise<GithubLiveUpdatesStatus> {
+		const userId = githubUserIdOf(actor);
+		return this.status(userId, params);
+	}
 
 	public async status(userId: string, params: GithubLiveUpdatesParams): Promise<GithubLiveUpdatesStatus> {
 		if (this.endpoint.endpoint() === null) {

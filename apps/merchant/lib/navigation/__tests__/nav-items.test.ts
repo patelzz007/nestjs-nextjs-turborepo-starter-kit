@@ -1,5 +1,4 @@
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
-import { MERCHANT_CAPABILITY, type CapabilitySlug, type FeatureFlagKey } from "@workspace/shared";
+import { createGrantedCapabilities, isCapabilityGranted, MERCHANT_CAPABILITY, type CapabilitySlug, type FeatureFlagKey } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { MERCHANT_FEATURE_FLAGS } from "@/lib/feature-flags";

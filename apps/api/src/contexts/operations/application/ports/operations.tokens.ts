@@ -45,4 +45,3 @@ export const OPERATIONS_TRAFFIC = Symbol("OPERATIONS_TRAFFIC");
 export const OPERATIONS_QUEUES = Symbol("OPERATIONS_QUEUES");
 /** The public status page and its incidents (`StatusPageService`, enhancement 4.5). */
 export const STATUS_PAGE = Symbol("STATUS_PAGE");
-export const REQUEST_METRICS = Symbol("REQUEST_METRICS");

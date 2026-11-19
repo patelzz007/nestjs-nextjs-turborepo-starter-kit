@@ -1,9 +1,7 @@
-import { Controller, Get } from "@nestjs/common";
-import { QueryBus } from "@nestjs/cqrs";
+import { Get } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	ReceivedWebhookDetailSchema,
 	ReceivedWebhookSummarySchema,
 	type PaginatedServiceResult,
@@ -13,6 +11,7 @@ import {
 	type ReceivedWebhookSummary,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -21,8 +20,7 @@ import { RequirePermission } from "../../../../../platform/presentation/http/sec
 import { ZodListQuery, ZodParams } from "../../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { WEBHOOKS_INBOUND_READ_OPERATION } from "../../application/ports/webhooks-inbound.tokens";
-import { GetReceivedWebhookQuery } from "../../application/queries/get-received-webhook/get-received-webhook.query";
-import { ListReceivedWebhooksQuery } from "../../application/queries/list-received-webhooks/list-received-webhooks.query";
+import { ReceivedWebhookApplicationService } from "../../application/services/received-webhook.application-service";
 
 /**
  * Admin viewer for the received-webhook log (ADR 081): every request a provider sent this server,
@@ -36,9 +34,9 @@ import { ListReceivedWebhooksQuery } from "../../application/queries/list-receiv
 @ApiTags("Received webhooks")
 @AdminAccessOnly("Admin access required to view received webhooks.")
 @PlatformOperation(WEBHOOKS_INBOUND_READ_OPERATION)
-@Controller(apiPath("/admin/webhooks/received"))
+@ApiController("/admin/webhooks/received")
 export class ReceivedWebhooksController {
-	public constructor(private readonly queryBus: QueryBus) {}
+	public constructor(private readonly receivedWebhooks: ReceivedWebhookApplicationService) {}
 
 	@RequirePermission("LIST", "AUDIT_LOG")
 	@Get()
@@ -51,7 +49,7 @@ export class ReceivedWebhooksController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.receivedWebhooks.list.input) query: ReceivedWebhookListQuery,
 	): Promise<PaginatedServiceResult<ReceivedWebhookSummary>> {
-		return this.queryBus.execute(new ListReceivedWebhooksQuery(actor, query));
+		return this.receivedWebhooks.list(actor, query);
 	}
 
 	@RequirePermission("READ", "AUDIT_LOG")
@@ -59,6 +57,6 @@ export class ReceivedWebhooksController {
 	@ApiOperation({ summary: "Get one received webhook", description: "Includes the payload's SHA-256 and size, the kept headers and why it was refused or failed." })
 	@ZodResponse(ReceivedWebhookDetailSchema, { description: "The complete received webhook" })
 	public async get(@CurrentActor() actor: ActorContext, @ZodParams(apiContract.receivedWebhooks.detail.input) params: ReceivedWebhookIdParam): Promise<ReceivedWebhookDetail> {
-		return this.queryBus.execute(new GetReceivedWebhookQuery(actor, params));
+		return this.receivedWebhooks.get(actor, params);
 	}
 }

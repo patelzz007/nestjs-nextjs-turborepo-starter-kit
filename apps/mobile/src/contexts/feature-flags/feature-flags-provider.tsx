@@ -244,6 +244,6 @@ export interface FeatureFlagGateProps {
 }
 
 /** Renders `children` only while `flag` is on. */
-export function FeatureFlagGate({ flag, fallback = null, children }: FeatureFlagGateProps): React.JSX.Element {
-	return <>{useFeatureFlag(flag) ? children : fallback}</>;
+export function FeatureFlagGate({ flag, fallback = null, children }: FeatureFlagGateProps): React.ReactNode {
+	return useFeatureFlag(flag) ? children : fallback;
 }

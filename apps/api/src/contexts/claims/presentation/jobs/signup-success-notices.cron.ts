@@ -20,7 +20,7 @@ export class SignupSuccessNoticesCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async sweep(): Promise<void> {
 		const swept = await this.dispatcher.dispatch(
 			new SweepSignupSuccessNoticesCommand(systemActor(SIGNUP_SUCCESS_NOTICE_OPERATION, "cron", null, "Deliver owed signup referral success notifications", null)),

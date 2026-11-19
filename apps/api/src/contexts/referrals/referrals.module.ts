@@ -27,7 +27,7 @@ import {
 	SIGNUP_REFERRALS,
 } from "./application/ports/referrals.tokens";
 import { GetMySignupReferralDashboardHandler } from "./application/queries/get-my-signup-referral-dashboard/get-my-signup-referral-dashboard.handler";
-import { ListMyRefereesHandler } from "./application/queries/list-my-referees/list-my-referees.handler";
+import { SignupRefereeApplicationService } from "./application/services/signup-referee.application-service";
 import { SignupReferralApplicationService } from "./application/services/signup-referral.application-service";
 import { CryptoReferralLinkIdentityGenerator } from "./infrastructure/adapters/referral-link-identity.generator";
 import {
@@ -79,7 +79,7 @@ import { SignupReferralMaintenanceCron } from "./presentation/jobs/signup-referr
 		SignupReferralApplicationService,
 		{ provide: SIGNUP_REFERRALS, useExisting: SignupReferralApplicationService },
 		GetMySignupReferralDashboardHandler,
-		ListMyRefereesHandler,
+		SignupRefereeApplicationService,
 		MaintainSignupReferralCodesHandler,
 		SignupReferralMaintenanceCron,
 	],

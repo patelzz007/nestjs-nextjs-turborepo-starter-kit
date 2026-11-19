@@ -50,7 +50,7 @@ flowchart TD
    - Record-dependent rules via `@Authorize` / the kernel ([recipes](./authorization/recipes.md)).
 4. **API** (`apps/api/src/contexts/<context>/` — `domain`, `application`, `infrastructure`, `presentation`)
    - Repository (extends the base repository: soft delete, list paging), service (business rules,
-     transactions, race-condition protection), controller (`@Controller(apiPath(...))`,
+     transactions, race-condition protection), controller (`@ApiController(...)`,
      `@ZodBody`/`@ZodQuery`/`@ZodParams`, `@ZodResponse`, permission decorators).
    - Side effects that other systems need → outbox event in the same transaction ([Messaging](./messaging.md)).
 5. **Client** — typed leaf in `packages/api-client/src/router.ts` (re-exported by `@workspace/client/lib/api/endpoints`).

@@ -1,5 +1,5 @@
-import { Controller, Get, Post } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Get, Post } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type {
 	AdminMfaRecoveryListQuery,
@@ -9,8 +9,9 @@ import type {
 	MfaRecoveryStatusResponse,
 	PaginatedServiceResult,
 } from "@workspace/shared";
-import { AdminMfaRecoveryRequestSchema, apiContract, apiPath, MfaRecoveryStatusResponseSchema } from "@workspace/shared";
+import { AdminMfaRecoveryRequestSchema, apiContract, MfaRecoveryStatusResponseSchema } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
@@ -24,16 +25,15 @@ import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presenta
 import { MFA_RECOVERY_LIST_OPERATION, MFA_RECOVERY_REVIEW_OPERATION } from "../../application/ports/identity.tokens";
 import { RequestMfaRecoveryCommand } from "../../application/commands/request-mfa-recovery/request-mfa-recovery.command";
 import { ReviewMfaRecoveryCommand } from "../../application/commands/review-mfa-recovery/review-mfa-recovery.command";
-import { GetMyMfaRecoveryStatusQuery } from "../../application/queries/get-my-mfa-recovery-status/get-my-mfa-recovery-status.query";
-import { ListMfaRecoveryRequestsQuery } from "../../application/queries/list-mfa-recovery-requests/list-mfa-recovery-requests.query";
+import { AccountApplicationService } from "../../application/services/account.application-service";
 
 /** Admin-reviewed MFA recovery: the member's request and status, and the SuperAdmin review queue. */
 @ApiTags("Auth")
-@Controller(apiPath("/auth"))
+@ApiController("/auth")
 export class MfaRecoveryController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly accounts: AccountApplicationService,
 	) {}
 
 	@RateLimit(RATE_LIMIT_POLICY.credential)
@@ -55,7 +55,7 @@ export class MfaRecoveryController {
 	@ApiOperation({ summary: "Get the current MFA recovery request status" })
 	@ZodResponse(MfaRecoveryStatusResponseSchema, { description: "Recovery request status" })
 	public async getRecoveryStatus(@GetUser("sub") userId: string, @CurrentActor() actor: ActorContext): Promise<MfaRecoveryStatusResponse> {
-		return this.queryBus.execute(new GetMyMfaRecoveryStatusQuery(actor, { userId }));
+		return this.accounts.mfaRecoveryStatus(actor, userId);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)
@@ -69,7 +69,7 @@ export class MfaRecoveryController {
 		@ZodListQuery(apiContract.auth.adminMfaRecoveryRequests.input) query: AdminMfaRecoveryListQuery,
 		@CurrentActor() actor: ActorContext,
 	): Promise<PaginatedServiceResult<AdminMfaRecoveryRequest>> {
-		return this.queryBus.execute(new ListMfaRecoveryRequestsQuery(actor, { query }));
+		return this.accounts.mfaRecoveryRequests(actor, query);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)

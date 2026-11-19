@@ -4,6 +4,7 @@ import { Reflector } from "@nestjs/core";
 import { API_VERSION_PREFIX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
+import { servedPathOf } from "../../../../../../e2e/support/route-metadata";
 import { RewardsAdminAnalyticsController } from "../admin-analytics.controller";
 import { AnalyticsExportRateLimitGuard } from "../analytics-export-rate-limit.guard";
 import { ConsumerAnalyticsController } from "../consumer-analytics.controller";
@@ -39,7 +40,7 @@ function routeOf(prototype: object, name: string): RouteMetadata {
 describe("reporting controllers keep every analytics route", () => {
 	it("serves the merchant routes under /tenants/:tenantSlug/analytics, the export behind the rate limit", () => {
 		const prototype = TenantAnalyticsController.prototype;
-		expect(reflector.get<string>(PATH_METADATA, TenantAnalyticsController)).toBe(`${API_VERSION_PREFIX}/tenants/:tenantSlug/analytics`);
+		expect(servedPathOf(TenantAnalyticsController)).toBe(`${API_VERSION_PREFIX}/tenants/:tenantSlug/analytics`);
 		expect(routeOf(prototype, "getAnalytics")).toEqual({ path: "/", method: RequestMethod.GET, guards: [] });
 		expect(routeOf(prototype, "getDashboard")).toEqual({ path: "dashboard", method: RequestMethod.GET, guards: [] });
 		expect(routeOf(prototype, "exportReport")).toEqual({ path: "export", method: RequestMethod.GET, guards: [AnalyticsExportRateLimitGuard] });
@@ -48,7 +49,7 @@ describe("reporting controllers keep every analytics route", () => {
 
 	it("serves an integration key the same reports under /integration/analytics (the key names its tenant), the export behind the rate limit", () => {
 		const prototype = IntegrationAnalyticsController.prototype;
-		expect(reflector.get<string>(PATH_METADATA, IntegrationAnalyticsController)).toBe(`${API_VERSION_PREFIX}/integration/analytics`);
+		expect(servedPathOf(IntegrationAnalyticsController)).toBe(`${API_VERSION_PREFIX}/integration/analytics`);
 		expect(reflector.get<object | undefined>(ALLOW_API_KEY_AUTH_KEY, IntegrationAnalyticsController)).toBeDefined();
 		expect(routeOf(prototype, "getAnalytics")).toEqual({ path: "/", method: RequestMethod.GET, guards: [] });
 		expect(routeOf(prototype, "getDashboard")).toEqual({ path: "dashboard", method: RequestMethod.GET, guards: [] });
@@ -57,7 +58,7 @@ describe("reporting controllers keep every analytics route", () => {
 
 	it("serves the admin routes under /admin/analytics, the export behind the rate limit", () => {
 		const prototype = RewardsAdminAnalyticsController.prototype;
-		expect(reflector.get<string>(PATH_METADATA, RewardsAdminAnalyticsController)).toBe(`${API_VERSION_PREFIX}/admin/analytics`);
+		expect(servedPathOf(RewardsAdminAnalyticsController)).toBe(`${API_VERSION_PREFIX}/admin/analytics`);
 		expect(routeOf(prototype, "getSales")).toEqual({ path: "sales", method: RequestMethod.GET, guards: [] });
 		expect(routeOf(prototype, "getDashboard")).toEqual({ path: "dashboard", method: RequestMethod.GET, guards: [] });
 		expect(routeOf(prototype, "exportReport")).toEqual({ path: "export", method: RequestMethod.GET, guards: [AnalyticsExportRateLimitGuard] });
@@ -65,7 +66,7 @@ describe("reporting controllers keep every analytics route", () => {
 
 	it("serves the customer routes under /claims", () => {
 		const prototype = ConsumerAnalyticsController.prototype;
-		expect(reflector.get<string>(PATH_METADATA, ConsumerAnalyticsController)).toBe(`${API_VERSION_PREFIX}/claims`);
+		expect(servedPathOf(ConsumerAnalyticsController)).toBe(`${API_VERSION_PREFIX}/claims`);
 		expect(routeOf(prototype, "getAnalytics")).toEqual({ path: "analytics", method: RequestMethod.GET, guards: [] });
 		expect(routeOf(prototype, "getAnalyticsDashboard")).toEqual({ path: "analytics/dashboard", method: RequestMethod.GET, guards: [] });
 	});

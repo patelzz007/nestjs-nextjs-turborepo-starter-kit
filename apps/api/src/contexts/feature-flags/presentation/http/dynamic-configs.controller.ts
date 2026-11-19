@@ -4,10 +4,9 @@
 // Platform staff only: DYNAMIC_CONFIG:LIST to read, UPDATE to save values and rules (each value checked against
 // the config's declared shape), APPROVE to decide someone else's pending production change.
 
-import { Controller, Get, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	CheckSubjectSchema,
 	ConfigCheckResultSchema,
 	ConfigRevisionPathSchema,
@@ -30,6 +29,7 @@ import {
 	type SaveConfigRevisionInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -46,7 +46,7 @@ import { CONFIG_ADMIN, FLAG_EVALUATION } from "../../feature-flags.tokens";
 @ApiTags("Dynamic configs")
 @ApiBearerAuth()
 @AdminAccessOnly("Dynamic configs are for the admin console.")
-@Controller(apiPath("/admin/dynamic-configs"))
+@ApiController("/admin/dynamic-configs")
 export class DynamicConfigsController {
 	public constructor(
 		@Inject(CONFIG_ADMIN) private readonly configs: ConfigAdminService,

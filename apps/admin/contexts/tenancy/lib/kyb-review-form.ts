@@ -1,5 +1,5 @@
 // ============================================
-// lib/merchants/kyb-review-form.ts - the KYB decision form ⇄ `PATCH /admin/merchants/:id/kyb`
+// contexts/tenancy/lib/kyb-review-form.ts -the KYB decision form ⇄ `PATCH /admin/merchants/:id/kyb`
 // ============================================
 // The form edits the reviewer-owned keys of the merchant's KYB payload plus
 // the status. Every key the form does not own is carried over unchanged, a

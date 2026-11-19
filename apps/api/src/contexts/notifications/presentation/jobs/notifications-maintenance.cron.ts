@@ -17,7 +17,7 @@ export class NotificationsMaintenanceCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_MINUTE)
+	@Cron(CronExpression.EVERY_MINUTE, { waitForCompletion: true })
 	public async everyMinute(): Promise<void> {
 		const summary = await this.dispatcher.dispatch(
 			new RunNotificationsMaintenanceCommand(systemActor(NOTIFICATIONS_MAINTENANCE_OPERATION, "cron", null, "Notifications: sweep, release held deliveries, digests", null), {
@@ -28,7 +28,7 @@ export class NotificationsMaintenanceCron {
 		this.logger.debug({ event: NOTIFICATIONS_MAINTENANCE_OPERATION, summary });
 	}
 
-	@Cron(CronExpression.EVERY_DAY_AT_3AM)
+	@Cron(CronExpression.EVERY_DAY_AT_3AM, { waitForCompletion: true })
 	public async daily(): Promise<void> {
 		const summary = await this.dispatcher.dispatch(
 			new RunNotificationsMaintenanceCommand(systemActor(NOTIFICATIONS_MAINTENANCE_OPERATION, "cron", null, "Notifications: retention and ended-session devices", null), {

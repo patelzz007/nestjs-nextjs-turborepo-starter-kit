@@ -42,6 +42,3 @@ export interface PaymentIntentRepository {
 	/** Open payments last touched between `from` and `to` (epoch ms), oldest first, at most `limit`. */
 	listOpenTouchedBetween(from: number, to: number, limit: number): Promise<readonly OpenPaymentRef[]>;
 }
-
-/** The unique index two concurrent creates with the same `Idempotency-Key` collide on. */
-export const PAYMENT_IDEMPOTENCY_INDEX = "PaymentIntent_tenantId_idempotencyKey_key";

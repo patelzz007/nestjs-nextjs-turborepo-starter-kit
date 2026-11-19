@@ -1,9 +1,8 @@
-import { Controller, Get, HttpStatus, Post, UseInterceptors } from "@nestjs/common";
+import { Get, HttpStatus, Post, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	MerchantApiKeyCreatedSchema,
 	MerchantApiKeyListQuerySchema,
 	MerchantApiKeySummarySchema,
@@ -17,6 +16,7 @@ import {
 } from "@workspace/shared";
 import type { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { MerchantActor } from "../../../../platform/presentation/http/security/api-keys/merchant-actor";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -35,7 +35,7 @@ import { PosEmptyBodyDto } from "./pos-empty-body.dto";
 @ApiTags("Tenant API Keys")
 @ApiBearerAuth()
 @UseInterceptors(MerchantActorInterceptor)
-@Controller(apiPath("/tenants/:tenantSlug/api-keys"))
+@ApiController("/tenants/:tenantSlug/api-keys")
 export class TenantApiKeysController {
 	public constructor(
 		private readonly commandBus: CommandBus,

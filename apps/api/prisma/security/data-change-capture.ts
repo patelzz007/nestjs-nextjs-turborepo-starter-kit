@@ -24,7 +24,7 @@
  *
  * {@link planDataChangeCapture} refuses a manifest that names an unknown
  * table / column or leaves a secret-looking column unclassified — at apply
- * time against the live catalog (`prisma/rls/apply.ts`) and in CI against
+ * time against the live catalog (`prisma/security/apply.ts`) and in CI against
  * the Prisma schema (`pnpm tools db:check-rls-manifest`).
  */
 
@@ -233,7 +233,7 @@ export interface DataChangeCapturePlan {
 /** Thrown when the manifest disagrees with the catalog; lists every problem at once. */
 export class DataChangeCaptureManifestError extends Error {
 	public constructor(public readonly problems: readonly string[]) {
-		super(`Data-change capture manifest (prisma/rls/data-change-capture.ts) is out of date:\n  - ${problems.join("\n  - ")}`);
+		super(`Data-change capture manifest (prisma/security/data-change-capture.ts) is out of date:\n  - ${problems.join("\n  - ")}`);
 		this.name = "DataChangeCaptureManifestError";
 	}
 }

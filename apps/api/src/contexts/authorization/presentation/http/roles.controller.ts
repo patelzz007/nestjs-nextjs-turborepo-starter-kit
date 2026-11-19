@@ -1,8 +1,7 @@
-import { Controller, Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	RbacMessageResponseSchema,
 	RoleAssignmentPreviewSchema,
 	RoleAssignmentValidationResponseSchema,
@@ -19,6 +18,7 @@ import {
 	type RoleResponse,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
@@ -35,21 +35,21 @@ import { ReviseRoleCommand } from "../../application/commands/revise-role/revise
 import { SyncRolePermissionsCommand } from "../../application/commands/sync-role-permissions/sync-role-permissions.command";
 import { SyncUserRolesCommand } from "../../application/commands/sync-user-roles/sync-user-roles.command";
 import { UnassignRoleCommand } from "../../application/commands/unassign-role/unassign-role.command";
-import { GetRoleQuery } from "../../application/queries/get-role/get-role.query";
-import { ListRolesQuery } from "../../application/queries/list-roles/list-roles.query";
+import { RbacCatalogApplicationService } from "../../application/services/rbac-catalog.application-service";
 import { PreviewRoleAssignmentQuery } from "../../application/queries/preview-role-assignment/preview-role-assignment.query";
 import { ValidateRoleAssignmentQuery } from "../../application/queries/validate-role-assignment/validate-role-assignment.query";
 import { RBAC_CATALOG_READ_OPERATION, RBAC_INSPECT_OPERATION, RBAC_MUTATE_OPERATION } from "../../application/ports/authorization.tokens";
 import { SyncRolePermissionsDto } from "./dtos/permission.dto";
 import { AssignRoleToUserDto, CreateRoleDto, SyncUserRolesDto, UpdateRoleDto, ValidateRoleAssignmentDto } from "./dtos/role.dto";
 
-/** Role catalog and user → role assignment. Every route makes exactly one bus call. */
-@Controller(apiPath("/admin/roles"))
+/** Role catalog and user → role assignment. Every route makes exactly one call: a command, a query, or a read of the RBAC catalog service. */
+@ApiController("/admin/roles")
 @ApiTags("Roles")
 export class RolesController {
 	public constructor(
 		private readonly commandBus: CommandBus,
 		private readonly queryBus: QueryBus,
+		private readonly catalog: RbacCatalogApplicationService,
 	) {}
 
 	@Get()
@@ -58,7 +58,7 @@ export class RolesController {
 	@PlatformOperation(RBAC_CATALOG_READ_OPERATION)
 	@ZodPaginatedResponse(RoleListItemSchema, { description: "One page of the roles; pagination is in `meta`" })
 	public async list(@CurrentActor() actor: ActorContext, @ZodListQuery(RoleListQuerySchema) query: RoleListQuery): Promise<PaginatedServiceResult<RoleListItem>> {
-		return this.queryBus.execute(new ListRolesQuery(actor, query));
+		return this.catalog.listRoles(actor, query);
 	}
 
 	@Post()
@@ -108,7 +108,7 @@ export class RolesController {
 	@PlatformOperation(RBAC_CATALOG_READ_OPERATION)
 	@ZodResponse(RoleResponseSchema, { description: "Role detail (404 NOT_FOUND when no live role has that id)" })
 	public async detail(@CurrentActor() actor: ActorContext, @ZodParam("id", UuidParamSchema) id: string): Promise<RoleResponse> {
-		return this.queryBus.execute(new GetRoleQuery(actor, id));
+		return this.catalog.getRole(actor, id);
 	}
 
 	@Patch(":id")

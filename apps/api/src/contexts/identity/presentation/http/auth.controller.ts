@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, HttpStatus, Inject, Patch, Post, Req, UseInterceptors } from "@nestjs/common";
+import { Get, Headers, HttpStatus, Inject, Patch, Post, Req, UseInterceptors } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type {
@@ -38,7 +38,6 @@ import {
 	AdminUserBanSchema,
 	AdminUserDetailSchema,
 	apiContract,
-	apiPath,
 	AuthClientTypeQuerySchema,
 	ChangePasswordResponseSchema,
 	ForgotPasswordResponseSchema,
@@ -55,6 +54,7 @@ import {
 } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { AUTH_FLOW_RECORDER, type AuthFlowRecorder } from "../../../../platform/application/ports/access-token.port";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
@@ -115,7 +115,7 @@ const PUBLIC_ACTOR = { allowAnonymous: true };
  * records the outcome of each credential flow (`authEvents` is its recorder).
  */
 @ApiTags("Auth")
-@Controller(apiPath("/auth"))
+@ApiController("/auth")
 export class AuthController {
 	public constructor(
 		private readonly commandBus: CommandBus,

@@ -245,7 +245,7 @@ export class PublishRewardService {
 ## 6. Controller (thin, fully mapped authorization)
 
 ```ts
-@Controller('rewards')
+@ApiController('/rewards') // served at /api/v1/rewards, /api/v2/rewards, … (ADR 094)
 @ApiTags('rewards')
 export class RewardsController {
   public constructor(private readonly publishReward: PublishRewardService, private readonly listRewards: ListRewardsService) {}

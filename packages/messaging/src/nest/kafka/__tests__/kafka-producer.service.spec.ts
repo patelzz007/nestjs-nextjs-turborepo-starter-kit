@@ -293,7 +293,7 @@ describe("KafkaProducerService", () => {
 
 		it("fails with KafkaProducerNotConnectedError after shutdown closed it", async () => {
 			const producer = await connectedProducer();
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 
 			await expect(producer.publish("platform.sessions", ENVELOPE)).rejects.toBeInstanceOf(KafkaProducerNotConnectedError);
 			expect(producer.isConnected()).toBe(false);
@@ -310,7 +310,7 @@ describe("KafkaProducerService", () => {
 
 			await expect(producer.publish("platform.sessions", ENVELOPE)).rejects.toMatchObject({ name: "KafkaProducerNotConnectedError", state: "connecting" });
 			expect(kafka.sent).toEqual([]);
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 			vi.restoreAllMocks();
 		});
 
@@ -362,7 +362,7 @@ describe("KafkaProducerService", () => {
 			await flushMicrotasks();
 
 			expect(log.mock.calls.flat().join("\n")).not.toContain("kafka.producer_connected");
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 		});
 
 		it("logs a broker that keeps failing once, then its repeat count when the client shuts down", async () => {
@@ -374,7 +374,7 @@ describe("KafkaProducerService", () => {
 			}
 			expect(warn).toHaveBeenCalledTimes(1);
 
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 
 			expect(warn).toHaveBeenCalledTimes(2);
 			expect(warn).toHaveBeenLastCalledWith(
@@ -406,7 +406,7 @@ describe("KafkaProducerService", () => {
 			producerClient().emit(KAFKA_BROKER_FAILED_EVENT, BROKER_FAILURE);
 			producerClient().emit(KAFKA_BROKER_FAILED_EVENT, BROKER_FAILURE);
 
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 
 			expect(warn.mock.calls.flat().join("\n")).toContain('"repeatCount":1');
 		});
@@ -435,7 +435,7 @@ describe("KafkaProducerService", () => {
 
 			expect(producer.getState()).toBe("connecting");
 			expect(producer.getFailedConnectAttempts()).toBe(1);
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 		});
 
 		it("counts a probe that never answers as a failed attempt once the probe budget runs out", async () => {
@@ -447,7 +447,7 @@ describe("KafkaProducerService", () => {
 
 			expect(producer.getState()).toBe("connecting");
 			expect(producer.getFailedConnectAttempts()).toBe(1);
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 		});
 
 		it("retries with backoff and turns `connected` once the broker answers — no restart", async () => {
@@ -471,7 +471,7 @@ describe("KafkaProducerService", () => {
 			expect(producer.getFailedConnectAttempts()).toBe(0);
 			await expect(indicator.isHealthy()).resolves.toBe(true);
 			await expect(indicator.getReport()).resolves.toEqual({ backend: KAFKA_CLIENT_BACKEND, brokers: "configured", state: "connected" });
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 		});
 
 		it("does not retry sooner than the backoff allows", async () => {
@@ -484,7 +484,7 @@ describe("KafkaProducerService", () => {
 			await vi.advanceTimersByTimeAsync(minDelayMs(1) - 1);
 
 			expect(kafka.listTopicsCalls).toBe(callsAfterFirstAttempt);
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 		});
 
 		it("shutdown cancels the reconnect loop at once — no attempt after it", async () => {
@@ -494,7 +494,7 @@ describe("KafkaProducerService", () => {
 			await flushMicrotasks();
 
 			// Resolves without advancing the (fake) clock: the backoff wait is aborted.
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 			const callsAtShutdown = kafka.listTopicsCalls;
 			kafka.listTopicsFailure = null;
 			await vi.advanceTimersByTimeAsync(DEFAULT_KAFKA_CONNECT_BACKOFF.maxDelayMs * 4);
@@ -522,7 +522,7 @@ describe("KafkaProducerService", () => {
 
 		it("is unhealthy when the producer is not connected", async () => {
 			const producer = await connectedProducer();
-			await producer.onModuleDestroy();
+			await producer.onApplicationShutdown();
 			const indicator = new KafkaHealthIndicator(producer);
 
 			await expect(indicator.isHealthy()).resolves.toBe(false);
@@ -547,6 +547,6 @@ describe("KafkaProducerService without brokers", () => {
 		expect(disabled.getState()).toBe("disabled");
 		expect(disabled.isConnected()).toBe(false);
 		await expect(disabled.ping()).resolves.toEqual({ reachable: false, reason: "producer disabled" });
-		await expect(disabled.onModuleDestroy()).resolves.toBeUndefined();
+		await expect(disabled.onApplicationShutdown()).resolves.toBeUndefined();
 	});
 });

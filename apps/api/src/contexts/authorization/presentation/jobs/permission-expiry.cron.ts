@@ -13,7 +13,7 @@ export class PermissionExpiryCron {
 
 	public constructor(private readonly dispatcher: SystemCommandDispatcher) {}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async expireOverrides(): Promise<void> {
 		const actor = authorizationSystemActor(PERMISSION_EXPIRY_OPERATION, "cron", "Expire time-bound direct permission overrides");
 		const expired: number = await this.dispatcher.dispatch(new ExpireTimeBoundPermissionOverridesCommand(actor), { kind: "cron", name: "permission-expiry" });

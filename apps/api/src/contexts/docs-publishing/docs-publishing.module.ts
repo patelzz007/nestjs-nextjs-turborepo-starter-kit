@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
+import { REDIS_PUBLISHER } from "@workspace/messaging/nest";
 import type { Redis } from "ioredis";
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { CLOCK, type Clock } from "../../platform/application/clock.port";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
-import { REDIS_PUBLISHER } from "../../platform/infrastructure/redis/redis.tokens";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { WebhooksInboundModule } from "../webhooks/inbound/public-api";
 import { PruneDocsSyncRunsHandler } from "./application/commands/prune-docs-sync-runs/prune-docs-sync-runs.handler";

@@ -62,8 +62,6 @@ export const GithubRepositorySummaryResponseWireSchema = z.object({
 	errors: GraphqlErrorsWireSchema.optional(),
 });
 
-export type GithubRepositorySummaryResponseWire = z.output<typeof GithubRepositorySummaryResponseWireSchema>;
-
 // ── Commit history (GraphQL) ───────────────────────────────────────────────
 
 export const GithubCommitNodeWireSchema = z.object({
@@ -105,8 +103,6 @@ export const GithubCommitHistoryResponseWireSchema = z.object({
 		.nullish(),
 	errors: GraphqlErrorsWireSchema.optional(),
 });
-
-export type GithubCommitHistoryResponseWire = z.output<typeof GithubCommitHistoryResponseWireSchema>;
 
 // ── Contribution history (GraphQL) ─────────────────────────────────────────
 

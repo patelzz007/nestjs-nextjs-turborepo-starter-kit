@@ -65,7 +65,7 @@ describe("Idempotency record retention (integration)", () => {
 	afterAll(async () => {
 		await verifier.query('DELETE FROM public."PlatformResourceIdempotencyRecord" WHERE scope = $1', [scope]);
 		await verifier.end();
-		await prisma.onModuleDestroy();
+		await prisma.onApplicationShutdown();
 	});
 
 	it("deletes rows expired past the grace period and keeps live and recently expired ones", async () => {
@@ -112,7 +112,7 @@ describe("Idempotency record retention (integration)", () => {
 				await outcome.lease.lock.release();
 			}
 		} finally {
-			await locks.onModuleDestroy();
+			await locks.onApplicationShutdown();
 		}
 		expect(await remainingKeys()).toContain(key);
 	});

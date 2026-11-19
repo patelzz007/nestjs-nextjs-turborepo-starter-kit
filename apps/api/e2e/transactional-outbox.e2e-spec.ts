@@ -76,7 +76,7 @@ describe("Transactional outbox (integration)", () => {
 			await verifier.query('DELETE FROM public."EmailLog" WHERE "templateKey" = ANY($1::text[])', [createdTemplateKeys]);
 		}
 		await verifier.end();
-		await prisma.onModuleDestroy();
+		await prisma.onApplicationShutdown();
 	});
 
 	it("commits the event together with the domain row", async () => {

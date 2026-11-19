@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runGracefulShutdown, type GracefulShutdownDependencies } from "../graceful-shutdown";
 
 const SHUTDOWN_TIMEOUT_MS = 15_000;
-const DRAINED_WORKERS = 6;
 
 interface Recorder {
 	readonly steps: string[];
@@ -12,7 +11,7 @@ interface Recorder {
 	readonly error: ReturnType<typeof vi.fn<(message: string) => void>>;
 }
 
-function recorder(overrides: { readonly drain?: () => Promise<number>; readonly close?: () => Promise<void> } = {}): Recorder {
+function recorder(overrides: { readonly close?: () => Promise<void> } = {}): Recorder {
 	const steps: string[] = [];
 	const exit = vi.fn<(code: number) => void>((code: number): void => {
 		steps.push(`exit:${String(code)}`);
@@ -33,14 +32,6 @@ function recorder(overrides: { readonly drain?: () => Promise<number>; readonly 
 			},
 		},
 		log: { info: vi.fn<(message: string) => void>(), error },
-		workerDrain: {
-			drain:
-				overrides.drain ??
-				((): Promise<number> => {
-					steps.push("drain");
-					return Promise.resolve(DRAINED_WORKERS);
-				}),
-		},
 		shutdownTimeoutMs: SHUTDOWN_TIMEOUT_MS,
 		exit,
 	};
@@ -52,16 +43,16 @@ describe("runGracefulShutdown", () => {
 		vi.useRealTimers();
 	});
 
-	it("drains the BullMQ workers BEFORE Nest teardown closes the database pool, then exits 0", async () => {
+	it("leaves the load balancer's rotation first, then closes the application, then exits 0", async () => {
 		const { steps, deps } = recorder();
 
 		await runGracefulShutdown("SIGTERM", deps);
 
-		expect(steps).toEqual(["not-ready", "drain", "close", "exit:0"]);
+		expect(steps).toEqual(["not-ready", "close", "exit:0"]);
 	});
 
-	it("exits 1 without closing when draining fails", async () => {
-		const { steps, deps, error } = recorder({ drain: (): Promise<number> => Promise.reject(new Error("redis down")) });
+	it("exits 1 when closing the application fails", async () => {
+		const { steps, deps, error } = recorder({ close: (): Promise<void> => Promise.reject(new Error("redis down")) });
 
 		await runGracefulShutdown("SIGINT", deps);
 

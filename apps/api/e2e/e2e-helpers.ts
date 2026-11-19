@@ -27,6 +27,8 @@ import { TenantTransactionService } from "../src/prisma/tenant-transaction.servi
 import { TrustedProxies } from "../src/platform/infrastructure/http/client-ip";
 import { getApiConfig } from "../src/config/api-config";
 import { HealthService } from "../src/platform/presentation/http/health/health.service";
+import { enableApiVersioning } from "../src/platform/presentation/http/versioning/enable-api-versioning";
+import { registerHttpShutdown } from "../src/bootstrap/register-http-shutdown";
 
 export interface LoginResult {
 	readonly accessToken: string;
@@ -233,6 +235,8 @@ export async function createE2eAppWith(
 	// Same trusted-proxy list as bootstrap-app.ts, so request.ip (rate limits) and the request context agree.
 	const trustProxy = new TrustedProxies(getApiConfig().http.trustedProxies).toFastifyTrustProxy();
 	const app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter({ trustProxy }), { rawBody: true });
+	enableApiVersioning(app);
+	registerHttpShutdown(app);
 	await app.register(fastifyCookie);
 	// Multipart bodies (local-storage uploads) — registered on the Fastify instance, as register-fastify-plugins.ts does in production.
 	await app.getHttpAdapter().getInstance().register(fastifyMultipart);

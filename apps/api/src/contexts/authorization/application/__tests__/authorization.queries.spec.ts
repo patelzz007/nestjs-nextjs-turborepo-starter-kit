@@ -27,20 +27,12 @@ import type {
 } from "../ports/rbac-read.port";
 import { DecideAuthorizationHandler } from "../queries/decide-authorization/decide-authorization.handler";
 import { DecideAuthorizationQuery } from "../queries/decide-authorization/decide-authorization.query";
-import { ExplainAuthorizationHandler } from "../queries/explain-authorization/explain-authorization.handler";
-import { ExplainAuthorizationQuery } from "../queries/explain-authorization/explain-authorization.query";
-import { GetPermissionHandler } from "../queries/get-permission/get-permission.handler";
-import { GetPermissionQuery } from "../queries/get-permission/get-permission.query";
-import { GetRoleHandler } from "../queries/get-role/get-role.handler";
-import { GetRoleQuery } from "../queries/get-role/get-role.query";
-import { ListRolesHandler } from "../queries/list-roles/list-roles.handler";
-import { ListPermissionsHandler } from "../queries/list-permissions/list-permissions.handler";
-import { ListPermissionsQuery } from "../queries/list-permissions/list-permissions.query";
-import { ListRolesQuery } from "../queries/list-roles/list-roles.query";
 import { effectivePermissionKeys, PreviewRoleAssignmentHandler } from "../queries/preview-role-assignment/preview-role-assignment.handler";
 import { PreviewRoleAssignmentQuery } from "../queries/preview-role-assignment/preview-role-assignment.query";
 import { ValidateRoleAssignmentHandler } from "../queries/validate-role-assignment/validate-role-assignment.handler";
 import { ValidateRoleAssignmentQuery } from "../queries/validate-role-assignment/validate-role-assignment.query";
+import { AuthorizationExplanationApplicationService } from "../services/authorization-explanation.application-service";
+import { RbacCatalogApplicationService } from "../services/rbac-catalog.application-service";
 import { InMemoryRbacStore, adminActor, anonymousActor } from "./fakes/authorization.fakes";
 
 /** A kernel that allows exactly the listed `action:resource` keys and records what it was asked. */
@@ -184,14 +176,14 @@ describe("DecideAuthorizationHandler", () => {
 	});
 });
 
-describe("ExplainAuthorizationHandler", () => {
+describe("AuthorizationExplanationApplicationService", () => {
 	it("never lends the caller's SuperAdmin bypass to another user it explains", async () => {
 		const kernel = new ScriptedKernel(new Set());
-		const handler = new ExplainAuthorizationHandler(kernel);
+		const explanations = new AuthorizationExplanationApplicationService(kernel);
 		const root = adminActor("root-1", { isSuperAdmin: true });
 
-		await handler.execute(new ExplainAuthorizationQuery(root, { action: "READ", resource: "USER" }));
-		await handler.execute(new ExplainAuthorizationQuery(root, { action: "READ", resource: "USER", userId: "user-1", tenantId: "org-1" }));
+		await explanations.explain(root, { action: "READ", resource: "USER" });
+		await explanations.explain(root, { action: "READ", resource: "USER", userId: "user-1", tenantId: "org-1" });
 
 		expect(kernel.asked.map((request) => request.subject)).toEqual([
 			{ userId: "root-1", isSuperAdmin: true },
@@ -236,17 +228,18 @@ describe("Role assignment dry runs", () => {
 	});
 });
 
-describe("Catalog reads", () => {
+describe("RbacCatalogApplicationService", () => {
 	it("answers not found for an unknown role or permission, and pages through the catalogs with the requested list query", async () => {
 		const catalog = new EmptyCatalog();
+		const service = new RbacCatalogApplicationService(catalog);
 		const actor = adminActor("admin-1");
 
-		await expect(new GetRoleHandler(catalog).execute(new GetRoleQuery(actor, "ghost"))).rejects.toBeInstanceOf(AuthorizationResourceNotFoundError);
-		await expect(new GetPermissionHandler(catalog).execute(new GetPermissionQuery(actor, "ghost"))).rejects.toBeInstanceOf(AuthorizationResourceNotFoundError);
+		await expect(service.getRole(actor, "ghost")).rejects.toBeInstanceOf(AuthorizationResourceNotFoundError);
+		await expect(service.getPermission(actor, "ghost")).rejects.toBeInstanceOf(AuthorizationResourceNotFoundError);
 		const roleQuery: RoleListQuery = { page: 1, limit: 20, search: "edit" };
 		const permissionQuery: PermissionListQuery = { page: 2, limit: 100 };
-		await expect(new ListRolesHandler(catalog).execute(new ListRolesQuery(actor, roleQuery))).resolves.toMatchObject({ items: [], total: 0 });
-		await expect(new ListPermissionsHandler(catalog).execute(new ListPermissionsQuery(actor, permissionQuery))).resolves.toMatchObject({ items: [], total: 0 });
+		await expect(service.listRoles(actor, roleQuery)).resolves.toMatchObject({ items: [], total: 0 });
+		await expect(service.listPermissions(actor, permissionQuery)).resolves.toMatchObject({ items: [], total: 0 });
 		expect(catalog.listQueries).toEqual([roleQuery, permissionQuery]);
 	});
 });

@@ -4,10 +4,9 @@
 // BACKGROUND_JOB permissions (the Platform Developer role acts; the Admin reads). A retry or discard is a
 // state-changing request with a reason, so the audit trail records who did it and why.
 
-import { Controller, Get, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Get, HttpStatus, Inject, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	OkResponseSchema,
 	OpsFailedJobListSchema,
 	OpsQueueJobActionSchema,
@@ -22,6 +21,7 @@ import {
 	type OpsQueuePath,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -33,7 +33,7 @@ import type { OperationsQueuesService } from "../../application/services/operati
 @ApiTags("Operations")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for the background job queues.")
-@Controller(apiPath("/admin/operations"))
+@ApiController("/admin/operations")
 export class OperationsQueuesController {
 	public constructor(@Inject(OPERATIONS_QUEUES) private readonly queues: OperationsQueuesService) {}
 

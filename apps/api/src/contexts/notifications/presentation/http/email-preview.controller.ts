@@ -1,5 +1,5 @@
-import { Controller, Get, HttpStatus, NotFoundException, Post } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Get, HttpStatus, NotFoundException, Post } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiNotFoundResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import {
@@ -11,9 +11,9 @@ import {
 	type EmailPreviewListResponse,
 	type EmailSendResult,
 	type EmailTemplateKey,
-	apiPath,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -24,8 +24,7 @@ import { ZodParam } from "../../../../platform/presentation/http/validation/deco
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { SendTestEmailCommand } from "../../application/commands/send-test-email/send-test-email.command";
 import { EMAIL_LOG_WRITE_OPERATION } from "../../application/notifications-scope";
-import { ListEmailTemplatesQuery } from "../../application/queries/list-email-templates/list-email-templates.query";
-import { PreviewEmailTemplateQuery } from "../../application/queries/preview-email-template/preview-email-template.query";
+import { EmailPreviewApplicationService } from "../../application/services/email-preview.application-service";
 import { EMAIL_TEMPLATE_REGISTRY } from "../../domain/templates/email-template.registry";
 
 /** Validates a template key exists in the registry or throws 404. */
@@ -46,10 +45,10 @@ function requireTemplate(key: string): EmailTemplateKey {
  */
 @ApiTags("Email Templates")
 @AdminAccessOnly("Admin access required to preview email templates.")
-@Controller(apiPath("/notifications/email-preview"))
+@ApiController("/notifications/email-preview")
 export class EmailPreviewController {
 	public constructor(
-		private readonly queryBus: QueryBus,
+		private readonly previews: EmailPreviewApplicationService,
 		private readonly commandBus: CommandBus,
 	) {}
 
@@ -58,8 +57,8 @@ export class EmailPreviewController {
 	@Get()
 	@ApiOperation({ summary: "List email template metadata" })
 	@ZodResponse(EmailPreviewListResponseSchema, { description: "Metadata for every registered email template" })
-	public async list(@CurrentActor() actor: ActorContext): Promise<EmailPreviewListResponse> {
-		return this.queryBus.execute(new ListEmailTemplatesQuery(actor));
+	public list(): EmailPreviewListResponse {
+		return this.previews.listTemplates();
 	}
 
 	/** Rendered HTML + plain text for one template (sample props only). */
@@ -68,8 +67,8 @@ export class EmailPreviewController {
 	@ApiOperation({ summary: "Render one email template preview" })
 	@ZodResponse(EmailPreviewSchema, { description: "Rendered preview for one template" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
-	public async detail(@CurrentActor() actor: ActorContext, @ZodParam("key", EmailTemplateKeyParamSchema) key: string): Promise<EmailPreview> {
-		return this.queryBus.execute(new PreviewEmailTemplateQuery(actor, { templateKey: requireTemplate(key) }));
+	public detail(@ZodParam("key", EmailTemplateKeyParamSchema) key: string): EmailPreview {
+		return this.previews.preview(requireTemplate(key));
 	}
 
 	/**

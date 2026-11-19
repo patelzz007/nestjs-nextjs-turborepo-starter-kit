@@ -39,6 +39,8 @@ function unrouted(url: string): { readonly url: string; readonly routeOptions: {
 describe("isApiDocsPath", () => {
 	it("matches the UI, the document, assets and the legacy redirect — nothing else", () => {
 		expect([apiDocsPath(), `${apiDocsPath()}-json`, `${apiDocsPath()}/swagger-ui.css`, "/docs"].map(isApiDocsPath)).toEqual([true, true, true, true]);
+		// Every version's mount is gated alike (ADR 094), not only the current one's.
+		expect([apiDocsPath("v2"), `${apiDocsPath("v2")}-json`, `${apiDocsPath("v2")}/swagger-ui-init.js`].map(isApiDocsPath)).toEqual([true, true, true]);
 		expect(["/api/v1/docsearch", "/api/v1/health", "/documents"].map(isApiDocsPath)).toEqual([false, false, false]);
 	});
 });

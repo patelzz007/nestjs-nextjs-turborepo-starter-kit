@@ -5,11 +5,10 @@
 // apply): each part of the service and the incidents, never internal details or who posted. The staff routes need STATUS_INCIDENT; every post is a
 // state-changing request, so the audit trail records who said what.
 
-import { Controller, Get, Header, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Get, Header, HttpStatus, Inject, Post } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	CreateStatusIncidentSchema,
 	PostStatusIncidentUpdateSchema,
 	PublicStatusPageSchema,
@@ -24,6 +23,7 @@ import {
 	type StatusIncidentPath,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -42,7 +42,7 @@ import type { StatusPageService } from "../../application/services/status-page.s
 const PUBLIC_STATUS_MAX_AGE_SECONDS = 30;
 
 @ApiTags("Operations")
-@Controller(apiPath("/operations"))
+@ApiController("/operations")
 export class PublicStatusController {
 	public constructor(@Inject(STATUS_PAGE) private readonly status: StatusPageService) {}
 
@@ -60,7 +60,7 @@ export class PublicStatusController {
 @ApiTags("Operations")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for the status page's incidents.")
-@Controller(apiPath("/admin/operations"))
+@ApiController("/admin/operations")
 export class OperationsStatusController {
 	public constructor(
 		private readonly commandBus: CommandBus,

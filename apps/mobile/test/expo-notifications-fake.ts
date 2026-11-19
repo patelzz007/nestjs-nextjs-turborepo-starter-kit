@@ -15,7 +15,6 @@ export const FAKE_DEVICE_TOKEN = "fcm-token-for-tests";
 let current: NotificationPermissionsStatus = statusOf("undetermined", true);
 let answer: NotificationPermissionsStatus = statusOf("granted", true);
 let requests = 0;
-let tokenAvailable = true;
 const tapListeners = new Set<TapListener>();
 const tokenListeners = new Set<(token: DevicePushToken) => void>();
 const channels = new Map<string, NotificationChannelInput>();
@@ -48,11 +47,6 @@ export function answerPermissionRequestWith(status: "granted" | "denied"): void 
 	answer = statusOf(status, status === "granted");
 }
 
-/** No token comes back (an emulator without Play services, a build without Firebase). */
-export function withoutDeviceToken(): void {
-	tokenAvailable = false;
-}
-
 export function permissionRequests(): number {
 	return requests;
 }
@@ -68,7 +62,7 @@ export function requestPermissionsAsync(): Promise<NotificationPermissionsStatus
 }
 
 export function getDevicePushTokenAsync(): Promise<DevicePushToken> {
-	return tokenAvailable ? Promise.resolve({ type: "android", data: FAKE_DEVICE_TOKEN }) : Promise.reject(new Error("No FCM token"));
+	return Promise.resolve({ type: "android", data: FAKE_DEVICE_TOKEN });
 }
 
 export function addNotificationResponseReceivedListener(listener: TapListener): { readonly remove: () => void } {
@@ -117,7 +111,6 @@ export function reset(): void {
 	current = statusOf("undetermined", true);
 	answer = statusOf("granted", true);
 	requests = 0;
-	tokenAvailable = true;
 	tapListeners.clear();
 	tokenListeners.clear();
 	channels.clear();

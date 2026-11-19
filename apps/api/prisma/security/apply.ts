@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { NodeEnvSchema, PostgresUrlEnvSchema } from "@workspace/shared";
 import { Pool } from "pg";
 import { z } from "zod";
 
@@ -15,7 +16,6 @@ import {
 } from "./data-change-capture.js";
 import { buildRowAuditSql, planRowAudit, ROW_AUDIT_TRIGGER, type RowAuditPlan } from "./row-audit.js";
 import { APP_RUNTIME_ROLE, buildWithheldPrivilegeRevocationSql, listWithheldPrivileges, type WithheldPrivilegeEntry } from "./withheld-privileges.js";
-import { getApiConfig } from "../../src/config/api-config.js";
 import { buildRlsApplyPlan } from "./apply-plan.js";
 import { ALLOW_POLICY_DROPS_SETTING } from "./generator/index.js";
 
@@ -27,9 +27,38 @@ export type RlsApplyLog = (line: string) => void;
 function writeLine(line: string): void {
 	process.stdout.write(`${line}\n`);
 }
-/** The API's validated `DATABASE_URL` (src/config): the caller loads the env first (`dotenv run`, or seed-bootstrap.ts). */
+/**
+ * What the database tools read from the environment: the database they act on, and whether it is production.
+ * Nothing else — they also run where the API's other settings (secrets, app URLs) do not exist, such as a CI job
+ * that only has a database, so they never validate the API's full configuration.
+ */
+export const DatabaseToolEnvSchema = z.object({
+	DATABASE_URL: PostgresUrlEnvSchema,
+	NODE_ENV: NodeEnvSchema.optional(),
+});
+
+export type DatabaseToolEnv = z.output<typeof DatabaseToolEnvSchema>;
+
+/** The database tools' environment is invalid. Names the variables and the rule they break, never their values. */
+export class DatabaseToolEnvError extends Error {
+	public constructor(problems: readonly string[]) {
+		super(`Invalid database tool environment:\n${problems.map((problem): string => `  - ${problem}`).join("\n")}`);
+		this.name = "DatabaseToolEnvError";
+	}
+}
+
+/** Reads the database tools' environment. The caller loads it first (`dotenv run`, or seed-bootstrap.ts). */
+export function readDatabaseToolEnv(env: NodeJS.ProcessEnv = process.env): DatabaseToolEnv {
+	const parsed = DatabaseToolEnvSchema.safeParse(env);
+	if (!parsed.success) {
+		throw new DatabaseToolEnvError(parsed.error.issues.map((issue): string => `${issue.path.join(".")}: ${issue.message}`));
+	}
+	return parsed.data;
+}
+
+/** The validated `DATABASE_URL` the database tools act on. */
 export function getDatabaseUrl(): string {
-	return getApiConfig().database.url;
+	return readDatabaseToolEnv().DATABASE_URL;
 }
 
 function stripPrismaQueryParams(databaseUrl: string): string {
@@ -258,21 +287,6 @@ async function assertRowAuditInstalled(pool: Pool, plan: RowAuditPlan): Promise<
 	}
 }
 
-/**
- * Apply the RLS SQL via the Node `pg` driver.
- *
- * The file list comes from `buildRlsApplyPlan` (`RLS_APPLY_ORDER` in
- * `prisma/rls/apply-plan.ts`), which validates disk drift and helper
- * use-before-definition BEFORE any SQL runs — so ordering bugs fail here
- * instead of against a fresh database. The privileges withheld from
- * `app_runtime` (`prisma/rls/withheld-privileges.ts`) are revoked with the
- * final grants file and then verified against the live catalog. Last, the
- * row-level data-change capture triggers (`prisma/rls/data-change-capture.ts`)
- * are planned against the live catalog, installed, and verified.
- *
- * No local `psql` binary required — only a reachable `DATABASE_URL` (Docker Postgres on localhost is fine).
- * Progress lines go to `log` (stdout by default). Run it with `pnpm tools db:apply-security`.
- */
 /** The flag that lets a production apply drop policies table-policies.ts no longer declares. */
 export const ALLOW_POLICY_DROPS_FLAG = "--allow-policy-drops";
 
@@ -289,10 +303,26 @@ export interface ApplySecurityOptions {
 	readonly allowPolicyDrops: boolean;
 }
 
+/**
+ * Apply the generated security SQL (`prisma/rls/*.sql`) via the Node `pg` driver.
+ *
+ * The file list comes from `buildRlsApplyPlan` (`RLS_APPLY_ORDER` in
+ * `prisma/security/apply-plan.ts`), which validates disk drift and helper
+ * use-before-definition BEFORE any SQL runs — so ordering bugs fail here
+ * instead of against a fresh database. The privileges withheld from
+ * `app_runtime` (`prisma/security/withheld-privileges.ts`) are revoked with the
+ * final grants file and then verified against the live catalog. Then the
+ * row-level data-change capture triggers (`prisma/security/data-change-capture.ts`)
+ * and the base-model row audit (`prisma/security/row-audit.ts`) are planned
+ * against the live catalog, installed, and verified.
+ *
+ * No local `psql` binary required — only a reachable `DATABASE_URL` (Docker Postgres on localhost is fine).
+ * Progress lines go to `log` (stdout by default). Run it with `pnpm db:apply-security`.
+ */
 export async function applyRowLevelSecurity(
 	log: RlsApplyLog = writeLine,
 	targetDatabaseUrl: string = getDatabaseUrl(),
-	options: ApplySecurityOptions = { allowPolicyDrops: policyDropsAllowed([], getApiConfig().runtime.nodeEnv) },
+	options: ApplySecurityOptions = { allowPolicyDrops: policyDropsAllowed([], readDatabaseToolEnv().NODE_ENV) },
 ): Promise<void> {
 	const databaseUrl = stripPrismaQueryParams(targetDatabaseUrl);
 	const sqlFiles = buildRlsApplyPlan(apiDir);
@@ -311,7 +341,7 @@ export async function applyRowLevelSecurity(
 		await assertPrivilegesWithheld(pool, withheld);
 		log(`  ✓ ${String(withheld.length)} tables keep their withheld ${APP_RUNTIME_ROLE} privileges`);
 
-		// Row-level data-change capture (prisma/rls/data-change-capture.ts): planned against the live catalog, so a table
+		// Row-level data-change capture (prisma/security/data-change-capture.ts): planned against the live catalog, so a table
 		// created by a migration since the last apply is captured now — or the apply fails on its unclassified columns.
 		const capturePlan: DataChangeCapturePlan = planDataChangeCapture(await readDataChangeCatalog(pool));
 		log("  → data-change capture triggers");
@@ -319,7 +349,7 @@ export async function applyRowLevelSecurity(
 		await assertDataChangeCaptureInstalled(pool, capturePlan);
 		log(`  ✓ ${String(capturePlan.captured.length)} tables capture every row change (${String(capturePlan.exempt.length)} declared exempt)`);
 
-		// Base-model audit columns (prisma/rls/row-audit.ts): every table must carry them; the trigger fills them.
+		// Base-model audit columns (prisma/security/row-audit.ts): every table must carry them; the trigger fills them.
 		const auditPlan: RowAuditPlan = planRowAudit(await readDataChangeCatalog(pool));
 		if (auditPlan.missing.length > 0) {
 			const gaps = auditPlan.missing.map((gap): string => `${gap.table} (${gap.columns.join(", ")})`).join("; ");

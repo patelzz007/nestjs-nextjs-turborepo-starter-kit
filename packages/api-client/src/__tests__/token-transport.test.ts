@@ -28,7 +28,7 @@ const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };
 const PROFILE = { id: "user-1" };
 const OLD_PAIR = { accessToken: "access-old", refreshToken: "refresh-old" };
 const NEW_PAIR = { accessToken: "access-new", refreshToken: "refresh-new" };
-const REFRESH_URL: string = buildUrl(BASE_URL, apiContract.auth.refresh.path, apiContract.auth.refresh.version);
+const REFRESH_URL: string = buildUrl(BASE_URL, apiContract.auth.refresh.path);
 
 const meDef = defineQuery({ method: "GET", path: "/auth/me", input: z.undefined(), response: singleResponse(DataValueSchema) }, { scope: () => ["auth", "me"] });
 const renameDef = defineMutation({ method: "PATCH", path: "/auth/profile", input: z.object({ name: z.string() }), response: singleResponse(DataValueSchema) });

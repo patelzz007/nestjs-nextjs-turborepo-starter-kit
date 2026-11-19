@@ -9,7 +9,7 @@ import { ADMIN_ACCESS_MESSAGE_KEY } from "../admin-access";
  *
  * ```typescript
  * @AdminAccessOnly("Admin access required.")
- * @Controller(apiPath("/admin/roles"))
+ * @ApiController("/admin/roles")
  * export class AdminRolesController { ... }
  * ```
  */

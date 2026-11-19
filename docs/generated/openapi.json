@@ -2245,7 +2245,7 @@
     "contact": {},
     "description": "Every HTTP endpoint of the API, generated from its zod contracts",
     "title": "REST API",
-    "version": "1.0"
+    "version": "v1"
   },
   "openapi": "3.0.0",
   "paths": {

@@ -87,17 +87,3 @@ export const WEB_AUTH_NAV_ITEM: WebNavItem = {
 	icon: LogIn,
 	keywords: ["login", "account", "auth"],
 };
-
-export function resolvePinnedNavItems(pinnedUrls: readonly string[]): readonly WebNavItem[] {
-	const allItems: readonly WebNavItem[] = [...WEB_NAV_ITEMS, WEB_AUTH_NAV_ITEM];
-	return pinnedUrls.map((url) => allItems.find((item) => item.url === url)).filter((item): item is WebNavItem => item !== undefined);
-}
-
-export function matchesNavQuery(item: WebNavItem, query: string): boolean {
-	const normalized = query.trim().toLowerCase();
-	if (normalized.length === 0) {
-		return true;
-	}
-	const haystack = [item.title, item.description, item.section, ...item.keywords].join(" ").toLowerCase();
-	return haystack.includes(normalized);
-}

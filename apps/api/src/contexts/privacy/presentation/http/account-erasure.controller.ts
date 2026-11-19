@@ -1,11 +1,10 @@
 // ============================================
 // privacy/presentation/http/account-erasure.controller.ts — "Delete my account" (ADR 077)
 // ============================================
-import { Controller, Get, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	AccountErasureResponseSchema,
-	apiPath,
 	OwnAccountErasureResponseSchema,
 	RequestOwnAccountErasureSchema,
 	type AccountErasureResponse,
@@ -13,6 +12,7 @@ import {
 	type RequestOwnAccountErasure,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -22,7 +22,7 @@ import { ACCOUNT_ERASURE_SERVICE } from "../../application/ports/account-erasure
 import type { AccountErasureService } from "../../application/services/account-erasure.service";
 
 @ApiTags("Privacy")
-@Controller(apiPath("/me"))
+@ApiController("/me")
 export class AccountErasureController {
 	public constructor(@Inject(ACCOUNT_ERASURE_SERVICE) private readonly erasures: AccountErasureService) {}
 

@@ -1,5 +1,4 @@
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
-import type { CapabilitySlug } from "@workspace/shared";
+import { createGrantedCapabilities, isCapabilityGranted, type CapabilitySlug } from "@workspace/shared";
 import { redirect } from "next/navigation";
 
 import { loadAdminServerSession } from "@/lib/auth-server";

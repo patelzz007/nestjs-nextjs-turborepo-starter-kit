@@ -9,9 +9,9 @@
 // run's job and in this store, and expires with the run.
 
 import { Inject, Injectable } from "@nestjs/common";
+import { REDIS_PUBLISHER } from "@workspace/messaging/nest";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { REDIS_PUBLISHER } from "../redis/redis.tokens";
 
 /** The header a load runner sends its run's key in. */
 export const LOAD_TEST_KEY_HEADER = "x-load-test-key";

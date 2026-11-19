@@ -1,10 +1,9 @@
-import { Controller, Delete, Get, Header, HttpStatus, Patch, Post } from "@nestjs/common";
+import { Delete, Get, Header, HttpStatus, Patch, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { z } from "zod";
 
 import {
 	apiContract,
-	apiPath,
 	GeoAutocompleteQuerySchema,
 	CascadePreviewSchema,
 	GeoExportQuerySchema,
@@ -29,6 +28,7 @@ import {
 	SubregionListItemSchema,
 	SubregionSchema,
 } from "@workspace/shared";
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { ZodBody, ZodListQuery, ZodQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 
@@ -49,7 +49,7 @@ import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/
  */
 @ApiTags("Geo")
 @PlatformOperation(GEO_READ_OPERATION)
-@Controller(apiPath("/geo"))
+@ApiController("/geo")
 export class GeoController {
 	public constructor(private readonly geography: GeographyApplicationService) {}
 

@@ -1,10 +1,11 @@
-import { Controller, Get, Res } from "@nestjs/common";
+import { Get, Res } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { FastifyReply } from "fastify";
 import type { z } from "zod";
-import { apiContract, apiPath, RewardResponseSchema, type PaginatedServiceResult, type RewardResponse } from "@workspace/shared";
+import { apiContract, RewardResponseSchema, type PaginatedServiceResult, type RewardResponse } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
@@ -12,7 +13,7 @@ import { OptionalAuth } from "../../../../platform/presentation/http/security/de
 import { ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { MARKETPLACE_REWARDS_READ_OPERATION } from "../../application/ports/rewards.tokens";
-import { GetPublishedRewardQuery } from "../../application/queries/get-published-reward/get-published-reward.query";
+import { RewardApplicationService } from "../../application/services/reward.application-service";
 import { ListMarketplaceRewardsQuery } from "../../application/queries/list-marketplace-rewards/list-marketplace-rewards.query";
 import { marketplaceCacheControl } from "./viewer-cache-control";
 
@@ -20,9 +21,12 @@ import { marketplaceCacheControl } from "./viewer-cache-control";
 const PUBLIC_ACTOR = { allowAnonymous: true };
 
 @ApiTags("Rewards")
-@Controller(apiPath("/rewards"))
+@ApiController("/rewards")
 export class ConsumerRewardsController {
-	public constructor(private readonly queryBus: QueryBus) {}
+	public constructor(
+		private readonly queryBus: QueryBus,
+		private readonly rewards: RewardApplicationService,
+	) {}
 
 	@OptionalAuth()
 	@PublicOperation(MARKETPLACE_REWARDS_READ_OPERATION)
@@ -49,6 +53,6 @@ export class ConsumerRewardsController {
 		@Res({ passthrough: true }) reply: FastifyReply,
 	): Promise<RewardResponse> {
 		reply.header("Cache-Control", marketplaceCacheControl(actor));
-		return this.queryBus.execute(new GetPublishedRewardQuery(actor, params));
+		return this.rewards.getPublished(actor, params);
 	}
 }

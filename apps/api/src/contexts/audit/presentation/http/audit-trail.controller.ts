@@ -1,10 +1,10 @@
-import { Controller, Get, Inject, Sse, type MessageEvent } from "@nestjs/common";
-import { QueryBus } from "@nestjs/cqrs";
+import { Get, Inject, Sse, type MessageEvent } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { interval, map, merge, throttleTime, type Observable } from "rxjs";
 
-import { apiContract, apiPath, AuditTrailEntrySchema, nowEpochMs, type AuditTrailEntry, type AuditTrailListQuery, type PaginatedServiceResult } from "@workspace/shared";
+import { apiContract, AuditTrailEntrySchema, nowEpochMs, type AuditTrailEntry, type AuditTrailListQuery, type PaginatedServiceResult } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { ApiEventStreamResponse } from "../../../../platform/presentation/http/validation/decorators/api-event-stream.decorator";
 import { ZodListQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
@@ -14,8 +14,8 @@ import { PlatformOperation } from "../../../../platform/presentation/http/securi
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AUDIT_TRAIL_SIGNALS, type AuditTrailSignalsPort } from "../../application/ports/audit-trail-signals.port";
-import { ListAuditTrailQuery } from "../../application/queries/list-audit-trail/list-audit-trail.query";
 import { AUDIT_TRAIL_READ_OPERATION } from "../../application/audit-read-operations";
+import { AuditApplicationService } from "../../application/services/audit.application-service";
 
 /** At most one signal per this window: a burst of activity is one refetch, not one per request. Leading and trailing, so the first and the last change both land. */
 export const AUDIT_TRAIL_SIGNAL_THROTTLE_MS = 2_000;
@@ -29,14 +29,14 @@ export const AUDIT_TRAIL_KEEPALIVE_MS = 25_000;
  * `GET /admin/data-changes/:id`.
  *
  * Authorization: admin-panel access AND `LIST AUDIT_LOG`. Every call is itself
- * recorded as a sensitive read. The controller only validates and dispatches one query.
+ * recorded as a sensitive read. The controller only validates and calls the audit application service.
  */
 @ApiTags("Audit Log")
 @AdminAccessOnly("Admin access required to view the audit log.")
-@Controller(apiPath("/admin/audit-trail"))
+@ApiController("/admin/audit-trail")
 export class AuditTrailController {
 	public constructor(
-		private readonly queryBus: QueryBus,
+		private readonly audit: AuditApplicationService,
 		@Inject(AUDIT_TRAIL_SIGNALS) private readonly auditTrailSignals: AuditTrailSignalsPort,
 	) {}
 
@@ -52,7 +52,7 @@ export class AuditTrailController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.auditTrail.list.input) query: AuditTrailListQuery,
 	): Promise<PaginatedServiceResult<AuditTrailEntry>> {
-		return this.queryBus.execute(new ListAuditTrailQuery(actor, query));
+		return this.audit.listAuditTrail(actor, query);
 	}
 
 	/**

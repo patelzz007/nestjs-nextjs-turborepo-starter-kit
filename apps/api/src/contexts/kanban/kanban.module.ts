@@ -38,12 +38,7 @@ import type { KanbanAttachmentFilesPort } from "./application/ports/kanban-attac
 import type { KanbanReadPort } from "./application/ports/kanban-read.port";
 import { KANBAN_ASSIGNEES, KANBAN_ATTACHMENT_FILES, KANBAN_ID_GENERATOR, KANBAN_READS, KANBAN_UNIT_OF_WORK, type KanbanIdGenerator } from "./application/ports/kanban.tokens";
 import { GetKanbanAttachmentDownloadHandler } from "./application/queries/get-kanban-attachment-download/get-kanban-attachment-download.handler";
-import { GetKanbanBoardHandler } from "./application/queries/get-kanban-board/get-kanban-board.handler";
-import { GetKanbanTaskHandler } from "./application/queries/get-kanban-task/get-kanban-task.handler";
-import { ListKanbanActivityHandler } from "./application/queries/list-kanban-activity/list-kanban-activity.handler";
-import { ListKanbanCommentsHandler } from "./application/queries/list-kanban-comments/list-kanban-comments.handler";
-import { ListKanbanItemsHandler } from "./application/queries/list-kanban-items/list-kanban-items.handler";
-import { SearchKanbanItemsHandler } from "./application/queries/search-kanban-items/search-kanban-items.handler";
+import { KanbanApplicationService } from "./application/services/kanban.application-service";
 import { ListKanbanPeopleHandler } from "./application/queries/list-kanban-people/list-kanban-people.handler";
 import { PermissionHoldersKanbanAssignees } from "./infrastructure/adapters/permission-holders-kanban-assignees.adapter";
 import { StoredFileKanbanAttachmentFiles } from "./infrastructure/adapters/stored-file-kanban-attachment-files.adapter";
@@ -72,16 +67,8 @@ const COMMAND_HANDLERS: readonly Provider[] = [
 	WatchKanbanTaskHandler,
 ];
 
-const QUERY_HANDLERS: readonly Provider[] = [
-	GetKanbanBoardHandler,
-	SearchKanbanItemsHandler,
-	GetKanbanTaskHandler,
-	ListKanbanPeopleHandler,
-	ListKanbanItemsHandler,
-	ListKanbanCommentsHandler,
-	ListKanbanActivityHandler,
-	GetKanbanAttachmentDownloadHandler,
-];
+/** The reads that compose collaborators; the single-port reads are `KanbanApplicationService` (ADR 096). */
+const QUERY_HANDLERS: readonly Provider[] = [ListKanbanPeopleHandler, GetKanbanAttachmentDownloadHandler];
 
 /**
  * The kanban context: the platform staff's two linked boards — a planning board
@@ -121,6 +108,7 @@ const QUERY_HANDLERS: readonly Provider[] = [
 		},
 		{ provide: KANBAN_ID_GENERATOR, useFactory: (): KanbanIdGenerator => new UuidKanbanIdGenerator() },
 		KanbanFileRegistrations,
+		KanbanApplicationService,
 		...COMMAND_HANDLERS,
 		...QUERY_HANDLERS,
 	],

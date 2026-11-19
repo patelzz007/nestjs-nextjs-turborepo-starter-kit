@@ -205,6 +205,8 @@ Every paginated list endpoint uses the one list grammar — `defineListQuery({ s
 
 Breaking public API changes need an explicit migration strategy — don't silently rename a field or change its semantics under an existing schema version.
 
+A breaking change gets a new version of that one endpoint (ADR 094): a `@SinceApiVersion("v2")` handler on the same path, with the new shape under a suffixed name (`ClaimV2Schema`). Every other endpoint is inherited by the new version unchanged, and each app pins one version on its client (`ApiClientConfig.apiVersion`). Per-version schemas on one contract leaf are not built yet; they arrive with the first real v2 (see ADR 094, "Not built yet"). How the controller side works: `02-backend-nestjs.md`, "API versioning".
+
 ## Contract tests
 
 Every important contract needs tests proving: valid input succeeds, invalid input fails, required fields are enforced, enum values are constrained, and the response shape stays stable across changes. See `11-testing-vitest.md`.

@@ -26,7 +26,7 @@ export class IdentityMaintenanceCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_10_MINUTES)
+	@Cron(CronExpression.EVERY_10_MINUTES, { waitForCompletion: true })
 	public async completeDueMfaRecoveries(): Promise<void> {
 		const completed = await this.dispatcher.dispatch(
 			new CompleteDueMfaRecoveriesCommand(systemActor(MFA_RECOVERY_UNLOCK_OPERATION, "cron", null, MFA_RECOVERY_REASON, null), { reason: MFA_RECOVERY_REASON }),
@@ -37,7 +37,7 @@ export class IdentityMaintenanceCron {
 		}
 	}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async purgeStalePasswordResetTokens(): Promise<void> {
 		const retired = await this.dispatcher.dispatch(
 			new PurgeStalePasswordResetTokensCommand(systemActor(PASSWORD_RESET_CLEANUP_OPERATION, "cron", null, RESET_TOKEN_REASON, null), { reason: RESET_TOKEN_REASON }),
@@ -48,7 +48,7 @@ export class IdentityMaintenanceCron {
 		}
 	}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async purgeStaleWebAuthnChallenges(): Promise<void> {
 		const retired = await this.dispatcher.dispatch(
 			new PurgeStaleWebAuthnChallengesCommand(systemActor(WEB_AUTHN_CHALLENGE_CLEANUP_OPERATION, "cron", null, WEB_AUTHN_CHALLENGE_REASON, null), {

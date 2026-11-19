@@ -1,10 +1,11 @@
-import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, type BeforeApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { nowEpochMs, CaughtValueSchema } from "@workspace/shared";
 
 import { TransactionLogFileWriter, type TransactionLogPurgeResult } from "./transaction-log-file-writer";
 import { TRANSACTION_LOG_RETENTION_INTERVAL_ID, TRANSACTION_LOG_RETENTION_INTERVAL_MS } from "./transaction-log.constants";
 import { caughtErrorLogFields } from "../../application/errors/caught-error-log";
+import { InFlightWork } from "../../application/in-flight-work";
 
 /**
  * Deletes day files past TRANSACTION_LOG_RETENTION_DAYS: at boot, then hourly.
@@ -16,10 +17,12 @@ import { caughtErrorLogFields } from "../../application/errors/caught-error-log"
  * already deleted is skipped.
  *
  * A failed run is logged at `error` and the next tick retries; the timer never dies.
+ * Shutdown stops the timer and waits for a run in progress (ADR 095).
  */
 @Injectable()
-export class TransactionLogRetentionScheduler implements OnModuleInit, OnApplicationShutdown {
+export class TransactionLogRetentionScheduler implements OnModuleInit, BeforeApplicationShutdown {
 	private readonly logger: Logger = new Logger(TransactionLogRetentionScheduler.name);
+	private readonly ticks = new InFlightWork();
 
 	public constructor(
 		private readonly schedulerRegistry: SchedulerRegistry,
@@ -28,17 +31,18 @@ export class TransactionLogRetentionScheduler implements OnModuleInit, OnApplica
 
 	public onModuleInit(): void {
 		const timer: NodeJS.Timeout = setInterval((): void => {
-			void this.runOnce();
+			void this.ticks.track(() => this.runOnce());
 		}, TRANSACTION_LOG_RETENTION_INTERVAL_MS);
 		timer.unref();
 		this.schedulerRegistry.addInterval(TRANSACTION_LOG_RETENTION_INTERVAL_ID, timer);
-		void this.runOnce();
+		void this.ticks.track(() => this.runOnce());
 	}
 
-	public onApplicationShutdown(): void {
+	public async beforeApplicationShutdown(): Promise<void> {
 		if (this.schedulerRegistry.doesExist("interval", TRANSACTION_LOG_RETENTION_INTERVAL_ID)) {
 			this.schedulerRegistry.deleteInterval(TRANSACTION_LOG_RETENTION_INTERVAL_ID);
 		}
+		await this.ticks.settled();
 	}
 
 	/** One retention run. Never rejects: a failure is logged and retried on the next tick. */

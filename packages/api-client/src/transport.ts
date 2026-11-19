@@ -11,7 +11,7 @@
 //   runs ONE shared body-token refresh, retries once, and a dead session clears
 //   the stored tokens and reports it once.
 
-import type { AuthClientType } from "@workspace/shared";
+import type { ApiVersion, AuthClientType } from "@workspace/shared";
 
 import { bearerAuthorizationHeader } from "./http";
 import { createBodyTokenRefresh, createRefreshCooldown, createSingleFlightRefresh, type RefreshCall } from "./refresh";
@@ -76,6 +76,8 @@ export interface TokenRequestTransportOptions {
 	readonly baseUrl: string;
 	readonly clientType: AuthClientType;
 	readonly appVersion?: string | undefined;
+	/** The client's pinned API version (ADR 094), for the refresh. */
+	readonly apiVersion?: ApiVersion | undefined;
 	/** Static headers of the client, sent with the refresh too. */
 	readonly headers?: Readonly<Record<string, string>> | undefined;
 	readonly tokenProvider: TokenProvider;
@@ -91,7 +93,14 @@ export function createTokenRequestTransport(options: TokenRequestTransportOption
 	const { tokenProvider, onSessionExpired } = options;
 	const refresh: RefreshCall = createSingleFlightRefresh(
 		createRefreshCooldown(
-			createBodyTokenRefresh({ baseUrl: options.baseUrl, clientType: options.clientType, appVersion: options.appVersion, headers: options.headers, tokenProvider }),
+			createBodyTokenRefresh({
+				baseUrl: options.baseUrl,
+				clientType: options.clientType,
+				appVersion: options.appVersion,
+				apiVersion: options.apiVersion,
+				headers: options.headers,
+				tokenProvider,
+			}),
 		),
 	);
 	let ending: Promise<void> | null = null;

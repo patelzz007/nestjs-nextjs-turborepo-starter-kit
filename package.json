@@ -48,18 +48,18 @@
 	},
 	"devDependencies": {
 		"@next/bundle-analyzer": "^16.4.6",
-		"@playwright/test": "1.65.0",
+		"@playwright/test": "1.65.1",
 		"@types/node": "^26.6.6",
 		"@vitest/coverage-v8": "^5.1.0",
 		"@workspace/typescript-config": "workspace:*",
 		"concurrently": "^10.0.7",
 		"husky": "^9.1.7",
-		"lint-staged": "^17.6.0",
+		"lint-staged": "^17.6.1",
 		"syncpack": "^15.3.3",
-		"turbo": "^2.11.10",
+		"turbo": "^2.11.11",
 		"typescript": "7.0.2"
 	},
-	"packageManager": "pnpm@12.16.1",
+	"packageManager": "pnpm@12.21.0",
 	"engines": {
 		"node": ">=26.13.1"
 	},

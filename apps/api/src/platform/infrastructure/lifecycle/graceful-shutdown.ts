@@ -1,7 +1,6 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 
 import { CaughtValueSchema } from "@workspace/shared";
-import type { BullMqWorkerDrainService } from "@workspace/messaging/nest";
 
 import { readCaughtErrorMessage } from "../utils/caught-error";
 import type { LogService } from "../logging/logs.service";
@@ -21,7 +20,6 @@ export interface GracefulShutdownDependencies {
 	readonly app: Pick<NestFastifyApplication, "close">;
 	readonly readiness: ShutdownReadinessProbe;
 	readonly log: Pick<LogService, "info" | "error">;
-	readonly workerDrain: Pick<BullMqWorkerDrainService, "drain">;
 	readonly shutdownTimeoutMs: number;
 	readonly exit: (code: number) => void;
 }
@@ -30,12 +28,11 @@ export interface GracefulShutdownDependencies {
  * One graceful shutdown, in order:
  *
  * 1. mark the instance not ready (the load balancer stops routing to it);
- * 2. DRAIN the BullMQ workers — no new jobs, running jobs finish — while the
- *    database pool, Kafka and Redis are still open. Nest's own teardown
- *    (`app.close()`) ends those in `onModuleDestroy`, BEFORE `@nestjs/bullmq`
- *    closes its workers, so skipping this step fails any in-flight job;
- * 3. `app.close()` — HTTP server, Nest shutdown hooks (Prisma, Redis, Kafka, …);
- * 4. exit — `0` when clean, `1` on failure or after `shutdownTimeoutMs`.
+ * 2. `app.close()`, which finishes the work in progress before it closes anything that work uses (ADR 095):
+ *    queue workers stop and their running jobs finish, cron and interval ticks stop and the running ones finish,
+ *    the HTTP server stops and its in-flight requests finish, buffers flush, and only then the connections
+ *    (database, Kafka, Redis) close;
+ * 3. exit — `0` when clean, `1` on failure or after `shutdownTimeoutMs`.
  */
 export async function runGracefulShutdown(signal: NodeJS.Signals, deps: GracefulShutdownDependencies): Promise<void> {
 	deps.readiness.markNotReady();
@@ -47,8 +44,6 @@ export async function runGracefulShutdown(signal: NodeJS.Signals, deps: Graceful
 	}, deps.shutdownTimeoutMs);
 
 	try {
-		const drained: number = await deps.workerDrain.drain();
-		deps.log.info(`Drained ${String(drained)} BullMQ worker(s)`);
 		await deps.app.close();
 		clearTimeout(forceExitTimer);
 		deps.log.info("Graceful shutdown complete — HTTP server and connections closed");
@@ -66,19 +61,12 @@ export async function runGracefulShutdown(signal: NodeJS.Signals, deps: Graceful
  * Registers SIGINT / SIGTERM / SIGHUP handlers that run {@link runGracefulShutdown}
  * once. `shutdownTimeoutMs` comes from the validated config (`SHUTDOWN_TIMEOUT_MS`).
  */
-export function registerGracefulShutdown(
-	app: NestFastifyApplication,
-	healthService: ShutdownReadinessProbe,
-	logService: LogService,
-	workerDrain: Pick<BullMqWorkerDrainService, "drain">,
-	shutdownTimeoutMs: number,
-): void {
+export function registerGracefulShutdown(app: NestFastifyApplication, healthService: ShutdownReadinessProbe, logService: LogService, shutdownTimeoutMs: number): void {
 	let shutdownStarted = false;
 	const deps: GracefulShutdownDependencies = {
 		app,
 		readiness: healthService,
 		log: logService,
-		workerDrain,
 		shutdownTimeoutMs,
 		exit: (code: number): void => {
 			process.exit(code);

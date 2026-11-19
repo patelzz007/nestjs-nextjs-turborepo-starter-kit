@@ -31,10 +31,6 @@ import {
 } from "./application/ports/reporting.tokens";
 import { ExportMerchantReportHandler } from "./application/queries/export-merchant-report/export-merchant-report.handler";
 import { ExportPlatformReportHandler } from "./application/queries/export-platform-report/export-platform-report.handler";
-import { GetAdminDashboardHandler } from "./application/queries/get-admin-dashboard/get-admin-dashboard.handler";
-import { GetAdminSalesAnalyticsHandler } from "./application/queries/get-admin-sales-analytics/get-admin-sales-analytics.handler";
-import { GetConsumerClaimAnalyticsHandler } from "./application/queries/get-consumer-claim-analytics/get-consumer-claim-analytics.handler";
-import { GetConsumerDashboardHandler } from "./application/queries/get-consumer-dashboard/get-consumer-dashboard.handler";
 import { GetMerchantAnalyticsHandler } from "./application/queries/get-merchant-analytics/get-merchant-analytics.handler";
 import { GetMerchantDashboardHandler } from "./application/queries/get-merchant-dashboard/get-merchant-dashboard.handler";
 import { AuditTrailReportExportAdapter } from "./infrastructure/adapters/audit-trail-report-export.adapter";
@@ -112,11 +108,7 @@ import { FeatureFlagsModule } from "../feature-flags/public-api";
 		GetMerchantAnalyticsHandler,
 		GetMerchantDashboardHandler,
 		ExportMerchantReportHandler,
-		GetAdminSalesAnalyticsHandler,
-		GetAdminDashboardHandler,
 		ExportPlatformReportHandler,
-		GetConsumerClaimAnalyticsHandler,
-		GetConsumerDashboardHandler,
 	],
 })
 export class ReportingModule implements OnModuleInit {

@@ -264,8 +264,6 @@ export const GithubContentEditWireSchema = z.object({
 	editor: GithubActorWireSchema,
 });
 
-export type GithubContentEditWire = z.output<typeof GithubContentEditWireSchema>;
-
 /** `node(id)` — any node; only comment-like ones carry `userContentEdits`. */
 export const GithubContentEditsResponseWireSchema = z.object({
 	data: z
@@ -329,8 +327,6 @@ export type GithubSubmittedReviewWire = z.output<typeof GithubSubmittedReviewWir
 export const GithubRestReactionWireSchema = z.object({ id: z.number().int().positive(), content: z.string(), user: RestUserWireSchema });
 
 export const GithubRestReactionListWireSchema = z.array(GithubRestReactionWireSchema);
-
-export type GithubRestReactionWire = z.output<typeof GithubRestReactionWireSchema>;
 
 // ── Merge status ───────────────────────────────────────────────────────────
 

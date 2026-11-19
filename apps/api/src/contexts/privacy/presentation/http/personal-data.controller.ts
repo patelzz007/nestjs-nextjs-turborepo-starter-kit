@@ -1,12 +1,13 @@
 // ============================================
 // privacy/presentation/http/personal-data.controller.ts — "Download my data" (ADR 077)
 // ============================================
-import { Controller, Get, Req, Res } from "@nestjs/common";
+import { Get, Req, Res } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiContract, apiPath } from "@workspace/shared";
+import { apiContract } from "@workspace/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -20,7 +21,7 @@ function attachmentDisposition(fileName: string): string {
 }
 
 @ApiTags("Privacy")
-@Controller(apiPath("/me"))
+@ApiController("/me")
 export class PersonalDataController {
 	public constructor(private readonly queryBus: QueryBus) {}
 

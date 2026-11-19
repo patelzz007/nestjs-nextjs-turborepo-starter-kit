@@ -38,7 +38,6 @@ export type KanbanSort = z.output<typeof KanbanSortSchema>;
 
 /** Whether the execution board's rollup strip (its active features' progress) is open. */
 export const KanbanRollupSchema = z.enum(["open", "closed"]);
-export type KanbanRollupState = z.output<typeof KanbanRollupSchema>;
 
 /**
  * `/components/kanban-board` state: the board, the view, the swimlanes, a
@@ -62,5 +61,3 @@ export const KANBAN_BOARD_URL_STATE = defineUrlState({
 	subtasks: optionalBooleanUrlParam(),
 	rollup: urlParamWithDefault(KanbanRollupSchema, "open"),
 });
-
-export type KanbanBoardUrlState = typeof KANBAN_BOARD_URL_STATE.defaults;

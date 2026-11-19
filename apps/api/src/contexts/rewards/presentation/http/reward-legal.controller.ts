@@ -1,31 +1,32 @@
-import { Controller, Get, HttpStatus, Post } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Get, HttpStatus, Post } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { z } from "zod";
-import { apiContract, apiPath, OkResponseSchema, RewardClaimCheckoutStatusSchema, type OkResponse, type RewardClaimCheckoutStatus } from "@workspace/shared";
+import { apiContract, OkResponseSchema, RewardClaimCheckoutStatusSchema, type OkResponse, type RewardClaimCheckoutStatus } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ZodBody } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { AcceptLegalTermsCommand } from "../../application/commands/accept-legal-terms/accept-legal-terms.command";
-import { GetLegalAcceptanceStatusQuery } from "../../application/queries/get-legal-acceptance-status/get-legal-acceptance-status.query";
+import { LegalAcceptanceApplicationService } from "../../application/services/legal-acceptance.application-service";
 
 @ApiTags("Legal")
 @ApiBearerAuth()
-@Controller(apiPath("/legal"))
+@ApiController("/legal")
 export class RewardLegalController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly legal: LegalAcceptanceApplicationService,
 	) {}
 
 	@Get("status")
 	@ApiOperation({ summary: "Get rewards legal acceptance and verified phone status" })
 	@ZodResponse(RewardClaimCheckoutStatusSchema, { description: "Claim checkout status for the signed-in user" })
 	public getStatus(@CurrentActor() actor: ActorContext): Promise<RewardClaimCheckoutStatus> {
-		return this.queryBus.execute(new GetLegalAcceptanceStatusQuery(actor));
+		return this.legal.checkoutStatus(actor);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)

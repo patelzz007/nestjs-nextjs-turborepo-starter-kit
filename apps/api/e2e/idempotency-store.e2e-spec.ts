@@ -76,8 +76,8 @@ describe("Idempotency ledger fencing (integration)", () => {
 	afterAll(async () => {
 		await verifier.query('DELETE FROM public."PlatformResourceIdempotencyRecord" WHERE scope = $1', [scope]);
 		await verifier.end();
-		await locks.onModuleDestroy();
-		await prisma.onModuleDestroy();
+		await locks.onApplicationShutdown();
+		await prisma.onApplicationShutdown();
 	});
 
 	it("stores the response of the current lease holder", async () => {

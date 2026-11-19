@@ -47,12 +47,7 @@ import { ReviseKanbanTaskHandler } from "../commands/revise-kanban-task/revise-k
 import type { KanbanScope } from "../kanban-scope";
 import { GetKanbanAttachmentDownloadHandler } from "../queries/get-kanban-attachment-download/get-kanban-attachment-download.handler";
 import { GetKanbanAttachmentDownloadQuery } from "../queries/get-kanban-attachment-download/get-kanban-attachment-download.query";
-import { GetKanbanBoardHandler } from "../queries/get-kanban-board/get-kanban-board.handler";
-import { GetKanbanBoardQuery } from "../queries/get-kanban-board/get-kanban-board.query";
-import { GetKanbanTaskHandler } from "../queries/get-kanban-task/get-kanban-task.handler";
-import { GetKanbanTaskQuery } from "../queries/get-kanban-task/get-kanban-task.query";
-import { ListKanbanCommentsHandler } from "../queries/list-kanban-comments/list-kanban-comments.handler";
-import { ListKanbanCommentsQuery } from "../queries/list-kanban-comments/list-kanban-comments.query";
+import { KanbanApplicationService } from "../services/kanban.application-service";
 import { FakeKanbanAttachmentFiles, FakeKanbanReads, taskDetail } from "./fakes/kanban-read.fakes";
 import {
 	DOING_ID,
@@ -518,27 +513,34 @@ describe("kanban queries", () => {
 	it("answers the board as the caller", async () => {
 		const reads = new FakeKanbanReads();
 
-		await expect(new GetKanbanBoardHandler(reads).execute(new GetKanbanBoardQuery(staff(), "PLANNING"))).resolves.toBe(reads.boardView);
+		await expect(new KanbanApplicationService(reads).board(staff(), "PLANNING")).resolves.toBe(reads.boardView);
 		expect(reads.asked).toEqual([{ read: "board:PLANNING", actor: staff() }]);
+	});
+
+	it("passes a key or title search through as the caller", async () => {
+		const reads = new FakeKanbanReads();
+
+		await expect(new KanbanApplicationService(reads).search(staff(), { q: "KAN-1", limit: 10 })).resolves.toBe(reads.searchResults);
+		expect(reads.asked.map((ask) => ask.actor)).toEqual([staff()]);
 	});
 
 	it("answers a task, and not found for a missing one", async () => {
 		const reads = new FakeKanbanReads();
 		reads.tasks.set("a", taskDetail("a"));
-		const handler = new GetKanbanTaskHandler(reads);
+		const kanban = new KanbanApplicationService(reads);
 
-		await expect(handler.execute(new GetKanbanTaskQuery(staff(), "a"))).resolves.toMatchObject({ id: "a" });
-		await expect(handler.execute(new GetKanbanTaskQuery(staff(), "missing"))).rejects.toThrow(KanbanTaskNotFoundError);
+		await expect(kanban.task(staff(), "a")).resolves.toMatchObject({ id: "a" });
+		await expect(kanban.task(staff(), "missing")).rejects.toThrow(KanbanTaskNotFoundError);
 	});
 
 	it("answers a page of comments, and not found for a missing task", async () => {
 		const reads = new FakeKanbanReads();
 		const page: PaginatedServiceResult<KanbanComment> = { items: [], limit: 20, total: 0, page: 1, totalPages: 0, nextCursor: null, hasNext: false, hasPrevious: false };
 		reads.commentPages.set("a", page);
-		const handler = new ListKanbanCommentsHandler(reads);
+		const kanban = new KanbanApplicationService(reads);
 
-		await expect(handler.execute(new ListKanbanCommentsQuery(staff(), "a", QUERY))).resolves.toBe(page);
-		await expect(handler.execute(new ListKanbanCommentsQuery(staff(), "missing", QUERY))).rejects.toThrow(KanbanTaskNotFoundError);
+		await expect(kanban.comments(staff(), "a", QUERY)).resolves.toBe(page);
+		await expect(kanban.comments(staff(), "missing", QUERY)).rejects.toThrow(KanbanTaskNotFoundError);
 	});
 
 	it("signs a download link for a live attachment of the task, named after the upload", async () => {

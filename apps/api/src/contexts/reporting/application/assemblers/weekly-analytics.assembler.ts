@@ -13,6 +13,7 @@ import type {
 } from "@workspace/shared";
 import { DEFAULT_SALE_CURRENCY, EpochMsSchema, IanaTimeZoneSchema, RewardClaimStatusSchema } from "@workspace/shared";
 
+import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CLOCK, type Clock } from "../../../../platform/application/clock.port";
 import {
 	averageBillMinor,
@@ -30,6 +31,7 @@ import type { AnalyticsTenantReadPort } from "../ports/analytics-tenant-read.por
 import { ANALYTICS_TENANT_READ, REWARD_ACTIVITY_READ, SALES_READ } from "../ports/reporting.tokens";
 import type { RewardActivityReadPort } from "../ports/reward-activity-read.port";
 import type { SalesReadPort, SalesScope } from "../ports/sales-read.port";
+import { actorUserIdOf, requireCustomer } from "./analytics-actor";
 
 /** Merchants listed in a user's "where you spent the most". */
 const USER_TOP_SPEND_MERCHANTS = 5;
@@ -140,8 +142,9 @@ export class WeeklyAnalyticsAssembler {
 		};
 	}
 
-	/** The customer's own weekly analytics (self only: `userId` is the caller). */
-	public async customerAnalytics(userId: string, query: RewardsAnalyticsQuery): Promise<UserRewardsAnalyticsResponse> {
+	/** The customer's own weekly analytics: self only, the user is the actor and never client input, and any other caller is refused. */
+	public async customerAnalytics(actor: ActorContext, query: RewardsAnalyticsQuery): Promise<UserRewardsAnalyticsResponse> {
+		const userId = requireCustomer(actor);
 		// A customer spends across merchants (and zones): their weeks are bucketed in UTC.
 		const period = resolveAnalyticsPeriod(query.from, query.to, this.clock.now());
 		const previous = previousAnalyticsPeriod(period);
@@ -176,8 +179,12 @@ export class WeeklyAnalyticsAssembler {
 		};
 	}
 
-	/** Platform-wide paid bills for `GET /admin/analytics/sales` (the route enforces `ANALYTICS:READ`). */
-	public async adminSalesAnalytics(actorUserId: string | null, query: AdminSalesAnalyticsQuery): Promise<AdminSalesAnalyticsResponse> {
+	/**
+	 * Platform-wide paid bills for `GET /admin/analytics/sales` (the route enforces `ANALYTICS:READ`). The merchant names
+	 * are a system read, recorded against the human behind `actor`.
+	 */
+	public async adminSalesAnalytics(actor: ActorContext, query: AdminSalesAnalyticsQuery): Promise<AdminSalesAnalyticsResponse> {
+		const actorUserId = actorUserIdOf(actor);
 		// The platform view spans every merchant: its weeks are bucketed in UTC.
 		const period = resolveAnalyticsPeriod(query.from, query.to, this.clock.now());
 		const previous = previousAnalyticsPeriod(period);

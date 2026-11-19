@@ -10,7 +10,6 @@ import { ProvisionMerchantFromAdminInviteCommand } from "../commands/provision-m
 import { ProvisionMerchantFromAdminInviteHandler } from "../commands/provision-merchant-from-admin-invite/provision-merchant-from-admin-invite.handler";
 import { ProvisionTenantFromPlatformInviteCommand } from "../commands/provision-tenant-from-platform-invite/provision-tenant-from-platform-invite.command";
 import { ProvisionTenantFromPlatformInviteHandler } from "../commands/provision-tenant-from-platform-invite/provision-tenant-from-platform-invite.handler";
-import { GetMerchantInviteAvailabilityHandler } from "../queries/get-merchant-invite-availability/get-merchant-invite-availability.handler";
 import type { InviteTokenPort } from "../ports/invite-tokens.port";
 import type { TenantsScope } from "../tenants-scope";
 
@@ -27,7 +26,6 @@ const ACTOR: ActorContext = {
 
 /** A single-tenant deployment: no tenant may be created. */
 const SINGLE_TENANT: TenantProvisioningGate = { isProvisioningAllowed: (): boolean => false };
-const MULTI_TENANT: TenantProvisioningGate = { isProvisioningAllowed: (): boolean => true };
 
 /** Records whether any work reached the database or a token was minted; a refusal must leave both untouched. */
 class Untouched implements UnitOfWork<TenantsScope>, InviteTokenPort {
@@ -84,10 +82,5 @@ describe("tenant provisioning on a single-tenant deployment", () => {
 			),
 		).rejects.toBeInstanceOf(TenantProvisioningDisabledError);
 		expect({ opened: io.opened, issued: io.issued }).toEqual({ opened: 0, issued: 0 });
-	});
-
-	it("tells the admin panel invites are off, from the same gate", async () => {
-		await expect(new GetMerchantInviteAvailabilityHandler(SINGLE_TENANT).execute()).resolves.toEqual({ available: false });
-		await expect(new GetMerchantInviteAvailabilityHandler(MULTI_TENANT).execute()).resolves.toEqual({ available: true });
 	});
 });

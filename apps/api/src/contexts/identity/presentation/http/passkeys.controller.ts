@@ -1,5 +1,5 @@
-import { Controller, Delete, Get, Headers, HttpStatus, Patch, Post, Req, UseInterceptors } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Delete, Get, Headers, HttpStatus, Patch, Post, Req, UseInterceptors } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type {
 	AuthClientTypeQuery,
@@ -23,7 +23,6 @@ import type {
 } from "@workspace/shared";
 import {
 	apiContract,
-	apiPath,
 	AuthClientTypeQuerySchema,
 	LoginClientResponseSchema,
 	PasskeyAppAssociationsSchema,
@@ -37,6 +36,7 @@ import {
 } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
@@ -59,8 +59,8 @@ import { RenamePasskeyCommand } from "../../application/commands/rename-passkey/
 import { StartPasskeyRegistrationCommand } from "../../application/commands/start-passkey-registration/start-passkey-registration.command";
 import { StartPasskeySecondFactorCommand } from "../../application/commands/start-passkey-second-factor/start-passkey-second-factor.command";
 import { StartPasswordlessPasskeyLoginCommand } from "../../application/commands/start-passwordless-passkey-login/start-passwordless-passkey-login.command";
-import { GetPasskeyAppAssociationsQuery } from "../../application/queries/get-passkey-app-associations/get-passkey-app-associations.query";
-import { ListMyPasskeysQuery } from "../../application/queries/list-my-passkeys/list-my-passkeys.query";
+import { AccountApplicationService } from "../../application/services/account.application-service";
+import { PasskeyAppAssociationsApplicationService } from "../../application/services/passkey-app-associations.application-service";
 import { TOKEN_DELIVERY_DESCRIPTION } from "./token-delivery.constants";
 
 const PUBLIC_ACTOR = { allowAnonymous: true };
@@ -73,11 +73,12 @@ type LoginResult = LoginServiceResponse | LoginRestrictedEnrollmentResponse | Lo
  * the user's passkeys are refused during impersonation.
  */
 @ApiTags("Auth")
-@Controller(apiPath("/auth"))
+@ApiController("/auth")
 export class PasskeysController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly accounts: AccountApplicationService,
+		private readonly associations: PasskeyAppAssociationsApplicationService,
 	) {}
 
 	@Public()
@@ -86,8 +87,8 @@ export class PasskeysController {
 		summary: "The Android and iOS apps allowed to use this site's passkeys: the bodies of the web app's assetlinks.json and apple-app-site-association",
 	})
 	@ZodResponse(PasskeyAppAssociationsSchema, { description: "Digital Asset Links statements and the webcredentials app ids (empty when no app is configured)" })
-	public async appAssociations(): Promise<PasskeyAppAssociations> {
-		return this.queryBus.execute(new GetPasskeyAppAssociationsQuery());
+	public appAssociations(): PasskeyAppAssociations {
+		return this.associations.appAssociations();
 	}
 
 	@ApiBearerAuth()
@@ -96,7 +97,7 @@ export class PasskeysController {
 	@ApiOperation({ summary: "List the caller's passkeys, newest first (names, sync state and last use — never a key)" })
 	@ZodResponse(PasskeyListSchema, { description: "The caller's live passkeys" })
 	public async listPasskeys(@GetUser("sub") userId: string, @CurrentActor() actor: ActorContext): Promise<PasskeyList> {
-		return this.queryBus.execute(new ListMyPasskeysQuery(actor, { userId }));
+		return this.accounts.passkeys(actor, userId);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.login)

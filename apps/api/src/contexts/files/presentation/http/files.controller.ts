@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Headers, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Delete, Get, Headers, HttpStatus, Inject, Post } from "@nestjs/common";
 import { CommandBus, QueryBus, type Command, type Query } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
@@ -15,7 +15,6 @@ import {
 	TenantSlugParamSchema,
 	UuidParamSchema,
 	apiContract,
-	apiPath,
 	type CompleteFileUploadResponse,
 	type CreateFileUploadUrlResponse,
 	type CreateTenantFileUploadUrlInput,
@@ -26,6 +25,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import { ZodBody, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import type { ActorContext } from "../../../../platform/application/actor-context";
@@ -64,7 +64,7 @@ const STORAGE_CALLBACK_SECRET_HEADER = "x-storage-callback-secret";
  * by its command before anything is read.
  */
 @ApiTags("Files")
-@Controller(apiPath("/files"))
+@ApiController("/files")
 export class FilesController {
 	public constructor(
 		@Inject(CommandBus) private readonly commandBus: FilesCommandDispatch,
@@ -151,7 +151,7 @@ export class FilesController {
  * refused before any row or ticket exists; the category owner's access rule then checks the capability.
  */
 @ApiTags("Files")
-@Controller(apiPath("/tenants"))
+@ApiController("/tenants")
 export class TenantFilesController {
 	public constructor(@Inject(CommandBus) private readonly commandBus: FilesCommandDispatch) {}
 

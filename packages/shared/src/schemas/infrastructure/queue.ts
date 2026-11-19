@@ -100,8 +100,6 @@ export type RewardsMaintenanceJob = z.output<typeof RewardsMaintenanceJobSchema>
 /** The feature flags maintenance job carries nothing: each run reads the clock and the catalogue (ADR 087). */
 export const FeatureFlagsMaintenanceJobSchema = z.object({}).strict();
 
-export type FeatureFlagsMaintenanceJob = z.output<typeof FeatureFlagsMaintenanceJobSchema>;
-
 export const StorageDeleteJobSchema = z
 	.object({
 		fileId: z.uuid(),

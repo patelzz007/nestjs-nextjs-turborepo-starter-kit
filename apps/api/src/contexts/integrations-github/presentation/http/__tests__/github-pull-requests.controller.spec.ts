@@ -16,6 +16,7 @@ import { GithubWebhookController } from "../github-webhook.controller";
 import { GithubContentEditsController } from "../github-content-edits.controller";
 import { GithubPicturesController } from "../github-pictures.controller";
 import { GithubPullRequestsController } from "../github-pull-requests.controller";
+import { servedPathOf } from "../../../../../../e2e/support/route-metadata";
 import { handlerOf, metadataKeyOf } from "./route-metadata";
 
 const reflector = new Reflector();
@@ -93,7 +94,7 @@ describe("pull-request controllers", () => {
 		[GithubLiveUpdatesController, "/github/live-updates"],
 		[GithubPicturesController, "/github/pictures"],
 	])("serves %o under the versioned %s prefix, admin panel only", (controller: ControllerClass, prefix: string) => {
-		expect(reflector.get<string>(PATH_METADATA, controller)).toBe(`${API_VERSION_PREFIX}${prefix}`);
+		expect(servedPathOf(controller)).toBe(`${API_VERSION_PREFIX}${prefix}`);
 		expect(reflector.get<readonly object[]>(GUARDS_METADATA, controller)).toContain(AdminAccessGuard);
 	});
 
@@ -129,7 +130,7 @@ describe("pull-request controllers", () => {
 
 	it("receives GitHub's webhook publicly, outside the admin guard — the signature is the credential", () => {
 		const handler = handlerOf(GithubWebhookController.prototype, "receive");
-		expect(reflector.get<string>(PATH_METADATA, GithubWebhookController)).toBe(`${API_VERSION_PREFIX}/github/webhook`);
+		expect(servedPathOf(GithubWebhookController)).toBe(`${API_VERSION_PREFIX}/github/webhook`);
 		expect(reflector.get<boolean>(IS_PUBLIC_KEY, handler)).toBe(true);
 		expect(reflector.get<readonly object[] | undefined>(GUARDS_METADATA, GithubWebhookController)).toBeUndefined();
 		expect(reflector.get<number>(METHOD_METADATA, handler)).toBe(RequestMethod.POST);

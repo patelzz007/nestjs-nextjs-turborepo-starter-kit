@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { Admin, ProduceAcks, Producer, compatibilityPartitioner, stringSerializers } from "@platformatic/kafka";
 
 import type { MessagingHealthIndicator } from "../../core/health";
@@ -134,7 +134,7 @@ type StringProducer = Producer<string, string, string, string>;
  *   success it did not get.
  */
 @Injectable()
-export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
+export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown {
 	private readonly logger: Logger = new Logger(KafkaProducerService.name);
 	private producer: StringProducer | null = null;
 	private admin: Admin | null = null;
@@ -196,8 +196,12 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 		this.connectLoop = this.connectUntilReady(producer, admin, brokers);
 	}
 
-	/** Cancels the connect loop (waits at most for the attempt in flight), then closes the clients. */
-	public async onModuleDestroy(): Promise<void> {
+	/**
+	 * Cancels the connect loop (waits at most for the attempt in flight), then closes the clients. It runs in the
+	 * last shutdown phase: the queue workers that publish (the outbox relay) have finished their jobs by then, so
+	 * no in-flight publish loses its producer.
+	 */
+	public async onApplicationShutdown(): Promise<void> {
 		if (this.state === "disabled") {
 			return;
 		}

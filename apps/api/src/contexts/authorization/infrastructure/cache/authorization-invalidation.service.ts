@@ -4,10 +4,10 @@ import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } f
 import type Redis from "ioredis";
 import { z } from "zod";
 
+import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "@workspace/messaging/nest";
 import { ThrownErrorSchema } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../../config/typed-config.service";
-import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../../../platform/infrastructure/redis/redis.tokens";
 import {
 	UserInvalidationTriggerSchema,
 	type AuthorizationCacheInvalidationPort,

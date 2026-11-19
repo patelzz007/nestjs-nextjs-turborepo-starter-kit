@@ -39,22 +39,23 @@ installed. Why: [ADR 027](../../adr/027-fastify-http-adapter.md). Everything bel
 | `@fastify/multipart` | always | At most 5 files of 5 MiB per request |
 | CORS (`app.enableCors`) | always | `CORS_ORIGINS`, credentials, and the explicitly allowed non-safelisted headers (`X-Client-Type`, `X-Mutation-Intent`, `Idempotency-Key`, …) |
 | `@fastify/compress`, `@fastify/etag` | outside development | Skipped in dev to keep boot and per-route hooks light |
-| `@fastify/rate-limit` | security hardening on | Global 300 requests/min keyed by **IP + API version**; the email webhook route 60/min (the route's own per-IP limiter, `WEBHOOK_RATE_LIMIT_PER_MINUTE`, default 120, `0` = off, applies on top in every environment); errors use the standard envelope (`RATE_LIMITED` + `Retry-After`) |
 | `@fastify/under-pressure` | security hardening on | `503` when event-loop delay > 1 s or heap > 512 MiB |
 | `@fastify/helmet` | security hardening on | CSP with nonces, HSTS (1 year, preload), `no-referrer` |
 
 Security hardening is on in production and opt-in elsewhere with `SECURITY_HARDENING_ENABLED=1`
-(set it in staging). Per-route auth throttling (`@nestjs/throttler`, Redis storage) is separate and
-always on ([Authentication](../security/authentication.md#login-hardening)).
+(set it in staging). There is no Fastify-level rate limit: request limits are the `@nestjs/throttler`
+policies (one shared count across instances, ADR 071), always on. `preAuth` counts every request per client IP
+before authentication, keyed by the caller and never by the URL, so `/api/v1/…` and `/api/v2/…` share one
+budget; the email webhook has its own per-IP limit (`WEBHOOK_RATE_LIMIT_PER_MINUTE`, default 120, `0` = off)
+([Authentication](../security/authentication.md#login-hardening)).
 
 ## Hooks
 
 | Hook | Does |
 | --- | --- |
-| `onRoute` | Per-route config: the webhook rate limit, and `requestTimeout: 0` for streaming routes (`…/stream`, `…/events`) so SSE connections are not cut |
-| `onRequest` | `Accept-version: v2` rewrites `/api/v1/…` to that version's prefix ([Architecture §6](../architecture.md#6-api-versioning)) |
+| `onRoute` | Per-route config: `requestTimeout: 0` for streaming routes (`…/stream`, `…/events`) so SSE connections are not cut |
 | `onSend` | `x-request-id`, `x-api-version` and `Sunset` headers; CSP nonces stamped into HTML (Swagger UI) |
-| `onResponse` | One access line through `LogService`: method, version, redacted URL, status, duration, request id |
+| `onResponse` | One access line through `LogService`: method, version (marked `(override)` when the call named a version in `Accept-version`, [ADR 094](../../adr/094-per-endpoint-api-versioning.md)), redacted URL, status, duration, request id |
 | `onError` | An error-level line with stack for **5xx only** (4xx are already in the access line) |
 | `preSerialization` | Converts `bigint` (Prisma epoch-ms columns) to `number`, so `JSON.stringify` never throws |
 

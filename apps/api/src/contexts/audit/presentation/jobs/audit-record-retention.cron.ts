@@ -13,7 +13,7 @@ export class AuditRecordRetentionCron {
 
 	public constructor(private readonly dispatcher: SystemCommandDispatcher) {}
 
-	@Cron(CronExpression.EVERY_WEEK)
+	@Cron(CronExpression.EVERY_WEEK, { waitForCompletion: true })
 	public async purge(): Promise<void> {
 		const actor = systemActor(AUDIT_RECORD_RETENTION_OPERATION, "cron", null, "Remove audit records past the ten-year retention", null);
 		const runs = await this.dispatcher.dispatch(new PurgeExpiredAuditRecordsCommand(actor, false), { kind: "cron", name: "audit-record-retention" });

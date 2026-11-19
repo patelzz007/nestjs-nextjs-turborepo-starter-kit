@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
@@ -12,7 +12,7 @@ import { RlsPool } from "./rls-pool";
 type ConnectionOutcome = { readonly connected: true } | { readonly connected: false; readonly error: Error };
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService extends PrismaClient implements OnModuleInit, OnApplicationShutdown {
 	private readonly logger: Logger = new Logger(PrismaService.name);
 	private readonly pool: RlsPool;
 
@@ -103,7 +103,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 		return this.pool;
 	}
 
-	public async onModuleDestroy(): Promise<void> {
+	/** Closes in the last shutdown phase, after every job, tick and request that could use the pool (ADR 095). */
+	public async onApplicationShutdown(): Promise<void> {
 		await closePrismaConnections(this, this.pool, this.logger, { closing: "Closing database connections…", closed: "Database connections closed" });
 	}
 }

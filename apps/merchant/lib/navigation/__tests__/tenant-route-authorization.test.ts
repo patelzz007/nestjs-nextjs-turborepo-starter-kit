@@ -2,9 +2,17 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import { MERCHANT_CAPABILITY, MerchantCapabilitySchema, MembershipRoleSchema, type CapabilitySlug, type FeatureFlagKey, type MembershipRole } from "@workspace/shared";
+import {
+	createGrantedCapabilities,
+	isCapabilityGranted,
+	MERCHANT_CAPABILITY,
+	MerchantCapabilitySchema,
+	MembershipRoleSchema,
+	type CapabilitySlug,
+	type FeatureFlagKey,
+	type MembershipRole,
+} from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";

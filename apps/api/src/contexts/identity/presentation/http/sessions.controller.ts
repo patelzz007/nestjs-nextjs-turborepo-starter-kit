@@ -1,5 +1,5 @@
-import { Controller, Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards, UseInterceptors } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards, UseInterceptors } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type {
 	AccessTokenPayload,
@@ -16,7 +16,6 @@ import type {
 } from "@workspace/shared";
 import {
 	apiContract,
-	apiPath,
 	LogoutAllResponseSchema,
 	LogoutResponseSchema,
 	RefreshClientResponseSchema,
@@ -27,6 +26,7 @@ import {
 } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -49,18 +49,18 @@ import { LogOutAllDevicesCommand } from "../../application/commands/log-out-all-
 import { LogOutDeviceCommand } from "../../application/commands/log-out-device/log-out-device.command";
 import { RefreshSessionCommand } from "../../application/commands/refresh-session/refresh-session.command";
 import { RevokeMySessionCommand } from "../../application/commands/revoke-my-session/revoke-my-session.command";
-import { ListMySessionsQuery } from "../../application/queries/list-my-sessions/list-my-sessions.query";
+import { AccountApplicationService } from "../../application/services/account.application-service";
 import { TOKEN_DELIVERY_DESCRIPTION } from "./token-delivery.constants";
 
 const PUBLIC_ACTOR = { allowAnonymous: true };
 
 /** Device sessions: refresh-token rotation, sign-out (one device, every device), and the caller's own session list. */
 @ApiTags("Sessions")
-@Controller(apiPath("/auth"))
+@ApiController("/auth")
 export class SessionsController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly accounts: AccountApplicationService,
 	) {}
 
 	@RateLimit(RATE_LIMIT_POLICY.sessionRefresh)
@@ -141,7 +141,7 @@ export class SessionsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(SessionListQuerySchema) query: SessionListQuery,
 	): Promise<PaginatedServiceResult<Session>> {
-		return this.queryBus.execute(new ListMySessionsQuery(actor, { userId: user.sub, currentSessionId: user.sid ?? null, query }));
+		return this.accounts.activeSessions(actor, { userId: user.sub, currentSessionId: user.sid ?? null, query });
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)

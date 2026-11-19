@@ -1,42 +1,6 @@
 import { rewardTypeGivesFreeItem, type CustomerTier, type RewardType } from "@workspace/shared";
 
-import { DomainErrorCodeSchema } from "../../../../platform/domain/errors/error-codes";
-
 import { DomainError } from "../../../../platform/domain/errors/domain-error";
-
-/**
- * Every code the rewards domain throws. Codes and messages that clients already saw (from the
- * `HttpException`s these replace) are kept byte for byte, and so are their absent details.
- */
-export const RewardsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
-	"REWARD_NOT_FOUND",
-	"REWARD_NOT_EDITABLE",
-	"REWARD_NOT_DRAFT",
-	"REWARD_NOT_PENDING",
-	"REWARD_TRANSITION_NOT_ALLOWED",
-	"REWARD_REJECTION_REASON_BLANK",
-	"REWARD_QUANTITY_BELOW_RESERVED",
-	"REWARD_QUANTITY_INVALID",
-	"REWARD_AMOUNT_INVALID",
-	"REWARD_RULES_INVALID",
-	"REWARD_IMAGES_INVALID",
-	"REWARD_IMAGE_NOT_FOUND",
-	"REWARD_LOCATION_INVALID",
-	"REWARD_AUDIENCE_INVALID",
-	"REWARD_AUDIENCE_REFERRALS",
-	"REWARD_MINIMUM_TIER_INVALID",
-	"REWARD_MINIMUM_TIER_UNAVAILABLE",
-	"REWARD_TIER_LOCKED",
-	"REWARD_FREE_ITEM_INVALID",
-	"TENANT_LOCATION_FORBIDDEN",
-	"REWARD_EXPIRED",
-	"REWARD_OUT_OF_STOCK",
-	"REWARD_RESERVATION_MISSING",
-	"VALIDATION_ERROR",
-	"CORRUPT_AGGREGATE_STATE",
-]);
-
-export type RewardsDomainErrorCode = (typeof RewardsDomainErrorCodeSchema)["options"][number];
 
 /** Missing, deleted, in another tenant, or outside the caller's stores — all answered alike (no existence oracle). */
 export class RewardNotFoundError extends DomainError {

@@ -5,10 +5,9 @@
 // FEATURE_FLAG:UPDATE (each with a reason, kept by the request audit and the change trail); deciding someone
 // else's pending production change needs FEATURE_FLAG:APPROVE (never one's own).
 
-import { Controller, Get, HttpCode, HttpStatus, Inject, Post, Put } from "@nestjs/common";
+import { Get, HttpCode, HttpStatus, Inject, Post, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	FeatureFlagDetailSchema,
 	FeatureFlagEnvironmentSchema,
 	FeatureFlagPathSchema,
@@ -51,6 +50,7 @@ import {
 	type SetKillSwitchInput,
 } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
@@ -67,7 +67,7 @@ import { FLAG_ADMIN, FLAG_EVALUATION } from "../../feature-flags.tokens";
 @ApiTags("Feature flags")
 @ApiBearerAuth()
 @AdminAccessOnly("Feature flags are for the admin console.")
-@Controller(apiPath("/admin/feature-flags"))
+@ApiController("/admin/feature-flags")
 export class FeatureFlagsController {
 	public constructor(
 		@Inject(FLAG_ADMIN) private readonly flags: FlagAdminService,

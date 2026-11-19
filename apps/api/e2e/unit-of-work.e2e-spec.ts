@@ -118,7 +118,7 @@ describe("Unit of work (e2e)", () => {
 			await verifier.query('DELETE FROM public."OutboxEvent" WHERE payload::text LIKE ANY($1::text[])', [templateKeys.map((key) => `%${key}%`)]);
 		}
 		await verifier.end();
-		await prisma.onModuleDestroy();
+		await prisma.onApplicationShutdown();
 	});
 
 	it("commits the business row and the outbox row, then publishes", async () => {

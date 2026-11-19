@@ -1,5 +1,4 @@
 import { Injectable, type CallHandler, type ExecutionContext, type NestInterceptor } from "@nestjs/common";
-import { SSE_METADATA } from "@nestjs/common/constants.js";
 import { Reflector } from "@nestjs/core";
 import { nowEpochMs, type ApiPaginatedMeta, type ApiResponseMeta, type DataValue, type PaginatedServiceResult } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
@@ -7,6 +6,7 @@ import { throwError, type Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
 import { RequestContextService } from "../../../infrastructure/context/request-context";
+import { isEventStreamRequest } from "../event-stream-request";
 import { getFileResponseContract, getResponseContract, type RouteResponseContract } from "../validation/decorators/zod-response.decorators";
 import { SKIP_ENVELOPE } from "../validation/decorators/skip-envelope.decorator";
 import { MissingResponseContractError, ResponseContractViolationError } from "../../../application/errors/response-contract.error";
@@ -58,12 +58,10 @@ export class ResponseInterceptor implements NestInterceptor {
 	) {}
 
 	public intercept(context: ExecutionContext, next: CallHandler<DataValue>): Observable<ResponseBody> {
-		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
-		// `includes` (not strict equality) tolerates `text/event-stream, */*` and Accept parameters.
-		const acceptHeader: string | undefined = request.headers.accept;
-		if (acceptHeader?.includes("text/event-stream") === true || this.reflector.get<boolean | undefined>(SSE_METADATA, context.getHandler()) === true) {
+		if (isEventStreamRequest(context, this.reflector)) {
 			return next.handle();
 		}
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		if (this.reflector.getAllAndOverride<boolean>(SKIP_ENVELOPE, [context.getHandler(), context.getClass()])) {
 			return next.handle();
 		}

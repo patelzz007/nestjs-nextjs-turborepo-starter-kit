@@ -1,27 +1,20 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { epochMs, type AccessTokenPayload, type Session } from "@workspace/shared";
+import { epochMs, OwnProfileSchema, type AccessTokenPayload, type MfaRecoveryStatusResponse, type OwnProfile, type Session } from "@workspace/shared";
 
 import { AccountNotFoundError, ProfileNotFoundError } from "../../domain/errors/identity.errors";
 import { CheckBackupCodeHandler } from "../queries/check-backup-code/check-backup-code.handler";
 import { CheckBackupCodeQuery } from "../queries/check-backup-code/check-backup-code.query";
 import { CheckPasswordResetTokenHandler } from "../queries/check-password-reset-token/check-password-reset-token.handler";
 import { CheckPasswordResetTokenQuery } from "../queries/check-password-reset-token/check-password-reset-token.query";
-import { CountRemainingBackupCodesHandler } from "../queries/count-remaining-backup-codes/count-remaining-backup-codes.handler";
-import { CountRemainingBackupCodesQuery } from "../queries/count-remaining-backup-codes/count-remaining-backup-codes.query";
 import { GetMeHandler } from "../queries/get-me/get-me.handler";
 import { GetMeQuery } from "../queries/get-me/get-me.query";
-import { GetMyMfaRecoveryStatusHandler } from "../queries/get-my-mfa-recovery-status/get-my-mfa-recovery-status.handler";
-import { GetMyMfaRecoveryStatusQuery } from "../queries/get-my-mfa-recovery-status/get-my-mfa-recovery-status.query";
-import { GetOwnProfileHandler } from "../queries/get-own-profile/get-own-profile.handler";
-import { GetOwnProfileQuery } from "../queries/get-own-profile/get-own-profile.query";
 import { GetSessionPermissionsHandler } from "../queries/get-session-permissions/get-session-permissions.handler";
 import { GetSessionPermissionsQuery } from "../queries/get-session-permissions/get-session-permissions.query";
 import { GetUserForAdminHandler } from "../queries/get-user-for-admin/get-user-for-admin.handler";
 import { GetUserForAdminQuery } from "../queries/get-user-for-admin/get-user-for-admin.query";
-import { ListMySessionsHandler } from "../queries/list-my-sessions/list-my-sessions.handler";
-import { ListMySessionsQuery } from "../queries/list-my-sessions/list-my-sessions.query";
 import { ListUsersForAdminHandler } from "../queries/list-users-for-admin/list-users-for-admin.handler";
 import { ListUsersForAdminQuery } from "../queries/list-users-for-admin/list-users-for-admin.query";
+import { AccountApplicationService } from "../services/account.application-service";
 import { InMemoryIdentityReads, adminAccountView } from "./fakes/identity-reads.fakes";
 import { InMemorySessionCache } from "./fakes/identity-sign-in.fakes";
 import { FakeCredentialCrypto, FixedClock, FixedGrants, NOW, ScriptedSignupReferralCodes, userActor } from "./fakes/identity.fakes";
@@ -154,9 +147,7 @@ describe("Self-service reads", () => {
 	it("returns the read model's page of the caller's sessions, marking the session in use", async () => {
 		reads.sessions.set(USER_ID, [session("recent", NOW - 10), session("current", NOW - 100)]);
 
-		const listed = await new ListMySessionsHandler(reads).execute(
-			new ListMySessionsQuery(actor, { userId: USER_ID, currentSessionId: "current", query: { page: 1, limit: 20 } }),
-		);
+		const listed = await new AccountApplicationService(reads).activeSessions(actor, { userId: USER_ID, currentSessionId: "current", query: { page: 1, limit: 20 } });
 
 		expect(listed.items.map((entry) => [entry.id, entry.isCurrent])).toEqual([
 			["recent", false],
@@ -173,7 +164,7 @@ describe("Self-service reads", () => {
 		await expect(new CheckBackupCodeHandler(reads, crypto).execute(new CheckBackupCodeQuery(actor, { userId: USER_ID, backupCode: "NOPE" }))).resolves.toEqual({
 			valid: false,
 		});
-		await expect(new CountRemainingBackupCodesHandler(reads).execute(new CountRemainingBackupCodesQuery(actor, { userId: USER_ID }))).resolves.toEqual({ remaining: 2 });
+		await expect(new AccountApplicationService(reads).remainingBackupCodes(actor, USER_ID)).resolves.toEqual({ remaining: 2 });
 	});
 
 	it("validates a reset link by digest lookup, then the slow hash", async () => {
@@ -187,7 +178,29 @@ describe("Self-service reads", () => {
 	});
 
 	it("answers NONE without a recovery request, and not found without a profile", async () => {
-		await expect(new GetMyMfaRecoveryStatusHandler(reads).execute(new GetMyMfaRecoveryStatusQuery(actor, { userId: USER_ID }))).resolves.toMatchObject({ status: "NONE" });
-		await expect(new GetOwnProfileHandler(reads).execute(new GetOwnProfileQuery(actor, { userId: USER_ID }))).rejects.toBeInstanceOf(ProfileNotFoundError);
+		const accounts = new AccountApplicationService(reads);
+		await expect(accounts.mfaRecoveryStatus(actor, USER_ID)).resolves.toMatchObject({ status: "NONE" });
+		await expect(accounts.ownProfile(actor, USER_ID)).rejects.toBeInstanceOf(ProfileNotFoundError);
+	});
+
+	it("answers the profile and the recovery request the read model holds, and pages the platform's recovery queue", async () => {
+		const accounts = new AccountApplicationService(reads);
+		const profile: OwnProfile = OwnProfileSchema.parse({
+			id: "0193f2c4-0000-7000-8000-0000000000a1",
+			email: "jane@example.com",
+			fullName: "Jane Doe",
+			avatar: null,
+			language: "en",
+			version: 3,
+			createdAt: NOW,
+			updatedAt: NOW,
+		});
+		const recovery: MfaRecoveryStatusResponse = { status: "PENDING", message: "Waiting for review" };
+		reads.profiles.set(USER_ID, profile);
+		reads.recoveries.set(USER_ID, recovery);
+
+		await expect(accounts.ownProfile(actor, USER_ID)).resolves.toEqual(profile);
+		await expect(accounts.mfaRecoveryStatus(actor, USER_ID)).resolves.toEqual(recovery);
+		await expect(accounts.mfaRecoveryRequests(actor, { page: 1, limit: 20 })).resolves.toMatchObject({ page: 1 });
 	});
 });

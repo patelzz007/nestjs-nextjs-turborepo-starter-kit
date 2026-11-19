@@ -31,15 +31,39 @@ describe("TransactionLogRetentionScheduler", () => {
 		return { scheduler: new TransactionLogRetentionScheduler(registry, writer), registry, purge };
 	}
 
-	it("purges at boot, registers the hourly interval, and removes it on shutdown", () => {
+	it("purges at boot, registers the hourly interval, and removes it on shutdown", async () => {
 		const { scheduler: retention, registry, purge } = scheduler();
 
 		retention.onModuleInit();
 		expect(purge).toHaveBeenCalledTimes(1);
 		expect(registry.doesExist("interval", "transaction-log-retention")).toBe(true);
 
-		retention.onApplicationShutdown();
+		await retention.beforeApplicationShutdown();
 		expect(registry.doesExist("interval", "transaction-log-retention")).toBe(false);
+	});
+
+	it("lets the boot-time purge finish before shutdown moves on", async () => {
+		const { scheduler: retention, purge } = scheduler();
+		let release: () => void = (): void => undefined;
+		purge.mockReturnValue(
+			new Promise((resolve): void => {
+				release = (): void => {
+					resolve({ cutoffDay: "2026-09-26", deletedFiles: [] });
+				};
+			}),
+		);
+		retention.onModuleInit();
+
+		let shutDown = false;
+		const shutdown = retention.beforeApplicationShutdown().then((): void => {
+			shutDown = true;
+		});
+		await Promise.resolve();
+		expect(shutDown).toBe(false);
+
+		release();
+		await shutdown;
+		expect(shutDown).toBe(true);
 	});
 
 	it("logs what a run deleted, and stays quiet when there was nothing to delete", async () => {

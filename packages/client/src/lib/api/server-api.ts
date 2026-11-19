@@ -1,5 +1,5 @@
 // ============================================
-// lib/server-api.ts - SSR entry point (wires apiRouter at the app boundary)
+// lib/api/server-api.ts -SSR entry point (wires apiRouter at the app boundary)
 // ============================================
 import "server-only";
 

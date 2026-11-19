@@ -36,7 +36,7 @@ describe("PrismaBaseRepository (e2e)", () => {
 			await verifier.query('DELETE FROM public."SampleCategory" WHERE slug = ANY($1::text[])', [slugs]);
 		}
 		await verifier.end();
-		await prisma.onModuleDestroy();
+		await prisma.onApplicationShutdown();
 	});
 
 	async function countSlugs(slug: string): Promise<number> {

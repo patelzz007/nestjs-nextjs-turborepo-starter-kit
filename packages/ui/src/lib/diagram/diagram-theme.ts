@@ -1,5 +1,5 @@
 // ============================================
-// lib/ui/diagram/diagram-theme.ts — Pele's variables on the kit's tokens
+// lib/diagram/diagram-theme.ts —Pele's variables on the kit's tokens
 // ============================================
 // Pele (https://pele.run) draws a diagram as SVG whose colours, radius and fonts
 // are CSS variables (`--pele-*`, pele.run/theming). Their map onto the design

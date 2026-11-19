@@ -22,7 +22,6 @@ export type {
 	RewardRedemptionFactsPort,
 } from "./application/ports/rewards-transactional.ports";
 export { RewardApproved, RewardAutoPublished, RewardRejected } from "./domain/events/reward.events";
-export { RewardsDomainErrorCodeSchema, type RewardsDomainErrorCode } from "./domain/errors/reward.errors";
 
 // Marketplace list translators: the shared list-query grammar → Prisma (cross-context list-translator spec).
 export { buildMarketplaceOrder, buildMarketplaceWhere, marketplaceTierSegments } from "./infrastructure/persistence/reward-list-queries";

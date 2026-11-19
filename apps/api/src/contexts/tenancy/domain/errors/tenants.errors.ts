@@ -1,4 +1,4 @@
-import { DomainErrorCodeSchema, type DomainErrorCode } from "../../../../platform/domain/errors/error-codes";
+import type { DomainErrorCode } from "../../../../platform/domain/errors/error-codes";
 import { DomainError } from "../../../../platform/domain/errors/domain-error";
 
 /**
@@ -16,55 +16,6 @@ export const TENANT_MEMBERSHIP_ERROR_CODES = {
 	scopeEscalation: "TENANT_SCOPE_ESCALATION",
 	invalidLocations: "TENANT_LOCATIONS_INVALID",
 } satisfies Readonly<Record<string, DomainErrorCode>>;
-
-/** The domain error codes the tenants context throws (a subset of the platform catalog, for the HTTP status map). */
-export const TenantsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
-	"BAD_REQUEST",
-	"CORRUPT_AGGREGATE_STATE",
-	"TENANT_ACCESS_REQUEST_ALREADY_REVIEWED",
-	"TENANT_ACCESS_REQUEST_PENDING",
-	"TENANT_ALREADY_MEMBER",
-	"TENANT_INVITE_PENDING",
-	"TENANT_INVITE_NO_LONGER_PENDING",
-	"TENANT_INVITE_EMAIL_MISMATCH",
-	"TENANT_INVITE_ACCOUNT_EXISTS",
-	"TENANT_SCOPE_ESCALATION",
-	"TENANT_LOCATIONS_INVALID",
-	"TENANT_OWNER_PROTECTED",
-	"TENANT_MEMBER_COVERS_ALL_STORES",
-	"TENANT_MEMBER_LAST_STORE",
-	"TENANT_STORE_OUT_OF_SCOPE",
-	"TENANT_LOCATION_STATUS_CONFLICT",
-	"TENANT_LOCATION_PRIMARY_CANNOT_CLOSE",
-	"TENANT_MEMBERSHIP_UPDATE_DURING_IMPERSONATION",
-	"TENANT_NOT_PROVISIONING",
-	"TENANT_NOT_ACTIVE",
-	"TENANT_SUSPENDED",
-	"TENANT_BANNED",
-	"TENANT_CUSTOMER_ALREADY_BANNED",
-	"TENANT_CUSTOMER_BAN_NOT_FOUND",
-	"TENANT_REDEMPTION_NOT_FOUND",
-	"MEMBERSHIP_INACTIVE",
-	"TENANT_SLUG_TAKEN",
-	"TENANT_PROVISIONING_DISABLED",
-	"TENANT_LIFECYCLE_TRANSITION_NOT_ALLOWED",
-	"TENANT_DELETION_GRACE_OVER",
-	"TENANT_OWNER_REQUIRED",
-	"TENANT_OWNER_CANNOT_LEAVE",
-	"TENANT_APPEAL_PENDING",
-	"TENANT_APPEAL_NOT_PENDING",
-	"KYB_REVIEW_CLOSED",
-	"KYB_DOCUMENT_INVALID",
-	"KYB_DOCUMENT_INCOMPLETE",
-	"KYB_DOCUMENT_REJECTED",
-	"KYB_TRANSITION_NOT_ALLOWED",
-	"KYB_DECISION_REASON_REQUIRED",
-	"MERCHANT_INVITE_EXPIRED",
-	"MERCHANT_INVITE_UNAVAILABLE",
-	"MERCHANT_ONBOARDING_DOCUMENTS_CLOSED",
-]);
-
-export type TenantsDomainErrorCode = (typeof TenantsDomainErrorCodeSchema)["options"][number];
 
 // ── Access requests and memberships ──────────────────────────────────────────
 

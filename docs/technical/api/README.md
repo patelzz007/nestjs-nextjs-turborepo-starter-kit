@@ -18,9 +18,11 @@ Every endpoint, with a real request and response captured from the seeded API, i
 
 ## Base URL and versions
 
-- Business routes: `https://<api-host>/api/v1/...` (`apiPath()`); unversioned: `/`, `/health*`,
-  `/version`, `/notifications/email-webhook` ([architecture §6](../architecture.md#6-api-versioning)).
-- Swagger UI: `/v1/docs`, JSON at `/v1/docs-json`. On by default outside production and public there;
+- Business routes: `https://<api-host>/api/<version>/...` for every version in `API_VERSIONS` (`/api/v1/...`,
+  `/api/v2/...`); a newer version inherits every route it does not replace. Unversioned: `/`, `/health*`,
+  `/version`, `/notifications/email-webhook` ([ADR 094](../../adr/094-per-endpoint-api-versioning.md),
+  [architecture §6](../architecture.md#6-api-versioning)).
+- Swagger UI: one document per version (`/v1/docs`, `/v2/docs`; JSON at `/v1/docs-json`, …). On by default outside production and public there;
   in production it is off unless `SWAGGER_ENABLED=1`, and then only SuperAdmins can open it.
 - Paths are defined once in `packages/shared/src/api-routes.ts` ([routes](./routes.md)).
 

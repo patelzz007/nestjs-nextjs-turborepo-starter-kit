@@ -18,8 +18,8 @@ const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };
 const PAIR = { accessToken: "access-1", refreshToken: "refresh-1" };
 const ROTATED = { accessToken: "access-2", refreshToken: "refresh-2" };
 const DEVICE_HEADERS = { "X-Device-Model": "iPhone%2015%20Pro", "X-Device-Name": "Alex%E2%80%99s%20iPhone" };
-const REFRESH_URL: string = buildUrl(BASE_URL, apiContract.auth.refresh.path, apiContract.auth.refresh.version);
-const LOGOUT_URL: string = buildUrl(BASE_URL, apiContract.auth.logout.path, apiContract.auth.logout.version);
+const REFRESH_URL: string = buildUrl(BASE_URL, apiContract.auth.refresh.path);
+const LOGOUT_URL: string = buildUrl(BASE_URL, apiContract.auth.logout.path);
 
 const meDef = defineQuery({ method: "GET", path: "/auth/me", input: z.undefined(), response: singleResponse(DataValueSchema) }, { scope: () => ["auth", "me"] });
 

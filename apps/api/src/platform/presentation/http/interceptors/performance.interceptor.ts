@@ -1,8 +1,9 @@
 import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler, Logger } from "@nestjs/common";
-import { SSE_METADATA } from "@nestjs/common/constants.js";
 import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
 import { type Observable, tap } from "rxjs";
+
+import { isEventStreamRequest } from "../event-stream-request";
 
 /** A request slower than this is logged as slow. */
 export const SLOW_REQUEST_THRESHOLD_MS = 1000;
@@ -22,10 +23,10 @@ export class PerformanceInterceptor implements NestInterceptor {
 	public constructor(private readonly reflector: Reflector) {}
 
 	public intercept<T>(context: ExecutionContext, next: CallHandler<T>): Observable<T> {
-		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
-		if (this.isEventStream(context, request)) {
+		if (isEventStreamRequest(context, this.reflector)) {
 			return next.handle();
 		}
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		const startTime: number = Date.now();
 		const method: string = request.method;
 		const url: string = request.url;
@@ -40,11 +41,5 @@ export class PerformanceInterceptor implements NestInterceptor {
 				},
 			}),
 		);
-	}
-
-	/** The same test the response interceptor uses: an `@Sse()` handler, or a client asking for an event stream. */
-	private isEventStream(context: ExecutionContext, request: FastifyRequest): boolean {
-		// `includes` (not strict equality) tolerates `text/event-stream, */*` and Accept parameters.
-		return request.headers.accept?.includes("text/event-stream") === true || this.reflector.get<boolean | undefined>(SSE_METADATA, context.getHandler()) === true;
 	}
 }

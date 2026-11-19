@@ -1,9 +1,9 @@
 import { Global, Logger, Module } from "@nestjs/common";
+import { REDIS_PUBLISHER } from "@workspace/messaging/nest";
 import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { APP_CACHE, type AppCache } from "../../application/ports/app-cache.port";
-import { REDIS_PUBLISHER } from "../redis/redis.tokens";
 import { GcmCacheCipher } from "./cache-cipher";
 import { CacheInvalidationBus } from "./cache-invalidation-bus";
 import { ioredisCacheClient } from "./redis-cache-client";

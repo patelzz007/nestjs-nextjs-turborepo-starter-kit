@@ -67,7 +67,7 @@ describe("Outbox retention (integration)", () => {
 	afterAll(async () => {
 		await verifier.query('DELETE FROM public."OutboxEvent" WHERE topic = $1', [topic]);
 		await verifier.end();
-		await prisma.onModuleDestroy();
+		await prisma.onApplicationShutdown();
 	});
 
 	it("deletes only settled rows past their retention window", async () => {

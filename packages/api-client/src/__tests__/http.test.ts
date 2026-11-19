@@ -8,7 +8,7 @@ describe("buildUrl", () => {
 		expect(buildUrl("http://api.test", "/auth/me?x=1")).toBe(`http://api.test${API_VERSION_PREFIX}/auth/me?x=1`);
 	});
 
-	it("uses the leaf's own version when it has one", () => {
+	it("uses the given version (a client's pin or a call's override)", () => {
 		expect(buildUrl("http://api.test", "/items", "v2")).toBe(`http://api.test${apiVersionPrefix("v2")}/items`);
 	});
 });

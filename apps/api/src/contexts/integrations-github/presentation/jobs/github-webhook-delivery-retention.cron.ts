@@ -20,7 +20,7 @@ export class GithubWebhookDeliveryRetentionCron {
 
 	public constructor(@Inject(SystemCommandDispatcher) private readonly dispatcher: Pick<SystemCommandDispatcher, "dispatch">) {}
 
-	@Cron(CronExpression.EVERY_HOUR)
+	@Cron(CronExpression.EVERY_HOUR, { waitForCompletion: true })
 	public async prune(): Promise<void> {
 		const actor = systemActor(GITHUB_WEBHOOK_DELIVERIES_OPERATION, "cron", null, "Prune GitHub webhook deliveries past their retention", null);
 		const pruned = await this.dispatcher.dispatch(new PruneGithubWebhookDeliveriesCommand(actor), { kind: "cron", name: RETENTION_CRON_NAME });

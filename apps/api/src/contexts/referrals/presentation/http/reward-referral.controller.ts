@@ -1,8 +1,7 @@
-import { Controller, HttpStatus, Inject, Post } from "@nestjs/common";
+import { HttpStatus, Inject, Post } from "@nestjs/common";
 import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	apiPath,
 	RewardReferralAttributionResponseSchema,
 	RewardReferralAttributionSchema,
 	RewardReferralLinkResponseSchema,
@@ -13,6 +12,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
@@ -33,7 +33,7 @@ const RewardParamsSchema = z.object({ rewardId: UuidParamSchema }).strict();
 /** Reward referral links: a signed-in consumer shares a reward, and the friend who opens the link is remembered for their claim. */
 @ApiTags("Referrals")
 @ApiBearerAuth()
-@Controller(apiPath("/referrals"))
+@ApiController("/referrals")
 export class RewardReferralController {
 	public constructor(@Inject(CommandBus) private readonly commandBus: RewardReferralCommandDispatch) {}
 

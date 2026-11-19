@@ -6,8 +6,6 @@ import { Label } from "@workspace/ui/components/label";
 import { Textarea } from "@workspace/ui/components/textarea";
 import * as React from "react";
 
-import { MerchantKybDocumentUpload } from "./document-upload";
-
 export interface MerchantKybFieldValues {
 	readonly businessName: string;
 	readonly legalName: string;
@@ -47,13 +45,6 @@ export interface MerchantKybRegistrationFieldsProps {
 	readonly onChange?: (field: MerchantKybRegistrationFieldName, value: string) => void;
 	readonly idPrefix?: string;
 	readonly readOnly?: boolean;
-}
-
-export interface MerchantKybFieldsProps {
-	readonly values: MerchantKybFieldValues;
-	readonly onChange: (field: keyof MerchantKybFieldValues, value: string | MerchantKybPendingDocument[]) => void;
-	readonly idPrefix?: string;
-	readonly showDocuments?: boolean;
 }
 
 export function MerchantKybBusinessFields({
@@ -235,37 +226,6 @@ export function MerchantKybRegistrationFields({ values, onChange, idPrefix = "me
 				/>
 				{readOnly ? null : <p className="text-xs text-muted-foreground">Describe the main registration document you are uploading in the next step.</p>}
 			</div>
-		</div>
-	);
-}
-
-export function MerchantKybFields({ values, onChange, idPrefix = "merchant-kyb", showDocuments = true }: MerchantKybFieldsProps): React.JSX.Element {
-	const handleBusinessChange = React.useCallback(
-		(field: MerchantKybBusinessFieldName, value: string): void => {
-			onChange(field, value);
-		},
-		[onChange],
-	);
-
-	const handleRegistrationChange = React.useCallback(
-		(field: MerchantKybRegistrationFieldName, value: string): void => {
-			onChange(field, value);
-		},
-		[onChange],
-	);
-
-	const handleDocumentsChange = React.useCallback(
-		(documents: MerchantKybPendingDocument[]): void => {
-			onChange("documents", documents);
-		},
-		[onChange],
-	);
-
-	return (
-		<div className="space-y-6">
-			<MerchantKybBusinessFields values={values} onChange={handleBusinessChange} idPrefix={idPrefix} />
-			<MerchantKybRegistrationFields values={values} onChange={handleRegistrationChange} idPrefix={idPrefix} />
-			{showDocuments ? <MerchantKybDocumentUpload documents={values.documents} onChange={handleDocumentsChange} idPrefix={`${idPrefix}-documents`} /> : null}
 		</div>
 	);
 }

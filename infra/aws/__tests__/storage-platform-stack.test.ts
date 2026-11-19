@@ -1,10 +1,11 @@
 import { App } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
+import { Bucket, BucketEncryption } from "aws-cdk-lib/aws-s3";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { InvalidApiRoleTrustError } from "../lib/api-role-trust.js";
-import { StoragePlatformStack } from "../lib/storage-platform-stack.js";
+import { knownBucketEncryption, StoragePlatformStack } from "../lib/storage-platform-stack.js";
 
 /**
  * CDK synthesis is the slow part (seconds per stack on a CI runner). Each
@@ -219,5 +220,34 @@ describe("StoragePlatformStack API role trust (CDK context)", () => {
 		["a role trust with a user ARN", { apiTrust: "aws-role", apiTrustRoleArn: "arn:aws:iam::210987654321:user/deployer" }],
 	])("refuses to synthesize with %s", (_label: string, context: Readonly<Record<string, string>>): void => {
 		expect(() => synth(context)).toThrow(InvalidApiRoleTrustError);
+	});
+});
+
+describe("knownBucketEncryption", () => {
+	it("answers a known mode unchanged", () => {
+		expect(knownBucketEncryption(BucketEncryption.S3_MANAGED, "TestStack/PublicOriginBucket")).toBe(BucketEncryption.S3_MANAGED);
+	});
+
+	it("stops synthesis, naming the bucket, when the mode is not known (never guesses one)", () => {
+		expect(() => knownBucketEncryption(undefined, "TestStack/PublicOriginBucket")).toThrow(/TestStack\/PublicOriginBucket is not known at synthesis/);
+	});
+});
+
+describe("public origin bucket", () => {
+	it("reports its encryption mode as known (S3-managed) and is not a website bucket", () => {
+		const stack = new StoragePlatformStack(new App(), "TestStack", { environmentName: "development" });
+		const bucket = stack.node.findChild("PublicOriginBucket");
+
+		expect(bucket).toBeInstanceOf(Bucket);
+		if (bucket instanceof Bucket) {
+			expect(bucket.encryption).toBe(BucketEncryption.S3_MANAGED);
+			expect(bucket.isWebsite).toBe(false);
+		}
+	});
+
+	it("is encrypted with S3-managed keys, the mode the origin access control reads", () => {
+		synth().hasResourceProperties("AWS::S3::Bucket", {
+			BucketEncryption: { ServerSideEncryptionConfiguration: [{ ServerSideEncryptionByDefault: { SSEAlgorithm: "AES256" } }] },
+		});
 	});
 });

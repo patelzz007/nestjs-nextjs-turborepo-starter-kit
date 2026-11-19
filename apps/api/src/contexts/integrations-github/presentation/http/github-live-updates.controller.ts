@@ -1,9 +1,10 @@
-import { Controller, Delete, Get, Inject, Put, Sse, UseGuards, type MessageEvent } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Delete, Get, Inject, Put, Sse, UseGuards, type MessageEvent } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, GithubLiveUpdatesParamsSchema, GithubLiveUpdatesStatusSchema, type GithubLiveUpdatesParams, type GithubLiveUpdatesStatus } from "@workspace/shared";
+import { GithubLiveUpdatesParamsSchema, GithubLiveUpdatesStatusSchema, type GithubLiveUpdatesParams, type GithubLiveUpdatesStatus } from "@workspace/shared";
 import { filter, interval, map, merge, type Observable } from "rxjs";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { ApiEventStreamResponse } from "../../../../platform/presentation/http/validation/decorators/api-event-stream.decorator";
@@ -16,7 +17,7 @@ import { DisableLiveUpdatesCommand } from "../../application/commands/disable-li
 import { EnableLiveUpdatesCommand } from "../../application/commands/enable-live-updates/enable-live-updates.command";
 import type { GithubChangeSignal, GithubChangeSignalsPort } from "../../application/ports/github-live-updates.port";
 import { GITHUB_CHANGE_SIGNALS } from "../../application/ports/github.tokens";
-import { GetLiveUpdatesStatusQuery } from "../../application/queries/get-live-updates-status/get-live-updates-status.query";
+import { GithubLiveUpdatesStatusReader } from "../../application/services/github-live-updates-status";
 import { isChangeOfRepository } from "../../domain/policies/webhook-delivery.policy";
 import { GithubRepositoryVisibleGuard } from "./github-repository-visible.guard";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -33,11 +34,11 @@ export const GITHUB_LIVE_UPDATES_KEEPALIVE_MS = 25_000;
 @ApiTags("GitHub pull requests")
 @ApiBearerAuth()
 @AdminAccessOnly("Admin access required for GitHub pull requests.")
-@Controller(apiPath("/github/live-updates"))
+@ApiController("/github/live-updates")
 export class GithubLiveUpdatesController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly liveUpdates: GithubLiveUpdatesStatusReader,
 		@Inject(GITHUB_CHANGE_SIGNALS) private readonly changes: GithubChangeSignalsPort,
 	) {}
 
@@ -45,8 +46,8 @@ export class GithubLiveUpdatesController {
 	@Get(":owner/:repository")
 	@ApiOperation({ summary: "Whether a repository's pull requests update live", description: "`off`: this server receives no webhooks; `disabled`; `enabled`." })
 	@ZodResponse(GithubLiveUpdatesStatusSchema, { description: "Live updates of the repository" })
-	public async status(@CurrentActor() actor: ActorContext, @ZodParams(GithubLiveUpdatesParamsSchema) params: GithubLiveUpdatesParams): Promise<GithubLiveUpdatesStatus> {
-		return this.queryBus.execute(new GetLiveUpdatesStatusQuery(actor, params));
+	public status(@CurrentActor() actor: ActorContext, @ZodParams(GithubLiveUpdatesParamsSchema) params: GithubLiveUpdatesParams): Promise<GithubLiveUpdatesStatus> {
+		return this.liveUpdates.statusFor(actor, params);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)

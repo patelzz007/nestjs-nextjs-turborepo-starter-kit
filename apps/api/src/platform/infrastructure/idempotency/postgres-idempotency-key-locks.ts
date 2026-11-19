@@ -1,7 +1,7 @@
 import { CaughtValueSchema } from "@workspace/shared";
 import { createHash } from "node:crypto";
 
-import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, type OnApplicationShutdown } from "@nestjs/common";
 import { DatabaseError, Pool, type PoolClient } from "pg";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -36,7 +36,7 @@ function advisoryLockKey(key: IdempotencyRecordKey): [number, number] {
  * crashed), so a duplicate issues exactly one lock statement however long it waits.
  */
 @Injectable()
-export class PostgresIdempotencyKeyLocks implements IdempotencyKeyLocks, OnModuleDestroy {
+export class PostgresIdempotencyKeyLocks implements IdempotencyKeyLocks, OnApplicationShutdown {
 	private readonly logger: Logger = new Logger(PostgresIdempotencyKeyLocks.name);
 	private readonly pool: Pool;
 
@@ -76,7 +76,8 @@ export class PostgresIdempotencyKeyLocks implements IdempotencyKeyLocks, OnModul
 		return { kind: "locked", lock: this.heldLock(client, high, low) };
 	}
 
-	public async onModuleDestroy(): Promise<void> {
+	/** Ends the lock pool once the HTTP server has closed, so no in-flight request loses its lock (ADR 095). */
+	public async onApplicationShutdown(): Promise<void> {
 		await this.pool.end();
 	}
 

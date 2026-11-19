@@ -4,6 +4,7 @@
 
 import { Logger, type Provider } from "@nestjs/common";
 import type Redis from "ioredis";
+import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "@workspace/messaging/nest";
 import { API_VERSION_PREFIX, APP_LINKS, apiRoutes, type EmailRenderContext } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -13,7 +14,6 @@ import { RATE_LIMITER, type RateLimiter } from "../../../platform/application/po
 import { MERCHANT_ACCESS } from "../../tenancy/public-api";
 import type { UnitOfWork } from "../../../platform/application/unit-of-work.port";
 import { LogService } from "../../../platform/infrastructure/logging/logs.service";
-import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../../platform/infrastructure/redis/redis.tokens";
 import type { NotificationsScope } from "../application/notifications-scope";
 import { PUSH_SENDER, SMS_SENDER, type PushSender, type SmsSender } from "../application/ports/channel-senders.port";
 import { IN_APP_SIGNAL, type InAppSignalPort } from "../application/ports/in-app-signal.port";

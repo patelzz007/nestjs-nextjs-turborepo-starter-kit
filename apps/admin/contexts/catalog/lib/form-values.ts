@@ -1,5 +1,5 @@
 // ============================================
-// lib/catalog/form-values.ts - catalog form values ⇄ shared API contracts
+// contexts/catalog/lib/form-values.ts -catalog form values ⇄ shared API contracts
 // ============================================
 // HTML inputs hold strings; the API contracts hold numbers, nulls and
 // optional fields. Each form schema below only CONVERTS the raw input (trim,

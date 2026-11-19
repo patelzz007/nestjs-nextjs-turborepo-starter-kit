@@ -22,9 +22,8 @@ import type { Prisma as PrismaNamespace } from "@prisma/client";
 import { Pool } from "pg";
 
 import { applyBaseModel } from "../prisma/engine/schema-engine";
-import { getApiConfig } from "../src/config/api-config";
 import { buildRlsApplyPlan, stripSqlComments } from "../prisma/security/apply-plan";
-import { applyRowLevelSecurity, getDatabaseUrl, policyDropsAllowed, runSqlScripts, type SqlScript } from "../prisma/security/apply";
+import { applyRowLevelSecurity, getDatabaseUrl, policyDropsAllowed, readDatabaseToolEnv, runSqlScripts, type SqlScript } from "../prisma/security/apply";
 import { renderSecurityFiles, type GeneratedFile } from "../prisma/security/generator";
 import {
 	collectRlsEnabledTableNames,
@@ -135,7 +134,8 @@ function schema(args: readonly string[]): number {
 // ── apply-security ────────────────────────────────────────────────────────
 
 async function applySecurity(args: readonly string[]): Promise<number> {
-	await applyRowLevelSecurity(out, getDatabaseUrl(), { allowPolicyDrops: policyDropsAllowed(args, getApiConfig().runtime.nodeEnv) });
+	const env = readDatabaseToolEnv();
+	await applyRowLevelSecurity(out, env.DATABASE_URL, { allowPolicyDrops: policyDropsAllowed(args, env.NODE_ENV) });
 	return EXIT_OK;
 }
 
@@ -326,7 +326,7 @@ async function auditSeedCoverage(databaseUrl: string, schemaTables: SeedCoverage
  * READ ONLY transaction with `row_security = off`, so it never writes and never sees an RLS-filtered view.
  */
 async function checkSeedCoverage(): Promise<number> {
-	const report = await auditSeedCoverage(getApiConfig().database.url, {
+	const report = await auditSeedCoverage(getDatabaseUrl(), {
 		tables: schemaTablesFromDmmf((await loadPrisma()).dmmf.datamodel.models),
 		schemaFileModelNames: listSchemaFileModelNames(readFileSync(schemaFile, "utf8")),
 	});
@@ -479,7 +479,7 @@ async function provisionBackupLogin(): Promise<number> {
 		return EXIT_FAILED;
 	}
 	const { login, password } = env.data.BACKUP_DATABASE_URL;
-	const pool = new Pool({ connectionString: getApiConfig().database.url, max: 1 });
+	const pool = new Pool({ connectionString: getDatabaseUrl(), max: 1 });
 	const client = await pool.connect();
 	try {
 		for (const statement of backupLoginSql(login, client.escapeLiteral(password))) {

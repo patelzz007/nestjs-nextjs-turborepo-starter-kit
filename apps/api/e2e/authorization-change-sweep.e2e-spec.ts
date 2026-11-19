@@ -63,7 +63,7 @@ describe("Authorization change sweep (integration)", () => {
 	});
 
 	afterAll(async () => {
-		await prisma.onModuleDestroy();
+		await prisma.onApplicationShutdown();
 		await verifier.end();
 	});
 

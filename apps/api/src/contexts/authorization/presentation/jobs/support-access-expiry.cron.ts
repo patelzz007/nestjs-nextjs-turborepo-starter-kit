@@ -17,7 +17,7 @@ export class SupportAccessExpiryCron {
 
 	public constructor(private readonly dispatcher: SystemCommandDispatcher) {}
 
-	@Cron(CronExpression.EVERY_5_MINUTES)
+	@Cron(CronExpression.EVERY_5_MINUTES, { waitForCompletion: true })
 	public async expireGrants(): Promise<void> {
 		const actor = authorizationSystemActor(SUPPORT_ACCESS_EXPIRY_OPERATION, "cron", "Expire support access grants past their expiry");
 		const result = await this.dispatcher.dispatch(new ExpireSupportAccessGrantsCommand(actor), { kind: "cron", name: "support-access-expiry" });

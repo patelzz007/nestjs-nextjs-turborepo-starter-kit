@@ -1,9 +1,8 @@
-import { Controller, Get, HttpStatus, Post } from "@nestjs/common";
-import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { Get, HttpStatus, Post } from "@nestjs/common";
+import { CommandBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
-	apiPath,
 	RequestClaimOtpResponseSchema,
 	RewardClaimCreatedResponseSchema,
 	RewardClaimQrResponseSchema,
@@ -16,6 +15,7 @@ import {
 } from "@workspace/shared";
 import type { z } from "zod";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
@@ -25,18 +25,17 @@ import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presenta
 import { ClaimRewardCommand } from "../../application/commands/claim-reward/claim-reward.command";
 import { IssueClaimQrCodesCommand } from "../../application/commands/issue-claim-qr-codes/issue-claim-qr-codes.command";
 import { RequestClaimOtpCommand } from "../../application/commands/request-claim-otp/request-claim-otp.command";
-import { GetMyClaimQuery } from "../../application/queries/get-my-claim/get-my-claim.query";
-import { ListMyClaimsQuery } from "../../application/queries/list-my-claims/list-my-claims.query";
+import { ConsumerClaimsApplicationService } from "../../application/services/consumer-claims.application-service";
 import { CLAIM_OTP_REQUEST_OPERATION, CLAIM_REWARD_OPERATION } from "../../application/ports/claims.tokens";
 
 /** A customer's own reward claims: OTP, claim, wallet list and detail, and the QR codes. */
 @ApiTags("Claims")
 @ApiBearerAuth()
-@Controller(apiPath("/claims"))
+@ApiController("/claims")
 export class ConsumerClaimsController {
 	public constructor(
 		private readonly commandBus: CommandBus,
-		private readonly queryBus: QueryBus,
+		private readonly claims: ConsumerClaimsApplicationService,
 	) {}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
@@ -70,7 +69,7 @@ export class ConsumerClaimsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.claims.list.input) query: z.output<typeof apiContract.claims.list.input>,
 	): Promise<PaginatedServiceResult<RewardClaimResponse>> {
-		return this.queryBus.execute(new ListMyClaimsQuery(actor, query));
+		return this.claims.listMyClaims(actor, query);
 	}
 
 	@Get(":claimId")
@@ -80,7 +79,7 @@ export class ConsumerClaimsController {
 		@CurrentActor() actor: ActorContext,
 		@ZodParams(apiContract.claims.get.input) params: z.output<typeof apiContract.claims.get.input>,
 	): Promise<RewardClaimResponse> {
-		return this.queryBus.execute(new GetMyClaimQuery(actor, params));
+		return this.claims.getMyClaim(actor, params);
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)

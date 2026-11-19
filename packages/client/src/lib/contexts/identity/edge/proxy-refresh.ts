@@ -1,5 +1,5 @@
 // ============================================
-// lib/proxy-refresh.ts - Server-side (proxy) token refresh
+// lib/contexts/identity/edge/proxy-refresh.ts -Server-side (proxy) token refresh
 // Node-safe: uses only fetch/atob (no Node APIs), so it runs wherever the
 // proxy does. Next.js 16 runs `proxy.ts` on the Node.js runtime by design
 // (only legacy `middleware.ts` can opt into Edge), so no Edge runtime setup

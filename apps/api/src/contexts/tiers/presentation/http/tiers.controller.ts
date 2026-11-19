@@ -5,10 +5,11 @@
 // signed-out visitors too, as Bronze); the tier page is the
 // signed-in customer's own, refused (404 TIERS_DISABLED) while tiers are off.
 
-import { Controller, Get, Header, Inject } from "@nestjs/common";
+import { Get, Header, Inject } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, MyTierSchema, TierAvailabilitySchema, type MyTier, type TierAvailability } from "@workspace/shared";
+import { MyTierSchema, TierAvailabilitySchema, type MyTier, type TierAvailability } from "@workspace/shared";
 
+import { ApiController } from "../../../../platform/presentation/http/versioning/api-controller.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { FEATURE_FLAGS_EVALUATE_OPERATION } from "../../../feature-flags/public-api";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -25,7 +26,7 @@ const PUBLIC_ACTOR = { allowAnonymous: true };
 const AVAILABILITY_CACHE_CONTROL = "private, no-store, max-age=0";
 
 @ApiTags("Tiers")
-@Controller(apiPath("/tiers"))
+@ApiController("/tiers")
 export class TiersController {
 	public constructor(@Inject(TIER_READ_SERVICE) private readonly tiers: Pick<TierReadService, "availability" | "myTier">) {}
 
