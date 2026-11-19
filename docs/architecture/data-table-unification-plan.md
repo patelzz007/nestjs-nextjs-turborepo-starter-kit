@@ -1,3 +1,16 @@
+---
+title: "Data table unification plan"
+description: "The approved outline (2026-11-19) for replacing the web and mobile data-table and data-grid components with one dumb DataTable, one dumb Spreadsheet and one private engine, rebuilding every ShadTable pattern on them, and porting the same code to nextjs-admin-dashboard-layout and expo-boilerplate."
+author: "Platform Team"
+category: "Architecture"
+date: 1795046400000
+lastUpdated: 1795046400000
+editedAt: 1795063005000
+coverImage: "/images/covers/architecture/data-table-unification-plan.webp"
+order: 10
+tags: ["architecture", "ui", "data-table", "spreadsheet", "mobile", "plan"]
+---
+
 # Data table unification plan
 
 | | |
