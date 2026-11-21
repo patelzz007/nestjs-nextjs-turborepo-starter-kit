@@ -6,6 +6,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import { PRERENDER_REQUEST_HEADERS } from "./src/lib/prerender";
 import { isPublishedGuide } from "./src/lib/publishing";
 
 /** Public origin for canonical URLs, the sitemap and RSS (see `src/lib/site.ts`). */
@@ -68,6 +69,8 @@ export default defineConfig({
 				crawlLinks: true,
 				autoSubfolderIndex: false,
 				failOnError: true,
+				// A fresh connection per page: a reused idle one can be reset mid-request (see `src/lib/prerender.ts`).
+				headers: { ...PRERENDER_REQUEST_HEADERS },
 				// Every page is listed in PAGES. Discovery would add the index routes by their ids (`/docs/`,
 				// `/blog/`) and write a second copy of each (`docs/index.html` beside `docs.html`).
 				autoStaticPathsDiscovery: false,
