@@ -7,6 +7,7 @@ category: "Architecture"
 date: 1795219200000
 lastUpdated: 1795219200000
 editedAt: 1795272885000
+coverImage: "/images/covers/architecture/go-migration-plan.webp"
 order: 11
 ---
 
