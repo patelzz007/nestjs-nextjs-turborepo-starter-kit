@@ -2,28 +2,17 @@
 
 import type * as React from "react";
 
-import { DataTable, type Filter } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableFilter, type DataTableSearch } from "@workspace/ui/components/data-table";
 
-import { DOCUMENT_SECTIONS, SECTION_COLUMNS, STATUS_FILTER, TYPE_FILTER } from "./data-table-sample";
+import { DOCUMENT_SECTIONS, getSectionId, SECTION_COLUMNS, SECTION_PAGING, STATUS_FILTER, TYPE_FILTER, type DocumentSection } from "./data-table-sample";
 
-const FILTERS: Filter[] = [STATUS_FILTER, TYPE_FILTER];
-const SEARCH_KEYS: string[] = ["header", "reviewer"];
-/** Typing settles for this long before the rows are filtered, so a large table stays responsive. */
-const SEARCH_DEBOUNCE_MS = 200;
-const PAGE_SIZE = 5;
+/** The search box matches these row fields, by key: any field of the row, shown as a column or not. */
+const SEARCH: DataTableSearch<DocumentSection> = { keys: ["header", "reviewer"] };
 
+/** A `select` filter picks one option; a `multi-select` filter picks any number from a searchable list. */
+const FILTERS: readonly DataTableFilter[] = [STATUS_FILTER, TYPE_FILTER];
+
+/** Search and filters work together, each option shows how many rows it has, and the toolbar counts the matches. */
 export function DataTable2Example(): React.JSX.Element {
-	return (
-		<DataTable
-			data={DOCUMENT_SECTIONS}
-			columns={SECTION_COLUMNS}
-			searchKeys={SEARCH_KEYS}
-			searchDebounceMs={SEARCH_DEBOUNCE_MS}
-			filters={FILTERS}
-			pageSize={PAGE_SIZE}
-			title="Document sections"
-			description="Search by section or reviewer, then narrow by status and type."
-			emptyState={{ title: "No sections match", description: "Clear the search or a filter to see more." }}
-		/>
-	);
+	return <DataTable data={DOCUMENT_SECTIONS} columns={SECTION_COLUMNS} getRowId={getSectionId} search={SEARCH} filters={FILTERS} paging={SECTION_PAGING} />;
 }

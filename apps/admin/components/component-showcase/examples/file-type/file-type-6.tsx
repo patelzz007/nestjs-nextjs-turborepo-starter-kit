@@ -4,13 +4,9 @@ import * as React from "react";
 
 import { PLATFORM_DISPLAY_REGION, utcEpochMs } from "@workspace/shared";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
-import { useState } from "react";
-import { DataGrid, DataGridContainer, dataGridFeatures, type DataGridFeatures } from "@workspace/ui/components/data-grid/data-grid";
-import { DataGridColumnHeader } from "@workspace/ui/components/data-grid/data-grid-column-header";
-import { DataGridScrollArea } from "@workspace/ui/components/data-grid/data-grid-scroll-area";
-import { DataGridTable } from "@workspace/ui/components/data-grid/data-grid-table";
+import { DataTable, type DataTableColumns, type DataTableFeatures, type DataTableSortingOptions } from "@workspace/ui/components/data-table";
 import { FileType, getFileType, getFileTypeCategory, type FileTypeCategory } from "@workspace/ui/components/file-type";
-import { useTable, type CellContext, type ColumnDef, type HeaderContext, type Row, type SortingState } from "@tanstack/react-table";
+import type { CellContext, Row } from "@tanstack/react-table";
 
 interface FileItem {
 	readonly id: string;
@@ -208,28 +204,11 @@ function compareByName(a: FileItem, b: FileItem): number {
 	return collator.compare(a.name, b.name);
 }
 
-function compareRowsByName(a: Row<DataGridFeatures, FileItem>, b: Row<DataGridFeatures, FileItem>): number {
+function compareRowsByName(a: Row<DataTableFeatures, FileItem>, b: Row<DataTableFeatures, FileItem>): number {
 	return compareByName(a.original, b.original);
 }
 
-type FileCell = CellContext<DataGridFeatures, FileItem>;
-type FileHeader = HeaderContext<DataGridFeatures, FileItem>;
-
-function NameHeader({ column }: FileHeader): React.JSX.Element {
-	return <DataGridColumnHeader title="Name" column={column} />;
-}
-function TypeHeader({ column }: FileHeader): React.JSX.Element {
-	return <DataGridColumnHeader title="Type" column={column} />;
-}
-function SizeHeader({ column }: FileHeader): React.JSX.Element {
-	return <DataGridColumnHeader title="Size" column={column} />;
-}
-function ModifiedHeader({ column }: FileHeader): React.JSX.Element {
-	return <DataGridColumnHeader title="Modified" column={column} />;
-}
-function OwnerHeader({ column }: FileHeader): React.JSX.Element {
-	return <DataGridColumnHeader title="Owner" column={column} />;
-}
+type FileCell = CellContext<DataTableFeatures, FileItem>;
 
 function NameCell({ row }: FileCell): React.JSX.Element {
 	const file = row.original;
@@ -259,12 +238,13 @@ function fileId(row: FileItem): string {
 	return row.id;
 }
 
-const COLUMNS: ColumnDef<DataGridFeatures, FileItem>[] = [
-	{ accessorKey: "name", id: "name", header: NameHeader, cell: NameCell, sortFn: compareRowsByName, size: 300 },
-	{ id: "type", accessorFn: kindOf, header: TypeHeader, size: 130 },
+// A string header becomes the table's own sortable column header.
+const COLUMNS: DataTableColumns<FileItem> = [
+	{ accessorKey: "name", id: "name", header: "Name", cell: NameCell, sortFn: compareRowsByName, size: 300 },
+	{ id: "type", accessorFn: kindOf, header: "Type", size: 130 },
 	{
 		accessorKey: "size",
-		header: SizeHeader,
+		header: "Size",
 		cell: SizeCell,
 		// Folders have no byte size, so they sit last in both directions.
 		sortFn: "basic",
@@ -279,34 +259,14 @@ const COLUMNS: ColumnDef<DataGridFeatures, FileItem>[] = [
 		},
 	},
 	// ISO dates sort chronologically as plain text.
-	{ accessorKey: "modifiedAtEpochMs", header: ModifiedHeader, cell: ModifiedCell, sortFn: "basic", size: 130 },
-	{ accessorKey: "owner", header: OwnerHeader, size: 140 },
+	{ accessorKey: "modifiedAtEpochMs", header: "Modified", cell: ModifiedCell, sortFn: "basic", size: 130 },
+	{ accessorKey: "owner", header: "Owner", size: 140 },
 ];
 
-const INITIAL_SORTING: SortingState = [{ id: "name", desc: false }];
+/** Sorted by name to start with, and a third click returns to the listed order. */
+const SORTING: DataTableSortingOptions = { initial: [{ id: "name", desc: false }], cycle: "asc-desc-none" };
 
 export function FileType6Example(): React.JSX.Element {
-	const [sorting, setSorting] = useState<SortingState>(INITIAL_SORTING);
-
-	const table = useTable({
-		features: dataGridFeatures,
-		// The shared bundle registers a pagination row model; manualPagination
-		// says the data is already the page, so every file renders.
-		manualPagination: true,
-		columns: COLUMNS,
-		data: files,
-		getRowId: fileId,
-		state: { sorting },
-		onSortingChange: setSorting,
-	});
-
-	return (
-		<DataGrid table={table} recordCount={files.length}>
-			<DataGridContainer>
-				<DataGridScrollArea>
-					<DataGridTable />
-				</DataGridScrollArea>
-			</DataGridContainer>
-		</DataGrid>
-	);
+	// No `paging`: every file shows.
+	return <DataTable data={files} columns={COLUMNS} getRowId={fileId} sorting={SORTING} />;
 }

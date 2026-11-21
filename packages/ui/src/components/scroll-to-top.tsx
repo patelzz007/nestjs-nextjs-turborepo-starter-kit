@@ -5,9 +5,9 @@ import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider"
 import { ChevronUp } from "lucide-react";
 import * as React from "react";
 
-import { mergeRefs } from "../lib/core/merge-refs";
-import { findPageScrollContainer } from "../lib/core/scroll-container";
-import { cn } from "../lib/core/utils";
+import { mergeRefs } from "@workspace/ui/lib/core/merge-refs";
+import { findPageScrollContainer } from "@workspace/ui/lib/core/scroll-container";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 /** How far (px) the page must scroll before the button appears. */
 export const DEFAULT_SCROLL_TO_TOP_THRESHOLD_PX = 300;

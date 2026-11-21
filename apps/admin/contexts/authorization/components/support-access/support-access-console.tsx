@@ -19,7 +19,7 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Button } from "@workspace/ui/components/button";
-import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableEmptyState, type DataTableFeatures, type DataTableFilter, type DataTablePaging } from "@workspace/ui/components/data-table";
 import { toastMessage } from "@workspace/ui/components/toast";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
@@ -27,7 +27,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
 import { toastMutationError } from "@/lib/api/mutation-error";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildReadOnlyTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
@@ -58,6 +58,10 @@ const TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
 function grantRowId(grant: SupportAccessGrantDetail): string {
 	return grant.id;
 }
+
+const GRANTS_BULK = buildReadOnlyTableBulk<SupportAccessGrantDetail>("support-access-grants.csv", ["status", "mode", "expiresAt", "createdAt"]);
+const GRANTS_PAGING: DataTablePaging = { pageSizeOptions: SUPPORT_ACCESS_PAGE_SIZE_OPTIONS };
+const GRANTS_EMPTY: DataTableEmptyState = { title: "No grants", description: "No support access grants match this filter." };
 
 interface RevokeGrantButtonProps {
 	readonly grant: SupportAccessGrantDetail;
@@ -97,7 +101,6 @@ export const SupportAccessConsole = React.forwardRef<HTMLDivElement, SupportAcce
 		placeholderData: keepPreviousData,
 		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
 	});
-	const isRefetching: boolean = grantsQuery.isFetching && !grantsQuery.isLoading;
 	const rows = React.useMemo((): readonly SupportAccessGrantDetail[] => grantsQuery.data?.data ?? [], [grantsQuery.data?.data]);
 
 	const refreshGrants = React.useCallback(async (): Promise<void> => {
@@ -136,18 +139,6 @@ export const SupportAccessConsole = React.forwardRef<HTMLDivElement, SupportAcce
 		updateUrlState({ status: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
 	}, [updateUrlState]);
 
-	const { pagination } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: supportAccessGrantListQuery,
-		totalCount: readPaginatedTotal(grantsQuery.data?.meta),
-		nextCursor: readPaginatedNextCursor(grantsQuery.data?.meta),
-		resetKey: SUPPORT_ACCESS_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: grantRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered: statusFilter !== undefined,
-	});
-
 	const handleManualColumnFilterChange = React.useCallback(
 		(filterKey: string, value: string | null): void => {
 			if (filterKey !== "status") {
@@ -159,13 +150,28 @@ export const SupportAccessConsole = React.forwardRef<HTMLDivElement, SupportAcce
 		[updateUrlState],
 	);
 	const manualColumnFilters = React.useMemo((): Readonly<Record<string, string>> => ({ status: statusFilter ?? ALL_FILTER_OPTION }), [statusFilter]);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: supportAccessGrantListQuery,
+		totalCount: readPaginatedTotal(grantsQuery.data?.meta),
+		nextCursor: readPaginatedNextCursor(grantsQuery.data?.meta),
+		getRowId: grantRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		onClearFilters: handleClearFilters,
+	});
 	const tableFilters = React.useMemo(
-		(): Filter[] => [
-			{ key: "status", label: "Status", options: SupportAccessGrantStatusSchema.options.map((status) => ({ value: status, label: SUPPORT_ACCESS_STATUS_LABELS[status] })) },
+		(): DataTableFilter[] => [
+			{
+				kind: "select",
+				column: "status",
+				label: "Status",
+				options: SupportAccessGrantStatusSchema.options.map((status) => ({ value: status, label: SUPPORT_ACCESS_STATUS_LABELS[status] })),
+			},
 		],
 		[],
 	);
-	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("support-access-grants.csv", ["status", "mode", "expiresAt", "createdAt"]), []);
 
 	const mobileCardRender = React.useCallback(
 		(grant: SupportAccessGrantDetail): React.ReactNode => (
@@ -241,18 +247,17 @@ export const SupportAccessConsole = React.forwardRef<HTMLDivElement, SupportAcce
 					<DataTable
 						columns={columns}
 						data={rows}
+						getRowId={getRowId}
+						source={source}
 						labels={TABLE_LABELS}
-						checkbox={checkbox}
-						enableColumnVisibility
+						selection={GRANTS_BULK.selection}
+						exporting={GRANTS_BULK.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
 						filters={tableFilters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						mobileCardRender={mobileCardRender}
-						pagination={pagination}
-						pageSizeOptions={SUPPORT_ACCESS_PAGE_SIZE_OPTIONS}
-						isLoading={grantsQuery.isLoading}
-						isRefetching={isRefetching}
-						emptyState={{ title: "No grants", description: "No support access grants match this filter." }}
+						mobileCard={mobileCardRender}
+						paging={GRANTS_PAGING}
+						status={toTableStatus(grantsQuery)}
+						emptyState={GRANTS_EMPTY}
 					/>
 				</CardContent>
 			</Card>

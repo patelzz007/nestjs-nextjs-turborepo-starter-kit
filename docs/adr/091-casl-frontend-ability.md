@@ -5,8 +5,8 @@ description: "Every app shows and hides UI through one CASL ability built from t
 author: "Platform Team"
 category: "Architecture decisions"
 date: 1794960000000
-lastUpdated: 1794960000000
-editedAt: 1794960000000
+lastUpdated: 1795132800000
+editedAt: 1795132800000
 coverImage: "/images/covers/adr/091-casl-frontend-ability.webp"
 order: 91
 ---
@@ -40,3 +40,4 @@ and PostgreSQL row-level security ([ADR 090](./090-permission-level-tenant-rls.m
 |---|---|
 | One standard API, typed against the catalogue: a misspelt verb or noun fails to compile | A component rendered outside a provider throws instead of quietly denying |
 | No authorization logic in the browser to drift from the API | A record-specific decision (a share, an owner) needs the API to say so per record: planned as per-row `capabilities` on rewards (follow-up) |
+| | **About 6 KiB (gzip) on every page whose shell mounts the provider**, measured 2026-11-20: 3.0 KiB is `Ability` and `@casl/react`, 3.2 KiB is `@ucast/*`, CASL's MongoDB-style condition engine. Our rules never carry conditions, so the engine is unused, but `@casl/ability`'s one entry file imports it at the top level and no bundler can drop it. The owner chose to keep CASL and pay this (2026-11-20). The merchant routes it pushed within 1% of their budget were re-budgeted to measured × 1.1 in `budgets/bundle.json`. Replacing CASL with an in-house set of `ACTION:RESOURCE` pairs, with the same `can()`, `<Can>` and `useAbility()` API, would win it back. |

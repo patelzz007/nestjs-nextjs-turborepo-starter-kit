@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/avatar/avatar-1").then((m) => m.Avatar1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/avatar/avatar-2").then((m) => m.Avatar2Example), { loading: FeatureLoading });
@@ -55,6 +55,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic avatar. Best for the minimal markup: 1 photo at the default size with 2 letter initials kept as the fallback.",
 		file: "avatar-1",
 		source:
@@ -65,6 +66,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-2",
 		label: "Fallbacks",
 		anchor: "fallbacks",
+		part: null,
 		description: "Avatar with fallback. Best for photo free placeholders: 2 letter initials and a user icon, both on the muted fallback fill.",
 		file: "avatar-2",
 		source:
@@ -75,6 +77,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-3",
 		label: "Sizes",
 		anchor: "sizes",
+		part: null,
 		description: "Avatars with different sizes. Best for the 3 built-in steps of the size prop, sm, default and lg, shown side by side on 1 photo.",
 		file: "avatar-3",
 		source:
@@ -85,6 +88,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-4",
 		label: "Border Radius",
 		anchor: "border-radius",
+		part: null,
 		description: "Avatars with different border radiuses. Best for square and soft cornered photos with md, lg and xl radius set next to the default circle.",
 		file: "avatar-4",
 		source:
@@ -95,6 +99,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-5",
 		label: "Custom Sizes",
 		anchor: "custom-sizes",
+		part: null,
 		description: "Avatars with custom sizes. Best for free sizing through className at 16, 32, 48 and 64 pixels, beyond the 3 presets of the size prop.",
 		file: "avatar-5",
 		source:
@@ -105,6 +110,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-6",
 		label: "Status Dots",
 		anchor: "status-dots",
+		part: null,
 		description: "Avatar with an online status badge. Best for plain presence dots in the default bottom right spot, colored primary, green, yellow and destructive.",
 		file: "avatar-6",
 		source:
@@ -115,6 +121,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-7",
 		label: "Badge Icons",
 		anchor: "badge-icons",
+		part: null,
 		description: "Avatar with badge icon. Best for corner badges holding a plus, check, star or shield icon on primary, success, warning and info fills.",
 		file: "avatar-7",
 		source:
@@ -125,6 +132,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-8",
 		label: "Round Badge Corners",
 		anchor: "round-badge-corners",
+		part: null,
 		description: "Avatar with different badge positions. Best for round photos with the dot moved to each of the 4 corners, sitting on the edge of the circle.",
 		file: "avatar-8",
 		source:
@@ -135,6 +143,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-9",
 		label: "Square Badge Corners",
 		anchor: "square-badge-corners",
+		part: null,
 		description: "Avatar with different badge positions. Best for square photos with the dot pushed 4 pixels past each of the 4 corners.",
 		file: "avatar-9",
 		source:
@@ -145,6 +154,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-10",
 		label: "Avatar Group",
 		anchor: "avatar-group",
+		part: null,
 		description: "Basic avatar group. Best for a stack of 3 overlapping photos with a background ring and no count chip at the end.",
 		file: "avatar-10",
 		source:
@@ -155,6 +165,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-11",
 		label: "Group With Count",
 		anchor: "group-with-count",
+		part: null,
 		description: "Avatar group with numerical count. Best for a 3 photo stack closed by a muted chip from the group count part that reads +3.",
 		file: "avatar-11",
 		source:
@@ -165,6 +176,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-12",
 		label: "Plus Chip Group",
 		anchor: "plus-chip-group",
+		part: null,
 		description: "Avatar group with an icon count. Best for a 3 photo stack ending in a round plus chip in place of a number.",
 		file: "avatar-12",
 		source:
@@ -175,6 +187,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-13",
 		label: "Border Rings",
 		anchor: "border-rings",
+		part: null,
 		description: "Avatar with a distinct border ring. Best for offset outer rings in 4 colors, primary, destructive, violet and yellow, around each photo.",
 		file: "avatar-13",
 		source:
@@ -185,6 +198,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-14",
 		label: "Soft Fallbacks",
 		anchor: "soft-fallbacks",
+		part: null,
 		description:
 			"Avatar with light background color fallback. Best for initials on soft tinted fills with a matching border, including dark mode shades for green and fuchsia.",
 		file: "avatar-14",
@@ -196,6 +210,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-15",
 		label: "Solid Fallbacks",
 		anchor: "solid-fallbacks",
+		part: null,
 		description:
 			"Avatar with a solid background color fallback. Best for initials in white or primary foreground text on full strength primary, destructive, green and blue fills.",
 		file: "avatar-15",
@@ -207,6 +222,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-16",
 		label: "User Details",
 		anchor: "user-details",
+		part: null,
 		description: "Avatar with user details and badge. Best for a name line with a small Pro badge and a job title stacked beside the photo.",
 		file: "avatar-16",
 		source:
@@ -217,6 +233,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-17",
 		label: "Grayscale",
 		anchor: "grayscale",
+		part: null,
 		description: "Avatar with grayscale image filter. Best for a single photo turned black and white by the grayscale class on the image only.",
 		file: "avatar-17",
 		source:
@@ -227,6 +244,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-18",
 		label: "Group Presence",
 		anchor: "group-presence",
+		part: null,
 		description: "Avatar group with online status on one. Best for a 3 person stack where only the first photo carries a success colored presence dot.",
 		file: "avatar-18",
 		source:
@@ -237,6 +255,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-19",
 		label: "Outline Button",
 		anchor: "outline-button",
+		part: null,
 		description: "Avatar inside small outline button. Best for a 20 pixel photo next to an @ handle inside a small outline button.",
 		file: "avatar-19",
 		source:
@@ -247,6 +266,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-20",
 		label: "Social Proof Pill",
 		anchor: "social-proof-pill",
+		part: null,
 		description: "Avatar social proof with text label. Best for a bordered pill with 4 small stacked photos and a bold 100K+ figure in its caption.",
 		file: "avatar-20",
 		source:
@@ -257,6 +277,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-21",
 		label: "Compact Social Proof",
 		anchor: "compact-social-proof",
+		part: null,
 		description: "Compact social proof with initials. Best for a Frame panel holding 4 developer photos and a Joined by 500+ developers caption.",
 		file: "avatar-21",
 		source:
@@ -267,6 +288,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-22",
 		label: "Lift Tooltips",
 		anchor: "lift-tooltips",
+		part: null,
 		description: "Avatar group with hover tooltips and lift effect. Best for a hand built overlap where the hovered photo rises 4 pixels with a shadow and a name tooltip.",
 		file: "avatar-22",
 		source:
@@ -277,6 +299,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-23",
 		label: "Hover Fan",
 		anchor: "hover-fan",
+		part: null,
 		description: "Avatar group with hover effect. Best for a stack that fans apart on hover, each photo sliding by its index and the hovered one growing 10 percent.",
 		file: "avatar-23",
 		source:
@@ -287,6 +310,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-24",
 		label: "Fan With Tooltips",
 		anchor: "fan-with-tooltips",
+		part: null,
 		description: "Avatar group with hover effect and tooltips. Best for the fan out hover stack with a name tooltip on each photo, the Avatar itself rendered as the trigger.",
 		file: "avatar-24",
 		source:
@@ -297,6 +321,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-25",
 		label: "Bordered Count Pill",
 		anchor: "bordered-count-pill",
+		part: null,
 		description: "Avatar group with numerical count. Best for a bordered pill of 4 small photos split by background borders, with a plain +3 text tally.",
 		file: "avatar-25",
 		source:
@@ -307,6 +332,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-26",
 		label: "Pill Outline Button",
 		anchor: "pill-outline-button",
+		part: null,
 		description: "Pilled small outline button with avatar. Best for a pill shaped outline button whose 24 pixel photo hugs its left edge inside a background border.",
 		file: "avatar-26",
 		source:
@@ -317,6 +343,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-27",
 		label: "Pill Primary Button",
 		anchor: "pill-primary-button",
+		part: null,
 		description: "Pilled small button with avatar. Best for a solid primary pill button with a thin primary border around the 24 pixel photo at its left.",
 		file: "avatar-27",
 		source:
@@ -327,6 +354,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-28",
 		label: "Empty State",
 		anchor: "empty-state",
+		part: null,
 		description: "Avatar inside an empty state example. Best for a no collaborators prompt with 3 grayscale photos, an add person chip and invite copy below.",
 		file: "avatar-28",
 		source:
@@ -337,6 +365,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-29",
 		label: "Group Add Button",
 		anchor: "group-add-button",
+		part: null,
 		description: "Avatar group with icon count and button. Best for a 3 photo stack with a +5 chip beside a round add user button that shows a tooltip.",
 		file: "avatar-29",
 		source:
@@ -347,6 +376,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-30",
 		label: "Loading State",
 		anchor: "loading-state",
+		part: null,
 		description: "Avatar with loading state demonstration. Best for a spinner over a 60 percent background veil on the photo, switched on and off by a demo timer.",
 		file: "avatar-30",
 		source:
@@ -357,6 +387,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-31",
 		label: "Custom Badge",
 		anchor: "custom-badge",
+		part: null,
 		description: "Avatar with custom badge. Best for a blue verified rosette drawn as inline SVG, placed at a different corner on each of 4 large photos.",
 		file: "avatar-31",
 		source:
@@ -367,6 +398,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-32",
 		label: "Pulsing Ring",
 		anchor: "pulsing-ring",
+		part: null,
 		description: "Avatar with ring animation. Best for a photo and green offset ring pulsing together, with a green dot drawn as a plain span past the bottom right.",
 		file: "avatar-32",
 		source:
@@ -377,6 +409,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-33",
 		label: "Gradient Ring",
 		anchor: "gradient-ring",
+		part: null,
 		description: "Avatar with gradient animated ring. Best for a story style ring: a blurred yellow to violet gradient spinning behind the photo, brighter on hover.",
 		file: "avatar-33",
 		source:
@@ -387,6 +420,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-34",
 		label: "Multiple Badges",
 		anchor: "multiple-badges",
+		part: null,
 		description: "Avatar with multiple badges. Best for a presence dot at the bottom right and a red count of 3 at the top right of one photo.",
 		file: "avatar-34",
 		source:
@@ -397,6 +431,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-avatar-35",
 		label: "Dropdown Menu",
 		anchor: "dropdown-menu",
+		part: null,
 		description: "Compact avatar dropdown menu. Best for a pill trigger with photo, name and up down chevron that opens Profile, Settings, Teams, Invite and Log out.",
 		file: "avatar-35",
 		source:
@@ -442,6 +477,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function AvatarFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function AvatarFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

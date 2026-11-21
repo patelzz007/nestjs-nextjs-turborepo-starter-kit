@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/drawer/drawer-1").then((m) => m.Drawer1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/drawer/drawer-2").then((m) => m.Drawer2Example), { loading: FeatureLoading });
@@ -25,6 +25,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-drawer-1",
 		label: "Scrollable Content",
 		anchor: "scrollable-content",
+		part: null,
 		description: "A basic drawer with scrollable content. Best for the default bottom panel, capped at 80vh, that a downward swipe dismisses.",
 		file: "drawer-1",
 		source:
@@ -35,6 +36,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-drawer-2",
 		label: "Right Side",
 		anchor: "right-side",
+		part: null,
 		description: "A drawer that opens from the right side. Best for a panel docked to the right edge that the user swipes right to dismiss.",
 		file: "drawer-2",
 		source:
@@ -45,6 +47,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-drawer-3",
 		label: "Left Side",
 		anchor: "left-side",
+		part: null,
 		description: "A drawer that opens from the left side. Best for a panel docked to the left edge, closed by a swipe toward the left.",
 		file: "drawer-3",
 		source:
@@ -55,6 +58,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-drawer-4",
 		label: "Top Side",
 		anchor: "top-side",
+		part: null,
 		description: "A drawer that opens from the top side. Best for a drawer that drops from the top edge, capped at 80vh, and closes with an upward swipe.",
 		file: "drawer-4",
 		source:
@@ -65,6 +69,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-drawer-5",
 		label: "All Sides",
 		anchor: "all-sides",
+		part: null,
 		description: "Drawers opening from different sides. Best for a row of 4 triggers, one drawer per edge, for comparing the directions side by side.",
 		file: "drawer-5",
 		source:
@@ -110,6 +115,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function DrawerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function DrawerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

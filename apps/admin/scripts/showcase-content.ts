@@ -168,7 +168,7 @@ export function parseDocs(markdown: string, file: string, features: readonly Gen
 		if (feature === undefined) {
 			throw new Error(`${file}: \`\`\`${EXAMPLE_FENCE}\`\`\` names "${id}", which is not one of this component's features`);
 		}
-		return { id, label: feature.label, anchor: feature.anchor, file: feature.file, source: feature.source };
+		return { id, label: feature.label, anchor: feature.anchor, part: feature.part, file: feature.file, source: feature.source };
 	});
 	return { body: markdown.trim(), examples };
 }

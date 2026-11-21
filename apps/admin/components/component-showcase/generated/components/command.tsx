@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/command/command-1").then((m) => m.Command1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/command/command-2").then((m) => m.Command2Example), { loading: FeatureLoading });
@@ -28,6 +28,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-command-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic command. Best for an always open list inside a narrow Card, with a disabled Calculator row and shortcut hints on the Settings rows only.",
 		file: "command-1",
 		source:
@@ -38,6 +39,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-command-2",
 		label: "Shortcuts",
 		anchor: "shortcuts",
+		part: null,
 		description: "Command with shortcuts. Best for the smallest modal palette, a single Settings group of 3 rows with a shortcut hint on each.",
 		file: "command-2",
 		source:
@@ -48,6 +50,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-command-3",
 		label: "Groups",
 		anchor: "groups",
+		part: null,
 		description: "Command with groups. Best for a modal with 2 groups, Suggestions as plain rows and Settings rows with shortcut hints, split by a separator.",
 		file: "command-3",
 		source:
@@ -58,6 +61,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-command-4",
 		label: "Many Groups",
 		anchor: "many-groups",
+		part: null,
 		description: "Command with many groups. Best for a dense palette of 5 groups and 23 rows, from navigation and file actions to view, account and tools.",
 		file: "command-4",
 		source:
@@ -68,6 +72,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-command-5",
 		label: "File Search",
 		anchor: "file-search",
+		part: null,
 		description: "File search command palette. Best for a file finder whose rows show name, muted path and a type Badge, opened from a search style trigger with a Kbd hint.",
 		file: "command-5",
 		source:
@@ -78,6 +83,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-command-6",
 		label: "User Search",
 		anchor: "user-search",
+		part: null,
 		description: "User search command with avatars. Best for a people search with avatar, name over email, and a role Badge tinted per Admin, Editor or Viewer.",
 		file: "command-6",
 		source:
@@ -88,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-command-7",
 		label: "Action Palette",
 		anchor: "action-palette",
+		part: null,
 		description:
 			"Action palette with keyboard shortcuts. Best for task verbs grouped as Create, Navigate and System, from New Project and Invite Member to dark mode and sign out.",
 		file: "command-7",
@@ -99,6 +106,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-command-8",
 		label: "Recent & Favorites",
 		anchor: "recent-favorites",
+		part: null,
 		description:
 			"Command with recent and favorites sections. Best for a jump list of starred favorites, recent pages stamped 2m to 2h ago and help links, opened as Search Everything.",
 		file: "command-8",
@@ -145,6 +153,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CommandFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CommandFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -1,25 +1,23 @@
-import * as React from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable, type DataTableFeatures } from "@workspace/ui/components/data-table";
+"use client";
 
-interface Invoice {
-	readonly id: string;
-	readonly merchant: string;
-	readonly amount: string;
-}
+import type * as React from "react";
 
-const INVOICES: readonly Invoice[] = [
-	{ id: "INV-001", merchant: "Acme Coffee", amount: "RM 250.00" },
-	{ id: "INV-002", merchant: "Bayview Books", amount: "RM 150.00" },
-	{ id: "INV-003", merchant: "Corner Bakery", amount: "RM 350.00" },
-];
+import { DataTable, type DataTableColumns } from "@workspace/ui/components/data-table";
 
-const COLUMNS: ColumnDef<DataTableFeatures, Invoice>[] = [
-	{ accessorKey: "id", header: "Invoice" },
-	{ accessorKey: "merchant", header: "Merchant" },
-	{ accessorKey: "amount", header: "Amount" },
+import { DOCUMENT_SECTIONS, getSectionId, SectionStatusBadge, type DocumentSection } from "./data-table-sample";
+
+const SHOWN_SECTION_COUNT = 3;
+const SECTIONS: readonly DocumentSection[] = DOCUMENT_SECTIONS.slice(0, SHOWN_SECTION_COUNT);
+
+const COLUMNS: DataTableColumns<DocumentSection> = [
+	{ accessorKey: "header", header: "Section", size: 200 },
+	{ accessorKey: "status", header: "Status", size: 140, cell: ({ row }): React.JSX.Element => <SectionStatusBadge status={row.original.status} /> },
 ];
 
 export function DataTableDo2Example(): React.JSX.Element {
-	return <DataTable data={INVOICES} columns={COLUMNS} title="Invoices" />;
+	return (
+		<div className="w-full max-w-sm">
+			<DataTable data={SECTIONS} columns={COLUMNS} getRowId={getSectionId} />
+		</div>
+	);
 }

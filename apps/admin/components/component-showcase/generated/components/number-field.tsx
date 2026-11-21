@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/number-field/number-field-1").then((m) => m.NumberField1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/number-field/number-field-2").then((m) => m.NumberField2Example), { loading: FeatureLoading });
@@ -34,6 +34,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-number-field-1",
 		label: "Default Size",
 		anchor: "default-size",
+		part: null,
 		description: "Basic number field. Best for the default size with minus at the start, plus at the end and the value centered between them.",
 		file: "number-field-1",
 		source:
@@ -44,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-number-field-2",
 		label: "Small Size",
 		anchor: "small-size",
+		part: null,
 		description: "Basic number field. Best for the sm size, a 28px tall group with tighter input padding for dense rows and toolbars.",
 		file: "number-field-2",
 		source:
@@ -54,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-number-field-3",
 		label: "Large Size",
 		anchor: "large-size",
+		part: null,
 		description: "Basic number field. Best for the lg size, a 36px tall group with wider buttons and roomier vertical input padding.",
 		file: "number-field-3",
 		source:
@@ -64,6 +67,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-number-field-4",
 		label: "Buttons on Right",
 		anchor: "buttons-on-right",
+		part: null,
 		description: "Number field with buttons on right. Best for the value aligned left with minus and plus grouped side by side at the end of the field.",
 		file: "number-field-4",
 		source:
@@ -74,6 +78,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-number-field-5",
 		label: "Spinner Buttons",
 		anchor: "spinner-buttons",
+		part: null,
 		description: "Number field with spinner buttons. Best for up and down chevrons stacked in a small bordered box at the end, with the value aligned to the start.",
 		file: "number-field-5",
 		source:
@@ -84,6 +89,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-number-field-6",
 		label: "Form Validation",
 		anchor: "form-validation",
+		part: null,
 		description: "Number field in form. Best for a React Hook Form Controller binding the amount, with zod bounds, an error message and Cancel and Submit buttons.",
 		file: "number-field-6",
 		source:
@@ -129,6 +135,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function NumberFieldFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function NumberFieldFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -5,19 +5,58 @@
 import type { ShowcaseFeatureExample, ShowcaseGuidelineExample } from "@/components/component-showcase/showcase-feature";
 
 import { DataTable1Example } from "@/components/component-showcase/examples/data-table/data-table-1";
+import { DataTable12Example } from "@/components/component-showcase/examples/data-table/data-table-12";
 import { DataTable2Example } from "@/components/component-showcase/examples/data-table/data-table-2";
+import { DataTable30Example } from "@/components/component-showcase/examples/data-table/data-table-30";
+import { DataTable15Example } from "@/components/component-showcase/examples/data-table/data-table-15";
 import { DataTable3Example } from "@/components/component-showcase/examples/data-table/data-table-3";
 import { DataTable4Example } from "@/components/component-showcase/examples/data-table/data-table-4";
 import { DataTable5Example } from "@/components/component-showcase/examples/data-table/data-table-5";
 import { DataTable6Example } from "@/components/component-showcase/examples/data-table/data-table-6";
 import { DataTable7Example } from "@/components/component-showcase/examples/data-table/data-table-7";
+import { DataTable26Example } from "@/components/component-showcase/examples/data-table/data-table-26";
 import { DataTable8Example } from "@/components/component-showcase/examples/data-table/data-table-8";
 import { DataTable9Example } from "@/components/component-showcase/examples/data-table/data-table-9";
 import { DataTable10Example } from "@/components/component-showcase/examples/data-table/data-table-10";
 import { DataTable11Example } from "@/components/component-showcase/examples/data-table/data-table-11";
-import { DataTable12Example } from "@/components/component-showcase/examples/data-table/data-table-12";
 import { DataTable13Example } from "@/components/component-showcase/examples/data-table/data-table-13";
 import { DataTable14Example } from "@/components/component-showcase/examples/data-table/data-table-14";
+import { DataTable21Example } from "@/components/component-showcase/examples/data-table/data-table-21";
+import { DataTable22Example } from "@/components/component-showcase/examples/data-table/data-table-22";
+import { DataTable33Example } from "@/components/component-showcase/examples/data-table/data-table-33";
+import { DataTable23Example } from "@/components/component-showcase/examples/data-table/data-table-23";
+import { DataTable24Example } from "@/components/component-showcase/examples/data-table/data-table-24";
+import { DataTable25Example } from "@/components/component-showcase/examples/data-table/data-table-25";
+import { DataTable32Example } from "@/components/component-showcase/examples/data-table/data-table-32";
+import { DataTable31Example } from "@/components/component-showcase/examples/data-table/data-table-31";
+import { DataTable18Example } from "@/components/component-showcase/examples/data-table/data-table-18";
+import { DataTable19Example } from "@/components/component-showcase/examples/data-table/data-table-19";
+import { DataTable20Example } from "@/components/component-showcase/examples/data-table/data-table-20";
+import { DataTable16Example } from "@/components/component-showcase/examples/data-table/data-table-16";
+import { DataTable17Example } from "@/components/component-showcase/examples/data-table/data-table-17";
+import { DataTable27Example } from "@/components/component-showcase/examples/data-table/data-table-27";
+import { DataTable28Example } from "@/components/component-showcase/examples/data-table/data-table-28";
+import { DataTable29Example } from "@/components/component-showcase/examples/data-table/data-table-29";
+import { DataTableRecipeHeatmap } from "@/components/component-showcase/examples/data-table/data-table-recipe-heatmap";
+import { DataTableRecipeCohortRetention } from "@/components/component-showcase/examples/data-table/data-table-recipe-cohort-retention";
+import { DataTableRecipeConditionalFormatting } from "@/components/component-showcase/examples/data-table/data-table-recipe-conditional-formatting";
+import { DataTableRecipeProductionDashboard } from "@/components/component-showcase/examples/data-table/data-table-recipe-production-dashboard";
+import { DataTableRecipeKpi } from "@/components/component-showcase/examples/data-table/data-table-recipe-kpi";
+import { DataTableRecipeAnomalyInvestigation } from "@/components/component-showcase/examples/data-table/data-table-recipe-anomaly-investigation";
+import { DataTableRecipeComparison } from "@/components/component-showcase/examples/data-table/data-table-recipe-comparison";
+import { DataTableRecipeLiveStatus } from "@/components/component-showcase/examples/data-table/data-table-recipe-live-status";
+import { DataTableRecipeDeployments } from "@/components/component-showcase/examples/data-table/data-table-recipe-deployments";
+import { DataTableRecipeLogs } from "@/components/component-showcase/examples/data-table/data-table-recipe-logs";
+import { DataTableRecipeCrmEmployees } from "@/components/component-showcase/examples/data-table/data-table-recipe-crm-employees";
+import { DataTableRecipeJobQueue } from "@/components/component-showcase/examples/data-table/data-table-recipe-job-queue";
+import { DataTableRecipeTreeVariants } from "@/components/component-showcase/examples/data-table/data-table-recipe-tree-variants";
+import { DataTableRecipeFileBrowser } from "@/components/component-showcase/examples/data-table/data-table-recipe-file-browser";
+import { DataTableRecipeInventoryAllocation } from "@/components/component-showcase/examples/data-table/data-table-recipe-inventory-allocation";
+import { DataTableRecipePermissionsMatrix } from "@/components/component-showcase/examples/data-table/data-table-recipe-permissions-matrix";
+import { DataTableRecipeChangeReview } from "@/components/component-showcase/examples/data-table/data-table-recipe-change-review";
+import { DataTableRecipeCsvImport } from "@/components/component-showcase/examples/data-table/data-table-recipe-csv-import";
+import { DataTableRecipeScheduleMatrix } from "@/components/component-showcase/examples/data-table/data-table-recipe-schedule-matrix";
+import { DataTableRecipeAnimatedIcons } from "@/components/component-showcase/examples/data-table/data-table-recipe-animated-icons";
 import { DataTableDo1Example } from "@/components/component-showcase/examples/data-table/data-table-do-1";
 import { DataTableDont1Example } from "@/components/component-showcase/examples/data-table/data-table-dont-1";
 import { DataTableDo2Example } from "@/components/component-showcase/examples/data-table/data-table-do-2";
@@ -25,19 +64,58 @@ import { DataTableDont2Example } from "@/components/component-showcase/examples/
 
 export const FEATURE_EXAMPLES: readonly ShowcaseFeatureExample[] = [
 	{ id: "c-data-table-1", label: "Overview", anchor: "overview", component: DataTable1Example },
+	{ id: "c-data-table-12", label: "Pagination & Sorting", anchor: "pagination-sorting", component: DataTable12Example },
 	{ id: "c-data-table-2", label: "Search & Filters", anchor: "search-filters", component: DataTable2Example },
+	{ id: "c-data-table-30", label: "Date-Range Filter", anchor: "date-range-filter", component: DataTable30Example },
+	{ id: "c-data-table-15", label: "Loading, Empty & Error", anchor: "loading-empty-error", component: DataTable15Example },
 	{ id: "c-data-table-3", label: "Row Actions", anchor: "row-actions", component: DataTable3Example },
 	{ id: "c-data-table-4", label: "Bulk Selection", anchor: "bulk-selection", component: DataTable4Example },
 	{ id: "c-data-table-5", label: "Export", anchor: "export", component: DataTable5Example },
 	{ id: "c-data-table-6", label: "Inline Editing", anchor: "inline-editing", component: DataTable6Example },
-	{ id: "c-data-table-7", label: "Drag to Reorder", anchor: "drag-to-reorder", component: DataTable7Example },
+	{ id: "c-data-table-7", label: "Drag To Reorder", anchor: "drag-to-reorder", component: DataTable7Example },
+	{ id: "c-data-table-26", label: "CRUD With Row Status", anchor: "crud-with-row-status", component: DataTable26Example },
 	{ id: "c-data-table-8", label: "Column Visibility & Pinning", anchor: "column-visibility-pinning", component: DataTable8Example },
-	{ id: "c-data-table-9", label: "Pagination & Sorting", anchor: "pagination-sorting", component: DataTable9Example },
-	{ id: "c-data-table-10", label: "Mobile Cards", anchor: "mobile-cards", component: DataTable10Example },
-	{ id: "c-data-table-11", label: "Loading, Empty & Error", anchor: "loading-empty-error", component: DataTable11Example },
-	{ id: "c-data-table-12", label: "Virtualised Rows", anchor: "virtualised-rows", component: DataTable12Example },
-	{ id: "c-data-table-13", label: "Server Mode", anchor: "server-mode", component: DataTable13Example },
-	{ id: "c-data-table-14", label: "Kitchen Sink", anchor: "kitchen-sink", component: DataTable14Example },
+	{ id: "c-data-table-9", label: "Column Resizing", anchor: "column-resizing", component: DataTable9Example },
+	{ id: "c-data-table-10", label: "Column Reordering", anchor: "column-reordering", component: DataTable10Example },
+	{ id: "c-data-table-11", label: "Column Header Controls", anchor: "column-header-controls", component: DataTable11Example },
+	{ id: "c-data-table-13", label: "Layout", anchor: "layout", component: DataTable13Example },
+	{ id: "c-data-table-14", label: "Mobile Cards", anchor: "mobile-cards", component: DataTable14Example },
+	{ id: "c-data-table-21", label: "Tree Rows", anchor: "tree-rows", component: DataTable21Example },
+	{ id: "c-data-table-22", label: "Detail Row", anchor: "detail-row", component: DataTable22Example },
+	{ id: "c-data-table-33", label: "Detail Panel", anchor: "detail-panel", component: DataTable33Example },
+	{ id: "c-data-table-23", label: "Sub-Table", anchor: "sub-table", component: DataTable23Example },
+	{ id: "c-data-table-24", label: "Row Pinning", anchor: "row-pinning", component: DataTable24Example },
+	{ id: "c-data-table-25", label: "Footer Totals", anchor: "footer-totals", component: DataTable25Example },
+	{ id: "c-data-table-32", label: "Grouping", anchor: "grouping", component: DataTable32Example },
+	{ id: "c-data-table-31", label: "Pivot", anchor: "pivot", component: DataTable31Example },
+	{ id: "c-data-table-18", label: "Server Source", anchor: "server-source", component: DataTable18Example },
+	{ id: "c-data-table-19", label: "Infinite Source, Local", anchor: "infinite-source-local", component: DataTable19Example },
+	{ id: "c-data-table-20", label: "Infinite Source, Remote", anchor: "infinite-source-remote", component: DataTable20Example },
+	{ id: "c-data-table-16", label: "Virtualised Rows", anchor: "virtualised-rows", component: DataTable16Example },
+	{ id: "c-data-table-17", label: "Virtualised Columns", anchor: "virtualised-columns", component: DataTable17Example },
+	{ id: "c-data-table-27", label: "Localised Labels", anchor: "localised-labels", component: DataTable27Example },
+	{ id: "c-data-table-28", label: "Saved Preferences", anchor: "saved-preferences", component: DataTable28Example },
+	{ id: "c-data-table-29", label: "Kitchen Sink", anchor: "kitchen-sink", component: DataTable29Example },
+	{ id: "c-data-table-recipe-heatmap", label: "Heatmap", anchor: "heatmap", component: DataTableRecipeHeatmap },
+	{ id: "c-data-table-recipe-cohort-retention", label: "Cohort Retention", anchor: "cohort-retention", component: DataTableRecipeCohortRetention },
+	{ id: "c-data-table-recipe-conditional-formatting", label: "Conditional Formatting", anchor: "conditional-formatting", component: DataTableRecipeConditionalFormatting },
+	{ id: "c-data-table-recipe-production-dashboard", label: "Production Dashboard", anchor: "production-dashboard", component: DataTableRecipeProductionDashboard },
+	{ id: "c-data-table-recipe-kpi", label: "KPIs With Sparklines", anchor: "kpis-with-sparklines", component: DataTableRecipeKpi },
+	{ id: "c-data-table-recipe-anomaly-investigation", label: "Anomaly Investigation", anchor: "anomaly-investigation", component: DataTableRecipeAnomalyInvestigation },
+	{ id: "c-data-table-recipe-comparison", label: "Comparison", anchor: "comparison", component: DataTableRecipeComparison },
+	{ id: "c-data-table-recipe-live-status", label: "Live Status", anchor: "live-status", component: DataTableRecipeLiveStatus },
+	{ id: "c-data-table-recipe-deployments", label: "Deployments", anchor: "deployments", component: DataTableRecipeDeployments },
+	{ id: "c-data-table-recipe-logs", label: "Log Viewer", anchor: "log-viewer", component: DataTableRecipeLogs },
+	{ id: "c-data-table-recipe-crm-employees", label: "People Directory", anchor: "people-directory", component: DataTableRecipeCrmEmployees },
+	{ id: "c-data-table-recipe-job-queue", label: "Job Queue", anchor: "job-queue", component: DataTableRecipeJobQueue },
+	{ id: "c-data-table-recipe-tree-variants", label: "Tree Variants", anchor: "tree-variants", component: DataTableRecipeTreeVariants },
+	{ id: "c-data-table-recipe-file-browser", label: "File Browser", anchor: "file-browser", component: DataTableRecipeFileBrowser },
+	{ id: "c-data-table-recipe-inventory-allocation", label: "Inventory Allocation", anchor: "inventory-allocation", component: DataTableRecipeInventoryAllocation },
+	{ id: "c-data-table-recipe-permissions-matrix", label: "Permissions Matrix", anchor: "permissions-matrix", component: DataTableRecipePermissionsMatrix },
+	{ id: "c-data-table-recipe-change-review", label: "Change Review", anchor: "change-review", component: DataTableRecipeChangeReview },
+	{ id: "c-data-table-recipe-csv-import", label: "CSV Import", anchor: "csv-import", component: DataTableRecipeCsvImport },
+	{ id: "c-data-table-recipe-schedule-matrix", label: "Schedule Matrix", anchor: "schedule-matrix", component: DataTableRecipeScheduleMatrix },
+	{ id: "c-data-table-recipe-animated-icons", label: "Animated Icons", anchor: "animated-icons", component: DataTableRecipeAnimatedIcons },
 ];
 
 export const GUIDELINE_EXAMPLES: readonly ShowcaseGuidelineExample[] = [

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/calendar/calendar-1").then((m) => m.Calendar1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/calendar/calendar-2").then((m) => m.Calendar2Example), { loading: FeatureLoading });
@@ -50,6 +50,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic calendar. Best for the minimal single day picker in a Card, with today selected on first render.",
 		file: "calendar-1",
 		source:
@@ -60,6 +61,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-2",
 		label: "Range",
 		anchor: "range",
+		part: null,
 		description: "Range calendar. Best for a from and to span in one month, seeded as today through 5 days later.",
 		file: "calendar-2",
 		source:
@@ -70,6 +72,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-3",
 		label: "Disabled Dates",
 		anchor: "disabled-dates",
+		part: null,
 		description: "Disabled dates. Best for range picking that blocks past days, today, weekends and 2 spans, restarting any range that crosses one.",
 		file: "calendar-3",
 		source:
@@ -80,6 +83,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-4",
 		label: "Multiple Days",
 		anchor: "multiple-days",
+		part: null,
 		description: "Multiple day selection. Best for separate days toggled on and off one by one, seeded with 4 dates around today.",
 		file: "calendar-4",
 		source:
@@ -90,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-5",
 		label: "Circular Days",
 		anchor: "circular-days",
+		part: null,
 		description: "Custom select day style. Best for fully round day buttons for a single pick, forced with one classNames override on the day button.",
 		file: "calendar-5",
 		source:
@@ -100,6 +105,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-6",
 		label: "Circular Range",
 		anchor: "circular-range",
+		part: null,
 		description: "Custom select range style. Best for a from and to span with every day button forced round, the range counterpart of the circular single pick.",
 		file: "calendar-6",
 		source:
@@ -110,6 +116,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-7",
 		label: "Right Navigation",
 		anchor: "right-navigation",
+		part: null,
 		description: "Right navigation. Best for the month title moved to the left edge with both arrows grouped on the right, through classNames.",
 		file: "calendar-7",
 		source:
@@ -120,6 +127,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-8",
 		label: "Month Year Select",
 		anchor: "month-year-select",
+		part: null,
 		description: "Month and year selection. Best for far past days reached through month and year Select menus that replace the arrows, from July 1980 on.",
 		file: "calendar-8",
 		source:
@@ -130,6 +138,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-9",
 		label: "Year Select",
 		anchor: "year-select",
+		part: null,
 		description: "Year select with navigation. Best for a year Select beside the month name in the caption, with the previous and next arrows kept.",
 		file: "calendar-9",
 		source:
@@ -140,6 +149,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-10",
 		label: "Week Numbers",
 		anchor: "week-numbers",
+		part: null,
 		description: "Display week numbers. Best for week numbers in a leading column through a custom WeekNumber cell, with 6 rows in every month.",
 		file: "calendar-10",
 		source:
@@ -150,6 +160,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-11",
 		label: "Current Month Button",
 		anchor: "current-month-button",
+		part: null,
 		description: "Current month button. Best for an outline button under the grid that brings the view back to this month without changing the pick.",
 		file: "calendar-11",
 		source:
@@ -160,6 +171,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-12",
 		label: "Today Button",
 		anchor: "today-button",
+		part: null,
 		description: "Today button. Best for a reset button that selects today and jumps to it, with the grid opening 4 weeks back.",
 		file: "calendar-12",
 		source:
@@ -170,6 +182,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-13",
 		label: "Year View",
 		anchor: "year-view",
+		part: null,
 		description: "Custom navigation with year view. Best for a caption button that swaps the grid for a year list, then a month list, spanning 10 years either side of today.",
 		file: "calendar-13",
 		source:
@@ -180,6 +193,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-14",
 		label: "Time Slots",
 		anchor: "time-slots",
+		part: null,
 		description: "Preset time selection. Best for half hour slots from 09:00 to 17:30 in a scrolling column beside the grid, with taken slots and past days disabled.",
 		file: "calendar-14",
 		source:
@@ -190,6 +204,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-15",
 		label: "Date Presets",
 		anchor: "date-presets",
+		part: null,
 		description: "Calendar with presets. Best for a rail of Today, Yesterday, Last week, Last month and Last year shortcuts for one past day, with future days blocked.",
 		file: "calendar-15",
 		source:
@@ -200,6 +215,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-16",
 		label: "Range Presets",
 		anchor: "range-presets",
+		part: null,
 		description: "Range calendar with presets. Best for range presets such as Last 7 days, Month to date and Last year that set both ends and jump the view there.",
 		file: "calendar-16",
 		source:
@@ -210,6 +226,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-17",
 		label: "Pricing",
 		anchor: "pricing",
+		part: null,
 		description: "Calendar with pricing. Best for a price under every day from a seeded formula, green below $100, with large cells and no outside days.",
 		file: "calendar-17",
 		source:
@@ -220,6 +237,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-18",
 		label: "Forward Presets",
 		anchor: "forward-presets",
+		part: null,
 		description: "Calendar with presets. Best for forward shortcuts Today, Tomorrow, 3 days, Week and 2 weeks as a footer button row in a compact card.",
 		file: "calendar-18",
 		source:
@@ -230,6 +248,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-19",
 		label: "Appointment",
 		anchor: "appointment",
+		part: null,
 		description: "Appointment calendar. Best for a titled booking card with 15 minute slots from 09:00 to 18:00, today and 2 more days taken, and a summary line by Confirm.",
 		file: "calendar-19",
 		source:
@@ -240,6 +259,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-20",
 		label: "Two Months",
 		anchor: "two-months",
+		part: null,
 		description: "Display 2 months. Best for a single day pick across 2 months shown side by side, stacking into one column below md.",
 		file: "calendar-20",
 		source:
@@ -250,6 +270,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-21",
 		label: "Two Month Range",
 		anchor: "two-month-range",
+		part: null,
 		description: "Display 2 months with range picker. Best for a range across 2 side by side months, preset from the 6th to the 18th of this month.",
 		file: "calendar-21",
 		source:
@@ -260,6 +281,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-22",
 		label: "Event List",
 		anchor: "event-list",
+		part: null,
 		description: "Calendar with event list. Best for a compact card listing events under the grid with colored bars, time spans and an Add Event button.",
 		file: "calendar-22",
 		source:
@@ -270,6 +292,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-23",
 		label: "Localized",
 		anchor: "localized",
+		part: null,
 		description: "Localize calendar. Best for a language Select in the header that switches day names, month titles and the heading between English and Chinese.",
 		file: "calendar-23",
 		source:
@@ -280,6 +303,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-24",
 		label: "Date Picker",
 		anchor: "date-picker",
+		part: null,
 		description: "Calendar with date picker. Best for an outline trigger reading Pick a date that opens one month in a popover and then shows the long formatted day.",
 		file: "calendar-24",
 		source:
@@ -290,6 +314,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-25",
 		label: "Date Range Picker",
 		anchor: "date-range-picker",
+		part: null,
 		description: "Calendar with date range picker. Best for a trigger reading Pick a date range that opens 2 months in a popover and prints both ends once chosen.",
 		file: "calendar-25",
 		source:
@@ -300,6 +325,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-26",
 		label: "Picker Year View",
 		anchor: "picker-year-view",
+		part: null,
 		description: "Calendar with date picker and year view. Best for the year then month drill down from the caption, inside a popover opened from a field.",
 		file: "calendar-26",
 		source:
@@ -310,6 +336,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-27",
 		label: "Picker Time Slots",
 		anchor: "picker-time-slots",
+		part: null,
 		description: "Calendar with date and appointment picker. Best for the half hour slot column inside a popover opened from a field, with past days blocked.",
 		file: "calendar-27",
 		source:
@@ -320,6 +347,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-28",
 		label: "Picker Presets",
 		anchor: "picker-presets",
+		part: null,
 		description: "Calendar with date picker and presets. Best for past day shortcuts from Today to Last year in a rail inside a popover opened from a field.",
 		file: "calendar-28",
 		source:
@@ -330,6 +358,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-29",
 		label: "Range Picker Presets",
 		anchor: "range-picker-presets",
+		part: null,
 		description:
 			"Range calendar with date picker and presets. Best for the 8 shortcut span rail inside a popover, its trigger printing the chosen span and starting on the last 7 days.",
 		file: "calendar-29",
@@ -341,6 +370,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-calendar-30",
 		label: "Date Time Range",
 		anchor: "date-time-range",
+		part: null,
 		description: "Calendar with date and time range picker. Best for start and End Time inputs with seconds under the grid in a popover, starting on the 12th of this month.",
 		file: "calendar-30",
 		source:
@@ -386,6 +416,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CalendarFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CalendarFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

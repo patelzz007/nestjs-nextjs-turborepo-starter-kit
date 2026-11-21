@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/rich-text-view/rich-text-view-1").then((m) => m.RichTextView1Example), {
 	loading: FeatureLoading,
@@ -34,6 +34,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rich-text-view-1",
 		label: "Broadcast Body",
 		anchor: "broadcast-body",
+		part: null,
 		description: "A saved rich text document rendered read only: headings, lists, links and marks. Best for showing what an editor wrote, such as a broadcast body.",
 		file: "rich-text-view-1",
 		source:
@@ -44,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rich-text-view-2",
 		label: "Table, Code And Button",
 		anchor: "table-code-and-button",
+		part: null,
 		description: "A read only document with a table, a code block and a button node. Best for structured content such as opening hours or instructions.",
 		file: "rich-text-view-2",
 		source:
@@ -89,6 +91,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function RichTextViewFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function RichTextViewFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

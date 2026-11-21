@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/alert-dialog/alert-dialog-1").then((m) => m.AlertDialog1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/alert-dialog/alert-dialog-2").then((m) => m.AlertDialog2Example), { loading: FeatureLoading });
@@ -52,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic alert dialog with title, description, and action buttons. Best for a plain text confirmation with centered title and copy above Cancel and Continue.",
 		file: "alert-dialog-1",
 		source:
@@ -62,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-2",
 		label: "Small Size",
 		anchor: "small-size",
+		part: null,
 		description: "Small size alert dialog for quick confirmations. Best for a compact permission prompt in the small size, its 2 buttons sharing the footer width.",
 		file: "alert-dialog-2",
 		source:
@@ -72,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-3",
 		label: "With Icon",
 		anchor: "with-icon",
+		part: null,
 		description: "Alert dialog with icon. Best for a default size prompt with an icon tile above the title, here pairing a Bluetooth device.",
 		file: "alert-dialog-3",
 		source:
@@ -82,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-4",
 		label: "Small With Icon",
 		anchor: "small-with-icon",
+		part: null,
 		description: "Small size alert dialog with media (icon). Best for the small size with an icon tile, for a quick yes or no question about an accessory.",
 		file: "alert-dialog-4",
 		source:
@@ -92,6 +96,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-5",
 		label: "Destructive Delete",
 		anchor: "destructive-delete",
+		part: null,
 		description:
 			"Destructive alert dialog for irreversible actions like deletion. Best for an irreversible delete with a red trash icon, a destructive button and a link in the copy.",
 		file: "alert-dialog-5",
@@ -103,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-6",
 		label: "Nested In Dialog",
 		anchor: "nested-in-dialog",
+		part: null,
 		description: "Alert dialog nested within a standard Dialog component. Best for a confirmation launched from a button inside an open Dialog, stacked above it.",
 		file: "alert-dialog-6",
 		source:
@@ -113,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-7",
 		label: "Success Notice",
 		anchor: "success-notice",
+		part: null,
 		description: "Task success confirmation. Best for a success notice with a green check and a do not show again checkbox beside the buttons.",
 		file: "alert-dialog-7",
 		source:
@@ -123,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-8",
 		label: "Account Deactivation",
 		anchor: "account-deactivation",
+		part: null,
 		description: "Account deactivation confirmation. Best for an account deactivation warning with the icon left of the title and a destructive confirm.",
 		file: "alert-dialog-8",
 		source:
@@ -133,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-9",
 		label: "Unsaved Changes",
 		anchor: "unsaved-changes",
+		part: null,
 		description: "Warning for unsaved changes when navigating away. Best for an unsaved changes guard inside a Frame panel, with Stay, Discard and a do not ask again box.",
 		file: "alert-dialog-9",
 		source:
@@ -143,6 +152,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-10",
 		label: "E-Ticket Receipt",
 		anchor: "e-ticket-receipt",
+		part: null,
 		description: "Confirmation for successful e-ticket registration. Best for a booking receipt listing 5 order fields above one full width Back to Home button.",
 		file: "alert-dialog-10",
 		source:
@@ -153,6 +163,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-11",
 		label: "System Update",
 		anchor: "system-update",
+		part: null,
 		description:
 			"System update notification requiring application restart. Best for an update prompt with a release version badge and a tinted lower band holding copy and buttons.",
 		file: "alert-dialog-11",
@@ -164,6 +175,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-12",
 		label: "Billing Warning",
 		anchor: "billing-warning",
+		part: null,
 		description:
 			"Billing warning for expired subscriptions or failed payments. Best for a plan expiry warning with a red bell, an expires in 2 days badge and an Update Payment action.",
 		file: "alert-dialog-12",
@@ -175,6 +187,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-13",
 		label: "Logout Confirmation",
 		anchor: "logout-confirmation",
+		part: null,
 		description: "Logout confirmation dialog. Best for a sign out check whose No and Yes buttons split the footer into 2 flush cells with a divider.",
 		file: "alert-dialog-13",
 		source:
@@ -185,6 +198,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-dialog-14",
 		label: "Security Audit",
 		anchor: "security-audit",
+		part: null,
 		description: "Advanced security audit confirmation. Best for a summary of 3 security checks with Pending or Done badges above stacked full width buttons.",
 		file: "alert-dialog-14",
 		source:
@@ -230,6 +244,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function AlertDialogFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function AlertDialogFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

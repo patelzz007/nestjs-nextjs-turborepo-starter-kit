@@ -8,13 +8,26 @@ export interface ShowcaseFeatureSummary {
 	readonly label: string;
 	/** The feature's anchor on its component's page (`soft-wrap`), unique within the component. */
 	readonly anchor: string;
+	/** The id of the page part it sits on (`finding-rows`), or `null` when the component's page is not split. */
+	readonly part: string | null;
+}
+
+/**
+ * One part of a component page split into several routes (`/components/<slug>/<part>`), so a component with many
+ * heavy live examples never runs them all on one page.
+ */
+export interface ShowcasePart {
+	/** The route segment (`finding-rows`). */
+	readonly id: string;
+	/** The part's title ("Finding rows"). */
+	readonly label: string;
 }
 
 /**
  * A feature with its example as a plain component, for tests that render every
  * example of a component synchronously (`components/component-showcase/generated/examples`).
  */
-export interface ShowcaseFeatureExample extends ShowcaseFeatureSummary {
+export interface ShowcaseFeatureExample extends Omit<ShowcaseFeatureSummary, "part"> {
 	readonly component: React.ComponentType;
 }
 

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/input/input-1").then((m) => m.Input1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/input/input-2").then((m) => m.Input2Example), { loading: FeatureLoading });
@@ -51,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic input. Best for a bare text box with placeholder text and no label, the smallest markup to start from.",
 		file: "input-1",
 		source:
@@ -61,6 +62,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-2",
 		label: "With Label",
 		anchor: "with-label",
+		part: null,
 		description: "Input with label. Best for an email field with a visible label above it, tied to the box through htmlFor and id.",
 		file: "input-2",
 		source:
@@ -71,6 +73,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-3",
 		label: "With Description",
 		anchor: "with-description",
+		part: null,
 		description: "Input with description. Best for a username field with one line of help text printed under the box.",
 		file: "input-3",
 		source:
@@ -81,6 +84,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-4",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled input. Best for a labeled email field locked by the disabled attribute, dimmed and skipped by the keyboard.",
 		file: "input-4",
 		source:
@@ -91,6 +95,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-5",
 		label: "Error Message",
 		anchor: "error-message",
+		part: null,
 		description: "Input with error message. Best for an email field shown in its red invalid state with a single error line below.",
 		file: "input-5",
 		source:
@@ -101,6 +106,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-6",
 		label: "Character Counter",
 		anchor: "character-counter",
+		part: null,
 		description: "Input with character counter. Best for a 50 character project description with a live typed count across from the label.",
 		file: "input-6",
 		source:
@@ -111,6 +117,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-7",
 		label: "Password",
 		anchor: "password",
+		part: null,
 		description: "Input with password type. Best for a plain masked password box with no reveal button and no strength feedback.",
 		file: "input-7",
 		source:
@@ -121,6 +128,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-8",
 		label: "Phone",
 		anchor: "phone",
+		part: null,
 		description: "Input with phone type. Best for a tel field that brings up the phone keypad, with no country menu or number formatting.",
 		file: "input-8",
 		source:
@@ -131,6 +139,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-9",
 		label: "URL",
 		anchor: "url",
+		part: null,
 		description: "Input with URL type. Best for a website address field typed as url, with a full https address as its placeholder.",
 		file: "input-9",
 		source:
@@ -141,6 +150,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-10",
 		label: "Number",
 		anchor: "number",
+		part: null,
 		description: "Input with number type. Best for a numeric field typed as number, with the browser's own spin arrows for stepping.",
 		file: "input-10",
 		source:
@@ -151,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-11",
 		label: "Date",
 		anchor: "date",
+		part: null,
 		description: "Input with date type. Best for a day picked from the browser's built in calendar popup, with no date library.",
 		file: "input-11",
 		source:
@@ -161,6 +172,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-12",
 		label: "File",
 		anchor: "file",
+		part: null,
 		description: "Input with file type. Best for a native file chooser with the browser's pick button flattened into the field, taking one file.",
 		file: "input-12",
 		source:
@@ -171,6 +183,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-13",
 		label: "Required Indicator",
 		anchor: "required-indicator",
+		part: null,
 		description: "Input with required indicator. Best for a company name field whose label ends in a red asterisk to mark it mandatory.",
 		file: "input-13",
 		source:
@@ -181,6 +194,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-14",
 		label: "Time",
 		anchor: "time",
+		part: null,
 		description: "Input with time type. Best for a native hour and minute field rendered by the browser, with no picker library and no state.",
 		file: "input-14",
 		source:
@@ -191,6 +205,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-15",
 		label: "Contact Form",
 		anchor: "contact-form",
+		part: null,
 		description: "Complex input form with multiple fields. Best for a short contact form with phone and country side by side, an address line and Cancel and Submit.",
 		file: "input-15",
 		source:
@@ -201,6 +216,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-16",
 		label: "Label Tooltip",
 		anchor: "label-tooltip",
+		part: null,
 		description: "Input label with tooltip. Best for a username label with a help icon that opens a tooltip, repeating the hint as text under the box.",
 		file: "input-16",
 		source:
@@ -211,6 +227,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-17",
 		label: "Label Badge",
 		anchor: "label-badge",
+		part: null,
 		description: "Input label with badge. Best for an API key field with a New badge in the success tint beside its label.",
 		file: "input-17",
 		source:
@@ -221,6 +238,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-18",
 		label: "Optional Badge",
 		anchor: "optional-badge",
+		part: null,
 		description: "Input label with optional badge. Best for a middle name field with a small outlined Optional badge at the far end of the label row.",
 		file: "input-18",
 		source:
@@ -231,6 +249,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-19",
 		label: "Link & Toggle",
 		anchor: "link-toggle",
+		part: null,
 		description: "Input label with link and visibility toggle. Best for a sign in password with a Forgot password link opposite the label and an eye button to reveal it.",
 		file: "input-19",
 		source:
@@ -241,6 +260,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-20",
 		label: "Horizontal",
 		anchor: "horizontal",
+		part: null,
 		description: "Input with horizontal orientation. Best for a name field with its label placed to the left on the same row rather than above.",
 		file: "input-20",
 		source:
@@ -251,6 +271,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-21",
 		label: "Multiple Errors",
 		anchor: "multiple-errors",
+		part: null,
 		description: "Input with multiple error messages. Best for a security code field listing 3 failed rules under it, each led by an alert icon.",
 		file: "input-21",
 		source:
@@ -261,6 +282,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-22",
 		label: "Strength Hint",
 		anchor: "strength-hint",
+		part: null,
 		description: "Basic password strength with dynamic hint and icons. Best for a password with one hint line that turns from grey to red, amber or green as 3 rules pass.",
 		file: "input-22",
 		source:
@@ -271,6 +293,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-23",
 		label: "Strength Meter",
 		anchor: "strength-meter",
+		part: null,
 		description: "Advanced password strength indicator with progress. Best for a 5 rule checklist with ticks, a 5 segment color bar, a met count and an eye toggle.",
 		file: "input-23",
 		source:
@@ -281,6 +304,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-24",
 		label: "Pulsed Background",
 		anchor: "pulsed-background",
+		part: null,
 		description: "Input with pulsed background animation. Best for a field behind a pulsing primary tint that stops when focused and resumes on blur.",
 		file: "input-24",
 		source:
@@ -291,6 +315,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-25",
 		label: "Custom Focus Ring",
 		anchor: "custom-focus-ring",
+		part: null,
 		description: "Input with custom focus ring. Best for a field whose focus border and ring turn emerald green in place of the theme ring color.",
 		file: "input-25",
 		source:
@@ -301,6 +326,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-26",
 		label: "Subtle Background",
 		anchor: "subtle-background",
+		part: null,
 		description: "Input with subtle background. Best for a field filled with the muted surface color, kept the same on hover and focus.",
 		file: "input-26",
 		source:
@@ -311,6 +337,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-27",
 		label: "Bottom Border",
 		anchor: "bottom-border",
+		part: null,
 		description: "Input with bottom border only. Best for an underline style field with a 2px bottom rule that turns primary on focus, with no ring.",
 		file: "input-27",
 		source:
@@ -321,6 +348,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-28",
 		label: "Color",
 		anchor: "color",
+		part: null,
 		description: "Color input. Best for a browser color swatch that opens the native picker, starting from a blue hex value.",
 		file: "input-28",
 		source:
@@ -331,6 +359,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-29",
 		label: "Range",
 		anchor: "range",
+		part: null,
 		description: "Range input with value indicator. Best for a native 0 to 100 range with its current number printed at the end of the label row.",
 		file: "input-29",
 		source:
@@ -341,6 +370,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-30",
 		label: "Pill Shape",
 		anchor: "pill-shape",
+		part: null,
 		description: "Pill-shaped input. Best for a search box with fully rounded ends and wider side padding.",
 		file: "input-30",
 		source:
@@ -351,6 +381,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-31",
 		label: "Borderless",
 		anchor: "borderless",
+		part: null,
 		description: "Minimal input without borders or background. Best for a chromeless field with no border, fill, padding or focus ring, only text and caret.",
 		file: "input-31",
 		source:
@@ -396,6 +427,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function InputFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function InputFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/field/field-1").then((m) => m.Field1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/field/field-2").then((m) => m.Field2Example), { loading: FeatureLoading });
@@ -31,6 +31,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-1",
 		label: "Input Groups",
 		anchor: "input-groups",
+		part: null,
 		description: "Fields with input groups. Best for an @ prefix and a fixed mail domain suffix on profile inputs, with a required star and a green available hint.",
 		file: "field-1",
 		source:
@@ -41,6 +42,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-2",
 		label: "Input & Textarea",
 		anchor: "input-textarea",
+		part: null,
 		description: "Field with input and textarea. Best for a support ticket subject and message, with a character count set at the right end of the message label row.",
 		file: "field-2",
 		source:
@@ -51,6 +53,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-3",
 		label: "Select Controls",
 		anchor: "select-controls",
+		part: null,
 		description: "Field with select control. Best for plan and billing cycle dropdowns that load set to the pro plan and yearly billing, each with a hint below.",
 		file: "field-3",
 		source:
@@ -61,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-4",
 		label: "Radio & Checkboxes",
 		anchor: "radio-checkboxes",
+		part: null,
 		description:
 			"Field with radio groups and checkboxes. Best for email opt-in checkboxes with one locked on, then a public or private radio choice, each under its own legend.",
 		file: "field-4",
@@ -72,6 +76,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-5",
 		label: "Slider & Switch",
 		anchor: "slider-switch",
+		part: null,
 		description: "Filed with slider and switch. Best for a switch at the end of a titled row, then a slider in steps of 5 whose live percent reads beside its label.",
 		file: "field-5",
 		source:
@@ -82,6 +87,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-6",
 		label: "OTP Input",
 		anchor: "otp-input",
+		part: null,
 		description: "Field with OTP input. Best for a native select of delivery methods above a 6 slot code split 3 and 3 by a separator.",
 		file: "field-6",
 		source:
@@ -92,6 +98,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-7",
 		label: "Settings Form",
 		anchor: "settings-form",
+		part: null,
 		description:
 			"Settings form with validation. Best for a long profile settings column mixing a slug error, a bio counter, 2 email switches and a terms checkbox above Save.",
 		file: "field-7",
@@ -103,6 +110,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-8",
 		label: "Permissions",
 		anchor: "permissions",
+		part: null,
 		description:
 			"Permission settings with checkboxes. Best for role access levels from read to admin as ticked rows, with the owner only level disabled and a hint under the legend.",
 		file: "field-8",
@@ -114,6 +122,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-9",
 		label: "Responsive Layout",
 		anchor: "responsive-layout",
+		part: null,
 		description: "Responsive field layout. Best for a member invite whose labels sit beside the inputs on a wide container and stack above them when narrow.",
 		file: "field-9",
 		source:
@@ -124,6 +133,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-10",
 		label: "Notification Preferences",
 		anchor: "notification-preferences",
+		part: null,
 		description: "Notification preferences form. Best for delivery channels as switch rows and event types as checkbox rows, in 2 legend groups split by a separator.",
 		file: "field-10",
 		source:
@@ -134,6 +144,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-field-11",
 		label: "Validation Errors",
 		anchor: "validation-errors",
+		part: null,
 		description: "Form with validation errors. Best for a sign up with icon addons where the password fails 2 rules, passed as an errors array and shown as bullets.",
 		file: "field-11",
 		source:
@@ -179,6 +190,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function FieldFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function FieldFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

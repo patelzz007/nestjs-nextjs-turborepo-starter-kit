@@ -2,23 +2,17 @@
 
 import type * as React from "react";
 
-import { DataTable } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableColumnControls } from "@workspace/ui/components/data-table";
 
-import { DOCUMENT_SECTIONS, SECTION_COLUMNS } from "./data-table-sample";
+import { DOCUMENT_SECTIONS, getSectionId, SECTION_COLUMNS, SECTION_PAGING } from "./data-table-sample";
 
-const PAGE_SIZE = 5;
-const PAGE_SIZE_OPTIONS: readonly number[] = [5, 10, 20];
+const COLUMN_CONTROLS: DataTableColumnControls = { resizing: true };
 
+/**
+ * Drag a header's edge to resize its column, or focus the edge and use the arrow keys; the soft dividers in the header
+ * mark each edge, and turn into a guide down the table while you drag. Each column starts at its `size`, and the
+ * columns share any room left so the table spans its container.
+ */
 export function DataTable9Example(): React.JSX.Element {
-	return (
-		<DataTable
-			data={DOCUMENT_SECTIONS}
-			columns={SECTION_COLUMNS}
-			pageSize={PAGE_SIZE}
-			pageSizeOptions={PAGE_SIZE_OPTIONS}
-			sortCycle="asc-desc-none"
-			title="Pagination and sorting"
-			description="Click a header to sort ascending, descending, then back to the original order; pick how many rows a page shows."
-		/>
-	);
+	return <DataTable data={DOCUMENT_SECTIONS} columns={SECTION_COLUMNS} getRowId={getSectionId} columnControls={COLUMN_CONTROLS} paging={SECTION_PAGING} />;
 }

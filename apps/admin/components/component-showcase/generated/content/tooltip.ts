@@ -53,6 +53,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-tooltip-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "tooltip-1",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";\n\nexport function Tooltip1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<Tooltip>\n\t\t\t\t<TooltipTrigger render={<Button variant="outline" className="w-fit" />}>Show Tooltip</TooltipTrigger>\n\t\t\t\t<TooltipContent>\n\t\t\t\t\t<p className="text-sm">Add to library</p>\n\t\t\t\t</TooltipContent>\n\t\t\t</Tooltip>\n\t\t</div>\n\t);\n}\n',
@@ -61,6 +62,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-tooltip-2",
 				label: "Placements",
 				anchor: "placements",
+				part: null,
 				file: "tooltip-2",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";\n\ntype TooltipSide = NonNullable<React.ComponentProps<typeof TooltipContent>["side"]>;\n\nconst sides: readonly TooltipSide[] = ["inline-start", "left", "top", "bottom", "right", "inline-end"];\n\n/** "inline-start" → "Inline start". */\nfunction sideLabel(side: TooltipSide): string {\n\tconst words = side.replace("-", " ");\n\treturn words.charAt(0).toUpperCase() + words.slice(1);\n}\n\nexport function Tooltip2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="grid max-w-xs grid-cols-3 gap-2">\n\t\t\t{sides.map((side: TooltipSide): React.JSX.Element => (\n\t\t\t\t<Tooltip key={side}>\n\t\t\t\t\t<TooltipTrigger render={<Button variant="outline" className="w-full" />}>{sideLabel(side)}</TooltipTrigger>\n\t\t\t\t\t<TooltipContent side={side}>\n\t\t\t\t\t\t<p className="text-sm">Add to library</p>\n\t\t\t\t\t</TooltipContent>\n\t\t\t\t</Tooltip>\n\t\t\t))}\n\t\t</div>\n\t);\n}\n',
@@ -69,6 +71,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-tooltip-4",
 				label: "Keyboard Shortcut",
 				anchor: "keyboard-shortcut",
+				part: null,
 				file: "tooltip-4",
 				source:
 					'import * as React from "react";\nimport { SaveIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Kbd } from "@workspace/ui/components/kbd";\nimport { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";\n\nexport function Tooltip4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<Tooltip>\n\t\t\t\t<TooltipTrigger render={<Button variant="outline" size="icon-sm" aria-label="Save" />}>\n\t\t\t\t\t<SaveIcon />\n\t\t\t\t</TooltipTrigger>\n\t\t\t\t<TooltipContent className="pr-1.5">\n\t\t\t\t\t<div className="flex items-center gap-2 text-sm">\n\t\t\t\t\t\tSave Changes <Kbd>S</Kbd>\n\t\t\t\t\t</div>\n\t\t\t\t</TooltipContent>\n\t\t\t</Tooltip>\n\t\t</div>\n\t);\n}\n',
@@ -77,6 +80,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-tooltip-8",
 				label: "Toolbar Actions",
 				anchor: "toolbar-actions",
+				part: null,
 				file: "tooltip-8",
 				source:
 					'import * as React from "react";\nimport { BoldIcon, ImageIcon, ItalicIcon, UnderlineIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Separator } from "@workspace/ui/components/separator";\nimport { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@workspace/ui/components/tooltip";\n\nexport function Tooltip8Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<TooltipProvider>\n\t\t\t\t<div className="flex items-center gap-1">\n\t\t\t\t\t<Tooltip>\n\t\t\t\t\t\t<TooltipTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Bold" />}>\n\t\t\t\t\t\t\t<BoldIcon aria-hidden="true" />\n\t\t\t\t\t\t</TooltipTrigger>\n\t\t\t\t\t\t<TooltipContent>Bold</TooltipContent>\n\t\t\t\t\t</Tooltip>\n\t\t\t\t\t<Tooltip>\n\t\t\t\t\t\t<TooltipTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Italic" />}>\n\t\t\t\t\t\t\t<ItalicIcon aria-hidden="true" />\n\t\t\t\t\t\t</TooltipTrigger>\n\t\t\t\t\t\t<TooltipContent>Italic</TooltipContent>\n\t\t\t\t\t</Tooltip>\n\t\t\t\t\t<Tooltip>\n\t\t\t\t\t\t<TooltipTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Underline" />}>\n\t\t\t\t\t\t\t<UnderlineIcon aria-hidden="true" />\n\t\t\t\t\t\t</TooltipTrigger>\n\t\t\t\t\t\t<TooltipContent>Underline</TooltipContent>\n\t\t\t\t\t</Tooltip>\n\t\t\t\t\t<div className="flex items-center">\n\t\t\t\t\t\t<Separator orientation="vertical" className="mx-1 h-5 leading-none" />\n\t\t\t\t\t</div>\n\t\t\t\t\t<Tooltip>\n\t\t\t\t\t\t<TooltipTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Image" />}>\n\t\t\t\t\t\t\t<ImageIcon aria-hidden="true" />\n\t\t\t\t\t\t</TooltipTrigger>\n\t\t\t\t\t\t<TooltipContent>Insert Image</TooltipContent>\n\t\t\t\t\t</Tooltip>\n\t\t\t\t</div>\n\t\t\t</TooltipProvider>\n\t\t</div>\n\t);\n}\n',
@@ -85,6 +89,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-tooltip-12",
 				label: "Disabled Button",
 				anchor: "disabled-button",
+				part: null,
 				file: "tooltip-12",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";\n\nexport function Tooltip12Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<Tooltip>\n\t\t\t\t<TooltipTrigger className="cursor-not-allowed" render={<span />}>\n\t\t\t\t\t<Button variant="outline" disabled>\n\t\t\t\t\t\tDelete Project\n\t\t\t\t\t</Button>\n\t\t\t\t</TooltipTrigger>\n\t\t\t\t<TooltipContent>\n\t\t\t\t\t<p className="text-sm">You need admin access to delete projects</p>\n\t\t\t\t</TooltipContent>\n\t\t\t</Tooltip>\n\t\t</div>\n\t);\n}\n',

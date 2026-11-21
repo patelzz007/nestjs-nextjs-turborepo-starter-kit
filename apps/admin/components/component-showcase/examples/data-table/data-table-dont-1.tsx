@@ -1,25 +1,13 @@
-import * as React from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable, type DataTableFeatures } from "@workspace/ui/components/data-table";
+"use client";
 
-interface Invoice {
-	readonly id: string;
-	readonly merchant: string;
-	readonly amount: string;
-}
+import type * as React from "react";
 
-const INVOICES: readonly Invoice[] = [
-	{ id: "INV-001", merchant: "Acme Coffee", amount: "RM 250.00" },
-	{ id: "INV-002", merchant: "Bayview Books", amount: "RM 150.00" },
-	{ id: "INV-003", merchant: "Corner Bakery", amount: "RM 350.00" },
-];
+import { DataTable } from "@workspace/ui/components/data-table";
 
-const COLUMNS: ColumnDef<DataTableFeatures, Invoice>[] = [
-	{ accessorKey: "id", header: "Invoice" },
-	{ accessorKey: "merchant", header: "Merchant" },
-	{ accessorKey: "amount", header: "Amount" },
-];
+import { getSectionId, SECTION_COLUMNS, type DocumentSection } from "./data-table-sample";
+
+const NO_SECTIONS: readonly DocumentSection[] = [];
 
 export function DataTableDont1Example(): React.JSX.Element {
-	return <DataTable data={INVOICES} columns={COLUMNS} checkbox title="Invoices" />;
+	return <DataTable data={NO_SECTIONS} columns={SECTION_COLUMNS} getRowId={getSectionId} />;
 }

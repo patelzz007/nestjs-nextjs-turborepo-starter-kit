@@ -10,7 +10,7 @@
 // branch) keeps them in a group under its own key, which the function replaces.
 
 import { formatMessage, MAX_PDF_VIEWER_FILE_BYTES, type MessageValues } from "@workspace/shared";
-import { buildDataGridLabels, buildFilterLabels } from "@workspace/ui-kit-logic";
+import { buildFilterLabels, buildTableEngineLabels } from "@workspace/ui-kit-logic";
 import { z } from "zod";
 
 import type { ColorDescription } from "../color/color-name";
@@ -127,8 +127,8 @@ export function bindUiKitLabels(language: UiKitLanguage, m: UiKitMessages): UiKi
 			removeOption: (label) => t(m.combobox.removeOption, { label }),
 			selectedCount: (count) => t(m.combobox.selectedCount, { count }),
 		},
-		dataGrid: buildDataGridLabels(m.dataGrid, t),
 		dataTable: m.dataTable,
+		tableEngine: buildTableEngineLabels(m.tableEngine, t),
 		datePicker: m.datePicker,
 		dateSelector: m.dateSelector,
 		emojiPicker: {

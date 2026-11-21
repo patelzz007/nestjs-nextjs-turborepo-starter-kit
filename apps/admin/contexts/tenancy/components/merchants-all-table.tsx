@@ -1,7 +1,7 @@
 "use client";
 
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildReadOnlyTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
@@ -19,7 +19,14 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { useCanStartImpersonation } from "@/lib/session/super-admin";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import {
+	DataTable,
+	type DataTableFeatures,
+	type DataTableFilter,
+	type DataTablePaging,
+	type DataTableRowAction,
+	type DataTableToolbar,
+} from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
@@ -76,17 +83,6 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	const rows: readonly MerchantTenantResponse[] = merchantsQuery.data?.data ?? [];
 	// The server's count of every matching row — not just the rows on this page.
 	const matchingTotal: number = readPaginatedTotal(merchantsQuery.data?.meta);
-	const { pagination } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: adminMerchantListQuery,
-		totalCount: matchingTotal,
-		nextCursor: readPaginatedNextCursor(merchantsQuery.data?.meta),
-		resetKey: MERCHANTS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getMerchantRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-	});
 	const tableError: string | null = merchantsQuery.isError ? "Could not load merchants. Clear search and try again." : null;
 
 	const handleReviewKyb = React.useCallback(
@@ -117,14 +113,14 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		[requestImpersonation],
 	);
 
-	const actions = React.useMemo((): Action<MerchantTenantResponse>[] => {
-		const base: Action<MerchantTenantResponse>[] = [
+	const actions = React.useMemo((): DataTableRowAction<MerchantTenantResponse>[] => {
+		const base: DataTableRowAction<MerchantTenantResponse>[] = [
 			{
 				key: "kyb",
 				label: canManageKyb ? "Review KYB" : "View KYB",
 				description: canManageKyb ? "Update verification status" : "Inspect verification details",
 				icon: <ShieldCheck className="size-4" />,
-				onClick: handleReviewKyb,
+				onSelect: handleReviewKyb,
 			},
 		];
 
@@ -134,7 +130,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 				label: "Impersonate owner",
 				description: "Super-admin: switch admin session to merchant owner",
 				icon: <ShieldCheck className="size-4" />,
-				onClick: handleImpersonateOwner,
+				onSelect: handleImpersonateOwner,
 			});
 		}
 
@@ -142,7 +138,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	}, [canImpersonateOwner, canManageKyb, handleImpersonateOwner, handleReviewKyb]);
 
 	const mobileCardRender = React.useCallback(
-		(merchant: MerchantTenantResponse, cardActions?: Action<MerchantTenantResponse>[]): React.ReactNode => (
+		(merchant: MerchantTenantResponse, cardActions: readonly DataTableRowAction<MerchantTenantResponse>[]): React.ReactNode => (
 			<DataTableMobileCard
 				item={merchant}
 				title={merchant.businessName}
@@ -217,16 +213,30 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		}),
 		[urlState.kybStatus, urlState.status],
 	);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: adminMerchantListQuery,
+		totalCount: matchingTotal,
+		nextCursor: readPaginatedNextCursor(merchantsQuery.data?.meta),
+		getRowId: getMerchantRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		isFiltered,
+		onClearFilters: handleClearFilters,
+	});
 
 	const tableFilters = React.useMemo(
-		(): Filter[] => [
+		(): DataTableFilter[] => [
 			{
-				key: "kybStatus",
+				kind: "select",
+				column: "kybStatus",
 				label: "KYB status",
 				options: enumFilterOptions(KybStatusSchema.options, KYB_STATUS_LABELS),
 			},
 			{
-				key: "status",
+				kind: "select",
+				column: "status",
 				label: "Merchant status",
 				options: enumFilterOptions(MerchantTenantStatusSchema.options, MERCHANT_TENANT_STATUS_LABELS),
 			},
@@ -234,10 +244,8 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		[],
 	);
 
-	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("merchants.csv", ["businessName", "city", "category", "contactEmail", "kybStatus", "status"]), []);
-
-	const toolbarContent = React.useMemo(
-		() => <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={MERCHANT_SEARCH_PLACEHOLDER} />,
+	const toolbar = React.useMemo(
+		(): DataTableToolbar => ({ extra: <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={MERCHANT_SEARCH_PLACEHOLDER} /> }),
 		[searchDraft, setSearchDraft],
 	);
 
@@ -257,20 +265,18 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 					<DataTable
 						columns={columns}
 						data={rows}
+						getRowId={getRowId}
+						source={source}
 						labels={MERCHANT_TABLE_LABELS}
-						actions={actions}
-						checkbox={checkbox}
-						enableColumnVisibility
+						rowActions={actions}
+						selection={MERCHANTS_BULK.selection}
+						exporting={MERCHANTS_BULK.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
 						filters={tableFilters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						mobileCardRender={mobileCardRender}
-						pagination={pagination}
-						pageSizeOptions={MERCHANTS_PAGE_SIZE_OPTIONS}
-						error={tableError}
-						isLoading={merchantsQuery.isLoading}
-						isRefetching={merchantsQuery.isFetching && !merchantsQuery.isLoading ? true : false}
-						toolbarContent={toolbarContent}
+						mobileCard={mobileCardRender}
+						paging={MERCHANTS_PAGING}
+						status={toTableStatus(merchantsQuery, tableError)}
+						toolbar={toolbar}
 					/>
 					<p className="mt-4 text-xs text-muted-foreground">
 						Need KYB? Open a row action or go to{" "}
@@ -284,6 +290,9 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		</div>
 	);
 }
+
+const MERCHANTS_BULK = buildReadOnlyTableBulk<MerchantTenantResponse>("merchants.csv", ["businessName", "city", "category", "contactEmail", "kybStatus", "status"]);
+const MERCHANTS_PAGING: DataTablePaging = { pageSizeOptions: MERCHANTS_PAGE_SIZE_OPTIONS };
 
 function getMerchantRowId(merchant: MerchantTenantResponse): string {
 	return merchant.id;

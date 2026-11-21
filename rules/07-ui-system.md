@@ -110,6 +110,15 @@ function GenericRowAction({ onClick }: { onClick: () => void }) {
 
 Never hardcode business labels inside generic components.
 
+## One kit, two repositories
+
+`packages/ui`, all of `packages/ui-kit-logic`, the `@workspace/shared` / `@workspace/tokens` helpers the kit imports and the showcase examples have an identical copy in `nextjs-admin-dashboard-layout`. A kit change is made here first and copied there with only its names mapped; a file may differ only in its import specifiers, its import order and wrapping, and the folders, routes and file paths `kitPairs.web` in `tooling.config.ts` maps.
+
+- Inside one kit folder, import relatively (`../alert`). Across folders (a component reaching `lib/`, a test reaching `lib/labels/en`), use the `@workspace/ui/…` alias: a relative path from `components/` to `lib/` does not exist in the dashboard.
+- `packages/ui/src/internal/` is private to the kit; apps import the public component (`DataTable`, `Spreadsheet`). Lint enforces it in both repositories.
+- After a kit change, run `pnpm kit:compare ../nextjs-admin-dashboard-layout`, copy the change across with `--sync`, then run the dashboard's format, typecheck, lint and tests. Never add a mapping to hide code that differs ([Kit compare](../docs/technical/tooling/kit-compare.md)).
+- Showcase examples link only to routes both apps have (`ROUTES.home`, `ROUTES.analytics.index`, `ROUTES.account.*`) or to the showcase (`SHOWCASE_ROUTES`).
+
 ## Production polish
 
 ```text

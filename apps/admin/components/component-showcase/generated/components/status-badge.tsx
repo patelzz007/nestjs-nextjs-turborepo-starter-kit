@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/status-badge/status-badge-1").then((m) => m.StatusBadge1Example), { loading: FeatureLoading });
 const Guideline1 = dynamic(() => import("@/components/component-showcase/examples/status-badge/status-badge-do-1").then((m) => m.StatusBadgeDo1Example), {
@@ -29,6 +29,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-status-badge-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "Every member status mapped to a tone and a label in one badge. Best for showing a record's state consistently across tables and pages.",
 		file: "status-badge-1",
 		source:
@@ -74,6 +75,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function StatusBadgeFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function StatusBadgeFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

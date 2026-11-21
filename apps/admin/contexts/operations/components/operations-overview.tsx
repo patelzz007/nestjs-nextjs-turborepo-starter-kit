@@ -12,7 +12,8 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
-import { DataTable, type DataTableFeatures, type EmptyStateConfig } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableEmptyState, type DataTableFeatures, type DataTablePreferences, type DataTableSearch } from "@workspace/ui/components/data-table";
+import { TABLE_COLUMN_CONTROLS, TABLE_DEFAULT_PAGING, toTableStatus } from "@/lib/data-table/capabilities";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus, Server } from "lucide-react";
@@ -72,18 +73,25 @@ function InstancesTable({ instances, now, loading }: { readonly instances: reado
 		<DataTable
 			columns={columns}
 			data={instances}
-			searchKeys={INSTANCE_SEARCH_KEYS}
-			isLoading={loading}
+			getRowId={getInstanceId}
+			search={INSTANCE_SEARCH}
+			paging={TABLE_DEFAULT_PAGING}
+			status={toTableStatus({ isLoading: loading })}
 			emptyState={INSTANCES_EMPTY}
-			persistKey="ops-instances"
-			enableColumnVisibility
+			preferences={INSTANCE_PREFERENCES}
+			columnControls={TABLE_COLUMN_CONTROLS}
 		/>
 	);
 }
 
+function getInstanceId(instance: OpsInstance): string {
+	return instance.instanceId;
+}
+
 const MS_PER_SECOND = 1_000;
-const INSTANCE_SEARCH_KEYS: string[] = ["service", "hostname"];
-const INSTANCES_EMPTY: EmptyStateConfig = { title: "No instance has reported yet", description: "Each API process reports itself every 10 seconds once it starts." };
+const INSTANCE_SEARCH: DataTableSearch<OpsInstance> = { keys: ["service", "hostname"] };
+const INSTANCE_PREFERENCES: DataTablePreferences = { key: "ops-instances" };
+const INSTANCES_EMPTY: DataTableEmptyState = { title: "No instance has reported yet", description: "Each API process reports itself every 10 seconds once it starts." };
 
 /** A dependency's headline figure, by kind. */
 export function dependencySummary(status: OpsDependencyStatus): string {

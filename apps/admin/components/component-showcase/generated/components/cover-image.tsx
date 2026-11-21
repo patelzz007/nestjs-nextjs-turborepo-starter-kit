@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/cover-image/cover-image-1").then((m) => m.CoverImage1Example), { loading: FeatureLoading });
 const Guideline1 = dynamic(() => import("@/components/component-showcase/examples/cover-image/cover-image-do-1").then((m) => m.CoverImageDo1Example), {
@@ -29,6 +29,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cover-image-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "A cover photo, and the same frame with no image falling back to a placeholder. Best for card and page headers whose image may be missing.",
 		file: "cover-image-1",
 		source:
@@ -74,6 +75,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CoverImageFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CoverImageFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -49,6 +49,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-group-1",
 				label: "Two Buttons",
 				anchor: "two-buttons",
+				part: null,
 				file: "button-group-1",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\nimport { ButtonGroup } from "@workspace/ui/components/button-group";\n\nexport function ButtonGroup1Example(): React.JSX.Element {\n\treturn (\n\t\t<ButtonGroup>\n\t\t\t<Button variant="outline">Button</Button>\n\t\t\t<Button variant="outline">Another Button</Button>\n\t\t</ButtonGroup>\n\t);\n}\n',
@@ -57,6 +58,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-group-4",
 				label: "Dropdown Menu",
 				anchor: "dropdown-menu",
+				part: null,
 				file: "button-group-4",
 				source:
 					'import * as React from "react";\nimport { ChevronDownIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { ButtonGroup } from "@workspace/ui/components/button-group";\nimport { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";\n\nexport function ButtonGroup4Example(): React.JSX.Element {\n\treturn (\n\t\t<ButtonGroup>\n\t\t\t<Button variant="outline">Update</Button>\n\t\t\t<DropdownMenu>\n\t\t\t\t<DropdownMenuTrigger\n\t\t\t\t\trender={\n\t\t\t\t\t\t<Button variant="outline" size="icon" aria-label="More options">\n\t\t\t\t\t\t\t<ChevronDownIcon aria-hidden="true" />\n\t\t\t\t\t\t</Button>\n\t\t\t\t\t}\n\t\t\t\t/>\n\t\t\t\t<DropdownMenuContent align="end" className="w-36">\n\t\t\t\t\t<DropdownMenuItem>Production</DropdownMenuItem>\n\t\t\t\t\t<DropdownMenuItem>Staging</DropdownMenuItem>\n\t\t\t\t\t<DropdownMenuItem>Development</DropdownMenuItem>\n\t\t\t\t</DropdownMenuContent>\n\t\t\t</DropdownMenu>\n\t\t</ButtonGroup>\n\t);\n}\n',
@@ -65,6 +67,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-group-2",
 				label: "Button & Input",
 				anchor: "button-input",
+				part: null,
 				file: "button-group-2",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\nimport { ButtonGroup } from "@workspace/ui/components/button-group";\nimport { Input } from "@workspace/ui/components/input";\n\nexport function ButtonGroup2Example(): React.JSX.Element {\n\treturn (\n\t\t<ButtonGroup>\n\t\t\t<Button variant="outline">Button</Button>\n\t\t\t<Input placeholder="Type something here..." />\n\t\t</ButtonGroup>\n\t);\n}\n',
@@ -73,6 +76,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-group-13",
 				label: "Vertical Orientation",
 				anchor: "vertical-orientation",
+				part: null,
 				file: "button-group-13",
 				source:
 					'import * as React from "react";\nimport { MinusIcon, PlusIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { ButtonGroup } from "@workspace/ui/components/button-group";\n\nexport function ButtonGroup13Example(): React.JSX.Element {\n\treturn (\n\t\t<ButtonGroup orientation="vertical">\n\t\t\t<Button variant="outline" size="icon" aria-label="Add">\n\t\t\t\t<PlusIcon aria-hidden="true" />\n\t\t\t</Button>\n\t\t\t<Button variant="outline" size="icon" aria-label="Subtract">\n\t\t\t\t<MinusIcon aria-hidden="true" />\n\t\t\t</Button>\n\t\t</ButtonGroup>\n\t);\n}\n',
@@ -81,6 +85,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-group-9",
 				label: "Nested Groups",
 				anchor: "nested-groups",
+				part: null,
 				file: "button-group-9",
 				source:
 					'import * as React from "react";\nimport { AudioLinesIcon, SendIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { ButtonGroup } from "@workspace/ui/components/button-group";\nimport { InputGroup, InputGroupAddon, InputGroupInput } from "@workspace/ui/components/input-group";\nimport { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";\n\nexport function ButtonGroup9Example(): React.JSX.Element {\n\treturn (\n\t\t<ButtonGroup>\n\t\t\t<ButtonGroup>\n\t\t\t\t<Button variant="outline" size="icon" aria-label="Send">\n\t\t\t\t\t<SendIcon aria-hidden="true" />\n\t\t\t\t</Button>\n\t\t\t</ButtonGroup>\n\t\t\t<ButtonGroup>\n\t\t\t\t<InputGroup>\n\t\t\t\t\t<InputGroupInput placeholder="Send a message..." />\n\t\t\t\t\t<Tooltip>\n\t\t\t\t\t\t<TooltipTrigger render={<InputGroupAddon align="inline-end" />}>\n\t\t\t\t\t\t\t<AudioLinesIcon aria-hidden="true" />\n\t\t\t\t\t\t</TooltipTrigger>\n\t\t\t\t\t\t<TooltipContent>Voice Mode</TooltipContent>\n\t\t\t\t\t</Tooltip>\n\t\t\t\t</InputGroup>\n\t\t\t</ButtonGroup>\n\t\t</ButtonGroup>\n\t);\n}\n',

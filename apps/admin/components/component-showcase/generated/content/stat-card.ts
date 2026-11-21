@@ -33,6 +33,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-stat-card-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "stat-card-1",
 				source:
 					'import { Gift, Store, Wallet } from "lucide-react";\nimport type * as React from "react";\nimport { StatCard } from "@workspace/ui/components/stat-card";\n\nexport function StatCard1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">\n\t\t\t<StatCard label="Active merchants" value="1,284" hint="+42 this week" icon={<Store />} tone="brand" />\n\t\t\t<StatCard label="Rewards claimed" value="18,930" hint="Across every store" icon={<Gift />} tone="green" />\n\t\t\t<StatCard label="Open disputes" value="7" hint="2 need a reply today" icon={<Wallet />} tone="red" />\n\t\t</div>\n\t);\n}\n',

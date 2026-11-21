@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/empty/empty-1").then((m) => m.Empty1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/empty/empty-2").then((m) => m.Empty2Example), { loading: FeatureLoading });
@@ -40,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic empty state. Best for a text only first project prompt with Create and Import buttons side by side and a muted Learn more link below.",
 		file: "empty-1",
 		source:
@@ -50,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-2",
 		label: "No Results",
 		anchor: "no-results",
+		part: null,
 		description: "Search empty state. Best for a no results message on a muted fill with no icon, a Try again button and a Learn more link with an arrow.",
 		file: "empty-2",
 		source:
@@ -60,6 +62,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-3",
 		label: "Search Input",
 		anchor: "search-input",
+		part: null,
 		description: "Empty state with search input. Best for a 404 page in a dashed outline holding a search field with a slash shortcut hint and a Contact support link.",
 		file: "empty-3",
 		source:
@@ -70,6 +73,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-4",
 		label: "Add Button",
 		anchor: "add-button",
+		part: null,
 		description: "Empty state with add button. Best for a folder tile over copy that links to the first post, in a dashed outline with an outline New Post button.",
 		file: "empty-4",
 		source:
@@ -80,6 +84,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-5",
 		label: "Documents",
 		anchor: "documents",
+		part: null,
 		description: "Document empty state. Best for a Recent Documents Card whose body holds a file tile and a small solid Create Document button.",
 		file: "empty-5",
 		source:
@@ -90,6 +95,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-6",
 		label: "Dashed Upload",
 		anchor: "dashed-upload",
+		part: null,
 		description: "Dashed upload empty state. Best for a dashed drop area of capped width with a cloud tile, a Browse Files button and an accepted types and size hint.",
 		file: "empty-6",
 		source:
@@ -100,6 +106,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-7",
 		label: "Inbox",
 		anchor: "inbox",
+		part: null,
 		description: "Inbox empty state. Best for an inbox zero notice with an inbox tile and no button, for a message list that has been cleared.",
 		file: "empty-7",
 		source:
@@ -110,6 +117,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-8",
 		label: "Team Members",
 		anchor: "team-members",
+		part: null,
 		description: "Team members empty state. Best for a Team Members Card that asks for the first collaborators through a small Invite People button with a user plus glyph.",
 		file: "empty-8",
 		source:
@@ -120,6 +128,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-9",
 		label: "No Notifications",
 		anchor: "no-notifications",
+		part: null,
 		description: "No notifications empty state. Best for a muted filled panel with a crossed out bell and no action, waiting for the first alert to arrive.",
 		file: "empty-9",
 		source:
@@ -130,6 +139,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-10",
 		label: "Analytics",
 		anchor: "analytics",
+		part: null,
 		description: "No data analytics empty state. Best for an analytics placeholder in a dashed outline with a bar chart tile and Connect Data Source and View Docs buttons.",
 		file: "empty-10",
 		source:
@@ -140,6 +150,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-11",
 		label: "Bookmarks",
 		anchor: "bookmarks",
+		part: null,
 		description: "Bookmarks empty state. Best for a saved items list before the first bookmark, with a bookmark tile and one outline Browse Items button.",
 		file: "empty-11",
 		source:
@@ -150,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-12",
 		label: "Tasks",
 		anchor: "tasks",
+		part: null,
 		description: "Tasks empty state. Best for a Tasks Card showing an all clear check tile and an outline New Task button once every to-do is done.",
 		file: "empty-12",
 		source:
@@ -160,6 +172,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-13",
 		label: "Automations",
 		anchor: "automations",
+		part: null,
 		description:
 			"No automations empty state with toggle illustration. Best for a switch drawn in SVG between branching connector lines, above one Create new automation button.",
 		file: "empty-13",
@@ -171,6 +184,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-14",
 		label: "Comments Board",
 		anchor: "comments-board",
+		part: null,
 		description:
 			"Comments empty state with isometric board illustration. Best for an isometric board drawing over a prompt to leave the first comment, with no button to press.",
 		file: "empty-14",
@@ -182,6 +196,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-15",
 		label: "Stacked Products",
 		anchor: "stacked-products",
+		part: null,
 		description:
 			"No products empty state with stacked cards and blur effect. Best for a catalog with no products, drawn as 3 stacked div cards fading into the page, with no button.",
 		file: "empty-15",
@@ -193,6 +208,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-16",
 		label: "Search File Cards",
 		anchor: "search-file-cards",
+		part: null,
 		description:
 			"Search empty state with stacked file cards illustration. Best for a prompt before the first search over 3 fading placeholder cards, naming files, folders, tags and transcripts.",
 		file: "empty-16",
@@ -204,6 +220,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-17",
 		label: "Chat Bubbles",
 		anchor: "chat-bubbles",
+		part: null,
 		description:
 			"No messages empty state with chat bubbles illustration. Best for a 2 bubble chat drawing in muted and primary tints above a Send a message button for a first conversation.",
 		file: "empty-17",
@@ -215,6 +232,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-18",
 		label: "Credit Card",
 		anchor: "credit-card",
+		part: null,
 		description:
 			"No payments empty state with credit card illustration. Best for a credit card drawing with a chip and contactless waves over a tilted shadow card, above Add payment method.",
 		file: "empty-18",
@@ -226,6 +244,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-19",
 		label: "Connected Nodes",
 		anchor: "connected-nodes",
+		part: null,
 		description:
 			"No integrations empty state with connected nodes illustration. Best for a hub node joined to 4 satellites by dashed lines, above Browse integrations and an outline Learn more.",
 		file: "empty-19",
@@ -237,6 +256,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-empty-20",
 		label: "Events Calendar",
 		anchor: "events-calendar",
+		part: null,
 		description:
 			"No events empty state with calendar illustration. Best for a calendar page drawing with one highlighted day among 12 dots, above a single Create event button.",
 		file: "empty-20",
@@ -283,6 +303,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function EmptyFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function EmptyFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

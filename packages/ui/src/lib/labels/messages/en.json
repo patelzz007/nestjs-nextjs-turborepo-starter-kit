@@ -242,7 +242,7 @@
 		"removeOptionFallback": "Remove option",
 		"selectedCount": "{count} selected"
 	},
-	"dataGrid": {
+	"tableEngine": {
 		"sortAscending": "Asc",
 		"sortDescending": "Desc",
 		"pinColumnStart": "Pin to left",
@@ -253,6 +253,7 @@
 		"unpinColumn": "Unpin {title} column",
 		"toggleColumns": "Toggle columns",
 		"rowCreate": "Add row",
+		"cellAddress": "Cell",
 		"pinRow": "Pin row",
 		"unpinRow": "Unpin row",
 		"selectRow": "Select row",
@@ -327,7 +328,33 @@
 		"unpinColumnAriaLabel": "Unpin column",
 		"exportCurrentPage": "Current page (CSV)",
 		"exportCurrentPageDescription": "Exports only the rows visible on this page",
-		"loadingTableAriaLabel": "Loading table data"
+		"loadingTableAriaLabel": "Loading table data",
+		"filterAll": "All",
+		"filterOptionCount": "{label} ({count})",
+		"retry": "Try again",
+		"densityToggle": "Density",
+		"densityCompact": "Compact",
+		"densityComfortable": "Comfortable",
+		"densitySpacious": "Spacious",
+		"clearDateRange": "Clear dates",
+		"rowActionPending": "{label}…",
+		"rowActionFailed": "{label} failed. Try again",
+		"exportDialogTitle": "Export rows",
+		"exportDialogFormat": "Format",
+		"exportDialogRows": "Rows",
+		"exportDialogColumns": "Columns",
+		"exportScopeSelected": "Ticked rows ({count})",
+		"exportScopeMatching": "Rows that match ({count})",
+		"exportScopeAll": "Every row ({count})",
+		"exportDialogConfirm": "Export {count} rows",
+		"exportDialogCancel": "Cancel",
+		"editUndo": "Undo",
+		"editRedo": "Redo",
+		"cellEditFailed": "Could not save {column}. The old value is back.",
+		"detailPanelLabel": "Row details",
+		"detailPanelClose": "Close details",
+		"detailPanelPrevious": "Previous row",
+		"detailPanelNext": "Next row"
 	},
 	"datePicker": {
 		"dialog": "Choose a date"

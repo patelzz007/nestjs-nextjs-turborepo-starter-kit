@@ -6,10 +6,10 @@ import { Badge } from "@workspace/ui/components/badge";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { IconTile } from "@workspace/ui/components/icon-tile";
 import { Markdown } from "@/components/docs/markdown";
-import { SHOWCASE_FEATURE_INDEX } from "@/components/component-showcase/generated/feature-index";
+import { SHOWCASE_FEATURE_INDEX, SHOWCASE_FEATURE_PARTS } from "@/components/component-showcase/generated/feature-index";
 import { showcaseNeighbours, type ShowcaseCatalogItem } from "@/components/component-showcase/showcase-catalog";
 import type { ShowcaseFaqEntry, ShowcaseOverview } from "@/components/component-showcase/showcase-content";
-import type { ShowcaseFeatureSummary } from "@/components/component-showcase/showcase-feature";
+import type { ShowcaseFeatureSummary, ShowcasePart } from "@/components/component-showcase/showcase-feature";
 import { SHOWCASE_FAMILY_META } from "@/components/component-showcase/showcase-family-meta";
 import { ShowcaseFaqAccordion, type ShowcaseFaqItem } from "@/components/component-showcase/showcase-faq-accordion";
 import { ShowcaseFeatures } from "@/components/component-showcase/showcase-features";
@@ -108,10 +108,60 @@ function ReuiProCallToAction(): React.JSX.Element {
 	);
 }
 
+interface PartNavProps {
+	readonly slug: string;
+	readonly name: string;
+	readonly parts: readonly ShowcasePart[];
+	/** The part shown, or `null` on the component's own page, which shows every example. */
+	readonly current: ShowcasePart | null;
+}
+
+/** The tab for the component's own page: every example, before the tabs for one group each. */
+const ALL_EXAMPLES_LABEL = "All examples";
+
+/**
+ * The groups of a grouped page, as tabs that are links: "All examples" (the component's own page) and then one route
+ * per group, for reading or linking to just that group.
+ */
+function PartNav({ slug, name, parts, current }: PartNavProps): React.JSX.Element {
+	return (
+		<nav aria-label={`${name} example groups`} data-showcase-parts="">
+			<ul className="flex flex-wrap gap-1.5 border-b pb-3">
+				<li>
+					<Link
+						href={SHOWCASE_ROUTES.component(slug)}
+						aria-current={current === null ? "page" : undefined}
+						className={buttonVariants({ variant: current === null ? "secondary" : "ghost", size: "sm" })}>
+						{ALL_EXAMPLES_LABEL}
+					</Link>
+				</li>
+				{parts.map((part: ShowcasePart): React.JSX.Element => (
+					<li key={part.id}>
+						<Link
+							href={SHOWCASE_ROUTES.part(slug, part.id)}
+							aria-current={part.id === current?.id ? "page" : undefined}
+							className={buttonVariants({ variant: part.id === current?.id ? "secondary" : "ghost", size: "sm" })}>
+							{part.label}
+						</Link>
+					</li>
+				))}
+			</ul>
+		</nav>
+	);
+}
+
+/** One group of a grouped component page, by its id; `undefined` when the component has no such group. */
+export function resolveShowcasePart(slug: string, partId: string): ShowcasePart | undefined {
+	const parts = SHOWCASE_FEATURE_PARTS.get(slug) ?? [];
+	return parts.find((part: ShowcasePart): boolean => part.id === partId);
+}
+
 export interface ShowcaseComponentPageProps {
 	readonly item: ShowcaseCatalogItem;
 	/** The component's written overview; `null` while it has none. */
 	readonly overview: ShowcaseOverview | null;
+	/** On a group's route, the group shown (from `resolveShowcasePart`); `null` on the component's own page: every example. */
+	readonly part: ShowcasePart | null;
 }
 
 /**
@@ -121,11 +171,13 @@ export interface ShowcaseComponentPageProps {
  * the features is server-rendered; the features download as one chunk and
  * mount as they near the viewport.
  */
-export function ShowcaseComponentPage({ item, overview }: ShowcaseComponentPageProps): React.JSX.Element {
+export function ShowcaseComponentPage({ item, overview, part }: ShowcaseComponentPageProps): React.JSX.Element {
 	const { key, entry, family } = item;
 	const meta = SHOWCASE_FAMILY_META[family.id];
 	const FamilyIcon = meta.icon;
 	const features = SHOWCASE_FEATURE_INDEX.get(entry.slug) ?? [];
+	const parts = SHOWCASE_FEATURE_PARTS.get(entry.slug) ?? [];
+	const shownFeatures = part === null ? features : features.filter((feature: ShowcaseFeatureSummary): boolean => feature.part === part.id);
 	const { previous, next } = showcaseNeighbours(key);
 	return (
 		<article aria-labelledby="showcase-component-title" className="flex flex-col gap-12">
@@ -163,10 +215,11 @@ export function ShowcaseComponentPage({ item, overview }: ShowcaseComponentPageP
 				<h2 id="showcase-examples-title" className="font-heading text-2xl font-semibold tracking-tight">
 					Examples
 				</h2>
-				{features.length > 1 ? (
+				{parts.length === 0 ? null : <PartNav slug={entry.slug} name={entry.name} parts={parts} current={part} />}
+				{shownFeatures.length > 1 ? (
 					<nav aria-label={`${entry.name} features`}>
 						<ul className="flex flex-wrap gap-1.5">
-							{features.map((feature: ShowcaseFeatureSummary): React.JSX.Element => (
+							{shownFeatures.map((feature: ShowcaseFeatureSummary): React.JSX.Element => (
 								<li key={feature.id}>
 									<a href={`#${feature.anchor}`} className={buttonVariants({ variant: "outline", size: "xs" })}>
 										{feature.label}
@@ -176,7 +229,7 @@ export function ShowcaseComponentPage({ item, overview }: ShowcaseComponentPageP
 						</ul>
 					</nav>
 				) : null}
-				<ShowcaseFeatures slug={entry.slug} />
+				<ShowcaseFeatures slug={entry.slug} part={part === null ? null : part.id} />
 			</section>
 			{overview === null ? null : (
 				<section aria-label={`About ${entry.name}`} className="max-w-3xl">

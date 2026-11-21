@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/message-scroller/message-scroller-1").then((m) => m.MessageScroller1Example), {
 	loading: FeatureLoading,
@@ -46,6 +46,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-scroller-1",
 		label: "Jump to Latest",
 		anchor: "jump-to-latest",
+		part: null,
 		description:
 			"Chat transcript with jump to latest. Best for a read only 9 message thread on the provider defaults, with no client state, streaming or composer to strip out.",
 		file: "message-scroller-1",
@@ -57,6 +58,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-scroller-2",
 		label: "Streaming Reply",
 		anchor: "streaming-reply",
+		part: null,
 		description:
 			"Streaming reply that follows the edge. Best for a reply typed out 4 characters every 28ms under a Working badge, with aria-busy on the log and a Replay stream button.",
 		file: "message-scroller-2",
@@ -68,6 +70,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-scroller-3",
 		label: "Anchored Turn",
 		anchor: "anchored-turn",
+		part: null,
 		description:
 			"Anchored turn with a previous peek. Best for a composer form that sends questions and gets a canned answer after 900ms, each question lifted near the top under a 64px peek.",
 		file: "message-scroller-3",
@@ -79,6 +82,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-scroller-4",
 		label: "Opening Position",
 		anchor: "opening-position",
+		part: null,
 		description:
 			"Opening position for a saved thread. Best for a Tabs switch over the 3 opening positions on a thread whose last answer outgrows the panel, with a day divider on top.",
 		file: "message-scroller-4",
@@ -90,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-scroller-5",
 		label: "Load Earlier",
 		anchor: "load-earlier",
+		part: null,
 		description:
 			"Load earlier without losing your place. Best for a header Load earlier button adding 5 older turns per click to a 6 of 16 window, with a badge that reports whether the view can scroll up.",
 		file: "message-scroller-5",
@@ -101,6 +106,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-scroller-6",
 		label: "Thread Navigator",
 		anchor: "thread-navigator",
+		part: null,
 		description:
 			"Thread navigator for stepping turns. Best for previous and next buttons around a turn counter and the current question, tracked from the anchor and jumped with smooth scrolling.",
 		file: "message-scroller-6",
@@ -147,6 +153,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function MessageScrollerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function MessageScrollerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

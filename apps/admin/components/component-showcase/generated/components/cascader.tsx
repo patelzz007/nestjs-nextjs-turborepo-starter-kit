@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/cascader/cascader-1").then((m) => m.Cascader1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/cascader/cascader-2").then((m) => m.Cascader2Example), { loading: FeatureLoading });
@@ -41,6 +41,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-1",
 		label: "Attribute Picker",
 		anchor: "attribute-picker",
+		part: null,
 		description:
 			"Nested attribute picker with drill-down navigation.. Best for person, company and workspace fields with a type icon per row, counts on branches and a trigger path capped at 3 segments.",
 		file: "cascader-1",
@@ -52,6 +53,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-2",
 		label: "Multi-Select Cap",
 		anchor: "multi-select-cap",
+		part: null,
 		description:
 			"Multi-select permissions with checkboxes and a selection cap.. Best for product area permissions like billing and deployments, capped at 5, with one disabled row and a clear X over the trigger and in the footer.",
 		file: "cascader-2",
@@ -63,6 +65,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-3",
 		label: "Deep Search",
 		anchor: "deep-search",
+		part: null,
 		description:
 			"Deep search across every level with path-annotated results.. Best for a source file tree whose search reaches files below the open folder, with folder paths telling repeated names like page.tsx apart.",
 		file: "cascader-3",
@@ -74,6 +77,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-5",
 		label: "Avatar Rows",
 		anchor: "avatar-rows",
+		part: null,
 		description:
 			"Custom rows with avatars and role badges.. Best for an assignee picker by team, each member row with a photo, an online or away dot and a seniority chip, and the face repeated in the trigger.",
 		file: "cascader-5",
@@ -85,6 +89,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-7",
 		label: "Embedded Panel",
 		anchor: "embedded-panel",
+		part: null,
 		description:
 			"Embedded panel without a popover.. Best for a docs table of contents searched and drilled right on the page inside a Card, with the list height capped at 240px.",
 		file: "cascader-7",
@@ -96,6 +101,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-8",
 		label: "Flat Data",
 		anchor: "flat-data",
+		part: null,
 		description:
 			"Flat adjacency data with a parent pointer.. Best for region and department rows as a database returns them, unsorted with a parent id each, plus a footer command that resets the pick.",
 		file: "cascader-8",
@@ -107,6 +113,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-9",
 		label: "Controlled State",
 		anchor: "controlled-state",
+		part: null,
 		description:
 			"Controlled path, value, query and open state.. Best for a restaurant menu where outside code drives the open level and search text, and each commit reports its reason and full path.",
 		file: "cascader-9",
@@ -118,6 +125,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-10",
 		label: "Translated Labels",
 		anchor: "translated-labels",
+		part: null,
 		description:
 			"Translated labels across a country picker.. Best for data and chrome both in German, down to plural forms like 1 Land and 2 Länder and the arrow key hint read to screen readers.",
 		file: "cascader-10",
@@ -129,6 +137,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-11",
 		label: "Two-Line Rows",
 		anchor: "two-line-rows",
+		part: null,
 		description:
 			"Two-line rows with descriptions and a disabled option.. Best for data center locations from country to city, each row a tile plus a second line of counts or region codes, with China locked.",
 		file: "cascader-11",
@@ -140,6 +149,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-12",
 		label: "Native Form Field",
 		anchor: "native-form-field",
+		part: null,
 		description:
 			"Form field that submits like a native input.. Best for an uncontrolled support topic field in a labelled form, its popup matched to the trigger width and its pick read back from FormData.",
 		file: "cascader-12",
@@ -151,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-13",
 		label: "Columns Mode",
 		anchor: "columns-mode",
+		part: null,
 		description:
 			"Columns mode with independently scrolling panels.. Best for video, audio and article items grouped by library and collection, with a hued tile per library and a runtime chip on items and the trigger.",
 		file: "cascader-13",
@@ -162,6 +173,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-14",
 		label: "Tree Mode",
 		anchor: "tree-mode",
+		part: null,
 		description:
 			"Tree mode with inline expand and multi-select scopes.. Best for a move to destination picker whose root level splits into Recently used and All spaces, reordering each time a folder is picked.",
 		file: "cascader-14",
@@ -173,6 +185,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-15",
 		label: "Async Loading",
 		anchor: "async-loading",
+		part: null,
 		description:
 			"Async drill-down that loads before it navigates.. Best for repositories, releases and paged release assets fetched on demand, with a toned badge per row and a button that fails the next request.",
 		file: "cascader-15",
@@ -184,6 +197,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-16",
 		label: "Virtualized List",
 		anchor: "virtualized-list",
+		part: null,
 		description:
 			"Virtualized level with thousands of rows.. Best for nearly 3,000 generated sales markets with flags, a territory name and a reach badge toned by subscriber tier.",
 		file: "cascader-16",
@@ -195,6 +209,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-17",
 		label: "Removable Chips",
 		anchor: "removable-chips",
+		part: null,
 		description:
 			"Consumer-rendered removable chips with path-aware labels.. Best for a report builder that adds table columns several at a time, counting them in the trigger and listing each as a removable chip below.",
 		file: "cascader-17",
@@ -206,6 +221,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-18",
 		label: "Tree Multi-Select",
 		anchor: "tree-multi-select",
+		part: null,
 		description:
 			"Cascading tree multi-select inside a popover.. Best for shipping zones by continent, region and country, where 1 press takes a whole region and the trigger names top picks plus a country total.",
 		file: "cascader-18",
@@ -217,6 +233,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-19",
 		label: "Color Dots",
 		anchor: "color-dots",
+		part: null,
 		description:
 			"Status and priority colour dots via renderLabel.. Best for workflow fields such as status, priority, severity and effort, each value marked by a colored dot that the trigger repeats beside its group.",
 		file: "cascader-19",
@@ -228,6 +245,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-20",
 		label: "Inherited Colors",
 		anchor: "inherited-colors",
+		part: null,
 		description:
 			"Expense accounts with a colour inherited down each branch.. Best for a chart of accounts where any level can be booked, each row with its ledger code and spend, and the picked tile filled in place of a check.",
 		file: "cascader-20",
@@ -239,6 +257,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-21",
 		label: "Global Search",
 		anchor: "global-search",
+		part: null,
 		description:
 			"Global search across the whole tree from a nested level.. Best for a labelled store taxonomy preset to Headphones, with 2 Chargers rows under different branches told apart by their trail.",
 		file: "cascader-21",
@@ -250,6 +269,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-4",
 		label: "Footer Flyout",
 		anchor: "footer-flyout",
+		part: null,
 		description: "Pinned footer with a side-anchored import flyout.. Best for a property picker whose footer opens a flyout of 7 app and data source logos in 2 named groups.",
 		file: "cascader-4",
 		source:
@@ -260,6 +280,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-cascader-6",
 		label: "Path Formatting",
 		anchor: "path-formatting",
+		part: null,
 		description:
 			"Trigger path formatting and collapsing.. Best for a connected app tree with a toggle that switches the trigger between collapsed, full, tail, leaf and a custom 2 line readout.",
 		file: "cascader-6",
@@ -306,6 +327,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CascaderFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CascaderFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

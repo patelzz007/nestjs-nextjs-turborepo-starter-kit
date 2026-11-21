@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/badge/badge-1").then((m) => m.Badge1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/badge/badge-2").then((m) => m.Badge2Example), { loading: FeatureLoading });
@@ -45,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-1",
 		label: "Default",
 		anchor: "default",
+		part: null,
 		description: "Default badge. Best for the plain call with no variant prop, filled with the theme primary and its foreground text.",
 		file: "badge-1",
 		source:
@@ -55,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-2",
 		label: "Secondary",
 		anchor: "secondary",
+		part: null,
 		description: "Secondary badge. Best for a lower emphasis fill from the secondary token, for metadata that sits beside a primary label.",
 		file: "badge-2",
 		source:
@@ -65,6 +67,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-3",
 		label: "Destructive",
 		anchor: "destructive",
+		part: null,
 		description: "Destructive badge. Best for the loudest error state, a solid destructive fill with white text for failed or blocked records.",
 		file: "badge-3",
 		source:
@@ -75,6 +78,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-4",
 		label: "Success",
 		anchor: "success",
+		part: null,
 		description: "Success badge. Best for a solid success fill with white text for paid, passing or live records at full emphasis.",
 		file: "badge-4",
 		source:
@@ -85,6 +89,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-5",
 		label: "Info",
 		anchor: "info",
+		part: null,
 		description: "Info badge. Best for a solid info fill with white text for neutral notices such as Beta, Syncing or Preview.",
 		file: "badge-5",
 		source:
@@ -95,6 +100,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-6",
 		label: "Warning",
 		anchor: "warning",
+		part: null,
 		description: "Warning badge. Best for a solid warning fill with white text for pending, expiring or degraded states.",
 		file: "badge-6",
 		source:
@@ -105,6 +111,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-7",
 		label: "Outline",
 		anchor: "outline",
+		part: null,
 		description: "Outline badge. Best for a neutral border around inherited text color, transparent in light mode and lightly filled in dark.",
 		file: "badge-7",
 		source:
@@ -115,6 +122,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-8",
 		label: "Primary Outline",
 		anchor: "primary-outline",
+		part: null,
 		description: "Primary outline badge. Best for a neutral border with only the label text in the primary color and no tinted fill.",
 		file: "badge-8",
 		source:
@@ -125,6 +133,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-9",
 		label: "Destructive Outline",
 		anchor: "destructive-outline",
+		part: null,
 		description: "Destructive outline badge. Best for an error flagged by destructive foreground text alone, inside a neutral border with no tint.",
 		file: "badge-9",
 		source:
@@ -135,6 +144,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-10",
 		label: "Info Outline",
 		anchor: "info-outline",
+		part: null,
 		description: "Info outline badge. Best for info foreground text in a neutral outline, for notices that need no colored fill in dense tables.",
 		file: "badge-10",
 		source:
@@ -145,6 +155,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-11",
 		label: "Success Outline",
 		anchor: "success-outline",
+		part: null,
 		description: "Success outline badge. Best for a low emphasis done or paid status, success foreground text set inside the neutral border.",
 		file: "badge-11",
 		source:
@@ -155,6 +166,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-12",
 		label: "Warning Outline",
 		anchor: "warning-outline",
+		part: null,
 		description: "Warning outline badge. Best for the quietest pending or expiring flag, warning foreground text with a neutral border and no tint.",
 		file: "badge-12",
 		source:
@@ -165,6 +177,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-13",
 		label: "Primary Light",
 		anchor: "primary-light",
+		part: null,
 		description: "Primary light badge. Best for a faint primary tint with primary text and border, softer than the solid primary fill.",
 		file: "badge-13",
 		source:
@@ -175,6 +188,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-14",
 		label: "Destructive Light",
 		anchor: "destructive-light",
+		part: null,
 		description: "Destructive light badge. Best for a pale destructive tint behind destructive text, for errors that sit in dense rows.",
 		file: "badge-14",
 		source:
@@ -185,6 +199,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-15",
 		label: "Success Light",
 		anchor: "success-light",
+		part: null,
 		description: "Success light badge. Best for success text on a faint success tint, a soft chip for active, paid or approved.",
 		file: "badge-15",
 		source:
@@ -195,6 +210,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-16",
 		label: "Info Light",
 		anchor: "info-light",
+		part: null,
 		description: "Info light badge. Best for an info tint with info text and a matching faint border, for feature or release markers.",
 		file: "badge-16",
 		source:
@@ -205,6 +221,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-17",
 		label: "Warning Light",
 		anchor: "warning-light",
+		part: null,
 		description: "Warning light badge. Best for a faint warning tint behind warning text, which keeps pending or trial states readable at small sizes.",
 		file: "badge-17",
 		source:
@@ -215,6 +232,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-18",
 		label: "Sizes",
 		anchor: "sizes",
+		part: null,
 		description: "Badge size variations. Best for the sm, default and lg sizes in one row, 18, 20 and 22px tall, to match a label to nearby text.",
 		file: "badge-18",
 		source:
@@ -225,6 +243,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-19",
 		label: "Full Radius",
 		anchor: "full-radius",
+		part: null,
 		description: 'Badge with full radius (radius="full"). Best for pill counts and New tags at 3 sizes, then the pill on outline, secondary and success light.',
 		file: "badge-19",
 		source:
@@ -235,6 +254,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-20",
 		label: "With Icon",
 		anchor: "with-icon",
+		part: null,
 		description: "Badge with an icon. Best for an outline label led by a check glyph that the primitive sizes to 12px with no class of its own.",
 		file: "badge-20",
 		source:
@@ -245,6 +265,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-21",
 		label: "Dismiss Button",
 		anchor: "dismiss-button",
+		part: null,
 		description: "Badge with a dismiss button. Best for an outline tag ending in an X inside a ghost icon button shrunk to 12px, for removable filters.",
 		file: "badge-21",
 		source:
@@ -255,6 +276,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-22",
 		label: "Status Dot",
 		anchor: "status-dot",
+		part: null,
 		description: "Badge with a status dot. Best for a 5px round dot in the current text color ahead of the label, on an info light chip for live states.",
 		file: "badge-22",
 		source:
@@ -265,6 +287,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-23",
 		label: "As Link",
 		anchor: "as-link",
+		part: null,
 		description: "Badge rendered as a link. Best for an outline label rendered as an anchor, so the whole chip navigates and takes keyboard focus.",
 		file: "badge-23",
 		source:
@@ -275,6 +298,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-24",
 		label: "With Avatar",
 		anchor: "with-avatar",
+		part: null,
 		description: "Badge with avatar. Best for a person chip with a 14px avatar photo, a first name and a trailing remove X in one outline label.",
 		file: "badge-24",
 		source:
@@ -285,6 +309,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-badge-25",
 		label: "With Flag",
 		anchor: "with-flag",
+		part: null,
 		description: "Badge with flag image. Best for a country chip with an 18px flag image ahead of the name, for locale, region or shipping tags.",
 		file: "badge-25",
 		source:
@@ -330,6 +355,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function BadgeFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function BadgeFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

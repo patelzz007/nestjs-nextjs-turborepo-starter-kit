@@ -1,19 +1,20 @@
 "use client";
 
 import { isBooleanPrimitive, isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
-import type { ColumnDef, PaginationState, SortingState } from "@tanstack/react-table";
-import { useTable } from "@tanstack/react-table";
 import { BriefcaseBusinessIcon, CircleDotIcon, GlobeIcon, StarIcon, UserRoundIcon, WifiIcon } from "lucide-react";
 import * as React from "react";
 
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
-import { Card } from "@workspace/ui/components/card";
-import { DataGrid, DataGridContainer, dataGridFeatures, type DataGridFeatures, type DataGridTableLayout } from "@workspace/ui/components/data-grid/data-grid";
-import { DataGridColumnHeader } from "@workspace/ui/components/data-grid/data-grid-column-header";
-import { DataGridPagination } from "@workspace/ui/components/data-grid/data-grid-pagination";
-import { DataGridScrollArea } from "@workspace/ui/components/data-grid/data-grid-scroll-area";
-import { DataGridTable } from "@workspace/ui/components/data-grid/data-grid-table";
+import {
+	DataTable,
+	type DataTableColumns,
+	type DataTableEmptyState,
+	type DataTableLayout,
+	type DataTablePaging,
+	type DataTableSortingOptions,
+	type DataTableToolbar,
+} from "@workspace/ui/components/data-table";
 import { Filters } from "@workspace/ui/components/filters/filters";
 import { createFilterQuery, createFilterRule, isFilterRule } from "@workspace/ui/components/filters/filters-query";
 import {
@@ -642,13 +643,12 @@ function toneOf(ladder: readonly Tone[], value: string): Tone | undefined {
 /** Column widths, each the widest line that column actually holds, in pixels. */
 const COLUMN_WIDTH = { staff: 200, role: 155, priority: 110, status: 110, availability: 115, location: 140 } satisfies Readonly<Record<string, number>>;
 
-type StaffColumn = ColumnDef<DataGridFeatures, Staff>;
-
-const COLUMNS: readonly StaffColumn[] = [
+// A string header becomes the table's own sortable column header.
+const COLUMNS: DataTableColumns<Staff> = [
 	{
 		accessorKey: "name",
 		id: "name",
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Staff" column={column} />,
+		header: "Staff",
 		// `min-w-0` on the text block and `truncate` on both lines, because a flex
 		// child's default `min-width: auto` refuses to shrink below its content.
 		cell: ({ row }): React.JSX.Element => (
@@ -667,7 +667,7 @@ const COLUMNS: readonly StaffColumn[] = [
 	},
 	{
 		accessorKey: "role",
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Occupation" column={column} />,
+		header: "Occupation",
 		// Wide enough for the longest title on ONE line.
 		cell: ({ row }): React.JSX.Element => <span className="whitespace-nowrap">{row.original.role}</span>,
 		size: COLUMN_WIDTH.role,
@@ -677,7 +677,7 @@ const COLUMNS: readonly StaffColumn[] = [
 		// Sorted by the ladder's own order, not by the word.
 		id: "priority",
 		accessorFn: (row: Staff): number => rankIn(PRIORITIES, row.priority),
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Priority" column={column} />,
+		header: "Priority",
 		cell: ({ row }): React.JSX.Element => {
 			const tone = toneOf(PRIORITIES, row.original.priority);
 			return (
@@ -693,7 +693,7 @@ const COLUMNS: readonly StaffColumn[] = [
 	{
 		id: "status",
 		accessorFn: (row: Staff): number => rankIn(STATUSES, row.status),
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Status" column={column} />,
+		header: "Status",
 		// A badge here and a bare swatch in the menu, deliberately: the option row
 		// prints the word beside the swatch already.
 		cell: ({ row }): React.JSX.Element => {
@@ -711,7 +711,7 @@ const COLUMNS: readonly StaffColumn[] = [
 	{
 		id: "availability",
 		accessorFn: (row: Staff): number => rankIn(AVAILABILITIES, row.availability),
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Availability" column={column} />,
+		header: "Availability",
 		cell: ({ row }): React.JSX.Element => {
 			const tone = toneOf(AVAILABILITIES, row.original.availability);
 			return (
@@ -726,7 +726,7 @@ const COLUMNS: readonly StaffColumn[] = [
 	},
 	{
 		accessorKey: "location",
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Location" column={column} />,
+		header: "Location",
 		cell: ({ row }): React.JSX.Element => (
 			<span className="flex items-center gap-1.5">
 				<Flag code={row.original.flag} />
@@ -743,11 +743,11 @@ const COLUMNS: readonly StaffColumn[] = [
 /* -------------------------------------------------------------------------- */
 
 const PAGE_SIZE = 5;
-const PAGE_SIZES: readonly number[] = [5, 10, 25];
-const INITIAL_PAGINATION: PaginationState = { pageIndex: 0, pageSize: PAGE_SIZE };
-const INITIAL_SORTING: SortingState = [{ id: "name", desc: false }];
-/** Dense, because the toolbar above is the subject and the rows are the evidence. */
-const TABLE_LAYOUT: DataGridTableLayout = { dense: true };
+const PAGING: DataTablePaging = { pageSize: PAGE_SIZE, pageSizeOptions: [PAGE_SIZE, 10, 25] };
+const SORTING: DataTableSortingOptions = { initial: [{ id: "name", desc: false }], cycle: "asc-desc-none" };
+/** Compact, because the toolbar above is the subject and the rows are the evidence. */
+const TABLE_LAYOUT: DataTableLayout = { density: "compact" };
+const EMPTY_STATE: DataTableEmptyState = { title: "No staff match these filters" };
 
 const INITIAL_QUERY: FilterQuery = createFilterQuery([
 	createFilterRule({
@@ -762,80 +762,15 @@ function staffRowId(row: Staff): string {
 	return row.id;
 }
 
-function firstPage(current: PaginationState): PaginationState {
-	return { ...current, pageIndex: 0 };
-}
-
 export function Filters7Example(): React.JSX.Element {
 	const [query, setQuery] = React.useState<FilterQuery>(INITIAL_QUERY);
-	const [pagination, setPagination] = React.useState<PaginationState>(INITIAL_PAGINATION);
-	const [sorting, setSorting] = React.useState<SortingState>(INITIAL_SORTING);
 
+	// The FILTERED rows, not the full set, so the table sorts, pages and counts what the query left standing. When
+	// a narrower query leaves fewer pages, the table moves to the last page that still exists.
 	const rows = React.useMemo((): Staff[] => STAFF.filter((row: Staff): boolean => matches(row, query)), [query]);
 
-	const handleQueryChange = React.useCallback((next: FilterQuery): void => {
-		setQuery(next);
-		// Back to page one on every edit. A narrower query can leave the current
-		// page past the end of the result set.
-		setPagination(firstPage);
-	}, []);
+	// The query builder sits in the table's own toolbar row.
+	const toolbar = React.useMemo((): DataTableToolbar => ({ extra: <Filters fields={FIELDS} query={query} onQueryChange={setQuery} showClear /> }), [query]);
 
-	const table = useTable({
-		features: dataGridFeatures,
-		columns: COLUMNS,
-		// The FILTERED rows, not the full set, so sorting, paging and the record
-		// count are all taken over what the query left standing.
-		data: rows,
-		pageCount: Math.ceil(rows.length / pagination.pageSize),
-		getRowId: staffRowId,
-		state: { pagination, sorting },
-		onPaginationChange: setPagination,
-		onSortingChange: setSorting,
-	});
-
-	return (
-		<DataGrid table={table} recordCount={rows.length} emptyMessage="No staff match these filters" tableLayout={TABLE_LAYOUT}>
-			<Card className="w-full gap-0 py-0">
-				<div className="border-b p-3">
-					<Filters fields={FIELDS} query={query} onQueryChange={handleQueryChange} showClear />
-				</div>
-
-				<DataGridContainer>
-					<DataGridScrollArea>
-						<DataGridTable />
-					</DataGridScrollArea>
-				</DataGridContainer>
-
-				<div className="border-t p-3">
-					{/*
-            Four overrides, and every one of them undoes the same bug.
-            `DataGridPagination` goes single row at `sm`, which is a VIEWPORT
-            query rather than a container one, so inside a card narrower than
-            640px it stacks its three parts however wide the card itself is:
-            page buttons, then the record range, then rows-per-page, reversed by
-            `order-*` and about 140px tall. In a preview frame that is most of
-            the height this example has to spend, and a pager nobody can see
-            cannot show that the query changed the page count.
-              flex-row py-0      the parent's own axis and padding. Plain
-                                 utilities, because the primitive merges this
-                                 className through `cn`, so tailwind-merge drops
-                                 the `flex-col` and `py-2.5` it replaces.
-              **:order-none!     source order at every depth. Two levels need
-                                 it, the two halves of the bar and the range
-                                 against the buttons inside the right half.
-              *:py-0!            the two halves' own stacking padding.
-              *:last:flex-row!   the right half, which stacks internally too.
-            The three `!` are load-bearing: those classes live on the
-            primitive's own children, out of tailwind-merge's reach, so nothing
-            else can win against them.
-
-            `flex-wrap` is left alone deliberately, so this degrades rather than
-            breaks: on a genuinely narrow phone the two halves wrap to two rows
-            instead of forcing a 400px row into 375px.
-          */}
-					<DataGridPagination sizes={PAGE_SIZES} className="flex-row py-0 *:py-0! **:order-none! *:last:flex-row!" />
-				</div>
-			</Card>
-		</DataGrid>
-	);
+	return <DataTable data={rows} columns={COLUMNS} getRowId={staffRowId} toolbar={toolbar} sorting={SORTING} paging={PAGING} layout={TABLE_LAYOUT} emptyState={EMPTY_STATE} />;
 }

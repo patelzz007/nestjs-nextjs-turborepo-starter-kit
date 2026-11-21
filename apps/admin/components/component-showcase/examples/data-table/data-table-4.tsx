@@ -3,52 +3,42 @@
 import { CircleCheck } from "lucide-react";
 import * as React from "react";
 
-import { DataTable, type DataTableBulkSelectionContext, type DataTableCheckboxConfig } from "@workspace/ui/components/data-table";
-import { toastMessage } from "@workspace/ui/components/toast";
+import { DataTable, type DataTableSelection } from "@workspace/ui/components/data-table";
 
-import { DOCUMENT_SECTIONS, SECTION_COLUMNS, type DocumentSection } from "./data-table-sample";
+import { DOCUMENT_SECTIONS, getSectionId, SECTION_COLUMNS, SECTION_PAGING, type DocumentSection } from "./data-table-sample";
 
-const PAGE_SIZE = 5;
-
-/** How many rows an action covers: the selected rows, or every matching row once "select all" spans pages. */
-function selectedCount(rows: readonly DocumentSection[], context: DataTableBulkSelectionContext): number {
-	return context.selectAllPages ? context.totalMatchingRows : rows.length;
+function idsOf(sections: readonly DocumentSection[]): ReadonlySet<string> {
+	return new Set(sections.map(getSectionId));
 }
 
+/**
+ * Row checkboxes open a bar with the bulk actions. A handler is given the ticked rows; rows are tracked by id, so a
+ * tick follows its row through a sort or a page change.
+ */
 export function DataTable4Example(): React.JSX.Element {
-	const [rows, setRows] = React.useState<readonly DocumentSection[]>(DOCUMENT_SECTIONS);
+	const [sections, setSections] = React.useState<readonly DocumentSection[]>(DOCUMENT_SECTIONS);
 
-	const checkbox = React.useMemo(
-		(): DataTableCheckboxConfig<DocumentSection> => ({
+	const selection = React.useMemo(
+		(): DataTableSelection<DocumentSection> => ({
 			bulkActions: [
 				{
 					key: "mark-done",
-					label: "Mark as done",
-					icon: <CircleCheck />,
-					onClick: (selected, context) => {
-						const ids = new Set(selected.map(({ id }) => id));
-						setRows((current) => current.map((row) => (context.selectAllPages || ids.has(row.id) ? { ...row, status: "Done" } : row)));
-						toastMessage.success({ title: `Marked ${String(selectedCount(selected, context))} as done` });
+					label: "Mark done",
+					icon: <CircleCheck aria-hidden="true" />,
+					onSelect: (selected: DocumentSection[]): void => {
+						const ids = idsOf(selected);
+						setSections((current) => current.map((section): DocumentSection => (ids.has(section.id) ? { ...section, status: "Done" } : section)));
 					},
 				},
 			],
-			onDeleteAll: (selected, context) => {
-				const ids = new Set(selected.map(({ id }) => id));
-				setRows((current) => (context.selectAllPages ? [] : current.filter((row) => !ids.has(row.id))));
-				toastMessage.success({ title: `Removed ${String(selectedCount(selected, context))}` });
+			// `onDelete` adds the destructive "Delete selected" action.
+			onDelete: (selected: DocumentSection[]): void => {
+				const ids = idsOf(selected);
+				setSections((current) => current.filter((section) => !ids.has(section.id)));
 			},
 		}),
 		[],
 	);
 
-	return (
-		<DataTable
-			data={rows}
-			columns={SECTION_COLUMNS}
-			checkbox={checkbox}
-			pageSize={PAGE_SIZE}
-			title="Bulk selection"
-			description="Tick rows, or select every page, then act on them at once."
-		/>
-	);
+	return <DataTable data={sections} columns={SECTION_COLUMNS} getRowId={getSectionId} selection={selection} paging={SECTION_PAGING} />;
 }

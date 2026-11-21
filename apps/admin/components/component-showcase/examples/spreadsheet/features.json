@@ -1,0 +1,37 @@
+[
+	{
+		"id": "c-spreadsheet-1",
+		"label": "Overview",
+		"description": "A small budget with editable item, category, quantity and price cells and a worked-out total. Best for the smallest working Spreadsheet: data, columns, getRowId, onCellsChange.",
+		"file": "spreadsheet-1",
+		"export": "Spreadsheet1Example"
+	},
+	{
+		"id": "c-spreadsheet-2",
+		"label": "Clipboard & Fill",
+		"description": "Copy, cut, paste and clear a block of cells, and drag the fill handle to repeat them, with a live count of what was written. Best for moving data to and from other spreadsheets.",
+		"file": "spreadsheet-2",
+		"export": "Spreadsheet2Example"
+	},
+	{
+		"id": "c-spreadsheet-3",
+		"label": "Validation & Status Marks",
+		"description": "Cells that refuse a value they cannot hold and show an invalid mark, with a dirty mark on every unsaved edit. Best for batch editing that is saved in one go.",
+		"file": "spreadsheet-3",
+		"export": "Spreadsheet3Example"
+	},
+	{
+		"id": "c-spreadsheet-4",
+		"label": "Draft Row",
+		"description": "An add-row button under the last row that appends an empty line, tinted as new. Best for grids people grow as they type.",
+		"file": "spreadsheet-4",
+		"export": "Spreadsheet4Example"
+	},
+	{
+		"id": "c-spreadsheet-5",
+		"label": "Formulas & A1 Headers",
+		"description": "A quote worked out with formulas (SUM, ROUND, cell references), column letters and row numbers, and a bar showing the focused cell's address and formula; fill moves a formula's references. Best for sheets that calculate as people type.",
+		"file": "spreadsheet-5",
+		"export": "Spreadsheet5Example"
+	}
+]

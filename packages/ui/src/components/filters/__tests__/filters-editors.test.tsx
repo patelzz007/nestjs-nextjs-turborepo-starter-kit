@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@t
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import {
 	DEFAULT_FILTER_EDITORS,
 	FilterBooleanEditor,

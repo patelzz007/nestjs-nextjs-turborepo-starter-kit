@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/message/message-1").then((m) => m.Message1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/message/message-2").then((m) => m.Message2Example), { loading: FeatureLoading });
@@ -27,6 +27,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-1",
 		label: "Two-Sided Chat",
 		anchor: "two-sided-chat",
+		part: null,
 		description: "Two-sided conversation. Best for the bare pattern with no avatars or metadata, where a muted or default bubble repeats which side spoke.",
 		file: "message-1",
 		source:
@@ -37,6 +38,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-2",
 		label: "Avatars",
 		anchor: "avatars",
+		part: null,
 		description: "Avatars on both sides. Best for photo avatars for both people, a green presence badge with a screen reader Online label and a long turn that wraps.",
 		file: "message-2",
 		source:
@@ -47,6 +49,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-3",
 		label: "Sender & Status",
 		anchor: "sender-status",
+		part: null,
 		description: "Sender name and delivery status. Best for a name and time header split by a decorative dot, a Read receipt under the outgoing turn and an Edited footer.",
 		file: "message-3",
 		source:
@@ -57,6 +60,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-4",
 		label: "Reply Actions",
 		anchor: "reply-actions",
+		part: null,
 		description: "Reply actions in the footer. Best for regenerate cycling 2 stored drafts and clearing the vote, a Copy that flips to a check, and pressed thumb toggles.",
 		file: "message-4",
 		source:
@@ -67,6 +71,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-5",
 		label: "Shared Files",
 		anchor: "shared-files",
+		part: null,
 		description: "Files shared in a thread. Best for an outgoing image tile above its caption and an incoming CSV card under its text, with a named download button.",
 		file: "message-5",
 		source:
@@ -77,6 +82,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-6",
 		label: "Consecutive Messages",
 		anchor: "consecutive-messages",
+		part: null,
 		description:
 			"Consecutive messages from one sender. Best for the name on the first row and the portrait on the last, with empty avatar slots holding the run on one spine.",
 		file: "message-6",
@@ -88,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-message-7",
 		label: "Streaming Reply",
 		anchor: "streaming-reply",
+		part: null,
 		description:
 			"Streaming reply with a pending state. Best for a spinner line, then text revealed 4 characters at a time behind a caret, and the full answer at once under reduced motion.",
 		file: "message-7",
@@ -134,6 +141,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function MessageFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function MessageFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

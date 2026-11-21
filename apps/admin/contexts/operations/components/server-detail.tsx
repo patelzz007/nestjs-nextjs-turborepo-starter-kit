@@ -17,7 +17,8 @@ import {
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
-import { DataTable, type DataTableFeatures, type EmptyStateConfig } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableEmptyState, type DataTableFeatures, type DataTableSearch } from "@workspace/ui/components/data-table";
+import { TABLE_DEFAULT_PAGING } from "@/lib/data-table/capabilities";
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -142,15 +143,18 @@ const PROCESS_COLUMNS: ColumnDef<DataTableFeatures, OpsProcess>[] = [
 	{ accessorKey: "cpuPercent", header: "CPU", cell: ({ row }) => <span className="tabular-nums">{formatPercent(row.original.cpuPercent)}</span> },
 	{ accessorKey: "memoryBytes", header: "Memory", cell: ({ row }) => <span className="tabular-nums">{formatBytes(row.original.memoryBytes)}</span> },
 ];
-const PROCESS_SEARCH_KEYS: string[] = ["name"];
-const PROCESSES_EMPTY: EmptyStateConfig = { title: "No processes reported" };
+const PROCESS_SEARCH: DataTableSearch<OpsProcess> = { keys: ["name"] };
+const PROCESSES_EMPTY: DataTableEmptyState = { title: "No processes reported" };
+
+/** A process id is unique on one machine at one moment. */
+function getProcessId(process: OpsProcess): string {
+	return String(process.pid);
+}
 
 /** The machine's busiest processes, sortable by CPU or memory. */
 function ProcessTable({ processes }: { readonly processes: readonly OpsProcess[] }): React.JSX.Element {
-	return <DataTable columns={PROCESS_COLUMNS} data={processes} searchKeys={PROCESS_SEARCH_KEYS} emptyState={PROCESSES_EMPTY} pageSize={PROCESS_PAGE_SIZE} />;
+	return <DataTable columns={PROCESS_COLUMNS} data={processes} getRowId={getProcessId} search={PROCESS_SEARCH} paging={TABLE_DEFAULT_PAGING} emptyState={PROCESSES_EMPTY} />;
 }
-
-const PROCESS_PAGE_SIZE = 10;
 
 function LiveSection({ server }: { readonly server: OpsServerDetail }): React.JSX.Element {
 	const { live } = server;

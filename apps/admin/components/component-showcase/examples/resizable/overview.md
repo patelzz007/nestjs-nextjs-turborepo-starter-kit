@@ -7,7 +7,7 @@
 ## When not to use
 
 - A sidebar that only opens and closes, with no free sizing: use [Sidebar](/components/sidebar)
-- Columns of a table people widen at the header edge: [Data Grid](/components/data-grid) resizes columns itself
+- Columns of a table people widen at the header edge: [Data Table](/components/data-table) resizes columns itself (`columnControls.resizing`)
 
 ## Notes
 

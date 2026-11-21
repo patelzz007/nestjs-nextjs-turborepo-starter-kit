@@ -21,7 +21,8 @@ import {
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableFeatures, type DataTableFilter, type DataTablePaging, type DataTableToolbar } from "@workspace/ui/components/data-table";
+import { TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Database, RefreshCw } from "lucide-react";
@@ -77,14 +78,16 @@ import { AuditLogDrawer } from "./audit-log-drawer";
  * The request-only ones (outcome … address class) leave only requests; "Attributed
  * to" leaves only background writes — the API applies the same rule.
  */
-const SELECT_FILTERS: Filter[] = [
-	{ key: "kind", label: "Source", options: enumFilterOptions(AuditTrailEntryKindSchema.options, AUDIT_TRAIL_KIND_LABELS) },
-	{ key: "outcome", label: "Outcome", options: enumFilterOptions(AuditOutcomeSchema.options, AUDIT_OUTCOME_LABELS) },
-	{ key: "method", label: "Method", options: enumFilterOptions(AuditHttpMethodSchema.options, AUDIT_HTTP_METHOD_LABELS) },
-	{ key: "authMethod", label: "Credential", options: enumFilterOptions(AuditAuthMethodSchema.options, AUDIT_AUTH_METHOD_LABELS) },
-	{ key: "deviceType", label: "Device", options: enumFilterOptions(DeviceTypeSchema.options, DEVICE_TYPE_LABELS) },
-	{ key: "ipScope", label: "Address class", options: enumFilterOptions(IpAddressScopeSchema.options, IP_ADDRESS_SCOPE_LABELS) },
-	{ key: "actorKind", label: "Attributed to", options: enumFilterOptions(DataChangeActorKindSchema.options, DATA_CHANGE_ACTOR_KIND_LABELS) },
+const AUDIT_LOG_PAGING: DataTablePaging = { pageSizeOptions: AUDIT_LOG_PAGE_SIZE_OPTIONS };
+
+const SELECT_FILTERS: DataTableFilter[] = [
+	{ kind: "select", column: "kind", label: "Source", options: enumFilterOptions(AuditTrailEntryKindSchema.options, AUDIT_TRAIL_KIND_LABELS) },
+	{ kind: "select", column: "outcome", label: "Outcome", options: enumFilterOptions(AuditOutcomeSchema.options, AUDIT_OUTCOME_LABELS) },
+	{ kind: "select", column: "method", label: "Method", options: enumFilterOptions(AuditHttpMethodSchema.options, AUDIT_HTTP_METHOD_LABELS) },
+	{ kind: "select", column: "authMethod", label: "Credential", options: enumFilterOptions(AuditAuthMethodSchema.options, AUDIT_AUTH_METHOD_LABELS) },
+	{ kind: "select", column: "deviceType", label: "Device", options: enumFilterOptions(DeviceTypeSchema.options, DEVICE_TYPE_LABELS) },
+	{ kind: "select", column: "ipScope", label: "Address class", options: enumFilterOptions(IpAddressScopeSchema.options, IP_ADDRESS_SCOPE_LABELS) },
+	{ kind: "select", column: "actorKind", label: "Attributed to", options: enumFilterOptions(DataChangeActorKindSchema.options, DATA_CHANGE_ACTOR_KIND_LABELS) },
 ];
 
 /** The id filters — each shown as a removable chip while set. */
@@ -349,17 +352,6 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 	// The timeline counts at most 10,000 entries (enhancement 2.3); past that the API says the total is a lower bound.
 	const totalLabel: string = readPaginatedTotalIsCapped(trailQuery.data?.meta) ? `${totalCount.toLocaleString("en")}+` : String(totalCount);
 	const isRefetching: boolean = trailQuery.isFetching && !trailQuery.isLoading;
-	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: auditTrailListQuery,
-		totalCount,
-		nextCursor: readPaginatedNextCursor(trailQuery.data?.meta),
-		resetKey: AUDIT_LOG_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getEntryRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-	});
 
 	const handleManualColumnFilterChange = React.useCallback(
 		(filterKey: string, value: string | null): void => {
@@ -396,6 +388,18 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 		}),
 		[urlState.kind, urlState.outcome, urlState.method, urlState.authMethod, urlState.deviceType, urlState.ipScope, urlState.actorKind],
 	);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: auditTrailListQuery,
+		totalCount,
+		nextCursor: readPaginatedNextCursor(trailQuery.data?.meta),
+		getRowId: getEntryRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		isFiltered,
+		onClearFilters: handleClearFilters,
+	});
 
 	const clearIdFilter = React.useCallback(
 		(key: IdFilterKey): void => {
@@ -464,6 +468,7 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 		[],
 	);
 
+	const toolbar = React.useMemo((): DataTableToolbar => ({ extra: searchToolbar }), [searchToolbar]);
 	const mobileCardRender = React.useCallback((entry: AuditTrailEntry): React.ReactNode => <AuditTrailMobileCard entry={entry} />, []);
 
 	const handleRefresh = React.useCallback((): void => {
@@ -519,18 +524,14 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 					<DataTable
 						data={rows}
 						columns={columns}
-						searchKeys={[]}
-						toolbarContent={searchToolbar}
+						getRowId={getRowId}
+						source={source}
+						toolbar={toolbar}
 						filters={SELECT_FILTERS}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						enableColumnVisibility
-						pagination={pagination}
-						pageSizeOptions={AUDIT_LOG_PAGE_SIZE_OPTIONS}
-						sorting={sorting}
-						onManualSortingChange={handleSortingChange}
-						isRefetching={isRefetching}
-						mobileCardRender={mobileCardRender}
+						columnControls={TABLE_COLUMN_CONTROLS}
+						paging={AUDIT_LOG_PAGING}
+						status={toTableStatus({ isLoading: false, isFetching: isRefetching })}
+						mobileCard={mobileCardRender}
 						onRowClick={handleRowClick}
 					/>
 				</CardContent>

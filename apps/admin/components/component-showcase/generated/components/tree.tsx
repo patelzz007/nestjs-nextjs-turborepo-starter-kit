@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/tree/tree-1").then((m) => m.Tree1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/tree/tree-2").then((m) => m.Tree2Example), { loading: FeatureLoading });
@@ -27,6 +27,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tree-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic tree.. Best for the bare pattern with nothing added: chevron toggles and text only rows over a CRM outline of leads and accounts.",
 		file: "tree-1",
 		source:
@@ -37,6 +38,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tree-2",
 		label: "Indent Lines",
 		anchor: "indent-lines",
+		part: null,
 		description: "Tree with indented lines.. Best for thin vertical guide lines at each indent step behind plain text rows, painted by one gradient on the root.",
 		file: "tree-2",
 		source:
@@ -47,6 +49,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tree-3",
 		label: "Folder File Icons",
 		anchor: "folder-file-icons",
+		part: null,
 		description: "Tree with custom indent.. Best for guide lines with a folder glyph that turns into an open folder on expand and a file glyph on every leaf.",
 		file: "tree-3",
 		source:
@@ -57,6 +60,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tree-4",
 		label: "Plus Minus Toggles",
 		anchor: "plus-minus-toggles",
+		part: null,
 		description: "Tree with custom indent.. Best for plus and minus marks on folders in place of chevrons, over guide lines and open or closed folder glyphs.",
 		file: "tree-4",
 		source:
@@ -67,6 +71,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tree-5",
 		label: "File Explorer",
 		anchor: "file-explorer",
+		part: null,
 		description:
 			"File explorer tree with type icons. Best for a code project outline with a colored glyph per file type: amber folders, blue code files, purple stylesheets and yellow JSON.",
 		file: "tree-5",
@@ -78,6 +83,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tree-6",
 		label: "Org Chart",
 		anchor: "org-chart",
+		part: null,
 		description: "Organization chart tree with avatars. Best for people rows with a photo, name and job title under their manager, nested at a wider 24px step.",
 		file: "tree-6",
 		source:
@@ -88,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tree-7",
 		label: "Permissions",
 		anchor: "permissions",
+		part: null,
 		description: "Permissions tree with checkboxes. Best for role access grouped by area with a checkbox on each action row, plus and minus toggles and 5 grants on load.",
 		file: "tree-7",
 		source:
@@ -133,6 +140,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function TreeFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function TreeFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -164,21 +164,42 @@ function EmailField({ value, onChange }: Props) {
 
 Column definitions are feature-owned (they know what a "customer" or "order" is); the reusable table component owns mechanics only — rendering, selection, pagination UI, sorting UI, column visibility, accessibility.
 
+**There is one table for records, `DataTable`, and one grid for cells, `Spreadsheet`** ([ADR 097](../docs/adr/097-one-data-table.md)). A page imports one of the two from `@workspace/ui/components/…` and nothing else: the engine under them lives in `packages/ui/src/internal/` and cannot be imported from an app (the package does not export it, lint refuses it, and a contract test scans for it). Never assemble a table from parts on a page, and never wrap `DataTable` in a second "table" component per feature.
+
 ```tsx
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: readonly TData[];
-  onRowClick?: (row: TData) => void;
-}
-export function DataTable<TData, TValue>({ columns, data, onRowClick }: DataTableProps<TData, TValue>): JSX.Element { ... }
+// Three props are required. Every other prop switches one job on and is off while absent.
+const COLUMNS: DataTableColumns<Invoice> = [
+  { accessorKey: "number", header: "Invoice" }, // a string header becomes a sortable column header
+  { accessorKey: "merchant", header: "Merchant" },
+];
+// Search and export name the row's own keys (typed from the row): a column or not, a misspelled key fails typecheck.
+const SEARCH: DataTableSearch<Invoice> = { keys: ["number", "merchant"] };
+
+<DataTable data={invoices} columns={COLUMNS} getRowId={getInvoiceId} search={SEARCH} paging={PAGING} onRowClick={openInvoice} />;
 ```
+
+| Rule | Detail |
+|---|---|
+| `getRowId` is required | Rows are named by id everywhere (selection, editing, reordering, expansion), never by position. |
+| One options object per job | `search`, `filters`, `sorting`, `paging`, `rowActions`, `selection`, `exporting`, `columnControls`, `editing`, `layout`, `preferences`, and so on. A new feature is a new prop on `DataTable`, not a new component. |
+| Keep the objects stable | `columns`, `filters`, `rowActions` and every options object are module constants or `useMemo`. A new object on every render redraws the table. |
+| The table never changes rows | It reports an edit, a move or a delete; the page writes it. |
+| Wording | Every string comes from the `dataTable` and `tableEngine` label families. A page overrides a few through `labels`; it never hardcodes table copy. |
 
 For server-side tables: `URL → page/search/sort/filter → server request → API → database`. Never load large result sets into the browser to simulate server-side pagination client-side.
 
-`DataTable`'s `filters` mean different things per pagination mode, and the kit enforces it:
+A server table is driven by ONE object. The page owns `query` (the page, the page size, the sort, the filters and the search), usually in the URL, and fetches again when the table reports a change:
 
-- **Server pagination** (`pagination={{ mode: "server", … }}`): each filter is a query parameter. Its value lives in `manualColumnFilters` and changes through `onManualColumnFilterChange`; it needs no column, and the table never looks it up as one, so it shows no faceted counts (a page is one slice of the results).
-- **Client pagination**: each filter filters a column, so its `key` must be a column id (`accessorKey` or `id`). A filter that names no column throws `DataTable: filter "…" names no column` (`assertDataTableFiltersMatchColumns` in `packages/ui/src/lib/data-table/column-ids.ts`). That replaces TanStack's per-render `Column with id '…' does not exist` warning with one clear error while the table is being written.
+```tsx
+<DataTable data={page.rows} columns={COLUMNS} getRowId={getId} source={{ mode: "server", totalCount, query, onQueryChange }} />
+```
+
+`onQueryChange(next, change)` says what moved (`change.kind` is `page`, `page-size`, `sorting`, `search`, `filter` or `clear-filters`), so the page writes only that part of its state. Admin pages get `source` from `useUrlListPaging` (`apps/admin/lib/data-table/use-url-list-paging.ts`).
+
+`DataTable`'s `filters` mean different things per source, and the kit enforces it:
+
+- **Server source**: each filter is a query parameter. Its value lives in `query.filters` under the filter's `column` key; it needs no column of that name, and it shows no row counts (a page is one slice of the results).
+- **Client source**: each filter narrows a column, so its `column` must be a column id (`accessorKey` or `id`). A filter that names no column throws `DataTable: filter "…" names no column` (`assertDataTableFiltersMatchColumns` in `packages/ui-kit-logic/src/table/column-ids.ts`). That replaces TanStack's per-render `Column with id '…' does not exist` warning with one clear error while the table is being written.
 
 ## Memoization
 

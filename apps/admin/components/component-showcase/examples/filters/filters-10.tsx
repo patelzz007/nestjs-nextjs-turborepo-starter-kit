@@ -1,20 +1,22 @@
 "use client";
 
 import { isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
-import type { ColumnDef, PaginationState, SortingState } from "@tanstack/react-table";
-import { useTable } from "@tanstack/react-table";
 import { BanknoteIcon, Building2Icon, SignpostIcon, UserIcon } from "lucide-react";
 import * as React from "react";
 
 import { Avatar, AvatarFallback, AvatarGroup } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataGrid, dataGridFeatures, type DataGridFeatures, type DataGridTableLayout } from "@workspace/ui/components/data-grid/data-grid";
-import { DataGridColumnHeader } from "@workspace/ui/components/data-grid/data-grid-column-header";
-import { DataGridPagination } from "@workspace/ui/components/data-grid/data-grid-pagination";
-import { DataGridScrollArea } from "@workspace/ui/components/data-grid/data-grid-scroll-area";
-import { DataGridTable, DataGridTableFootRow, DataGridTableFootRowCell } from "@workspace/ui/components/data-grid/data-grid-table";
+import {
+	DataTable,
+	type DataTableColumns,
+	type DataTableEmptyState,
+	type DataTableFooter,
+	type DataTableHeading,
+	type DataTableLayout,
+	type DataTablePaging,
+	type DataTableSortingOptions,
+} from "@workspace/ui/components/data-table";
 import { Filters } from "@workspace/ui/components/filters/filters";
 import type { FilterOperatorLabels } from "@workspace/ui/components/filters/filters-operators";
 import { createFilterGroup, createFilterQuery, createFilterRule, isFilterRule } from "@workspace/ui/components/filters/filters-query";
@@ -729,35 +731,32 @@ const SEED: FilterQuery = createFilterQuery(
 /*                                  The report                                */
 /* -------------------------------------------------------------------------- */
 
-const GUTTER_START = "ps-4";
-const GUTTER_END = "pe-4";
 const NUMERIC_ALIGN = "text-right rtl:text-left";
-const AMOUNT_ALIGN = `${NUMERIC_ALIGN} ${GUTTER_END}`;
 
 /** Column widths, each the widest line that column holds, in pixels. */
 const COLUMN_WIDTH = { account: 125, stage: 110, owner: 134, seats: 79, amount: 104 } satisfies Readonly<Record<string, number>>;
-/** The footer's label spans the three non-numeric columns. */
-const FOOTER_LABEL_SPAN = 3;
 /** The builder shows only a nested attribute's leaf, "Seats" rather than "Account > Seats". */
 const MAX_PATH_SEGMENTS = 1;
 
 const PAGE_SIZE = 5;
-const PAGE_SIZES: readonly number[] = [5, 10, 25];
-const INITIAL_PAGINATION: PaginationState = { pageIndex: 0, pageSize: PAGE_SIZE };
-const INITIAL_SORTING: SortingState = [{ id: "amount", desc: true }];
-const TABLE_LAYOUT: DataGridTableLayout = { dense: true };
+const PAGING: DataTablePaging = { pageSize: PAGE_SIZE, pageSizeOptions: [PAGE_SIZE, 10, 25] };
+/** Biggest deal first to start with. */
+const SORTING: DataTableSortingOptions = { initial: [{ id: "amount", desc: true }], cycle: "asc-desc-none" };
+const TABLE_LAYOUT: DataTableLayout = { density: "compact" };
+const EMPTY_STATE: DataTableEmptyState = { title: "No deals match these filters" };
+/** A numeric column's header button moves to the end of its cell, so the sort arrow lines up with the figures. */
+const NUMERIC_HEADER = "[&>div]:-me-2 [&>div]:justify-end";
 
 function rankIn(ladder: readonly Stage[], value: string): number {
 	return ladder.findIndex((entry: Stage): boolean => entry.value === value);
 }
 
-type DealColumn = ColumnDef<DataGridFeatures, Deal>;
-
-const COLUMNS: readonly DealColumn[] = [
+// A string header becomes the table's own sortable column header.
+const COLUMNS: DataTableColumns<Deal> = [
 	{
 		id: "account",
 		accessorFn: (row: Deal): string => row.account.name,
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Account" column={column} />,
+		header: "Account",
 		cell: ({ row }): React.JSX.Element => (
 			<div className="min-w-0">
 				<div className="truncate font-medium text-foreground">{row.original.account.name}</div>
@@ -766,12 +765,11 @@ const COLUMNS: readonly DealColumn[] = [
 		),
 		size: COLUMN_WIDTH.account,
 		enableSorting: true,
-		meta: { headerClassName: GUTTER_START, cellClassName: GUTTER_START },
 	},
 	{
 		id: "stage",
 		accessorFn: (row: Deal): number => rankIn(STAGES, row.stage),
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Stage" column={column} />,
+		header: "Stage",
 		cell: ({ row }): React.JSX.Element => {
 			const stage = STAGES.find((entry: Stage): boolean => entry.value === row.original.stage);
 			return (
@@ -787,7 +785,7 @@ const COLUMNS: readonly DealColumn[] = [
 	{
 		id: "owner",
 		accessorFn: (row: Deal): string => OWNER_LABELS.get(row.owner) ?? row.owner,
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Owner" column={column} />,
+		header: "Owner",
 		cell: ({ row }): React.JSX.Element => {
 			const label = OWNER_LABELS.get(row.original.owner) ?? row.original.owner;
 			return (
@@ -803,20 +801,20 @@ const COLUMNS: readonly DealColumn[] = [
 	{
 		id: "seats",
 		accessorFn: (row: Deal): number => row.account.seats,
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Seats" column={column} className="ms-auto -me-2" />,
+		header: "Seats",
 		cell: ({ row }): React.JSX.Element => <span className="tabular-nums">{count.format(row.original.account.seats)}</span>,
 		size: COLUMN_WIDTH.seats,
 		enableSorting: true,
-		meta: { headerClassName: NUMERIC_ALIGN, cellClassName: NUMERIC_ALIGN },
+		meta: { headerClassName: cn(NUMERIC_ALIGN, NUMERIC_HEADER), cellClassName: NUMERIC_ALIGN },
 	},
 	{
 		accessorKey: "amount",
 		id: "amount",
-		header: ({ column }): React.JSX.Element => <DataGridColumnHeader title="Amount" column={column} className="ms-auto -me-2" />,
+		header: "Amount",
 		cell: ({ row }): React.JSX.Element => <span className="font-medium tabular-nums">{money.format(row.original.amount)}</span>,
 		size: COLUMN_WIDTH.amount,
 		enableSorting: true,
-		meta: { headerClassName: AMOUNT_ALIGN, cellClassName: AMOUNT_ALIGN },
+		meta: { headerClassName: cn(NUMERIC_ALIGN, NUMERIC_HEADER), cellClassName: NUMERIC_ALIGN },
 	},
 ];
 
@@ -835,73 +833,47 @@ function dealRowId(row: Deal): string {
 	return row.id;
 }
 
-function firstPage(current: PaginationState): PaginationState {
-	return { ...current, pageIndex: 0 };
-}
-
 export function Filters10Example(): React.JSX.Element {
 	const [query, setQuery] = React.useState<FilterQuery>(SEED);
-	const [pagination, setPagination] = React.useState<PaginationState>(INITIAL_PAGINATION);
-	const [sorting, setSorting] = React.useState<SortingState>(INITIAL_SORTING);
 
+	// The FILTERED rows, so the table sorts, pages and counts what the query left standing. When a narrower query
+	// leaves fewer pages, the table moves to the last page that still exists.
 	const rows = React.useMemo((): Deal[] => DEALS.filter((deal: Deal): boolean => matches(deal, query)), [query]);
 	const totals = React.useMemo((): Totals => rows.reduce(addDeal, NO_TOTALS), [rows]);
 
-	const applyQuery = React.useCallback((next: FilterQuery): void => {
-		setQuery(next);
-		setPagination(firstPage);
-	}, []);
 	const resetQuery = React.useCallback((): void => {
-		applyQuery(SEED);
-	}, [applyQuery]);
+		setQuery(SEED);
+	}, []);
 
-	const table = useTable({
-		features: dataGridFeatures,
-		columns: COLUMNS,
-		data: rows,
-		pageCount: Math.ceil(rows.length / pagination.pageSize),
-		getRowId: dealRowId,
-		state: { pagination, sorting },
-		onPaginationChange: setPagination,
-		onSortingChange: setSorting,
-	});
-
-	const footer = (
-		<DataGridTableFootRow>
-			<DataGridTableFootRowCell colSpan={FOOTER_LABEL_SPAN} className={GUTTER_START}>
-				<span className="text-muted-foreground">Filtered total</span>
-			</DataGridTableFootRowCell>
-			<DataGridTableFootRowCell className={cn("font-medium tabular-nums", NUMERIC_ALIGN)}>{count.format(totals.seats)}</DataGridTableFootRowCell>
-			<DataGridTableFootRowCell className={cn("font-medium tabular-nums", AMOUNT_ALIGN)}>{money.format(totals.amount)}</DataGridTableFootRowCell>
-		</DataGridTableFootRow>
+	// One totals row under the body, keyed by column id: a column with no entry stays empty.
+	const footer = React.useMemo(
+		(): DataTableFooter => ({
+			rows: [
+				{
+					key: "filtered-total",
+					cells: {
+						account: <span className="text-muted-foreground">Filtered total</span>,
+						seats: <span className="font-medium tabular-nums">{count.format(totals.seats)}</span>,
+						amount: <span className="font-medium tabular-nums">{money.format(totals.amount)}</span>,
+					},
+				},
+			],
+		}),
+		[totals],
 	);
 
-	return (
-		<DataGrid table={table} recordCount={rows.length} emptyMessage="No deals match these filters" tableLayout={TABLE_LAYOUT}>
-			{/*
-        Card spacing is a per-style token, and this report has to hold its
-        height in a fixed frame, so the card zeroes its own padding and each
-        part pays for its own. That is the same composition the data-grid
-        examples use for a card that is a page rather than a tile.
-      */}
-			<Card className="w-full gap-0 p-0">
-				<CardHeader className="flex items-center justify-between gap-3 px-4 py-2">
-					{/*
-            Title over count rather than beside it. Side by side they need about
-            180px, and a style with taller, wider controls (sera's are
-            uppercase) leaves the left of this header barely 110px, at which
-            point the only shrinkable item, the title, truncates to nothing and
-            the card loses its name. Stacked, the group asks for the width of
-            its widest line - and the count is the one thing on screen that says
-            the query is doing something while the panel is shut.
-          */}
-					<div className="flex min-w-0 flex-col gap-0.5">
-						<CardTitle className="truncate text-sm font-medium">Pipeline</CardTitle>
-						<CardDescription className="truncate text-xs tabular-nums">
-							{rows.length} of {DEALS.length} deals
-						</CardDescription>
-					</div>
-
+	// The count under the title is the one thing on screen that says the query is doing something while the panel
+	// is shut.
+	const heading = React.useMemo(
+		(): DataTableHeading => ({
+			title: "Pipeline",
+			description: (
+				<span className="tabular-nums">
+					{rows.length} of {DEALS.length} deals
+				</span>
+			),
+			actions: (
+				<>
 					{/*
             POPOVER, not inline, and the grid is why. Inline reads more like a
             real report page, and the sibling example that walks a tree back out
@@ -913,24 +885,23 @@ export function Filters10Example(): React.JSX.Element {
             conditions are in force without opening anything.
 
             `className` on `Filters` would land on the POPOVER panel, not on the
-            trigger, so the toolbar's own layout belongs to this action group.
+            trigger, so the layout of the two controls belongs to the heading.
           */}
-					<CardAction className="flex shrink-0 items-center gap-2">
-						<Filters
-							variant="advanced"
-							advancedMode="popover"
-							advancedAlign="end"
-							reorderable
-							fields={FIELDS}
-							operatorLabels={COMPACT_OPERATORS}
-							pathCollapse="start"
-							maxPathSegments={MAX_PATH_SEGMENTS}
-							className="[--filter-field-width:9rem] [--filter-operator-width:6.5rem] [--filter-value-width:10.5rem]"
-							query={query}
-							onQueryChange={applyQuery}
-						/>
+					<Filters
+						variant="advanced"
+						advancedMode="popover"
+						advancedAlign="end"
+						reorderable
+						fields={FIELDS}
+						operatorLabels={COMPACT_OPERATORS}
+						pathCollapse="start"
+						maxPathSegments={MAX_PATH_SEGMENTS}
+						className="[--filter-field-width:9rem] [--filter-operator-width:6.5rem] [--filter-value-width:10.5rem]"
+						query={query}
+						onQueryChange={setQuery}
+					/>
 
-						{/*
+					{/*
               Restoring the view is the only button beside the trigger. Emptying
               the query is the panel's own footer action, and a toolbar copy of a
               control that already exists one click away is two places to keep in
@@ -940,65 +911,26 @@ export function Filters10Example(): React.JSX.Element {
               restore: every edit publishes a new query object, so the seeded one
               is still the seeded one exactly while nothing has been changed.
             */}
-						<Button variant="ghost" disabled={query === SEED} onClick={resetQuery}>
-							Reset
-						</Button>
-					</CardAction>
-				</CardHeader>
+					<Button variant="ghost" disabled={query === SEED} onClick={resetQuery}>
+						Reset
+					</Button>
+				</>
+			),
+		}),
+		[query, rows.length, resetQuery],
+	);
 
-				<CardContent className="border-y px-0">
-					<DataGridScrollArea>
-						<DataGridTable footerContent={footer} />
-					</DataGridScrollArea>
-				</CardContent>
-
-				{/*
-          `border-t-0`, because two styles draw this line already. Six of the
-          eight leave the card footer unbordered and take one from the content
-          block above it, which is what `border-y` up there is for; nova and
-          lyra give the footer an unconditional `border-t` of its own, and the
-          two land on the same pixel row as a visible double rule. Suppressing
-          the footer's own copy rather than dropping `border-y` is what keeps
-          the other six bordered - and it has to be this way round, because a
-          `border-t` utility added here would also match the
-          `[.border-t]:pt-(--card-spacing)` rule those six ship and replace this
-          bar's 10px of padding with the style's full card spacing.
-
-          The utility wins on layer order, not specificity: the per-style card
-          rules are imported into `layer(base)` and tailwind's utilities come
-          after it, so the style's footer selector loses to a plain `border-t-0`
-          despite being the more specific one.
-        */}
-				<CardFooter className="border-t-0 px-4 py-2.5">
-					{/*
-            Four overrides, and every one of them undoes the same bug.
-            `DataGridPagination` goes single row at `sm`, which is a VIEWPORT
-            query rather than a container one, so inside a card narrower than
-            640px it stacks its three parts however wide the card itself is:
-            page buttons, then the record range, then rows-per-page, reversed by
-            `order-*` and about 140px tall. In a preview frame that is most of
-            the height this example has to spend, and a pager nobody can see
-            cannot show that the query changed the page count.
-              flex-row py-0      the parent's own axis and padding. Plain
-                                 utilities, because the primitive merges this
-                                 className through `cn`, so tailwind-merge drops
-                                 the `flex-col` and `py-2.5` it replaces.
-              **:order-none!     source order at every depth. Two levels need
-                                 it, the two halves of the bar and the range
-                                 against the buttons inside the right half.
-              *:py-0!            the two halves' own stacking padding.
-              *:last:flex-row!   the right half, which stacks internally too.
-            The three `!` are load-bearing: those classes live on the
-            primitive's own children, out of tailwind-merge's reach, so nothing
-            else can win against them.
-
-            `flex-wrap` is left alone deliberately, so this degrades rather than
-            breaks: on a genuinely narrow phone the two halves wrap to two rows
-            instead of forcing a 400px row into 375px.
-          */}
-					<DataGridPagination sizes={PAGE_SIZES} className="flex-row py-0 *:py-0! **:order-none! *:last:flex-row!" />
-				</CardFooter>
-			</Card>
-		</DataGrid>
+	return (
+		<DataTable
+			data={rows}
+			columns={COLUMNS}
+			getRowId={dealRowId}
+			heading={heading}
+			footer={footer}
+			sorting={SORTING}
+			paging={PAGING}
+			layout={TABLE_LAYOUT}
+			emptyState={EMPTY_STATE}
+		/>
 	);
 }

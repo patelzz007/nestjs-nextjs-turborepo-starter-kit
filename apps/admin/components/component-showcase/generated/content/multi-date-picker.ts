@@ -27,6 +27,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-multi-date-picker-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "multi-date-picker-1",
 				source:
 					'"use client";\n\nimport { addMonths } from "date-fns";\nimport * as React from "react";\nimport { Label } from "@workspace/ui/components/label";\nimport { MultiDatePicker } from "@workspace/ui/components/multi-date-picker";\nimport { useSampleNow } from "@/components/component-showcase/examples/sample-clock";\nimport { formatDateInputString } from "@workspace/ui/lib/form/date-input";\n\n/** How far ahead days can be picked. */\nconst BOOKING_WINDOW_MONTHS = 3;\n/** The most days one pick accepts. */\nconst MAX_PICKED_DAYS = 5;\nconst NO_DAYS: readonly string[] = [];\n\nexport function MultiDatePicker1Example(): React.JSX.Element {\n\tconst [days, setDays] = React.useState<readonly string[]>(NO_DAYS);\n\t// One stable "now": the bounds only need to be right for this visit.\n\tconst today = new Date(useSampleNow());\n\n\treturn (\n\t\t<div className="flex w-full max-w-sm flex-col gap-1.5">\n\t\t\t<Label htmlFor="usage-multi-date-picker">Available days</Label>\n\t\t\t<MultiDatePicker\n\t\t\t\tid="usage-multi-date-picker"\n\t\t\t\tvalue={days}\n\t\t\t\tonValueChange={setDays}\n\t\t\t\tplaceholder="Pick up to 5 days"\n\t\t\t\tfromDate={formatDateInputString(today)}\n\t\t\t\ttoDate={formatDateInputString(addMonths(today, BOOKING_WINDOW_MONTHS))}\n\t\t\t\tmaxDates={MAX_PICKED_DAYS}\n\t\t\t/>\n\t\t</div>\n\t);\n}\n',

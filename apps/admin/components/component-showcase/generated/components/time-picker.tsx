@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/time-picker/time-picker-1").then((m) => m.TimePicker1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/time-picker/time-picker-2").then((m) => m.TimePicker2Example), { loading: FeatureLoading });
@@ -41,6 +41,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-1",
 		label: "Inline Panel",
 		anchor: "inline-panel",
+		part: null,
 		description: "Inline time panel. Best for an always open panel set flush in a Card, where each column pick commits at once with no OK step.",
 		file: "time-picker-1",
 		source:
@@ -51,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-2",
 		label: "Popover",
 		anchor: "popover",
+		part: null,
 		description: "Popover picker. Best for the bare root with no children and no state, drawing its own trigger and popover and starting empty.",
 		file: "time-picker-2",
 		source:
@@ -61,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-3",
 		label: "Typable Input",
 		anchor: "typable-input",
+		part: null,
 		description: "Typable time input. Best for keyboard first entry in a text field with a clock button, where typed times snap to 5 minute steps.",
 		file: "time-picker-3",
 		source:
@@ -71,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-4",
 		label: "12-Hour Seconds",
 		anchor: "12-hour-seconds",
+		part: null,
 		description: "12-hour clock with seconds. Best for second level precision where the trigger reads 02:45:30 PM while the stored value stays 14:45:30.",
 		file: "time-picker-4",
 		source:
@@ -81,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-5",
 		label: "Hour Only",
 		anchor: "hour-only",
+		part: null,
 		description: "Hour only. Best for a small fixed width trigger at the end of a settings Item row, with only hour and AM/PM columns.",
 		file: "time-picker-5",
 		source:
@@ -91,6 +96,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-6",
 		label: "Opening Hours",
 		anchor: "opening-hours",
+		part: null,
 		description: "Steps and opening hours. Best for an empty picker whose columns open on 08:30, the first allowed time, so an hour pick lands inside the window.",
 		file: "time-picker-6",
 		source:
@@ -101,6 +107,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-7",
 		label: "Unavailable Slots",
 		anchor: "unavailable-slots",
+		part: null,
 		description: "Unavailable slots. Best for a lunch hour and a set of booked slots greyed out by one predicate, so hour 12 is disabled whole.",
 		file: "time-picker-7",
 		source:
@@ -111,6 +118,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-8",
 		label: "Start & End",
 		anchor: "start-end",
+		part: null,
 		description: "Start and end time. Best for two linked pickers where moving the start shifts the end by the same amount and earlier end slots are disabled.",
 		file: "time-picker-8",
 		source:
@@ -121,6 +129,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-9",
 		label: "Time Zone",
 		anchor: "time-zone",
+		part: null,
 		description: "Time zone label. Best for hand composed trigger content and footer: the value, a fixed zone name and the clock, then only Clear and OK.",
 		file: "time-picker-9",
 		source:
@@ -131,6 +140,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-10",
 		label: "Confirm Before Apply",
 		anchor: "confirm-before-apply",
+		part: null,
 		description: "Confirm before applying. Best for popover picks, Now and Clear held as a draft that closing throws away, with OK drawn as the primary button.",
 		file: "time-picker-10",
 		source:
@@ -141,6 +151,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-11",
 		label: "Localized",
 		anchor: "localized",
+		part: null,
 		description: "Localized labels. Best for one stored value shown through 4 locale tabs, Chinese leading with the period and Arabic digits from a custom formatter.",
 		file: "time-picker-11",
 		source:
@@ -151,6 +162,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-12",
 		label: "Form Validation",
 		anchor: "form-validation",
+		part: null,
 		description: "Form field with validation. Best for a native form that reads the time from FormData on submit, swaps in a FieldError when empty and clears it on Reset.",
 		file: "time-picker-12",
 		source:
@@ -161,6 +173,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-time-picker-13",
 		label: "Date & Time",
 		anchor: "date-time",
+		part: null,
 		description: "Date and time. Best for a day and a time merged into one summary line, with 7 row columns, no footer and a Schedule button.",
 		file: "time-picker-13",
 		source:
@@ -206,6 +219,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function TimePickerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function TimePickerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

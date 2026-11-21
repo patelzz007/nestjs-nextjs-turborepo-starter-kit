@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/table/table-1").then((m) => m.Table1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/table/table-2").then((m) => m.Table2Example), { loading: FeatureLoading });
@@ -37,6 +37,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic table.. Best for a plain invoice list with a caption under the rows, a payment method column and status written as text.",
 		file: "table-1",
 		source:
@@ -47,6 +48,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-2",
 		label: "With Footer",
 		anchor: "with-footer",
+		part: null,
 		description: "Table with footer.. Best for a footer row whose Total label spans 2 columns beside a bold sum of the amounts.",
 		file: "table-2",
 		source:
@@ -57,6 +59,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-3",
 		label: "Status Badges",
 		anchor: "status-badges",
+		part: null,
 		description: "Table in card with status badges.. Best for a 2 column task list set inside a Card, with a colored status pill right aligned on each row.",
 		file: "table-3",
 		source:
@@ -67,6 +70,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-4",
 		label: "Actions Column",
 		anchor: "actions-column",
+		part: null,
 		description: "Table card with actions column.. Best for a dots button on each product row that opens Edit, Duplicate and a destructive Delete.",
 		file: "table-4",
 		source:
@@ -77,6 +81,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-5",
 		label: "Interactive Rows",
 		anchor: "interactive-rows",
+		part: null,
 		description: "Table with interactive elements.. Best for a number input in each row for changing a quantity in place, inside a Card.",
 		file: "table-5",
 		source:
@@ -87,6 +92,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-6",
 		label: "Team Members",
 		anchor: "team-members",
+		part: null,
 		description: "Team members table with avatars, roles, and status. Best for team members with avatar, name and email over role and presence badges, inside a Frame panel.",
 		file: "table-6",
 		source:
@@ -97,6 +103,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-7",
 		label: "Orders",
 		anchor: "orders",
+		part: null,
 		description:
 			"Orders table with customer info and payment status. Best for recent orders with a monospace order number, a customer name over the order date beside an avatar, and a right aligned amount.",
 		file: "table-7",
@@ -108,6 +115,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-8",
 		label: "Projects",
 		anchor: "projects",
+		part: null,
 		description: "Projects table with team avatars and status. Best for projects with a folder icon tile, stacked team avatars plus an overflow count and a due date.",
 		file: "table-8",
 		source:
@@ -118,6 +126,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-9",
 		label: "Activity Log",
 		anchor: "activity-log",
+		part: null,
 		description:
 			"Activity log table with user avatars and timestamps. Best for an audit trail of who did what, with an action badge, a monospace target such as a branch and a relative time.",
 		file: "table-9",
@@ -129,6 +138,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-10",
 		label: "Subscriptions",
 		anchor: "subscriptions",
+		part: null,
 		description:
 			"Subscriptions table with plan badges and billing info. Best for software subscriptions with a plan badge, monthly price, next billing date and a Manage button on each row.",
 		file: "table-10",
@@ -140,6 +150,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-11",
 		label: "Inventory",
 		anchor: "inventory",
+		part: null,
 		description:
 			"Product inventory table with stock badges and prices. Best for products with a SKU under the name, a stock level badge beside the unit count and an Edit, Restock, Archive menu.",
 		file: "table-11",
@@ -151,6 +162,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-12",
 		label: "API Keys",
 		anchor: "api-keys",
+		part: null,
 		description:
 			"API keys table with permission badges and actions. Best for masked secret keys in a code chip, with xs permission badges and icon buttons to copy or regenerate.",
 		file: "table-12",
@@ -162,6 +174,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-13",
 		label: "File Manager",
 		anchor: "file-manager",
+		part: null,
 		description:
 			"File manager table with owners and sharing badges. Best for files and folders with a type icon, owner avatar, a sharing scope badge, size and last modified time.",
 		file: "table-13",
@@ -173,6 +186,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-14",
 		label: "Issues",
 		anchor: "issues",
+		part: null,
 		description:
 			"Issues table with priority, assignee, and labels. Best for issue rows with a monospace ID, a title followed by an outline label badge, the assignee and a status badge.",
 		file: "table-14",
@@ -184,6 +198,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-15",
 		label: "Leaderboard",
 		anchor: "leaderboard",
+		part: null,
 		description:
 			"Leaderboard table with rank, score, and level badges. Best for a ranked list with a position number, player handle, level badge, formatted score and a colored up or down change.",
 		file: "table-15",
@@ -195,6 +210,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-16",
 		label: "Employee Profile",
 		anchor: "employee-profile",
+		part: null,
 		description:
 			"Vertical table with employee profile details. Best for one employee's details as label and value rows, with a shaded label column, avatar, job title and status.",
 		file: "table-16",
@@ -206,6 +222,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-table-17",
 		label: "Server Config",
 		anchor: "server-config",
+		part: null,
 		description:
 			"Vertical table with server configuration details. Best for a titled server panel with a pulsing status dot, CPU and memory usage bars and secondary tag badges.",
 		file: "table-17",
@@ -252,6 +269,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function TableFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function TableFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

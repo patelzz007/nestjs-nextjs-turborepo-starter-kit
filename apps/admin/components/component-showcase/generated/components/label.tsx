@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/label/label-1").then((m) => m.Label1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/label/label-2").then((m) => m.Label2Example), { loading: FeatureLoading });
@@ -33,6 +33,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic label.. Best for the bare pairing of a Username name over one text input, with no marks, hints or states.",
 		file: "label-1",
 		source:
@@ -43,6 +44,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-2",
 		label: "Checkbox",
 		anchor: "checkbox",
+		part: null,
 		description: "Label paired with a checkbox.. Best for a one line terms consent with the name set to the right of a tick box in a horizontal row.",
 		file: "label-2",
 		source:
@@ -53,6 +55,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-3",
 		label: "Textarea",
 		anchor: "textarea",
+		part: null,
 		description: "Label for a textarea field.. Best for a Message name over a multi line text area for longer free text, with no counter or hint.",
 		file: "label-3",
 		source:
@@ -63,6 +66,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-4",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Label in a disabled state.. Best for a field locked from editing, with the input disabled and the wrapper flagged data-disabled.",
 		file: "label-4",
 		source:
@@ -73,6 +77,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-5",
 		label: "Required",
 		anchor: "required",
+		part: null,
 		description: "Label with required indicator. Best for an email field marked mandatory by a red asterisk after the name, with the browser required check on the input.",
 		file: "label-5",
 		source:
@@ -83,6 +88,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-6",
 		label: "Optional",
 		anchor: "optional",
+		part: null,
 		description: "Label with optional indicator. Best for a phone number field marked as skippable by muted optional text in parentheses after the name.",
 		file: "label-6",
 		source:
@@ -93,6 +99,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-7",
 		label: "Tooltip Info",
 		anchor: "tooltip-info",
+		part: null,
 		description: "Label with tooltip info icon. Best for an API key name followed by a small info icon whose hover or focus opens a hint about where to find the key.",
 		file: "label-7",
 		source:
@@ -103,6 +110,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-8",
 		label: "Badge",
 		anchor: "badge",
+		part: null,
 		description:
 			"Label with badge indicator. Best for a webhook URL with a small Active badge in the success tint beside the name, for a setting whose state matters at a glance.",
 		file: "label-8",
@@ -114,6 +122,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-9",
 		label: "Character Counter",
 		anchor: "character-counter",
+		part: null,
 		description: "Label with character counter. Best for a bio box whose name row carries a running count of typed characters against a 200 limit at the right end.",
 		file: "label-9",
 		source:
@@ -124,6 +133,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-10",
 		label: "Helper Text",
 		anchor: "helper-text",
+		part: null,
 		description: "Label with helper description text. Best for an API key name with a line of helper copy stacked between it and the input, always on screen.",
 		file: "label-10",
 		source:
@@ -134,6 +144,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-11",
 		label: "Error State",
 		anchor: "error-state",
+		part: null,
 		description: "Label with error state. Best for an email that failed validation, its name in red, the box outlined red and an error line under it.",
 		file: "label-11",
 		source:
@@ -144,6 +155,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-12",
 		label: "Inline Edit",
 		anchor: "inline-edit",
+		part: null,
 		description:
 			"Label with inline edit toggle. Best for a project name shown as read only text until a pencil button beside the name swaps in an input, then a check swaps it back.",
 		file: "label-12",
@@ -155,6 +167,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-label-13",
 		label: "Status Dot",
 		anchor: "status-dot",
+		part: null,
 		description: "Label with status indicator dot. Best for a server status row with a pinging green dot after the name and the current state in a locked input.",
 		file: "label-13",
 		source:
@@ -200,6 +213,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function LabelFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function LabelFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

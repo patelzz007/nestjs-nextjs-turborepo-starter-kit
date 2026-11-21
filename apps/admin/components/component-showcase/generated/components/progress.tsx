@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/progress/progress-1").then((m) => m.Progress1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/progress/progress-2").then((m) => m.Progress2Example), { loading: FeatureLoading });
@@ -28,6 +28,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-progress-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic progress.. Best for a name on the left and its percent on the right, over a bar left at the active style's default height.",
 		file: "progress-1",
 		source:
@@ -38,6 +39,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-progress-2",
 		label: "Small",
 		anchor: "small",
+		part: null,
 		description: "Small progress.. Best for a slim bar pinned to a 4px track, whatever height the active style gives it by default.",
 		file: "progress-2",
 		source:
@@ -48,6 +50,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-progress-3",
 		label: "Large",
 		anchor: "large",
+		part: null,
 		description: "Large progress.. Best for a heavy bar pinned to a 12px track, with its name and percent on the row above.",
 		file: "progress-3",
 		source:
@@ -58,6 +61,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-progress-4",
 		label: "Status Messages",
 		anchor: "status-messages",
+		part: null,
 		description: "Progress bar with status messages.. Best for a bar that fills by itself and loops, with a status line under it that rewords as each cutoff is passed.",
 		file: "progress-4",
 		source:
@@ -68,6 +72,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-progress-5",
 		label: "File Uploads",
 		anchor: "file-uploads",
+		part: null,
 		description:
 			"File upload list with progress & status.. Best for rows of 4 files, each with a file icon, a cut off name, a 4px bar and the time left or Complete at the end.",
 		file: "progress-5",
@@ -79,6 +84,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-progress-6",
 		label: "With Slider",
 		anchor: "with-slider",
+		part: null,
 		description: "Progress bar with slider.. Best for a bar and a 0 to 100 slider under it with a step of 1, both bound to one value state.",
 		file: "progress-6",
 		source:
@@ -89,6 +95,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-progress-7",
 		label: "Multi-Step",
 		anchor: "multi-step",
+		part: null,
 		description:
 			"Multi-step progress indicator. Best for a setup checklist whose bar fills by the share of finished steps, with a done count and a check or empty circle per step.",
 		file: "progress-7",
@@ -100,6 +107,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-progress-8",
 		label: "Custom Colors",
 		anchor: "custom-colors",
+		part: null,
 		description: "Progress bar with custom colors.. Best for stacked bars in 5 fixed palette fills from green to violet that all slide from 45 to 75 together on load.",
 		file: "progress-8",
 		source:
@@ -145,6 +153,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ProgressFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ProgressFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

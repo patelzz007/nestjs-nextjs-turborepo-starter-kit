@@ -6,7 +6,7 @@ import { Share, Text, type ViewInstance } from "react-native";
 
 import { SHEET_MOTION } from "../../lib/motion";
 import type { DataTableExportFile } from "../../lib/data-table";
-import { DataTable, type DataTableColumn, type DataTableFilter, type DataTableProps } from "../data-table";
+import { DataTable, dataTableCellVariants, dataTableUtilityCellVariants, type DataTableColumn, type DataTableFilter, type DataTableProps } from "../data-table";
 
 interface Invoice {
 	readonly id: string;
@@ -70,6 +70,13 @@ beforeEach((): void => {
 
 afterEach((): void => {
 	jest.useRealTimers();
+});
+
+describe("DataTable layout", () => {
+	it("lets data cells grow into the room the screen has left, so the table spans it, while utility cells keep their width", () => {
+		expect(dataTableCellVariants().split(" ")).toContain("grow");
+		expect(dataTableUtilityCellVariants().split(" ")).not.toContain("grow");
+	});
 });
 
 describe("DataTable", () => {
@@ -184,11 +191,32 @@ describe("DataTable", () => {
 
 	it("runs a row action on its row", async () => {
 		const onPress = jest.fn<undefined, [Invoice]>();
-		await render(table({ actions: [{ key: "view", label: "View", icon: EyeIcon, onPress }] }));
+		await render(table({ actions: [{ key: "view", label: "View", description: "Open the whole invoice", icon: EyeIcon, onPress }] }));
 
-		await choose(/^Open row menu, INV-002/u, "View", "menuitem");
+		// The entry is read as its title and its subtitle.
+		await choose(/^Open row menu, INV-002/u, "View, Open the whole invoice", "menuitem");
 
 		expect(onPress).toHaveBeenCalledWith(INVOICES.at(1));
+	});
+
+	it("draws each menu entry on a coloured tile: its own tone, else the palette in menu order", async () => {
+		await render(
+			table({
+				actions: [
+					{ key: "view", label: "View", description: "Open the whole invoice", icon: EyeIcon, onPress: jest.fn() },
+					{ key: "copy", label: "Duplicate", description: "Copy it as a draft", icon: EyeIcon, onPress: jest.fn() },
+					{ key: "void", label: "Void", description: "Cancel the invoice", icon: EyeIcon, tone: "destructive", onPress: jest.fn() },
+				],
+			}),
+		);
+
+		await fireEvent.press(screen.getByRole("button", { name: /^Open row menu, INV-001/u }));
+
+		// The tile is decorative, hidden from screen readers (the title names the action).
+		const hidden = { includeHiddenElements: true };
+		expect(screen.getByTestId("row-action-tile-blue", hidden)).toBeOnTheScreen();
+		expect(screen.getByTestId("row-action-tile-violet", hidden)).toBeOnTheScreen();
+		expect(screen.getByTestId("row-action-tile-destructive", hidden)).toBeOnTheScreen();
 	});
 
 	it("makes each row a button when rows press", async () => {
@@ -330,7 +358,7 @@ describe("DataTable", () => {
 		const onPress = jest.fn<undefined, [Invoice]>();
 		await render(
 			table({
-				actions: [{ key: "open", label: "Open", onPress }],
+				actions: [{ key: "open", label: "Open", description: "See the whole invoice", onPress }],
 				renderCard: (row: Invoice, actions): React.JSX.Element => <Text onPress={actions.at(0)?.onPress}>{`Card ${row.merchant}`}</Text>,
 			}),
 		);

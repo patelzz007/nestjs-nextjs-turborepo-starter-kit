@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/button/button-1").then((m) => m.Button1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/button/button-2").then((m) => m.Button2Example), { loading: FeatureLoading });
@@ -85,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-1",
 		label: "Default",
 		anchor: "default",
+		part: null,
 		description: "Default button. Best for the main call to action with no variant or size prop, the base the other examples change.",
 		file: "button-1",
 		source:
@@ -95,6 +96,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-2",
 		label: "Secondary",
 		anchor: "secondary",
+		part: null,
 		description: "Secondary button. Best for a lower emphasis action on the secondary fill, for the alternative beside a primary one.",
 		file: "button-2",
 		source:
@@ -105,6 +107,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-3",
 		label: "Outline",
 		anchor: "outline",
+		part: null,
 		description: "Outline button. Best for a bordered action that ranks below the filled styles, for neutral choices next to them.",
 		file: "button-3",
 		source:
@@ -115,6 +118,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-4",
 		label: "Ghost",
 		anchor: "ghost",
+		part: null,
 		description: "Ghost button. Best for a borderless action with no fill until hover, for toolbars and dense rows of controls.",
 		file: "button-4",
 		source:
@@ -125,6 +129,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-5",
 		label: "Destructive",
 		anchor: "destructive",
+		part: null,
 		description: "Destructive button. Best for an action in a soft destructive tint with destructive text, for delete, remove or revoke.",
 		file: "button-5",
 		source:
@@ -135,6 +140,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-6",
 		label: "Link",
 		anchor: "link",
+		part: null,
 		description: "Link button variant. Best for an action styled as primary colored text with no fill or border, still a native button element.",
 		file: "button-6",
 		source:
@@ -145,6 +151,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-7",
 		label: "Extra Small",
 		anchor: "extra-small",
+		part: null,
 		description: "Extra small button. Best for the smallest text size of the scale, sized for dense rows, tags and inline controls.",
 		file: "button-7",
 		source:
@@ -155,6 +162,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-8",
 		label: "Small",
 		anchor: "small",
+		part: null,
 		description: "Small button. Best for the text size one step below default, for compact forms, card footers and toolbars.",
 		file: "button-8",
 		source:
@@ -165,6 +173,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-9",
 		label: "Large",
 		anchor: "large",
+		part: null,
 		description: "Large button. Best for the tallest text size of the scale, for a hero or a single main call to action on a page.",
 		file: "button-9",
 		source:
@@ -175,6 +184,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-10",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled button. Best for a default size control labelled Button that renders enabled, since its source passes no disabled prop.",
 		file: "button-10",
 		source:
@@ -185,6 +195,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-11",
 		label: "Icon Button",
 		anchor: "icon-button",
+		part: null,
 		description: "Icon button. Best for a square icon only search control at the default size, named for screen readers by its aria-label.",
 		file: "button-11",
 		source:
@@ -195,6 +206,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-12",
 		label: "Icon Right",
 		anchor: "icon-right",
+		part: null,
 		description: "Button with an icon on the right. Best for a primary Get Started call to action with a static trailing arrow after the label.",
 		file: "button-12",
 		source:
@@ -205,6 +217,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-13",
 		label: "Loading State",
 		anchor: "loading-state",
+		part: null,
 		description: "Button in a loading state. Best for a fixed pending state, disabled with a spinner and Please wait, with no logic to end it.",
 		file: "button-13",
 		source:
@@ -215,6 +228,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-14",
 		label: "Icon Left",
 		anchor: "icon-left",
+		part: null,
 		description: "Button with an icon on the left. Best for a primary Download action led by a cloud download icon before its label.",
 		file: "button-14",
 		source:
@@ -225,6 +239,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-15",
 		label: "Invalid State",
 		anchor: "invalid-state",
+		part: null,
 		description: "Button with an invalid state highlight. Best for the primary fill flagged with aria-invalid, for a submit tied to a form that failed validation.",
 		file: "button-15",
 		source:
@@ -235,6 +250,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-16",
 		label: "Secondary Icon Left",
 		anchor: "secondary-icon-left",
+		part: null,
 		description: "Secondary button with an icon on the left. Best for a secondary fill action with the GitHub logo placed before its label.",
 		file: "button-16",
 		source:
@@ -245,6 +261,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-17",
 		label: "Secondary Icon Right",
 		anchor: "secondary-icon-right",
+		part: null,
 		description: "Secondary button with an icon on the right. Best for a secondary Open Project action with a trailing external link icon after its label.",
 		file: "button-17",
 		source:
@@ -255,6 +272,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-18",
 		label: "Outline Icon Left",
 		anchor: "outline-icon-left",
+		part: null,
 		description: "Outline button with an icon on the left. Best for an outline Add Item action led by a plus sign, for creating a new record in a list.",
 		file: "button-18",
 		source:
@@ -265,6 +283,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-19",
 		label: "Outline Icon Right",
 		anchor: "outline-icon-right",
+		part: null,
 		description: "Outline button with an icon on the right. Best for an outline Options control ending in an adjustments icon, for opening settings or filters.",
 		file: "button-19",
 		source:
@@ -275,6 +294,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-20",
 		label: "Ghost Icon Left",
 		anchor: "ghost-icon-left",
+		part: null,
 		description: "Ghost button with an icon on the left. Best for a ghost Settings entry led by a gear, for sidebars and account menus.",
 		file: "button-20",
 		source:
@@ -285,6 +305,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-21",
 		label: "Ghost Icon Right",
 		anchor: "ghost-icon-right",
+		part: null,
 		description: "Ghost button with an icon on the right. Best for a ghost Logout action with a trailing sign out arrow, for the end of an account menu.",
 		file: "button-21",
 		source:
@@ -295,6 +316,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-22",
 		label: "Destructive Icon Left",
 		anchor: "destructive-icon-left",
+		part: null,
 		description: "Destructive button with an icon on the left. Best for a destructive Delete Account action led by a trash can icon.",
 		file: "button-22",
 		source:
@@ -305,6 +327,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-23",
 		label: "Destructive Icon Right",
 		anchor: "destructive-icon-right",
+		part: null,
 		description: "Destructive button with an icon on the right. Best for a destructive Confirm Removal action ending in a warning circle, for the last step of a delete.",
 		file: "button-23",
 		source:
@@ -315,6 +338,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-24",
 		label: "Extra Small Icon",
 		anchor: "extra-small-icon",
+		part: null,
 		description: "Extra small icon button. Best for the smallest square size as an outline close X, for dismissing chips, tags or toasts.",
 		file: "button-24",
 		source:
@@ -325,6 +349,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-25",
 		label: "Small Icon",
 		anchor: "small-icon",
+		part: null,
 		description: "Small icon button. Best for a small borderless bell for a notifications entry in a dense top bar.",
 		file: "button-25",
 		source:
@@ -335,6 +360,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-26",
 		label: "Large Icon",
 		anchor: "large-icon",
+		part: null,
 		description: "Large (lg) icon-only button. Best for the largest square size on the primary fill with a play icon, for a media start control.",
 		file: "button-26",
 		source:
@@ -345,6 +371,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-27",
 		label: "Next Link",
 		anchor: "next-link",
+		part: null,
 		description: "Button rendered as a Next.js Link. Best for a plain anchor to the site root that keeps the primary look, for navigating between pages.",
 		file: "button-27",
 		source:
@@ -355,6 +382,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-28",
 		label: "Link Icon Left",
 		anchor: "link-icon-left",
+		part: null,
 		description: "Link button with an icon on the left. Best for a link styled Help Center entry led by a question mark circle, rendered as a native button.",
 		file: "button-28",
 		source:
@@ -365,6 +393,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-29",
 		label: "Link Icon Right",
 		anchor: "link-icon-right",
+		part: null,
 		description: "Link button with an icon on the right. Best for a link styled View Documentation action whose up right arrow turns 45 degrees on hover.",
 		file: "button-29",
 		source:
@@ -375,6 +404,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-30",
 		label: "Large Icon Left",
 		anchor: "large-icon-left",
+		part: null,
 		description: "Large button with an icon on the left. Best for a large Upgrade Now call to action led by a lightning bolt, for plan upsells.",
 		file: "button-30",
 		source:
@@ -385,6 +415,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-31",
 		label: "Large Icon Right",
 		anchor: "large-icon-right",
+		part: null,
 		description: "Large button with an icon on the right. Best for a large Send Message action with a trailing paper plane, as at the foot of a contact form.",
 		file: "button-31",
 		source:
@@ -395,6 +426,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-32",
 		label: "Outline Invalid",
 		anchor: "outline-invalid",
+		part: null,
 		description: "Outline button with an invalid state. Best for an outline control marked aria-invalid, so its border turns destructive beside a failed field.",
 		file: "button-32",
 		source:
@@ -405,6 +437,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-33",
 		label: "Ghost Invalid",
 		anchor: "ghost-invalid",
+		part: null,
 		description: "Ghost button with an invalid state. Best for a ghost control set to aria-invalid, which gains a destructive border and ring it otherwise lacks.",
 		file: "button-33",
 		source:
@@ -415,6 +448,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-34",
 		label: "Email Login",
 		anchor: "email-login",
+		part: null,
 		description: "Button with an icon on the left. Best for a primary Login with Email action led by an envelope, for an email first sign in form.",
 		file: "button-34",
 		source:
@@ -425,6 +459,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-35",
 		label: "More Less Toggle",
 		anchor: "more-less-toggle",
+		part: null,
 		description: "Ghost button with more/less toggle. Best for a ghost Show more control whose label and chevron flip between more and less on each click.",
 		file: "button-35",
 		source:
@@ -435,6 +470,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-36",
 		label: "Outline Social Icons",
 		anchor: "outline-social-icons",
+		part: null,
 		description: "Social login buttons with Remix Icons. Best for a wrapping row of 6 outline icon only brand marks, Google through Instagram, from Remix Icon.",
 		file: "button-36",
 		source:
@@ -445,6 +481,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-37",
 		label: "Like Count",
 		anchor: "like-count",
+		part: null,
 		description: "Outline like button with count. Best for a filled Like action with a thumbs up and a 456 count split off by a thin divider.",
 		file: "button-37",
 		source:
@@ -455,6 +492,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-38",
 		label: "Star Count",
 		anchor: "star-count",
+		part: null,
 		description: "Star button with count. Best for an outline Star action with a muted 589 count after a border colored divider.",
 		file: "button-38",
 		source:
@@ -465,6 +503,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-39",
 		label: "Unread Badge",
 		anchor: "unread-badge",
+		part: null,
 		description: "Button with an unread badge. Best for an outline Inbox entry with a destructive count badge pinned over its top right corner.",
 		file: "button-39",
 		source:
@@ -475,6 +514,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-40",
 		label: "Shortcut Keys",
 		anchor: "shortcut-keys",
+		part: null,
 		description: "Button with icon, label, and shortcut keys. Best for an outline Search launcher with the Command K keys set inside it, as a command palette opener.",
 		file: "button-40",
 		source:
@@ -485,6 +525,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-41",
 		label: "Copy Feedback",
 		anchor: "copy-feedback",
+		part: null,
 		description: "Copy button with feedback. Best for an outline Copy action with a visible label that turns to Copied with a check for 1.5 seconds.",
 		file: "button-41",
 		source:
@@ -495,6 +536,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-42",
 		label: "Icon Copy",
 		anchor: "icon-copy",
+		part: null,
 		description: "Icon-only copy button with feedback. Best for a square copy control that confirms with a check and a Copied tooltip, with no visible label.",
 		file: "button-42",
 		source:
@@ -505,6 +547,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-43",
 		label: "Hamburger Toggle",
 		anchor: "hamburger-toggle",
+		part: null,
 		description: "Animated hamburger / close toggle button. Best for a square menu control whose bars rotate into an X and back, with aria-expanded kept in sync.",
 		file: "button-43",
 		source:
@@ -515,6 +558,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-44",
 		label: "Async Action",
 		anchor: "async-action",
+		part: null,
 		description: "Async action button with loading and success states. Best for a Save changes action that runs idle, saving and saved, then resets after 2 seconds.",
 		file: "button-44",
 		source:
@@ -525,6 +569,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-45",
 		label: "Inline Count",
 		anchor: "inline-count",
+		part: null,
 		description: "Outline button with inline count badge. Best for an outline Messages entry with an outlined count badge sitting inline after the label.",
 		file: "button-45",
 		source:
@@ -535,6 +580,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-46",
 		label: "Status Dot",
 		anchor: "status-dot",
+		part: null,
 		description: "Button with status dot badge. Best for an outline Live label with a pulsing green dot and 2 staggered ping rings at its right edge.",
 		file: "button-46",
 		source:
@@ -545,6 +591,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-47",
 		label: "Status Badge",
 		anchor: "status-badge",
+		part: null,
 		description: "Ghost button with a status badge. Best for a filled Updates entry with a small success colored New tag after the label.",
 		file: "button-47",
 		source:
@@ -555,6 +602,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-48",
 		label: "Notification Badge",
 		anchor: "notification-badge",
+		part: null,
 		description: "Icon button with notification badge. Best for a square bell with a destructive count badge pinned over its corner, named by aria-label.",
 		file: "button-48",
 		source:
@@ -565,6 +613,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-49",
 		label: "Go Back",
 		anchor: "go-back",
+		part: null,
 		description: "Go back link button. Best for a Go back anchor in the link style with a leading chevron, a real link and not a native button.",
 		file: "button-49",
 		source:
@@ -575,6 +624,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-50",
 		label: "Animated Go Back",
 		anchor: "animated-go-back",
+		part: null,
 		description: "Go back link button with animation. Best for the Go back link with a chevron that slides left on hover through a named hover group.",
 		file: "button-50",
 		source:
@@ -585,6 +635,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-51",
 		label: "Expanding Button",
 		anchor: "expanding-button",
+		part: null,
 		description: "Expanding button from icon to label. Best for a round 40px plus that widens to reveal Create New on hover, like a floating action control.",
 		file: "button-51",
 		source:
@@ -595,6 +646,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-52",
 		label: "Title & Description",
 		anchor: "title-description",
+		part: null,
 		description: "Multi-line button with icon, title & description. Best for a tall left aligned choice with an icon tile, a Credit Card title and a muted line of help text.",
 		file: "button-52",
 		source:
@@ -605,6 +657,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-53",
 		label: "Sliding Arrow",
 		anchor: "sliding-arrow",
+		part: null,
 		description: "Sliding Icon Button (Hover reveal). Best for a pill Get Started whose arrow slides in from the right on hover as the label moves aside.",
 		file: "button-53",
 		source:
@@ -615,6 +668,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-54",
 		label: "Shortcut Tooltip",
 		anchor: "shortcut-tooltip",
+		part: null,
 		description: "Shortcut Tooltip Button (Kbd hints). Best for a square search control whose hover tooltip names it and shows the Command K keys.",
 		file: "button-54",
 		source:
@@ -625,6 +679,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-55",
 		label: "Avatar",
 		anchor: "avatar",
+		part: null,
 		description: "Button with avatar. Best for a filled account chip pairing a 20px avatar with a handle, at the default height.",
 		file: "button-55",
 		source:
@@ -635,6 +690,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-56",
 		label: "Outline Avatar",
 		anchor: "outline-avatar",
+		part: null,
 		description: "Outline button with avatar. Best for an outline account chip with a 20px avatar and handle on the page background.",
 		file: "button-56",
 		source:
@@ -645,6 +701,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-57",
 		label: "Small Avatar",
 		anchor: "small-avatar",
+		part: null,
 		description: "Small button with avatar. Best for the filled avatar chip at the small size, for tight headers and comment rows.",
 		file: "button-57",
 		source:
@@ -655,6 +712,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-58",
 		label: "Small Outline Avatar",
 		anchor: "small-outline-avatar",
+		part: null,
 		description: "Small outline button with avatar. Best for the outline avatar chip at the small height, for dense lists of people.",
 		file: "button-58",
 		source:
@@ -665,6 +723,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-59",
 		label: "Social Login Stack",
 		anchor: "social-login-stack",
+		part: null,
 		description:
 			"Social login buttons with Remix icons. Best for a stacked column of 4 outline sign in choices, each a brand colored logo, a muted Login with prefix and a provider name.",
 		file: "button-59",
@@ -676,6 +735,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-60",
 		label: "Colored Social Icons",
 		anchor: "colored-social-icons",
+		part: null,
 		description: "Social icon-only buttons with Remix icons. Best for a row of 4 equal width icon only provider marks in brand colors, each named by its aria-label.",
 		file: "button-60",
 		source:
@@ -686,6 +746,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-61",
 		label: "Theme Toggle",
 		anchor: "theme-toggle",
+		part: null,
 		description: "Theme toggle button with animated moon and sun icons. Best for a square sun and moon swap that rotates between light and dark, labelled with the next mode.",
 		file: "button-61",
 		source:
@@ -765,6 +826,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ButtonFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ButtonFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

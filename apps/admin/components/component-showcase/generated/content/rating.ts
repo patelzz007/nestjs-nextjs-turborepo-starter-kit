@@ -42,6 +42,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-rating-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "rating-1",
 				source:
 					'import * as React from "react";\nimport { Rating } from "@workspace/ui/components/rating";\n\nexport function Rating1Example(): React.JSX.Element {\n\treturn <Rating rating={4} />;\n}\n',
@@ -50,6 +51,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-rating-2",
 				label: "Decimal Value",
 				anchor: "decimal-value",
+				part: null,
 				file: "rating-2",
 				source:
 					'import * as React from "react";\nimport { Rating } from "@workspace/ui/components/rating";\n\nexport function Rating2Example(): React.JSX.Element {\n\treturn <Rating rating={3.5} />;\n}\n',
@@ -58,6 +60,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-rating-4",
 				label: "Editable",
 				anchor: "editable",
+				part: null,
 				file: "rating-4",
 				source:
 					'"use client";\n\nimport { Rating } from "@workspace/ui/components/rating";\nimport { toastMessage } from "@workspace/ui/components/toast";\nimport * as React from "react";\n\n/** The number of stars on the scale. */\nconst MAX_RATING = 5;\n\nexport function Rating4Example(): React.JSX.Element {\n\tconst [productRating, setProductRating] = React.useState(0);\n\n\tconst handleRatingChange = React.useCallback((rating: number): void => {\n\t\tsetProductRating(rating);\n\t\ttoastMessage.success({ title: "Thanks for rating", description: `Rated ${String(rating)} out of ${String(MAX_RATING)}` });\n\t}, []);\n\n\treturn (\n\t\t<div className="space-y-8">\n\t\t\t<Rating rating={productRating} maxRating={MAX_RATING} editable onRatingChange={handleRatingChange} showValue />\n\t\t</div>\n\t);\n}\n',
@@ -66,6 +69,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-rating-5",
 				label: "Sizes",
 				anchor: "sizes",
+				part: null,
 				file: "rating-5",
 				source:
 					'import * as React from "react";\nimport { Rating } from "@workspace/ui/components/rating";\n\nexport function Rating5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-col items-center gap-4">\n\t\t\t<Rating rating={4} size="sm" />\n\t\t\t<Rating rating={4} />\n\t\t\t<Rating rating={4} size="lg" />\n\t\t</div>\n\t);\n}\n',
@@ -74,6 +78,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-rating-6",
 				label: "Review Summary",
 				anchor: "review-summary",
+				part: null,
 				file: "rating-6",
 				source:
 					'import * as React from "react";\nimport { Rating } from "@workspace/ui/components/rating";\n\nimport { Progress } from "@workspace/ui/components/progress";\nimport { Separator } from "@workspace/ui/components/separator";\n\nconst distribution = [\n\t{ stars: 5, count: 124, percentage: 62 },\n\t{ stars: 4, count: 45, percentage: 22 },\n\t{ stars: 3, count: 18, percentage: 9 },\n\t{ stars: 2, count: 8, percentage: 4 },\n\t{ stars: 1, count: 5, percentage: 3 },\n];\n\nexport function Rating6Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs space-y-4">\n\t\t\t<div className="flex flex-col items-center gap-2">\n\t\t\t\t<span className="text-3xl font-semibold">4.6</span>\n\t\t\t\t<Rating rating={4.6} size="sm" />\n\t\t\t\t<span className="text-xs text-muted-foreground">Based on 200 reviews</span>\n\t\t\t</div>\n\t\t\t<Separator />\n\t\t\t<div className="space-y-2">\n\t\t\t\t{distribution.map((row) => (\n\t\t\t\t\t<div key={row.stars} className="flex items-center gap-3 text-sm">\n\t\t\t\t\t\t<span className="w-3 text-right text-xs text-muted-foreground">{row.stars}</span>\n\t\t\t\t\t\t<Progress value={row.percentage} className="flex-1 **:data-[slot=progress-indicator]:bg-warning **:data-[slot=progress-track]:h-1.5" />\n\t\t\t\t\t\t<span className="w-7 text-right text-xs text-muted-foreground">{row.count}</span>\n\t\t\t\t\t</div>\n\t\t\t\t))}\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n',

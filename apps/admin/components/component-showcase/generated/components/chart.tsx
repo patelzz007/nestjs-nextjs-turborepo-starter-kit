@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/chart/chart-1").then((m) => m.Chart1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/chart/chart-2").then((m) => m.Chart2Example), { loading: FeatureLoading });
@@ -45,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-1",
 		label: "Basic Bars",
 		anchor: "basic-bars",
+		part: null,
 		description: "Basic bar chart. Best for a single revenue series as solid bars over 12 months with horizontal grid lines and a dollar amount in the tooltip.",
 		file: "chart-1",
 		source:
@@ -55,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-2",
 		label: "Multi-Dataset Bars",
 		anchor: "multi-dataset-bars",
+		part: null,
 		description:
 			"Multi-dataset bar chart. Best for desktop and mobile bars grouped side by side for 6 months, each series in its own theme color with a matching tooltip swatch.",
 		file: "chart-2",
@@ -66,6 +68,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-3",
 		label: "Diagonal Stripe Bars",
 		anchor: "diagonal-stripe-bars",
+		part: null,
 		description: "Diagonal stripe bar chart. Best for single series bars hatched with diagonal lines on a faint tint, each bar outlined in the series color.",
 		file: "chart-3",
 		source:
@@ -76,6 +79,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-4",
 		label: "Dotted Bars",
 		anchor: "dotted-bars",
+		part: null,
 		description: "Dotted pattern bar chart. Best for single series bars textured with a fine grid of dots over a faint tint of the series color.",
 		file: "chart-4",
 		source:
@@ -86,6 +90,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-5",
 		label: "Striped Solid Bars",
 		anchor: "striped-solid-bars",
+		part: null,
 		description: "Striped and solid bar chart. Best for desktop bars diagonally striped beside solid mobile bars, so one of 2 series reads apart from the other.",
 		file: "chart-5",
 		source:
@@ -96,6 +101,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-6",
 		label: "3D Gradient Bars",
 		anchor: "3d-gradient-bars",
+		part: null,
 		description: "3D gradient bar chart. Best for bars extruded into 3D blocks whose front, top, side and back faces each take their own gradient.",
 		file: "chart-6",
 		source:
@@ -106,6 +112,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-7",
 		label: "Gradient Bars",
 		anchor: "gradient-bars",
+		part: null,
 		description: "Gradient bar chart. Best for single series bars that fade from 70 to 20 percent opacity downward, with rounded corners and no grid lines.",
 		file: "chart-7",
 		source:
@@ -116,6 +123,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-8",
 		label: "Isometric Bars",
 		anchor: "isometric-bars",
+		part: null,
 		description: "3D isometric bar chart. Best for isometric 3D blocks in one flat series color, with the back, side and top faces at 60, 70 and 80 percent opacity.",
 		file: "chart-8",
 		source:
@@ -126,6 +134,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-9",
 		label: "Dotted Solid Bars",
 		anchor: "dotted-solid-bars",
+		part: null,
 		description: "Dotted and solid bar chart. Best for a pair of series in the same color told apart by fill, a dotted texture for desktop and solid bars for mobile.",
 		file: "chart-9",
 		source:
@@ -136,6 +145,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-10",
 		label: "Duotone Bars",
 		anchor: "duotone-bars",
+		part: null,
 		description: "Duotone gradient bar chart. Best for bars split down the middle into a pale left half and a solid right half through a hard stop gradient.",
 		file: "chart-10",
 		source:
@@ -146,6 +156,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-11",
 		label: "Animated Monochrome Bars",
 		anchor: "animated-monochrome-bars",
+		part: null,
 		description: "Animated monochrome bar chart. Best for thin bars that widen on hover to print their value, while the header figure follows the hovered month.",
 		file: "chart-11",
 		source:
@@ -156,6 +167,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-12",
 		label: "Horizontal Bars",
 		anchor: "horizontal-bars",
+		part: null,
 		description: "Vertical bar chart. Best for horizontal bars with months down the side and the value axis hidden, comparing desktop against mobile.",
 		file: "chart-12",
 		source:
@@ -166,6 +178,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-13",
 		label: "Gradient Area",
 		anchor: "gradient-area",
+		part: null,
 		description:
 			"Gradient area chart with stripe overlay. Best for a single visitor series as a smooth area fading from 50 to 5 percent opacity under its line, over a dashed grid.",
 		file: "chart-13",
@@ -177,6 +190,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-14",
 		label: "Stacked Dashed Area",
 		anchor: "stacked-dashed-area",
+		part: null,
 		description: "Stacked area chart with dashed strokes. Best for organic, paid and referral traffic stacked as 3 areas, the lower 2 traced with dashed strokes.",
 		file: "chart-14",
 		source:
@@ -187,6 +201,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-15",
 		label: "Dotted Step Area",
 		anchor: "dotted-step-area",
+		part: null,
 		description:
 			"Step area chart with dotted pattern fill. Best for a stepped area that holds each month flat until the next, filled with a dot texture, for counts that rise in jumps.",
 		file: "chart-15",
@@ -198,6 +213,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-16",
 		label: "Glowing Dot Area",
 		anchor: "glowing-dot-area",
+		part: null,
 		description: "Area chart with glowing dot markers. Best for weekly signups as a smooth area under a glowing line, with a glowing dot on every point that grows on hover.",
 		file: "chart-16",
 		source:
@@ -208,6 +224,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-17",
 		label: "Forecast Line",
 		anchor: "forecast-line",
+		part: null,
 		description:
 			"Forecast line chart with stripe pattern zone. Best for a projected sales line over a faintly striped area, with a legend below and dollar values in the tooltip.",
 		file: "chart-17",
@@ -219,6 +236,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-18",
 		label: "Crosshatch Area",
 		anchor: "crosshatch-area",
+		part: null,
 		description:
 			"Stacked area chart with crosshatch pattern fill. Best for request volume from API calls and webhooks stacked as 2 areas, each filled with a crosshatch of thin lines in its own color.",
 		file: "chart-18",
@@ -230,6 +248,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-19",
 		label: "Donut Center Total",
 		anchor: "donut-center-total",
+		part: null,
 		description:
 			"Donut chart with center total. Best for visits from 5 traffic sources as rounded donut slices with gradient fills and a drop shadow, totaled in thousands at the center.",
 		file: "chart-19",
@@ -241,6 +260,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-20",
 		label: "Donut Center Stats",
 		anchor: "donut-center-stats",
+		part: null,
 		description: "Donut chart with center stats. Best for sprint tasks by status in a donut whose center reads the completed share as a percent, with a legend below.",
 		file: "chart-20",
 		source:
@@ -251,6 +271,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-21",
 		label: "Striped Pie",
 		anchor: "striped-pie",
+		part: null,
 		description:
 			"Bug priority pie with stripe patterns. Best for open bugs by priority with a striped critical slice in the destructive color and a dotted medium slice beside 2 solid ones.",
 		file: "chart-21",
@@ -262,6 +283,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-22",
 		label: "Active Segment Donut",
 		anchor: "active-segment-donut",
+		part: null,
 		description:
 			"Active segment donut with center label. Best for plan tiers in a donut whose hovered slice grows outward, with paid users at the center and the paid share in the subtitle.",
 		file: "chart-22",
@@ -273,6 +295,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-23",
 		label: "Gradient Radar",
 		anchor: "gradient-radar",
+		part: null,
 		description: "Radar chart with gradient fill. Best for team skill scores on a 6 axis radar with a top to bottom gradient fill, a soft glow and solid point dots.",
 		file: "chart-23",
 		source:
@@ -283,6 +306,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-24",
 		label: "Glowing Stroke Radar",
 		anchor: "glowing-stroke-radar",
+		part: null,
 		description: "Filled radar with glowing stroke. Best for a radar held to a 0 to 100 scale by a hidden radius axis, with hollow point markers and a diagonal gradient.",
 		file: "chart-24",
 		source:
@@ -293,6 +317,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-chart-25",
 		label: "Radial Scores",
 		anchor: "radial-scores",
+		part: null,
 		description:
 			"Lighthouse scores radial with labels. Best for platform scores as 3 radial bars on a 0 to 100 track, each labeled with its value and filled with its own gradient.",
 		file: "chart-25",
@@ -339,6 +364,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ChartFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ChartFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

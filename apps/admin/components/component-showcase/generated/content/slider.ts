@@ -47,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-slider-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "slider-1",
 				source:
 					'import * as React from "react";\nimport { Slider } from "@workspace/ui/components/slider";\n\nexport function Slider1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex w-full max-w-xs items-center justify-center">\n\t\t\t<Slider defaultValue={50} max={100} step={1} />\n\t\t</div>\n\t);\n}\n',
@@ -55,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-slider-6",
 				label: "Range",
 				anchor: "range",
+				part: null,
 				file: "slider-6",
 				source:
 					'import * as React from "react";\nimport { Slider } from "@workspace/ui/components/slider";\n\nconst DEFAULT_RANGE: readonly number[] = [25, 75];\n\nexport function Slider6Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex w-full max-w-xs items-center justify-center">\n\t\t\t<Slider defaultValue={DEFAULT_RANGE} max={100} step={5} />\n\t\t</div>\n\t);\n}\n',
@@ -63,6 +65,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-slider-4",
 				label: "Vertical",
 				anchor: "vertical",
+				part: null,
 				file: "slider-4",
 				source:
 					'import * as React from "react";\nimport { Slider } from "@workspace/ui/components/slider";\n\nconst SINGLE_VALUE: readonly number[] = [50];\nconst RANGE_VALUE: readonly number[] = [25, 75];\n\nexport function Slider4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center gap-12">\n\t\t\t<Slider defaultValue={SINGLE_VALUE} max={100} step={1} orientation="vertical" className="h-40" />\n\t\t\t<Slider defaultValue={RANGE_VALUE} max={100} step={5} orientation="vertical" className="h-40" />\n\t\t</div>\n\t);\n}\n',
@@ -71,6 +74,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-slider-7",
 				label: "Number Input",
 				anchor: "number-input",
+				part: null,
 				file: "slider-7",
 				source:
 					'"use client";\n\nimport { isArrayValue } from "@workspace/shared";\nimport { Input } from "@workspace/ui/components/input";\nimport { Label } from "@workspace/ui/components/label";\nimport { Slider } from "@workspace/ui/components/slider";\nimport * as React from "react";\n\nconst OPACITY_MIN = 0;\nconst OPACITY_MAX = 100;\nconst OPACITY_INITIAL = 50;\nconst OPACITY_STEP = 1;\n\nexport function Slider7Example(): React.JSX.Element {\n\tconst [value, setValue] = React.useState(OPACITY_INITIAL);\n\n\tconst handleInputChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {\n\t\tconst next = Number(event.target.value);\n\t\tif (next >= OPACITY_MIN && next <= OPACITY_MAX) setValue(next);\n\t}, []);\n\n\tconst handleSliderChange = React.useCallback((next: number | readonly number[]): void => {\n\t\tconst [first = OPACITY_INITIAL] = isArrayValue(next) ? next : [next];\n\t\tsetValue(first);\n\t}, []);\n\n\treturn (\n\t\t<div className="mx-auto grid w-full max-w-sm gap-4">\n\t\t\t<div className="flex items-center justify-between">\n\t\t\t\t<Label htmlFor="slider-input" className="text-sm font-medium">\n\t\t\t\t\tOpacity\n\t\t\t\t</Label>\n\t\t\t\t<div className="flex items-center gap-1.5">\n\t\t\t\t\t<Input\n\t\t\t\t\t\tid="slider-input"\n\t\t\t\t\t\ttype="number"\n\t\t\t\t\t\tvalue={value}\n\t\t\t\t\t\tonChange={handleInputChange}\n\t\t\t\t\t\tmin={OPACITY_MIN}\n\t\t\t\t\t\tmax={OPACITY_MAX}\n\t\t\t\t\t\tclassName="h-8 w-16 text-center text-sm tabular-nums"\n\t\t\t\t\t/>\n\t\t\t\t\t<span className="text-xs text-muted-foreground">%</span>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t\t<Slider aria-label="Opacity" value={value} onValueChange={handleSliderChange} min={OPACITY_MIN} max={OPACITY_MAX} step={OPACITY_STEP} />\n\t\t</div>\n\t);\n}\n',
@@ -79,6 +83,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-slider-10",
 				label: "Tick Marks",
 				anchor: "tick-marks",
+				part: null,
 				file: "slider-10",
 				source:
 					'import * as React from "react";\nimport { cn } from "@workspace/ui/lib/core/utils";\nimport { Label } from "@workspace/ui/components/label";\nimport { Slider } from "@workspace/ui/components/slider";\n\nexport function Slider10Example(): React.JSX.Element {\n\tconst max = 12;\n\tconst skipInterval = 2;\n\tconst ticks = Array.from({ length: max + 1 }, (_, i) => i);\n\n\treturn (\n\t\t<div className="mx-auto grid w-full max-w-sm gap-4">\n\t\t\t<Label className="text-sm font-medium">Duration (months)</Label>\n\t\t\t<Slider defaultValue={5} max={max} />\n\t\t\t<span aria-hidden="true" className="flex w-full items-center justify-between gap-1 px-2.5 text-xs font-medium text-muted-foreground">\n\t\t\t\t{ticks.map((tick) => (\n\t\t\t\t\t<span key={tick} className="flex w-0 flex-col items-center justify-center gap-2">\n\t\t\t\t\t\t<span className={cn("h-1 w-px bg-muted-foreground/70", tick % skipInterval !== 0 && "h-0.5")} />\n\t\t\t\t\t\t<span className={cn(tick % skipInterval !== 0 && "opacity-0")}>{tick}</span>\n\t\t\t\t\t</span>\n\t\t\t\t))}\n\t\t\t</span>\n\t\t</div>\n\t);\n}\n',

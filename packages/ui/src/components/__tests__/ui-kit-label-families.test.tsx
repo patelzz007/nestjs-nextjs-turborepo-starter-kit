@@ -4,8 +4,8 @@ import { cleanup, render } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import type { UiKitLabelFamily, UiKitLabels } from "../../lib/labels/ui-kit-labels";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import type { UiKitLabelFamily, UiKitLabels } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { AlertDialog, AlertDialogContent, AlertDialogTitle } from "../alert-dialog";
 import { AnalyticsRangePicker, type CustomDays, type PickerOption } from "../analytics-range-picker";
@@ -65,6 +65,10 @@ interface Row {
 
 const NO_ROWS: readonly Row[] = [];
 const NO_COLUMNS: ColumnDef<DataTableFeatures, Row>[] = [];
+
+function getRowId(row: Row): string {
+	return row.id;
+}
 
 type Preset = "last30Days" | "custom";
 type Interval = "day";
@@ -142,7 +146,7 @@ const CASES: readonly LabelFamilyCase[] = [
 	},
 	{
 		family: "dataTable",
-		element: (override) => <DataTable data={NO_ROWS} columns={NO_COLUMNS} labels={override === undefined ? undefined : { noDataTitle: override }} />,
+		element: (override) => <DataTable data={NO_ROWS} columns={NO_COLUMNS} getRowId={getRowId} labels={override === undefined ? undefined : { noDataTitle: override }} />,
 		withCheckedText: (labels, text) => ({ ...labels, dataTable: { ...labels.dataTable, noDataTitle: text } }),
 		checkedText: (labels) => labels.dataTable.noDataTitle,
 		untouchedText: (labels) => labels.dataTable.noDataDescription,

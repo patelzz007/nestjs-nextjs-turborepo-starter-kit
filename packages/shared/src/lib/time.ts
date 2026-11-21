@@ -1,5 +1,5 @@
 // ============================================
-// packages/shared/src/lib/time.ts — epoch milliseconds
+// Time — epoch milliseconds and the units of time
 // ============================================
 // Every time the app stores, compares, sends or logs is epoch milliseconds: a UTC
 // instant as a plain number. Build one with date-fns (+ @date-fns/tz for a fixed

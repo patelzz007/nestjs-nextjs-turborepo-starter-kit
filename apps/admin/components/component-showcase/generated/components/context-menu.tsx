@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/context-menu/context-menu-1").then((m) => m.ContextMenu1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/context-menu/context-menu-2").then((m) => m.ContextMenu2Example), { loading: FeatureLoading });
@@ -40,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic context menu.. Best for the bare minimum of 3 plain text rows in a single group, with the middle row disabled.",
 		file: "context-menu-1",
 		source:
@@ -50,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-2",
 		label: "Icons",
 		anchor: "icons",
+		part: null,
 		description:
 			"Context menu with icons for common actions.. Best for clipboard commands, Copy, Cut and Paste, each with a leading icon, and a destructive Delete below a divider.",
 		file: "context-menu-2",
@@ -61,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-3",
 		label: "Shortcuts",
 		anchor: "shortcuts",
+		part: null,
 		description: "Context menu with keyboard shortcuts.. Best for navigation and save commands with a trailing key hint on each row and Forward disabled.",
 		file: "context-menu-3",
 		source:
@@ -71,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-4",
 		label: "Nested Submenus",
 		anchor: "nested-submenus",
+		part: null,
 		description: "Context menu with nested submenus.. Best for a More Tools flyout of 3 divided groups, Delete last, below 2 clipboard rows with key hints.",
 		file: "context-menu-4",
 		source:
@@ -81,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-5",
 		label: "Labels & Separators",
 		anchor: "labels-separators",
+		part: null,
 		description:
 			"Context menu labels and separators.. Best for a list of 4 groups, File and Edit headed by labels, with a key hint on every row down to a destructive Delete.",
 		file: "context-menu-5",
@@ -92,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-6",
 		label: "Checkbox Items",
 		anchor: "checkbox-items",
+		part: null,
 		description: "Context menu with checkbox items.. Best for a list of 3 browser view toggles that show a check when on, 2 of them on at load.",
 		file: "context-menu-6",
 		source:
@@ -102,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-7",
 		label: "Radio Items",
 		anchor: "radio-items",
+		part: null,
 		description: "Context menu with radio items.. Best for a person picker and a Light, Dark or System theme switch, each a headed radio set held in state.",
 		file: "context-menu-7",
 		source:
@@ -112,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-8",
 		label: "Destructive Actions",
 		anchor: "destructive-actions",
+		part: null,
 		description: "Context menu with destructive actions.. Best for edit and Share over a divider, then Archive and a destructive Delete, every row led by an icon.",
 		file: "context-menu-8",
 		source:
@@ -122,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-9",
 		label: "Alignment Sides",
 		anchor: "alignment-sides",
+		part: null,
 		description: "Context menu with different alignment sides.. Best for a row of 6 triggers that each open on a different side, the logical inline start and end included.",
 		file: "context-menu-9",
 		source:
@@ -132,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-context-menu-10",
 		label: "Inside Dialog",
 		anchor: "inside-dialog",
+		part: null,
 		description:
 			"Context menu used inside a dialog component.. Best for a right click area inside a modal window, with icon rows, a More Options flyout and a destructive Delete.",
 		file: "context-menu-10",
@@ -178,6 +188,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ContextMenuFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ContextMenuFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

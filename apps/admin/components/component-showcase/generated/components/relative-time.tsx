@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/relative-time/relative-time-1").then((m) => m.RelativeTime1Example), {
 	loading: FeatureLoading,
@@ -31,6 +31,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-relative-time-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: 'Times shown as "5 minutes ago" or "in 2 days", with the exact time on hover, in the platform\'s region. Best for activity feeds and last updated stamps.',
 		file: "relative-time-1",
 		source:
@@ -76,6 +77,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function RelativeTimeFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function RelativeTimeFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

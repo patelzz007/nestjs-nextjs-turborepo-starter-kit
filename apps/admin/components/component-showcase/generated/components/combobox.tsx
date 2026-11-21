@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/combobox/combobox-1").then((m) => m.Combobox1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/combobox/combobox-2").then((m) => m.Combobox2Example), { loading: FeatureLoading });
@@ -50,6 +50,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "A basic combobox with a list of options. Best for the minimal single pick wiring: a string array filtered by typing, with a no results message.",
 		file: "combobox-1",
 		source:
@@ -60,6 +61,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-2",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "A disabled combobox. Best for a locked single field whose input and chevron are both disabled, so neither typing nor clicking opens it.",
 		file: "combobox-2",
 		source:
@@ -70,6 +72,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-3",
 		label: "Invalid",
 		anchor: "invalid",
+		part: null,
 		description: "A combobox in an invalid state. Best for a labelled field marked invalid through aria-invalid, with a required message printed under it.",
 		file: "combobox-3",
 		source:
@@ -80,6 +83,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-4",
 		label: "Clear Button",
 		anchor: "clear-button",
+		part: null,
 		description: "A combobox with a clear button. Best for a field preset to Next.js whose X empties it, with the X standing in for the chevron while a value is set.",
 		file: "combobox-4",
 		source:
@@ -90,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-5",
 		label: "Auto-Highlight",
 		anchor: "auto-highlight",
+		part: null,
 		description: "A combobox with auto-highlight enabled. Best for the first match highlighted as the user types, so Enter picks it without an arrow key press.",
 		file: "combobox-5",
 		source:
@@ -100,6 +105,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-6",
 		label: "Grouped Options",
 		anchor: "grouped-options",
+		part: null,
 		description: "A combobox with grouped options. Best for timezones listed under Americas, Europe and Asia Pacific headings, with the typed search narrowing every region.",
 		file: "combobox-6",
 		source:
@@ -110,6 +116,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-7",
 		label: "Group Separators",
 		anchor: "group-separators",
+		part: null,
 		description: "A combobox with grouped options and separators. Best for the regional timezone list with a thin rule placed inside each group, under that group's last row.",
 		file: "combobox-7",
 		source:
@@ -120,6 +127,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-8",
 		label: "Large List",
 		anchor: "large-list",
+		part: null,
 		description: "A combobox with a large list of options. Best for a long generated list of 100 entries that scrolls inside the popup and narrows as the user types.",
 		file: "combobox-8",
 		source:
@@ -130,6 +138,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-9",
 		label: "Icon Addon",
 		anchor: "icon-addon",
+		part: null,
 		description: "A combobox with an icon addon. Best for a leading globe glyph inside the field, passed to the input as an InputGroupAddon child.",
 		file: "combobox-9",
 		source:
@@ -140,6 +149,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-10",
 		label: "Country Picker",
 		anchor: "country-picker",
+		part: null,
 		description:
 			"A combobox rendered inside a popup. Best for a country picker whose outline button shows the chosen flag and name, with the search box moved inside the popup.",
 		file: "combobox-10",
@@ -151,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-11",
 		label: "In Form",
 		anchor: "in-form",
+		part: null,
 		description: "A combobox used within a form. Best for a labelled required field inside a form element, read back through FormData when Submit is pressed.",
 		file: "combobox-11",
 		source:
@@ -161,6 +172,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-12",
 		label: "Multi-Select",
 		anchor: "multi-select",
+		part: null,
 		description: "A multi-select combobox. Best for chips for each chosen framework with an X on each, typed into from an input that sits after the last chip.",
 		file: "combobox-12",
 		source:
@@ -171,6 +183,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-13",
 		label: "Disabled Multi-Select",
 		anchor: "disabled-multi-select",
+		part: null,
 		description: "A disabled multi-select combobox. Best for a locked multi value field holding 2 preset chips, disabled at the root rather than on the input.",
 		file: "combobox-13",
 		source:
@@ -181,6 +194,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-14",
 		label: "Invalid Multi-Select",
 		anchor: "invalid-multi-select",
+		part: null,
 		description:
 			"A multi-select combobox in an invalid state. Best for the multi value chip field in its error state, with aria-invalid on the chip input and a message below.",
 		file: "combobox-14",
@@ -192,6 +206,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-15",
 		label: "Non-Removable Chips",
 		anchor: "non-removable-chips",
+		part: null,
 		description: "A multi-select with chips that cannot be removed. Best for preset chips drawn without an X button, for picks the chip itself should not offer to dismiss.",
 		file: "combobox-15",
 		source:
@@ -202,6 +217,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-16",
 		label: "Custom Items",
 		anchor: "custom-items",
+		part: null,
 		description:
 			"A combobox with custom item rendering. Best for a member picker whose button shows the chosen avatar, with rows listing each person's photo, name and job title.",
 		file: "combobox-16",
@@ -213,6 +229,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-17",
 		label: "In Dialog",
 		anchor: "in-dialog",
+		part: null,
 		description: "A combobox used within a dialog. Best for a framework pick placed in a modal with a hidden label and Cancel and Confirm buttons in its footer.",
 		file: "combobox-17",
 		source:
@@ -223,6 +240,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-18",
 		label: "Custom Trigger Icon",
 		anchor: "custom-trigger-icon",
+		part: null,
 		description:
 			"A combobox with a custom trigger icon. Best for a chevrons up and down glyph shown only while the field is empty, giving way to the X once a value is picked.",
 		file: "combobox-18",
@@ -234,6 +252,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-19",
 		label: "User Tags",
 		anchor: "user-tags",
+		part: null,
 		description: "A multi-select combobox with user tags. Best for team members as rounded pill chips with a small avatar, picked from rows that show each person's position.",
 		file: "combobox-19",
 		source:
@@ -244,6 +263,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-20",
 		label: "Invisible Tags",
 		anchor: "invisible-tags",
+		part: null,
 		description: "Invisible combobox with member tags. Best for member pills sitting loose on the page with no field border, ring or background around them.",
 		file: "combobox-20",
 		source:
@@ -254,6 +274,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-21",
 		label: "Status Change",
 		anchor: "status-change",
+		part: null,
 		description: "A status change combobox. Best for workflow states from Backlog to Cancelled, each with its own tinted circle glyph on the button and in the list.",
 		file: "combobox-21",
 		source:
@@ -264,6 +285,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-22",
 		label: "Priority Change",
 		anchor: "priority-change",
+		part: null,
 		description: "A priority change combobox. Best for priority levels drawn as 3 step signal bars, with Urgent shown as a yellow warning sign.",
 		file: "combobox-22",
 		source:
@@ -274,6 +296,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-23",
 		label: "Lead Selection",
 		anchor: "lead-selection",
+		part: null,
 		description: "A lead selection combobox. Best for a single lead picked from a Team members group of avatar rows, marked You for the signed in user, or No lead.",
 		file: "combobox-23",
 		source:
@@ -284,6 +307,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-24",
 		label: "Member Selection",
 		anchor: "member-selection",
+		part: null,
 		description: "A multi-member selection combobox. Best for several people summarised on the button as up to 4 stacked avatars and a member count.",
 		file: "combobox-24",
 		source:
@@ -294,6 +318,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-25",
 		label: "Date Selection",
 		anchor: "date-selection",
+		part: null,
 		description:
 			"A date selection combobox with an optional custom picker dialog. Best for date presets such as Tomorrow and End of month beside their dates, plus a Custom row opening a 2 month calendar dialog.",
 		file: "combobox-25",
@@ -305,6 +330,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-26",
 		label: "Label Selection",
 		anchor: "label-selection",
+		part: null,
 		description:
 			"A multi-label selection combobox with a no-label mode. Best for issue labels marked by colored dots, the button showing one label's name or up to 3 dots plus a count of the rest.",
 		file: "combobox-26",
@@ -316,6 +342,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-27",
 		label: "Team Selection",
 		anchor: "team-selection",
+		part: null,
 		description: "A team selection combobox. Best for one owning team per record, each marked by its own tinted glyph, with a No team row to unset it.",
 		file: "combobox-27",
 		source:
@@ -326,6 +353,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-combobox-28",
 		label: "Assignee Selection",
 		anchor: "assignee-selection",
+		part: null,
 		description: "An assignee selection combobox. Best for a single assignee chosen from avatar rows, with No assignee on top and an Invite row in its own New user group.",
 		file: "combobox-28",
 		source:
@@ -388,6 +416,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ComboboxFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ComboboxFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/switch/switch-1").then((m) => m.Switch1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/switch/switch-2").then((m) => m.Switch2Example), { loading: FeatureLoading });
@@ -34,6 +34,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic switch.. Best for the minimal row: one switch, off on load, left of its Airplane Mode label in a horizontal Field.",
 		file: "switch-1",
 		source:
@@ -44,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-2",
 		label: "With Description",
 		anchor: "with-description",
+		part: null,
 		description: "Switch with description.. Best for a title over a supporting sentence with the control at the right, the whole row one clickable label.",
 		file: "switch-2",
 		source:
@@ -54,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-3",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled switch.. Best for locked rows in both states, one off and one on, that stay readable but cannot be flipped.",
 		file: "switch-3",
 		source:
@@ -64,6 +67,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-4",
 		label: "Sizes",
 		anchor: "sizes",
+		part: null,
 		description: "Switch in different sizes.. Best for the sm and default sizes stacked for comparison, to match the control to dense or regular rows.",
 		file: "switch-4",
 		source:
@@ -74,6 +78,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-5",
 		label: "Switch Group",
 		anchor: "switch-group",
+		part: null,
 		description: "Switch group. Best for a headed stack of email, SMS and push channels, each control left of its label and 2 on at load.",
 		file: "switch-5",
 		source:
@@ -84,6 +89,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-6",
 		label: "Card Separators",
 		anchor: "card-separators",
+		part: null,
 		description: "Switch list in card with separators. Best for a card holding 3 channel rows split by separators, each name at the left and its toggle at the right edge.",
 		file: "switch-6",
 		source:
@@ -94,6 +100,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-7",
 		label: "Card With Icons",
 		anchor: "card-with-icons",
+		part: null,
 		description: "Switch list in card with icons. Best for rows that lead with a dimmed bell, mail or phone icon before each channel name, in a divided card.",
 		file: "switch-7",
 		source:
@@ -104,6 +111,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-8",
 		label: "In Frame",
 		anchor: "in-frame",
+		part: null,
 		description: "Switch in frame. Best for privacy rows in a Frame panel below a header titled Privacy Settings, 2 of the 3 on at load.",
 		file: "switch-8",
 		source:
@@ -114,6 +122,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-9",
 		label: "Tooltip Info",
 		anchor: "tooltip-info",
+		part: null,
 		description: "Switch with tooltip info. Best for a sign in security option whose label is followed by a help icon that explains it in a tooltip.",
 		file: "switch-9",
 		source:
@@ -124,6 +133,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-10",
 		label: "With Badges",
 		anchor: "with-badges",
+		part: null,
 		description: "Switch with badges. Best for preview feature rows tagged with New and Beta pills after the label, such as an AI copilot.",
 		file: "switch-10",
 		source:
@@ -134,6 +144,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-11",
 		label: "Colored",
 		anchor: "colored",
+		part: null,
 		description: "Colored switches. Best for custom on colors set per control through a data-checked class, here blue, green and yellow.",
 		file: "switch-11",
 		source:
@@ -144,6 +155,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-12",
 		label: "Destructive Confirm",
 		anchor: "destructive-confirm",
+		part: null,
 		description: "Destructive switch with confirmation text. Best for a data wiping option with red title text, an irreversible warning below it and a red track when on.",
 		file: "switch-12",
 		source:
@@ -154,6 +166,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-13",
 		label: "Compact Table",
 		anchor: "compact-table",
+		part: null,
 		description: "Compact settings table with switches. Best for editor preferences mapped from an array into dense rows, each with a short hint and a small toggle.",
 		file: "switch-13",
 		source:
@@ -164,6 +177,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-switch-14",
 		label: "Card Grid",
 		anchor: "card-grid",
+		part: null,
 		description: "Switch with descriptions in card grid. Best for a 2 column grid of service tiles, each with a bordered icon box, a brief description and a small toggle.",
 		file: "switch-14",
 		source:
@@ -209,6 +223,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SwitchFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SwitchFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

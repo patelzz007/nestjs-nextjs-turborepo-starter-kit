@@ -18,6 +18,7 @@ import {
 	isDataGridCellWritable,
 	moveDataGridColumn,
 	resolveDataGridLayout,
+	spreadDataGridSpareWidth,
 	type DataGridFeatures,
 	type DataGridTableInstance,
 } from "../data-grid";
@@ -115,6 +116,30 @@ describe("columns", () => {
 });
 
 describe("geometry", () => {
+	it("shares the spare width among the growing columns by their widths, so the grid spans the viewport", () => {
+		const viewport = 500;
+		// 100 + 200 + 100 = 400 wide: 100 to share between the two growing columns, 1 : 2.
+		const widths = spreadDataGridSpareWidth(
+			[
+				{ width: 100, grows: true },
+				{ width: 200, grows: true },
+				{ width: 100, grows: false },
+			],
+			viewport,
+		);
+		expect(widths).toEqual([100 + 100 / 3, 200 + 200 / 3, 100]);
+		expect(widths.reduce((total, width) => total + width, 0)).toBeCloseTo(viewport);
+	});
+
+	it("leaves every width alone when the columns already fill the viewport, or none grows", () => {
+		const columns = [
+			{ width: 300, grows: true },
+			{ width: 300, grows: true },
+		];
+		expect(spreadDataGridSpareWidth(columns, 400)).toEqual([300, 300]);
+		expect(spreadDataGridSpareWidth([{ width: 100, grows: false }], 400)).toEqual([100]);
+	});
+
 	it("drops a dragged column past each neighbour whose half it crossed", () => {
 		const widths = [100, 80, 120, 60];
 		expect(dataGridDropIndex(widths, 1, 30)).toBe(1);

@@ -2,7 +2,8 @@
 // data components; each folder is one component's logic.
 export * from "./file-type/index";
 export * from "./kanban/index";
-export * from "./data-table/index";
+export * from "./table/index";
+export * from "./spreadsheet/index";
 export * from "./gantt/index";
 export * from "./event-calendar/index";
 export * from "./data-grid/index";

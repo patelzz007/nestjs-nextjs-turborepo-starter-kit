@@ -7,8 +7,8 @@
 
 import * as React from "react";
 
-import { cn } from "../lib/core/utils";
-import type { UiKitLabelsOverride } from "../lib/labels/ui-kit-labels";
+import { cn } from "@workspace/ui/lib/core/utils";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { BrandMark } from "./brand-mark";
 import { buttonVariants, Button } from "./button";
 import { ShellLanguageToggle } from "./shell-language-toggle";

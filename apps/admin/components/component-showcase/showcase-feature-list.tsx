@@ -67,7 +67,7 @@ function FeatureSection({ feature }: FeatureSectionProps): React.JSX.Element {
 				<TabsContent value="preview">
 					<Frame>
 						<FramePanel aria-label={`${feature.label} preview`} role="region">
-							<LazySection height={PREVIEW_HEIGHT} placeholder={PREVIEW_PLACEHOLDER} rootMargin={MOUNT_AHEAD_MARGIN} reveal="instant" commit="urgent">
+							<LazySection height={PREVIEW_HEIGHT} placeholder={PREVIEW_PLACEHOLDER} rootMargin={MOUNT_AHEAD_MARGIN} reveal="instant" commit="urgent" retain="near-viewport">
 								<div data-slot="feature-preview" className="flex min-h-40 w-full items-center justify-center">
 									{feature.render()}
 								</div>
@@ -100,27 +100,47 @@ export function useScrollToLinkedFeature(): void {
 	}, []);
 }
 
+/** What a generated features module takes: the page part to show, or `null` for every feature. */
+export interface ShowcaseFeatureSetProps {
+	readonly part: string | null;
+}
+
 export interface ShowcaseFeatureListProps {
 	readonly features: readonly ShowcaseFeature[];
 	/** The component's Do / Don't pairs, after its features. */
 	readonly guidelines?: readonly ShowcaseGuideline[] | undefined;
+	/** On a split page, the part to show; `null` (the default) shows every feature. */
+	readonly part?: string | null;
 }
 
 const NO_GUIDELINES: readonly ShowcaseGuideline[] = [];
 
 /**
- * Every feature of one component, in order. Each preview mounts well ahead of
- * the viewport (no reveal animation) and each example is its own chunk, so a
- * long page stays light and nothing pops in on screen.
+ * The features one page shows: every feature, or one part's. The Do / Don't pairs are the component's own, not a
+ * part's, so a split page shows them on its first part only.
  */
-export function ShowcaseFeatureList({ features, guidelines = NO_GUIDELINES }: ShowcaseFeatureListProps): React.JSX.Element {
+export function featuresOnPage(features: readonly ShowcaseFeature[], part: string | null): { readonly shown: readonly ShowcaseFeature[]; readonly showsGuidelines: boolean } {
+	if (part === null) {
+		return { shown: features, showsGuidelines: true };
+	}
+	const [first] = features;
+	return { shown: features.filter((feature: ShowcaseFeature): boolean => feature.part === part), showsGuidelines: first?.part === part };
+}
+
+/**
+ * Every feature of one component (or of one part of its page), in order. Each preview mounts well ahead of the
+ * viewport (no reveal animation) and unmounts again once it is as far behind, at the height it had, and each example
+ * is its own chunk: a page of dozens of live tables runs only the few near the screen, and nothing pops in on screen.
+ */
+export function ShowcaseFeatureList({ features, guidelines = NO_GUIDELINES, part = null }: ShowcaseFeatureListProps): React.JSX.Element {
 	useScrollToLinkedFeature();
+	const { shown, showsGuidelines } = featuresOnPage(features, part);
 	return (
 		<div className="flex flex-col gap-12">
-			{features.map((feature: ShowcaseFeature): React.JSX.Element => (
+			{shown.map((feature: ShowcaseFeature): React.JSX.Element => (
 				<FeatureSection key={feature.id} feature={feature} />
 			))}
-			{guidelines.length === 0 ? null : <ShowcaseGuidelines guidelines={guidelines} />}
+			{guidelines.length === 0 || !showsGuidelines ? null : <ShowcaseGuidelines guidelines={guidelines} />}
 		</div>
 	);
 }

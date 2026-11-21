@@ -53,6 +53,58 @@ export const toolingConfig = {
 		],
 		pm2Ecosystem: "infra/pm2/ecosystem.config.cjs",
 	},
+	// The web kit (packages/ui, the shared table logic, the showcase examples) and where nextjs-admin-dashboard-layout
+	// keeps its copy. `pnpm kit:compare <path-to-that-repo>` lists every file that differs beyond these mappings.
+	kitPairs: {
+		web: {
+			name: "web",
+			paths: [
+				{ from: "packages/ui/src/components/", to: "components/ui/" },
+				{ from: "packages/ui/src/internal/", to: "components/ui/internal/" },
+				{ from: "packages/ui/src/hooks/", to: "hooks/" },
+				{ from: "packages/ui/src/lib/", to: "lib/ui/" },
+				{ from: "packages/ui-kit-logic/src/", to: "lib/ui/kit-logic/" },
+				// The framework-free helpers the kit imports from @workspace/shared and @workspace/tokens, one file each: the
+				// rest of those packages is the apps' own (each product keeps its own themes and domain helpers).
+				{ from: "packages/shared/src/lib/time.ts", to: "lib/shared/time.ts" },
+				{ from: "packages/shared/src/lib/__tests__/time.test.ts", to: "lib/shared/__tests__/time.test.ts" },
+				{ from: "packages/shared/src/lib/entity-avatar-tone.ts", to: "lib/shared/entity-avatar-tone.ts" },
+				{ from: "packages/shared/src/lib/__tests__/entity-avatar-tone.test.ts", to: "lib/shared/__tests__/entity-avatar-tone.test.ts" },
+				{ from: "packages/shared/src/lib/image-sources.ts", to: "lib/shared/image-sources.ts" },
+				{ from: "packages/shared/src/lib/__tests__/image-sources.test.ts", to: "lib/shared/__tests__/image-sources.test.ts" },
+				{ from: "packages/shared/src/lib/navigation-menu/breadcrumb-tree.ts", to: "lib/shared/navigation-menu/breadcrumb-tree.ts" },
+				{ from: "packages/shared/src/lib/navigation-menu/__tests__/breadcrumb-tree.test.ts", to: "lib/shared/navigation-menu/__tests__/breadcrumb-tree.test.ts" },
+				{ from: "packages/shared/src/lib/navigation-menu/menu-trail.ts", to: "lib/shared/navigation-menu/menu-trail.ts" },
+				{ from: "packages/shared/src/lib/navigation-menu/__tests__/menu-trail.test.ts", to: "lib/shared/navigation-menu/__tests__/menu-trail.test.ts" },
+				{ from: "packages/tokens/src/diagram.ts", to: "lib/tokens/diagram.ts" },
+				// The dashboard's own upload features use these parts too, so it keeps them beside its features, not its examples.
+				{ from: "apps/admin/components/component-showcase/examples/file-upload/file-upload-shared.tsx", to: "features/shared/file-upload-parts.tsx" },
+				{ from: "apps/admin/components/component-showcase/examples/", to: "features/showcase/examples/" },
+			],
+			specifiers: [
+				{ from: "@workspace/ui/components/", to: "@/components/ui/" },
+				{ from: "@workspace/ui/hooks/", to: "@/hooks/" },
+				{ from: "@workspace/ui/lib/", to: "@/lib/ui/" },
+				{ from: "@workspace/ui/testing/", to: "@/testing/" },
+				{ from: "@workspace/ui-kit-logic", to: "@/lib/ui/kit-logic" },
+				{ from: "@workspace/shared", to: "@/lib/shared" },
+				{ from: "@workspace/tokens", to: "@/lib/tokens" },
+				// The password-strength rule a showcase example scores with: the client package here, the app's auth lib there.
+				{ from: "@workspace/client/lib/contexts/identity/password", to: "@/lib/auth/password-strength" },
+				{ from: "@/components/component-showcase/examples/file-upload/file-upload-shared", to: "@/features/shared/file-upload-parts" },
+				{ from: "@/components/component-showcase/", to: "@/features/showcase/" },
+				// The showcase's own route, as a docs code sample links it.
+				{ from: "/components", to: "/showcase" },
+				// The dashboard keeps `internal/` inside `components/ui/`, so a public component reaches it one level shallower.
+				{ from: "../../internal/", to: "../internal/" },
+				{ from: "../internal/", to: "./internal/" },
+				// A kit test reaches the shared test helpers relatively; the dashboard keeps them at its root.
+				{ from: "../../testing/", to: "@/testing/" },
+			],
+			// The admin app serves the showcase under /components; the dashboard under /showcase.
+			links: [{ from: "/components/", to: "/showcase/" }],
+		},
+	},
 	tools: [
 		{
 			name: "mobile:route-types",

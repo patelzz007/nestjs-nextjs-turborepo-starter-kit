@@ -43,6 +43,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-frame-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "frame-1",
 				source:
 					'import * as React from "react";\nimport { Frame, FrameDescription, FrameFooter, FrameHeader, FramePanel, FrameTitle } from "@workspace/ui/components/frame";\n\nexport function Frame1Example(): React.JSX.Element {\n\treturn (\n\t\t<Frame className="w-full">\n\t\t\t<FrameHeader>\n\t\t\t\t<FrameTitle>Section header</FrameTitle>\n\t\t\t\t<FrameDescription>Description for the section</FrameDescription>\n\t\t\t</FrameHeader>\n\t\t\t<FramePanel>\n\t\t\t\t<h2 className="text-sm font-semibold">Section title 2</h2>\n\t\t\t\t<p className="text-sm text-muted-foreground">Section description</p>\n\t\t\t</FramePanel>\n\t\t\t<FrameFooter>\n\t\t\t\t<p className="text-sm text-muted-foreground">Section footer</p>\n\t\t\t</FrameFooter>\n\t\t</Frame>\n\t);\n}\n',
@@ -51,6 +52,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-frame-2",
 				label: "Separated Panels",
 				anchor: "separated-panels",
+				part: null,
 				file: "frame-2",
 				source:
 					'import * as React from "react";\nimport { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@workspace/ui/components/frame";\n\nexport function Frame2Example(): React.JSX.Element {\n\treturn (\n\t\t<Frame className="w-full">\n\t\t\t<FrameHeader>\n\t\t\t\t<FrameTitle>Section header</FrameTitle>\n\t\t\t\t<FrameDescription>Description for the section</FrameDescription>\n\t\t\t</FrameHeader>\n\t\t\t<FramePanel>\n\t\t\t\t<h2 className="text-sm font-semibold">Separated panel</h2>\n\t\t\t\t<p className="text-sm text-muted-foreground">Section description</p>\n\t\t\t</FramePanel>\n\t\t\t<FramePanel>\n\t\t\t\t<h2 className="text-sm font-semibold">Separated panel</h2>\n\t\t\t\t<p className="text-sm text-muted-foreground">Section description</p>\n\t\t\t</FramePanel>\n\t\t</Frame>\n\t);\n}\n',
@@ -59,6 +61,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-frame-3",
 				label: "Stacked Panels",
 				anchor: "stacked-panels",
+				part: null,
 				file: "frame-3",
 				source:
 					'import * as React from "react";\nimport { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@workspace/ui/components/frame";\n\nexport function Frame3Example(): React.JSX.Element {\n\treturn (\n\t\t<Frame className="w-full" stacked>\n\t\t\t<FrameHeader>\n\t\t\t\t<FrameTitle>Section header</FrameTitle>\n\t\t\t\t<FrameDescription>Description for the section</FrameDescription>\n\t\t\t</FrameHeader>\n\t\t\t<FramePanel>\n\t\t\t\t<h2 className="text-sm font-semibold">Stacked panel</h2>\n\t\t\t\t<p className="text-sm text-muted-foreground">Section description</p>\n\t\t\t</FramePanel>\n\t\t\t<FramePanel>\n\t\t\t\t<h2 className="text-sm font-semibold">Stacked panel</h2>\n\t\t\t\t<p className="text-sm text-muted-foreground">Section description</p>\n\t\t\t</FramePanel>\n\t\t</Frame>\n\t);\n}\n',
@@ -67,6 +70,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-frame-5",
 				label: "Collapsible Panels",
 				anchor: "collapsible-panels",
+				part: null,
 				file: "frame-5",
 				source:
 					'import * as React from "react";\nimport { ChevronRightIcon } from "lucide-react";\nimport { Frame, FrameHeader, FramePanel, FrameTitle } from "@workspace/ui/components/frame";\n\nimport { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@workspace/ui/components/collapsible";\n\nexport function Frame5Example(): React.JSX.Element {\n\treturn (\n\t\t<Frame className="w-full" stacked>\n\t\t\t<Collapsible defaultOpen className="group/collapsible">\n\t\t\t\t<CollapsibleTrigger className="w-full">\n\t\t\t\t\t<FrameHeader className="flex grow flex-row items-center justify-between gap-2">\n\t\t\t\t\t\t<FrameTitle>Start</FrameTitle>\n\t\t\t\t\t\t<ChevronRightIcon className="size-4 text-muted-foreground transition-transform duration-200 group-data-open/collapsible:rotate-90" />\n\t\t\t\t\t</FrameHeader>\n\t\t\t\t</CollapsibleTrigger>\n\t\t\t\t<CollapsibleContent>\n\t\t\t\t\t<FramePanel>\n\t\t\t\t\t\t<p className="text-sm text-muted-foreground">Initialize run to answer a user question using uploaded files and the knowledge base; cite sources when relevant.</p>\n\t\t\t\t\t</FramePanel>\n\t\t\t\t</CollapsibleContent>\n\t\t\t</Collapsible>\n\t\t</Frame>\n\t);\n}\n',
@@ -75,6 +79,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-frame-7",
 				label: "Dense Layout",
 				anchor: "dense-layout",
+				part: null,
 				file: "frame-7",
 				source:
 					'import * as React from "react";\nimport { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@workspace/ui/components/frame";\n\nexport function Frame7Example(): React.JSX.Element {\n\treturn (\n\t\t<Frame dense className="w-full max-w-sm">\n\t\t\t<FrameHeader>\n\t\t\t\t<FrameTitle>Inventory Check</FrameTitle>\n\t\t\t\t<FrameDescription>Real-time stock monitoring</FrameDescription>\n\t\t\t</FrameHeader>\n\t\t\t<FramePanel>\n\t\t\t\t<h2 className="text-sm font-semibold">Warehouse A</h2>\n\t\t\t\t<p className="text-sm text-muted-foreground">Dense mode removes outer padding for a more compact appearance.</p>\n\t\t\t</FramePanel>\n\t\t</Frame>\n\t);\n}\n',

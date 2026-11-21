@@ -13,7 +13,7 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { docsSyncRunListQuery, DocsSyncRunStatusSchema, DocsSyncTriggerSchema, type DocsSyncOverview, type DocsSyncRunSummary, type Envelope } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableEmptyState, type DataTableFeatures, type DataTableFilter, type DataTablePaging } from "@workspace/ui/components/data-table";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { RefreshCw } from "lucide-react";
 import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
@@ -28,7 +28,7 @@ import {
 	toDocsSyncRunListQuery,
 } from "@/contexts/docs-publishing/url-state/docs-sync-runs";
 import { toastMutationError } from "@/lib/api/mutation-error";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildReadOnlyTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { enumFilterOptions } from "@/lib/data-table/enum-filter-options";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
@@ -39,6 +39,10 @@ import { DOCS_SYNC_STATUS_LABELS, DOCS_SYNC_TRIGGER_LABELS, DocsSyncStatusBadge 
 import { DocsSyncSetup } from "./docs-sync-setup";
 
 const FILTER_KEY = { status: "status", trigger: "trigger" } satisfies Record<string, string>;
+
+const RUNS_BULK = buildReadOnlyTableBulk<DocsSyncRunSummary>("docs-sync-runs.csv", ["startedAt", "trigger", "status", "pagesProcessed", "pagesRemoved", "pagesHeldBack"]);
+const RUNS_PAGING: DataTablePaging = { pageSizeOptions: DOCS_SYNC_RUNS_PAGE_SIZE_OPTIONS };
+const RUNS_EMPTY: DataTableEmptyState = { title: "No sync runs", description: "No run matches this filter. Runs appear here once the sync can report to this server." };
 
 function getRunRowId(run: DocsSyncRunSummary): string {
 	return run.id;
@@ -138,18 +142,6 @@ export default function DocsSyncView({ initialOverview, initialPage }: DocsSyncV
 		updateUrlState({ status: undefined, trigger: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
 	}, [updateUrlState]);
 
-	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: docsSyncRunListQuery,
-		totalCount,
-		nextCursor: readPaginatedNextCursor(listQuery.data?.meta),
-		resetKey: DOCS_SYNC_RUNS_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getRunRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-	});
-
 	const handleManualColumnFilterChange = React.useCallback(
 		(filterKey: string, value: string | null): void => {
 			const option: string = value ?? "";
@@ -169,17 +161,24 @@ export default function DocsSyncView({ initialOverview, initialPage }: DocsSyncV
 		}),
 		[urlState.status, urlState.trigger],
 	);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: docsSyncRunListQuery,
+		totalCount,
+		nextCursor: readPaginatedNextCursor(listQuery.data?.meta),
+		getRowId: getRunRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		isFiltered,
+		onClearFilters: handleClearFilters,
+	});
 
 	const filters = React.useMemo(
-		(): Filter[] => [
-			{ key: FILTER_KEY.status, label: "Status", options: enumFilterOptions(DocsSyncRunStatusSchema.options, DOCS_SYNC_STATUS_LABELS) },
-			{ key: FILTER_KEY.trigger, label: "Started by", options: enumFilterOptions(DocsSyncTriggerSchema.options, DOCS_SYNC_TRIGGER_LABELS) },
+		(): DataTableFilter[] => [
+			{ kind: "select", column: FILTER_KEY.status, label: "Status", options: enumFilterOptions(DocsSyncRunStatusSchema.options, DOCS_SYNC_STATUS_LABELS) },
+			{ kind: "select", column: FILTER_KEY.trigger, label: "Started by", options: enumFilterOptions(DocsSyncTriggerSchema.options, DOCS_SYNC_TRIGGER_LABELS) },
 		],
-		[],
-	);
-
-	const checkbox = React.useMemo(
-		() => buildReadOnlyTableCheckbox("docs-sync-runs.csv", ["startedAt", "trigger", "status", "pagesProcessed", "pagesRemoved", "pagesHeldBack"]),
 		[],
 	);
 
@@ -291,20 +290,17 @@ export default function DocsSyncView({ initialOverview, initialPage }: DocsSyncV
 					<DataTable
 						data={rows}
 						columns={columns}
-						searchKeys={[]}
+						getRowId={getRowId}
+						source={source}
 						filters={filters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						checkbox={checkbox}
-						enableColumnVisibility
-						pagination={pagination}
-						pageSizeOptions={DOCS_SYNC_RUNS_PAGE_SIZE_OPTIONS}
-						sorting={sorting}
-						onManualSortingChange={handleSortingChange}
-						isRefetching={isRefetching}
-						mobileCardRender={mobileCardRender}
+						selection={RUNS_BULK.selection}
+						exporting={RUNS_BULK.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
+						paging={RUNS_PAGING}
+						status={toTableStatus({ isLoading: false, isFetching: isRefetching })}
+						mobileCard={mobileCardRender}
 						onRowClick={handleRowClick}
-						emptyState={{ title: "No sync runs", description: "No run matches this filter. Runs appear here once the sync can report to this server." }}
+						emptyState={RUNS_EMPTY}
 					/>
 				</CardContent>
 			</Card>

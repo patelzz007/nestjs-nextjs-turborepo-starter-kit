@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/qr-code/qr-code-1").then((m) => m.QrCode1Example), { loading: FeatureLoading });
 const Guideline1 = dynamic(() => import("@/components/component-showcase/examples/qr-code/qr-code-do-1").then((m) => m.QrCodeDo1Example), { loading: FeatureLoading });
@@ -21,6 +21,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-qr-code-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "A QR code redrawn as you type its value. Best for sharing a link, a voucher or a pairing code with a phone.",
 		file: "qr-code-1",
 		source:
@@ -66,6 +67,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function QrCodeFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function QrCodeFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

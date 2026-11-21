@@ -116,6 +116,7 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/catalog", OPEN],
 	["/components", OPEN],
 	["/components/[slug]", OPEN],
+	["/components/[slug]/[part]", OPEN],
 	["/components/[slug]/docs", OPEN],
 	["/emails", OPEN],
 	["/operations", OPEN],

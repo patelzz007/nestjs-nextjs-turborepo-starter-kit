@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../../../testing/ui-kit-test-providers";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { CascaderAction, CascaderFooter, groupCascaderActionRuns } from "../cascader-footer";
 import { CascaderItems } from "../cascader-item";
 import { CascaderList } from "../cascader";

@@ -2,41 +2,39 @@
 
 import * as React from "react";
 
-import { DataTable } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableRowMove, type DataTableRowReorder } from "@workspace/ui/components/data-table";
 
-import { DOCUMENT_SECTIONS, SECTION_COLUMNS, type DocumentSection } from "./data-table-sample";
+import { DOCUMENT_SECTIONS, getSectionId, SECTION_COLUMNS, type DocumentSection } from "./data-table-sample";
 
-const PAGE_SIZE = 8;
+const SHOWN_SECTION_COUNT = 6;
+const SECTIONS: readonly DocumentSection[] = DOCUMENT_SECTIONS.slice(0, SHOWN_SECTION_COUNT);
 
-/** `rows` with the row shown at `from` moved to where the row shown at `to` sits: anchored by id, so a sorted or filtered view moves the right record. */
-export function reorderSections(rows: readonly DocumentSection[], visible: readonly DocumentSection[], from: number, to: number): readonly DocumentSection[] {
-	const fromIndex = rows.findIndex((row) => row.id === visible.at(from)?.id);
-	const toIndex = rows.findIndex((row) => row.id === visible.at(to)?.id);
-	const moved = rows.at(fromIndex);
-	if (fromIndex === -1 || toIndex === -1 || moved === undefined) {
-		return rows;
-	}
-	const rest = rows.filter((row) => row.id !== moved.id);
-	return [...rest.slice(0, toIndex), moved, ...rest.slice(toIndex)];
+/**
+ * The rows in the order a move left them. The table names rows by id, so the new order is read from `orderedIds`;
+ * a row the table was not showing (hidden by a filter) keeps its place after the ones that were.
+ */
+export function reorderSections(sections: readonly DocumentSection[], orderedIds: readonly string[]): readonly DocumentSection[] {
+	const byId = new Map(sections.map((section) => [section.id, section]));
+	const shown = orderedIds.flatMap((id) => {
+		const section = byId.get(id);
+		return section === undefined ? [] : [section];
+	});
+	const shownIds = new Set(orderedIds);
+	return [...shown, ...sections.filter((section) => !shownIds.has(section.id))];
 }
 
+/** Drag a row by its grip, or focus the grip and use Space and the arrow keys. */
 export function DataTable7Example(): React.JSX.Element {
-	const [rows, setRows] = React.useState<readonly DocumentSection[]>(DOCUMENT_SECTIONS);
+	const [sections, setSections] = React.useState<readonly DocumentSection[]>(SECTIONS);
 
-	// The table passes the rows it shows, in display order: re-anchor by id, never by raw index.
-	const handleRowReorder = React.useCallback((fromIndex: number, toIndex: number, visibleRows: DocumentSection[]): void => {
-		setRows((current) => reorderSections(current, visibleRows, fromIndex, toIndex));
-	}, []);
-
-	return (
-		<DataTable
-			data={rows}
-			columns={SECTION_COLUMNS}
-			draggable
-			onRowReorder={handleRowReorder}
-			pageSize={PAGE_SIZE}
-			title="Drag to reorder"
-			description="Drag a row by its grip to a new place. Dragging is pointer-only, so offer move actions for keyboard users."
-		/>
+	const rowReorder = React.useMemo(
+		(): DataTableRowReorder => ({
+			onReorder: (move: DataTableRowMove): void => {
+				setSections((current) => reorderSections(current, move.orderedIds));
+			},
+		}),
+		[],
 	);
+
+	return <DataTable data={sections} columns={SECTION_COLUMNS} getRowId={getSectionId} rowReorder={rowReorder} />;
 }

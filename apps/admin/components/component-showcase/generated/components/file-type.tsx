@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/file-type/file-type-1").then((m) => m.FileType1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/file-type/file-type-2").then((m) => m.FileType2Example), { loading: FeatureLoading });
@@ -39,6 +39,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-1",
 		label: "Common Formats",
 		anchor: "common-formats",
+		part: null,
 		description: "Common formats. Best for a 5 column grid of 10 everyday formats in the default outline at 40px, uncaptioned because each icon names itself.",
 		file: "file-type-1",
 		source:
@@ -49,6 +50,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-2",
 		label: "Variants",
 		anchor: "variants",
+		part: null,
 		description: "Outline, solid, light and mono. Best for one row per variant over the same 5 types, PDF, DOCX, XLSX, JPG and ZIP, so only the paint changes between rows.",
 		file: "file-type-2",
 		source:
@@ -59,6 +61,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-3",
 		label: "Sizes",
 		anchor: "sizes",
+		part: null,
 		description: "Sizes. Best for a PDF at each size preset from mini to xl, captioned with the prop value and its pixel box, bottoms aligned.",
 		file: "file-type-3",
 		source:
@@ -69,6 +72,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-4",
 		label: "Family Glyphs",
 		anchor: "family-glyphs",
+		part: null,
 		description: "Family glyphs. Best for all 13 family types from the exported category list, captioned by name, with the blank empty page placed last.",
 		file: "file-type-4",
 		source:
@@ -79,6 +83,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-5",
 		label: "All Formats",
 		anchor: "all-formats",
+		part: null,
 		description: "All formats. Best for the full extension table split into 11 family rows with counts, painted in whichever of 4 variant tabs is active.",
 		file: "file-type-5",
 		source:
@@ -89,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-7",
 		label: "Attachment List",
 		anchor: "attachment-list",
+		part: null,
 		description: "Attachment list. Best for static rows pairing a light page with the name, size and a dated time element, ending in a ghost download button.",
 		file: "file-type-7",
 		source:
@@ -99,6 +105,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-8",
 		label: "Upload Queue",
 		anchor: "upload-queue",
+		part: null,
 		description: "Upload queue. Best for a live count of uploaded and failed items above rows that swap a named bar for a size line, with retry and cancel.",
 		file: "file-type-8",
 		source:
@@ -109,6 +116,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-9",
 		label: "Resolve From Name",
 		anchor: "resolve-from-name",
+		part: null,
 		description: "Resolve from a file name. Best for sample chips under one input with a clear button, the result in all 4 variants and a live Type and Family readout.",
 		file: "file-type-9",
 		source:
@@ -119,6 +127,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-10",
 		label: "Custom Labels",
 		anchor: "custom-labels",
+		part: null,
 		description: "Custom labels. Best for a revision history newest first, rows tagged SIGNED or V1 to V3, under a large blank page carrying a CA-1042 code.",
 		file: "file-type-10",
 		source:
@@ -129,6 +138,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-11",
 		label: "Custom Colors",
 		anchor: "custom-colors",
+		part: null,
 		description:
 			"Custom colors and unknown types. Best for the same 4 CAD and 3D formats twice, on the default neutral page and then recolored teal, indigo, orange and rose.",
 		file: "file-type-11",
@@ -140,6 +150,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-12",
 		label: "Format Picker",
 		anchor: "format-picker",
+		part: null,
 		description: "Export format picker. Best for a preselected PDF choice among 5, a button labeled with the picked extension, and a status line naming the result.",
 		file: "file-type-12",
 		source:
@@ -150,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-13",
 		label: "Locked & Starred",
 		anchor: "locked-starred",
+		part: null,
 		description: "Locked, linked and starred. Best for pairs of outline and solid pages for 6 states, from verified and hidden to uploading, captioned with state and format.",
 		file: "file-type-13",
 		source:
@@ -160,6 +172,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-14",
 		label: "Restyled Labels",
 		anchor: "restyled-labels",
+		part: null,
 		description: "Restyled labels. Best for each badge recipe printed beside its class string, from a pill and an inverted band to a DRAFT tag in amber.",
 		file: "file-type-14",
 		source:
@@ -170,6 +183,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-15",
 		label: "Dotfiles & Build Names",
 		anchor: "dotfiles-build-names",
+		part: null,
 		description:
 			"Dotfiles and build names. Best for a 2 column list of 12 repository entries, dotfiles and extensionless build scripts among them, each icon read from the name.",
 		file: "file-type-15",
@@ -181,10 +195,11 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-type-6",
 		label: "File Browser",
 		anchor: "file-browser",
+		part: null,
 		description: "Data grid file browser. Best for folders sorted ahead of files, a Type column filled from each family, and item counts in place of sizes for folders.",
 		file: "file-type-6",
 		source:
-			'"use client";\n\nimport * as React from "react";\n\nimport { PLATFORM_DISPLAY_REGION, utcEpochMs } from "@workspace/shared";\nimport { formatEpochMs } from "@workspace/ui/lib/format/date-time";\nimport { useState } from "react";\nimport { DataGrid, DataGridContainer, dataGridFeatures, type DataGridFeatures } from "@workspace/ui/components/data-grid/data-grid";\nimport { DataGridColumnHeader } from "@workspace/ui/components/data-grid/data-grid-column-header";\nimport { DataGridScrollArea } from "@workspace/ui/components/data-grid/data-grid-scroll-area";\nimport { DataGridTable } from "@workspace/ui/components/data-grid/data-grid-table";\nimport { FileType, getFileType, getFileTypeCategory, type FileTypeCategory } from "@workspace/ui/components/file-type";\nimport { useTable, type CellContext, type ColumnDef, type HeaderContext, type Row, type SortingState } from "@tanstack/react-table";\n\ninterface FileItem {\n\treadonly id: string;\n\treadonly name: string;\n\treadonly kind: "file" | "folder";\n\t/** Bytes. Files only: a folder has an item count instead. */\n\treadonly size?: number;\n\treadonly items?: number;\n\t/** ISO date. */\n\t/** Last modified, in epoch milliseconds. */\n\treadonly modifiedAtEpochMs: number;\n\treadonly owner: string;\n}\n\nconst files: FileItem[] = [\n\t{\n\t\tid: "1",\n\t\tname: "Brand assets",\n\t\tkind: "folder",\n\t\titems: 24,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 2),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "2",\n\t\tname: "Legal",\n\t\tkind: "folder",\n\t\titems: 6,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 21),\n\t\towner: "Marco Silva",\n\t},\n\t{\n\t\tid: "3",\n\t\tname: "Q3 financial report.pdf",\n\t\tkind: "file",\n\t\tsize: 2516582,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 5),\n\t\towner: "Marco Silva",\n\t},\n\t{\n\t\tid: "4",\n\t\tname: "Customer interviews - synthesis and next steps.docx",\n\t\tkind: "file",\n\t\tsize: 190464,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 6),\n\t\towner: "You",\n\t},\n\t{\n\t\tid: "5",\n\t\tname: "Revenue forecast 2027.xlsx",\n\t\tkind: "file",\n\t\tsize: 933888,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 1),\n\t\towner: "Lena Fischer",\n\t},\n\t{\n\t\tid: "6",\n\t\tname: "Waitlist export.csv",\n\t\tkind: "file",\n\t\tsize: 5033165,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 29),\n\t\towner: "You",\n\t},\n\t{\n\t\tid: "7",\n\t\tname: "Launch keynote.pptx",\n\t\tkind: "file",\n\t\tsize: 19503513,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 4),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "8",\n\t\tname: "Homepage hero.png",\n\t\tkind: "file",\n\t\tsize: 1363149,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 30),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "9",\n\t\tname: "Team offsite.jpg",\n\t\tkind: "file",\n\t\tsize: 3250586,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 12),\n\t\towner: "Lena Fischer",\n\t},\n\t{\n\t\tid: "10",\n\t\tname: "Product walkthrough.mp4",\n\t\tkind: "file",\n\t\tsize: 149631795,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 3),\n\t\towner: "Noah Kim",\n\t},\n\t{\n\t\tid: "11",\n\t\tname: "Podcast episode 12.mp3",\n\t\tkind: "file",\n\t\tsize: 40055603,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 24),\n\t\towner: "Noah Kim",\n\t},\n\t{\n\t\tid: "12",\n\t\tname: "Press kit.zip",\n\t\tkind: "file",\n\t\tsize: 59139686,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 2),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "13",\n\t\tname: "Design system.fig",\n\t\tkind: "file",\n\t\tsize: 24012390,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 6),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "14",\n\t\tname: "app.config.json",\n\t\tkind: "file",\n\t\tsize: 4301,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 6),\n\t\towner: "Noah Kim",\n\t},\n\t{\n\t\tid: "15",\n\t\tname: "Office floor plan.dwg",\n\t\tkind: "file",\n\t\tsize: 7864320,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 8, 27),\n\t\towner: "Lena Fischer",\n\t},\n];\n\nconst FAMILY_LABELS: Readonly<Record<Exclude<FileTypeCategory, "file">, string>> = {\n\tarchive: "Archive",\n\taudio: "Audio",\n\tcode: "Code",\n\tdesign: "Design",\n\tdocument: "Document",\n\tempty: "File",\n\texecutable: "Application",\n\tfolder: "Folder",\n\tfont: "Font",\n\timage: "Image",\n\tpresentation: "Presentation",\n\tspreadsheet: "Spreadsheet",\n\tvideo: "Video",\n};\n\n// A folder name is not a file name: "v2.1 exports" would resolve to a\n// "1 exports" extension, so folders never go through getFileType.\nfunction fileTypeOf(file: FileItem): string {\n\treturn file.kind === "folder" ? "folder" : getFileType(file.name);\n}\n\nfunction kindOf(file: FileItem): string {\n\tconst type = fileTypeOf(file);\n\tconst category = getFileTypeCategory(type);\n\t// An unknown extension has no family to name, so it names the kind itself.\n\treturn category === "file" ? `${type.toUpperCase()} file` : FAMILY_LABELS[category];\n}\n\nconst UNITS: readonly string[] = ["B", "KB", "MB", "GB"];\nconst BYTES_PER_UNIT = 1024;\nconst sizeNumber = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });\n\nfunction formatBytes(bytes: number): string {\n\tlet value = bytes;\n\tlet unit = 0;\n\twhile (value >= BYTES_PER_UNIT && unit < UNITS.length - 1) {\n\t\tvalue /= BYTES_PER_UNIT;\n\t\tunit += 1;\n\t}\n\treturn `${sizeNumber.format(value)} ${UNITS.at(unit) ?? ""}`;\n}\n\n// A fixed locale keeps the order identical on the server and the client, and\n// numeric puts "episode 2" before "episode 12".\nconst collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });\n\n/** Sort results: the first row before, after, or level with the second. */\nconst BEFORE = -1;\nconst AFTER = 1;\n\n// Folders group ahead of files, as in a file manager. A descending sort\n// reverses the whole order, so they then move to the end.\nfunction compareByName(a: FileItem, b: FileItem): number {\n\tif (a.kind !== b.kind) {\n\t\treturn a.kind === "folder" ? BEFORE : AFTER;\n\t}\n\treturn collator.compare(a.name, b.name);\n}\n\nfunction compareRowsByName(a: Row<DataGridFeatures, FileItem>, b: Row<DataGridFeatures, FileItem>): number {\n\treturn compareByName(a.original, b.original);\n}\n\ntype FileCell = CellContext<DataGridFeatures, FileItem>;\ntype FileHeader = HeaderContext<DataGridFeatures, FileItem>;\n\nfunction NameHeader({ column }: FileHeader): React.JSX.Element {\n\treturn <DataGridColumnHeader title="Name" column={column} />;\n}\nfunction TypeHeader({ column }: FileHeader): React.JSX.Element {\n\treturn <DataGridColumnHeader title="Type" column={column} />;\n}\nfunction SizeHeader({ column }: FileHeader): React.JSX.Element {\n\treturn <DataGridColumnHeader title="Size" column={column} />;\n}\nfunction ModifiedHeader({ column }: FileHeader): React.JSX.Element {\n\treturn <DataGridColumnHeader title="Modified" column={column} />;\n}\nfunction OwnerHeader({ column }: FileHeader): React.JSX.Element {\n\treturn <DataGridColumnHeader title="Owner" column={column} />;\n}\n\nfunction NameCell({ row }: FileCell): React.JSX.Element {\n\tconst file = row.original;\n\t// The name already reads its extension, so a file\'s icon is hidden. A\n\t// folder name says nothing about what the row is, so the folder icon keeps\n\t// its "Folder" name.\n\treturn (\n\t\t<div className="flex min-w-0 items-center gap-2">\n\t\t\t<FileType type={fileTypeOf(file)} size="mini" aria-hidden={file.kind === "folder" ? undefined : true} />\n\t\t\t<span className="truncate font-medium" title={file.name}>\n\t\t\t\t{file.name}\n\t\t\t</span>\n\t\t</div>\n\t);\n}\n\nfunction SizeCell({ row }: FileCell): React.JSX.Element {\n\tconst { size, items } = row.original;\n\treturn size === undefined ? <span className="text-muted-foreground">{String(items ?? 0)} items</span> : <>{formatBytes(size)}</>;\n}\n\nfunction ModifiedCell({ row }: FileCell): React.JSX.Element {\n\treturn <>{formatEpochMs(row.original.modifiedAtEpochMs, "date", PLATFORM_DISPLAY_REGION)}</>;\n}\n\nfunction fileId(row: FileItem): string {\n\treturn row.id;\n}\n\nconst COLUMNS: ColumnDef<DataGridFeatures, FileItem>[] = [\n\t{ accessorKey: "name", id: "name", header: NameHeader, cell: NameCell, sortFn: compareRowsByName, size: 300 },\n\t{ id: "type", accessorFn: kindOf, header: TypeHeader, size: 130 },\n\t{\n\t\taccessorKey: "size",\n\t\theader: SizeHeader,\n\t\tcell: SizeCell,\n\t\t// Folders have no byte size, so they sit last in both directions.\n\t\tsortFn: "basic",\n\t\tsortUndefined: "last",\n\t\tsize: 100,\n\t\t// The header is a padded button in a flex row: justify-end moves it\n\t\t// to the end, and -me-2 mirrors the header\'s own -ms-2, so the sort\n\t\t// arrow lines up with the figures below.\n\t\tmeta: {\n\t\t\theaderClassName: "text-end [&>div]:-me-2 [&>div]:justify-end",\n\t\t\tcellClassName: "text-end tabular-nums",\n\t\t},\n\t},\n\t// ISO dates sort chronologically as plain text.\n\t{ accessorKey: "modifiedAtEpochMs", header: ModifiedHeader, cell: ModifiedCell, sortFn: "basic", size: 130 },\n\t{ accessorKey: "owner", header: OwnerHeader, size: 140 },\n];\n\nconst INITIAL_SORTING: SortingState = [{ id: "name", desc: false }];\n\nexport function FileType6Example(): React.JSX.Element {\n\tconst [sorting, setSorting] = useState<SortingState>(INITIAL_SORTING);\n\n\tconst table = useTable({\n\t\tfeatures: dataGridFeatures,\n\t\t// The shared bundle registers a pagination row model; manualPagination\n\t\t// says the data is already the page, so every file renders.\n\t\tmanualPagination: true,\n\t\tcolumns: COLUMNS,\n\t\tdata: files,\n\t\tgetRowId: fileId,\n\t\tstate: { sorting },\n\t\tonSortingChange: setSorting,\n\t});\n\n\treturn (\n\t\t<DataGrid table={table} recordCount={files.length}>\n\t\t\t<DataGridContainer>\n\t\t\t\t<DataGridScrollArea>\n\t\t\t\t\t<DataGridTable />\n\t\t\t\t</DataGridScrollArea>\n\t\t\t</DataGridContainer>\n\t\t</DataGrid>\n\t);\n}\n',
+			'"use client";\n\nimport * as React from "react";\n\nimport { PLATFORM_DISPLAY_REGION, utcEpochMs } from "@workspace/shared";\nimport { formatEpochMs } from "@workspace/ui/lib/format/date-time";\nimport { DataTable, type DataTableColumns, type DataTableFeatures, type DataTableSortingOptions } from "@workspace/ui/components/data-table";\nimport { FileType, getFileType, getFileTypeCategory, type FileTypeCategory } from "@workspace/ui/components/file-type";\nimport type { CellContext, Row } from "@tanstack/react-table";\n\ninterface FileItem {\n\treadonly id: string;\n\treadonly name: string;\n\treadonly kind: "file" | "folder";\n\t/** Bytes. Files only: a folder has an item count instead. */\n\treadonly size?: number;\n\treadonly items?: number;\n\t/** ISO date. */\n\t/** Last modified, in epoch milliseconds. */\n\treadonly modifiedAtEpochMs: number;\n\treadonly owner: string;\n}\n\nconst files: FileItem[] = [\n\t{\n\t\tid: "1",\n\t\tname: "Brand assets",\n\t\tkind: "folder",\n\t\titems: 24,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 2),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "2",\n\t\tname: "Legal",\n\t\tkind: "folder",\n\t\titems: 6,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 21),\n\t\towner: "Marco Silva",\n\t},\n\t{\n\t\tid: "3",\n\t\tname: "Q3 financial report.pdf",\n\t\tkind: "file",\n\t\tsize: 2516582,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 5),\n\t\towner: "Marco Silva",\n\t},\n\t{\n\t\tid: "4",\n\t\tname: "Customer interviews - synthesis and next steps.docx",\n\t\tkind: "file",\n\t\tsize: 190464,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 6),\n\t\towner: "You",\n\t},\n\t{\n\t\tid: "5",\n\t\tname: "Revenue forecast 2027.xlsx",\n\t\tkind: "file",\n\t\tsize: 933888,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 1),\n\t\towner: "Lena Fischer",\n\t},\n\t{\n\t\tid: "6",\n\t\tname: "Waitlist export.csv",\n\t\tkind: "file",\n\t\tsize: 5033165,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 29),\n\t\towner: "You",\n\t},\n\t{\n\t\tid: "7",\n\t\tname: "Launch keynote.pptx",\n\t\tkind: "file",\n\t\tsize: 19503513,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 4),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "8",\n\t\tname: "Homepage hero.png",\n\t\tkind: "file",\n\t\tsize: 1363149,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 30),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "9",\n\t\tname: "Team offsite.jpg",\n\t\tkind: "file",\n\t\tsize: 3250586,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 12),\n\t\towner: "Lena Fischer",\n\t},\n\t{\n\t\tid: "10",\n\t\tname: "Product walkthrough.mp4",\n\t\tkind: "file",\n\t\tsize: 149631795,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 3),\n\t\towner: "Noah Kim",\n\t},\n\t{\n\t\tid: "11",\n\t\tname: "Podcast episode 12.mp3",\n\t\tkind: "file",\n\t\tsize: 40055603,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 9, 24),\n\t\towner: "Noah Kim",\n\t},\n\t{\n\t\tid: "12",\n\t\tname: "Press kit.zip",\n\t\tkind: "file",\n\t\tsize: 59139686,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 2),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "13",\n\t\tname: "Design system.fig",\n\t\tkind: "file",\n\t\tsize: 24012390,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 6),\n\t\towner: "Ava Patel",\n\t},\n\t{\n\t\tid: "14",\n\t\tname: "app.config.json",\n\t\tkind: "file",\n\t\tsize: 4301,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 10, 6),\n\t\towner: "Noah Kim",\n\t},\n\t{\n\t\tid: "15",\n\t\tname: "Office floor plan.dwg",\n\t\tkind: "file",\n\t\tsize: 7864320,\n\t\tmodifiedAtEpochMs: utcEpochMs(2026, 8, 27),\n\t\towner: "Lena Fischer",\n\t},\n];\n\nconst FAMILY_LABELS: Readonly<Record<Exclude<FileTypeCategory, "file">, string>> = {\n\tarchive: "Archive",\n\taudio: "Audio",\n\tcode: "Code",\n\tdesign: "Design",\n\tdocument: "Document",\n\tempty: "File",\n\texecutable: "Application",\n\tfolder: "Folder",\n\tfont: "Font",\n\timage: "Image",\n\tpresentation: "Presentation",\n\tspreadsheet: "Spreadsheet",\n\tvideo: "Video",\n};\n\n// A folder name is not a file name: "v2.1 exports" would resolve to a\n// "1 exports" extension, so folders never go through getFileType.\nfunction fileTypeOf(file: FileItem): string {\n\treturn file.kind === "folder" ? "folder" : getFileType(file.name);\n}\n\nfunction kindOf(file: FileItem): string {\n\tconst type = fileTypeOf(file);\n\tconst category = getFileTypeCategory(type);\n\t// An unknown extension has no family to name, so it names the kind itself.\n\treturn category === "file" ? `${type.toUpperCase()} file` : FAMILY_LABELS[category];\n}\n\nconst UNITS: readonly string[] = ["B", "KB", "MB", "GB"];\nconst BYTES_PER_UNIT = 1024;\nconst sizeNumber = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });\n\nfunction formatBytes(bytes: number): string {\n\tlet value = bytes;\n\tlet unit = 0;\n\twhile (value >= BYTES_PER_UNIT && unit < UNITS.length - 1) {\n\t\tvalue /= BYTES_PER_UNIT;\n\t\tunit += 1;\n\t}\n\treturn `${sizeNumber.format(value)} ${UNITS.at(unit) ?? ""}`;\n}\n\n// A fixed locale keeps the order identical on the server and the client, and\n// numeric puts "episode 2" before "episode 12".\nconst collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });\n\n/** Sort results: the first row before, after, or level with the second. */\nconst BEFORE = -1;\nconst AFTER = 1;\n\n// Folders group ahead of files, as in a file manager. A descending sort\n// reverses the whole order, so they then move to the end.\nfunction compareByName(a: FileItem, b: FileItem): number {\n\tif (a.kind !== b.kind) {\n\t\treturn a.kind === "folder" ? BEFORE : AFTER;\n\t}\n\treturn collator.compare(a.name, b.name);\n}\n\nfunction compareRowsByName(a: Row<DataTableFeatures, FileItem>, b: Row<DataTableFeatures, FileItem>): number {\n\treturn compareByName(a.original, b.original);\n}\n\ntype FileCell = CellContext<DataTableFeatures, FileItem>;\n\nfunction NameCell({ row }: FileCell): React.JSX.Element {\n\tconst file = row.original;\n\t// The name already reads its extension, so a file\'s icon is hidden. A\n\t// folder name says nothing about what the row is, so the folder icon keeps\n\t// its "Folder" name.\n\treturn (\n\t\t<div className="flex min-w-0 items-center gap-2">\n\t\t\t<FileType type={fileTypeOf(file)} size="mini" aria-hidden={file.kind === "folder" ? undefined : true} />\n\t\t\t<span className="truncate font-medium" title={file.name}>\n\t\t\t\t{file.name}\n\t\t\t</span>\n\t\t</div>\n\t);\n}\n\nfunction SizeCell({ row }: FileCell): React.JSX.Element {\n\tconst { size, items } = row.original;\n\treturn size === undefined ? <span className="text-muted-foreground">{String(items ?? 0)} items</span> : <>{formatBytes(size)}</>;\n}\n\nfunction ModifiedCell({ row }: FileCell): React.JSX.Element {\n\treturn <>{formatEpochMs(row.original.modifiedAtEpochMs, "date", PLATFORM_DISPLAY_REGION)}</>;\n}\n\nfunction fileId(row: FileItem): string {\n\treturn row.id;\n}\n\n// A string header becomes the table\'s own sortable column header.\nconst COLUMNS: DataTableColumns<FileItem> = [\n\t{ accessorKey: "name", id: "name", header: "Name", cell: NameCell, sortFn: compareRowsByName, size: 300 },\n\t{ id: "type", accessorFn: kindOf, header: "Type", size: 130 },\n\t{\n\t\taccessorKey: "size",\n\t\theader: "Size",\n\t\tcell: SizeCell,\n\t\t// Folders have no byte size, so they sit last in both directions.\n\t\tsortFn: "basic",\n\t\tsortUndefined: "last",\n\t\tsize: 100,\n\t\t// The header is a padded button in a flex row: justify-end moves it\n\t\t// to the end, and -me-2 mirrors the header\'s own -ms-2, so the sort\n\t\t// arrow lines up with the figures below.\n\t\tmeta: {\n\t\t\theaderClassName: "text-end [&>div]:-me-2 [&>div]:justify-end",\n\t\t\tcellClassName: "text-end tabular-nums",\n\t\t},\n\t},\n\t// ISO dates sort chronologically as plain text.\n\t{ accessorKey: "modifiedAtEpochMs", header: "Modified", cell: ModifiedCell, sortFn: "basic", size: 130 },\n\t{ accessorKey: "owner", header: "Owner", size: 140 },\n];\n\n/** Sorted by name to start with, and a third click returns to the listed order. */\nconst SORTING: DataTableSortingOptions = { initial: [{ id: "name", desc: false }], cycle: "asc-desc-none" };\n\nexport function FileType6Example(): React.JSX.Element {\n\t// No `paging`: every file shows.\n\treturn <DataTable data={files} columns={COLUMNS} getRowId={fileId} sorting={SORTING} />;\n}\n',
 		render: (): React.JSX.Element => <Example15 />,
 	},
 ];
@@ -226,6 +241,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function FileTypeFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function FileTypeFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

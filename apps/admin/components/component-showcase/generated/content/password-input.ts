@@ -36,6 +36,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-password-input-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "password-input-1",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { Label } from "@workspace/ui/components/label";\nimport { PasswordInput } from "@workspace/ui/components/password-input";\n\nexport function PasswordInput1Example(): React.JSX.Element {\n\tconst [password, setPassword] = React.useState<string>("");\n\tconst [isVisible, setIsVisible] = React.useState<boolean>(false);\n\n\tconst handleChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {\n\t\tsetPassword(event.currentTarget.value);\n\t}, []);\n\n\treturn (\n\t\t<div className="flex w-full max-w-xs flex-col gap-1.5">\n\t\t\t<Label htmlFor="usage-password">Password</Label>\n\t\t\t<PasswordInput id="usage-password" value={password} onChange={handleChange} visible={isVisible} onVisibleChange={setIsVisible} autoComplete="new-password" />\n\t\t</div>\n\t);\n}\n',

@@ -51,6 +51,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-number-field-1",
 				label: "Default Size",
 				anchor: "default-size",
+				part: null,
 				file: "number-field-1",
 				source:
 					'import * as React from "react";\nimport { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "@workspace/ui/components/number-field";\n\nexport function NumberField1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="w-full max-w-48">\n\t\t\t<NumberField defaultValue={5} min={0} max={100}>\n\t\t\t\t<NumberFieldScrubArea label="Amount" />\n\t\t\t\t<NumberFieldGroup>\n\t\t\t\t\t<NumberFieldDecrement />\n\t\t\t\t\t<NumberFieldInput />\n\t\t\t\t\t<NumberFieldIncrement />\n\t\t\t\t</NumberFieldGroup>\n\t\t\t</NumberField>\n\t\t</div>\n\t);\n}\n',
@@ -59,6 +60,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-number-field-2",
 				label: "Small Size",
 				anchor: "small-size",
+				part: null,
 				file: "number-field-2",
 				source:
 					'import * as React from "react";\nimport { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "@workspace/ui/components/number-field";\n\nexport function NumberField2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="w-full max-w-48">\n\t\t\t<NumberField defaultValue={5} min={0} max={100} size="sm">\n\t\t\t\t<NumberFieldScrubArea label="Small" />\n\t\t\t\t<NumberFieldGroup>\n\t\t\t\t\t<NumberFieldDecrement />\n\t\t\t\t\t<NumberFieldInput />\n\t\t\t\t\t<NumberFieldIncrement />\n\t\t\t\t</NumberFieldGroup>\n\t\t\t</NumberField>\n\t\t</div>\n\t);\n}\n',
@@ -67,6 +69,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-number-field-3",
 				label: "Large Size",
 				anchor: "large-size",
+				part: null,
 				file: "number-field-3",
 				source:
 					'import * as React from "react";\nimport { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "@workspace/ui/components/number-field";\n\nexport function NumberField3Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="w-full max-w-48">\n\t\t\t<NumberField defaultValue={5} min={0} max={100} size="lg">\n\t\t\t\t<NumberFieldScrubArea label="Large" />\n\t\t\t\t<NumberFieldGroup>\n\t\t\t\t\t<NumberFieldDecrement />\n\t\t\t\t\t<NumberFieldInput />\n\t\t\t\t\t<NumberFieldIncrement />\n\t\t\t\t</NumberFieldGroup>\n\t\t\t</NumberField>\n\t\t</div>\n\t);\n}\n',
@@ -75,6 +78,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-number-field-4",
 				label: "Buttons on Right",
 				anchor: "buttons-on-right",
+				part: null,
 				file: "number-field-4",
 				source:
 					'import * as React from "react";\nimport { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "@workspace/ui/components/number-field";\n\nexport function NumberField4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="w-full max-w-48">\n\t\t\t<NumberField defaultValue={5} min={0} max={100}>\n\t\t\t\t<NumberFieldScrubArea label="Amount" />\n\t\t\t\t<NumberFieldGroup>\n\t\t\t\t\t<NumberFieldInput className="text-left" />\n\t\t\t\t\t<NumberFieldDecrement className="rounded-none!" />\n\t\t\t\t\t<NumberFieldIncrement />\n\t\t\t\t</NumberFieldGroup>\n\t\t\t</NumberField>\n\t\t</div>\n\t);\n}\n',
@@ -83,6 +87,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-number-field-5",
 				label: "Spinner Buttons",
 				anchor: "spinner-buttons",
+				part: null,
 				file: "number-field-5",
 				source:
 					'import * as React from "react";\nimport { ChevronDownIcon, ChevronUpIcon } from "lucide-react";\nimport { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "@workspace/ui/components/number-field";\n\nexport function NumberField5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="w-full max-w-48">\n\t\t\t<NumberField defaultValue={5} min={0} max={100}>\n\t\t\t\t<NumberFieldScrubArea label="Amount" />\n\t\t\t\t<NumberFieldGroup>\n\t\t\t\t\t<NumberFieldInput className="text-start" />\n\n\t\t\t\t\t<div className="m-px flex shrink-0 flex-col overflow-hidden rounded-lg border border-input bg-muted/30">\n\t\t\t\t\t\t<NumberFieldIncrement className="flex h-3.5 w-full flex-1 shrink-0 items-center rounded-none! border-b border-input px-1.5 leading-none hover:bg-accent focus-visible:bg-accent">\n\t\t\t\t\t\t\t<ChevronUpIcon className="size-3.5" />\n\t\t\t\t\t\t</NumberFieldIncrement>\n\t\t\t\t\t\t<NumberFieldDecrement className="flex h-3.5 w-full flex-1 shrink-0 items-center rounded-none! px-1.5 leading-none hover:bg-accent focus-visible:bg-accent">\n\t\t\t\t\t\t\t<ChevronDownIcon className="size-3.5" />\n\t\t\t\t\t\t</NumberFieldDecrement>\n\t\t\t\t\t</div>\n\t\t\t\t</NumberFieldGroup>\n\t\t\t</NumberField>\n\t\t</div>\n\t);\n}\n',
@@ -91,6 +96,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-number-field-6",
 				label: "Form Validation",
 				anchor: "form-validation",
+				part: null,
 				file: "number-field-6",
 				source:
 					'"use client";\n\nimport { useForm } from "@tanstack/react-form";\nimport { Button } from "@workspace/ui/components/button";\nimport { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSet } from "@workspace/ui/components/field";\nimport { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput } from "@workspace/ui/components/number-field";\nimport { toastMessage } from "@workspace/ui/components/toast";\nimport * as React from "react";\nimport { z } from "zod";\n\nimport { useFormSubmitHandler } from "@/components/common/form-fields";\n\n/** The accepted amount range, enforced by the schema (the stepper itself allows 0–100). */\nconst MIN_AMOUNT = 10;\nconst MAX_AMOUNT = 100;\nconst STEPPER_MIN = 0;\n/** Deliberately below `MIN_AMOUNT`, so the demo opens showing the validation message once edited. */\nconst DEFAULT_AMOUNT = 5;\n\nconst AmountSchema = z\n\t.number({ message: "Amount must be a number." })\n\t.min(MIN_AMOUNT, { message: `Amount must be at least ${String(MIN_AMOUNT)}.` })\n\t.max(MAX_AMOUNT, { message: `Amount must be at most ${String(MAX_AMOUNT)}.` });\n\n/** A cleared number field reports `null`; the refinement turns that into the "must be a number" message. */\nconst AmountFormSchema = z.object({\n\tamount: AmountSchema.nullable().refine((amount: number | null): boolean => amount !== null, { message: "Amount must be a number." }),\n});\n\ntype AmountFormValues = z.input<typeof AmountFormSchema>;\n\nconst DEFAULT_VALUES: AmountFormValues = { amount: DEFAULT_AMOUNT };\n\nexport function NumberField6Example(): React.JSX.Element {\n\tconst form = useForm({\n\t\tdefaultValues: DEFAULT_VALUES,\n\t\tvalidators: { onChange: AmountFormSchema },\n\t\tonSubmit: ({ value, formApi }): void => {\n\t\t\ttoastMessage.success({ title: "Form submitted", description: `Your form has successfully submitted with amount: ${String(value.amount)}` });\n\t\t\tformApi.reset();\n\t\t},\n\t});\n\n\tconst submit = React.useCallback((): Promise<void> => form.handleSubmit(), [form]);\n\tconst handleFormSubmit = useFormSubmitHandler(submit);\n\tconst handleCancel = React.useCallback((): void => {\n\t\tform.reset();\n\t}, [form]);\n\n\treturn (\n\t\t<div className="w-full max-w-68">\n\t\t\t<form noValidate onSubmit={handleFormSubmit}>\n\t\t\t\t<FieldGroup>\n\t\t\t\t\t<FieldSet>\n\t\t\t\t\t\t<FieldGroup>\n\t\t\t\t\t\t\t<form.Field name="amount">\n\t\t\t\t\t\t\t\t{(field) => (\n\t\t\t\t\t\t\t\t\t<Field data-invalid={!field.state.meta.isValid}>\n\t\t\t\t\t\t\t\t\t\t<FieldLabel htmlFor="number-field-amount">Amount</FieldLabel>\n\t\t\t\t\t\t\t\t\t\t<NumberField id="number-field-amount" value={field.state.value} onValueChange={field.handleChange} min={STEPPER_MIN} max={MAX_AMOUNT}>\n\t\t\t\t\t\t\t\t\t\t\t<NumberFieldGroup aria-invalid={!field.state.meta.isValid}>\n\t\t\t\t\t\t\t\t\t\t\t\t<NumberFieldDecrement />\n\t\t\t\t\t\t\t\t\t\t\t\t<NumberFieldInput />\n\t\t\t\t\t\t\t\t\t\t\t\t<NumberFieldIncrement />\n\t\t\t\t\t\t\t\t\t\t\t</NumberFieldGroup>\n\t\t\t\t\t\t\t\t\t\t</NumberField>\n\t\t\t\t\t\t\t\t\t\t<FieldDescription>\n\t\t\t\t\t\t\t\t\t\t\tEnter an amount between {String(MIN_AMOUNT)} and {String(MAX_AMOUNT)}.\n\t\t\t\t\t\t\t\t\t\t</FieldDescription>\n\t\t\t\t\t\t\t\t\t\t<FieldError errors={field.state.meta.errors} />\n\t\t\t\t\t\t\t\t\t</Field>\n\t\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t\t</form.Field>\n\t\t\t\t\t\t</FieldGroup>\n\t\t\t\t\t</FieldSet>\n\t\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t\t<Button variant="outline" type="button" onClick={handleCancel} className="flex-1">\n\t\t\t\t\t\t\tCancel\n\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t<Button type="submit" className="flex-1">\n\t\t\t\t\t\t\tSubmit\n\t\t\t\t\t\t</Button>\n\t\t\t\t\t</Field>\n\t\t\t\t</FieldGroup>\n\t\t\t</form>\n\t\t</div>\n\t);\n}\n',

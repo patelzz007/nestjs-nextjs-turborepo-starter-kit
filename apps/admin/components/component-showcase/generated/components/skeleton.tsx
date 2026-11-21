@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/skeleton/skeleton-1").then((m) => m.Skeleton1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/skeleton/skeleton-2").then((m) => m.Skeleton2Example), { loading: FeatureLoading });
@@ -30,6 +30,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-1",
 		label: "Avatar Info",
 		anchor: "avatar-info",
+		part: null,
 		description: "Skeleton loader for avatars and user info.. Best for a 48px avatar circle beside 2 fixed width text bars, the second shorter, with no card around them.",
 		file: "skeleton-1",
 		source:
@@ -40,6 +41,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-2",
 		label: "Card",
 		anchor: "card",
+		part: null,
 		description: "Skeleton loader for a card component.. Best for a card that opens with 2 title bars of falling width above a 16:9 media block, with no footer.",
 		file: "skeleton-2",
 		source:
@@ -50,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-3",
 		label: "Text Paragraphs",
 		anchor: "text-paragraphs",
+		part: null,
 		description: "Skeleton loader for text and paragraphs.. Best for body copy in 2 paragraphs of full width lines, each closing on a shorter line, with no heading or image.",
 		file: "skeleton-3",
 		source:
@@ -60,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-4",
 		label: "Form",
 		anchor: "form",
+		part: null,
 		description: "Skeleton loader for a form.. Best for a stack of 2 label bars over full width input bars, closed by one shorter button bar.",
 		file: "skeleton-4",
 		source:
@@ -70,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-5",
 		label: "Data Table",
 		anchor: "data-table",
+		part: null,
 		description: "Skeleton loader for a data table.. Best for a 3 column header row with a bottom border over 4 body rows, laid out with flex divs, not table markup.",
 		file: "skeleton-5",
 		source:
@@ -80,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-6",
 		label: "Stats Row",
 		anchor: "stats-row",
+		part: null,
 		description: "Skeleton loader for a dashboard stats row. Best for a row of 3 metric cards, each a small label bar over a tall value bar and a caption line.",
 		file: "skeleton-6",
 		source:
@@ -90,6 +96,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-7",
 		label: "List With Actions",
 		anchor: "list-with-actions",
+		part: null,
 		description:
 			"Skeleton loader for a list with actions. Best for a titled list with a header button bar over 3 divided rows of avatar, 2 text lines and a trailing action bar.",
 		file: "skeleton-7",
@@ -101,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-8",
 		label: "Card Grid",
 		anchor: "card-grid",
+		part: null,
 		description:
 			"Skeleton loader for a card grid. Best for a card led by a 16:9 media block, then a heading bar and 2 copy lines over a footer with a wide and a square button bar.",
 		file: "skeleton-8",
@@ -112,6 +120,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-9",
 		label: "Profile Page",
 		anchor: "profile-page",
+		part: null,
 		description:
 			"Skeleton loader for a full profile page. Best for a profile card with an 80px avatar, name lines and 3 stat pairs, above a details card of 4 label and value rows.",
 		file: "skeleton-9",
@@ -123,6 +132,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-skeleton-10",
 		label: "Chat Messages",
 		anchor: "chat-messages",
+		part: null,
 		description:
 			"Skeleton loader for chat messages. Best for incoming bubbles with an avatar and sender bar, one outgoing bubble on the right and a reply field with a square button bar.",
 		file: "skeleton-10",
@@ -169,6 +179,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SkeletonFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SkeletonFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

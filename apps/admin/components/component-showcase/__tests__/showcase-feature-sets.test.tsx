@@ -36,7 +36,8 @@ describe("every generated features module", () => {
 		"mounts every %s feature with its live example, its code a tab away",
 		async (slug: string): Promise<void> => {
 			const featureCount = (SHOWCASE_FEATURE_INDEX.get(slug) ?? []).length;
-			const { container } = render(featureSetOf(slug)(), { wrapper: UiKitTestProviders });
+			// `null`: every feature at once, whatever parts the component's page is split into.
+			const { container } = render(featureSetOf(slug)(null), { wrapper: UiKitTestProviders });
 
 			// A preview's loading state appears in the same commit as the preview itself,
 			// so once every preview is mounted and none is loading, every example has loaded.

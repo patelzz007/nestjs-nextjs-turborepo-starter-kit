@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/carousel/carousel-1").then((m) => m.Carousel1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/carousel/carousel-2").then((m) => m.Carousel2Example), { loading: FeatureLoading });
@@ -31,6 +31,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic carousel with single item. Best for the minimal setup with no options: 5 square photos one per view, arrow buttons shown from the sm breakpoint up.",
 		file: "carousel-1",
 		source:
@@ -41,6 +42,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-2",
 		label: "Vertical",
 		anchor: "vertical",
+		part: null,
 		description: "Vertical carousel orientation. Best for cards stacked in a fixed height column that scrolls up and down, 2 in view, with arrows above and below.",
 		file: "carousel-2",
 		source:
@@ -51,6 +53,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-3",
 		label: "Multiple Items",
 		anchor: "multiple-items",
+		part: null,
 		description: "Carousel with multiple items visible. Best for a wide row holding 3 square photos in view at every screen width, aligned to the start.",
 		file: "carousel-3",
 		source:
@@ -61,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-4",
 		label: "Responsive Basis",
 		anchor: "responsive-basis",
+		part: null,
 		description: "Carousel with responsive basis. Best for portrait photos whose count in view climbs from 1 on phones to 4 on large screens, across 8 slides.",
 		file: "carousel-4",
 		source:
@@ -71,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-5",
 		label: "Autoplay",
 		anchor: "autoplay",
+		part: null,
 		description: "Carousel with autoplay plugin. Best for square photos that advance by themselves every 2 seconds through the Autoplay plugin, arrows kept.",
 		file: "carousel-5",
 		source:
@@ -81,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-6",
 		label: "Centered Alignment",
 		anchor: "centered-alignment",
+		part: null,
 		description: "Carousel with centered slide alignment. Best for a looping row of 16:9 slides at 70 percent width, centered so both neighbors peek in at the edges.",
 		file: "carousel-6",
 		source:
@@ -91,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-7",
 		label: "Custom Spacing",
 		anchor: "custom-spacing",
+		part: null,
 		description: "Carousel with custom spacing. Best for a pair of square photos in view with the slide gutter cut from the default 16px to 4px.",
 		file: "carousel-7",
 		source:
@@ -101,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-8",
 		label: "Image Overlays",
 		anchor: "image-overlays",
+		part: null,
 		description: "Carousel with images and overlays. Best for wide 16:9 slides with a title and caption set on a dark bottom fade, zooming the photo on hover.",
 		file: "carousel-8",
 		source:
@@ -111,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-9",
 		label: "Thumbnail Strip",
 		anchor: "thumbnail-strip",
+		part: null,
 		description: "Carousel with thumbnail navigation. Best for a main slide above a free scrolling strip of 10 thumbnails that outlines the active one and jumps on click.",
 		file: "carousel-9",
 		source:
@@ -121,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-10",
 		label: "Overlay Thumbnails",
 		anchor: "overlay-thumbnails",
+		part: null,
 		description: "Carousel with overlay thumbnail navigation. Best for thumbnails set over the bottom of a 16:9 slide on a dark gradient, the active one outlined in white.",
 		file: "carousel-10",
 		source:
@@ -131,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-carousel-11",
 		label: "Dots Navigation",
 		anchor: "dots-navigation",
+		part: null,
 		description:
 			"Carousel with dots navigation and content overlays. Best for square captioned slides with a row of dots under them, the active dot stretched wider, and no arrow buttons.",
 		file: "carousel-11",
@@ -177,6 +188,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CarouselFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CarouselFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

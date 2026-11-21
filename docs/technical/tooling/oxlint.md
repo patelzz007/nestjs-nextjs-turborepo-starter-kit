@@ -211,7 +211,10 @@ identical). Oxlint's native `no-restricted-imports` is not used: it silently ign
 regexes, which several boundary patterns need. Every boundary is an `error`.
 
 - **Universal** (every workspace): no app → app imports; no `@workspace/<pkg>/src/…` or `/dist/…`;
-  no relative climbs into another workspace; no deep `@workspace/shared/*` paths.
+  no relative climbs into another workspace; no deep `@workspace/shared/*` paths; no
+  `@workspace/ui/internal/…` (the table engine and the parts `DataTable` and `Spreadsheet` are built
+  from are private to the kit, [ADR 097](../../adr/097-one-data-table.md); the package does not
+  export them either, and `ui-kit-contract.test.ts` scans every app and package for the import).
 - **Frontend** (Next apps, `packages/client`, `packages/ui`): no `@workspace/messaging` and no
   server-only packages (`@prisma/*`, `@nestjs/*`, `bullmq`, `ioredis`, Kafka, `pg`, `bcrypt`, …);
   **frontend context boundaries**: another context's internals only through its public index.

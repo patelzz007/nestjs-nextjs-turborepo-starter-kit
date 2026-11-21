@@ -52,6 +52,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-group-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "input-group-1",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { InputGroup, InputGroupInput } from "@workspace/ui/components/input-group";\n\nexport function InputGroup1Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="max-w-xs">\n\t\t\t<InputGroup>\n\t\t\t\t<InputGroupInput placeholder="Search..." />\n\t\t\t</InputGroup>\n\t\t</Field>\n\t);\n}\n',
@@ -60,6 +61,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-group-9",
 				label: "Prefix Suffix Text",
 				anchor: "prefix-suffix-text",
+				part: null,
 				file: "input-group-9",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@workspace/ui/components/input-group";\n\nexport function InputGroup9Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs">\n\t\t\t<InputGroup>\n\t\t\t\t<InputGroupAddon>\n\t\t\t\t\t<InputGroupText>$</InputGroupText>\n\t\t\t\t</InputGroupAddon>\n\t\t\t\t<InputGroupInput type="number" placeholder="0.00" />\n\t\t\t\t<InputGroupAddon align="inline-end">\n\t\t\t\t\t<InputGroupText>USD</InputGroupText>\n\t\t\t\t</InputGroupAddon>\n\t\t\t</InputGroup>\n\t\t</Field>\n\t);\n}\n',
@@ -68,6 +70,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-group-10",
 				label: "Action Button",
 				anchor: "action-button",
+				part: null,
 				file: "input-group-10",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@workspace/ui/components/input-group";\n\nexport function InputGroup10Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs">\n\t\t\t<InputGroup>\n\t\t\t\t<InputGroupInput placeholder="Query..." />\n\t\t\t\t<InputGroupAddon align="inline-end">\n\t\t\t\t\t<InputGroupButton>Search</InputGroupButton>\n\t\t\t\t</InputGroupAddon>\n\t\t\t</InputGroup>\n\t\t</Field>\n\t);\n}\n',
@@ -76,6 +79,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-group-13",
 				label: "Keyboard Shortcut",
 				anchor: "keyboard-shortcut",
+				part: null,
 				file: "input-group-13",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { InputGroup, InputGroupAddon, InputGroupInput } from "@workspace/ui/components/input-group";\nimport { Kbd } from "@workspace/ui/components/kbd";\n\nexport function InputGroup13Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs">\n\t\t\t<InputGroup>\n\t\t\t\t<InputGroupInput placeholder="Search documentation..." />\n\t\t\t\t<InputGroupAddon align="inline-end">\n\t\t\t\t\t<Kbd>⌘K</Kbd>\n\t\t\t\t</InputGroupAddon>\n\t\t\t</InputGroup>\n\t\t</Field>\n\t);\n}\n',
@@ -84,6 +88,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-group-3",
 				label: "Invalid",
 				anchor: "invalid",
+				part: null,
 				file: "input-group-3",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { InputGroup, InputGroupInput } from "@workspace/ui/components/input-group";\n\nexport function InputGroup3Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="max-w-xs" data-invalid="true">\n\t\t\t<InputGroup>\n\t\t\t\t<InputGroupInput placeholder="Invalid field" aria-invalid="true" />\n\t\t\t</InputGroup>\n\t\t</Field>\n\t);\n}\n',

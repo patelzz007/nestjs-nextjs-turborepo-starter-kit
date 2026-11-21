@@ -4,8 +4,8 @@ import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import type { UiKitLabels } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { ShellThemeToggle } from "../shell-theme-toggle";
 import { UiKitLabelsProvider } from "../ui-kit-labels-provider";

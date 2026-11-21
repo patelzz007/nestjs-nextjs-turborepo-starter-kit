@@ -18,6 +18,7 @@ import {
 	featureSetsSource,
 	parseGuidelines,
 	parseManifest,
+	partsOf,
 	pascalCaseOf,
 	readComponentFeatures,
 	STATIC_EXAMPLES_DIR,
@@ -37,7 +38,19 @@ const COMPONENTS: readonly ComponentFeatures[] = readComponentFeatures(ROOT);
 const CATALOG_SLUGS: readonly string[] = SHOWCASE_CATALOG_ORDER.map((item) => item.entry.slug);
 const SAMPLE: ComponentFeatures = {
 	slug: "icon-tile",
-	features: [{ id: "c-icon-tile-1", label: "Basic", description: "A tile with an icon.", file: "icon-tile-1", export: "IconTile1Example", anchor: "basic", source: "a\nb\n" }],
+	features: [
+		{
+			id: "c-icon-tile-1",
+			label: "Basic",
+			description: "A tile with an icon.",
+			file: "icon-tile-1",
+			export: "IconTile1Example",
+			anchor: "basic",
+			source: "a\nb\n",
+			part: null,
+		},
+	],
+	parts: [],
 	guidelines: [
 		{
 			title: "Name the tile",
@@ -78,19 +91,54 @@ describe("showcase feature generator", () => {
 		expect(generatedModule).toContain('import("@/components/component-showcase/examples/icon-tile/icon-tile-do-1").then((m) => m.IconTileDo1Example)');
 		expect(generatedModule).toContain('title: "Name the tile"');
 		expect(generatedModule).toContain("render: (): React.JSX.Element => <Guideline2 />");
-		expect(generatedModule).toContain("<ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />");
+		expect(generatedModule).toContain("<ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />");
 		expect(staticExamplesSource(SAMPLE)).toContain('{ file: "icon-tile-dont-1", component: IconTileDont1Example }');
 		expect(staticExamplesIndexSource(["icon-tile"])).toContain('["icon-tile", IconTileGuidelines]');
 	});
 
 	it("writes each module's entries from the manifest", () => {
-		expect(featureIndexSource([SAMPLE])).toContain('["icon-tile", [{ id: "c-icon-tile-1", label: "Basic", anchor: "basic" }]]');
+		expect(featureIndexSource([SAMPLE])).toContain('["icon-tile", [{ id: "c-icon-tile-1", label: "Basic", anchor: "basic", part: null }]]');
 		const generatedModule = componentModuleSource(SAMPLE);
 		expect(generatedModule).toContain('import("@/components/component-showcase/examples/icon-tile/icon-tile-1").then((m) => m.IconTile1Example)');
 		expect(generatedModule).toContain('source: "a\\nb\\n"');
 		expect(generatedModule).toContain('description: "A tile with an icon."');
-		expect(generatedModule).toContain("export function IconTileFeatures()");
-		expect(featureSetsSource(["icon-tile"])).toContain('["icon-tile", (): React.JSX.Element => <IconTileFeatures />]');
+		expect(generatedModule).toContain("export function IconTileFeatures({ part }: ShowcaseFeatureSetProps)");
+		expect(featureSetsSource(["icon-tile"])).toContain('["icon-tile", (part: string | null): React.JSX.Element => <IconTileFeatures part={part} />]');
+	});
+
+	it("splits a page into parts when the features name their groups, in first-seen order", () => {
+		const valid = { id: "c-table-1", label: "Basic", description: "A table.", file: "table-1", export: "Table1Example" };
+		const manifest = parseManifest(
+			"table",
+			JSON.stringify([
+				{ ...valid, group: "Finding rows" },
+				{ ...valid, id: "c-table-2", group: "Recipes: analytics" },
+				{ ...valid, id: "c-table-3", group: "Finding rows" },
+			]),
+		);
+		expect(partsOf(manifest)).toEqual([
+			{ id: "finding-rows", label: "Finding rows" },
+			{ id: "recipes-analytics", label: "Recipes: analytics" },
+		]);
+		expect(partsOf(parseManifest("table", JSON.stringify([valid])))).toEqual([]);
+		const split: ComponentFeatures = { ...SAMPLE, features: SAMPLE.features.map((feature) => ({ ...feature, part: "basics" })), parts: [{ id: "basics", label: "Basics" }] };
+		expect(featureIndexSource([split])).toContain('part: "basics"');
+		expect(featureIndexSource([split])).toContain('["icon-tile", [{ id: "basics", label: "Basics" }]]');
+		expect(featureIndexSource([SAMPLE])).toContain("new Map<string, readonly ShowcasePart[]>([\n\n]);");
+	});
+
+	it("refuses a manifest where only some features name a group, or a group that would take the docs route", () => {
+		const valid = { id: "c-table-1", label: "Basic", description: "A table.", file: "table-1", export: "Table1Example" };
+		expect(() =>
+			parseManifest(
+				"table",
+				JSON.stringify([
+					{ ...valid, group: "Basics" },
+					{ ...valid, id: "c-table-2" },
+				]),
+			),
+		).toThrow(/every feature names its group/u);
+		expect(() => partsOf(parseManifest("table", JSON.stringify([{ ...valid, group: "Docs" }])))).toThrow(/docs page's route/u);
 		expect(staticExamplesSource(SAMPLE)).toContain('import { IconTile1Example } from "@/components/component-showcase/examples/icon-tile/icon-tile-1";');
 	});
 

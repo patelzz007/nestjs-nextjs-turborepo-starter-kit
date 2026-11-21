@@ -42,6 +42,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-progress-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "progress-1",
 				source:
 					'import * as React from "react";\nimport { Progress, ProgressLabel, ProgressValue } from "@workspace/ui/components/progress";\n\nexport function Progress1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs">\n\t\t\t<Progress value={56}>\n\t\t\t\t<ProgressLabel>Upload progress</ProgressLabel>\n\t\t\t\t<ProgressValue />\n\t\t\t</Progress>\n\t\t</div>\n\t);\n}\n',
@@ -50,6 +51,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-progress-2",
 				label: "Small",
 				anchor: "small",
+				part: null,
 				file: "progress-2",
 				source:
 					'import * as React from "react";\nimport { Progress, ProgressLabel, ProgressValue } from "@workspace/ui/components/progress";\n\nexport function Progress2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs">\n\t\t\t<Progress value={30} className="**:data-[slot=progress-track]:h-1">\n\t\t\t\t<ProgressLabel>Small progress</ProgressLabel>\n\t\t\t\t<ProgressValue />\n\t\t\t</Progress>\n\t\t</div>\n\t);\n}\n',
@@ -58,6 +60,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-progress-3",
 				label: "Large",
 				anchor: "large",
+				part: null,
 				file: "progress-3",
 				source:
 					'import * as React from "react";\nimport { Progress, ProgressLabel, ProgressValue } from "@workspace/ui/components/progress";\n\nexport function Progress3Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs">\n\t\t\t<Progress value={70} className="**:data-[slot=progress-track]:h-3">\n\t\t\t\t<ProgressLabel>Large progress</ProgressLabel>\n\t\t\t\t<ProgressValue />\n\t\t\t</Progress>\n\t\t</div>\n\t);\n}\n',
@@ -66,6 +69,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-progress-5",
 				label: "File Uploads",
 				anchor: "file-uploads",
+				part: null,
 				file: "progress-5",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { FileIcon } from "lucide-react";\nimport { Item, ItemActions, ItemContent, ItemGroup, ItemMedia, ItemTitle } from "@workspace/ui/components/item";\nimport { Progress } from "@workspace/ui/components/progress";\n\nconst files = [\n\t{ id: "1", name: "document.pdf", progress: 45, status: "2m 30s" },\n\t{ id: "2", name: "presentation.pptx", progress: 78, status: "45s" },\n\t{ id: "3", name: "spreadsheet.xlsx", progress: 12, status: "5m 12s" },\n\t{ id: "4", name: "image.jpg", progress: 100, status: "Complete" },\n];\n\nexport function Progress5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto flex w-full max-w-xs flex-col">\n\t\t\t<ItemGroup>\n\t\t\t\t{files.map((file) => (\n\t\t\t\t\t<Item key={file.id} size="xs" className="px-0">\n\t\t\t\t\t\t<ItemMedia variant="icon">\n\t\t\t\t\t\t\t<FileIcon className="size-4 text-muted-foreground" />\n\t\t\t\t\t\t</ItemMedia>\n\t\t\t\t\t\t<ItemContent className="flex-1 truncate">\n\t\t\t\t\t\t\t<ItemTitle className="cursor-pointer truncate hover:underline">{file.name}</ItemTitle>\n\t\t\t\t\t\t</ItemContent>\n\t\t\t\t\t\t<ItemContent className="w-32">\n\t\t\t\t\t\t\t<Progress value={file.progress} className="**:data-[slot=progress-track]:h-1" />\n\t\t\t\t\t\t</ItemContent>\n\t\t\t\t\t\t<ItemActions className="w-20 justify-end">\n\t\t\t\t\t\t\t<span className="text-foreground">{file.status}</span>\n\t\t\t\t\t\t</ItemActions>\n\t\t\t\t\t</Item>\n\t\t\t\t))}\n\t\t\t</ItemGroup>\n\t\t</div>\n\t);\n}\n',
@@ -74,6 +78,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-progress-7",
 				label: "Multi-Step",
 				anchor: "multi-step",
+				part: null,
 				file: "progress-7",
 				source:
 					'import * as React from "react";\nimport { CircleCheckIcon, CircleIcon } from "lucide-react";\nimport { Progress } from "@workspace/ui/components/progress";\n\nconst steps = [\n\t{ label: "Account", completed: true },\n\t{ label: "Profile", completed: true },\n\t{ label: "Preferences", completed: false },\n\t{ label: "Review", completed: false },\n];\n\nexport function Progress7Example(): React.JSX.Element {\n\tconst completedSteps = steps.filter((s) => s.completed).length;\n\tconst progressValue = (completedSteps / steps.length) * 100;\n\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs space-y-4">\n\t\t\t<div className="flex items-center justify-between">\n\t\t\t\t<span className="text-sm font-medium">Setup Progress</span>\n\t\t\t\t<span className="text-xs text-muted-foreground">\n\t\t\t\t\t{completedSteps} of {steps.length} steps\n\t\t\t\t</span>\n\t\t\t</div>\n\t\t\t<Progress value={progressValue} />\n\t\t\t<div className="flex flex-col gap-2">\n\t\t\t\t{steps.map((step) => (\n\t\t\t\t\t<div key={step.label} className="flex items-center gap-2 text-sm">\n\t\t\t\t\t\t{step.completed ? (\n\t\t\t\t\t\t\t<CircleCheckIcon className="size-4 text-success" aria-hidden="true" />\n\t\t\t\t\t\t) : (\n\t\t\t\t\t\t\t<CircleIcon className="size-4 text-muted-foreground" aria-hidden="true" />\n\t\t\t\t\t\t)}\n\t\t\t\t\t\t<span className={step.completed ? "text-foreground" : "text-muted-foreground"}>{step.label}</span>\n\t\t\t\t\t</div>\n\t\t\t\t))}\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n',

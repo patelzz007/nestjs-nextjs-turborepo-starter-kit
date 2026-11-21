@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/sidebar/sidebar-1").then((m) => m.Sidebar1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/sidebar/sidebar-2").then((m) => m.Sidebar2Example), { loading: FeatureLoading });
@@ -25,6 +25,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sidebar-1",
 		label: "Workspace Switcher",
 		anchor: "workspace-switcher",
+		part: null,
 		description:
 			"Application shell with a workspace switcher. Best for an inset variant layout whose header dropdown switches the workspace named in the page breadcrumb, beside stat cards and a deploy list.",
 		file: "sidebar-1",
@@ -36,6 +37,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sidebar-2",
 		label: "Icon Rail",
 		anchor: "icon-rail",
+		part: null,
 		description:
 			"Icon rail that collapses. Best for narrowing the nav to icons while the brand tile and account avatar stay in view, toggled by an edge strip or a header button.",
 		file: "sidebar-2",
@@ -47,6 +49,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sidebar-3",
 		label: "Docs Navigation",
 		anchor: "docs-navigation",
+		part: null,
 		description:
 			"Documentation nav with sub-menus. Best for an always open panel with no toggle where typing opens every section that still matches, with the current page trail open on load.",
 		file: "sidebar-3",
@@ -58,6 +61,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sidebar-4",
 		label: "Inspector Panel",
 		anchor: "inspector-panel",
+		part: null,
 		description:
 			"Right-hand inspector panel. Best for issue details beside the record: assignees with owner and remove actions, linked work, an activity feed and an Open in board button.",
 		file: "sidebar-4",
@@ -69,6 +73,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sidebar-5",
 		label: "Filter & Loading",
 		anchor: "filter-loading",
+		part: null,
 		description:
 			"Filtering, loading and empty states. Best for a project list whose pinned rows survive any query, with a refresh spinner, a clear button in the search box and a plan usage footer.",
 		file: "sidebar-5",
@@ -115,6 +120,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SidebarFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SidebarFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/input-group/input-group-1").then((m) => m.InputGroup1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/input-group/input-group-2").then((m) => m.InputGroup2Example), { loading: FeatureLoading });
@@ -68,6 +68,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic input group. Best for the bare shell: one field inside the bordered wrapper with no addon yet, the base to add icons, text or controls to.",
 		file: "input-group-1",
 		source:
@@ -78,6 +79,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-2",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Input group in disabled state. Best for a locked field that takes no focus or typing, with its Field wrapper flagged as disabled to match.",
 		file: "input-group-2",
 		source:
@@ -88,6 +90,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-3",
 		label: "Invalid",
 		anchor: "invalid",
+		part: null,
 		description: "Input group in invalid state. Best for the error look on its own, a red border on the whole wrapper with no message text printed below it.",
 		file: "input-group-3",
 		source:
@@ -98,6 +101,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-4",
 		label: "Prefix Icon",
 		anchor: "prefix-icon",
+		part: null,
 		description: "Input group with prefix icon. Best for a single leading search icon ahead of the field, with nothing at the trailing end.",
 		file: "input-group-4",
 		source:
@@ -108,6 +112,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-5",
 		label: "Suffix Icon",
 		anchor: "suffix-icon",
+		part: null,
 		description: "Input group with suffix icon. Best for an email field with a mail icon after the typed text and nothing before it.",
 		file: "input-group-5",
 		source:
@@ -118,6 +123,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-6",
 		label: "Prefix Suffix Icons",
 		anchor: "prefix-suffix-icons",
+		part: null,
 		description: "Input group with both prefix and suffix icons. Best for a listening state with a mic icon before the field and a pulsing red broadcast icon after it.",
 		file: "input-group-6",
 		source:
@@ -128,6 +134,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-7",
 		label: "Prefix Text",
 		anchor: "prefix-text",
+		part: null,
 		description: "Input group with prefix text addon. Best for a fixed https scheme printed ahead of a domain field as muted prefix text.",
 		file: "input-group-7",
 		source:
@@ -138,6 +145,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-8",
 		label: "Suffix Text",
 		anchor: "suffix-text",
+		part: null,
 		description: "Input group with suffix text addon. Best for a username field followed by a fixed mail domain as trailing text.",
 		file: "input-group-8",
 		source:
@@ -148,6 +156,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-9",
 		label: "Prefix Suffix Text",
 		anchor: "prefix-suffix-text",
+		part: null,
 		description: "Input group with both prefix and suffix text addons. Best for a money amount with a dollar sign before and a USD code after a number field.",
 		file: "input-group-9",
 		source:
@@ -158,6 +167,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-10",
 		label: "Action Button",
 		anchor: "action-button",
+		part: null,
 		description: "Input group with action button addon. Best for a text Search control at the trailing end of a query field, with no icon on either side.",
 		file: "input-group-10",
 		source:
@@ -168,6 +178,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-11",
 		label: "Icon Button",
 		anchor: "icon-button",
+		part: null,
 		description: "Input group with icon button action. Best for a read only share URL with one icon only copy control at the end.",
 		file: "input-group-11",
 		source:
@@ -178,6 +189,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-12",
 		label: "Dropdown Select",
 		anchor: "dropdown-select",
+		part: null,
 		description: "Input group with dropdown menu selection. Best for a calling code menu at the start of a phone field, its trigger showing the picked code such as +1.",
 		file: "input-group-12",
 		source:
@@ -188,6 +200,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-13",
 		label: "Keyboard Shortcut",
 		anchor: "keyboard-shortcut",
+		part: null,
 		description: "Input group with keyboard shortcut (Kbd). Best for a documentation search ending in a single Command K key hint.",
 		file: "input-group-13",
 		source:
@@ -198,6 +211,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-14",
 		label: "Tooltip Action",
 		anchor: "tooltip-action",
+		part: null,
 		description: "Input group with tooltip action. Best for a numeric limit with an info icon control whose tooltip explains the value on hover or focus.",
 		file: "input-group-14",
 		source:
@@ -208,6 +222,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-15",
 		label: "Loading Spinner",
 		anchor: "loading-spinner",
+		part: null,
 		description: "Input group with loading spinner. Best for a busy state: a locked field keeping its value while a spinner turns at the trailing end.",
 		file: "input-group-15",
 		source:
@@ -218,6 +233,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-16",
 		label: "Block-Start Addon",
 		anchor: "block-start-addon",
+		part: null,
 		description:
 			"Input group with block-start addon. Best for a header row inside the border above the field, holding a User Profile caption with an info icon pushed to its far end.",
 		file: "input-group-16",
@@ -229,6 +245,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-17",
 		label: "Character Limit",
 		anchor: "character-limit",
+		part: null,
 		description: "Textarea input group with dynamic character limit. Best for a multi line description whose bottom row counts typed characters live against a 140 limit.",
 		file: "input-group-17",
 		source:
@@ -239,6 +256,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-18",
 		label: "AI Chat Toolbar",
 		anchor: "ai-chat-toolbar",
+		part: null,
 		description:
 			"AI Chat textarea with rich toolbar actions. Best for a prompt box whose bottom toolbar holds add, voice and web search tools, a model menu and a send arrow.",
 		file: "input-group-18",
@@ -250,6 +268,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-19",
 		label: "AI Chat Attachments",
 		anchor: "ai-chat-attachments",
+		part: null,
 		description:
 			"AI Chat interface with file and context attachments. Best for a composer with a top row of an @ mention button and file and tab count chips over the text, and a model menu below.",
 		file: "input-group-19",
@@ -261,6 +280,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-20",
 		label: "Label Usage",
 		anchor: "label-usage",
+		part: null,
 		description: "Input group demonstrating label usage. Best for a visible Search Components label above the border, tied to the field through a matching id.",
 		file: "input-group-20",
 		source:
@@ -271,6 +291,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-21",
 		label: "Multiple End Actions",
 		anchor: "multiple-end-actions",
+		part: null,
 		description: "Input group with multiple icons/buttons at the end. Best for a trailing pair of a muted star icon and an icon only copy control after a name field.",
 		file: "input-group-21",
 		source:
@@ -281,6 +302,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-22",
 		label: "Popover Trigger",
 		anchor: "popover-trigger",
+		part: null,
 		description: "Input group with popover trigger addon. Best for a read only address led by a green shield that opens a Secure Connection popover on click.",
 		file: "input-group-22",
 		source:
@@ -291,6 +313,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-23",
 		label: "Sparkles Shortcut",
 		anchor: "sparkles-shortcut",
+		part: null,
 		description:
 			"Input group with Sparkles icon and complex Kbd shortcut. Best for an AI generate field led by a green sparkles icon and ending in a Command plus Enter key chord.",
 		file: "input-group-23",
@@ -302,6 +325,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-24",
 		label: "Success Indicator",
 		anchor: "success-indicator",
+		part: null,
 		description: "Input group with success indicator circle. Best for a filled username followed by a small green circle with a white check, marking the value as accepted.",
 		file: "input-group-24",
 		source:
@@ -312,6 +336,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-25",
 		label: "Results Count",
 		anchor: "results-count",
+		part: null,
 		description: "Input group with search results count. Best for a log search with a leading search icon and a muted 12 results count at the trailing end.",
 		file: "input-group-25",
 		source:
@@ -322,6 +347,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-26",
 		label: "Textarea Actions",
 		anchor: "textarea-actions",
+		part: null,
 		description: "Textarea input group with action buttons. Best for a comment box with Cancel at the left and Post Comment at the right of its bottom row.",
 		file: "input-group-26",
 		source:
@@ -332,6 +358,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-27",
 		label: "Button Group",
 		anchor: "button-group",
+		part: null,
 		description:
 			"Input group wrapped in a button group with text prefixes/suffixes. Best for a domain field held between https and dot com cells that sit outside its border, all joined at shared seams.",
 		file: "input-group-27",
@@ -343,6 +370,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-28",
 		label: "Three Dot Menu",
 		anchor: "three-dot-menu",
+		part: null,
 		description: "Input group with a menu button (three dots) at the end. Best for a file name field ending in a three dot menu of Rename, Duplicate and a red Delete.",
 		file: "input-group-28",
 		source:
@@ -353,6 +381,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-29",
 		label: "Pill Category",
 		anchor: "pill-category",
+		part: null,
 		description:
 			"Pill-shaped input group with a category dropdown at the end. Best for a fully rounded product search ending in a category menu that starts unset and shows the picked one.",
 		file: "input-group-29",
@@ -364,6 +393,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-30",
 		label: "Inline Addons",
 		anchor: "inline-addons",
+		part: null,
 		description:
 			"Input group with inline addons (no separating borders). Best for a euro amount whose sign and EUR code are set off from the field by thin vertical rules on both sides.",
 		file: "input-group-30",
@@ -375,6 +405,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-31",
 		label: "Inline Block-End",
 		anchor: "inline-block-end",
+		part: null,
 		description:
 			"Input group with inline start and block-end addon. Best for a muted euro sign hugging the amount with no rule, and a single thin rule setting the EUR code apart.",
 		file: "input-group-31",
@@ -386,6 +417,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-32",
 		label: "Member Row",
 		anchor: "member-row",
+		part: null,
 		description:
 			"Member row with avatar, email and role selection. Best for a member row with a small avatar before the handle and an Admin, Member or Viewer role menu after it.",
 		file: "input-group-32",
@@ -397,6 +429,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-33",
 		label: "Project Save",
 		anchor: "project-save",
+		part: null,
 		description:
 			"Project save interface with status and action buttons. Best for a wide create panel stacking a name line over a description beside an icon tile, then a Save to menu, Cancel and Save.",
 		file: "input-group-33",
@@ -408,6 +441,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-34",
 		label: "Pill AI Prompt",
 		anchor: "pill-ai-prompt",
+		part: null,
 		description:
 			"Pill-shaped AI prompt bar with voice and audio icons. Best for a tall pill prompt bar: a plus opening an upward tools menu with a More submenu, and mic and voice buttons at the far end.",
 		file: "input-group-34",
@@ -419,6 +453,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-35",
 		label: "Password Toggle",
 		anchor: "password-toggle",
+		part: null,
 		description: "Password input with visibility toggle. Best for a password field with a lock icon in front and an eye control that reveals or hides the characters.",
 		file: "input-group-35",
 		source:
@@ -429,6 +464,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-36",
 		label: "API Request",
 		anchor: "api-request",
+		part: null,
 		description:
 			"API request input with method selector and send action. Best for an API endpoint bar led by a color coded GET, POST, PUT, PATCH or DELETE menu and ending in Send.",
 		file: "input-group-36",
@@ -440,6 +476,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-37",
 		label: "Order Search",
 		anchor: "order-search",
+		part: null,
 		description:
 			"Order search input with status filter. Best for an order search with a clear control that appears once typing starts and a Status popover of checkboxes with a count.",
 		file: "input-group-37",
@@ -451,6 +488,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-38",
 		label: "Company Search",
 		anchor: "company-search",
+		part: null,
 		description:
 			"Company search input with region selector. Best for a company search scoped by a globe region menu of Global, United States, Europe and APAC, plus a clear control.",
 		file: "input-group-38",
@@ -462,6 +500,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-39",
 		label: "Contact Search",
 		anchor: "contact-search",
+		part: null,
 		description:
 			"Contact search input with filter and actions menu. Best for a contact search with per status totals in its filter popover and a more actions menu for bulk email, export and add.",
 		file: "input-group-39",
@@ -473,6 +512,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-group-40",
 		label: "Share Link",
 		anchor: "share-link",
+		part: null,
 		description:
 			"Share link input with visibility selector and copy action. Best for an editable share link with a Private, Team or Public access menu and a copy control at the end.",
 		file: "input-group-40",
@@ -519,6 +559,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function InputGroupFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function InputGroupFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

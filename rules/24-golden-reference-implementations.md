@@ -291,15 +291,17 @@ export default async function RewardsPage({ searchParams }: { searchParams: Reco
 
 ```tsx
 // packages/ui/src/components/data-table.tsx  (DUMB, generic, memoized, forwardRef where it wraps a DOM primitive)
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+// The kit's ONE table for records (ADR 097). Three required props, then one options object per job.
+interface DataTableProps<TData> {
   data: readonly TData[];
-  isLoading?: boolean;
-  isError?: boolean;
-  emptyMessage: string;         // copy comes from the caller — nothing hardcoded
+  columns: DataTableColumns<TData>;
+  getRowId: (row: TData) => string;   // rows are named by id, never by position
+  status?: DataTableStatus;           // { loading, error, onRetry }
+  emptyState?: DataTableEmptyState;   // copy comes from the caller — nothing hardcoded
   onRowClick?: (row: TData) => void;
+  // …search, filters, sorting, paging, source, rowActions, selection, exporting, columnControls, editing, layout
 }
-export function DataTable<TData, TValue>(props: DataTableProps<TData, TValue>): JSX.Element { /* renders skeleton / error / empty / rows */ }
+export function DataTable<TData>(props: DataTableProps<TData>): JSX.Element { /* renders skeleton / error / empty / rows */ }
 ```
 
 ```ts

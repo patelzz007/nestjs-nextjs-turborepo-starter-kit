@@ -3,10 +3,10 @@ import { act, cleanup, render, renderHook, screen } from "@testing-library/react
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import { UI_KIT_LANGUAGE_PACKS } from "../../lib/labels/all-language-packs";
-import { UI_KIT_LANGUAGES, UiKitLanguageSchema, loadUiKitLanguagePack } from "../../lib/labels/language-packs";
-import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import { UI_KIT_LANGUAGE_PACKS } from "@workspace/ui/lib/labels/all-language-packs";
+import { UI_KIT_LANGUAGES, UiKitLanguageSchema, loadUiKitLanguagePack } from "@workspace/ui/lib/labels/language-packs";
+import type { UiKitLabels } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { UiKitLabelsProvider, UiKitLanguageProvider, useUiKitLabels } from "../ui-kit-labels-provider";
 

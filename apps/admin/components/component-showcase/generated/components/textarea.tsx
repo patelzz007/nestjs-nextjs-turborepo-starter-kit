@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/textarea/textarea-1").then((m) => m.Textarea1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/textarea/textarea-2").then((m) => m.Textarea2Example), { loading: FeatureLoading });
@@ -26,6 +26,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-textarea-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic textarea.. Best for the bare multi line box with placeholder text and no label, Field or hint around it.",
 		file: "textarea-1",
 		source:
@@ -36,6 +37,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-textarea-2",
 		label: "Invalid",
 		anchor: "invalid",
+		part: null,
 		description: "Invalid textarea.. Best for the red invalid state set by aria-invalid alone, with no label or message saying what is wrong.",
 		file: "textarea-2",
 		source:
@@ -46,6 +48,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-textarea-3",
 		label: "With Label",
 		anchor: "with-label",
+		part: null,
 		description: "Textarea with label.. Best for a Your Message label above the box, tied to it by htmlFor and id, with nothing printed below.",
 		file: "textarea-3",
 		source:
@@ -56,6 +59,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-textarea-4",
 		label: "With Description",
 		anchor: "with-description",
+		part: null,
 		description: "Textarea with description.. Best for a Feedback label above the box and one line of help text printed below it.",
 		file: "textarea-4",
 		source:
@@ -66,6 +70,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-textarea-5",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled textarea.. Best for a labeled box locked by the disabled attribute, dimmed to half opacity with a not allowed cursor.",
 		file: "textarea-5",
 		source:
@@ -76,6 +81,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-textarea-6",
 		label: "Auto-Resize Counter",
 		anchor: "auto-resize-counter",
+		part: null,
 		description:
 			"Auto-resize textarea with character count. Best for a 280 character Bio whose live count by the label turns to the warning tone 20 short of the cap and red at it.",
 		file: "textarea-6",
@@ -122,6 +128,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function TextareaFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function TextareaFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

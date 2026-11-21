@@ -9,7 +9,7 @@ import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/u
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { MFA_RECOVERY_PAGE_SIZE_OPTIONS, MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "@/contexts/identity/url-state/mfa-recovery";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildReadOnlyTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import { MfaRecoveryReviewPanel } from "@/contexts/identity/components/security/mfa-recovery-review-panel";
@@ -17,7 +17,14 @@ import { MfaRecoveryStatusBadge } from "@/contexts/identity/components/security/
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import {
+	DataTable,
+	type DataTableEmptyState,
+	type DataTableFeatures,
+	type DataTableFilter,
+	type DataTablePaging,
+	type DataTableRowAction,
+} from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useProgressRouter } from "@workspace/client/lib/navigation/use-progress-router";
 import { Eye } from "lucide-react";
@@ -58,7 +65,6 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 	const router = useProgressRouter();
 	const [urlState, updateUrlState] = useUrlState(MFA_RECOVERY_URL_STATE);
 	const statusFilter = urlState.status;
-	const isFiltered = statusFilter !== undefined;
 
 	const handleClearFilters = React.useCallback((): void => {
 		updateUrlState({ status: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
@@ -71,21 +77,8 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 	});
 
 	const rows = React.useMemo((): readonly AdminMfaRecoveryRequest[] => requestsQuery.data?.data ?? [], [requestsQuery.data?.data]);
-	const isRefetching: boolean = requestsQuery.isFetching && !requestsQuery.isLoading;
 	// The server's count of every matching request, not just this page.
 	const matchingTotal: number = readPaginatedTotal(requestsQuery.data?.meta);
-	const { pagination } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: adminMfaRecoveryListQuery,
-		totalCount: matchingTotal,
-		nextCursor: readPaginatedNextCursor(requestsQuery.data?.meta),
-		resetKey: MFA_RECOVERY_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined, requestId: undefined }),
-		getRowId: getRequestRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-	});
-
 	// Derived, not synced: only the request the URL names — never another one in its place.
 	const selectedRequest: AdminMfaRecoveryRequest | undefined = urlState.requestId === undefined ? undefined : rows.find((row) => row.id === urlState.requestId);
 	const isSelectionOutOfView: boolean = urlState.requestId !== undefined && selectedRequest === undefined && !requestsQuery.isLoading;
@@ -108,18 +101,29 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 
 	const manualColumnFilters = React.useMemo((): Readonly<Record<string, string>> => ({ status: statusFilter ?? ALL_FILTER_OPTION }), [statusFilter]);
 
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: adminMfaRecoveryListQuery,
+		totalCount: matchingTotal,
+		nextCursor: readPaginatedNextCursor(requestsQuery.data?.meta),
+		getRowId: getRequestRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		onClearFilters: handleClearFilters,
+	});
+
 	const tableFilters = React.useMemo(
-		(): Filter[] => [
+		(): DataTableFilter[] => [
 			{
-				key: "status",
+				kind: "select",
+				column: "status",
 				label: "Status",
 				options: MfaRecoveryRecordStatusSchema.options.map((status) => ({ value: status, label: STATUS_FILTER_LABELS[status] })),
 			},
 		],
 		[],
 	);
-
-	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("mfa-recovery-requests.csv", ["userFullName", "userEmail", "status", "requestedAt"]), []);
 
 	const handleRowClick = React.useCallback(
 		(row: AdminMfaRecoveryRequest): void => {
@@ -139,20 +143,20 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 		[router],
 	);
 
-	const actions = React.useMemo((): Action<AdminMfaRecoveryRequest>[] => {
+	const actions = React.useMemo((): DataTableRowAction<AdminMfaRecoveryRequest>[] => {
 		return [
 			{
 				key: "view",
 				label: "View user",
 				description: "Open the user profile",
 				icon: <Eye className="size-4" />,
-				onClick: handleViewUser,
+				onSelect: handleViewUser,
 			},
 		];
 	}, [handleViewUser]);
 
 	const mobileCardRender = React.useCallback(
-		(request: AdminMfaRecoveryRequest, cardActions?: Action<AdminMfaRecoveryRequest>[]): React.ReactNode => (
+		(request: AdminMfaRecoveryRequest, cardActions: readonly DataTableRowAction<AdminMfaRecoveryRequest>[]): React.ReactNode => (
 			<DataTableMobileCard
 				item={request}
 				title={request.userFullName}
@@ -204,23 +208,19 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 					<DataTable
 						columns={columns}
 						data={rows}
+						getRowId={getRowId}
+						source={source}
 						labels={MFA_RECOVERY_TABLE_LABELS}
-						actions={actions}
-						checkbox={checkbox}
-						enableColumnVisibility
+						rowActions={actions}
+						selection={MFA_RECOVERY_BULK.selection}
+						exporting={MFA_RECOVERY_BULK.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
 						filters={tableFilters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						mobileCardRender={mobileCardRender}
-						pagination={pagination}
-						pageSizeOptions={MFA_RECOVERY_PAGE_SIZE_OPTIONS}
-						isLoading={requestsQuery.isLoading}
-						isRefetching={isRefetching}
+						mobileCard={mobileCardRender}
+						paging={MFA_RECOVERY_PAGING}
+						status={toTableStatus(requestsQuery)}
 						onRowClick={handleRowClick}
-						emptyState={{
-							title: "No requests",
-							description: "No MFA recovery requests match this filter.",
-						}}
+						emptyState={MFA_RECOVERY_EMPTY}
 					/>
 				</CardContent>
 			</Card>
@@ -243,6 +243,10 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 		</div>
 	);
 });
+
+const MFA_RECOVERY_BULK = buildReadOnlyTableBulk<AdminMfaRecoveryRequest>("mfa-recovery-requests.csv", ["userFullName", "userEmail", "status", "requestedAt"]);
+const MFA_RECOVERY_PAGING: DataTablePaging = { pageSizeOptions: MFA_RECOVERY_PAGE_SIZE_OPTIONS };
+const MFA_RECOVERY_EMPTY: DataTableEmptyState = { title: "No requests", description: "No MFA recovery requests match this filter." };
 
 function getRequestRowId(request: AdminMfaRecoveryRequest): string {
 	return request.id;

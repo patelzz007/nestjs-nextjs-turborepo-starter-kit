@@ -43,6 +43,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-badge-1",
 				label: "Default",
 				anchor: "default",
+				part: null,
 				file: "badge-1",
 				source:
 					'import * as React from "react";\nimport { Badge } from "@workspace/ui/components/badge";\n\nexport function Badge1Example(): React.JSX.Element {\n\treturn <Badge>Badge</Badge>;\n}\n',
@@ -51,6 +52,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-badge-15",
 				label: "Success Light",
 				anchor: "success-light",
+				part: null,
 				file: "badge-15",
 				source:
 					'import * as React from "react";\nimport { Badge } from "@workspace/ui/components/badge";\n\nexport function Badge15Example(): React.JSX.Element {\n\treturn <Badge variant="success-light">Badge</Badge>;\n}\n',
@@ -59,6 +61,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-badge-11",
 				label: "Success Outline",
 				anchor: "success-outline",
+				part: null,
 				file: "badge-11",
 				source:
 					'import * as React from "react";\nimport { Badge } from "@workspace/ui/components/badge";\n\nexport function Badge11Example(): React.JSX.Element {\n\treturn <Badge variant="success-outline">Badge</Badge>;\n}\n',
@@ -67,6 +70,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-badge-18",
 				label: "Sizes",
 				anchor: "sizes",
+				part: null,
 				file: "badge-18",
 				source:
 					'import * as React from "react";\nimport { Badge } from "@workspace/ui/components/badge";\n\nexport function Badge18Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center gap-2.5">\n\t\t\t<Badge size="sm">Small</Badge>\n\t\t\t<Badge size="default">Default</Badge>\n\t\t\t<Badge size="lg">Large</Badge>\n\t\t</div>\n\t);\n}\n',
@@ -75,6 +79,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-badge-22",
 				label: "Status Dot",
 				anchor: "status-dot",
+				part: null,
 				file: "badge-22",
 				source:
 					'import * as React from "react";\nimport { Badge } from "@workspace/ui/components/badge";\n\nexport function Badge22Example(): React.JSX.Element {\n\treturn (\n\t\t<Badge variant="info-light">\n\t\t\t<span className="ms-0.25 size-1.25 rounded-full! bg-[currentColor]" /> Badge\n\t\t</Badge>\n\t);\n}\n',
@@ -83,6 +88,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-badge-21",
 				label: "Dismiss Button",
 				anchor: "dismiss-button",
+				part: null,
 				file: "badge-21",
 				source:
 					'import * as React from "react";\nimport { XIcon } from "lucide-react";\nimport { Badge } from "@workspace/ui/components/badge";\n\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Badge21Example(): React.JSX.Element {\n\treturn (\n\t\t<Badge variant="outline" className="gap-0.5">\n\t\t\tBadge\n\t\t\t<Button variant="ghost" size="icon" className="size-3 hover:bg-transparent">\n\t\t\t\t<XIcon />\n\t\t\t</Button>\n\t\t</Badge>\n\t);\n}\n',
@@ -91,6 +97,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-badge-23",
 				label: "As Link",
 				anchor: "as-link",
+				part: null,
 				file: "badge-23",
 				source:
 					'import * as React from "react";\nimport { Badge } from "@workspace/ui/components/badge";\n\n/** The badge renders as a link back to the gallery\'s Badge section. */\nconst BADGE_LINK: React.JSX.Element = <a href="#component-badge" aria-label="Badge" />;\n\nexport function Badge23Example(): React.JSX.Element {\n\treturn (\n\t\t<Badge variant="outline" render={BADGE_LINK}>\n\t\t\tBadge\n\t\t</Badge>\n\t);\n}\n',

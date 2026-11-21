@@ -4,11 +4,11 @@ import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ShowcaseComponentPageSkeleton, ShowcaseDocsPageSkeleton, ShowcasePageSkeleton } from "@/components/loading/showcase-skeleton";
-import { SHOWCASE_FEATURE_INDEX } from "@/components/component-showcase/generated/feature-index";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { SHOWCASE_FEATURE_INDEX, SHOWCASE_FEATURE_PARTS } from "@/components/component-showcase/generated/feature-index";
+import { featuresOnPage, ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
 import type { ShowcaseFeature } from "@/components/component-showcase/showcase-feature";
 import { SHOWCASE_CATALOG_ORDER, SHOWCASE_FAMILIES, showcaseItemBySlug, showcaseNeighbours } from "@/components/component-showcase/showcase-catalog";
-import { ShowcaseComponentPage } from "@/components/component-showcase/showcase-component-page";
+import { resolveShowcasePart, ShowcaseComponentPage } from "@/components/component-showcase/showcase-component-page";
 import type { ShowcaseOverview } from "@/components/component-showcase/showcase-content";
 import { MissingShowcaseFeaturesError } from "@/components/component-showcase/showcase-errors";
 import { ShowcaseFeatures } from "@/components/component-showcase/showcase-features";
@@ -74,7 +74,7 @@ describe("ShowcaseComponentPage", () => {
 		if (item === undefined) {
 			throw new Error("kbd is in the catalog");
 		}
-		render(<ShowcaseComponentPage item={item} overview={OVERVIEW} />, { wrapper: UiKitTestProviders });
+		render(<ShowcaseComponentPage item={item} overview={OVERVIEW} part={null} />, { wrapper: UiKitTestProviders });
 
 		expect(within(screen.getByRole("region", { name: "When to use" })).getByText("keyboard")).toBeTruthy();
 		expect(within(screen.getByRole("region", { name: "When not to use" })).getByText("Button")).toBeTruthy();
@@ -91,7 +91,7 @@ describe("ShowcaseComponentPage", () => {
 		if (item === undefined) {
 			throw new Error("kbd is in the catalog");
 		}
-		render(<ShowcaseComponentPage item={item} overview={null} />, { wrapper: UiKitTestProviders });
+		render(<ShowcaseComponentPage item={item} overview={null} part={null} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.queryByRole("region", { name: "When to use" })).toBeNull();
 		expect(screen.queryByRole("heading", { name: "Frequently asked questions" })).toBeNull();
@@ -105,7 +105,7 @@ describe("ShowcaseComponentPage", () => {
 			return;
 		}
 		const features = SHOWCASE_FEATURE_INDEX.get("kbd") ?? [];
-		const { container } = render(<ShowcaseComponentPage item={item} overview={null} />, { wrapper: UiKitTestProviders });
+		const { container } = render(<ShowcaseComponentPage item={item} overview={null} part={null} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("heading", { level: 1, name: "Kbd" })).toBeTruthy();
 		expect(
@@ -145,7 +145,7 @@ describe("ShowcaseComponentPage", () => {
 	it("fails loudly for a component without generated features", () => {
 		render(
 			<CaughtError>
-				<ShowcaseFeatures slug="not-a-component" />
+				<ShowcaseFeatures slug="not-a-component" part={null} />
 			</CaughtError>,
 			{ wrapper: UiKitTestProviders },
 		);
@@ -155,11 +155,12 @@ describe("ShowcaseComponentPage", () => {
 });
 
 /** A feature whose example is a plain paragraph. */
-function sampleFeature(anchor: string): ShowcaseFeature {
+function sampleFeature(anchor: string, part: string | null = null): ShowcaseFeature {
 	return {
 		id: `c-sample-${anchor}`,
 		label: anchor,
 		anchor,
+		part,
 		description: `The ${anchor} sample.`,
 		file: `sample-${anchor}`,
 		source: "x",
@@ -196,6 +197,85 @@ describe("ShowcaseFeatureList", () => {
 		render(<ShowcaseFeatureList features={[sampleFeature("other")]} />, { wrapper: UiKitTestProviders });
 
 		expect(scrolled).toEqual([]);
+	});
+});
+
+describe("split component pages", () => {
+	installJsdomUiShims();
+
+	it("shows one part's features, and the Do / Don't pairs on the first part only", () => {
+		const features = [sampleFeature("a", "basics"), sampleFeature("b", "recipes"), sampleFeature("c", "basics")];
+		expect(featuresOnPage(features, null)).toEqual({ shown: features, showsGuidelines: true });
+		expect(featuresOnPage(features, "basics").shown.map((feature) => feature.anchor)).toEqual(["a", "c"]);
+		expect(featuresOnPage(features, "basics").showsGuidelines).toBe(true);
+		expect(featuresOnPage(features, "recipes").shown.map((feature) => feature.anchor)).toEqual(["b"]);
+		expect(featuresOnPage(features, "recipes").showsGuidelines).toBe(false);
+	});
+
+	it("finds a named part and knows an unknown one", () => {
+		const parts = SHOWCASE_FEATURE_PARTS.get("data-table") ?? [];
+		expect(parts.length).toBeGreaterThan(1);
+		expect(resolveShowcasePart("data-table", parts.at(1)?.id ?? "")).toEqual(parts.at(1));
+		expect(resolveShowcasePart("data-table", "no-such-part")).toBeUndefined();
+		expect(resolveShowcasePart("kbd", "anything")).toBeUndefined();
+	});
+
+	it("shows every feature on the component's own page, with All examples marked current before the group tabs", () => {
+		const item = showcaseItemBySlug("data-table");
+		const parts = SHOWCASE_FEATURE_PARTS.get("data-table") ?? [];
+		if (item === undefined) {
+			throw new Error("data-table is in the catalog");
+		}
+		render(<ShowcaseComponentPage item={item} overview={null} part={null} />, { wrapper: UiKitTestProviders });
+		const links = within(screen.getByRole("navigation", { name: "DataTable example groups" })).getAllByRole("link");
+		expect(links.map((link) => link.getAttribute("href"))).toEqual([
+			SHOWCASE_ROUTES.component("data-table"),
+			...parts.map((part) => SHOWCASE_ROUTES.part("data-table", part.id)),
+		]);
+		expect(links.at(0)?.textContent).toBe("All examples");
+		expect(links.at(0)?.getAttribute("aria-current")).toBe("page");
+		expect(
+			within(screen.getByRole("navigation", { name: "DataTable features" }))
+				.getAllByRole("link")
+				.map((link) => link.getAttribute("href")),
+		).toEqual((SHOWCASE_FEATURE_INDEX.get("data-table") ?? []).map((feature) => `#${feature.anchor}`));
+	});
+
+	it("shows no group tabs on a component whose features are not grouped", () => {
+		const item = showcaseItemBySlug("kbd");
+		if (item === undefined) {
+			throw new Error("kbd is in the catalog");
+		}
+		render(<ShowcaseComponentPage item={item} overview={null} part={null} />, { wrapper: UiKitTestProviders });
+		expect(screen.queryByRole("navigation", { name: "Kbd example groups" })).toBeNull();
+	});
+
+	it("links each part as its own route, marks the current one, and lists only that part's features", () => {
+		const item = showcaseItemBySlug("data-table");
+		const parts = SHOWCASE_FEATURE_PARTS.get("data-table") ?? [];
+		const current = parts.at(1);
+		if (item === undefined || current === undefined) {
+			throw new Error("data-table is split into parts");
+		}
+		render(<ShowcaseComponentPage item={item} overview={null} part={current} />, { wrapper: UiKitTestProviders });
+		const links = within(screen.getByRole("navigation", { name: "DataTable example groups" })).getAllByRole("link");
+		expect(links.map((link) => link.getAttribute("href"))).toEqual([
+			SHOWCASE_ROUTES.component("data-table"),
+			...parts.map((part) => SHOWCASE_ROUTES.part("data-table", part.id)),
+		]);
+		expect(links.at(0)?.getAttribute("aria-current")).toBeNull();
+		expect(links.at(2)?.getAttribute("aria-current")).toBe("page");
+		const partFeatures = (SHOWCASE_FEATURE_INDEX.get("data-table") ?? []).filter((feature) => feature.part === current.id);
+		expect(
+			within(screen.getByRole("navigation", { name: "DataTable features" }))
+				.getAllByRole("link")
+				.map((link) => link.getAttribute("href")),
+		).toEqual(partFeatures.map((feature) => `#${feature.anchor}`));
+	});
+
+	it("links a feature on a split page to its part's route", () => {
+		expect(SHOWCASE_ROUTES.feature("data-table", "heatmap", "recipes-analytics")).toBe(`${SHOWCASE_ROUTES.part("data-table", "recipes-analytics")}#heatmap`);
+		expect(SHOWCASE_ROUTES.feature("kbd", "basic", null)).toBe(`${SHOWCASE_ROUTES.component("kbd")}#basic`);
 	});
 });
 

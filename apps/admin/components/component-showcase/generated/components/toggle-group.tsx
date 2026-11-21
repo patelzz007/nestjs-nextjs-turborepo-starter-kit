@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/toggle-group/toggle-group-1").then((m) => m.ToggleGroup1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/toggle-group/toggle-group-2").then((m) => m.ToggleGroup2Example), { loading: FeatureLoading });
@@ -58,6 +58,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic toggle group.. Best for bold, italic and underline as borderless icon buttons that can all be on at once, none pressed at load.",
 		file: "toggle-group-1",
 		source:
@@ -68,6 +69,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-2",
 		label: "Outline",
 		anchor: "outline",
+		part: null,
 		description: "Toggle group with outline variant.. Best for an outline pair of text options, All and Missed, with All picked and only one on at a time.",
 		file: "toggle-group-2",
 		source:
@@ -78,6 +80,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-3",
 		label: "Sizes",
 		anchor: "sizes",
+		part: null,
 		description: "Toggle groups in different sizes.. Best for the sm and default heights stacked to compare, each an outline Top and Bottom pair with Top picked.",
 		file: "toggle-group-3",
 		source:
@@ -88,6 +91,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-4",
 		label: "Custom Spacing",
 		anchor: "custom-spacing",
+		part: null,
 		description: "Toggle group with custom spacing.. Best for day, Week and Month as separate outline items with Week picked on load.",
 		file: "toggle-group-4",
 		source:
@@ -98,6 +102,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-5",
 		label: "Filter Control",
 		anchor: "filter-control",
+		part: null,
 		description: "Toggle group with filter control.. Best for small outline items for 4 statuses, All, Active, Completed and Archived, with Active picked.",
 		file: "toggle-group-5",
 		source:
@@ -108,6 +113,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-6",
 		label: "Vertical",
 		anchor: "vertical",
+		part: null,
 		description: "Toggle group with vertical orientation.. Best for bold, italic and underline stacked in an outlined column, icon only, with any mix on together.",
 		file: "toggle-group-6",
 		source:
@@ -118,6 +124,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-7",
 		label: "Text Alignment",
 		anchor: "text-alignment",
+		part: null,
 		description: "Toggle group for text alignment. Best for left, center, right and justify as borderless icon buttons where one alignment is on, left at load.",
 		file: "toggle-group-7",
 		source:
@@ -128,6 +135,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-8",
 		label: "View Mode",
 		anchor: "view-mode",
+		part: null,
 		description: "Toggle group for view mode switching. Best for icon only outline choice of list, grid or kanban layout, with list picked and an aria label on each.",
 		file: "toggle-group-8",
 		source:
@@ -138,6 +146,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-9",
 		label: "Vertical Settings",
 		anchor: "vertical-settings",
+		part: null,
 		description:
 			"Vertical toggle group for settings. Best for a borderless column of Wi-Fi, Bluetooth, Airplane Mode and Location with icon and label, any mix on, 2 at load.",
 		file: "toggle-group-9",
@@ -149,6 +158,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-10",
 		label: "Color Theme",
 		anchor: "color-theme",
+		part: null,
 		description: "Toggle group for color theme. Best for light, Dark and System choices with an icon and label each in outline, Light picked on load.",
 		file: "toggle-group-10",
 		source:
@@ -159,6 +169,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-11",
 		label: "Font Size",
 		anchor: "font-size",
+		part: null,
 		description: "Toggle group for font size. Best for small outline items lettered S, M, L and XL for a short size scale, with M picked on load.",
 		file: "toggle-group-11",
 		source:
@@ -169,6 +180,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-12",
 		label: "Time Range",
 		anchor: "time-range",
+		part: null,
 		description: "Toggle group for time range filter. Best for small outline presets 1H, 6H, 24H, 7D, 30D and All in one row, with 24H picked on load.",
 		file: "toggle-group-12",
 		source:
@@ -179,6 +191,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-13",
 		label: "Notification Channels",
 		anchor: "notification-channels",
+		part: null,
 		description: "Toggle group for notification channels. Best for email, SMS, Push and Slack with an icon and label each, any mix on together, Email and Push on at load.",
 		file: "toggle-group-13",
 		source:
@@ -189,6 +202,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-14",
 		label: "Layout Columns",
 		anchor: "layout-columns",
+		part: null,
 		description: "Toggle group for layout columns. Best for icon only outline picks for 1, 2, 3 or 4 columns, each named by its count, with 2 set at load.",
 		file: "toggle-group-14",
 		source:
@@ -199,6 +213,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-15",
 		label: "Sort Direction",
 		anchor: "sort-direction",
+		part: null,
 		description: "Toggle group for sort direction. Best for a small outline pair, Ascending and Descending, each led by an up or down arrow, Ascending on at load.",
 		file: "toggle-group-15",
 		source:
@@ -209,6 +224,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-group-16",
 		label: "Pricing Tier",
 		anchor: "pricing-tier",
+		part: null,
 		description: "Toggle group for pricing tier. Best for a large outline Monthly and Yearly pair, the Yearly item carrying a filled Save 20% pill.",
 		file: "toggle-group-16",
 		source:
@@ -254,6 +270,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ToggleGroupFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ToggleGroupFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

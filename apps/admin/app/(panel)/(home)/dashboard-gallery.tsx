@@ -27,7 +27,7 @@ const toastSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-
 
 // Every gallery section is viewport-gated by `<LazySection>` and only mounts
 // when scrolled near — the chunk then downloads on demand and the section fades in.
-const DataTableShowcase = dynamic(() => import("@/components/component-showcase/examples/data-table/data-table-14").then((m) => m.DataTable14Example), {
+const DataTableShowcase = dynamic(() => import("@/components/component-showcase/examples/data-table/data-table-29").then((m) => m.DataTable29Example), {
 	loading: tableSectionLoading,
 });
 

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/autocomplete/autocomplete-1").then((m) => m.Autocomplete1Example), {
 	loading: FeatureLoading,
@@ -64,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic autocomplete control. Best for the minimal uncontrolled setup, with 41 tag and component names matched by the built in filter.",
 		file: "autocomplete-1",
 		source:
@@ -74,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-2",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled state. Best for a field locked from the root, so the input takes no focus and its list never opens.",
 		file: "autocomplete-2",
 		source:
@@ -84,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-3",
 		label: "Auto Highlight",
 		anchor: "auto-highlight",
+		part: null,
 		description: "Auto highlight option as you type. Best for the first match highlighted as soon as the user types, so Enter fills the input without arrow keys.",
 		file: "autocomplete-3",
 		source:
@@ -94,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-4",
 		label: "Labeled",
 		anchor: "labeled",
+		part: null,
 		description: "Control with label. Best for a kit Label stacked above the input and tied to it by a shared id, with auto highlight on.",
 		file: "autocomplete-4",
 		source:
@@ -104,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-5",
 		label: "Clear Button",
 		anchor: "clear-button",
+		part: null,
 		description: "With clear button. Best for a query held in React state, with an X inside the input that appears once text is typed and empties it.",
 		file: "autocomplete-5",
 		source:
@@ -114,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-6",
 		label: "Trigger Button",
 		anchor: "trigger-button",
+		part: null,
 		description: "With trigger button. Best for a chevron button at the end of the input that opens the full list before anything is typed.",
 		file: "autocomplete-6",
 		source:
@@ -124,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-7",
 		label: "Clear & Trigger",
 		anchor: "clear-trigger",
+		part: null,
 		description:
 			"With clear and trigger buttons. Best for both end buttons at the default h-8 size in one spot: the chevron opens the list while empty, the X takes over once text is typed.",
 		file: "autocomplete-7",
@@ -135,6 +142,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-8",
 		label: "Groups & Labels",
 		anchor: "groups-labels",
+		part: null,
 		description: "With groups and labels. Best for a people directory of 26 users in 6 teams under sticky labels, matched on name, team or job title.",
 		file: "autocomplete-8",
 		source:
@@ -145,6 +153,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-9",
 		label: "Search Results",
 		anchor: "search-results",
+		part: null,
 		description: "With search results. Best for a debounced lookup of 25 developers with a spinner, error text and result count in a status line.",
 		file: "autocomplete-9",
 		source:
@@ -155,6 +164,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-10",
 		label: "Small",
 		anchor: "small",
+		part: null,
 		description: "Small autocomplete. Best for the sm size at h-7 with the clear X and chevron, for dense filter bars and toolbars.",
 		file: "autocomplete-10",
 		source:
@@ -165,6 +175,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-11",
 		label: "Large",
 		anchor: "large",
+		part: null,
 		description: "Large autocomplete. Best for the lg size at h-9, keeping the chevron and clear X, for a search bar that leads a page.",
 		file: "autocomplete-11",
 		source:
@@ -175,6 +186,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-autocomplete-12",
 		label: "Form Integration",
 		anchor: "form-integration",
+		part: null,
 		description: "Form integration. Best for a React Hook Form field checked by zod that rejects text matching no item, with the error shown on submit.",
 		file: "autocomplete-12",
 		source:
@@ -220,6 +232,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function AutocompleteFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function AutocompleteFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

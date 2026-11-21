@@ -21,9 +21,9 @@ import { formatDateTime } from "@/lib/format/dates";
 import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildReadOnlyTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableFeatures, type DataTableFilter, type DataTablePaging, type DataTableToolbar } from "@workspace/ui/components/data-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleX, Mail, RefreshCw, TriangleAlert } from "lucide-react";
@@ -74,8 +74,6 @@ function EmailStatusBadge({ entry }: { readonly entry: EmailLogEntry }): React.J
 export default function EmailLogPage({ initialPage }: { readonly initialPage?: PrefetchedQuery<Envelope<EmailLogEntry[]>> | undefined }): React.JSX.Element {
 	const { api } = useAuth();
 	const [urlState, updateUrlState] = useUrlState(EMAIL_LOG_URL_STATE);
-	const isFiltered = urlState.search !== undefined || urlState.status !== undefined;
-
 	const commitSearch = React.useCallback(
 		(value: string): void => {
 			updateUrlState({ search: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
@@ -101,19 +99,6 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 	// Stable rows reference (rule 16 — avoid re-renders via new array identity).
 	const rows = React.useMemo(() => logQuery.data?.data ?? [], [logQuery.data]);
 	const totalCount = readPaginatedTotal(logQuery.data?.meta, rows.length);
-	const isRefetching: boolean = logQuery.isFetching && !logQuery.isLoading;
-	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: emailLogListQuery,
-		totalCount,
-		nextCursor: readPaginatedNextCursor(logQuery.data?.meta),
-		resetKey: EMAIL_LOG_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getEmailLogRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-	});
-
 	const handleManualColumnFilterChange = React.useCallback(
 		(filterKey: string, value: string | null): void => {
 			if (filterKey === "status") {
@@ -125,6 +110,18 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 	);
 
 	const manualColumnFilters = React.useMemo((): Readonly<Record<string, string>> => ({ status: urlState.status ?? ALL_FILTER_OPTION }), [urlState.status]);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: emailLogListQuery,
+		totalCount,
+		nextCursor: readPaginatedNextCursor(logQuery.data?.meta),
+		getRowId: getEmailLogRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		search: urlState.search ?? "",
+		onClearFilters: handleClearFilters,
+	});
 
 	const searchToolbar = React.useMemo(
 		(): React.JSX.Element => (
@@ -134,9 +131,10 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 	);
 
 	const statusFilters = React.useMemo(
-		(): Filter[] => [
+		(): DataTableFilter[] => [
 			{
-				key: "status",
+				kind: "select",
+				column: "status",
 				label: "Status",
 				options: enumFilterOptions(EmailLogStatusSchema.options, EMAIL_LOG_STATUS_LABELS),
 			},
@@ -144,7 +142,7 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 		[],
 	);
 
-	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("email-log.csv", ["subject", "to", "templateKey", "status", "createdAt"]), []);
+	const toolbar = React.useMemo((): DataTableToolbar => ({ extra: searchToolbar }), [searchToolbar]);
 
 	const columns = React.useMemo<ColumnDef<DataTableFeatures, EmailLogEntry>[]>(
 		() => [
@@ -252,25 +250,25 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 					<DataTable
 						data={rows}
 						columns={columns}
-						searchKeys={[]}
-						toolbarContent={searchToolbar}
+						getRowId={getRowId}
+						source={source}
+						toolbar={toolbar}
 						filters={statusFilters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						checkbox={checkbox}
-						enableColumnVisibility
-						pagination={pagination}
-						pageSizeOptions={EMAIL_LOG_PAGE_SIZE_OPTIONS}
-						sorting={sorting}
-						onManualSortingChange={handleSortingChange}
-						isRefetching={isRefetching}
-						mobileCardRender={mobileCardRender}
+						selection={EMAIL_LOG_BULK.selection}
+						exporting={EMAIL_LOG_BULK.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
+						paging={EMAIL_LOG_PAGING}
+						status={toTableStatus({ isLoading: false, isFetching: logQuery.isFetching && !logQuery.isLoading })}
+						mobileCard={mobileCardRender}
 					/>
 				</CardContent>
 			</Card>
 		</div>
 	);
 }
+
+const EMAIL_LOG_BULK = buildReadOnlyTableBulk<EmailLogEntry>("email-log.csv", ["subject", "to", "templateKey", "status", "createdAt"]);
+const EMAIL_LOG_PAGING: DataTablePaging = { pageSizeOptions: EMAIL_LOG_PAGE_SIZE_OPTIONS };
 
 function getEmailLogRowId(entry: EmailLogEntry): string {
 	return entry.id;

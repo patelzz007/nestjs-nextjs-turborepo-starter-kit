@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/attachment/attachment-1").then((m) => m.Attachment1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/attachment/attachment-2").then((m) => m.Attachment2Example), { loading: FeatureLoading });
@@ -34,6 +34,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-attachment-1",
 		label: "Assistant Reply",
 		anchor: "assistant-reply",
+		part: null,
 		description:
 			"Single file attachment in an assistant reply. Best for a full width report card under a reply paragraph, with type and size and a secondary download button.",
 		file: "attachment-1",
@@ -45,6 +46,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-attachment-2",
 		label: "Composer Tray",
 		anchor: "composer-tray",
+		part: null,
 		description:
 			"Composer tray with removable attachments. Best for a chat textarea topped by xs chips that scroll sideways, a paperclip that adds files and a live attached count.",
 		file: "attachment-2",
@@ -56,6 +58,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-attachment-3",
 		label: "Image Strip",
 		anchor: "image-strip",
+		part: null,
 		description: "Image thumbnails in a snapping strip. Best for vertical image cards whose full card button marks one as pressed and prints its name and dimensions below.",
 		file: "attachment-3",
 		source:
@@ -66,6 +69,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-attachment-4",
 		label: "Three Sizes",
 		anchor: "three-sizes",
+		part: null,
 		description:
 			"Three sizes carrying three levels of an answer. Best for default, sm and xs cards stacked under text labels to rank a deliverable, its working files and cited snippets.",
 		file: "attachment-4",
@@ -77,6 +81,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-attachment-5",
 		label: "Upload Queue",
 		anchor: "upload-queue",
+		part: null,
 		description:
 			"Upload queue across all five states. Best for each of the 5 states on its own row, with a spinner while uploading, a retry on the failure and cancel or remove labels by state.",
 		file: "attachment-5",
@@ -88,6 +93,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-attachment-6",
 		label: "File Picker",
 		anchor: "file-picker",
+		part: null,
 		description:
 			"File picker that fills an attachment tray. Best for a dashed idle card that opens the system dialog, then lists picks as sm rows with image previews, sizes and limit errors.",
 		file: "attachment-6",
@@ -134,6 +140,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function AttachmentFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function AttachmentFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

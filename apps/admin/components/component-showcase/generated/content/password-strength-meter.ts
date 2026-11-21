@@ -37,6 +37,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-password-strength-meter-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "password-strength-meter-1",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { Label } from "@workspace/ui/components/label";\nimport { PasswordInput } from "@workspace/ui/components/password-input";\nimport { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";\nimport { passwordStrength } from "@workspace/client/lib/contexts/identity/password";\n\nexport function PasswordStrengthMeter1Example(): React.JSX.Element {\n\tconst [password, setPassword] = React.useState<string>("Correct-horse");\n\tconst strength = React.useMemo(() => passwordStrength(password), [password]);\n\n\tconst handleChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {\n\t\tsetPassword(event.currentTarget.value);\n\t}, []);\n\n\treturn (\n\t\t<div className="flex w-full max-w-md flex-col gap-3">\n\t\t\t<div className="flex flex-col gap-1.5">\n\t\t\t\t<Label htmlFor="usage-strength-password">Try a password</Label>\n\t\t\t\t<PasswordInput id="usage-strength-password" value={password} onChange={handleChange} autoComplete="off" />\n\t\t\t</div>\n\t\t\t<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />\n\t\t</div>\n\t);\n}\n',

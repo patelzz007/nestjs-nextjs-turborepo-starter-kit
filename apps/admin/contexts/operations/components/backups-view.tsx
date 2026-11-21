@@ -12,7 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";
-import { type Action, DataTable, type DataTableFeatures, type EmptyStateConfig } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableEmptyState, type DataTableFeatures, type DataTablePreferences, type DataTableRowAction } from "@workspace/ui/components/data-table";
+import { TABLE_DEFAULT_PAGING, toTableStatus } from "@/lib/data-table/capabilities";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -133,10 +134,17 @@ const BACKUP_COLUMNS: ColumnDef<DataTableFeatures, OpsBackup>[] = [
 		),
 	},
 ];
-const BACKUPS_EMPTY: EmptyStateConfig = { title: "No backups yet", description: "Back up now, or wait for tonight's scheduled backup." };
+const BACKUPS_EMPTY: DataTableEmptyState = { title: "No backups yet", description: "Back up now, or wait for tonight's scheduled backup." };
+const BACKUP_PREFERENCES: DataTablePreferences = { key: "ops-backups" };
+/** One stable empty list while the backups load, so the table does not see new rows on every render. */
+const NO_BACKUPS: readonly OpsBackup[] = [];
+
+function getBackupId(backup: OpsBackup): string {
+	return backup.id;
+}
 
 /** The row actions: download (a finished backup), pin or unpin, delete (once it has finished). */
-function useBackupActions(): Action<OpsBackup>[] {
+function useBackupActions(): DataTableRowAction<OpsBackup>[] {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const refresh = React.useCallback(async (): Promise<void> => {
@@ -168,12 +176,13 @@ function useBackupActions(): Action<OpsBackup>[] {
 		},
 	});
 	return React.useMemo(
-		(): Action<OpsBackup>[] => [
+		(): DataTableRowAction<OpsBackup>[] => [
 			{
 				key: "download",
 				label: "Download",
+				description: "Save the backup file to this device.",
 				icon: <Download className="size-4" />,
-				onClick: (backup): void => {
+				onSelect: (backup): void => {
 					if (backup.status === "SUCCEEDED") {
 						download.mutate({ backupId: backup.id });
 					} else {
@@ -186,17 +195,17 @@ function useBackupActions(): Action<OpsBackup>[] {
 				label: "Pin or unpin",
 				description: "A pinned backup is kept past the retention.",
 				icon: <Pin className="size-4" />,
-				onClick: (backup): void => {
+				onSelect: (backup): void => {
 					pin.mutate({ backupId: backup.id, pinned: !backup.pinned });
 				},
 			},
 			{
 				key: "delete",
 				label: "Delete",
+				description: "Remove the backup and its file for good.",
 				icon: <Trash2 className="size-4" />,
-				variant: "destructive",
-				isDestructive: true,
-				onClick: (backup): void => {
+				tone: "destructive",
+				onSelect: (backup): void => {
 					if (!isFinishedBackup(backup)) {
 						toastMessage.error({ title: "A backup can be deleted once it has finished" });
 					} else if (window.confirm("Delete this backup and its file? This cannot be undone.")) {
@@ -302,7 +311,16 @@ export function BackupsView(): React.JSX.Element {
 			{data === undefined ? null : (
 				<ScheduleForm key={JSON.stringify(data.schedule)} schedule={data.schedule} timeZone={data.timeZone} nextScheduledAt={data.nextScheduledAt} />
 			)}
-			<DataTable columns={BACKUP_COLUMNS} data={data?.backups ?? []} actions={actions} isLoading={list.isLoading} emptyState={BACKUPS_EMPTY} persistKey="ops-backups" />
+			<DataTable
+				columns={BACKUP_COLUMNS}
+				data={data?.backups ?? NO_BACKUPS}
+				getRowId={getBackupId}
+				rowActions={actions}
+				paging={TABLE_DEFAULT_PAGING}
+				status={toTableStatus({ isLoading: list.isLoading })}
+				emptyState={BACKUPS_EMPTY}
+				preferences={BACKUP_PREFERENCES}
+			/>
 			{data === undefined ? null : <RestoreDrillsCard drills={data.restoreDrills} configured={data.restoreDrillConfigured} />}
 		</div>
 	);

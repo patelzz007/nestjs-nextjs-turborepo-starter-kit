@@ -231,6 +231,13 @@ const query = api.product.list.useQuery(
 );
 ```
 
+`DataTable` itself asks for one thing: `source={{ mode: "server", totalCount, query, onQueryChange }}`,
+where `query` (`DataTableQuery`: page index, page size, sort, filters, search) is what the current
+rows were fetched with ([ADR 097](../../adr/097-one-data-table.md)). The page owns `query` and
+fetches again when the table reports a change. Admin pages do not build `source` by hand:
+`useUrlListPaging` (`apps/admin/lib/data-table/use-url-list-paging.ts`) reads the URL state,
+returns `source`, and writes each reported change back to the URL.
+
 A table whose state lives in the URL (§7 — every admin table) uses the sibling
 `listStateToListQuery(spec, { pagination, sort, search, filter })`, which takes the URL's
 `sort` param instead of TanStack sorting and applies exactly the same rules.

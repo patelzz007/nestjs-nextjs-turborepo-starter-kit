@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/signature-pad/signature-pad-1").then((m) => m.SignaturePad1Example), {
 	loading: FeatureLoading,
@@ -64,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-1",
 		label: "Pinned Actions",
 		anchor: "pinned-actions",
+		part: null,
 		description: "Pinned clear and save. Best for a bottom corner Clear and Save pair, with Save redrawing the kept strokes as a small preview under the pad.",
 		file: "signature-pad-1",
 		source:
@@ -74,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-2",
 		label: "Undo & Redo",
 		anchor: "undo-redo",
+		part: null,
 		description: "Undo and redo toolbar. Best for history buttons in a row above the pad, a Ctrl Z hint on wider screens and a labelled Clear at the far end.",
 		file: "signature-pad-2",
 		source:
@@ -84,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-3",
 		label: "Form Validation",
 		anchor: "form-validation",
+		part: null,
 		description: "Form field with validation. Best for a name input and a pad read back from FormData on submit, showing a field error when the pad was left empty.",
 		file: "signature-pad-3",
 		source:
@@ -94,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-4",
 		label: "Signing Workspace",
 		anchor: "signing-workspace",
+		part: null,
 		description:
 			"Signing workspace. Best for ink and weight picked from ghost icon menus under the pad, an animated replay of the drawing, and Edit to reopen it once signed.",
 		file: "signature-pad-4",
@@ -105,6 +109,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-5",
 		label: "Export Formats",
 		anchor: "export-formats",
+		part: null,
 		description: "Export PNG, JPEG, SVG or JSON. Best for one Save button per format in a labelled group, the output shown in a Frame panel as an image or raw JSON text.",
 		file: "signature-pad-5",
 		source:
@@ -115,6 +120,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-6",
 		label: "Draw or Type",
 		anchor: "draw-or-type",
+		part: null,
 		description: "Draw or type. Best for a typed name echoed in large serif italics as the other tab, and one Adopt and sign button for whichever tab is open.",
 		file: "signature-pad-6",
 		source:
@@ -125,6 +131,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-7",
 		label: "Agreement Card",
 		anchor: "agreement-card",
+		part: null,
 		description: "Agreement signing card. Best for a consent checkbox that must be ticked before the full width Sign agreement button enables, and Start over in the header.",
 		file: "signature-pad-7",
 		source:
@@ -135,6 +142,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-8",
 		label: "In Dialog",
 		anchor: "in-dialog",
+		part: null,
 		description: "Signature in a dialog. Best for edits made on a draft copy so Cancel keeps the stored mark, shown afterwards as a small preview in the row footer.",
 		file: "signature-pad-8",
 		source:
@@ -145,6 +153,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-9",
 		label: "Stylus Mode",
 		anchor: "stylus-mode",
+		part: null,
 		description: "Stylus mode with palm rejection. Best for a switch that limits drawing to a stylus, and a badge naming which pointer drew the last stroke.",
 		file: "signature-pad-9",
 		source:
@@ -155,6 +164,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-10",
 		label: "Clause Initials",
 		anchor: "clause-initials",
+		part: null,
 		description: "Initials per clause. Best for small pads with a thinner ink range in 4 item rows, holding back Submit until every row has a mark.",
 		file: "signature-pad-10",
 		source:
@@ -165,6 +175,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-11",
 		label: "Proof of Delivery",
 		anchor: "proof-of-delivery",
+		part: null,
 		description: "Proof of delivery. Best for a narrow order card whose large full width button needs a typed receiver and ink, then locks both.",
 		file: "signature-pad-11",
 		source:
@@ -175,6 +186,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-signature-pad-12",
 		label: "File Upload",
 		anchor: "file-upload",
+		part: null,
 		description: "Upload with apiRef. Best for a 3x scale PNG Blob wrapped in a File object, with Attach and Clear buttons outside the pad driving it by ref.",
 		file: "signature-pad-12",
 		source:
@@ -220,6 +232,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SignaturePadFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SignaturePadFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

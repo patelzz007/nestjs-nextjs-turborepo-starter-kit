@@ -1,5 +1,5 @@
 // ============================================
-// lib/diagram/static-diagram.ts —a diagram as a standalone SVG file
+// lib/diagram/static-diagram.ts — a diagram as a standalone SVG file
 // ============================================
 // For places that cannot run Pele or read the app's CSS — the README on GitHub, an
 // exported file. The SVG is drawn by Pele like the `Diagram` component, and the

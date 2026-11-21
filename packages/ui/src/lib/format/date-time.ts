@@ -1,5 +1,5 @@
 // ============================================
-// lib/format/date-time.ts -timestamp and relative-time formatting
+// lib/format/date-time.ts - timestamp and relative-time formatting
 // ============================================
 // Time is epoch milliseconds everywhere — in data, state, URLs, logs and on the
 // wire (a UTC instant, a plain number that sorts and compares). The only place

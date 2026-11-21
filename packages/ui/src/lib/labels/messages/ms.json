@@ -242,7 +242,7 @@
 		"removeOptionFallback": "Buang pilihan",
 		"selectedCount": "{count} dipilih"
 	},
-	"dataGrid": {
+	"tableEngine": {
 		"sortAscending": "Menaik",
 		"sortDescending": "Menurun",
 		"pinColumnStart": "Semat ke kiri",
@@ -253,6 +253,7 @@
 		"unpinColumn": "Nyahsemat lajur {title}",
 		"toggleColumns": "Tunjuk/sembunyi lajur",
 		"rowCreate": "Tambah baris",
+		"cellAddress": "Sel",
 		"pinRow": "Semat baris",
 		"unpinRow": "Nyahsemat baris",
 		"selectRow": "Pilih baris",
@@ -327,7 +328,33 @@
 		"unpinColumnAriaLabel": "Nyahsemat lajur",
 		"exportCurrentPage": "Halaman semasa (CSV)",
 		"exportCurrentPageDescription": "Mengeksport hanya baris yang kelihatan di halaman ini",
-		"loadingTableAriaLabel": "Memuatkan data jadual"
+		"loadingTableAriaLabel": "Memuatkan data jadual",
+		"filterAll": "Semua",
+		"filterOptionCount": "{label} ({count})",
+		"retry": "Cuba lagi",
+		"densityToggle": "Kepadatan",
+		"densityCompact": "Padat",
+		"densityComfortable": "Selesa",
+		"densitySpacious": "Lapang",
+		"clearDateRange": "Kosongkan tarikh",
+		"rowActionPending": "{label}…",
+		"rowActionFailed": "{label} gagal. Cuba lagi",
+		"exportDialogTitle": "Eksport baris",
+		"exportDialogFormat": "Format",
+		"exportDialogRows": "Baris",
+		"exportDialogColumns": "Lajur",
+		"exportScopeSelected": "Baris yang ditanda ({count})",
+		"exportScopeMatching": "Baris yang sepadan ({count})",
+		"exportScopeAll": "Semua baris ({count})",
+		"exportDialogConfirm": "Eksport {count} baris",
+		"exportDialogCancel": "Batal",
+		"editUndo": "Buat asal",
+		"editRedo": "Buat semula",
+		"cellEditFailed": "Tidak dapat menyimpan {column}. Nilai lama dikembalikan.",
+		"detailPanelLabel": "Butiran baris",
+		"detailPanelClose": "Tutup butiran",
+		"detailPanelPrevious": "Baris sebelumnya",
+		"detailPanelNext": "Baris seterusnya"
 	},
 	"datePicker": {
 		"dialog": "Pilih tarikh"

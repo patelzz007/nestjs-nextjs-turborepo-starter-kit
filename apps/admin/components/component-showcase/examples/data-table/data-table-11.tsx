@@ -1,51 +1,32 @@
 "use client";
 
-import * as React from "react";
-import { z } from "zod";
+import type * as React from "react";
 
-import { DataTable } from "@workspace/ui/components/data-table";
-import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
+import { DataTable, type DataTableColumnControls, type DataTableColumns } from "@workspace/ui/components/data-table";
 
-import { DOCUMENT_SECTIONS, SECTION_COLUMNS } from "./data-table-sample";
+import { DOCUMENT_SECTIONS, getSectionId, NUMERIC_COLUMN_META, SECTION_PAGING, SectionStatusBadge, type DocumentSection } from "./data-table-sample";
 
-const PAGE_SIZE = 5;
-const SKELETON_ROWS = 5;
+/** Every control a header can carry: its menu sorts, pins, moves and hides the column, and its edge resizes it. */
+const COLUMN_CONTROLS: DataTableColumnControls = { visibility: true, pinning: true, resizing: true, reordering: true };
 
-const TableStateSchema = z.enum(["loaded", "loading", "refetching", "empty", "error"]);
-type TableState = z.output<typeof TableStateSchema>;
-
-const STATE_LABELS: Readonly<Record<TableState, string>> = { loaded: "Loaded", loading: "First load", refetching: "Refetching", empty: "Empty", error: "Error" };
+// What a column allows is declared on the column: `enableSorting`, `enableHiding`, `enablePinning` and
+// `enableResizing` each switch one control off for that column only.
+const COLUMNS: DataTableColumns<DocumentSection> = [
+	{ accessorKey: "header", header: "Section", size: 260, enableHiding: false },
+	{ accessorKey: "type", header: "Type", size: 170 },
+	{
+		accessorKey: "status",
+		header: "Status",
+		size: 140,
+		// A status has no meaningful order, so this header is a plain title.
+		enableSorting: false,
+		cell: ({ row }): React.JSX.Element => <SectionStatusBadge status={row.original.status} />,
+	},
+	{ accessorKey: "target", header: "Target", size: 100, meta: NUMERIC_COLUMN_META },
+	{ accessorKey: "limit", header: "Limit", size: 100, meta: NUMERIC_COLUMN_META },
+	{ accessorKey: "reviewer", header: "Reviewer", size: 180, enableResizing: false },
+];
 
 export function DataTable11Example(): React.JSX.Element {
-	const [state, setState] = React.useState<TableState>("loading");
-	const handleValueChange = React.useCallback((value: string | number | null): void => {
-		const parsed = TableStateSchema.safeParse(value);
-		setState(parsed.success ? parsed.data : "loaded");
-	}, []);
-
-	return (
-		<div className="flex w-full flex-col gap-4">
-			<Tabs value={state} onValueChange={handleValueChange}>
-				<TabsList aria-label="Table state">
-					{TableStateSchema.options.map((option: TableState): React.JSX.Element => (
-						<TabsTrigger key={option} value={option}>
-							{STATE_LABELS[option]}
-						</TabsTrigger>
-					))}
-				</TabsList>
-			</Tabs>
-			<DataTable
-				data={state === "empty" ? [] : DOCUMENT_SECTIONS}
-				columns={SECTION_COLUMNS}
-				isLoading={state === "loading"}
-				isRefetching={state === "refetching"}
-				skeletonRows={SKELETON_ROWS}
-				error={state === "error" ? "The sections could not be loaded. Try again in a moment." : null}
-				emptyState={{ title: "No sections yet", description: "Sections appear here once the proposal has some." }}
-				pageSize={PAGE_SIZE}
-				title="Loading, empty and error"
-				description="Every state a fetched table goes through, from skeleton rows to an error."
-			/>
-		</div>
-	);
+	return <DataTable data={DOCUMENT_SECTIONS} columns={COLUMNS} getRowId={getSectionId} columnControls={COLUMN_CONTROLS} paging={SECTION_PAGING} />;
 }

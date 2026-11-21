@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-li
 import type * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { formatBytes, isFileAccepted, useFileUpload, type FileMetadata, type FileUploadOptions, type FileUploadState, type FileUploadActions } from "../use-file-upload";
 

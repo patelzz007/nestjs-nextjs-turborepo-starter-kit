@@ -12,7 +12,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 		],
 		whenNotToUse: [
 			"A sidebar that only opens and closes, with no free sizing: use [Sidebar](/components/sidebar)",
-			"Columns of a table people widen at the header edge: [Data Grid](/components/data-grid) resizes columns itself",
+			"Columns of a table people widen at the header edge: [Data Table](/components/data-table) resizes columns itself (`columnControls.resizing`)",
 		],
 		notes: [
 			'A number in `defaultSize` or `minSize` is read as pixels; pass a string such as `"30%"` for a share of the group',
@@ -46,6 +46,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-resizable-1",
 				label: "Horizontal Layout",
 				anchor: "horizontal-layout",
+				part: null,
 				file: "resizable-1",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@workspace/ui/components/resizable";\n\nexport function Resizable1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-lg">\n\t\t\t<ResizablePanelGroup orientation="vertical" className="min-h-[300px] rounded-2xl border">\n\t\t\t\t<ResizablePanel defaultSize={25}>\n\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">Header</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t\t<ResizableHandle />\n\t\t\t\t<ResizablePanel defaultSize={75}>\n\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">Content</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t</ResizablePanelGroup>\n\t\t</div>\n\t);\n}\n',
@@ -54,6 +55,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-resizable-2",
 				label: "Vertical Layout",
 				anchor: "vertical-layout",
+				part: null,
 				file: "resizable-2",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@workspace/ui/components/resizable";\n\nexport function Resizable2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-lg">\n\t\t\t<ResizablePanelGroup orientation="horizontal" className="min-h-[200px] rounded-2xl border">\n\t\t\t\t<ResizablePanel defaultSize={25}>\n\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">Sidebar</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t\t<ResizableHandle />\n\t\t\t\t<ResizablePanel defaultSize={75}>\n\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">Content</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t</ResizablePanelGroup>\n\t\t</div>\n\t);\n}\n',
@@ -62,6 +64,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-resizable-3",
 				label: "Mixed Directions",
 				anchor: "mixed-directions",
+				part: null,
 				file: "resizable-3",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@workspace/ui/components/resizable";\n\nexport function Resizable3Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-lg">\n\t\t\t<ResizablePanelGroup orientation="horizontal" className="min-h-[300px] rounded-2xl border">\n\t\t\t\t<ResizablePanel defaultSize={40}>\n\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">Side</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t\t<ResizableHandle />\n\t\t\t\t<ResizablePanel defaultSize={60}>\n\t\t\t\t\t<ResizablePanelGroup orientation="vertical">\n\t\t\t\t\t\t<ResizablePanel defaultSize={30}>\n\t\t\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t\t\t<span className="text-sm font-semibold">Top</span>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</ResizablePanel>\n\t\t\t\t\t\t<ResizableHandle />\n\t\t\t\t\t\t<ResizablePanel defaultSize={70}>\n\t\t\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t\t\t<span className="text-sm font-semibold">Bottom</span>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</ResizablePanel>\n\t\t\t\t\t</ResizablePanelGroup>\n\t\t\t\t</ResizablePanel>\n\t\t\t</ResizablePanelGroup>\n\t\t</div>\n\t);\n}\n',
@@ -70,6 +73,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-resizable-9",
 				label: "Three Panels",
 				anchor: "three-panels",
+				part: null,
 				file: "resizable-9",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@workspace/ui/components/resizable";\n\nconst pillClasses =\n\t"before:pointer-events-none before:absolute before:top-1/2 before:left-1/2 before:z-10 before:h-6 before:w-1 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:bg-muted-foreground/25 before:transition-all before:duration-300 before:ease-[cubic-bezier(0.32,0.72,0,1)] hover:before:h-10 hover:before:bg-muted-foreground/40 active:before:h-12 active:before:w-1.5 active:before:bg-primary";\n\nexport function Resizable9Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-lg">\n\t\t\t<ResizablePanelGroup orientation="horizontal" className="min-h-[200px] rounded-2xl border">\n\t\t\t\t<ResizablePanel defaultSize={25} minSize={15}>\n\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">Files</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t\t<ResizableHandle className={pillClasses} />\n\t\t\t\t<ResizablePanel defaultSize={50} minSize={25}>\n\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">Editor</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t\t<ResizableHandle className={pillClasses} />\n\t\t\t\t<ResizablePanel defaultSize={25} minSize={15}>\n\t\t\t\t\t<div className="flex h-full items-center justify-center p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">Preview</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t</ResizablePanelGroup>\n\t\t</div>\n\t);\n}\n',
@@ -78,6 +82,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-resizable-10",
 				label: "Size Tracking",
 				anchor: "size-tracking",
+				part: null,
 				file: "resizable-10",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { useCallback, useState } from "react";\n\nimport { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@workspace/ui/components/resizable";\n\n/** Each panel\'s starting share of the group, in percent. */\nconst LEFT_DEFAULT_SIZE = 30;\nconst RIGHT_DEFAULT_SIZE = 70;\nconst DEFAULT_LAYOUT: Readonly<Record<string, number>> = { left: LEFT_DEFAULT_SIZE, right: RIGHT_DEFAULT_SIZE };\n\nexport function Resizable10Example(): React.JSX.Element {\n\tconst [sizes, setSizes] = useState<Readonly<Record<string, number>>>(DEFAULT_LAYOUT);\n\n\tconst handleLayoutChange = useCallback((layout: Readonly<Record<string, number>>): void => {\n\t\tsetSizes(layout);\n\t}, []);\n\n\treturn (\n\t\t<div className="mx-auto w-full max-w-lg">\n\t\t\t<ResizablePanelGroup orientation="horizontal" className="min-h-[200px] rounded-2xl border" onLayoutChange={handleLayoutChange}>\n\t\t\t\t<ResizablePanel id="left" defaultSize={LEFT_DEFAULT_SIZE} minSize={20}>\n\t\t\t\t\t<div className="flex h-full flex-col items-center justify-center gap-2 p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">{Math.round(sizes.left ?? LEFT_DEFAULT_SIZE)}%</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t\t<ResizableHandle withHandle />\n\t\t\t\t<ResizablePanel id="right" defaultSize={RIGHT_DEFAULT_SIZE} minSize={30}>\n\t\t\t\t\t<div className="flex h-full flex-col items-center justify-center gap-2 p-6">\n\t\t\t\t\t\t<span className="text-sm font-semibold">{Math.round(sizes.right ?? RIGHT_DEFAULT_SIZE)}%</span>\n\t\t\t\t\t</div>\n\t\t\t\t</ResizablePanel>\n\t\t\t</ResizablePanelGroup>\n\t\t</div>\n\t);\n}\n',

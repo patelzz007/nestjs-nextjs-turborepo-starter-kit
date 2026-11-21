@@ -84,7 +84,7 @@ function UserRewardTable() {
 // ✅ DO — generic, reusable, data-agnostic; the SAME DataTable component
 // can render orders, rewards, users, or anything else, because it has
 // zero opinions about where its data came from
-<DataTable columns={columns} data={rows} />
+<DataTable data={rows} columns={COLUMNS} getRowId={getRowId} />
 ```
 
 A concrete way to catch this in review: **could this component be unit-tested by passing it plain props and asserting on the rendered output, with zero mocking of `fetch`/TanStack Query/an API client?** If the answer is no — if you'd need to mock a network call just to render the component in a test — it isn't a dumb component, no matter what folder it's in.
@@ -178,7 +178,7 @@ TanStack Form owns form state; zod owns validation. The UI primitive (e.g. `Text
 
 ## Tables
 
-TanStack Table is the table engine. Domain-specific column definitions live near the feature; the reusable `DataTable` component doesn't know what a "customer," "reward," or "invoice" is. Full detail: `06-tanstack-state-forms-tables.md`.
+TanStack Table is the table engine. Domain-specific column definitions live near the feature; the reusable `DataTable` component doesn't know what a "customer," "reward," or "invoice" is. A page that lists records uses `DataTable`; a page that edits cells in blocks uses `Spreadsheet`. Those two are the only table components a page imports ([ADR 097](../docs/adr/097-one-data-table.md)). Full detail: `06-tanstack-state-forms-tables.md`.
 
 ## Loading/error/empty states
 

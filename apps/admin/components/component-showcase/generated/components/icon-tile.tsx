@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/icon-tile/icon-tile-1").then((m) => m.IconTile1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/icon-tile/icon-tile-2").then((m) => m.IconTile2Example), { loading: FeatureLoading });
@@ -41,6 +41,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-1",
 		label: "Default",
 		anchor: "default",
+		part: null,
 		description: "Default icon tile. Best for every variant prop left at its default, giving an outline surface at style radius around a folder glyph.",
 		file: "icon-tile-1",
 		source:
@@ -51,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-2",
 		label: "Elevated",
 		anchor: "elevated",
+		part: null,
 		description: "Elevated icon tile. Best for a lone raised chip with a muted fill, a page colored ring and a soft shadow, around a package glyph.",
 		file: "icon-tile-2",
 		source:
@@ -61,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-3",
 		label: "Framed",
 		anchor: "framed",
+		part: null,
 		description: "Framed icon tile. Best for a muted outer ring around an inset card, the double surface that echoes the Frame primitive, around a dashboard glyph.",
 		file: "icon-tile-3",
 		source:
@@ -71,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-4",
 		label: "All Variants",
 		anchor: "all-variants",
+		part: null,
 		description: "All variants. Best for the 5 surface treatments in one row around the same package glyph, for comparing them before picking one.",
 		file: "icon-tile-4",
 		source:
@@ -81,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-5",
 		label: "Sizes",
 		anchor: "sizes",
+		part: null,
 		description: "Sizes. Best for elevated tiles at xs, sm, default, lg and xl, bottom aligned so box and glyph growth compare step by step.",
 		file: "icon-tile-5",
 		source:
@@ -91,6 +96,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-6",
 		label: "Circular",
 		anchor: "circular",
+		part: null,
 		description: "Circular tiles. Best for large round tiles in the outline, elevated and nested card surfaces, with globe, star and check glyphs.",
 		file: "icon-tile-6",
 		source:
@@ -101,6 +107,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-7",
 		label: "Custom Sizing",
 		anchor: "custom-sizing",
+		part: null,
 		description: "Custom sizing. Best for resizing outside the size prop 2 ways, size classes on tile and glyph or both size variables in one class.",
 		file: "icon-tile-7",
 		source:
@@ -111,6 +118,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-8",
 		label: "Color Tones",
 		anchor: "color-tones",
+		part: null,
 		description: "Color tones. Best for outline tiles tinted by hand with fill, border and glyph classes for primary, success, warning and destructive.",
 		file: "icon-tile-8",
 		source:
@@ -121,6 +129,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-9",
 		label: "Text Content",
 		anchor: "text-content",
+		part: null,
 		description: "Text content. Best for initials and a count in place of a glyph, the first on a raised tile and the second in a round outline with muted text.",
 		file: "icon-tile-9",
 		source:
@@ -131,6 +140,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-10",
 		label: "List Row",
 		anchor: "list-row",
+		part: null,
 		description: "List row. Best for a small raised tile in the media slot of an outlined Item row, beside a file title and an updated by line.",
 		file: "icon-tile-10",
 		source:
@@ -141,6 +151,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-11",
 		label: "Feature Card",
 		anchor: "feature-card",
+		part: null,
 		description: "Feature card. Best for a large raised tile heading a Frame panel, stacked over a feature title and one sentence of copy.",
 		file: "icon-tile-11",
 		source:
@@ -151,6 +162,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-12",
 		label: "Empty State",
 		anchor: "empty-state",
+		part: null,
 		description: "Empty state. Best for the largest tile in its nested card surface as the media of an Empty header, above a no files title and hint.",
 		file: "icon-tile-12",
 		source:
@@ -161,6 +173,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-13",
 		label: "Interactive",
 		anchor: "interactive",
+		part: null,
 		description: "Interactive tile. Best for a raised tile rendered as a link with its own accessible name, a hover fill and a keyboard focus ring.",
 		file: "icon-tile-13",
 		source:
@@ -171,6 +184,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-14",
 		label: "Status Overlay",
 		anchor: "status-overlay",
+		part: null,
 		description: "Status overlay. Best for a raised globe tile with a green dot pinned to its top end corner, cut out by a page colored ring.",
 		file: "icon-tile-14",
 		source:
@@ -181,6 +195,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-15",
 		label: "Soft Tones",
 		anchor: "soft-tones",
+		part: null,
 		description: "Soft tones. Best for soft tiles retinted through 1 text color class each, from the primary default to the info and status tones.",
 		file: "icon-tile-15",
 		source:
@@ -191,6 +206,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-16",
 		label: "Solid Tones",
 		anchor: "solid-tones",
+		part: null,
 		description: "Solid tones. Best for filled tiles that swap the primary fill for an info, success, warning or destructive bg class with a white glyph.",
 		file: "icon-tile-16",
 		source:
@@ -201,6 +217,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-tile-17",
 		label: "Brand Colors",
 		anchor: "brand-colors",
+		part: null,
 		description: "Brand colors. Best for raised tiles whose fill is swapped for indigo, amber, emerald and rose palette colors while the ring and shadow stay.",
 		file: "icon-tile-17",
 		source:
@@ -246,6 +263,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function IconTileFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function IconTileFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

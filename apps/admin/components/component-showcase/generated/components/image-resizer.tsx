@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/image-resizer/image-resizer-1").then((m) => m.ImageResizer1Example), {
 	loading: FeatureLoading,
@@ -31,6 +31,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-image-resizer-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "An image with drag handles that keep its aspect ratio, reporting its width and height. Best for sizing a picture inside rich text or an email layout.",
 		file: "image-resizer-1",
 		source:
@@ -76,6 +77,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ImageResizerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ImageResizerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/breadcrumb/breadcrumb-1").then((m) => m.Breadcrumb1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/breadcrumb/breadcrumb-2").then((m) => m.Breadcrumb2Example), { loading: FeatureLoading });
@@ -43,6 +43,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic breadcrumb. Best for plain text levels split by the default chevron, with no icons, menus or custom styling.",
 		file: "breadcrumb-1",
 		source:
@@ -53,6 +54,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-2",
 		label: "Dropdown Menu",
 		anchor: "dropdown-menu",
+		part: null,
 		description: "Breadcrumb with dropdown menu. Best for middle levels folded into an ellipsis button that opens a dropdown of the hidden pages.",
 		file: "breadcrumb-2",
 		source:
@@ -63,6 +65,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-3",
 		label: "Router Link",
 		anchor: "router-link",
+		part: null,
 		description: "Breadcrumb with Next.js link. Best for crumbs that render a caller supplied anchor element, the place to swap in your router's link.",
 		file: "breadcrumb-3",
 		source:
@@ -73,6 +76,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-4",
 		label: "Slash Separator",
 		anchor: "slash-separator",
+		part: null,
 		description: "Breadcrumb with a custom slash separator. Best for slash characters between levels in place of the default chevron, on an otherwise plain trail.",
 		file: "breadcrumb-4",
 		source:
@@ -83,6 +87,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-5",
 		label: "Item Icons",
 		anchor: "item-icons",
+		part: null,
 		description: "Breadcrumb with icons for each item. Best for a leading icon on every level including the current page, laid out beside each label.",
 		file: "breadcrumb-5",
 		source:
@@ -93,6 +98,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-6",
 		label: "Static Ellipsis",
 		anchor: "static-ellipsis",
+		part: null,
 		description: "Breadcrumb with ellipsis for long paths. Best for a static ellipsis standing in for skipped middle levels, with no menu or link behind it.",
 		file: "breadcrumb-6",
 		source:
@@ -103,6 +109,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-7",
 		label: "Avatars",
 		anchor: "avatars",
+		part: null,
 		description: "Breadcrumb items with avatars. Best for team and user levels led by small avatar images with initials fallbacks, ending on a plain current page.",
 		file: "breadcrumb-7",
 		source:
@@ -113,6 +120,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-8",
 		label: "Double Chevron",
 		anchor: "double-chevron",
+		part: null,
 		description: "Breadcrumb with double chevron separators. Best for double chevron icons passed into each separator in place of the single default one.",
 		file: "breadcrumb-8",
 		source:
@@ -123,6 +131,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-9",
 		label: "In Card",
 		anchor: "in-card",
+		part: null,
 		description: "Breadcrumb inside card. Best for a trail on a padded Card surface, opening with a home icon and ending on a semibold current page.",
 		file: "breadcrumb-9",
 		source:
@@ -133,6 +142,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-10",
 		label: "Pill In Frame",
 		anchor: "pill-in-frame",
+		part: null,
 		description: "Pill-style breadcrumb inside a frame. Best for a trail inside a Frame panel rather than a Card, with a home icon, tight padding and a semibold last level.",
 		file: "breadcrumb-10",
 		source:
@@ -143,6 +153,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-11",
 		label: "Count Badge",
 		anchor: "count-badge",
+		part: null,
 		description:
 			"Breadcrumb items containing badge with count. Best for a rounded count badge inside a parent level, here a total of 3 beside the Inbox folder of a mail path.",
 		file: "breadcrumb-11",
@@ -154,6 +165,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-12",
 		label: "Home Icon Button",
 		anchor: "home-icon-button",
+		part: null,
 		description: "Breadcrumb starting with home icon item. Best for a square outline icon button as the home level, with its label kept for screen readers only.",
 		file: "breadcrumb-12",
 		source:
@@ -164,6 +176,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-13",
 		label: "Bar Separator",
 		anchor: "bar-separator",
+		part: null,
 		description: "Breadcrumb with a custom separator. Best for a short faded bar between levels, drawn by a small local component rather than a character or icon.",
 		file: "breadcrumb-13",
 		source:
@@ -174,6 +187,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-14",
 		label: "Button Style",
 		anchor: "button-style",
+		part: null,
 		description:
 			"Button-style breadcrumb. Best for every level as a small button pairing an icon with its label, ghost for parent pages and filled secondary for the current one.",
 		file: "breadcrumb-14",
@@ -185,6 +199,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-breadcrumb-15",
 		label: "Project & Document",
 		anchor: "project-document",
+		part: null,
 		description:
 			"Breadcrumb with project, user and document info. Best for two line levels pairing an avatar or tinted file tile with a name above a muted email or file name.",
 		file: "breadcrumb-15",
@@ -231,6 +246,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function BreadcrumbFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function BreadcrumbFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

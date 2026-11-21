@@ -45,6 +45,11 @@ const Switch = React.forwardRef<HTMLElement, SwitchProps>(function Switch(
 	return (
 		<SwitchPrimitive.Root
 			ref={ref}
+			// A native <button>, not Base UI's default <span>: a wrapping <label> or a <Label htmlFor> names a button in the
+			// server-rendered HTML, but not a span (Base UI patches a span's name in only after hydration; until then it is
+			// unnamed, an axe `aria-toggle-field-name` failure).
+			nativeButton
+			render={<button type="button" />}
 			data-slot="switch"
 			data-size={size}
 			disabled={inactive}

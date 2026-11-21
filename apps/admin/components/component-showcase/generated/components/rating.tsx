@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/rating/rating-1").then((m) => m.Rating1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/rating/rating-2").then((m) => m.Rating2Example), { loading: FeatureLoading });
@@ -29,6 +29,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic rating.. Best for the minimal read only display: a whole score of 4 at the default size with no number shown.",
 		file: "rating-1",
 		source:
@@ -39,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-2",
 		label: "Decimal Value",
 		anchor: "decimal-value",
+		part: null,
 		description: "Rating with decimal value.. Best for a half star score of 3.5, drawn as 3 full stars and a fourth filled halfway, with no number.",
 		file: "rating-2",
 		source:
@@ -49,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-3",
 		label: "Show Value",
 		anchor: "show-value",
+		part: null,
 		description: "Rating with show value.. Best for a 4.5 score with its value printed after the stars to 1 decimal place in muted text.",
 		file: "rating-3",
 		source:
@@ -59,6 +62,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-4",
 		label: "Editable",
 		anchor: "editable",
+		part: null,
 		description: "Rating with editable.. Best for a click to score input that starts empty, prints the hovered or picked number and confirms each pick with a toast.",
 		file: "rating-4",
 		source:
@@ -69,6 +73,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-5",
 		label: "Sizes",
 		anchor: "sizes",
+		part: null,
 		description: "Rating with size.. Best for the sm, default and lg sizes stacked at the same score of 4 to compare star size and spacing.",
 		file: "rating-5",
 		source:
@@ -79,6 +84,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-6",
 		label: "Review Summary",
 		anchor: "review-summary",
+		part: null,
 		description: "Rating with review summary. Best for a ratings overview: a large average over small stars and a review total, then a yellow count bar per star level.",
 		file: "rating-6",
 		source:
@@ -89,6 +95,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-7",
 		label: "Half-Star Input",
 		anchor: "half-star-input",
+		part: null,
 		description: "Interactive half-star rating. Best for a star input preset to 3.5 with a line under it echoing the chosen score out of 5.",
 		file: "rating-7",
 		source:
@@ -99,6 +106,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-8",
 		label: "Emoji Reactions",
 		anchor: "emoji-reactions",
+		part: null,
 		description: "Emoji reaction rating. Best for a 5 face scale from Terrible to Amazing on plain buttons, naming the chosen mood under the row.",
 		file: "rating-8",
 		source:
@@ -109,6 +117,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rating-9",
 		label: "Review Text",
 		anchor: "review-text",
+		part: null,
 		description:
 			"Rating with review text input. Best for a review card: a star input, a reply line that shifts with the score, a comment box and a Submit locked until a pick.",
 		file: "rating-9",
@@ -155,6 +164,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function RatingFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function RatingFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

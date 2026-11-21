@@ -1,32 +1,26 @@
-import * as React from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable, type DataTableFeatures, type DataTablePagination } from "@workspace/ui/components/data-table";
+"use client";
 
-interface Invoice {
-	readonly id: string;
-	readonly merchant: string;
-	readonly amount: string;
+import { FileText } from "lucide-react";
+import type * as React from "react";
+
+import { DataTable, type DataTableEmptyState } from "@workspace/ui/components/data-table";
+import { toastMessage } from "@workspace/ui/components/toast";
+
+import { getSectionId, SECTION_COLUMNS, type DocumentSection } from "./data-table-sample";
+
+const NO_SECTIONS: readonly DocumentSection[] = [];
+
+function addSection(): void {
+	toastMessage.info({ title: "A new section would open here" });
 }
 
-const INVOICES: readonly Invoice[] = [
-	{ id: "INV-001", merchant: "Acme Coffee", amount: "RM 250.00" },
-	{ id: "INV-002", merchant: "Bayview Books", amount: "RM 150.00" },
-	{ id: "INV-003", merchant: "Corner Bakery", amount: "RM 350.00" },
-];
-
-const COLUMNS: ColumnDef<DataTableFeatures, Invoice>[] = [
-	{ accessorKey: "id", header: "Invoice" },
-	{ accessorKey: "merchant", header: "Merchant" },
-	{ accessorKey: "amount", header: "Amount" },
-];
-
-function invoiceId(invoice: Invoice): string {
-	return invoice.id;
-}
-
-/** Rows tracked by their invoice number, not by where they sit. */
-const BY_ID: DataTablePagination<Invoice> = { mode: "client", getRowId: invoiceId };
+const EMPTY_STATE: DataTableEmptyState = {
+	icon: <FileText aria-hidden="true" />,
+	title: "No sections yet",
+	description: "A proposal starts with its cover page.",
+	action: { label: "Add section", onClick: addSection },
+};
 
 export function DataTableDo1Example(): React.JSX.Element {
-	return <DataTable data={INVOICES} columns={COLUMNS} pagination={BY_ID} checkbox title="Invoices" />;
+	return <DataTable data={NO_SECTIONS} columns={SECTION_COLUMNS} getRowId={getSectionId} emptyState={EMPTY_STATE} />;
 }

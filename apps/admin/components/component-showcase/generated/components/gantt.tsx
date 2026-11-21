@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/gantt/gantt-1").then((m) => m.Gantt1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/gantt/gantt-2").then((m) => m.Gantt2Example), { loading: FeatureLoading });
@@ -28,6 +28,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-gantt-1",
 		label: "Settings Menu",
 		anchor: "settings-menu",
+		part: null,
 		description:
 			"Gantt chart with settings menu and schedulable rows. Best for a tabbed Settings popover with 12 display and behavior switches, 6 languages and 5 time zones, over empty rows waiting to be scheduled.",
 		file: "gantt-1",
@@ -39,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-gantt-2",
 		label: "Drag Reorder",
 		anchor: "drag-reorder",
+		part: null,
 		description:
 			"Gantt chart with drag-to-reorder tree rows. Best for the leanest setup, where one callback adds a drag grip to every tree row and a single setState keeps the new order.",
 		file: "gantt-2",
@@ -50,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-gantt-3",
 		label: "Quarter Roadmap",
 		anchor: "quarter-roadmap",
+		part: null,
 		description:
 			"Gantt chart with quarter roadmap and rollups. Best for multi month initiatives grouped by workstream, with a toolbar button that drops the next backlog item onto its empty row.",
 		file: "gantt-3",
@@ -61,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-gantt-4",
 		label: "Capacity Board",
 		anchor: "capacity-board",
+		part: null,
 		description:
 			"Gantt chart with weekly capacity board. Best for teammates grouped by squad with avatar row labels and shaded weekends, where added assignments stack into extra lanes.",
 		file: "gantt-4",
@@ -72,6 +76,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-gantt-5",
 		label: "Task Table",
 		anchor: "task-table",
+		part: null,
 		description:
 			"Gantt chart with task table and progress. Best for a read only status report whose tree panel adds Owner avatars and Status badges as columns, with rows added from the toolbar.",
 		file: "gantt-5",
@@ -83,6 +88,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-gantt-6",
 		label: "Baseline Tracking",
 		anchor: "baseline-tracking",
+		part: null,
 		description:
 			"Gantt chart with as-built baseline tracking. Best for frozen plan dates ghosted behind actual bars, showing early, late and on time work plus a planned band on a whole group.",
 		file: "gantt-6",
@@ -94,6 +100,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-gantt-7",
 		label: "Dependencies & Milestones",
 		anchor: "dependencies-milestones",
+		part: null,
 		description:
 			"Gantt chart with dependency arrows and milestones. Best for a rollout chain where QA waits on 2 build tracks and a zero length sign off gate opens the go live step.",
 		file: "gantt-7",
@@ -105,6 +112,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-gantt-8",
 		label: "Working Days",
 		anchor: "working-days",
+		part: null,
 		description:
 			"Gantt chart with working-day drag adjustment. Best for moves that land on a weekend or a holiday and settle on the next working day, keeping each task's working-day length.",
 		file: "gantt-8",
@@ -151,6 +159,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function GanttFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function GanttFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -121,7 +121,7 @@ export function DataTable14Example(): React.JSX.Element {
 				label: "Delete",
 				description: "Remove this section permanently",
 				icon: Trash2Icon,
-				variant: "destructive",
+				tone: "destructive",
 				onPress: (row: DocumentSection): void => {
 					toast.error("This is a demo: no data was removed.", { title: `Deleted “${row.header}”` });
 				},

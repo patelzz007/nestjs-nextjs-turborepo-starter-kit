@@ -38,6 +38,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-avatar-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "avatar-1",
 				source:
 					'import * as React from "react";\nimport { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";\n\nexport function Avatar1Example(): React.JSX.Element {\n\treturn (\n\t\t<Avatar>\n\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1584308972272-9e4e7685e80f?w=96&h=96&dpr=2&q=80" alt="Michael Rodriguez" />\n\t\t\t<AvatarFallback>MR</AvatarFallback>\n\t\t</Avatar>\n\t);\n}\n',
@@ -46,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-avatar-2",
 				label: "Fallbacks",
 				anchor: "fallbacks",
+				part: null,
 				file: "avatar-2",
 				source:
 					'import * as React from "react";\nimport { UserIcon } from "lucide-react";\nimport { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";\n\nexport function Avatar2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center gap-2">\n\t\t\t<Avatar>\n\t\t\t\t<AvatarFallback>AJ</AvatarFallback>\n\t\t\t</Avatar>\n\t\t\t<Avatar>\n\t\t\t\t<AvatarFallback>\n\t\t\t\t\t<UserIcon className="size-4" aria-hidden="true" />\n\t\t\t\t</AvatarFallback>\n\t\t\t</Avatar>\n\t\t</div>\n\t);\n}\n',
@@ -54,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-avatar-6",
 				label: "Status Dots",
 				anchor: "status-dots",
+				part: null,
 				file: "avatar-6",
 				source:
 					'import * as React from "react";\nimport { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";\n\nexport function Avatar6Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center gap-2">\n\t\t\t<Avatar className="relative">\n\t\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1485206412256-701ccc5b93ca?w=96&h=96&dpr=2&q=80" alt="Nick Johnson" />\n\t\t\t\t<AvatarFallback>AJ</AvatarFallback>\n\t\t\t\t<AvatarBadge className="bg-primary" />\n\t\t\t</Avatar>\n\t\t\t<Avatar className="relative">\n\t\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=96&h=96&dpr=2&q=80" alt="Alex Johnson (away)" />\n\t\t\t\t<AvatarFallback>AJ</AvatarFallback>\n\t\t\t\t<AvatarBadge className="bg-success" />\n\t\t\t</Avatar>\n\t\t\t<Avatar className="relative">\n\t\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=96&h=96&dpr=2&q=80" alt="Sarah Chen" />\n\t\t\t\t<AvatarFallback>SC</AvatarFallback>\n\t\t\t\t<AvatarBadge className="bg-warning" />\n\t\t\t</Avatar>\n\t\t\t<Avatar className="relative">\n\t\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1584308972272-9e4e7685e80f?w=96&h=96&dpr=2&q=80" alt="Michael Rodriguez" />\n\t\t\t\t<AvatarFallback>MR</AvatarFallback>\n\t\t\t\t<AvatarBadge className="bg-destructive" />\n\t\t\t</Avatar>\n\t\t</div>\n\t);\n}\n',
@@ -62,6 +65,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-avatar-11",
 				label: "Group With Count",
 				anchor: "group-with-count",
+				part: null,
 				file: "avatar-11",
 				source:
 					'import * as React from "react";\nimport { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from "@workspace/ui/components/avatar";\n\nexport function Avatar11Example(): React.JSX.Element {\n\treturn (\n\t\t<AvatarGroup>\n\t\t\t<Avatar>\n\t\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=96&h=96&dpr=2&q=80" alt="Sarah Chen" />\n\t\t\t\t<AvatarFallback>SC</AvatarFallback>\n\t\t\t</Avatar>\n\t\t\t<Avatar>\n\t\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1584308972272-9e4e7685e80f?w=96&h=96&dpr=2&q=80" alt="Michael Rodriguez" />\n\t\t\t\t<AvatarFallback>MR</AvatarFallback>\n\t\t\t</Avatar>\n\t\t\t<Avatar>\n\t\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1485893086445-ed75865251e0?w=96&h=96&dpr=2&q=80" alt="Emma Wilson" />\n\t\t\t\t<AvatarFallback>EW</AvatarFallback>\n\t\t\t</Avatar>\n\t\t\t<AvatarGroupCount>+3</AvatarGroupCount>\n\t\t</AvatarGroup>\n\t);\n}\n',
@@ -70,6 +74,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-avatar-16",
 				label: "User Details",
 				anchor: "user-details",
+				part: null,
 				file: "avatar-16",
 				source:
 					'import * as React from "react";\nimport { Badge } from "@workspace/ui/components/badge";\n\nimport { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";\n\nexport function Avatar16Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center gap-1.5">\n\t\t\t<Avatar>\n\t\t\t\t<AvatarImage src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=96&h=96&dpr=2&q=80" alt="Alex Johnson" />\n\t\t\t\t<AvatarFallback>AJ</AvatarFallback>\n\t\t\t</Avatar>\n\n\t\t\t<div className="flex flex-col">\n\t\t\t\t<div className="flex items-center gap-1.5">\n\t\t\t\t\t<span className="text-sm font-semibold">Alex Johnson</span>\n\t\t\t\t\t<Badge variant="default" size="xs">\n\t\t\t\t\t\tPro\n\t\t\t\t\t</Badge>\n\t\t\t\t</div>\n\t\t\t\t<span className="text-xs text-muted-foreground">Founder & CEO</span>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n',

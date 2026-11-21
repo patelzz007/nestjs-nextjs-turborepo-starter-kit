@@ -62,6 +62,21 @@ describe("frontend router import", () => {
 	});
 });
 
+describe("the UI kit's private internals", () => {
+	const configs = [frontendImportBoundaryConfig, ...frontendContextBoundaryConfigs];
+	const file = "apps/admin/app/(panel)/invoices/page.tsx";
+
+	it("rejects packages/ui's internal folder from an app", () => {
+		expect(messages(configs, 'import { TableEngineTable } from "@workspace/ui/internal/table-engine/table-engine-table";', file).length).toBeGreaterThan(0);
+		expect(messages(configs, 'import { Pager } from "@workspace/ui/internal";', file).length).toBeGreaterThan(0);
+	});
+
+	it("allows the public components built on it", () => {
+		expect(messages(configs, 'import { DataTable } from "@workspace/ui/components/data-table";', file)).toEqual([]);
+		expect(messages(configs, 'import { Spreadsheet } from "@workspace/ui/components/spreadsheet";', file)).toEqual([]);
+	});
+});
+
 describe("mobile import boundaries", () => {
 	const configs = [mobileImportBoundaryConfig, ...mobileContextBoundaryConfigs];
 

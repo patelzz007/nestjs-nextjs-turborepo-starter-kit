@@ -8,8 +8,9 @@ components, so both lay out, validate and serialise the same way:
 | `gantt/` | Ranges, the time axis, rows and lanes, bars, baselines, dependencies, recurrence, the Gantt's copy |
 | `event-calendar/` | View ranges, occurrences and recurrence, packing overlapping events, the calendar's copy |
 | `filters/` | The query model (rules, groups, operators by value type), drafts, dates, serialisation, copy |
-| `data-table/` | Column ids, selection and bulk actions, pagination modes, saved preferences, export text |
-| `data-grid/` | The grid's copy and its clipboard text |
+| `table/` | `DataTable`'s rules: column ids, selection and bulk actions, the server query (`DataTableQuery`), pagination, saved preferences, export text, and the copy of the table and of its engine |
+| `spreadsheet/` | `Spreadsheet`'s clipboard text (tab-separated parse and format) |
+| `data-grid/` | TEMPORARY: the old `DataGrid*` names as aliases, for the native kit until it is rebuilt on `table/` and `spreadsheet/` ([ADR 097](../../docs/adr/097-one-data-table.md)) |
 | `kanban/` | Moving cards and columns |
 | `file-type/` | The file-type table and how a name or MIME type resolves to one |
 

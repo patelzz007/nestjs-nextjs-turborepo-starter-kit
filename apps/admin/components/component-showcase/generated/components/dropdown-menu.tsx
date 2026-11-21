@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/dropdown-menu/dropdown-menu-1").then((m) => m.DropdownMenu1Example), {
 	loading: FeatureLoading,
@@ -82,6 +82,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic dropdown menu. Best for plain text rows in 2 groups, the first headed My Account, with a disabled API row.",
 		file: "dropdown-menu-1",
 		source:
@@ -92,6 +93,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-2",
 		label: "Opening Positions",
 		anchor: "opening-positions",
+		part: null,
 		description: "Dropdown menus opening positions. Best for one trigger per placement side, each opening the same 3 rows so the sides can be compared.",
 		file: "dropdown-menu-2",
 		source:
@@ -102,6 +104,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-3",
 		label: "Icons",
 		anchor: "icons",
+		part: null,
 		description: "Dropdown menu with icons. Best for a leading icon on each row and a destructive Log out set apart below a separator.",
 		file: "dropdown-menu-3",
 		source:
@@ -112,6 +115,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-4",
 		label: "Keyboard Shortcuts",
 		anchor: "keyboard-shortcuts",
+		part: null,
 		description: "Dropdown menu with keyboard shortcuts. Best for key chord hints right aligned on every row of a short account list with no icons.",
 		file: "dropdown-menu-4",
 		source:
@@ -122,6 +126,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-5",
 		label: "Nested Submenus",
 		anchor: "nested-submenus",
+		part: null,
 		description: "Dropdown menu with nested submenus. Best for a single Invite users row between Team and New Team, opening a side flyout of Email, Message and a More row.",
 		file: "dropdown-menu-5",
 		source:
@@ -132,6 +137,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-6",
 		label: "Checkboxes",
 		anchor: "checkboxes",
+		part: null,
 		description: "Dropdown menu with checkboxes. Best for layout toggles for 3 panels, each bound to its own boolean, with the Activity Bar one disabled.",
 		file: "dropdown-menu-6",
 		source:
@@ -142,6 +148,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-7",
 		label: "Radio Groups",
 		anchor: "radio-groups",
+		part: null,
 		description: "Dropdown menu with radio groups. Best for an exclusive pick of panel position among 3 arrow icon options, with Right disabled.",
 		file: "dropdown-menu-7",
 		source:
@@ -152,6 +159,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-8",
 		label: "All Item Types",
 		anchor: "all-item-types",
+		part: null,
 		description: "Advance dropdown menu. Best for every item kind together: an Open Recent flyout, a theme radio set in a flyout, a checkbox and a delete.",
 		file: "dropdown-menu-8",
 		source:
@@ -162,6 +170,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-9",
 		label: "User Profile",
 		anchor: "user-profile",
+		part: null,
 		description: "User profile dropdown menu. Best for a named account button opening an avatar and email header over profile, team, help and log out rows.",
 		file: "dropdown-menu-9",
 		source:
@@ -172,6 +181,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-11",
 		label: "Notification Feed",
 		anchor: "notification-feed",
+		part: null,
 		description: "Notifications dropdown menu. Best for a bell with a count badge, 3 avatar activity rows with times and unread dots, and a Mark all as read button.",
 		file: "dropdown-menu-11",
 		source:
@@ -182,6 +192,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-12",
 		label: "Record Actions",
 		anchor: "record-actions",
+		part: null,
 		description: "Actions dropdown menu. Best for record actions on a vertical dots button: edit, duplicate, a move to flyout, share, copy link and delete.",
 		file: "dropdown-menu-12",
 		source:
@@ -192,6 +203,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-13",
 		label: "Share & Export",
 		anchor: "share-export",
+		part: null,
 		description: "Share and export dropdown menu. Best for a labelled Share button whose rows split into share channels and PDF, CSV or PNG export, ending in Print.",
 		file: "dropdown-menu-13",
 		source:
@@ -202,6 +214,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-14",
 		label: "Theme & Status",
 		anchor: "theme-status",
+		part: null,
 		description:
 			"User profile dropdown menu with theme toggle and status selector. Best for an account popover with an icon Tabs theme switch, count badges and a presence status flyout with colored dots.",
 		file: "dropdown-menu-14",
@@ -213,6 +226,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-15",
 		label: "User & Create",
 		anchor: "user-create",
+		part: null,
 		description: "User and create menu. Best for a New button for customer, order and invoice records beside a bare avatar trigger for profile, billing and sign out.",
 		file: "dropdown-menu-15",
 		source:
@@ -223,6 +237,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-16",
 		label: "Quick Actions",
 		anchor: "quick-actions",
+		part: null,
 		description: "Quick action menu. Best for a borderless horizontal dots button named More options, with Settings, Share and a destructive Remove.",
 		file: "dropdown-menu-16",
 		source:
@@ -233,6 +248,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-17",
 		label: "Notification Items",
 		anchor: "notification-items",
+		part: null,
 		description: "Notifications dropdown with items. Best for a ghost bell button opening 3 one line text alerts, the first with a trailing check mark.",
 		file: "dropdown-menu-17",
 		source:
@@ -243,6 +259,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-10",
 		label: "Workspace Switcher",
 		anchor: "workspace-switcher",
+		part: null,
 		description:
 			"Workspace switcher dropdown menu. Best for switching among 3 workspaces shown by logo or avatar, name and plan, with a check on the active one and create or manage rows.",
 		file: "dropdown-menu-10",
@@ -254,6 +271,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dropdown-menu-18",
 		label: "AI Model Selector",
 		anchor: "ai-model-selector",
+		part: null,
 		description:
 			"AI model selector with provider icons. Best for a Select model button listing 3 AI models by provider logo, with a dark variant for the logo that needs one.",
 		file: "dropdown-menu-18",
@@ -300,6 +318,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function DropdownMenuFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function DropdownMenuFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

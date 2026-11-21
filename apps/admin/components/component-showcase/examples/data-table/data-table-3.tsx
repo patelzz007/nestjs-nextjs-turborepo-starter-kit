@@ -1,74 +1,75 @@
 "use client";
 
-import { Copy, Eye, Pencil, Trash2 } from "lucide-react";
+import { Copy, Eye, Send, Trash2 } from "lucide-react";
 import * as React from "react";
 
-import { DataTable, type Action } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableRowAction } from "@workspace/ui/components/data-table";
 import { toastMessage } from "@workspace/ui/components/toast";
-import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 
-import { DOCUMENT_SECTIONS, SECTION_COLUMNS, type DocumentSection } from "./data-table-sample";
+import { DOCUMENT_SECTIONS, getSectionId, SECTION_COLUMNS, SECTION_PAGING, type DocumentSection } from "./data-table-sample";
 
-const PAGE_SIZE = 5;
+function viewSection(section: DocumentSection): void {
+	toastMessage.info({ title: `Viewing "${section.header}"`, description: `Section type: ${section.type}` });
+}
 
-/** Only the strings that differ from the kit's `dataTable` copy: the menu names the record. */
-const LABELS: UiKitLabelsOverride<"dataTable"> = { actionsMenuTitle: "Section actions", openRowMenu: "Open section row menu" };
+/** How long the pretend server takes to publish a section. */
+const PUBLISH_LATENCY_MS = 800;
 
+/**
+ * Publishes a section the way a request would: it takes a moment, and it is refused for a section still in
+ * progress. Returning the promise is all the table needs to show the wait and, on a refusal, a retry button.
+ */
+export function publishSection(section: DocumentSection): Promise<void> {
+	return new Promise<void>((resolve, reject): void => {
+		setTimeout((): void => {
+			if (section.status === "Done") {
+				toastMessage.success({ title: `Published "${section.header}"` });
+				resolve();
+			} else {
+				reject(new Error(`"${section.header}" is still in progress`));
+			}
+		}, PUBLISH_LATENCY_MS);
+	});
+}
+
+/**
+ * An inline button and the ⋯ menu at the end of each row. `tone: "destructive"` marks the entry that removes
+ * something. An action that returns a promise shows a spinner while it runs, and a retry button if it fails.
+ */
 export function DataTable3Example(): React.JSX.Element {
-	const actions = React.useMemo(
-		(): Action<DocumentSection>[] => [
-			{
-				key: "view",
-				label: "View",
-				description: "Open the section preview",
-				icon: <Eye />,
-				onClick: (row): void => {
-					toastMessage.info({ title: `Viewing “${row.header}”` });
-				},
-			},
-			{
-				key: "edit",
-				label: "Edit",
-				description: "Edit section details",
-				icon: <Pencil />,
-				onClick: (row): void => {
-					toastMessage.success({ title: `Editing “${row.header}”` });
-				},
-			},
+	const [sections, setSections] = React.useState<readonly DocumentSection[]>(DOCUMENT_SECTIONS);
+
+	const rowActions = React.useMemo(
+		(): readonly DataTableRowAction<DocumentSection>[] => [
+			// `inline`: a button in the row itself. Publishing an "In Process" section fails, to show the retry.
+			{ key: "publish", label: "Publish", description: "Send the section to the reviewer", icon: <Send aria-hidden="true" />, inline: true, onSelect: publishSection },
+			{ key: "view", label: "View", description: "Open the whole section", icon: <Eye aria-hidden="true" />, onSelect: viewSection },
 			{
 				key: "duplicate",
-				label: "Make a copy",
-				icon: <Copy />,
-				onClick: (row): void => {
-					toastMessage.success({ title: `Duplicated “${row.header}”` });
+				label: "Duplicate",
+				description: "Adds a copy under this section",
+				icon: <Copy aria-hidden="true" />,
+				onSelect: (section: DocumentSection): void => {
+					setSections((current) => {
+						const copy: DocumentSection = { ...section, id: `${section.id}-copy-${String(current.length)}`, header: `${section.header} (copy)` };
+						const position = current.findIndex((entry) => entry.id === section.id);
+						return [...current.slice(0, position + 1), copy, ...current.slice(position + 1)];
+					});
 				},
 			},
 			{
 				key: "delete",
 				label: "Delete",
-				icon: <Trash2 />,
-				isDestructive: true,
-				onClick: (row): void => {
-					toastMessage.error({ title: `Deleted “${row.header}”`, description: "A demo: nothing was removed." });
+				description: "Remove this section from the proposal",
+				icon: <Trash2 aria-hidden="true" />,
+				tone: "destructive",
+				onSelect: (section: DocumentSection): void => {
+					setSections((current) => current.filter((entry) => entry.id !== section.id));
 				},
 			},
 		],
 		[],
 	);
-	const handleRowClick = React.useCallback((row: DocumentSection): void => {
-		toastMessage.info({ title: `Opened “${row.header}”`, description: "The ⋯ menu holds the row's actions." });
-	}, []);
 
-	return (
-		<DataTable
-			data={DOCUMENT_SECTIONS}
-			columns={SECTION_COLUMNS}
-			actions={actions}
-			onRowClick={handleRowClick}
-			labels={LABELS}
-			pageSize={PAGE_SIZE}
-			title="Row actions"
-			description="Click a row to open it, or use its ⋯ menu."
-		/>
-	);
+	return <DataTable data={sections} columns={SECTION_COLUMNS} getRowId={getSectionId} rowActions={rowActions} paging={SECTION_PAGING} />;
 }

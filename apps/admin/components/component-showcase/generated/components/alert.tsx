@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/alert/alert-1").then((m) => m.Alert1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/alert/alert-2").then((m) => m.Alert2Example), { loading: FeatureLoading });
@@ -40,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-1",
 		label: "Title & Description",
 		anchor: "title-description",
+		part: null,
 		description: "Basic alert. Best for the plain default tone with just a title and a description line, no icon, color or buttons.",
 		file: "alert-1",
 		source:
@@ -50,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-2",
 		label: "Leading Icon",
 		anchor: "leading-icon",
+		part: null,
 		description: "Alert with icon. Best for a check mark in the leading column of a neutral card toned notice, with no color or actions.",
 		file: "alert-2",
 		source:
@@ -60,6 +62,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-3",
 		label: "Icon & Actions",
 		anchor: "icon-actions",
+		part: null,
 		description: "Alert with icon and action buttons. Best for the full row: shield icon, title, description and an outline Dismiss beside a solid Update button.",
 		file: "alert-3",
 		source:
@@ -70,6 +73,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-4",
 		label: "Payment Failure",
 		anchor: "payment-failure",
+		part: null,
 		description: "Destructive alert with icon and action buttons. Best for a destructive payment failure whose description holds a bulleted checklist of details to fix.",
 		file: "alert-4",
 		source:
@@ -80,6 +84,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-5",
 		label: "Info Variant",
 		anchor: "info-variant",
+		part: null,
 		description: "Info alert with icon and action buttons. Best for the info variant with a tinted border, fill and circle icon for a notice worth reading closely.",
 		file: "alert-5",
 		source:
@@ -90,6 +95,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-6",
 		label: "Success Variant",
 		anchor: "success-variant",
+		part: null,
 		description: "Success alert. Best for the success variant with a check icon, confirming everything works and the user can carry on.",
 		file: "alert-6",
 		source:
@@ -100,6 +106,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-7",
 		label: "Warning Variant",
 		anchor: "warning-variant",
+		part: null,
 		description: "Warning alert. Best for the warning variant with a triangle icon, pointing the user to settings or support.",
 		file: "alert-7",
 		source:
@@ -110,6 +117,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-8",
 		label: "Error Variant",
 		anchor: "error-variant",
+		part: null,
 		description: "Error alert. Best for the destructive variant for a failed action, asking the user to try again or contact support.",
 		file: "alert-8",
 		source:
@@ -120,6 +128,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-9",
 		label: "Invert Variant",
 		anchor: "invert-variant",
+		part: null,
 		description: "Invert alert. Best for the invert variant: a dark solid bar with light text and a success colored icon for contrast.",
 		file: "alert-9",
 		source:
@@ -130,6 +139,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-10",
 		label: "Title & Actions",
 		anchor: "title-actions",
+		part: null,
 		description: "Alert with icon and action buttons. Best for a single title line paired with Dismiss and Update, leaving the description out entirely.",
 		file: "alert-10",
 		source:
@@ -140,6 +150,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-11",
 		label: "Description & Actions",
 		anchor: "description-actions",
+		part: null,
 		description: "Alert with description and action buttons. Best for muted body copy beside Dismiss and Update with no title above it, for one sentence prompts.",
 		file: "alert-11",
 		source:
@@ -150,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-12",
 		label: "Frame Reset Borders",
 		anchor: "frame-reset-borders",
+		part: null,
 		description:
 			"Alert integrated within a Frame with reset borders. Best for a system update notice filling a Frame panel edge to edge, with a destructive tinted info icon and no actions.",
 		file: "alert-12",
@@ -161,6 +173,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-13",
 		label: "Stacked in Frame",
 		anchor: "stacked-in-frame",
+		part: null,
 		description: "Stacked alerts within a Frame. Best for a stacked Frame pair: a deploy success above a resource limit warning with a Verify button.",
 		file: "alert-13",
 		source:
@@ -171,6 +184,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-14",
 		label: "Frame With Actions",
 		anchor: "frame-with-actions",
+		part: null,
 		description:
 			"Alert with actions integrated within a Frame. Best for a borderless default notice in a Frame panel with an emerald shield, a longer security message and 2 buttons.",
 		file: "alert-14",
@@ -182,6 +196,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-15",
 		label: "Pro Upsell",
 		anchor: "pro-upsell",
+		part: null,
 		description: "Inverted alert variant. Best for a Pro upsell on the dark invert variant, with a yellow bolt and a blue Upgrade button beside Dismiss.",
 		file: "alert-15",
 		source:
@@ -192,6 +207,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-16",
 		label: "Urgent Billing",
 		anchor: "urgent-billing",
+		part: null,
 		description: "Urgent billing notice. Best for an expiring subscription notice in the destructive tint, with a credit card icon and a Renew Now button.",
 		file: "alert-16",
 		source:
@@ -202,6 +218,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-17",
 		label: "Service Status",
 		anchor: "service-status",
+		part: null,
 		description:
 			"Service status summary stacked within a frame. Best for a 2 row service health summary, a connected database over an API latency warning with Retry, on clear fills.",
 		file: "alert-17",
@@ -213,6 +230,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-18",
 		label: "Feature Discovery",
 		anchor: "feature-discovery",
+		part: null,
 		description: "Feature discovery alert. Best for a feature announcement on the info tint, with an icon only close button and an Explore features link below the copy.",
 		file: "alert-18",
 		source:
@@ -223,6 +241,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-19",
 		label: "Direct Message",
 		anchor: "direct-message",
+		part: null,
 		description: "User message notification alert. Best for a direct message notice with the sender's avatar, a one line quoted preview and View and Reply buttons.",
 		file: "alert-19",
 		source:
@@ -233,6 +252,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-alert-20",
 		label: "Comment Mention",
 		anchor: "comment-mention",
+		part: null,
 		description: "User message notification alert. Best for a comment mention on the dark invert surface, with avatar, dimmed action text and a blue View button.",
 		file: "alert-20",
 		source:
@@ -278,6 +298,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function AlertFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function AlertFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

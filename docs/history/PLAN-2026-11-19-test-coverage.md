@@ -8,6 +8,8 @@ Goal: every workspace that has tests, in **all three repos**, is above 95% on **
 | `nextjs-admin-dashboard-layout` | The whole app: one Vitest workspace, 380 test files today. |
 | `expo-boilerplate` | The whole app: one Jest workspace, 346 suites today. |
 
+Second goal (added 2026-11-19 by the owner): **make the tests faster.** Today `format → lint → typecheck → test → test:e2e → ci:local` takes about 15 minutes for the unit tests alone, and every `git push` waits the same 15 minutes in the pre-push hook. More tests (this plan) would make that worse, so part T (§5.1) finds where the time goes and cuts it, first, before the coverage parts add tests.
+
 Status: **not started.** Tonight (2026-11-19) the package upgrades and the full gate ran instead; see §9. Parts are marked ✅ when done, each with a note on what was done, what it achieved, and how each problem was solved.
 
 ---
@@ -22,6 +24,7 @@ Status: **not started.** Tonight (2026-11-19) the package upgrades and the full 
 | What the tests prove | What the user uses (form validation, button clicks, navigation, keyboard, and so on) **and** the edge cases (§4). When the code does not handle an edge case, the **code is fixed first**, then the test proves it. |
 | Thresholds | Each config's `thresholds` is raised to just below the reached values, and never lowered. |
 | Budget | The owner's quota is limited. Work one part per session, stop at a part boundary, and record where it stopped (§8). |
+| Test speed | Part of this plan (added 2026-11-19): find out why the unit tests, the e2e tests and the pre-push hook each take ~15 minutes, and make them faster without weakening a single check (§5.1). Plan only for now; nothing is implemented until the owner says go. |
 
 ## 2. Baseline (measured 2026-11-19, this repo, before any work)
 
@@ -51,7 +54,7 @@ These configs count **only files some test loads**, so the real figures are lowe
 | packages/tooling | 98.3% | 98.3% | 98.4% | 91.8% | branches |
 | packages/docs-content | 100% | 100% | 100% | 97.1% | — |
 | apps/load-runner | 98.2% | 98.3% | 100% | 96.9% | — |
-| apps/docs | not measured: 3 tests fail on another thread's untracked `docs/architecture/data-table-unification-plan.md`, which has no front matter (§7) | | | | |
+| apps/docs | not measured yet (its 3 failing tests were fixed on 2026-11-19, see §7; part A measures it) | | | | |
 
 ## 3. Rules for the work
 
@@ -90,6 +93,7 @@ Each part is one or more sessions, and each ends with its scoped checks green an
 
 | Part | Scope | How | Status |
 |---|---|---|---|
+| T | **Test speed, all three repos** (first, before A: every later part runs the tests many times, and the new tests would only add to the wait). | Measure where the 15 minutes go, then cut them without weakening a check. Full detail in §5.1. | ⬜ |
 | A | **Measurement, all three repos.** | (1) `coverage.include` in every Vitest config (`src/**/*.{ts,tsx}`, plus `app/`, `components/`, `lib/`, `contexts/`, `features/` and similar for the Next apps), and `collectCoverageFrom` in every Jest config. (2) Add the `json-summary` and `json` reporters next to `text-summary`, written to `coverage/` (git-ignored), and list the files under 95% per workspace. (3) API: unit and e2e coverage measured together. Both suites run with `--coverage` and the blob reporter, then `vitest --merge-reports --coverage` produces the one figure the thresholds check. Prisma repositories, RLS and the HTTP pipeline are proven against real Postgres in e2e, where `rules/11` puts them; mocking the database to cover SQL would prove nothing. (4) Record the new baseline in §2 for all three repos. | ⬜ |
 | B | Small workspaces in this repo: oxlint-config, messaging, api-client, shared, ui-kit-logic, tokens, tooling, docs-content, docs-renderer, docs-sync, load-runner, analytics-consumer, server-agent, infra/aws. | Mostly branches: the error paths and invalid inputs each module already handles. | ⬜ |
 | C | **apps/web** and **apps/merchant** (this repo), and packages/client. | User flows per page: sign-in and sign-up forms, the merchant console's forms and tables, the double-submit and permission cases from §4. | ⬜ |
@@ -97,8 +101,51 @@ Each part is one or more sessions, and each ends with its scoped checks green an
 | E | **apps/admin**, then the rest of `nextjs-admin-dashboard-layout`. | Each page: the list, view and edit flows, forms, bulk actions, settings, the audit log; the §4 cases. | ⬜ |
 | F | **apps/api**, context by context: platform first, then identity, authorization, tenancy, rewards, claims, notifications, reporting, integrations-github, kanban, webhooks, files, feature-flags, operations, tiers, referrals, saved-views and reference-data. | Unit: handlers, application services, domain policies and value objects. E2E: the persistence adapters and endpoints that a unit test cannot prove. | ⬜ |
 | G | **apps/mobile** and packages/ui-native, mirrored to `expo-boilerplate`. | Mostly branches: screens' error, empty and offline states, and the mobile cases in §4. | ⬜ |
-| H | apps/docs. | After its 3 failing tests are fixed (§7). | ⬜ |
+| H | apps/docs. | Its 3 failing tests were fixed on 2026-11-19 (§7), so it can be measured in part A and covered here. | ⬜ |
 | I | Ratchet every threshold to the reached values (all three repos); add the 95% floor on all four metrics to `rules/11` (and the sibling repos' rules); update `enhancements.md` 3.1 and the progress log; full gate in all three repos. | | ⬜ |
+
+### 5.1 Part T — test speed (plan only; not implemented)
+
+**Why:** each run of the gate costs the owner about 15 minutes of unit tests, and every `git push` repeats them in the pre-push hook. On 2026-11-19 the pre-push run took 15 min 21 s for 2,137 test files and 21,280 tests, and the full `ci:local` took 31 minutes. Coverage work runs the tests over and over, and more tests make every run longer. So this comes first.
+
+**Rule for this part:** faster only by doing less **wasted** work, never by checking less. No skipped or deleted tests, no lower thresholds, no shorter timeouts that make tests flaky, no "only run tests on CI". Every idea below is a **hypothesis**: it is measured before and after, and kept only if it saves real time with the same results.
+
+**What is known today (facts from the repo, 2026-11-19):**
+
+| Fact | Where | Why it matters |
+|---|---|---|
+| The root `pnpm test` is `turbo run test --concurrency=1`: one workspace at a time, 24 workspaces in a row. | `package.json`, `packages/tooling/src/ci-local/ci-local-plan.ts:132` | The total is the **sum** of every workspace. The reason is in `docs/technical/operations/ci.md`: on a **4-vCPU CI runner**, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. That reason is about the CI runner. Locally, a Mac with more cores may be able to run 2–3 suites side by side safely. That is not measured yet. |
+| `test` is **not cached** in Turborepo: the unit tests always run in full, even for a workspace that did not change since its last green run. | `turbo.json`, the pre-push hook's header comment | A push that only touched `apps/docs` still runs the API's, mobile's and admin's suites (most of the 15 minutes). Lint and typecheck are already cached and take 2–3 s on a push. |
+| Each unit-test run measures coverage (`--coverage`). | each workspace's `test` script | v8 coverage adds time, and part A will widen it (every file counted, API unit + e2e merged). |
+| CI already splits the unit tests into 6 shards on 6 runners; the longest shard sets the time. | `docs/technical/operations/ci.md` (Unit tests row) | Locally there is no such split: one machine runs all of it in a row. |
+| The API unit suite includes specs that use a **real Postgres** (`e2e/support/**/*.spec.ts`, for example `sql-statement-counter.spec.ts`, which creates a scratch database per test). | `apps/api/vitest.config.unit.ts:29` | Creating and dropping databases is slow, and these tests skip silently when `DATABASE_URL` is unset, so they behave differently on different machines. |
+| Vitest prints, per suite, how the time splits (for example apps/docs: "import 52%, transform 22%, tests 13%, environment 12%") and suggests `isolate: false` ("~659 ms faster"). | the test output | In many suites most of the time is **importing and transforming code**, not running tests. That is where to look first. |
+| The API e2e suite starts per-worker databases (`globalSetup`, `E2E_MAX_WORKERS`). | `apps/api/vitest.config.e2e.ts` | Database setup per worker, and booting a Nest app per spec file, may dominate the e2e time. |
+| expo-boilerplate's `trace-examples-use.test.tsx` takes 81 s for 22 tests. | §7 | One file that slow holds up a whole Jest worker. |
+
+**Steps:**
+
+| Step | What | How | Output |
+|---|---|---|---|
+| T1 | **Measure, don't guess.** | For every workspace in all three repos: the wall time of its `test` script, and the 30 slowest test files (Vitest `--reporter=json`, Jest `--json`, which give each file's duration). Split each suite's time into import, transform, setup, environment and tests (Vitest prints this). Time each `ci:local` step and the e2e suites the same way. Note the machine (cores, memory) next to the numbers. | A table in this section: workspace → seconds → top slow files → where the time goes. The whole of part T is decided from this table. |
+| T2 | **Pre-push runs only what the push can break.** | Option 1: cache `test` in Turborepo with correct `inputs` (a workspace's own source and tests, the workspaces it depends on, its configs, the lockfile and the env vars it reads), so an unchanged workspace replays its last green result. Option 2: the pre-push hook runs `--affected` (workspaces changed since `origin/main`, plus everything that depends on them), and CI still runs everything. Both need a reason the result can be trusted, so first list every test whose result depends on something outside its inputs: a real database, the network, the clock, env vars. Those must be declared as inputs or must not be cached. | A decision for the owner (below), then the change in `turbo.json` and `packages/tooling/src/pre-push/`, with a test for the hook's choice. |
+| T3 | **Run workspaces side by side locally, if it is safe.** | Measure `--concurrency=2` and `3` on the owner's machine, with each suite's `maxWorkers` capped so the total stays at the core count (the 2026-10 slowdown came from 17 suites each taking every core). Keep `--concurrency=1` on the 4-vCPU CI runners. If it helps, make the number come from the machine's core count, written in one place (ci-local and pre-push share it). | Before and after timings, and no test newly slow or flaky in 5 runs. |
+| T4 | **Cut import and transform time in the slow suites.** | Per suite, from T1: try `isolate: false` where tests share no module state (check each suite for globals, module-level singletons and `vi.mock` that leak between files); `pool: "threads"` vs `"forks"`; Vitest's dependency optimizer for heavy UI packages; trimming setup files that every file imports but few need. Jest (mobile, expo-boilerplate): the transform cache, `maxWorkers`, and `transformIgnorePatterns` so large `node_modules` packages are not re-transformed. | Each change kept only with numbers. A suite that needs isolation keeps it. |
+| T5 | **The API's slowest specs.** | The real-database specs in the unit suite: share one scratch database per file (create in `beforeAll`, clean between tests) instead of one per test, or move them to the e2e suite, where the database belongs (`rules/11`). E2E: clone databases from a migrated template (`CREATE DATABASE … TEMPLATE`) instead of migrating each, and boot the Nest app once per worker instead of once per spec file, if the specs allow it. | API unit and e2e timings before and after. |
+| T6 | **The slow single tests.** | Each test file over ~10 s from T1 (expo-boilerplate's 81 s `trace-examples-use` first, and the same test in this repo's mobile app): find out why. Usually it renders far more than it needs, waits on real timers, or waits for a timeout to pass. Use fake timers, render only what the test checks, and split a file with too many unrelated tests. Never raise a timeout to make it pass. | The file's time before and after. Same assertions. |
+| T7 | **Coverage without the wait.** | Part A makes coverage wider (every file counted, API unit + e2e merged). Measure what `--coverage` costs per suite. Decide (owner) whether the pre-push hook needs coverage at all, or whether coverage thresholds are enforced by `pnpm test`, `ci:local` and CI only. The thresholds stay enforced in all of those. | A decision, then the hook and the scripts changed to match. |
+| T8 | **`ci:local` (31 min).** | Time each step (T1). See which steps could run at the same time without competing for the CPU (for example lint and typecheck are cached already; the build is limited to 3 at a time for memory). The browser suites need the owner's dev servers stopped (ports 8080, 3000, 3001). | Step timings before and after. |
+| T9 | **The same in the sibling repos.** | `nextjs-admin-dashboard-layout` (Vitest, 5,131 tests) and `expo-boilerplate` (Jest, 346 suites): T1, T4 and T6, with the same configs as this repo where the code is mirrored. | Their timings in the T1 table. |
+| T10 | **Keep it fast.** | Write the budget into `rules/11` and `docs/technical/operations/ci.md`: for example "a unit test file over N seconds needs a reason". Optionally add a check that lists the slowest files after each run, so a new slow test is noticed when it lands. | Rule and docs updated. |
+
+**Decisions the owner makes before T2, T3 and T7 are built:**
+
+| Question | Options |
+|---|---|
+| The target | For example: `git push` under 3 minutes for a typical change, `pnpm test` under 8 minutes for everything. Set after T1, from real numbers. |
+| What the pre-push hook runs | (a) Everything, as today. (b) Only the workspaces the push changed, plus those that depend on them; CI still runs everything. (c) Cached results for unchanged workspaces (T2 option 1). |
+| Coverage in the pre-push hook | Keep it, or leave coverage to `pnpm test`, `ci:local` and CI. |
+| Local concurrency | Keep one workspace at a time, or allow 2–3 locally if T3 proves it safe. |
 
 ## 6. Bugs found by the new tests
 
@@ -111,15 +158,16 @@ Each part is one or more sessions, and each ends with its scoped checks green an
 | Issue | Where | What to do |
 |---|---|---|
 | `client.query()` called while the client is already executing a query (a pg deprecation; it becomes an error in pg@9) | apps/api: some code runs `Promise.all` over queries on **one** interactive-transaction client. 39 infrastructure files combine `Promise.all` with a transaction; the exact sites are not known yet. | Run the API e2e suite with `NODE_OPTIONS=--throw-deprecation`. Each site then fails its test. Make the queries inside one transaction sequential (one connection cannot run them in parallel anyway), and add a rule to `rules/08` or `rules/19`. |
-| `apps/docs` fails 3 tests | `docs/architecture/data-table-unification-plan.md` is untracked, from the data-table thread, and has no front matter. | It belongs to that thread. It needs front matter, or it moves to `docs/history/` (dated plans live there and are not published). Not touched tonight. |
+| ✅ `apps/docs` failed 3 tests | `docs/architecture/data-table-unification-plan.md` had no front matter, and it and ADR 096 had no cover image. | Fixed on 2026-11-19: front matter added, and both covers drawn with `pnpm docs:covers`. Pushed. |
+| ✅ An unhandled "Cannot use a pool after calling end on the pool" failed the pre-push run | apps/api `e2e/support/__tests__/sql-statement-counter.spec.ts` | Fixed on 2026-11-19 (commit `9502f18b`): the test started a background query every millisecond and never waited for them, so the ones still queued failed when `afterEach` closed the pool. It now waits for all of them. Whether it failed depended on machine load. Part T6 looks for the same pattern elsewhere. |
 | `trace-examples-use.test.tsx` takes 81 s alone | expo-boilerplate, `src/features/showcase/__tests__/` | It passes alone, but timed out in a full run under load. Find out why 22 tests take 81 s (probably rendering every example), and make it fast instead of raising the timeout. Check the same test in this repo's mobile app. |
 | A Vite warning: `import "./e2e/support/e2e-worker-databases"` without a file extension | apps/api `vitest.config.e2e.ts` | Add the extension, as the native config loader will require. |
 
 ## 8. Resume checklist (Friday or Saturday)
 
 1. `source ~/.nvm/nvm.sh && nvm use` in each repo (this repo: Node 26.13.1; the siblings also run on 26.13.1).
-2. `git status` in all three repos. Tonight's changes are uncommitted (§9); keep them.
-3. Start part A. After each part: update §2 (new figures), §5 (✅ plus a note), §6 (bugs) and the thresholds.
+2. `git status` in all three repos. This repo's changes were committed and pushed on 2026-11-19 (`9502f18b`). The two sibling repos' upgrades are still uncommitted (§9); keep them.
+3. Start part T (§5.1, step T1: measure), then part A. Get the owner's answers to the §5.1 decisions before building T2, T3 and T7. After each part: update §2 (new figures), §5 (✅ plus a note), §6 (bugs) and the thresholds.
 4. Stop at a part boundary when the session budget runs low, and write in §5 exactly where the work stopped.
 
 ---

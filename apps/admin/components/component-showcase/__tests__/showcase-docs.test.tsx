@@ -30,7 +30,7 @@ const USE_SHORTCUT: ApiEntry = { ...KBD, name: "useShortcut", kind: "hook", desc
 
 const DOCS: ShowcaseDocs = {
 	body: "## Usage\n\nPress a key.\n\n```showcase-example\nc-kbd-1\n```\n\n## API Reference\n\n```showcase-api\n```\n\n## Accessibility\n\n- Read aloud as text.\n",
-	examples: [{ id: "c-kbd-1", label: "Basic", anchor: "basic", file: "kbd-1", source: "export function Kbd1Example() {}\n" }],
+	examples: [{ id: "c-kbd-1", label: "Basic", anchor: "basic", part: null, file: "kbd-1", source: "export function Kbd1Example() {}\n" }],
 };
 
 function kbdItem(): ShowcaseCatalogItem {

@@ -264,7 +264,11 @@ not hand-rolled components. They include:
   `icon-stack`;
 - `kanban`, `number-field`, `phone-input`, `rating`, `scrollspy`, `signature-pad` and `sortable`;
 - `time-picker` and `timeline`;
-- the multi-file families `cascader/`, `data-grid/`, `event-calendar/`, `filters/` and `gantt/`;
+- the multi-file families `cascader/`, `event-calendar/`, `filters/` and `gantt/`;
+- the table engine in `src/internal/table-engine/` (it began as the ReUI data grid). It is private: apps use
+  `DataTable` and `Spreadsheet`, which are built on it ([ADR 097](../../docs/adr/097-one-data-table.md)).
+  A `DataTable` row action can be limited to some rows with `isAvailable: (row) => boolean` (for example
+  Retry on failed jobs only); the menu, inline buttons and mobile cards all leave it out where it returns `false`;
 - the hooks `use-file-upload` and `use-copy-to-clipboard`.
 
 The shadcn `item`, `trace`, `questionnaire` and `native-select` components were ported the same

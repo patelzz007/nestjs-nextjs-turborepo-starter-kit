@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/questionnaire/questionnaire-1").then((m) => m.Questionnaire1Example), {
 	loading: FeatureLoading,
@@ -49,6 +49,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-questionnaire-1",
 		label: "Guided Setup",
 		anchor: "guided-setup",
+		part: null,
 		description: "Guided workspace setup. Best for the baseline card flow of single answer questions, each choice carrying a hint line and a letter key shortcut.",
 		file: "questionnaire-1",
 		source:
@@ -59,6 +60,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-questionnaire-2",
 		label: "Multi-Select",
 		anchor: "multi-select",
+		part: null,
 		description: "Multi-select answers. Best for a bare flow with no Card that opens on a 6 option checkbox question, its ticked count shown in a Badge by the counter.",
 		file: "questionnaire-2",
 		source:
@@ -69,6 +71,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-questionnaire-3",
 		label: "Write-In Answer",
 		anchor: "write-in-answer",
+		part: null,
 		description:
 			"A written answer beside the choices. Best for a write-in row with its own visible Label that clears the picked radio as you type and submits under the question name.",
 		file: "questionnaire-3",
@@ -80,6 +83,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-questionnaire-4",
 		label: "Segmented Progress",
 		anchor: "segmented-progress",
+		part: null,
 		description: "Segmented progress with step labels. Best for a bare flow whose counter is redrawn as filled segments with a named step, ending on an Empty success state.",
 		file: "questionnaire-4",
 		source:
@@ -90,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-questionnaire-5",
 		label: "Optional Skip",
 		anchor: "optional-skip",
+		part: null,
 		description:
 			"An optional question with skip. Best for a status Badge over the card tracking the optional middle question, which also takes a write-in, as not answered, answered or skipped.",
 		file: "questionnaire-5",
@@ -101,6 +106,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-questionnaire-6",
 		label: "Cross-Question Rule",
 		anchor: "cross-question-rule",
+		part: null,
 		description:
 			"A rule that sends you back. Best for controlled step position that a failed submit check moves back, with custom error copy holding Next until the plan or region changes.",
 		file: "questionnaire-6",
@@ -112,6 +118,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-questionnaire-7",
 		label: "Conditional Branch",
 		anchor: "conditional-branch",
+		part: null,
 		description:
 			"A branch that appears when it applies. Best for a controlled first question whose answer enables a people picker step, taking the counter from 3 to 4 questions.",
 		file: "questionnaire-7",
@@ -158,6 +165,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function QuestionnaireFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function QuestionnaireFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

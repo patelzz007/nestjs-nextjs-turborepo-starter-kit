@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/kanban/kanban-1").then((m) => m.Kanban1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/kanban/kanban-2").then((m) => m.Kanban2Example), { loading: FeatureLoading });
@@ -26,6 +26,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kanban-1",
 		label: "Placeholder Overlay",
 		anchor: "placeholder-overlay",
+		part: null,
 		description:
 			"Kanban board with placeholder overlay. Best for task cards with priority, assignee and due date, dragged as a dashed placeholder box between reorderable columns.",
 		file: "kanban-1",
@@ -37,6 +38,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kanban-2",
 		label: "Dynamic Overlay",
 		anchor: "dynamic-overlay",
+		part: null,
 		description: "Kanban board with dynamic overlay. Best for a live copy of the dragged card or whole column under the pointer, drawn by an overlay function.",
 		file: "kanban-2",
 		source:
@@ -47,6 +49,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kanban-3",
 		label: "Frame Columns",
 		anchor: "frame-columns",
+		part: null,
 		description: "Kanban board with frame columns. Best for frame columns with a status icon and count over label cards, where only the cards drag.",
 		file: "kanban-3",
 		source:
@@ -57,6 +60,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kanban-4",
 		label: "Stacked Frame",
 		anchor: "stacked-frame",
+		part: null,
 		description: "Minimal kanban with stacked frame. Best for stacked Frame columns with a one line description each, over cards with a progress bar and assignee.",
 		file: "kanban-4",
 		source:
@@ -67,6 +71,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kanban-5",
 		label: "Feature Roadmap",
 		anchor: "feature-roadmap",
+		part: null,
 		description: "Feature roadmap kanban with progress. Best for a product roadmap of feature cards with description, progress bar and vote count across color coded stages.",
 		file: "kanban-5",
 		source:
@@ -77,6 +82,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kanban-6",
 		label: "Persisted Moves",
 		anchor: "persisted-moves",
+		part: null,
 		description: "Kanban board persisted to a backend. Best for drops saved to a simulated API, with a loading toast and a rollback to the previous board on failure.",
 		file: "kanban-6",
 		source:
@@ -122,6 +128,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function KanbanFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function KanbanFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

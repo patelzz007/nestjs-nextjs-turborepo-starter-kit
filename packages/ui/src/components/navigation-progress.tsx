@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { cn } from "../lib/core/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 /** How long (ms) a navigation may run before the bar shows, so a prefetched route that commits at once never flashes it. */
 export const NAVIGATION_PROGRESS_SHOW_DELAY_MS = 120;

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/select/select-1").then((m) => m.Select1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/select/select-2").then((m) => m.Select2Example), { loading: FeatureLoading });
@@ -55,6 +55,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description:
 			"A basic select component with a list of options. Best for the minimal pattern: 5 fruits in a dropdown below the trigger, led by a prompt row that clears the pick.",
 		file: "select-1",
@@ -66,6 +67,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-2",
 		label: "Icons",
 		anchor: "icons",
+		part: null,
 		description:
 			"Select with icons and placeholder state. Best for app sections such as Dashboard and Security led by muted icons, with a scan icon beside the prompt before any pick.",
 		file: "select-2",
@@ -77,6 +79,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-3",
 		label: "Grouped Labels",
 		anchor: "grouped-labels",
+		part: null,
 		description:
 			"Select component with grouped options and labels. Best for fruits and vegetables in 2 labeled groups of 3 split by a rule, the prompt kept out of the open list.",
 		file: "select-3",
@@ -88,6 +91,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-4",
 		label: "Large List",
 		anchor: "large-list",
+		part: null,
 		description:
 			"Select component with a large list of options. Best for a 100 row generated list that opens over the trigger and scrolls within the space left in the viewport.",
 		file: "select-4",
@@ -99,6 +103,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-5",
 		label: "Small Trigger",
 		anchor: "small-trigger",
+		part: null,
 		description: "Select component with small trigger size. Best for the sm trigger size on a 3 fruit list, a shorter control for dense forms and toolbars.",
 		file: "select-5",
 		source:
@@ -109,6 +114,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-6",
 		label: "Plan Picker",
 		anchor: "plan-picker",
+		part: null,
 		description:
 			"Select component with a subscription plan style. Best for a plan picker whose trigger grows to show the chosen plan's name and one line description, built from Item parts.",
 		file: "select-6",
@@ -120,6 +126,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-7",
 		label: "Disabled Item",
 		anchor: "disabled-item",
+		part: null,
 		description:
 			"Select component with item alignment disabled. Best for a fruit list where Grapes is shown faded and cannot be picked while the other rows stay open to choice.",
 		file: "select-7",
@@ -131,6 +138,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-8",
 		label: "Field With Label",
 		anchor: "field-with-label",
+		part: null,
 		description:
 			"Select component within a Field with label and description. Best for a Favorite Fruit label tied to the trigger by id, with a one sentence hint under the control.",
 		file: "select-8",
@@ -142,6 +150,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-9",
 		label: "Invalid",
 		anchor: "invalid",
+		part: null,
 		description: "Select component in an invalid state. Best for an error state set on both the Field and the trigger, with a message printed below the control.",
 		file: "select-9",
 		source:
@@ -152,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-10",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Select component in a disabled state. Best for the entire control switched off and faded, so its list of fruits cannot be opened at all.",
 		file: "select-10",
 		source:
@@ -162,6 +172,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-11",
 		label: "In Dialog",
 		anchor: "in-dialog",
+		part: null,
 		description: "Select component inside a Dialog. Best for a full width fruit picker inside a modal with a title and description, opened from a button.",
 		file: "select-11",
 		source:
@@ -172,6 +183,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-12",
 		label: "Multiple Selection",
 		anchor: "multiple-selection",
+		part: null,
 		description:
 			"Select component with multiple selection. Best for several fruits checked in one open list, the trigger reading the single name or a count such as 3 fruits selected.",
 		file: "select-12",
@@ -183,6 +195,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-13",
 		label: "Inline With Input",
 		anchor: "inline-with-input",
+		part: null,
 		description: "Select component inline with Input. Best for a narrow status filter of All, Active and Inactive beside a search box in one toolbar row.",
 		file: "select-13",
 		source:
@@ -193,6 +206,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-14",
 		label: "With Button",
 		anchor: "with-button",
+		part: null,
 		description: "Select component with Button side by side. Best for a picker that stretches across a row ending in a Submit button, as a quick one field form.",
 		file: "select-14",
 		source:
@@ -203,6 +217,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-15",
 		label: "Item Aligned",
 		anchor: "item-aligned",
+		part: null,
 		description: "Select component with item alignment enabled. Best for a list laid over the trigger so the current fruit sits exactly where the trigger text was.",
 		file: "select-15",
 		source:
@@ -213,6 +228,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-16",
 		label: "Access Levels",
 		anchor: "access-levels",
+		part: null,
 		description:
 			"Select with custom access level descriptions. Best for permission levels from Full access to No access, each with a short line on what it allows, the trigger keeping the name only.",
 		file: "select-16",
@@ -224,6 +240,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-17",
 		label: "Status Bullets",
 		anchor: "status-bullets",
+		part: null,
 		description: "Select with colored bullets for status. Best for statuses such as In Progress and Rejected marked by small colored dots in the rows and the trigger.",
 		file: "select-17",
 		source:
@@ -234,6 +251,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-18",
 		label: "User Avatars",
 		anchor: "user-avatars",
+		part: null,
 		description: "Select with user avatars. Best for a people picker of 10 users with photo avatars under a heading, the trigger repeating a smaller avatar.",
 		file: "select-18",
 		source:
@@ -244,6 +262,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-19",
 		label: "Status Badges",
 		anchor: "status-badges",
+		part: null,
 		description: "Select with status badges. Best for a Status: prefix in the trigger ahead of an outlined colored badge, with each row drawn as its own badge.",
 		file: "select-19",
 		source:
@@ -254,6 +273,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-20",
 		label: "Left Indicator",
 		anchor: "left-indicator",
+		part: null,
 		description: "Select with indicator on the left side. Best for the check mark moved to the left edge of each row, with the row padding flipped to make room.",
 		file: "select-20",
 		source:
@@ -264,6 +284,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-21",
 		label: "Clear Button",
 		anchor: "clear-button",
+		part: null,
 		description: "Select with clear button. Best for an X in the trigger that empties a controlled framework pick, taking the chevron's place once a value is set.",
 		file: "select-21",
 		source:
@@ -274,6 +295,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-22",
 		label: "Custom Chevrons",
 		anchor: "custom-chevrons",
+		part: null,
 		description:
 			"Select with custom chevrons up down icon. Best for an up and down chevron pair in place of the stock arrow, swapped for a clearing X when a fruit is chosen.",
 		file: "select-22",
@@ -285,6 +307,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-23",
 		label: "Overlapping Dots",
 		anchor: "overlapping-dots",
+		part: null,
 		description:
 			"Multi-select with overlapping dots. Best for statuses such as Ready, Building and Error, several picked at once and summed up as overlapping dots and a count badge.",
 		file: "select-23",
@@ -296,6 +319,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-24",
 		label: "Grouped Separators",
 		anchor: "grouped-separators",
+		part: null,
 		description: "Select with grouped options and separators. Best for frontend and backend tech under 2 headings with a divider, from React and Vue to Node.js and Go.",
 		file: "select-24",
 		source:
@@ -306,6 +330,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-25",
 		label: "Country Flags",
 		anchor: "country-flags",
+		part: null,
 		description: "Country picker select with flag emojis. Best for countries led by their flag emoji in the rows and the trigger, with United States chosen on load.",
 		file: "select-25",
 		source:
@@ -316,6 +341,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-26",
 		label: "Status Filter",
 		anchor: "status-filter",
+		part: null,
 		description: "Status filter select with colored dots. Best for a filter that starts on an All Status row with no dot, above 4 states that each carry one.",
 		file: "select-26",
 		source:
@@ -326,6 +352,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-27",
 		label: "Option Descriptions",
 		anchor: "option-descriptions",
+		part: null,
 		description:
 			"Select with description text per option. Best for startup, Business and Enterprise tiers with a muted subtitle under each, the trigger keeping the tier name alone.",
 		file: "select-27",
@@ -337,6 +364,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-28",
 		label: "Timezone Offsets",
 		anchor: "timezone-offsets",
+		part: null,
 		description: "Timezone select with UTC offsets. Best for timezone codes grouped by Americas, Europe and Asia, each row trailed by its UTC offset in muted text.",
 		file: "select-28",
 		source:
@@ -347,6 +375,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-29",
 		label: "Team Assignment",
 		anchor: "team-assignment",
+		part: null,
 		description: "Select with avatar items for team member assignment. Best for an Assign to list of 4 teammates with photos, the first of them chosen on load.",
 		file: "select-29",
 		source:
@@ -357,6 +386,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-30",
 		label: "Priority Badges",
 		anchor: "priority-badges",
+		part: null,
 		description:
 			"Priority select with colored badges. Best for priority levels from No Priority to Urgent as small outline, solid and light badges in the rows and the trigger.",
 		file: "select-30",
@@ -368,6 +398,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-31",
 		label: "Font Preview",
 		anchor: "font-preview",
+		part: null,
 		description: "Font family select with preview. Best for each font option set in its own typeface, Inter, Mono and Serif, in the rows and the trigger.",
 		file: "select-31",
 		source:
@@ -378,6 +409,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-32",
 		label: "Category Icons",
 		anchor: "category-icons",
+		part: null,
 		description: "Select with icon-labeled categories. Best for file types such as Documents, Images and Archives led by an icon, which stays beside the name in the trigger.",
 		file: "select-32",
 		source:
@@ -388,6 +420,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-select-33",
 		label: "Size Scale",
 		anchor: "size-scale",
+		part: null,
 		description: "Size variant select with small trigger. Best for a 4 step size scale from Small to Extra Large behind the compact sm trigger.",
 		file: "select-33",
 		source:
@@ -450,6 +483,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SelectFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SelectFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

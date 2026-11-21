@@ -38,6 +38,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-aspect-ratio-1",
 				label: "Widescreen",
 				anchor: "widescreen",
+				part: null,
 				file: "aspect-ratio-1",
 				source:
 					'import * as React from "react";\nimport { AspectRatio } from "@workspace/ui/components/aspect-ratio";\nimport Image from "next/image";\n\nimport { SAMPLE_PHOTO_HEIGHT, SAMPLE_PHOTO_WIDTH, SAMPLE_PHOTOS } from "@/components/component-showcase/examples/aspect-ratio/aspect-ratio-sample";\n\nexport function AspectRatio1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="w-full max-w-md">\n\t\t\t<AspectRatio ratio={16 / 9} className="overflow-hidden rounded-xl border bg-muted">\n\t\t\t\t<Image\n\t\t\t\t\tsrc={SAMPLE_PHOTOS.gradient}\n\t\t\t\t\talt="Abstract sample photo in a 16:9 frame"\n\t\t\t\t\twidth={SAMPLE_PHOTO_WIDTH}\n\t\t\t\t\theight={SAMPLE_PHOTO_HEIGHT}\n\t\t\t\t\tclassName="h-full w-full object-cover"\n\t\t\t\t/>\n\t\t\t</AspectRatio>\n\t\t</div>\n\t);\n}\n',
@@ -46,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-aspect-ratio-3",
 				label: "Square",
 				anchor: "square",
+				part: null,
 				file: "aspect-ratio-3",
 				source:
 					'import * as React from "react";\nimport { AspectRatio } from "@workspace/ui/components/aspect-ratio";\nimport Image from "next/image";\n\nimport { SAMPLE_PHOTO_HEIGHT, SAMPLE_PHOTO_WIDTH, SAMPLE_PHOTOS } from "@/components/component-showcase/examples/aspect-ratio/aspect-ratio-sample";\n\nexport function AspectRatio3Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="w-full max-w-xs">\n\t\t\t<AspectRatio ratio={1 / 1} className="overflow-hidden rounded-xl border bg-muted">\n\t\t\t\t<Image\n\t\t\t\t\tsrc={SAMPLE_PHOTOS.fluid}\n\t\t\t\t\talt="Abstract sample photo in a 1:1 frame"\n\t\t\t\t\twidth={SAMPLE_PHOTO_WIDTH}\n\t\t\t\t\theight={SAMPLE_PHOTO_HEIGHT}\n\t\t\t\t\tclassName="h-full w-full object-cover"\n\t\t\t\t/>\n\t\t\t</AspectRatio>\n\t\t</div>\n\t);\n}\n',
@@ -54,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-aspect-ratio-5",
 				label: "Tall Portrait",
 				anchor: "tall-portrait",
+				part: null,
 				file: "aspect-ratio-5",
 				source:
 					'import * as React from "react";\nimport { AspectRatio } from "@workspace/ui/components/aspect-ratio";\nimport Image from "next/image";\n\nimport { SAMPLE_PHOTO_HEIGHT, SAMPLE_PHOTO_WIDTH, SAMPLE_PHOTOS } from "@/components/component-showcase/examples/aspect-ratio/aspect-ratio-sample";\n\nexport function AspectRatio5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="w-full max-w-xs">\n\t\t\t<AspectRatio ratio={9 / 16} className="overflow-hidden rounded-xl border bg-muted">\n\t\t\t\t<Image\n\t\t\t\t\tsrc={SAMPLE_PHOTOS.marble}\n\t\t\t\t\talt="Abstract sample photo in a 9:16 frame"\n\t\t\t\t\twidth={SAMPLE_PHOTO_WIDTH}\n\t\t\t\t\theight={SAMPLE_PHOTO_HEIGHT}\n\t\t\t\t\tclassName="h-full w-full object-cover"\n\t\t\t\t/>\n\t\t\t</AspectRatio>\n\t\t</div>\n\t);\n}\n',

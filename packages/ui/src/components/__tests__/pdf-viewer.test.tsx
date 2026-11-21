@@ -4,7 +4,7 @@ import { PDF_FILE_EXTENSION, PDF_MEDIA_TYPE, PdfOpenFailureSchema } from "@works
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { PdfViewer, type PdfViewerProps, type PdfViewerSource } from "../pdf-viewer";
 

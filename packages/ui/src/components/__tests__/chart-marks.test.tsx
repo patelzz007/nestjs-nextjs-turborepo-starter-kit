@@ -2,8 +2,8 @@ import { cleanup, render } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CHART_COLOR_SLOTS, CHART_SLOT_COLORS } from "../../lib/charts/chart-colors";
-import { CHART_SLOT_ENCODINGS, type ChartMarkerShape } from "../../lib/charts/chart-encodings";
+import { CHART_COLOR_SLOTS, CHART_SLOT_COLORS } from "@workspace/ui/lib/charts/chart-colors";
+import { CHART_SLOT_ENCODINGS, type ChartMarkerShape } from "@workspace/ui/lib/charts/chart-encodings";
 import { chartFill, ChartMarker, ChartPatternDefs, SeriesKey } from "../chart-marks";
 
 afterEach((): void => {

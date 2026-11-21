@@ -13,7 +13,7 @@ import { Menubar, MenubarContent, MenubarGroup, MenubarItem, MenubarLabel, Menub
 import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "../navigation-menu";
 import { ToastCountdownLabel, ToastIcon, ToastProgress, Toaster, createToastManager, createToastMessage, toastA11yProps } from "../toast";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/password-input/password-input-1").then((m) => m.PasswordInput1Example), {
 	loading: FeatureLoading,
@@ -31,6 +31,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-password-input-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "A password field with a show and hide toggle whose visibility you control. Best for sign in and account forms.",
 		file: "password-input-1",
 		source:
@@ -76,6 +77,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function PasswordInputFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function PasswordInputFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/native-select/native-select-1").then((m) => m.NativeSelect1Example), {
 	loading: FeatureLoading,
@@ -46,6 +46,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-native-select-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic native select.. Best for a flat list of 5 fruits behind an empty prompt option, with Grapes listed but disabled.",
 		file: "native-select-1",
 		source:
@@ -56,6 +57,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-native-select-2",
 		label: "Grouped Options",
 		anchor: "grouped-options",
+		part: null,
 		description: "Native select with options grouped.. Best for fruits and vegetables under 2 group headings, 3 choices in each, below an ungrouped prompt.",
 		file: "native-select-2",
 		source:
@@ -66,6 +68,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-native-select-3",
 		label: "Small",
 		anchor: "small",
+		part: null,
 		description: "Small native select.. Best for the sm size, 4px shorter than the default in every style, on a 2 option list.",
 		file: "native-select-3",
 		source:
@@ -76,6 +79,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-native-select-4",
 		label: "Field With Label",
 		anchor: "field-with-label",
+		part: null,
 		description: "Native select embedded within a field.. Best for a Country label tied to the control by id, a hint line under it and 3 countries to pick.",
 		file: "native-select-4",
 		source:
@@ -86,6 +90,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-native-select-5",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled native select.. Best for the whole control switched off, wrapper and chevron faded to half opacity.",
 		file: "native-select-5",
 		source:
@@ -96,6 +101,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-native-select-6",
 		label: "Invalid",
 		anchor: "invalid",
+		part: null,
 		description: "Invalid native select.. Best for an error state from aria-invalid alone, turning the border red with no message printed under it.",
 		file: "native-select-6",
 		source:
@@ -141,6 +147,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function NativeSelectFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function NativeSelectFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

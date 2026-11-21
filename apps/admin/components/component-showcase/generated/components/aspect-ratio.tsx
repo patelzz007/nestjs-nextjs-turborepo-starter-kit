@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/aspect-ratio/aspect-ratio-1").then((m) => m.AspectRatio1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/aspect-ratio/aspect-ratio-2").then((m) => m.AspectRatio2Example), { loading: FeatureLoading });
@@ -36,6 +36,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-aspect-ratio-1",
 		label: "Widescreen",
 		anchor: "widescreen",
+		part: null,
 		description: "16:9 widescreen aspect ratio. Best for a landscape 16:9 box, the shape of video players and modern slide decks, in a column up to 28rem wide.",
 		file: "aspect-ratio-1",
 		source:
@@ -46,6 +47,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-aspect-ratio-2",
 		label: "Standard",
 		anchor: "standard",
+		part: null,
 		description: "4:3 standard aspect ratio. Best for the 4:3 shape of phone camera photos and classic TV footage, in a landscape box up to 28rem wide.",
 		file: "aspect-ratio-2",
 		source:
@@ -56,6 +58,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-aspect-ratio-3",
 		label: "Square",
 		anchor: "square",
+		part: null,
 		description: "1:1 square aspect ratio. Best for an equal sided box for product shots, album covers and grid tiles, kept to 20rem wide.",
 		file: "aspect-ratio-3",
 		source:
@@ -66,6 +69,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-aspect-ratio-4",
 		label: "Ultrawide",
 		anchor: "ultrawide",
+		part: null,
 		description: "21:9 ultrawide aspect ratio. Best for an extra wide 21:9 strip for cinematic banners and page headers, at most 28rem across.",
 		file: "aspect-ratio-4",
 		source:
@@ -76,6 +80,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-aspect-ratio-5",
 		label: "Tall Portrait",
 		anchor: "tall-portrait",
+		part: null,
 		description: "9:16 portrait aspect ratio. Best for a tall 9:16 box, the shape of stories and short full screen vertical video, at most 20rem wide.",
 		file: "aspect-ratio-5",
 		source:
@@ -86,6 +91,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-aspect-ratio-6",
 		label: "Classic Photo",
 		anchor: "classic-photo",
+		part: null,
 		description: "3:2 classic photography aspect ratio. Best for the 3:2 shape of most DSLR and 35mm film photos, for blog and article images up to 28rem wide.",
 		file: "aspect-ratio-6",
 		source:
@@ -96,6 +102,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-aspect-ratio-7",
 		label: "Social Portrait",
 		anchor: "social-portrait",
+		part: null,
 		description: "4:5 social media portrait aspect ratio. Best for a slightly tall 4:5 box sized for portrait posts in a social feed, kept to 20rem wide.",
 		file: "aspect-ratio-7",
 		source:
@@ -106,6 +113,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-aspect-ratio-8",
 		label: "Monitor",
 		anchor: "monitor",
+		part: null,
 		description: "16:10 computer monitor aspect ratio. Best for the 16:10 shape of many laptop and monitor displays, for app screenshots and device mockups up to 28rem wide.",
 		file: "aspect-ratio-8",
 		source:
@@ -151,6 +159,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function AspectRatioFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function AspectRatioFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

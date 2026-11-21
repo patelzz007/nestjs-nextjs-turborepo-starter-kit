@@ -1,5 +1,5 @@
 // ============================================
-// lib/command/command-filter.ts —how a command list matches a search
+// lib/command/command-filter.ts — how a command list matches a search
 // ============================================
 // Pure, framework-free scoring for the kit's command primitive
 // (components/ui/command-primitive.tsx). A score above 0 keeps an item in the

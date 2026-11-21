@@ -52,7 +52,7 @@ The exact package list can evolve as the product grows, but ownership of each pa
 | A component specific to one page | co-located with that route | Not yet reused — don't promote speculatively |
 | A zod schema shared between api and web/mobile | `packages/shared` | Must be the same definition everywhere |
 | A pure, framework-agnostic function used by 2+ apps | `packages/shared` | No framework dependency, genuine reuse |
-| A UI-kit data component's platform-free rules (Gantt, event calendar, filters, data table, data grid, kanban, file type), shared by `packages/ui` and `packages/ui-native` | `packages/ui-kit-logic` | Kept out of `packages/shared` so an app carries it (and date-fns) only when it draws one of these components: a bundler keeps everything a barrel reaches |
+| A UI-kit data component's platform-free rules (Gantt, event calendar, filters, data table, spreadsheet, kanban, file type), shared by `packages/ui` and `packages/ui-native` | `packages/ui-kit-logic` | Kept out of `packages/shared` so an app carries it (and date-fns) only when it draws one of these components: a bundler keeps everything a barrel reaches |
 | Prisma schema/migrations/seed | `apps/api/prisma` | Single source of DB truth; only the API touches the database |
 | Shared lint/tsconfig | `packages/oxlint-config`, `packages/typescript-config` | Config consistency across apps |
 | An API endpoint's client leaf, request/response handling, session transport, or a TanStack Query hook over the router | `packages/api-client` (core in `src/`, hooks in `src/react/`) | One client for web and mobile; it must stay free of Next, DOM and Node code |

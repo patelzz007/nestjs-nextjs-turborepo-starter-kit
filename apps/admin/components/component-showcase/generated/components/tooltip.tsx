@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/tooltip/tooltip-1").then((m) => m.Tooltip1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/tooltip/tooltip-2").then((m) => m.Tooltip2Example), { loading: FeatureLoading });
@@ -36,6 +36,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic tooltip.. Best for the bare minimum: an outline text Button and a single line hint, Add to library, opening on the default top side.",
 		file: "tooltip-1",
 		source:
@@ -46,6 +47,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-2",
 		label: "Placements",
 		anchor: "placements",
+		part: null,
 		description:
 			"Tooltips opening from different sides.. Best for a 3 column grid of 6 outline buttons, one per placement, including the 2 logical sides that follow text direction.",
 		file: "tooltip-2",
@@ -57,6 +59,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-3",
 		label: "Icon Trigger",
 		anchor: "icon-trigger",
+		part: null,
 		description: "Tooltip with icon trigger.. Best for a ghost info button with no visible text, named by its aria-label, opening a centered line of help copy.",
 		file: "tooltip-3",
 		source:
@@ -67,6 +70,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-4",
 		label: "Keyboard Shortcut",
 		anchor: "keyboard-shortcut",
+		part: null,
 		description: "Tooltip with keyboard shortcut.. Best for a small outline save icon button whose hint pairs the action name with its key in a Kbd cap.",
 		file: "tooltip-4",
 		source:
@@ -77,6 +81,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-5",
 		label: "Bell With Count",
 		anchor: "bell-with-count",
+		part: null,
 		description:
 			"Tooltip on notification bell with badge count. Best for an icon button with a destructive count Badge that opens a 3 item activity digest under a header and a View all link.",
 		file: "tooltip-5",
@@ -88,6 +93,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-6",
 		label: "Status Badges",
 		anchor: "status-badges",
+		part: null,
 		description: "Tooltip with status badge. Best for a System Status button whose hint lists 3 services with Operational or Degraded badges and an updated time.",
 		file: "tooltip-6",
 		source:
@@ -98,6 +104,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-7",
 		label: "Verified Domain",
 		anchor: "verified-domain",
+		part: null,
 		description:
 			"Tooltip with icon and description. Best for a check mark set inside a sentence after Verified domain, revealing a Verified badge and a one line explanation.",
 		file: "tooltip-7",
@@ -109,6 +116,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-8",
 		label: "Toolbar Actions",
 		anchor: "toolbar-actions",
+		part: null,
 		description: "Toolbar with tooltip actions. Best for bold, italic, underline and image buttons in one ghost toolbar, each named by aria-label, under a single provider.",
 		file: "tooltip-8",
 		source:
@@ -119,6 +127,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-9",
 		label: "Warning",
 		anchor: "warning",
+		part: null,
 		description: "Tooltip with warning badge. Best for a triangle alert icon button whose hint warns, behind a matching glyph, that the action cannot be undone.",
 		file: "tooltip-9",
 		source:
@@ -129,6 +138,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-10",
 		label: "Upgrade Prompt",
 		anchor: "upgrade-prompt",
+		part: null,
 		description:
 			"Tooltip with feature badge and upgrade link. Best for a lock icon button opening a Pro tagged feature pitch with a short blurb and an Upgrade to Pro button.",
 		file: "tooltip-10",
@@ -140,6 +150,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-11",
 		label: "Avatar Role Badge",
 		anchor: "avatar-role-badge",
+		part: null,
 		description: "Tooltip with avatar and role badge. Best for an avatar trigger that opens the same photo with the person's name, an Admin role badge and an email address.",
 		file: "tooltip-11",
 		source:
@@ -150,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-12",
 		label: "Disabled Button",
 		anchor: "disabled-button",
+		part: null,
 		description:
 			"Tooltip on disabled button with wrapper. Best for a disabled Delete Project button wrapped in a span trigger, so the reason it is locked still shows on hover.",
 		file: "tooltip-12",
@@ -161,6 +173,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-13",
 		label: "Online Status",
 		anchor: "online-status",
+		part: null,
 		description: "Tooltip with online status indicator. Best for an avatar with a green presence dot whose hint repeats the photo beside the name and an Online now line.",
 		file: "tooltip-13",
 		source:
@@ -171,6 +184,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-14",
 		label: "File Info",
 		anchor: "file-info",
+		part: null,
 		description: "Tooltip with file info and badges. Best for a muted file name in text that opens its size, upload age and PDF and Verified tags next to a document glyph.",
 		file: "tooltip-14",
 		source:
@@ -181,6 +195,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-15",
 		label: "Label Badges",
 		anchor: "label-badges",
+		part: null,
 		description: "Tooltip with label badges. Best for a compact 3 labels count with a tag glyph that expands into 3 colored chips under a Labels heading.",
 		file: "tooltip-15",
 		source:
@@ -191,6 +206,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tooltip-16",
 		label: "Unread Bell",
 		anchor: "unread-bell",
+		part: null,
 		description: "Tooltip with action button inside. Best for a ghost bell button with an unread dot whose hint gives the new count above a View all link.",
 		file: "tooltip-16",
 		source:
@@ -236,6 +252,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function TooltipFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function TooltipFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

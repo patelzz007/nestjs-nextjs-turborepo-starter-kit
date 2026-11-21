@@ -39,6 +39,7 @@ export function DataTable3Example(): React.JSX.Element {
 			{
 				key: "duplicate",
 				label: "Make a copy",
+				description: "Add a copy under this section",
 				icon: CopyIcon,
 				onPress: (row: DocumentSection): void => {
 					toast.success(`Duplicated “${row.header}”`);
@@ -47,8 +48,9 @@ export function DataTable3Example(): React.JSX.Element {
 			{
 				key: "delete",
 				label: "Delete",
+				description: "Remove this section",
 				icon: Trash2Icon,
-				variant: "destructive",
+				tone: "destructive",
 				onPress: (row: DocumentSection): void => {
 					toast.error("A demo: nothing was removed.", { title: `Deleted “${row.header}”` });
 				},

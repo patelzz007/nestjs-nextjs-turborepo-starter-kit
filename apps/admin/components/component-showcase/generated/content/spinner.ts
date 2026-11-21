@@ -38,6 +38,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-spinner-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "spinner-1",
 				source:
 					'import * as React from "react";\nimport { Spinner } from "@workspace/ui/components/spinner";\n\nexport function Spinner1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center gap-6">\n\t\t\t<Spinner />\n\t\t</div>\n\t);\n}\n',
@@ -46,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-spinner-3",
 				label: "In Badges",
 				anchor: "in-badges",
+				part: null,
 				file: "spinner-3",
 				source:
 					'import * as React from "react";\nimport { Badge } from "@workspace/ui/components/badge";\n\nimport { Spinner } from "@workspace/ui/components/spinner";\n\nexport function Spinner3Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="grid grid-cols-3 gap-4">\n\t\t\t<Badge>\n\t\t\t\t<Spinner data-icon="inline-start" />\n\t\t\t\tUpdating\n\t\t\t</Badge>\n\t\t\t<Badge variant="secondary">\n\t\t\t\t<Spinner data-icon="inline-start" />\n\t\t\t\tSyncing\n\t\t\t</Badge>\n\t\t\t<Badge variant="outline">\n\t\t\t\t<Spinner data-icon="inline-start" />\n\t\t\t\tLoading\n\t\t\t</Badge>\n\t\t\t<Badge variant="destructive-light">\n\t\t\t\t<Spinner data-icon="inline-start" />\n\t\t\t\tUpdating\n\t\t\t</Badge>\n\t\t\t<Badge variant="success-light">\n\t\t\t\t<Spinner data-icon="inline-start" />\n\t\t\t\tSyncing\n\t\t\t</Badge>\n\t\t\t<Badge variant="info-light">\n\t\t\t\t<Spinner data-icon="inline-start" />\n\t\t\t\tLoading\n\t\t\t</Badge>\n\t\t</div>\n\t);\n}\n',
@@ -54,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-spinner-4",
 				label: "In Input Group",
 				anchor: "in-input-group",
+				part: null,
 				file: "spinner-4",
 				source:
 					'import * as React from "react";\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\nimport { InputGroup, InputGroupAddon, InputGroupInput } from "@workspace/ui/components/input-group";\nimport { Spinner } from "@workspace/ui/components/spinner";\n\nexport function Spinner4Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs">\n\t\t\t<FieldLabel htmlFor="search-loading">Searching</FieldLabel>\n\t\t\t<InputGroup id="search-loading">\n\t\t\t\t<InputGroupInput placeholder="Search records…" />\n\t\t\t\t<InputGroupAddon>\n\t\t\t\t\t<Spinner className="size-4" />\n\t\t\t\t</InputGroupAddon>\n\t\t\t</InputGroup>\n\t\t</Field>\n\t);\n}\n',
@@ -62,6 +65,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-spinner-11",
 				label: "Card Overlay",
 				anchor: "card-overlay",
+				part: null,
 				file: "spinner-11",
 				source:
 					'import * as React from "react";\nimport { Card, CardContent } from "@workspace/ui/components/card";\nimport { Spinner } from "@workspace/ui/components/spinner";\n\nexport function Spinner11Example(): React.JSX.Element {\n\treturn (\n\t\t<Card className="relative w-full max-w-xs">\n\t\t\t<CardContent className="space-y-3 p-4">\n\t\t\t\t<h3 className="text-sm font-semibold">Dashboard Overview</h3>\n\t\t\t\t<p className="text-sm text-muted-foreground">Monthly revenue and user statistics for the current period.</p>\n\t\t\t\t<div className="grid grid-cols-2 gap-4">\n\t\t\t\t\t<div className="rounded-md border p-3">\n\t\t\t\t\t\t<p className="text-xs text-muted-foreground">Revenue</p>\n\t\t\t\t\t\t<p className="text-lg font-bold">$12,450</p>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div className="rounded-md border p-3">\n\t\t\t\t\t\t<p className="text-xs text-muted-foreground">Users</p>\n\t\t\t\t\t\t<p className="text-lg font-bold">1,234</p>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</CardContent>\n\n\t\t\t{/* Overlay */}\n\t\t\t<Card className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-xs">\n\t\t\t\t<CardContent className="flex grow flex-col items-center justify-center gap-2">\n\t\t\t\t\t<Spinner className="size-4 opacity-60" />\n\t\t\t\t</CardContent>\n\t\t\t</Card>\n\t\t</Card>\n\t);\n}\n',

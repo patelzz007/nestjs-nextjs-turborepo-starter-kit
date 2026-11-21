@@ -47,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-phone-input-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "phone-input-1",
 				source:
 					'import * as React from "react";\nimport { PhoneInput } from "@workspace/ui/components/phone-input";\n\nexport function PhoneInput1Example(): React.JSX.Element {\n\treturn <PhoneInput placeholder="Enter phone number" />;\n}\n',
@@ -55,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-phone-input-2",
 				label: "Small",
 				anchor: "small",
+				part: null,
 				file: "phone-input-2",
 				source:
 					'import * as React from "react";\nimport { PhoneInput } from "@workspace/ui/components/phone-input";\n\nexport function PhoneInput2Example(): React.JSX.Element {\n\treturn <PhoneInput variant="sm" placeholder="Enter phone number" defaultCountry="NL" value="+31612345678" />;\n}\n',
@@ -63,6 +65,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-phone-input-3",
 				label: "Large",
 				anchor: "large",
+				part: null,
 				file: "phone-input-3",
 				source:
 					'import * as React from "react";\nimport { PhoneInput } from "@workspace/ui/components/phone-input";\n\nexport function PhoneInput3Example(): React.JSX.Element {\n\treturn <PhoneInput variant="lg" placeholder="Enter phone number" defaultCountry="US" value="+12125551234" />;\n}\n',
@@ -71,6 +74,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-phone-input-6",
 				label: "Error State",
 				anchor: "error-state",
+				part: null,
 				file: "phone-input-6",
 				source:
 					'import * as React from "react";\nimport { PhoneInput } from "@workspace/ui/components/phone-input";\n\nexport function PhoneInput6Example(): React.JSX.Element {\n\treturn <PhoneInput aria-invalid="true" placeholder="Enter phone number" />;\n}\n',
@@ -79,6 +83,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-phone-input-8",
 				label: "Read-Only",
 				anchor: "read-only",
+				part: null,
 				file: "phone-input-8",
 				source:
 					'import * as React from "react";\nimport { PhoneInput } from "@workspace/ui/components/phone-input";\n\nexport function PhoneInput8Example(): React.JSX.Element {\n\treturn <PhoneInput readOnly value="+12125551234" placeholder="Enter phone number" />;\n}\n',

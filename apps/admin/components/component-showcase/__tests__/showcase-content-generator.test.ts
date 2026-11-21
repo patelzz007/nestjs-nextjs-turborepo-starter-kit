@@ -65,6 +65,7 @@ const FEATURE: GeneratedFeature = {
 	export: "Kbd1Example",
 	anchor: "basic",
 	source: "export function Kbd1Example() {}\n",
+	part: null,
 };
 
 const COMPONENTS: readonly ComponentFeatures[] = readComponentFeatures(ROOT);
@@ -117,7 +118,7 @@ describe("showcase content generator", () => {
 
 	it("checks a docs page's API block and its examples", () => {
 		const docs = parseDocs("## Usage\n\n```showcase-example\nc-kbd-1\n```\n\n## API Reference\n\n```showcase-api\n```\n", "kbd/docs.md", [FEATURE]);
-		expect(docs.examples).toEqual([{ id: "c-kbd-1", label: "Basic", anchor: "basic", file: "kbd-1", source: FEATURE.source }]);
+		expect(docs.examples).toEqual([{ id: "c-kbd-1", label: "Basic", anchor: "basic", part: null, file: "kbd-1", source: FEATURE.source }]);
 		expect(() => parseDocs("## Usage\n\nNo API.\n", "kbd/docs.md", [FEATURE])).toThrow("needs exactly one ```showcase-api``` block (found 0)");
 		expect(() => parseDocs("## Usage\n\n```showcase-api\n```\n\n```showcase-example\nc-kbd-9\n```\n", "kbd/docs.md", [FEATURE])).toThrow('names "c-kbd-9"');
 	});

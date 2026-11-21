@@ -3,7 +3,17 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { EndpointAuthSchema, EndpointIndexSchema, type EndpointAuth, type EndpointRow } from "@workspace/docs-renderer/api-reference/endpoint-index";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { Badge, type BadgeVariant } from "@workspace/ui/components/badge";
-import { DataTable, type DataTableFeatures, type Filter, type FilterOption } from "@workspace/ui/components/data-table";
+import {
+	DataTable,
+	type DataTableEmptyState,
+	type DataTableFeatures,
+	type DataTableFilter,
+	type DataTableFilterOption,
+	type DataTablePaging,
+	type DataTableSearch,
+	type DataTableStatus,
+	type DataTableToolbar,
+} from "@workspace/ui/components/data-table";
 import { createElement, useMemo, type ReactElement } from "react";
 
 import { docIcon, iconComponent, type IconName } from "@/lib/icons";
@@ -11,7 +21,20 @@ import { docIcon, iconComponent, type IconName } from "@/lib/icons";
 /** Where the build writes the index (src/routes/api-endpoints[.]json.ts). */
 export const ENDPOINTS_URL = "/api-endpoints.json";
 const ENDPOINTS_QUERY_KEY: readonly ["docs", "endpoints"] = ["docs", "endpoints"];
-const PAGE_SIZE = 25;
+
+/** 25 endpoints a page to start with. */
+const PAGING: DataTablePaging = { pageSize: 25, pageSizeOptions: [10, 25, 50, 100] };
+/** The search box matches the path, the summary and the group. */
+const SEARCH: DataTableSearch<EndpointRow> = { keys: ["path", "summary", "group"] };
+/** The filters are this table's main controls, so they share the toolbar row equally with the search. */
+const TOOLBAR: DataTableToolbar = { layout: "fill" };
+const LOADING_STATUS: DataTableStatus = { loading: "initial" };
+const EMPTY_STATE: DataTableEmptyState = { title: "No endpoint matches", description: "Clear a filter or search for part of a path, such as tenants." };
+
+/** A method and a path name one operation. */
+export function endpointRowId(row: EndpointRow): string {
+	return `${row.method} ${row.path}`;
+}
 
 export const AUTH_LABELS: Readonly<Record<EndpointAuth, string>> = {
 	public: "Public",
@@ -61,7 +84,7 @@ export function optionsOf(
 	pick: (row: EndpointRow) => string,
 	label: (value: string) => string = (value) => value,
 	icon?: (value: string) => IconName,
-): readonly FilterOption[] {
+): readonly DataTableFilterOption[] {
 	return [...new Set(rows.map(pick))].sort().map((value) => {
 		const option = { value, label: label(value) };
 		return icon === undefined ? option : { ...option, icon: createElement(iconComponent(icon(value)), { size: FILTER_ICON_SIZE }) };
@@ -119,9 +142,10 @@ export function EndpointsExplorer(): ReactElement {
 	const rows = useMemo(() => query.data ?? [], [query.data]);
 	const groupIcons = useMemo((): ReadonlyMap<string, IconName> => new Map(rows.map((row) => [row.group, groupIcon(row)])), [rows]);
 	const filters = useMemo(
-		(): Filter[] => [
+		(): DataTableFilter[] => [
 			{
-				key: "method",
+				kind: "select",
+				column: "method",
 				label: "Method",
 				options: optionsOf(
 					rows,
@@ -130,7 +154,8 @@ export function EndpointsExplorer(): ReactElement {
 				),
 			},
 			{
-				key: "auth",
+				kind: "select",
+				column: "auth",
 				label: "Access",
 				options: optionsOf(
 					rows,
@@ -140,7 +165,8 @@ export function EndpointsExplorer(): ReactElement {
 				),
 			},
 			{
-				key: "group",
+				kind: "select",
+				column: "group",
 				label: "Group",
 				options: optionsOf(
 					rows,
@@ -166,12 +192,13 @@ export function EndpointsExplorer(): ReactElement {
 		<DataTable
 			columns={COLUMNS}
 			data={rows}
+			getRowId={endpointRowId}
 			filters={filters}
-			searchKeys={["path", "summary", "group"]}
-			toolbarLayout="fill"
-			pageSize={PAGE_SIZE}
-			isLoading={query.isPending}
-			emptyState={{ title: "No endpoint matches", description: "Clear a filter or search for part of a path, such as tenants." }}
+			search={SEARCH}
+			toolbar={TOOLBAR}
+			paging={PAGING}
+			status={query.isPending ? LOADING_STATUS : undefined}
+			emptyState={EMPTY_STATE}
 		/>
 	);
 }

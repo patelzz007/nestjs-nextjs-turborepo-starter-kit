@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/rich-text-editor/rich-text-editor-1").then((m) => m.RichTextEditor1Example), {
 	loading: FeatureLoading,
@@ -34,6 +34,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rich-text-editor-1",
 		label: "Broadcast Toolbar",
 		anchor: "broadcast-toolbar",
+		part: null,
 		description: "A rich text editor with a full toolbar: undo, headings, marks, lists, links and alignment. Best for composing long formatted content.",
 		file: "rich-text-editor-1",
 		source:
@@ -44,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-rich-text-editor-2",
 		label: "With Live Preview",
 		anchor: "with-live-preview",
+		part: null,
 		description: "A compact editor beside a live read only preview of the same document. Best for composing a message while seeing exactly how it will look.",
 		file: "rich-text-editor-2",
 		source:
@@ -89,6 +91,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function RichTextEditorFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function RichTextEditorFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

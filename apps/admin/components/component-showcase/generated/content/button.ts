@@ -60,6 +60,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-1",
 				label: "Default",
 				anchor: "default",
+				part: null,
 				file: "button-1",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Button1Example(): React.JSX.Element {\n\treturn <Button>Default</Button>;\n}\n',
@@ -68,6 +69,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-3",
 				label: "Outline",
 				anchor: "outline",
+				part: null,
 				file: "button-3",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Button3Example(): React.JSX.Element {\n\treturn <Button variant="outline">Outline</Button>;\n}\n',
@@ -76,6 +78,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-11",
 				label: "Icon Button",
 				anchor: "icon-button",
+				part: null,
 				file: "button-11",
 				source:
 					'import * as React from "react";\nimport { SearchIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Button11Example(): React.JSX.Element {\n\treturn (\n\t\t<Button size="icon" aria-label="Search">\n\t\t\t<SearchIcon aria-hidden="true" />\n\t\t</Button>\n\t);\n}\n',
@@ -84,6 +87,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-14",
 				label: "Icon Left",
 				anchor: "icon-left",
+				part: null,
 				file: "button-14",
 				source:
 					'import * as React from "react";\nimport { CloudDownloadIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Button14Example(): React.JSX.Element {\n\treturn (\n\t\t<Button>\n\t\t\t<CloudDownloadIcon aria-hidden="true" />\n\t\t\tDownload\n\t\t</Button>\n\t);\n}\n',
@@ -92,6 +96,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-13",
 				label: "Loading State",
 				anchor: "loading-state",
+				part: null,
 				file: "button-13",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Spinner } from "@workspace/ui/components/spinner";\n\nexport function Button13Example(): React.JSX.Element {\n\treturn (\n\t\t<Button disabled>\n\t\t\t<Spinner aria-hidden="true" />\n\t\t\tPlease wait\n\t\t</Button>\n\t);\n}\n',
@@ -100,6 +105,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-15",
 				label: "Invalid State",
 				anchor: "invalid-state",
+				part: null,
 				file: "button-15",
 				source:
 					'import * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Button15Example(): React.JSX.Element {\n\treturn <Button aria-invalid="true">Invalid State</Button>;\n}\n',
@@ -108,6 +114,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-button-27",
 				label: "Next Link",
 				anchor: "next-link",
+				part: null,
 				file: "button-27",
 				source:
 					'import Link from "next/link";\nimport type * as React from "react";\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Button27Example(): React.JSX.Element {\n\treturn (\n\t\t<Button render={<Link href="/" />} nativeButton={false}>\n\t\t\tBack to Home\n\t\t</Button>\n\t);\n}\n',

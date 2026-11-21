@@ -1,6 +1,6 @@
 ## Installation
 
-The toast parts ship with the kit in `packages/ui/src/components/toast.tsx`, built on Base UI's toast. The app already mounts a `Toaster` in `apps/admin/app/layout.tsx`.
+The toast parts ship with the kit in `packages/ui/src/components/toast.tsx`, built on Base UI's toast. The app already mounts one `Toaster` at its root, so a page only calls `toastMessage`.
 
 ```showcase-example
 c-sonner-1

@@ -3,7 +3,7 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { CHART_LOADING, type ChartFrameState } from "../analytics-panel";
 import { SeriesTooltip, TimeSeriesChart, type TimeSeriesDefinition, type TimeSeriesPoint } from "../time-series-chart";

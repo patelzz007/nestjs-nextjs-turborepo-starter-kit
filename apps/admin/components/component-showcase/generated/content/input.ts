@@ -48,6 +48,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "input-1",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\n\nexport function Input1Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="max-w-xs">\n\t\t\t<Input id="basic-input" type="text" placeholder="Basic Input" />\n\t\t</Field>\n\t);\n}\n',
@@ -56,6 +57,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-3",
 				label: "With Description",
 				anchor: "with-description",
+				part: null,
 				file: "input-3",
 				source:
 					'import * as React from "react";\nimport { Field, FieldDescription, FieldLabel } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\n\nexport function Input3Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="max-w-xs">\n\t\t\t<FieldLabel htmlFor="input-demo-username">Username</FieldLabel>\n\t\t\t<Input id="input-demo-username" type="text" placeholder="Enter your username" />\n\t\t\t<FieldDescription>Choose a unique username for your account.</FieldDescription>\n\t\t</Field>\n\t);\n}\n',
@@ -64,6 +66,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-5",
 				label: "Error Message",
 				anchor: "error-message",
+				part: null,
 				file: "input-5",
 				source:
 					'import * as React from "react";\nimport { Field, FieldError, FieldLabel } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\n\nexport function Input5Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="max-w-xs">\n\t\t\t<FieldLabel htmlFor="input-demo-error">Email</FieldLabel>\n\t\t\t<Input id="input-demo-error" type="email" placeholder="name@example.com" aria-invalid="true" />\n\t\t\t<FieldError>Please enter a valid email address.</FieldError>\n\t\t</Field>\n\t);\n}\n',
@@ -72,6 +75,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-6",
 				label: "Character Counter",
 				anchor: "character-counter",
+				part: null,
 				file: "input-6",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { useCallback, useState } from "react";\n\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\n\n/** The longest description the field accepts. */\nconst maxLength = 50;\n\nexport function Input6Example(): React.JSX.Element {\n\tconst [value, setValue] = useState("");\n\n\tconst handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {\n\t\tsetValue(event.target.value);\n\t}, []);\n\n\treturn (\n\t\t<Field className="max-w-xs">\n\t\t\t<div className="flex items-center justify-between">\n\t\t\t\t<FieldLabel htmlFor="bio">Description</FieldLabel>\n\t\t\t\t<span className="text-xs text-muted-foreground">\n\t\t\t\t\t{String(value.length)}/{String(maxLength)}\n\t\t\t\t</span>\n\t\t\t</div>\n\t\t\t<Input id="bio" maxLength={maxLength} value={value} onChange={handleChange} placeholder="Description of your project" />\n\t\t</Field>\n\t);\n}\n',
@@ -80,6 +84,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-input-12",
 				label: "File",
 				anchor: "file",
+				part: null,
 				file: "input-12",
 				source:
 					'import * as React from "react";\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\n\nexport function Input12Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="max-w-xs">\n\t\t\t<FieldLabel htmlFor="input-demo-file">File</FieldLabel>\n\t\t\t<Input id="input-demo-file" type="file" />\n\t\t</Field>\n\t);\n}\n',

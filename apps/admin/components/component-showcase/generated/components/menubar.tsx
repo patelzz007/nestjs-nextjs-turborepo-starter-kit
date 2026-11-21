@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/menubar/menubar-1").then((m) => m.Menubar1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/menubar/menubar-2").then((m) => m.Menubar2Example), { loading: FeatureLoading });
@@ -25,6 +25,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-menubar-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic menubar.. Best for file and Edit lists of plain text rows with key hints, dividers and a disabled New Incognito Window.",
 		file: "menubar-1",
 		source:
@@ -35,6 +36,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-menubar-2",
 		label: "Submenus",
 		anchor: "submenus",
+		part: null,
 		description: "Menubar with dropdown submenus.. Best for a side flyout in each list, Share with 3 channels under File and Find with 3 search commands under Edit.",
 		file: "menubar-2",
 		source:
@@ -45,6 +47,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-menubar-3",
 		label: "Checkbox & Radio",
 		anchor: "checkbox-radio",
+		part: null,
 		description: "Menubar with checkbox & radio items.. Best for a View list of 2 browser toggles beside a Theme list whose Light, Dark or System pick is held in state.",
 		file: "menubar-3",
 		source:
@@ -55,6 +58,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-menubar-4",
 		label: "Icons",
 		anchor: "icons",
+		part: null,
 		description: "Menubar with icons.. Best for a leading icon on every row, with Profile and a destructive Sign out grouped under Account.",
 		file: "menubar-4",
 		source:
@@ -65,6 +69,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-menubar-5",
 		label: "Formatting & Media",
 		anchor: "formatting-media",
+		part: null,
 		description: "Menubar for formatting and media.. Best for bold and Italic rows, Strikethrough and Code toggles and an Insert list with a Media flyout and Link.",
 		file: "menubar-5",
 		source:
@@ -110,6 +115,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function MenubarFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function MenubarFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

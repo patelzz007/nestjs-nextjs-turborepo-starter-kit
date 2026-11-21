@@ -40,9 +40,18 @@ export interface LazySectionProps {
 	 * each load their own code (a showcase page's examples).
 	 */
 	readonly commit?: LazySectionCommit;
+	/**
+	 * Whether the content stays mounted once shown. `always` (the default) never unmounts it, so scrolling back never
+	 * loads it again. `near-viewport` unmounts it again once it is farther than `rootMargin` from the viewport, holding
+	 * its last height so nothing shifts: for a long page of heavy sections (a showcase page of live tables), where
+	 * keeping every section that was ever scrolled past would leave dozens running at once.
+	 */
+	readonly retain?: LazySectionRetain;
 }
 
 export type LazySectionCommit = "transition" | "urgent";
+
+export type LazySectionRetain = "always" | "near-viewport";
 
 /** Overflow values that make an element scroll its content (and clip what lies outside it). */
 const SCROLLING_OVERFLOW = /(auto|scroll|overlay)/u;
@@ -100,16 +109,27 @@ const REVEAL_CLASS_NAMES: Readonly<Record<LazySectionReveal, string | undefined>
  * in the scroll path. Do NOT wrap a `LazySection` inside a `display: none`
  * container (closed tab/accordion) — it would never trigger until shown.
  */
-export function LazySection({ height, children, rootMargin = "300px 0px", placeholder, reveal = "animate", commit = "transition" }: LazySectionProps): React.JSX.Element {
+export function LazySection({
+	height,
+	children,
+	rootMargin = "300px 0px",
+	placeholder,
+	reveal = "animate",
+	commit = "transition",
+	retain = "always",
+}: LazySectionProps): React.JSX.Element {
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const [hasIntersected, setHasIntersected] = React.useState(false);
+	// The height the content had when it last unmounted (`near-viewport` only), held so the page does not shift.
+	const [heldHeight, setHeldHeight] = React.useState<number | null>(null);
 	const isClient = useIsClient();
 	const lacksIntersectionObserver = isClient && !hasGlobalConstructor("IntersectionObserver");
 	const visible = hasIntersected || lacksIntersectionObserver;
+	const keepsObserving = retain === "near-viewport";
 
 	React.useEffect(() => {
 		const node = containerRef.current;
-		if (node === null || visible || !hasGlobalConstructor("IntersectionObserver")) {
+		if (node === null || (visible && !keepsObserving) || !hasGlobalConstructor("IntersectionObserver")) {
 			return undefined;
 		}
 
@@ -125,7 +145,12 @@ export function LazySection({ height, children, rootMargin = "300px 0px", placeh
 							setHasIntersected(true);
 						});
 					}
-					observer.disconnect();
+					if (!keepsObserving) {
+						observer.disconnect();
+					}
+				} else if (keepsObserving) {
+					setHeldHeight(node.offsetHeight);
+					setHasIntersected(false);
 				}
 			},
 			{ root: scrollParentOf(node), rootMargin },
@@ -134,11 +159,22 @@ export function LazySection({ height, children, rootMargin = "300px 0px", placeh
 		return (): void => {
 			observer.disconnect();
 		};
-	}, [visible, rootMargin, commit]);
+	}, [visible, keepsObserving, rootMargin, commit]);
 
+	if (visible) {
+		return (
+			<div ref={containerRef}>
+				<div className={REVEAL_CLASS_NAMES[reveal]}>{children}</div>
+			</div>
+		);
+	}
 	return (
 		<div ref={containerRef}>
-			{visible ? <div className={REVEAL_CLASS_NAMES[reveal]}>{children}</div> : <div aria-hidden="true">{placeholder ?? <SectionBones height={height} />}</div>}
+			{heldHeight === null ? (
+				<div aria-hidden="true">{placeholder ?? <SectionBones height={height} />}</div>
+			) : (
+				<div aria-hidden="true" data-lazy-section-held="" style={{ height: heldHeight }} />
+			)}
 		</div>
 	);
 }

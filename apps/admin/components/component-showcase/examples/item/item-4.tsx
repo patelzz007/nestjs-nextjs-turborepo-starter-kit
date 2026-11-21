@@ -8,7 +8,7 @@ import { ROUTES } from "@/lib/routes";
 /** Each row is a real link into the admin app (reui's sample used `href="#"`). */
 const PROFILE_LINK: React.JSX.Element = <Link href={ROUTES.account.profile} />;
 const SECURITY_LINK: React.JSX.Element = <Link href={ROUTES.account.security} />;
-const ACTIVITY_LINK: React.JSX.Element = <Link href={ROUTES.auditLogs.list} />;
+const ACTIVITY_LINK: React.JSX.Element = <Link href={ROUTES.analytics.index} />;
 
 export function Item4Example(): React.JSX.Element {
 	return (

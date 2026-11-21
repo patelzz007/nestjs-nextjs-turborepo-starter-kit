@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/trace/trace-5").then((m) => m.Trace5Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/trace/trace-6").then((m) => m.Trace6Example), { loading: FeatureLoading });
@@ -42,6 +42,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-5",
 		label: "Change Approval",
 		anchor: "change-approval",
+		part: null,
 		description: "Terraform change approval. Best for a human approval gate where planned resource rows switch from pending to running to applied in place after Apply.",
 		file: "trace-5",
 		source:
@@ -52,6 +53,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-6",
 		label: "Cited Sources",
 		anchor: "cited-sources",
+		part: null,
 		description: "Answer with citations. Best for inline citation buttons wired to a controlled sources row, focusing the cited link once its panel mounts.",
 		file: "trace-6",
 		source:
@@ -62,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-7",
 		label: "Support Copilot",
 		anchor: "support-copilot",
+		part: null,
 		description: "Support copilot draft. Best for a drafted support reply in its own row after 3 order and policy lookups, with Insert and Regenerate below.",
 		file: "trace-7",
 		source:
@@ -72,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-10",
 		label: "Request Spans",
 		anchor: "request-spans",
+		part: null,
 		description: "Distributed trace spans. Best for spans nested under their parent, each opening to its OpenTelemetry attributes, with the slowest span marked by its share.",
 		file: "trace-10",
 		source:
@@ -82,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-13",
 		label: "Data Pipeline",
 		anchor: "data-pipeline",
+		part: null,
 		description: "Data pipeline run. Best for built models folded into one row, a failing data test open on its duplicate keys, and a skipped downstream model.",
 		file: "trace-13",
 		source:
@@ -92,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-15",
 		label: "CSV Import",
 		anchor: "csv-import",
+		part: null,
 		description: "CSV import. Best for a spreadsheet upload whose last step counts up live while rejected rows sit in a Table with a download link.",
 		file: "trace-15",
 		source:
@@ -102,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-16",
 		label: "Security Audit",
 		anchor: "security-audit",
+		part: null,
 		description: "Dependency audit. Best for a list of 3 advisories with severity badges, each opening to its dependency chain and the one action that fixes it.",
 		file: "trace-16",
 		source:
@@ -112,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-18",
 		label: "Eval Results",
 		anchor: "eval-results",
+		part: null,
 		description: "Model eval results. Best for scored cases with a failures only switch, each failure opening to a compact expected, got and judge list.",
 		file: "trace-18",
 		source:
@@ -122,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-19",
 		label: "Access Decision",
 		anchor: "access-decision",
+		part: null,
 		description: "Access decision. Best for a permission decision as the parent row of its rules, recomputed from 2 Selects, with rules after the decider not reached.",
 		file: "trace-19",
 		source:
@@ -132,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-20",
 		label: "Identity Review",
 		anchor: "identity-review",
+		part: null,
 		description: "Identity verification. Best for an applicant review with automated document and screening checks, one rejection and a request for a new document.",
 		file: "trace-20",
 		source:
@@ -142,6 +152,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-21",
 		label: "Domain Setup",
 		anchor: "domain-setup",
+		part: null,
 		description: "Domain DNS setup. Best for a setup checklist with copyable DNS records, a lookup per record, then a pending go live step.",
 		file: "trace-21",
 		source:
@@ -152,6 +163,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-22",
 		label: "Transcode",
 		anchor: "transcode",
+		part: null,
 		description: "Media transcode. Best for a media pipeline with 3 renditions encoding in parallel under one row, followed by thumbnail and publish steps.",
 		file: "trace-22",
 		source:
@@ -162,6 +174,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-1",
 		label: "Agent Steps",
 		anchor: "agent-steps",
+		part: null,
 		description: "Agent steps. Best for a plain search line, a diff and test output that expand, a lint failure and a running fix, in one bare column.",
 		file: "trace-1",
 		source:
@@ -172,6 +185,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-2",
 		label: "Streaming Run",
 		anchor: "streaming-run",
+		part: null,
 		description: "Streaming agent run. Best for a run that streams its reasoning and resolves tool steps on a timer, with a Stop button and live rows that open themselves.",
 		file: "trace-2",
 		source:
@@ -182,16 +196,18 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-3",
 		label: "Chat Turn",
 		anchor: "chat-turn",
+		part: null,
 		description: "Chat turn with sources. Best for a chat transcript turn whose 2 SQL queries fold into one summary row above the answer, with cited dashboards below.",
 		file: "trace-3",
 		source:
-			'import { ChartLineIcon, ChevronRightIcon, DatabaseIcon } from "lucide-react";\nimport Link from "next/link";\nimport type * as React from "react";\n\nimport { Bubble, BubbleContent } from "@workspace/ui/components/bubble";\nimport { CodeBlock } from "@workspace/ui/components/code-block";\nimport { Message, MessageContent } from "@workspace/ui/components/message";\nimport { Trace, TraceCollapsible, TraceCollapsibleContent, TraceCollapsibleTrigger, TraceDescription, TraceIcon, TraceLine, TraceTitle } from "@workspace/ui/components/trace";\n\nimport { ROUTES } from "@/lib/routes";\nimport { appRoute } from "@workspace/client/lib/navigation/app-route";\n\ninterface Query {\n\treadonly id: string;\n\treadonly title: string;\n\treadonly description: string;\n\treadonly sql: string;\n}\n\ninterface Dashboard {\n\treadonly title: string;\n\treadonly href: string;\n}\n\nconst QUERIES: readonly Query[] = [\n\t{\n\t\tid: "by-day",\n\t\ttitle: "Queried trial signups by day",\n\t\tdescription: "28 rows",\n\t\tsql: `select date_trunc(\'day\', created_at) as day, count(*)\nfrom trials\nwhere created_at >= current_date - 27\ngroup by 1 order by 1`,\n\t},\n\t{\n\t\tid: "by-domain",\n\t\ttitle: "Queried bounces by email domain",\n\t\tdescription: "12 rows",\n\t\tsql: `select split_part(email, \'@\', 2) as domain, count(*)\nfrom verification_attempts\nwhere status = \'bounced\' and created_at::date = \'2026-10-06\'\ngroup by 1 order by 2 desc limit 12`,\n\t},\n];\n\n// The sources link to this admin\'s own pages: the analytics dashboard and the\n// email delivery log.\nconst DASHBOARDS: readonly Dashboard[] = [\n\t{ title: "Activation funnel, weekly", href: ROUTES.analytics.index },\n\t{ title: "Email delivery health", href: ROUTES.emails.log },\n];\n\n// The work folds into one row above the answer and the sources sit below it.\n// keepMounted keeps an opened query open when the summary folds.\nexport function Trace3Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex w-full max-w-md flex-col gap-6 text-sm">\n\t\t\t<Message align="end">\n\t\t\t\t<MessageContent>\n\t\t\t\t\t<Bubble align="end" variant="muted">\n\t\t\t\t\t\t<BubbleContent>Why did trial signups drop last Tuesday?</BubbleContent>\n\t\t\t\t\t</Bubble>\n\t\t\t\t</MessageContent>\n\t\t\t</Message>\n\t\t\t<Message>\n\t\t\t\t<MessageContent>\n\t\t\t\t\t<div className="flex flex-col gap-4">\n\t\t\t\t\t\t<Trace>\n\t\t\t\t\t\t\t<TraceCollapsible defaultOpen>\n\t\t\t\t\t\t\t\t<TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t\t<TraceLine>\n\t\t\t\t\t\t\t\t\t\t<TraceTitle>Worked for 38s</TraceTitle>\n\t\t\t\t\t\t\t\t\t\t<TraceDescription>{QUERIES.length} queries</TraceDescription>\n\t\t\t\t\t\t\t\t\t</TraceLine>\n\t\t\t\t\t\t\t\t</TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t<TraceCollapsibleContent keepMounted>\n\t\t\t\t\t\t\t\t\t<Trace>\n\t\t\t\t\t\t\t\t\t\t{QUERIES.map((query: Query): React.JSX.Element => (\n\t\t\t\t\t\t\t\t\t\t\t<TraceCollapsible key={query.id}>\n\t\t\t\t\t\t\t\t\t\t\t\t<TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceLine>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceIcon>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<DatabaseIcon />\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t</TraceIcon>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceTitle>{query.title}</TraceTitle>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceDescription>{query.description}</TraceDescription>\n\t\t\t\t\t\t\t\t\t\t\t\t\t</TraceLine>\n\t\t\t\t\t\t\t\t\t\t\t\t</TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t\t\t\t\t<TraceCollapsibleContent>\n\t\t\t\t\t\t\t\t\t\t\t\t\t<CodeBlock code={query.sql} language="sql" label={query.title} wrap />\n\t\t\t\t\t\t\t\t\t\t\t\t</TraceCollapsibleContent>\n\t\t\t\t\t\t\t\t\t\t\t</TraceCollapsible>\n\t\t\t\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t\t\t\t</Trace>\n\t\t\t\t\t\t\t\t</TraceCollapsibleContent>\n\t\t\t\t\t\t\t</TraceCollapsible>\n\t\t\t\t\t\t</Trace>\n\t\t\t\t\t\t<p className="leading-relaxed text-pretty">Signups fell 41% because verification emails to Gmail bounced for 4 hours after the DKIM record broke.</p>\n\t\t\t\t\t\t<Trace>\n\t\t\t\t\t\t\t<TraceCollapsible>\n\t\t\t\t\t\t\t\t<TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t\t<TraceLine>\n\t\t\t\t\t\t\t\t\t\t<TraceIcon>\n\t\t\t\t\t\t\t\t\t\t\t<ChartLineIcon />\n\t\t\t\t\t\t\t\t\t\t</TraceIcon>\n\t\t\t\t\t\t\t\t\t\t<TraceTitle>Used {DASHBOARDS.length} dashboards</TraceTitle>\n\t\t\t\t\t\t\t\t\t</TraceLine>\n\t\t\t\t\t\t\t\t</TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t<TraceCollapsibleContent>\n\t\t\t\t\t\t\t\t\t<Trace>\n\t\t\t\t\t\t\t\t\t\t{DASHBOARDS.map((dashboard: Dashboard): React.JSX.Element => (\n\t\t\t\t\t\t\t\t\t\t\t<Link key={dashboard.title} href={appRoute(dashboard.href)}>\n\t\t\t\t\t\t\t\t\t\t\t\t<TraceLine>\n\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceTitle>{dashboard.title}</TraceTitle>\n\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceIcon>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t<ChevronRightIcon />\n\t\t\t\t\t\t\t\t\t\t\t\t\t</TraceIcon>\n\t\t\t\t\t\t\t\t\t\t\t\t</TraceLine>\n\t\t\t\t\t\t\t\t\t\t\t</Link>\n\t\t\t\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t\t\t\t</Trace>\n\t\t\t\t\t\t\t\t</TraceCollapsibleContent>\n\t\t\t\t\t\t\t</TraceCollapsible>\n\t\t\t\t\t\t</Trace>\n\t\t\t\t\t</div>\n\t\t\t\t</MessageContent>\n\t\t\t</Message>\n\t\t</div>\n\t);\n}\n',
+			'import { ChartLineIcon, ChevronRightIcon, DatabaseIcon } from "lucide-react";\nimport Link from "next/link";\nimport type * as React from "react";\n\nimport { Bubble, BubbleContent } from "@workspace/ui/components/bubble";\nimport { CodeBlock } from "@workspace/ui/components/code-block";\nimport { Message, MessageContent } from "@workspace/ui/components/message";\nimport { Trace, TraceCollapsible, TraceCollapsibleContent, TraceCollapsibleTrigger, TraceDescription, TraceIcon, TraceLine, TraceTitle } from "@workspace/ui/components/trace";\n\nimport { ROUTES } from "@/lib/routes";\n\ninterface Query {\n\treadonly id: string;\n\treadonly title: string;\n\treadonly description: string;\n\treadonly sql: string;\n}\n\nconst QUERIES: readonly Query[] = [\n\t{\n\t\tid: "by-day",\n\t\ttitle: "Queried trial signups by day",\n\t\tdescription: "28 rows",\n\t\tsql: `select date_trunc(\'day\', created_at) as day, count(*)\nfrom trials\nwhere created_at >= current_date - 27\ngroup by 1 order by 1`,\n\t},\n\t{\n\t\tid: "by-domain",\n\t\ttitle: "Queried bounces by email domain",\n\t\tdescription: "12 rows",\n\t\tsql: `select split_part(email, \'@\', 2) as domain, count(*)\nfrom verification_attempts\nwhere status = \'bounced\' and created_at::date = \'2026-10-06\'\ngroup by 1 order by 2 desc limit 12`,\n\t},\n];\n\n/** One cited dashboard\'s row: its title and an arrow, inside the link to it. */\nfunction DashboardLine({ title }: { readonly title: string }): React.JSX.Element {\n\treturn (\n\t\t<TraceLine>\n\t\t\t<TraceTitle>{title}</TraceTitle>\n\t\t\t<TraceIcon>\n\t\t\t\t<ChevronRightIcon />\n\t\t\t</TraceIcon>\n\t\t</TraceLine>\n\t);\n}\n\n// The work folds into one row above the answer and the sources sit below it.\n// keepMounted keeps an opened query open when the summary folds.\nexport function Trace3Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex w-full max-w-md flex-col gap-6 text-sm">\n\t\t\t<Message align="end">\n\t\t\t\t<MessageContent>\n\t\t\t\t\t<Bubble align="end" variant="muted">\n\t\t\t\t\t\t<BubbleContent>Why did trial signups drop last Tuesday?</BubbleContent>\n\t\t\t\t\t</Bubble>\n\t\t\t\t</MessageContent>\n\t\t\t</Message>\n\t\t\t<Message>\n\t\t\t\t<MessageContent>\n\t\t\t\t\t<div className="flex flex-col gap-4">\n\t\t\t\t\t\t<Trace>\n\t\t\t\t\t\t\t<TraceCollapsible defaultOpen>\n\t\t\t\t\t\t\t\t<TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t\t<TraceLine>\n\t\t\t\t\t\t\t\t\t\t<TraceTitle>Worked for 38s</TraceTitle>\n\t\t\t\t\t\t\t\t\t\t<TraceDescription>{QUERIES.length} queries</TraceDescription>\n\t\t\t\t\t\t\t\t\t</TraceLine>\n\t\t\t\t\t\t\t\t</TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t<TraceCollapsibleContent keepMounted>\n\t\t\t\t\t\t\t\t\t<Trace>\n\t\t\t\t\t\t\t\t\t\t{QUERIES.map((query: Query): React.JSX.Element => (\n\t\t\t\t\t\t\t\t\t\t\t<TraceCollapsible key={query.id}>\n\t\t\t\t\t\t\t\t\t\t\t\t<TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceLine>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceIcon>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<DatabaseIcon />\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t</TraceIcon>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceTitle>{query.title}</TraceTitle>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t<TraceDescription>{query.description}</TraceDescription>\n\t\t\t\t\t\t\t\t\t\t\t\t\t</TraceLine>\n\t\t\t\t\t\t\t\t\t\t\t\t</TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t\t\t\t\t<TraceCollapsibleContent>\n\t\t\t\t\t\t\t\t\t\t\t\t\t<CodeBlock code={query.sql} language="sql" label={query.title} wrap />\n\t\t\t\t\t\t\t\t\t\t\t\t</TraceCollapsibleContent>\n\t\t\t\t\t\t\t\t\t\t\t</TraceCollapsible>\n\t\t\t\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t\t\t\t</Trace>\n\t\t\t\t\t\t\t\t</TraceCollapsibleContent>\n\t\t\t\t\t\t\t</TraceCollapsible>\n\t\t\t\t\t\t</Trace>\n\t\t\t\t\t\t<p className="leading-relaxed text-pretty">Signups fell 41% because verification emails to Gmail bounced for 4 hours after the DKIM record broke.</p>\n\t\t\t\t\t\t<Trace>\n\t\t\t\t\t\t\t<TraceCollapsible>\n\t\t\t\t\t\t\t\t<TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t\t<TraceLine>\n\t\t\t\t\t\t\t\t\t\t<TraceIcon>\n\t\t\t\t\t\t\t\t\t\t\t<ChartLineIcon />\n\t\t\t\t\t\t\t\t\t\t</TraceIcon>\n\t\t\t\t\t\t\t\t\t\t<TraceTitle>Used 2 dashboards</TraceTitle>\n\t\t\t\t\t\t\t\t\t</TraceLine>\n\t\t\t\t\t\t\t\t</TraceCollapsibleTrigger>\n\t\t\t\t\t\t\t\t<TraceCollapsibleContent>\n\t\t\t\t\t\t\t\t\t{/* The sources link to the app\'s own pages: its analytics dashboard and its overview. */}\n\t\t\t\t\t\t\t\t\t<Trace>\n\t\t\t\t\t\t\t\t\t\t<Link href={ROUTES.analytics.index}>\n\t\t\t\t\t\t\t\t\t\t\t<DashboardLine title="Activation funnel, weekly" />\n\t\t\t\t\t\t\t\t\t\t</Link>\n\t\t\t\t\t\t\t\t\t\t<Link href={ROUTES.home}>\n\t\t\t\t\t\t\t\t\t\t\t<DashboardLine title="Platform overview" />\n\t\t\t\t\t\t\t\t\t\t</Link>\n\t\t\t\t\t\t\t\t\t</Trace>\n\t\t\t\t\t\t\t\t</TraceCollapsibleContent>\n\t\t\t\t\t\t\t</TraceCollapsible>\n\t\t\t\t\t\t</Trace>\n\t\t\t\t\t</div>\n\t\t\t\t</MessageContent>\n\t\t\t</Message>\n\t\t</div>\n\t);\n}\n',
 		render: (): React.JSX.Element => <Example15 />,
 	},
 	{
 		id: "c-trace-4",
 		label: "Subagents",
 		anchor: "subagents",
+		part: null,
 		description: "Parallel subagents. Best for a parent row over 3 subagents whose status is computed from its children, plus a retry for the failed one.",
 		file: "trace-4",
 		source:
@@ -202,6 +218,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-8",
 		label: "Install Summary",
 		anchor: "install-summary",
+		part: null,
 		description: "CLI install summary. Best for a finished install summary with registry items, packages, created files as links, one kept file and a CSS diff.",
 		file: "trace-8",
 		source:
@@ -212,6 +229,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-9",
 		label: "CI Pipeline",
 		anchor: "ci-pipeline",
+		part: null,
 		description: "CI pipeline run. Best for a workflow run of 4 jobs where the failed test job opens to its log and a re-run replays test, build and deploy.",
 		file: "trace-9",
 		source:
@@ -222,6 +240,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-11",
 		label: "Error Breadcrumbs",
 		anchor: "error-breadcrumbs",
+		part: null,
 		description: "Error breadcrumbs. Best for an exception's timestamped user and network events, a response body in a Dialog and folded React stack lines.",
 		file: "trace-11",
 		source:
@@ -232,6 +251,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-12",
 		label: "Query Plan",
 		anchor: "query-plan",
+		part: null,
 		description: "SQL query plan. Best for a recursive tree of plan nodes, each opening to its numbers and children, with the slowest node flagged by its share.",
 		file: "trace-12",
 		source:
@@ -242,6 +262,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-14",
 		label: "Webhook Retries",
 		anchor: "webhook-retries",
+		part: null,
 		description: "Webhook delivery attempts. Best for a delivery log of failed and successful attempts, each opening to its response or payload, plus a Resend action.",
 		file: "trace-14",
 		source:
@@ -252,6 +273,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-trace-17",
 		label: "Review Findings",
 		anchor: "review-findings",
+		part: null,
 		description: "AI review findings. Best for flagged lines that each open in a Sheet with a suggested diff, then read as applied or dismissed in place.",
 		file: "trace-17",
 		source:
@@ -297,6 +319,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function TraceFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function TraceFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

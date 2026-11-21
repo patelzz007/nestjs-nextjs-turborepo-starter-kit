@@ -23,6 +23,8 @@ export interface ShowcaseDocsExample {
 	readonly id: string;
 	readonly label: string;
 	readonly anchor: string;
+	/** The page part the example runs on, or `null` when its component's page is not split. */
+	readonly part: string | null;
 	readonly file: string;
 	readonly source: string;
 }

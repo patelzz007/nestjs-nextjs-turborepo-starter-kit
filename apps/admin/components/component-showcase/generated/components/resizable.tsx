@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/resizable/resizable-1").then((m) => m.Resizable1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/resizable/resizable-2").then((m) => m.Resizable2Example), { loading: FeatureLoading });
@@ -34,6 +34,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-1",
 		label: "Horizontal Layout",
 		anchor: "horizontal-layout",
+		part: null,
 		description: "Horizontal resizable layout. Best for a header pane stacked over a content pane, split 25 to 75, with a plain line dragged up and down.",
 		file: "resizable-1",
 		source:
@@ -44,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-2",
 		label: "Vertical Layout",
 		anchor: "vertical-layout",
+		part: null,
 		description: "Vertical resizable layout.. Best for a sidebar beside a content pane, split 25 to 75, with a plain 1px divider dragged left and right.",
 		file: "resizable-2",
 		source:
@@ -54,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-3",
 		label: "Mixed Directions",
 		anchor: "mixed-directions",
+		part: null,
 		description:
 			"Nested mixed-direction resizable layout.. Best for a side pane beside a column that splits again into top and bottom, 3 panes in 2 directions on plain line dividers.",
 		file: "resizable-3",
@@ -65,6 +68,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-4",
 		label: "Nested Grips",
 		anchor: "nested-grips",
+		part: null,
 		description: "Nested resizable. Best for equal halves where the right half splits 25 to 75 top and bottom, on grip dividers with sizes written as percent strings.",
 		file: "resizable-4",
 		source:
@@ -75,6 +79,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-5",
 		label: "Animated Pill",
 		anchor: "animated-pill",
+		part: null,
 		description: "Handle with animated pill indicator. Best for a short pill on a 30 to 70 split that lengthens on hover, then grows longer and turns primary while pressed.",
 		file: "resizable-5",
 		source:
@@ -85,6 +90,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-6",
 		label: "Spring Pill",
 		anchor: "spring-pill",
+		part: null,
 		description:
 			"Handle pill with spring scale on drag. Best for a pill drawn at 75 percent scale that eases to full scale on hover, then stretches and turns primary while pressed.",
 		file: "resizable-6",
@@ -96,6 +102,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-7",
 		label: "Capsule Expansion",
 		anchor: "capsule-expansion",
+		part: null,
 		description:
 			"Handle with large capsule expansion on drag. Best for the longest press state: a pill that widens on hover and reaches 5rem while pressed, as the whole divider line tints primary.",
 		file: "resizable-7",
@@ -107,6 +114,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-8",
 		label: "Nested Pills",
 		anchor: "nested-pills",
+		part: null,
 		description:
 			"Nested layout with animated pill handles. Best for nav beside a toolbar over an editor, with an upright pill on the outer divider and a wide pill on the inner one.",
 		file: "resizable-8",
@@ -118,6 +126,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-9",
 		label: "Three Panels",
 		anchor: "three-panels",
+		part: null,
 		description:
 			"Three-panel layout with animated pill handles. Best for files, editor and preview in one row split 25, 50 and 25, with 2 pill handles and a minimum size on every pane.",
 		file: "resizable-9",
@@ -129,6 +138,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-resizable-10",
 		label: "Size Tracking",
 		anchor: "size-tracking",
+		part: null,
 		description: "State-tracked resizable layout.. Best for live percentage readouts in each pane, fed from the group layout callback into React state as the divider moves.",
 		file: "resizable-10",
 		source:
@@ -174,6 +184,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ResizableFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ResizableFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

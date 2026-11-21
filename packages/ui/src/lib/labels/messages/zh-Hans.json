@@ -242,7 +242,7 @@
 		"removeOptionFallback": "移除选项",
 		"selectedCount": "已选 {count} 项"
 	},
-	"dataGrid": {
+	"tableEngine": {
 		"sortAscending": "升序",
 		"sortDescending": "降序",
 		"pinColumnStart": "固定到左侧",
@@ -253,6 +253,7 @@
 		"unpinColumn": "取消固定“{title}”列",
 		"toggleColumns": "显示或隐藏列",
 		"rowCreate": "添加行",
+		"cellAddress": "单元格",
 		"pinRow": "固定行",
 		"unpinRow": "取消固定行",
 		"selectRow": "选择行",
@@ -327,7 +328,33 @@
 		"unpinColumnAriaLabel": "取消固定列",
 		"exportCurrentPage": "当前页（CSV）",
 		"exportCurrentPageDescription": "仅导出本页可见的行",
-		"loadingTableAriaLabel": "正在加载表格数据"
+		"loadingTableAriaLabel": "正在加载表格数据",
+		"filterAll": "全部",
+		"filterOptionCount": "{label} ({count})",
+		"retry": "重试",
+		"densityToggle": "密度",
+		"densityCompact": "紧凑",
+		"densityComfortable": "舒适",
+		"densitySpacious": "宽松",
+		"clearDateRange": "清除日期",
+		"rowActionPending": "{label}…",
+		"rowActionFailed": "{label}失败。重试",
+		"exportDialogTitle": "导出行",
+		"exportDialogFormat": "格式",
+		"exportDialogRows": "行",
+		"exportDialogColumns": "列",
+		"exportScopeSelected": "已勾选的行（{count}）",
+		"exportScopeMatching": "匹配的行（{count}）",
+		"exportScopeAll": "所有行（{count}）",
+		"exportDialogConfirm": "导出 {count} 行",
+		"exportDialogCancel": "取消",
+		"editUndo": "撤销",
+		"editRedo": "重做",
+		"cellEditFailed": "无法保存{column}。已恢复原值。",
+		"detailPanelLabel": "行详情",
+		"detailPanelClose": "关闭详情",
+		"detailPanelPrevious": "上一行",
+		"detailPanelNext": "下一行"
 	},
 	"datePicker": {
 		"dialog": "选择日期"

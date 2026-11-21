@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/frame/frame-1").then((m) => m.Frame1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/frame/frame-2").then((m) => m.Frame2Example), { loading: FeatureLoading });
@@ -39,6 +39,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic frame. Best for the full anatomy in placeholder copy, a title bar over one panel and a footer line, at full container width.",
 		file: "frame-1",
 		source:
@@ -49,6 +50,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-2",
 		label: "Separated Panels",
 		anchor: "separated-panels",
+		part: null,
 		description: "Frame with separated panels. Best for two panels under one title bar, each keeping its own rounded border with a small gap between them.",
 		file: "frame-2",
 		source:
@@ -59,6 +61,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-3",
 		label: "Stacked Panels",
 		anchor: "stacked-panels",
+		part: null,
 		description: "Frame with stacked panels. Best for two placeholder panels under a title bar, fused into one column where a single border marks the seam.",
 		file: "frame-3",
 		source:
@@ -69,6 +72,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-4",
 		label: "Stacked Dense",
 		anchor: "stacked-dense",
+		part: null,
 		description: "Frame with stacked panels and dense style. Best for two fused panels pulled flush onto the outer border, with no inset padding left around them.",
 		file: "frame-4",
 		source:
@@ -79,6 +83,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-5",
 		label: "Collapsible Panels",
 		anchor: "collapsible-panels",
+		part: null,
 		description: "Frame with collapsible panels. Best for one run step whose chevron title bar opens and closes its instructions panel, open on load.",
 		file: "frame-5",
 		source:
@@ -89,6 +94,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-6",
 		label: "Ghost Variant",
 		anchor: "ghost-variant",
+		part: null,
 		description: "Frame with ghost variant. Best for a shell with no outer border, where only the muted fill and the bordered panel inside mark its edge.",
 		file: "frame-6",
 		source:
@@ -99,6 +105,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-7",
 		label: "Dense Layout",
 		anchor: "dense-layout",
+		part: null,
 		description: "Frame with dense layout. Best for one panel flush with the outer border under a title bar, shown as a warehouse stock check in a narrow column.",
 		file: "frame-7",
 		source:
@@ -109,6 +116,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-8",
 		label: "Stacked Rows",
 		anchor: "stacked-rows",
+		part: null,
 		description: "Frame with stacked panels. Best for three service rows for auth, database and storage, fused into one column under a server logs title bar.",
 		file: "frame-8",
 		source:
@@ -119,6 +127,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-9",
 		label: "Extra Small Spacing",
 		anchor: "extra-small-spacing",
+		part: null,
 		description: "Frame with extra small spacing. Best for the tightest padding preset, 8px panel sides and the thinnest title and footer bars, in a 320px wide column.",
 		file: "frame-9",
 		source:
@@ -129,6 +138,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-10",
 		label: "Small Spacing",
 		anchor: "small-spacing",
+		part: null,
 		description: "Frame with small spacing. Best for the small padding preset, 12px panel sides, on a database health widget with a status footer.",
 		file: "frame-10",
 		source:
@@ -139,6 +149,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-11",
 		label: "Default Spacing",
 		anchor: "default-spacing",
+		part: null,
 		description: "Frame with default spacing. Best for the padding a Frame gets with no preset passed, 16px panel sides, around account security and a last login footer.",
 		file: "frame-11",
 		source:
@@ -149,6 +160,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-12",
 		label: "Large Spacing",
 		anchor: "large-spacing",
+		part: null,
 		description: "Frame with large spacing. Best for the roomiest padding preset, 20px panel sides and the tallest bars, for a sparse analytics summary.",
 		file: "frame-12",
 		source:
@@ -159,6 +171,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-13",
 		label: "Small Radius",
 		anchor: "small-radius",
+		part: null,
 		description: "Frame with small border radius. Best for corners pinned to the small radius token, the smallest override here, on a network diagnostics panel.",
 		file: "frame-13",
 		source:
@@ -169,6 +182,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-14",
 		label: "Medium Radius",
 		anchor: "medium-radius",
+		part: null,
 		description: "Frame with medium border radius. Best for corners pinned to the medium radius token, a step rounder than small, on a media storage panel.",
 		file: "frame-14",
 		source:
@@ -179,6 +193,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-15",
 		label: "Large Radius",
 		anchor: "large-radius",
+		part: null,
 		description: "Frame with large border radius. Best for corners pinned to the large radius token on a team panel showing members online.",
 		file: "frame-15",
 		source:
@@ -189,6 +204,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-16",
 		label: "Default Radius",
 		anchor: "default-radius",
+		part: null,
 		description: "Frame with the default border radius. Best for no radius override, so the corner follows the theme and matches a Card beside it.",
 		file: "frame-16",
 		source:
@@ -199,6 +215,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-17",
 		label: "Extra Large Radius",
 		anchor: "extra-large-radius",
+		part: null,
 		description: "Frame with extra large border radius. Best for the roundest override in the set, the 2xl radius token, softening a creative portfolio gallery panel.",
 		file: "frame-17",
 		source:
@@ -209,6 +226,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-18",
 		label: "Content-Only Panels",
 		anchor: "content-only-panels",
+		part: null,
 		description: "Frame with content-only panels. Best for two panels with no title bar or footer, kept apart by a small gap, as account and team summaries.",
 		file: "frame-18",
 		source:
@@ -219,6 +237,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-frame-19",
 		label: "Stacked Content-Only",
 		anchor: "stacked-content-only",
+		part: null,
 		description: "Frame with stacked content-only panels. Best for two summary panels with no title bar or footer, joined by one shared border into a single block.",
 		file: "frame-19",
 		source:
@@ -264,6 +283,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function FrameFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function FrameFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

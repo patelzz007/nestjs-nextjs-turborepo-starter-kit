@@ -7,6 +7,18 @@ const ToolSchema = z.object({ name: z.string().min(1), group: z.string().min(1),
 
 const DeployAppSchema = z.object({ app: z.string().min(1), workspace: z.string().min(1), port: PortSchema, healthPath: z.string().min(1) }).strict();
 
+/** One prefix as this repository writes it, and as the sister repository writes it. */
+const KitMappingSchema = z.object({ from: z.string().min(1), to: z.string().min(1) }).strict();
+
+/**
+ * A kit this repository keeps identical with a sister repository: where each folder (or one relocated file) lives
+ * there, how that repository writes its import specifiers, and the route its docs link the showcase under. Each list
+ * is most specific first.
+ */
+const KitPairSchema = z
+	.object({ name: z.string().min(1), paths: z.array(KitMappingSchema).min(1), specifiers: z.array(KitMappingSchema), links: z.array(KitMappingSchema) })
+	.strict();
+
 /**
  * The shape of the repository's `tooling.config.ts`: every app name, port and path the tools need. The tools
  * themselves hold none of these, so a product built from this starter changes that one file, not tool code.
@@ -30,6 +42,8 @@ export const ToolingConfigSchema = z
 		envExampleFiles: z.array(FolderSchema).min(1),
 		testPlacementWorkspaces: z.array(FolderSchema).min(1),
 		deploy: z.object({ apps: z.array(DeployAppSchema).min(1), pm2Ecosystem: FolderSchema }).strict(),
+		/** The kits `kit:compare` checks against their copies: the web kit against `nextjs-admin-dashboard-layout`. */
+		kitPairs: z.object({ web: KitPairSchema }).strict(),
 		tools: z.array(ToolSchema).min(1),
 	})
 	.strict();

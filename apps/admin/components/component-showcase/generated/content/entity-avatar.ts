@@ -33,6 +33,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-entity-avatar-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "entity-avatar-1",
 				source:
 					'import type * as React from "react";\nimport { EntityAvatar } from "@workspace/ui/components/entity-avatar";\n\nconst MERCHANTS: readonly string[] = ["Acme Coffee", "Bayview Books", "Corner Bakery", "Delta Fitness"];\n\nexport function EntityAvatar1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-wrap items-center gap-3">\n\t\t\t{MERCHANTS.map((name: string): React.JSX.Element => (\n\t\t\t\t<EntityAvatar key={name} name={name} size="lg" />\n\t\t\t))}\n\t\t\t<EntityAvatar name="Circle" size="lg" shape="circle" />\n\t\t</div>\n\t);\n}\n',

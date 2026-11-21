@@ -6,7 +6,7 @@
 
 ## When not to use
 
-- A data table with sorting and filtering: [Data Table](/components/data-table) and [Data Grid](/components/data-grid) have their pagers built in
+- A data table with sorting and filtering: [Data Table](/components/data-table) has its pager built in
 - A long feed that loads more as people scroll: use a "Load more" [Button](/components/button) or infinite scrolling
 
 ## Notes

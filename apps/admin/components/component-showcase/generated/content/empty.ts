@@ -38,6 +38,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-empty-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "empty-1",
 				source:
 					'import Link from "next/link";\nimport * as React from "react";\nimport { ArrowUpRightIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@workspace/ui/components/empty";\n\nexport function Empty1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<Empty>\n\t\t\t\t<EmptyHeader>\n\t\t\t\t\t<EmptyTitle>No projects yet</EmptyTitle>\n\t\t\t\t\t<EmptyDescription>You haven&apos;t created any projects yet. Get started by creating your first project.</EmptyDescription>\n\t\t\t\t</EmptyHeader>\n\t\t\t\t<EmptyContent>\n\t\t\t\t\t<div className="flex gap-2">\n\t\t\t\t\t\t<Button render={<Link href="#component-empty" />} nativeButton={false}>\n\t\t\t\t\t\t\tCreate project\n\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t<Button variant="outline">Import project</Button>\n\t\t\t\t\t</div>\n\t\t\t\t\t<Button variant="link" render={<Link href="#component-empty" />} className="text-muted-foreground" nativeButton={false}>\n\t\t\t\t\t\tLearn more <ArrowUpRightIcon />\n\t\t\t\t\t</Button>\n\t\t\t\t</EmptyContent>\n\t\t\t</Empty>\n\t\t</div>\n\t);\n}\n',
@@ -46,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-empty-2",
 				label: "No Results",
 				anchor: "no-results",
+				part: null,
 				file: "empty-2",
 				source:
 					'import Link from "next/link";\nimport * as React from "react";\nimport { ArrowUpRightIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@workspace/ui/components/empty";\n\nexport function Empty2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<Empty className="bg-muted">\n\t\t\t\t<EmptyHeader>\n\t\t\t\t\t<EmptyTitle>No results found</EmptyTitle>\n\t\t\t\t\t<EmptyDescription>No results found for your search. Try adjusting your search terms.</EmptyDescription>\n\t\t\t\t</EmptyHeader>\n\t\t\t\t<EmptyContent>\n\t\t\t\t\t<Button>Try again</Button>\n\t\t\t\t\t<Button variant="link" render={<Link href="#component-empty" />} className="text-muted-foreground" nativeButton={false}>\n\t\t\t\t\t\tLearn more <ArrowUpRightIcon />\n\t\t\t\t\t</Button>\n\t\t\t\t</EmptyContent>\n\t\t\t</Empty>\n\t\t</div>\n\t);\n}\n',
@@ -54,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-empty-6",
 				label: "Dashed Upload",
 				anchor: "dashed-upload",
+				part: null,
 				file: "empty-6",
 				source:
 					'import * as React from "react";\nimport { CloudUploadIcon, PlusIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";\n\nexport function Empty6Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center p-4">\n\t\t\t<Empty className="w-full max-w-md border border-dashed py-12">\n\t\t\t\t<EmptyHeader>\n\t\t\t\t\t<EmptyMedia variant="icon">\n\t\t\t\t\t\t<CloudUploadIcon />\n\t\t\t\t\t</EmptyMedia>\n\t\t\t\t\t<EmptyTitle>Upload files</EmptyTitle>\n\t\t\t\t\t<EmptyDescription>Drag and drop files here, or click to browse.</EmptyDescription>\n\t\t\t\t</EmptyHeader>\n\t\t\t\t<EmptyContent>\n\t\t\t\t\t<Button variant="outline" size="sm">\n\t\t\t\t\t\t<PlusIcon data-icon="inline-start" />\n\t\t\t\t\t\tBrowse Files\n\t\t\t\t\t</Button>\n\t\t\t\t\t<EmptyDescription className="text-xs">PNG, JPG, SVG up to 10MB</EmptyDescription>\n\t\t\t\t</EmptyContent>\n\t\t\t</Empty>\n\t\t</div>\n\t);\n}\n',
@@ -62,6 +65,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-empty-8",
 				label: "Team Members",
 				anchor: "team-members",
+				part: null,
 				file: "empty-8",
 				source:
 					'import * as React from "react";\nimport { UserPlusIcon, UsersIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";\nimport { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";\n\nexport function Empty8Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center p-4">\n\t\t\t<Card className="w-full max-w-md">\n\t\t\t\t<CardHeader>\n\t\t\t\t\t<CardTitle>Team Members</CardTitle>\n\t\t\t\t\t<CardDescription>Manage your team and their permissions.</CardDescription>\n\t\t\t\t</CardHeader>\n\t\t\t\t<CardContent>\n\t\t\t\t\t<Empty>\n\t\t\t\t\t\t<EmptyHeader>\n\t\t\t\t\t\t\t<EmptyMedia variant="icon">\n\t\t\t\t\t\t\t\t<UsersIcon />\n\t\t\t\t\t\t\t</EmptyMedia>\n\t\t\t\t\t\t\t<EmptyTitle>No team members</EmptyTitle>\n\t\t\t\t\t\t\t<EmptyDescription>Invite people to collaborate on this project.</EmptyDescription>\n\t\t\t\t\t\t</EmptyHeader>\n\t\t\t\t\t\t<EmptyContent>\n\t\t\t\t\t\t\t<Button size="sm">\n\t\t\t\t\t\t\t\t<UserPlusIcon data-icon="inline-start" />\n\t\t\t\t\t\t\t\tInvite People\n\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t</EmptyContent>\n\t\t\t\t\t</Empty>\n\t\t\t\t</CardContent>\n\t\t\t</Card>\n\t\t</div>\n\t);\n}\n',

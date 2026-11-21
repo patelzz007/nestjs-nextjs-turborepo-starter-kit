@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
-import { DataTable, type DataTableFeatures, type EmptyStateConfig } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableEmptyState, type DataTableFeatures, type DataTablePreferences, type DataTableSearch } from "@workspace/ui/components/data-table";
+import { TABLE_DEFAULT_PAGING, toTableStatus } from "@/lib/data-table/capabilities";
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -141,8 +142,14 @@ const ALERT_COLUMNS: ColumnDef<DataTableFeatures, OpsAlert>[] = [
 		cell: ({ row }) => <span className="tabular-nums">{row.original.peakValue === null ? "—" : row.original.peakValue.toFixed(0)}</span>,
 	},
 ];
-const ALERT_SEARCH_KEYS: string[] = ["message", "subjectName"];
-const ALERTS_EMPTY: EmptyStateConfig = { title: "No alerts here", description: "Every server, instance and dependency is within its thresholds." };
+const ALERT_SEARCH: DataTableSearch<OpsAlert> = { keys: ["message", "subjectName"] };
+const ALERT_PREFERENCES: DataTablePreferences = { key: "ops-alerts" };
+
+function getAlertId(alert: OpsAlert): string {
+	return alert.id;
+}
+
+const ALERTS_EMPTY: DataTableEmptyState = { title: "No alerts here", description: "Every server, instance and dependency is within its thresholds." };
 
 export function OpsAlertsView(): React.JSX.Element {
 	const { api } = useAuth();
@@ -172,11 +179,12 @@ export function OpsAlertsView(): React.JSX.Element {
 			<DataTable
 				columns={ALERT_COLUMNS}
 				data={rows}
-				searchKeys={ALERT_SEARCH_KEYS}
-				isLoading={alerts.isLoading}
-				isRefetching={alerts.isFetching ? !alerts.isLoading : false}
+				getRowId={getAlertId}
+				search={ALERT_SEARCH}
+				paging={TABLE_DEFAULT_PAGING}
+				status={toTableStatus(alerts)}
 				emptyState={ALERTS_EMPTY}
-				persistKey="ops-alerts"
+				preferences={ALERT_PREFERENCES}
 			/>
 			{isSuperAdmin && settings.data !== undefined ? <AlertSettingsForm key={JSON.stringify(settings.data.data)} settings={settings.data.data} /> : null}
 		</div>

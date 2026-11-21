@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/bubble/bubble-1").then((m) => m.Bubble1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/bubble/bubble-2").then((m) => m.Bubble2Example), { loading: FeatureLoading });
@@ -27,6 +27,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-bubble-1",
 		label: "Sender Alignment",
 		anchor: "sender-alignment",
+		part: null,
 		description:
 			"Support thread with sender alignment. Best for a Card with an avatar and name header over a thread mapped from data, each turn announcing its sender to screen readers.",
 		file: "bubble-1",
@@ -38,6 +39,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-bubble-2",
 		label: "All Variants",
 		anchor: "all-variants",
+		part: null,
 		description:
 			"Bubble variants in a release thread. Best for one turn per variant, from a secondary status update and a destructive failure notice to the full width ghost answer.",
 		file: "bubble-2",
@@ -49,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-bubble-3",
 		label: "Grouped Messages",
 		anchor: "grouped-messages",
+		part: null,
 		description:
 			"Grouped consecutive messages. Best for sender entries holding an array of lines, a wider thread gap than group gap, and a delivered time under the last turn.",
 		file: "bubble-3",
@@ -60,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-bubble-4",
 		label: "Reactions",
 		anchor: "reactions",
+		part: null,
 		description:
 			"Message reactions and a reaction button. Best for emoji pills hanging off the bubble edge on a Card, static rows labeled as one image and a single aria-pressed toggle.",
 		file: "bubble-4",
@@ -71,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-bubble-5",
 		label: "Show More",
 		anchor: "show-more",
+		part: null,
 		description: "Long reply with show more. Best for a lead paragraph kept out of the panel so nothing repeats, with a link Button trigger whose chevron turns on open.",
 		file: "bubble-5",
 		source:
@@ -81,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-bubble-6",
 		label: "Quick Replies",
 		anchor: "quick-replies",
+		part: null,
 		description:
 			"Quick reply bubbles and an action row. Best for choices that swap for the echoed pick and a reply written for that option, with one choice leaving as a link.",
 		file: "bubble-6",
@@ -92,6 +98,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-bubble-7",
 		label: "Formatted Answer",
 		anchor: "formatted-answer",
+		part: null,
 		description: "Assistant answer with formatted content. Best for a wide column where the answer spans the row as real elements, with no markdown parser and no raw HTML.",
 		file: "bubble-7",
 		source:
@@ -137,6 +144,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function BubbleFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function BubbleFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

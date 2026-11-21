@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/date-selector/date-selector-1").then((m) => m.DateSelector1Example), {
 	loading: FeatureLoading,
@@ -40,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-date-selector-1",
 		label: "Basic Inline",
 		anchor: "basic-inline",
+		part: null,
 		description: "Basic date selector. Best for the whole selector laid inline in a Card with typed entry, and a JSON readout of the value under it.",
 		file: "date-selector-1",
 		source:
@@ -50,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-date-selector-2",
 		label: "Popover",
 		anchor: "popover",
+		part: null,
 		description: "Date selector with popover. Best for a popover anchored under an outline trigger, with typed shortcuts and Apply and Cancel below the selector.",
 		file: "date-selector-2",
 		source:
@@ -60,6 +62,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-date-selector-3",
 		label: "Dialog",
 		anchor: "dialog",
+		part: null,
 		description: "Date selector with dialog. Best for a modal titled Select Due Date with a read only field, closing on Cancel or committing on Apply.",
 		file: "date-selector-3",
 		source:
@@ -70,6 +73,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-date-selector-4",
 		label: "Language Menu",
 		anchor: "language-menu",
+		part: null,
 		description: "Date selector with dropdown menu. Best for a language menu switching English, Spanish, French and German labels, date format and first weekday.",
 		file: "date-selector-4",
 		source:
@@ -115,6 +119,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function DateSelectorFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function DateSelectorFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

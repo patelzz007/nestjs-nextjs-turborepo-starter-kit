@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/slider/slider-1").then((m) => m.Slider1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/slider/slider-2").then((m) => m.Slider2Example), { loading: FeatureLoading });
@@ -32,6 +32,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic slider.. Best for the bare uncontrolled control: a single value starting at 50 on a 0 to 100 scale, with no label or readout.",
 		file: "slider-1",
 		source:
@@ -42,6 +43,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-2",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled slider. Best for a locked setting held at 50 that people can see but cannot drag, click or step with the keys.",
 		file: "slider-2",
 		source:
@@ -52,6 +54,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-3",
 		label: "Multiple Thumbs",
 		anchor: "multiple-thumbs",
+		part: null,
 		description: "Slider with multiple discrete values. Best for a track with 3 thumbs starting at 10, 40 and 80, each snapping to steps of 10.",
 		file: "slider-3",
 		source:
@@ -62,6 +65,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-4",
 		label: "Vertical",
 		anchor: "vertical",
+		part: null,
 		description: "Vertical slider with range selection. Best for a pair of upright tracks side by side, one holding a single value and one a 2 thumb span in steps of 5.",
 		file: "slider-4",
 		source:
@@ -72,6 +76,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-5",
 		label: "Controlled Value",
 		anchor: "controlled-value",
+		part: null,
 		description: "Slider with controlled value tracking. Best for a 2 thumb span over a 0 to 1 scale in tenths, held in state and printed above the track to 1 decimal place.",
 		file: "slider-5",
 		source:
@@ -82,6 +87,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-6",
 		label: "Range",
 		anchor: "range",
+		part: null,
 		description: "Slider with range selection. Best for the plain 2 thumb span: ends at 25 and 75 on a 0 to 100 track that move in steps of 5, with no state.",
 		file: "slider-6",
 		source:
@@ -92,6 +98,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-7",
 		label: "Number Input",
 		anchor: "number-input",
+		part: null,
 		description:
 			"Slider synced with number input. Best for an opacity percent kept in step between the track and a number box beside the label, either one driving the other.",
 		file: "slider-7",
@@ -103,6 +110,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-8",
 		label: "Color Temperature",
 		anchor: "color-temperature",
+		part: null,
 		description:
 			"Color temperature slider. Best for a kelvin value from 2700 to 6500 in steps of 100 below a warm to cool gradient strip, with its band named in the readout.",
 		file: "slider-8",
@@ -114,6 +122,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-9",
 		label: "Reference Labels",
 		anchor: "reference-labels",
+		part: null,
 		description: "Slider with reference labels. Best for a 5 to 35 GB storage pick with its low, middle and high marks printed under the track.",
 		file: "slider-9",
 		source:
@@ -124,6 +133,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-10",
 		label: "Tick Marks",
 		anchor: "tick-marks",
+		part: null,
 		description: "Slider with tick marks. Best for a 0 to 12 month duration with a tick per month and a number on every second tick, all built from the max constant.",
 		file: "slider-10",
 		source:
@@ -134,6 +144,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-11",
 		label: "Value Tooltip",
 		anchor: "value-tooltip",
+		part: null,
 		description:
 			"Slider with dynamic tooltip indicator. Best for a volume level whose percent rides above the thumb in a filled bubble with a small arrow, moving as it drags.",
 		file: "slider-11",
@@ -145,6 +156,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-slider-12",
 		label: "Emoji Rating",
 		anchor: "emoji-rating",
+		part: null,
 		description: "Rating slider with emoji feedback. Best for a 1 to 5 experience score that swaps a face emoji beside the track and a word such as Okay under it.",
 		file: "slider-12",
 		source:
@@ -190,6 +202,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SliderFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SliderFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

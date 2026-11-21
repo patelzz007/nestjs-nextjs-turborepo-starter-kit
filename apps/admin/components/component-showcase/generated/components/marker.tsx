@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/marker/marker-1").then((m) => m.Marker1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/marker/marker-2").then((m) => m.Marker2Example), { loading: FeatureLoading });
@@ -26,6 +26,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-marker-1",
 		label: "Basic Variants",
 		anchor: "basic-variants",
+		part: null,
 		description: "Default, separator, and border markers. Best for the 3 variant shapes stacked with no icons: a plain line, a labeled divider and a line ruled underneath.",
 		file: "marker-1",
 		source:
@@ -36,6 +37,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-marker-2",
 		label: "Tool Call Log",
 		anchor: "tool-call-log",
+		part: null,
 		description: "Tool call log with icon markers. Best for a bare column of 6 tool calls, each led by an icon for its action, with no card, status or grouping.",
 		file: "marker-2",
 		source:
@@ -46,6 +48,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-marker-3",
 		label: "Run Status",
 		anchor: "run-status",
+		part: null,
 		description:
 			"Run status markers with a live step. Best for a titled run card mixing done, failed and in progress rows, with a failed badge and a spinner on the live step.",
 		file: "marker-3",
@@ -57,6 +60,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-marker-4",
 		label: "Phase Separators",
 		anchor: "phase-separators",
+		part: null,
 		description:
 			"Agent run log grouped by phase separators. Best for plan, Edit and Verify dividers splitting 8 icon steps in a run card that shows the run name and duration.",
 		file: "marker-4",
@@ -68,6 +72,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-marker-5",
 		label: "Changed Files",
 		anchor: "changed-files",
+		part: null,
 		description:
 			"Changed files summary with border markers. Best for a diff of 5 files in ruled rows: truncated monospace paths, an added, modified or removed badge and a line delta.",
 		file: "marker-5",
@@ -79,6 +84,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-marker-6",
 		label: "Links & Action",
 		anchor: "links-action",
+		part: null,
 		description:
 			"Markers as links and as an action button. Best for a pair of underlined link rows over a button row that flips between revert and undo, announced in a live region.",
 		file: "marker-6",
@@ -125,6 +131,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function MarkerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function MarkerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

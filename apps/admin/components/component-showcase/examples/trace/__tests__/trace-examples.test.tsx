@@ -76,7 +76,7 @@ describe("Trace gallery example interactions", (): void => {
 		fireEvent.click(screen.getByText("Used 2 dashboards"));
 
 		expect(screen.getByRole("link", { name: "Activation funnel, weekly" }).getAttribute("href")).toBe(ROUTES.analytics.index);
-		expect(screen.getByRole("link", { name: "Email delivery health" }).getAttribute("href")).toBe(ROUTES.emails.log);
+		expect(screen.getByRole("link", { name: "Platform overview" }).getAttribute("href")).toBe(ROUTES.home);
 	});
 
 	it("re-running the failed jobs restarts the pipeline from the tests", (): void => {

@@ -19,7 +19,14 @@ import {
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import {
+	DataTable,
+	type DataTableEmptyState,
+	type DataTableFeatures,
+	type DataTableFilter,
+	type DataTablePaging,
+	type DataTableToolbar,
+} from "@workspace/ui/components/data-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { RefreshCw } from "lucide-react";
@@ -29,7 +36,7 @@ import * as React from "react";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { RECEIVED_WEBHOOKS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { RECEIVED_WEBHOOKS_TABLE_PAGE, TablePageSkeleton } from "@/components/loading/table-page-skeleton";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildReadOnlyTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import {
 	enumFilterOptions,
 	RECEIVED_WEBHOOK_OUTCOME_LABELS,
@@ -55,6 +62,21 @@ const NOT_RECORDED = "—";
 
 /** The filter keys of the table, as `DataTable` names them. */
 const FILTER_KEY = { provider: "provider", outcome: "outcome", verification: "verification" } satisfies Record<string, string>;
+
+const WEBHOOKS_BULK = buildReadOnlyTableBulk<ReceivedWebhookSummary>("received-webhooks.csv", [
+	"receivedAt",
+	"provider",
+	"eventType",
+	"providerDeliveryId",
+	"verification",
+	"outcome",
+	"httpStatus",
+]);
+const WEBHOOKS_PAGING: DataTablePaging = { pageSizeOptions: RECEIVED_WEBHOOKS_PAGE_SIZE_OPTIONS };
+const WEBHOOKS_EMPTY: DataTableEmptyState = {
+	title: "No webhooks received",
+	description: "No delivery matches this filter yet. Providers' requests appear here the moment they arrive.",
+};
 
 function getReceivedWebhookRowId(entry: ReceivedWebhookSummary): string {
 	return entry.id;
@@ -110,18 +132,6 @@ export default function ReceivedWebhooksView({ initialPage }: { readonly initial
 
 	const rows = React.useMemo(() => listQuery.data?.data ?? [], [listQuery.data]);
 	const totalCount = readPaginatedTotal(listQuery.data?.meta, rows.length);
-	const isRefetching: boolean = listQuery.isFetching && !listQuery.isLoading;
-	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: receivedWebhookListQuery,
-		totalCount,
-		nextCursor: readPaginatedNextCursor(listQuery.data?.meta),
-		resetKey: RECEIVED_WEBHOOKS_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getReceivedWebhookRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-	});
 
 	const handleManualColumnFilterChange = React.useCallback(
 		(filterKey: string, value: string | null): void => {
@@ -148,6 +158,18 @@ export default function ReceivedWebhooksView({ initialPage }: { readonly initial
 		}),
 		[urlState.provider, urlState.outcome, urlState.verification],
 	);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: receivedWebhookListQuery,
+		totalCount,
+		nextCursor: readPaginatedNextCursor(listQuery.data?.meta),
+		getRowId: getReceivedWebhookRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		isFiltered,
+		onClearFilters: handleClearFilters,
+	});
 
 	const searchToolbar = React.useMemo(
 		(): React.JSX.Element => (
@@ -157,18 +179,19 @@ export default function ReceivedWebhooksView({ initialPage }: { readonly initial
 	);
 
 	const filters = React.useMemo(
-		(): Filter[] => [
-			{ key: FILTER_KEY.provider, label: "Provider", options: enumFilterOptions(ReceivedWebhookProviderSchema.options, RECEIVED_WEBHOOK_PROVIDER_LABELS) },
-			{ key: FILTER_KEY.outcome, label: "Outcome", options: enumFilterOptions(ReceivedWebhookOutcomeSchema.options, RECEIVED_WEBHOOK_OUTCOME_LABELS) },
-			{ key: FILTER_KEY.verification, label: "Signature", options: enumFilterOptions(ReceivedWebhookVerificationSchema.options, RECEIVED_WEBHOOK_VERIFICATION_LABELS) },
+		(): DataTableFilter[] => [
+			{ kind: "select", column: FILTER_KEY.provider, label: "Provider", options: enumFilterOptions(ReceivedWebhookProviderSchema.options, RECEIVED_WEBHOOK_PROVIDER_LABELS) },
+			{ kind: "select", column: FILTER_KEY.outcome, label: "Outcome", options: enumFilterOptions(ReceivedWebhookOutcomeSchema.options, RECEIVED_WEBHOOK_OUTCOME_LABELS) },
+			{
+				kind: "select",
+				column: FILTER_KEY.verification,
+				label: "Signature",
+				options: enumFilterOptions(ReceivedWebhookVerificationSchema.options, RECEIVED_WEBHOOK_VERIFICATION_LABELS),
+			},
 		],
 		[],
 	);
-
-	const checkbox = React.useMemo(
-		() => buildReadOnlyTableCheckbox("received-webhooks.csv", ["receivedAt", "provider", "eventType", "providerDeliveryId", "verification", "outcome", "httpStatus"]),
-		[],
-	);
+	const toolbar = React.useMemo((): DataTableToolbar => ({ extra: searchToolbar }), [searchToolbar]);
 
 	const columns = React.useMemo<ColumnDef<DataTableFeatures, ReceivedWebhookSummary>[]>(
 		() => [
@@ -295,24 +318,18 @@ export default function ReceivedWebhooksView({ initialPage }: { readonly initial
 					<DataTable
 						data={rows}
 						columns={columns}
-						searchKeys={[]}
-						toolbarContent={searchToolbar}
+						getRowId={getRowId}
+						source={source}
+						toolbar={toolbar}
 						filters={filters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						checkbox={checkbox}
-						enableColumnVisibility
-						pagination={pagination}
-						pageSizeOptions={RECEIVED_WEBHOOKS_PAGE_SIZE_OPTIONS}
-						sorting={sorting}
-						onManualSortingChange={handleSortingChange}
-						isRefetching={isRefetching}
-						mobileCardRender={mobileCardRender}
+						selection={WEBHOOKS_BULK.selection}
+						exporting={WEBHOOKS_BULK.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
+						paging={WEBHOOKS_PAGING}
+						status={toTableStatus({ isLoading: false, isFetching: listQuery.isFetching && !listQuery.isLoading })}
+						mobileCard={mobileCardRender}
 						onRowClick={handleRowClick}
-						emptyState={{
-							title: "No webhooks received",
-							description: "No delivery matches this filter yet. Providers' requests appear here the moment they arrive.",
-						}}
+						emptyState={WEBHOOKS_EMPTY}
 					/>
 				</CardContent>
 			</Card>

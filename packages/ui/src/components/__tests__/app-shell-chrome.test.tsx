@@ -3,9 +3,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
-import { createNoopSidebarStorage } from "../../lib/sidebar/storage";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import type { UiKitLabels } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
 import { AppPanelShell } from "../app-panel-shell";
 import { AppShellNotificationBell, NOTIFICATION_BADGE_MAX, notificationBadgeText } from "../app-shell-notification-bell";
 import { AppShellTopbar, AppShellTopbarSearch } from "../app-shell-topbar";

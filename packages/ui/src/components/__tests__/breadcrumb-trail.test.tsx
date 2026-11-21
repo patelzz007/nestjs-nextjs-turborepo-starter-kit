@@ -4,8 +4,8 @@ import { FileText, Home } from "lucide-react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import type { UiKitLabels, UiKitLabelsOverride } from "../../lib/labels/ui-kit-labels";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import type { UiKitLabels, UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { accessibilityViolations } from "../../testing/axe";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import type { BreadcrumbItem } from "../breadcrumb-context";

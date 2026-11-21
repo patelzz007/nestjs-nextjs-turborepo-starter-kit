@@ -1,6 +1,6 @@
 "use client";
 
-import type { Action } from "@workspace/ui/components/data-table";
+import type { DataTableRowAction } from "@workspace/ui/components/data-table";
 import { Button } from "@workspace/ui/components/button";
 import type { RowData } from "@tanstack/react-table";
 import * as React from "react";
@@ -16,7 +16,7 @@ export interface DataTableMobileCardProps<T extends RowData> {
 	readonly subtitle?: React.ReactNode;
 	readonly badge?: React.ReactNode;
 	readonly fields?: readonly DataTableMobileCardField[];
-	readonly actions?: readonly Action<T>[] | undefined;
+	readonly actions?: readonly DataTableRowAction<T>[] | undefined;
 }
 
 export function DataTableMobileCard<T extends RowData>({ item, title, subtitle, badge, fields = [], actions }: DataTableMobileCardProps<T>): React.JSX.Element {
@@ -25,7 +25,7 @@ export function DataTableMobileCard<T extends RowData>({ item, title, subtitle, 
 			const actionKey = event.currentTarget.dataset.actionKey;
 			const action = actions?.find((entry) => entry.key === actionKey);
 			if (action !== undefined) {
-				action.onClick(item);
+				void action.onSelect(item);
 			}
 		},
 		[actions, item],
@@ -55,7 +55,7 @@ export function DataTableMobileCard<T extends RowData>({ item, title, subtitle, 
 					{actions.map((action) => (
 						<Button
 							key={action.key}
-							variant={action.isDestructive === true ? "destructive" : "outline"}
+							variant={action.tone === "destructive" ? "destructive" : "outline"}
 							size="md"
 							data-action-key={action.key}
 							onClick={handleActionClick}

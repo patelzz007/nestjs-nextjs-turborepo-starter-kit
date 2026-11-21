@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/popover/popover-1").then((m) => m.Popover1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/popover/popover-2").then((m) => m.Popover2Example), { loading: FeatureLoading });
@@ -31,6 +31,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic popover.. Best for the minimal anatomy: a title and a one line description in the header part, with no body or actions.",
 		file: "popover-1",
 		source:
@@ -41,6 +42,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-2",
 		label: "Opening Sides",
 		anchor: "opening-sides",
+		part: null,
 		description: "Popovers opening from different sides.. Best for one trigger per side in a button grid, each opening a narrow panel on that side to compare placements.",
 		file: "popover-2",
 		source:
@@ -51,6 +53,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-3",
 		label: "Inline Form",
 		anchor: "inline-form",
+		part: null,
 		description: "Popover with form.. Best for a Dimensions header over 2 inline label and input rows for width and height, with no submit button.",
 		file: "popover-3",
 		source:
@@ -61,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-4",
 		label: "Alignment",
 		anchor: "alignment",
+		part: null,
 		description: "Popover alignment positions.. Best for a row of 3 small buttons whose auto width panels line up with the start, center or end of their trigger.",
 		file: "popover-4",
 		source:
@@ -71,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-5",
 		label: "In Dialog",
 		anchor: "in-dialog",
+		part: null,
 		description: "Popover within a dialog.. Best for a second layer nested in an open modal: a button in the modal body opens a title and description panel.",
 		file: "popover-5",
 		source:
@@ -81,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-6",
 		label: "Profile Card",
 		anchor: "profile-card",
+		part: null,
 		description: "Popover with user profile details.. Best for a person chip with avatar, name and handle that opens a bio card with follower counts and a Follow button.",
 		file: "popover-6",
 		source:
@@ -91,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-7",
 		label: "Feature Pitch",
 		anchor: "feature-pitch",
+		part: null,
 		description: "Popover with custom content. Best for a feature pitch with a primary tinted header bar, a short explainer and Enable AI and Learn more buttons.",
 		file: "popover-7",
 		source:
@@ -101,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-8",
 		label: "Media Preview",
 		anchor: "media-preview",
+		part: null,
 		description: "Popover with media preview.. Best for an edge to edge 16:9 image that zooms on hover, above a template name, a one line summary and 2 action buttons.",
 		file: "popover-8",
 		source:
@@ -111,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-9",
 		label: "Relative Time",
 		anchor: "relative-time",
+		part: null,
 		description:
 			"Relative time popover with timezone details. Best for a relative time inside a sentence, behind a dashed underline, that opens exact dates and clock times updating each second.",
 		file: "popover-9",
@@ -122,6 +131,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-10",
 		label: "Controls",
 		anchor: "controls",
+		part: null,
 		description: "Popover with controls. Best for an icon only settings button opening 2 labeled switches and a volume slider with a live percent readout.",
 		file: "popover-10",
 		source:
@@ -132,6 +142,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-popover-11",
 		label: "Step Tour",
 		anchor: "step-tour",
+		part: null,
 		description: "Popover with navigation. Best for a 4 step tour opening above its button, with a step counter and back and next arrows that stop at either end.",
 		file: "popover-11",
 		source:
@@ -177,6 +188,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function PopoverFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function PopoverFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

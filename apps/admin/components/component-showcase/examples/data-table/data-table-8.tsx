@@ -2,25 +2,17 @@
 
 import type * as React from "react";
 
-import { DataTable } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableColumnControls } from "@workspace/ui/components/data-table";
 
-import { DOCUMENT_SECTIONS, SECTION_COLUMNS } from "./data-table-sample";
+import { DOCUMENT_SECTIONS, getSectionId, SECTION_COLUMNS, SECTION_PAGING } from "./data-table-sample";
 
-const PAGE_SIZE = 5;
-/** Where the hidden columns, the pinned columns and the page size are remembered for this table. */
-const PERSIST_KEY = "showcase-data-table-columns";
+/** `visibility` adds the columns menu to the toolbar; `pinning` adds "pin to start / end" to every header menu. */
+const COLUMN_CONTROLS: DataTableColumnControls = { visibility: true, pinning: true };
 
+/**
+ * Hide columns from the columns menu, and pin one from its header menu so it stays in view while the rest scroll
+ * sideways. The Section column sets `enableHiding: false`, so it can never be hidden.
+ */
 export function DataTable8Example(): React.JSX.Element {
-	return (
-		<DataTable
-			data={DOCUMENT_SECTIONS}
-			columns={SECTION_COLUMNS}
-			enableColumnVisibility
-			enableColumnPinning
-			persistKey={PERSIST_KEY}
-			pageSize={PAGE_SIZE}
-			title="Columns"
-			description="Hide columns, pin them to an edge, and find them the same way after a reload."
-		/>
-	);
+	return <DataTable data={DOCUMENT_SECTIONS} columns={SECTION_COLUMNS} getRowId={getSectionId} columnControls={COLUMN_CONTROLS} paging={SECTION_PAGING} />;
 }

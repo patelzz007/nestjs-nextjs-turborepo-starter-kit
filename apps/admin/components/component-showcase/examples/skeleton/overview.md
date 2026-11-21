@@ -6,7 +6,7 @@
 ## When not to use
 
 - A wait whose result has no known shape, such as a file being processed: use [Spinner](/components/spinner)
-- A data table: [Data Table](/components/data-table) and [Data Grid](/components/data-grid) draw their own skeleton rows
+- A data table: [Data Table](/components/data-table) draws its own skeleton rows
 
 ## Notes
 

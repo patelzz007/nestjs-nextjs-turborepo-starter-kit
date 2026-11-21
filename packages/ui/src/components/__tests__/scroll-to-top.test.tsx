@@ -3,8 +3,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import type { UiKitLabels } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { ScrollToTop } from "../scroll-to-top";
 import { UiKitLabelsProvider } from "../ui-kit-labels-provider";

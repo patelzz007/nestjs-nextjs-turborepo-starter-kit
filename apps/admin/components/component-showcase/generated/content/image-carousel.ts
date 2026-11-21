@@ -37,6 +37,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-image-carousel-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "image-carousel-1",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { ImageCarousel, type ImageCarouselImage } from "@workspace/ui/components/image-carousel";\n\nfunction photo(photoId: string): string {\n\treturn `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=800&q=80`;\n}\n\nconst IMAGES: readonly ImageCarouselImage[] = [\n\t{ id: "workspace", src: photo("photo-1486312338219-ce68d2c6f44d"), alt: "A laptop on a desk" },\n\t{ id: "code", src: photo("photo-1461749280684-dccba630e2f6"), alt: "Code on a screen" },\n\t{ id: "network", src: photo("photo-1451187580459-43490279c0fa"), alt: "The earth at night" },\n];\n\nexport function ImageCarousel1Example(): React.JSX.Element {\n\tconst [selectedIndex, setSelectedIndex] = React.useState<number>(0);\n\n\treturn (\n\t\t<div className="mx-auto flex w-full max-w-lg flex-col gap-2">\n\t\t\t<ImageCarousel images={IMAGES} onSelectedIndexChange={setSelectedIndex} frameClassName="rounded-lg" />\n\t\t\t<p className="text-sm text-muted-foreground">\n\t\t\t\tPhoto {selectedIndex + 1} of {IMAGES.length}\n\t\t\t</p>\n\t\t</div>\n\t);\n}\n',

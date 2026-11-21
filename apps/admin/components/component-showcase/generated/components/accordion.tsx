@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/accordion/accordion-1").then((m) => m.Accordion1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/accordion/accordion-2").then((m) => m.Accordion2Example), { loading: FeatureLoading });
@@ -35,6 +35,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-1",
 		label: "Single Expand",
 		anchor: "single-expand",
+		part: null,
 		description: "A basic single-expand accordion. Best for the minimal pattern: 3 questions with one answer open at a time and the first open on load.",
 		file: "accordion-1",
 		source:
@@ -45,6 +46,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-2",
 		label: "Plus Minus Icons",
 		anchor: "plus-minus-icons",
+		part: null,
 		description: "Accordion with plus/minus indicators. Best for feature summaries that can all stay open at once, each row ending in a plus that flips to a minus.",
 		file: "accordion-2",
 		source:
@@ -55,6 +57,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-3",
 		label: "Bordered Rounded",
 		anchor: "bordered-rounded",
+		part: null,
 		description:
 			"Accordion with borders and rounded corners. Best for each question boxed on its own with a gap between, holding long answers in muted text, one open at a time.",
 		file: "accordion-3",
@@ -66,6 +69,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-4",
 		label: "In Card",
 		anchor: "in-card",
+		part: null,
 		description:
 			"Accordion embedded within a Card. Best for plan, billing and security questions under a titled Card header that can open together, the first ending in a View plans button.",
 		file: "accordion-4",
@@ -77,6 +81,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-5",
 		label: "Disabled Items",
 		anchor: "disabled-items",
+		part: null,
 		description:
 			"Accordion with disabled items and highlighted state. Best for one outlined box whose open row takes a muted tint, with a locked middle row that cannot be opened.",
 		file: "accordion-5",
@@ -88,6 +93,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-6",
 		label: "Icons & Badges",
 		anchor: "icons-badges",
+		part: null,
 		description:
 			"Advanced accordion with custom icons and badges. Best for spaced card rows led by an icon tile, one open at a time, with a New badge and the panel text indented under the label.",
 		file: "accordion-6",
@@ -99,6 +105,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-7",
 		label: "In Frame",
 		anchor: "in-frame",
+		part: null,
 		description:
 			"Accordion items integrated within Frame and FramePanel. Best for settings rows with icon tiles joined in a stacked Frame, where each panel opens without closing the others.",
 		file: "accordion-7",
@@ -110,6 +117,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-8",
 		label: "Nested",
 		anchor: "nested",
+		part: null,
 		description:
 			"Nested accordion example with bordered items. Best for a product details list where one section opens onto its own inner set of sub sections, both levels open on load.",
 		file: "accordion-8",
@@ -121,6 +129,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-9",
 		label: "User List",
 		anchor: "user-list",
+		part: null,
 		description:
 			"User list accordion with avatars and role indicators. Best for team members shown by avatar, name and role badge, each opening to a summary of what they may access.",
 		file: "accordion-9",
@@ -132,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-10",
 		label: "Rotating Arrow",
 		anchor: "rotating-arrow",
+		part: null,
 		description:
 			"Accordion with rotating arrow indicator. Best for a chevron ahead of each question that turns to point down when open, with the answer indented under the text.",
 		file: "accordion-10",
@@ -143,6 +153,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-accordion-11",
 		label: "Setup Steps",
 		anchor: "setup-steps",
+		part: null,
 		description:
 			"Accordion component for onboarding or setup steps with icons, badges, and QR codes. Best for a 3 step setup checklist with done, in progress and pending states, the open step holding an email field and QR code.",
 		file: "accordion-11",
@@ -189,6 +200,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function AccordionFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function AccordionFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

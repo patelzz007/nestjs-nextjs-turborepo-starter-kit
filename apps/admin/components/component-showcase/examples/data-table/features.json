@@ -2,99 +2,425 @@
 	{
 		"id": "c-data-table-1",
 		"label": "Overview",
-		"description": "A table of invoices with sortable columns, a search filter and pagination. Best for the smallest working DataTable: columns, rows and a filter.",
+		"description": "A table of proposal sections with a heading, sortable columns and a pager. Best for the smallest working DataTable: data, columns, getRowId.",
 		"file": "data-table-1",
-		"export": "DataTable1Example"
+		"export": "DataTable1Example",
+		"group": "Basics"
+	},
+	{
+		"id": "c-data-table-12",
+		"label": "Pagination & Sorting",
+		"description": "A pager with three page sizes and a table that opens sorted, largest target first. Best for choosing the starting sort and the sort cycle.",
+		"file": "data-table-12",
+		"export": "DataTable12Example",
+		"group": "Basics"
 	},
 	{
 		"id": "c-data-table-2",
 		"label": "Search & Filters",
-		"description": "A search across two columns with a debounce, and select filters for status and type. Best for narrowing a long list from the toolbar without a server.",
+		"description": "A search across two columns, a select filter for status and a multi-select filter for type. Best for narrowing a long list from the toolbar without a server.",
 		"file": "data-table-2",
-		"export": "DataTable2Example"
+		"export": "DataTable2Example",
+		"group": "Basics"
+	},
+	{
+		"id": "c-data-table-30",
+		"label": "Date-Range Filter",
+		"description": "A calendar filter over a due-date column, both end days included, beside a status filter. Best for narrowing a list to a week, a month or any span of days.",
+		"file": "data-table-30",
+		"export": "DataTable30Example",
+		"group": "Basics"
+	},
+	{
+		"id": "c-data-table-15",
+		"label": "Loading, Empty & Error",
+		"description": "Buttons that switch the table between skeleton rows, a dimmed refresh, an empty state and an error with retry. Best for checking every state a list can be in.",
+		"file": "data-table-15",
+		"export": "DataTable15Example",
+		"group": "Basics"
 	},
 	{
 		"id": "c-data-table-3",
 		"label": "Row Actions",
-		"description": "A ⋯ menu per row with view, edit, copy and a destructive delete, plus a click that opens the row. Best for records a person acts on one at a time.",
+		"description": "An inline Publish button that shows a spinner and, on failure, a retry, beside a menu with view, duplicate and a destructive delete. Best for the two or three things people do to one record.",
 		"file": "data-table-3",
-		"export": "DataTable3Example"
+		"export": "DataTable3Example",
+		"group": "Acting on rows"
 	},
 	{
 		"id": "c-data-table-4",
 		"label": "Bulk Selection",
-		"description": "Row checkboxes, select all across pages, a bulk action and a bulk delete that update the rows. Best for triage screens where many records change together.",
+		"description": "Row checkboxes that open a bar with a bulk action and delete. Best for acting on many records at once, with ticks that follow their rows by id.",
 		"file": "data-table-4",
-		"export": "DataTable4Example"
+		"export": "DataTable4Example",
+		"group": "Acting on rows"
 	},
 	{
 		"id": "c-data-table-5",
 		"label": "Export",
-		"description": "Export the selected rows, or every row, as CSV or JSON with a chosen file name and columns. Best for handing a filtered list to a spreadsheet.",
+		"description": "An export dialog to pick the format, the rows (ticked, matching or every row) and the columns, with the row count shown before the file is written. Best for downloads people tailor each time.",
 		"file": "data-table-5",
-		"export": "DataTable5Example"
+		"export": "DataTable5Example",
+		"group": "Acting on rows"
 	},
 	{
 		"id": "c-data-table-6",
 		"label": "Inline Editing",
-		"description": "Cells that edit in place, written back to the record by its id so a sorted or filtered view stays right. Best for quick corrections without a form.",
+		"description": "Cells edited in place with a double-click, Enter or F2, page counts that refuse text, a title that cannot be left empty, and undo and redo. Best for quick corrections without opening a form.",
 		"file": "data-table-6",
-		"export": "DataTable6Example"
+		"export": "DataTable6Example",
+		"group": "Acting on rows"
 	},
 	{
 		"id": "c-data-table-7",
-		"label": "Drag to Reorder",
-		"description": "Rows with a drag grip, re-anchored by id after the drop. Best for a hand-ordered list such as a document outline; dragging is pointer-only, so pair it with move actions for keyboard users.",
+		"label": "Drag To Reorder",
+		"description": "A grip on every row that drags with a pointer, touch or the keyboard. Best for lists whose order is the data, such as steps or priorities.",
 		"file": "data-table-7",
-		"export": "DataTable7Example"
+		"export": "DataTable7Example",
+		"group": "Acting on rows"
+	},
+	{
+		"id": "c-data-table-26",
+		"label": "CRUD With Row Status",
+		"description": "Add, edit and delete with nothing written until Save, each unsaved row marked new, dirty or deleted. Best for batch editing with a clear undo.",
+		"file": "data-table-26",
+		"export": "DataTable26Example",
+		"group": "Acting on rows"
 	},
 	{
 		"id": "c-data-table-8",
 		"label": "Column Visibility & Pinning",
-		"description": "A columns menu to hide or pin columns, remembered across reloads through a persist key. Best for wide tables where each reader wants their own view.",
+		"description": "A columns menu that hides columns and header menus that pin one to an edge. Best for wide tables where readers keep a key column in view.",
 		"file": "data-table-8",
-		"export": "DataTable8Example"
+		"export": "DataTable8Example",
+		"group": "Columns and layout"
 	},
 	{
 		"id": "c-data-table-9",
-		"label": "Pagination & Sorting",
-		"description": "Page size choices and a sort cycle that returns to the original order on the third click. Best for long lists read page by page.",
+		"label": "Column Resizing",
+		"description": "Header edges that drag, or move with the arrow keys, to resize a column. Best for tables whose cell content varies a lot in length.",
 		"file": "data-table-9",
-		"export": "DataTable9Example"
+		"export": "DataTable9Example",
+		"group": "Columns and layout"
 	},
 	{
 		"id": "c-data-table-10",
-		"label": "Mobile Cards",
-		"description": "The same rows rendered as cards below the lg breakpoint, with the row actions on each card. Best for tables people also use on a phone.",
+		"label": "Column Reordering",
+		"description": "Header menus that move a column towards the start or the end. Best for letting readers put the columns they compare side by side.",
 		"file": "data-table-10",
-		"export": "DataTable10Example"
+		"export": "DataTable10Example",
+		"group": "Columns and layout"
 	},
 	{
 		"id": "c-data-table-11",
-		"label": "Loading, Empty & Error",
-		"description": "Tabs that switch the table between skeleton rows, a dimmed refetch, an empty state and an error. Best for checking every state a fetched table goes through.",
+		"label": "Column Header Controls",
+		"description": "Every header control at once, with one column that cannot sort and one that cannot resize. Best for seeing how a column opts out of a control.",
 		"file": "data-table-11",
-		"export": "DataTable11Example"
-	},
-	{
-		"id": "c-data-table-12",
-		"label": "Virtualised Rows",
-		"description": "Two thousand rows in one scrolling body where only the rows in view are drawn. Best for large local datasets that should not be paged.",
-		"file": "data-table-12",
-		"export": "DataTable12Example"
+		"export": "DataTable11Example",
+		"group": "Columns and layout"
 	},
 	{
 		"id": "c-data-table-13",
-		"label": "Server Mode",
-		"description": "Paging, sorting and filtering owned by the parent, which fetches each page from a pretend server. Best for a table backed by an API that pages on the server.",
+		"label": "Layout",
+		"description": "Compact rows, stripes, column lines, content-sized columns and a sticky header over a scrolling body, with a density menu for compact, comfortable or spacious rows. Best for dense reference tables.",
 		"file": "data-table-13",
-		"export": "DataTable13Example"
+		"export": "DataTable13Example",
+		"group": "Columns and layout"
 	},
 	{
 		"id": "c-data-table-14",
-		"label": "Kitchen Sink",
-		"description": "Every feature at once, as the dashboard shows it: search, filters, actions, bulk actions, export, column menu, pinning, inline editing, drag to reorder and mobile cards. Best for seeing how the features combine.",
+		"label": "Mobile Cards",
+		"description": "Rows drawn as cards when the table itself is narrower than 640px, each with its row actions. Best for tables that must stay usable on a phone.",
 		"file": "data-table-14",
-		"export": "DataTable14Example"
+		"export": "DataTable14Example",
+		"group": "Columns and layout"
+	},
+	{
+		"id": "c-data-table-21",
+		"label": "Tree Rows",
+		"description": "An outline three levels deep, with a toggle and an indent on the first column, and a search that keeps each match's parents and opens its branch. Best for records that hold records, such as chapters and sections.",
+		"file": "data-table-21",
+		"export": "DataTable21Example",
+		"group": "Row structure"
+	},
+	{
+		"id": "c-data-table-22",
+		"label": "Detail Row",
+		"description": "A toggle on each row that opens a full-width row with the fields that do not earn a column. Best for extra detail without leaving the list.",
+		"file": "data-table-22",
+		"export": "DataTable22Example",
+		"group": "Row structure"
+	},
+	{
+		"id": "c-data-table-33",
+		"label": "Detail Panel",
+		"description": "A panel beside the table with the clicked section's details, stepped through with the arrow keys, hiding two columns while open and becoming a sheet on narrow screens. Best for reading records one after another without leaving the list.",
+		"file": "data-table-33",
+		"export": "DataTable33Example",
+		"group": "Row structure"
+	},
+	{
+		"id": "c-data-table-23",
+		"label": "Sub-Table",
+		"description": "A detail row holding a second table of the section's revisions. Best for parent records with child records of a different shape.",
+		"file": "data-table-23",
+		"export": "DataTable23Example",
+		"group": "Row structure"
+	},
+	{
+		"id": "c-data-table-24",
+		"label": "Row Pinning",
+		"description": "A pin button on every row that keeps it at the top through scrolling and sorting. Best for comparing a few records against the rest.",
+		"file": "data-table-24",
+		"export": "DataTable24Example",
+		"group": "Row structure"
+	},
+	{
+		"id": "c-data-table-25",
+		"label": "Footer Totals",
+		"description": "Three rows under the body: a subtotal, an average and a total, keyed by column. Best for figures that sum down a column.",
+		"file": "data-table-25",
+		"export": "DataTable25Example",
+		"group": "Row structure"
+	},
+	{
+		"id": "c-data-table-32",
+		"label": "Grouping",
+		"description": "Sections grouped by type or reviewer, each group a row with its count and the summed page budget, switchable from the heading. Best for reading a long list group by group.",
+		"file": "data-table-32",
+		"export": "DataTable32Example",
+		"group": "Row structure"
+	},
+	{
+		"id": "c-data-table-31",
+		"label": "Pivot",
+		"description": "Order lines pivoted into regions by quarters, with row totals, column totals and a grand total, switchable between total, average, count and largest. Best for summarising a list across two dimensions.",
+		"file": "data-table-31",
+		"export": "DataTable31Example",
+		"group": "Row structure"
+	},
+	{
+		"id": "c-data-table-18",
+		"label": "Server Source",
+		"description": "One page at a time from a pretend server, driven by a single query object for page, sort, filters and search. Best for lists backed by an API.",
+		"file": "data-table-18",
+		"export": "DataTable18Example",
+		"group": "Data sources and scale"
+	},
+	{
+		"id": "c-data-table-19",
+		"label": "Infinite Source, Local",
+		"description": "Rows already in memory, revealed a batch at a time as the reader scrolls. Best for a long list that should start light.",
+		"file": "data-table-19",
+		"export": "DataTable19Example",
+		"group": "Data sources and scale"
+	},
+	{
+		"id": "c-data-table-20",
+		"label": "Infinite Source, Remote",
+		"description": "Batches fetched from a pretend server with loading rows while a request is out. Best for feeds and logs with no page numbers.",
+		"file": "data-table-20",
+		"export": "DataTable20Example",
+		"group": "Data sources and scale"
+	},
+	{
+		"id": "c-data-table-16",
+		"label": "Virtualised Rows",
+		"description": "5,000 rows in a scrolling body that draws only the rows in view. Best for long lists that must stay on one page and still sort instantly.",
+		"file": "data-table-16",
+		"export": "DataTable16Example",
+		"group": "Data sources and scale"
+	},
+	{
+		"id": "c-data-table-17",
+		"label": "Virtualised Columns",
+		"description": "53 columns by 40 rows with only the cells in view drawn. Best for wide tables such as a year of weekly figures.",
+		"file": "data-table-17",
+		"export": "DataTable17Example",
+		"group": "Data sources and scale"
+	},
+	{
+		"id": "c-data-table-27",
+		"label": "Localised Labels",
+		"description": "A table with its own wording for the search, the counts, the pager and the menus. Best for domain wording on top of the translated language pack.",
+		"file": "data-table-27",
+		"export": "DataTable27Example",
+		"group": "Wording, memory and everything"
+	},
+	{
+		"id": "c-data-table-28",
+		"label": "Saved Preferences",
+		"description": "Column choices, the sort and the page size remembered across reloads under one key. Best for tables people return to every day.",
+		"file": "data-table-28",
+		"export": "DataTable28Example",
+		"group": "Wording, memory and everything"
+	},
+	{
+		"id": "c-data-table-29",
+		"label": "Kitchen Sink",
+		"description": "Search, filters, sorting, paging, row and bulk actions, export, column controls, inline editing, mobile cards and saved preferences in one table. Best for seeing the features work together.",
+		"file": "data-table-29",
+		"export": "DataTable29Example",
+		"group": "Wording, memory and everything"
+	},
+	{
+		"id": "c-data-table-recipe-heatmap",
+		"label": "Heatmap",
+		"description": "Every cell coloured by where its number sits on one scale for the whole grid, in token colours that hold in light and dark mode. Best for spotting the hot and cold spots of a grid of figures.",
+		"file": "data-table-recipe-heatmap",
+		"export": "DataTableRecipeHeatmap",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-cohort-retention",
+		"label": "Cohort Retention",
+		"description": "Signup months by months since, each cell the share still active on the heat scale; months still to come show a dash, so the grid reads as a triangle. Best for retention reviews.",
+		"file": "data-table-recipe-cohort-retention",
+		"export": "DataTableRecipeCohortRetention",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-conditional-formatting",
+		"label": "Conditional Formatting",
+		"description": "A small rule list (first match wins) that gives each stock line its level, badge and emphasis. Best for keeping formatting rules in the page, not in the table.",
+		"file": "data-table-recipe-conditional-formatting",
+		"export": "DataTableRecipeConditionalFormatting",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-production-dashboard",
+		"label": "Production Dashboard",
+		"description": "A progress bar against each line's target, the change since last shift and yield flagged under 95%. Best for a shift board read at a glance.",
+		"file": "data-table-recipe-production-dashboard",
+		"export": "DataTableRecipeProductionDashboard",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-kpi",
+		"label": "KPIs With Sparklines",
+		"description": "This week, the change since last week coloured by whether it is good news for that metric, and an eight-week sparkline drawn as plain SVG. Best for a metrics overview.",
+		"file": "data-table-recipe-kpi",
+		"export": "DataTableRecipeKpi",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-anomaly-investigation",
+		"label": "Anomaly Investigation",
+		"description": "Each series with its expected band from history and today's value as a dot, red outside the band, over an operations or a finance data set. Best for finding outliers first.",
+		"file": "data-table-recipe-anomaly-investigation",
+		"export": "DataTableRecipeAnomalyInvestigation",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-comparison",
+		"label": "Comparison",
+		"description": "Plan columns built from the reader's choice, with the recommended plan highlighted down its whole column. Best for pricing and feature comparisons.",
+		"file": "data-table-recipe-comparison",
+		"export": "DataTableRecipeComparison",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-live-status",
+		"label": "Live Status",
+		"description": "Rows replaced every two seconds with new objects, re-sorting as latencies move, with a switch to pause. Best for monitoring boards.",
+		"file": "data-table-recipe-live-status",
+		"export": "DataTableRecipeLiveStatus",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-deployments",
+		"label": "Deployments",
+		"description": "Status, environment and project filters with live counts plus a search over branch and commit, newest first. Best for release and CI history.",
+		"file": "data-table-recipe-deployments",
+		"export": "DataTableRecipeDeployments",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-logs",
+		"label": "Log Viewer",
+		"description": "A time range, level and service filters and a message search; a clicked line opens in the side panel, and the arrow keys step through. Best for reading logs.",
+		"file": "data-table-recipe-logs",
+		"export": "DataTableRecipeLogs",
+		"group": "Recipes: analytics"
+	},
+	{
+		"id": "c-data-table-recipe-crm-employees",
+		"label": "People Directory",
+		"description": "Stacked cells (a name over its email, a role over its department) and multi-select filters with live counts. Best for CRM and staff lists.",
+		"file": "data-table-recipe-crm-employees",
+		"export": "DataTableRecipeCrmEmployees",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-job-queue",
+		"label": "Job Queue",
+		"description": "Running jobs advance on a timer, each row opens to its log, and a failed job's Retry (offered on failed rows only) puts it back in the queue. Best for background work.",
+		"file": "data-table-recipe-job-queue",
+		"export": "DataTableRecipeJobQueue",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-tree-variants",
+		"label": "Tree Variants",
+		"description": "One tree in three looks: an open outline, a compact closed tree and a selectable tree with cascading checkboxes. Best for choosing how a hierarchy reads.",
+		"file": "data-table-recipe-tree-variants",
+		"export": "DataTableRecipeTreeVariants",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-file-browser",
+		"label": "File Browser",
+		"description": "Folders that open on a click, a breadcrumb that walks back up, and a name column that sorts folders first either way. Best for browsing stored files.",
+		"file": "data-table-recipe-file-browser",
+		"export": "DataTableRecipeFileBrowser",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-inventory-allocation",
+		"label": "Inventory Allocation",
+		"description": "Allocated and Reserved edited in place, each refusing a figure that would promise more than is on the shelf, with undo and a detail bar per row. Best for stock planning.",
+		"file": "data-table-recipe-inventory-allocation",
+		"export": "DataTableRecipeInventoryAllocation",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-permissions-matrix",
+		"label": "Permissions Matrix",
+		"description": "Permissions by roles with a checkbox where they meet, the owner column locked on. Best for role settings.",
+		"file": "data-table-recipe-permissions-matrix",
+		"export": "DataTableRecipePermissionsMatrix",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-change-review",
+		"label": "Change Review",
+		"description": "Rows marked added, changed or removed, the before and after in the side panel, and Approve and Reject while a change is pending. Best for reviewing a change set.",
+		"file": "data-table-recipe-change-review",
+		"export": "DataTableRecipeChangeReview",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-csv-import",
+		"label": "CSV Import",
+		"description": "Pasted CSV mapped column by column from selects in the headers, each line checked, with lines that will import marked new and the rest struck through with the reason. Best for import review.",
+		"file": "data-table-recipe-csv-import",
+		"export": "DataTableRecipeCsvImport",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-schedule-matrix",
+		"label": "Schedule Matrix",
+		"description": "A rota on Spreadsheet in single-cell mode: type D, E, N or OFF, copy a day over others, and see the cover per shift recalculated underneath. Best for shift planning.",
+		"file": "data-table-recipe-schedule-matrix",
+		"export": "DataTableRecipeScheduleMatrix",
+		"group": "Recipes: workflows"
+	},
+	{
+		"id": "c-data-table-recipe-animated-icons",
+		"label": "Animated Icons",
+		"description": "Row actions whose icons move when their button or menu item is hovered or focused, still under reduced motion, with a sync that shows a spinner and a retry. Best for lively action menus.",
+		"file": "data-table-recipe-animated-icons",
+		"export": "DataTableRecipeAnimatedIcons",
+		"group": "Recipes: workflows"
 	}
 ]

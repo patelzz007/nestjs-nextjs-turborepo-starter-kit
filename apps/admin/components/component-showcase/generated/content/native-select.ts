@@ -47,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-native-select-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "native-select-1",
 				source:
 					'import * as React from "react";\nimport { NativeSelect, NativeSelectOption } from "@workspace/ui/components/native-select";\n\nexport function NativeSelect1Example(): React.JSX.Element {\n\treturn (\n\t\t<NativeSelect className="w-full max-w-xs">\n\t\t\t<NativeSelectOption value="">Select a fruit</NativeSelectOption>\n\t\t\t<NativeSelectOption value="apple">Apple</NativeSelectOption>\n\t\t\t<NativeSelectOption value="banana">Banana</NativeSelectOption>\n\t\t\t<NativeSelectOption value="blueberry">Blueberry</NativeSelectOption>\n\t\t\t<NativeSelectOption value="grapes" disabled>\n\t\t\t\tGrapes\n\t\t\t</NativeSelectOption>\n\t\t\t<NativeSelectOption value="pineapple">Pineapple</NativeSelectOption>\n\t\t</NativeSelect>\n\t);\n}\n',
@@ -55,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-native-select-2",
 				label: "Grouped Options",
 				anchor: "grouped-options",
+				part: null,
 				file: "native-select-2",
 				source:
 					'import * as React from "react";\nimport { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@workspace/ui/components/native-select";\n\nexport function NativeSelect2Example(): React.JSX.Element {\n\treturn (\n\t\t<NativeSelect className="w-full max-w-xs">\n\t\t\t<NativeSelectOption value="">Select a food</NativeSelectOption>\n\t\t\t<NativeSelectOptGroup label="Fruits">\n\t\t\t\t<NativeSelectOption value="apple">Apple</NativeSelectOption>\n\t\t\t\t<NativeSelectOption value="banana">Banana</NativeSelectOption>\n\t\t\t\t<NativeSelectOption value="blueberry">Blueberry</NativeSelectOption>\n\t\t\t</NativeSelectOptGroup>\n\t\t\t<NativeSelectOptGroup label="Vegetables">\n\t\t\t\t<NativeSelectOption value="carrot">Carrot</NativeSelectOption>\n\t\t\t\t<NativeSelectOption value="broccoli">Broccoli</NativeSelectOption>\n\t\t\t\t<NativeSelectOption value="spinach">Spinach</NativeSelectOption>\n\t\t\t</NativeSelectOptGroup>\n\t\t</NativeSelect>\n\t);\n}\n',
@@ -63,6 +65,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-native-select-4",
 				label: "Field With Label",
 				anchor: "field-with-label",
+				part: null,
 				file: "native-select-4",
 				source:
 					'import * as React from "react";\nimport { Field, FieldDescription, FieldLabel } from "@workspace/ui/components/field";\nimport { NativeSelect, NativeSelectOption } from "@workspace/ui/components/native-select";\n\nexport function NativeSelect4Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs">\n\t\t\t<FieldLabel htmlFor="native-select-country">Country</FieldLabel>\n\t\t\t<NativeSelect id="native-select-country">\n\t\t\t\t<NativeSelectOption value="">Select a country</NativeSelectOption>\n\t\t\t\t<NativeSelectOption value="us">United States</NativeSelectOption>\n\t\t\t\t<NativeSelectOption value="uk">United Kingdom</NativeSelectOption>\n\t\t\t\t<NativeSelectOption value="ca">Canada</NativeSelectOption>\n\t\t\t</NativeSelect>\n\t\t\t<FieldDescription>Select your country of residence.</FieldDescription>\n\t\t</Field>\n\t);\n}\n',
@@ -71,6 +74,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-native-select-6",
 				label: "Invalid",
 				anchor: "invalid",
+				part: null,
 				file: "native-select-6",
 				source:
 					'import * as React from "react";\nimport { NativeSelect, NativeSelectOption } from "@workspace/ui/components/native-select";\n\nexport function NativeSelect6Example(): React.JSX.Element {\n\treturn (\n\t\t<NativeSelect aria-invalid="true" className="w-full max-w-xs">\n\t\t\t<NativeSelectOption value="">Invalid Select</NativeSelectOption>\n\t\t\t<NativeSelectOption value="1">Option 1</NativeSelectOption>\n\t\t</NativeSelect>\n\t);\n}\n',

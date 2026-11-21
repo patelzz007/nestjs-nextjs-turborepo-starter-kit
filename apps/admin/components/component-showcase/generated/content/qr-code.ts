@@ -30,6 +30,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-qr-code-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "qr-code-1",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { Input } from "@workspace/ui/components/input";\nimport { Label } from "@workspace/ui/components/label";\nimport { QrCode } from "@workspace/ui/components/qr-code";\n\nconst DEFAULT_VALUE = "https://acme.example/claim/R-2026-0042";\nconst QR_SIZE_PX = 160;\n\nexport function QrCode1Example(): React.JSX.Element {\n\tconst [value, setValue] = React.useState<string>(DEFAULT_VALUE);\n\n\tconst handleChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {\n\t\tsetValue(event.currentTarget.value);\n\t}, []);\n\n\treturn (\n\t\t<div className="flex w-full max-w-md flex-col gap-4">\n\t\t\t<div className="flex flex-col gap-1.5">\n\t\t\t\t<Label htmlFor="usage-qr-value">Encoded value</Label>\n\t\t\t\t<Input id="usage-qr-value" value={value} onChange={handleChange} />\n\t\t\t</div>\n\t\t\t<QrCode value={value.length > 0 ? value : DEFAULT_VALUE} size={QR_SIZE_PX} label="QR code of the encoded value" />\n\t\t</div>\n\t);\n}\n',

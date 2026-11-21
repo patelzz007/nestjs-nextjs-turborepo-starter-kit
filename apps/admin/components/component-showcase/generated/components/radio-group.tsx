@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/radio-group/radio-group-1").then((m) => m.RadioGroup1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/radio-group/radio-group-2").then((m) => m.RadioGroup2Example), { loading: FeatureLoading });
@@ -45,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic radio group. Best for the bare pattern: 3 density options, each dot tied to its label through id and htmlFor, Comfortable picked on load.",
 		file: "radio-group-1",
 		source:
@@ -55,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-2",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled radio group. Best for the density list with its preselected Comfortable option locked: the dot disabled, its label dimmed by the Field.",
 		file: "radio-group-2",
 		source:
@@ -65,6 +67,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-3",
 		label: "Descriptions",
 		anchor: "descriptions",
+		part: null,
 		description: "Radio with description. Best for density options that each carry a one line hint stacked under the label inside FieldContent.",
 		file: "radio-group-3",
 		source:
@@ -75,6 +78,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-4",
 		label: "Invalid",
 		anchor: "invalid",
+		part: null,
 		description: "Invalid radio group. Best for a 2 option Email or SMS choice shown in error, with data-invalid on each Field and aria-invalid on each dot.",
 		file: "radio-group-4",
 		source:
@@ -85,6 +89,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-5",
 		label: "Colored",
 		anchor: "colored",
+		part: null,
 		description: "Colored radio group. Best for options whose circles take a blue, green or yellow border through a className override on each item.",
 		file: "radio-group-5",
 		source:
@@ -95,6 +100,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-6",
 		label: "Legend & Description",
 		anchor: "legend-description",
+		part: null,
 		description: "Radio group with legend and description. Best for a fieldset whose legend and hint title the whole set, here 3 battery levels with Medium picked.",
 		file: "radio-group-6",
 		source:
@@ -105,6 +111,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-7",
 		label: "Descriptive Cards",
 		anchor: "descriptive-cards",
+		part: null,
 		description:
 			"Card radio group with descriptions. Best for two outlined plan tiles, Plus and Pro, a title and one line pitch left of a trailing dot, the whole tile clickable.",
 		file: "radio-group-7",
@@ -116,6 +123,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-8",
 		label: "Card Separators",
 		anchor: "card-separators",
+		part: null,
 		description: "Radio group in card with separators. Best for shipping speeds as 3 full width rows inside one Card, split by separators, the dot leading each title.",
 		file: "radio-group-8",
 		source:
@@ -126,6 +134,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-9",
 		label: "Card Icons",
 		anchor: "card-icons",
+		part: null,
 		description: "Radio group in card with icons. Best for contact method rows in one Card, each opening on a muted mail, phone or chat icon with the dot at the far end.",
 		file: "radio-group-9",
 		source:
@@ -136,6 +145,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-10",
 		label: "In Frame",
 		anchor: "in-frame",
+		part: null,
 		description: "Radio group in a frame. Best for four language rows in a Frame, a Language title bar over one panel whose rows are split by separators.",
 		file: "radio-group-10",
 		source:
@@ -146,6 +156,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-11",
 		label: "Grid Layout",
 		anchor: "grid-layout",
+		part: null,
 		description: "Radio group with grid layout. Best for four product area tiles in 2 columns, each an icon chip over a title and blurb, with the dot pinned top right.",
 		file: "radio-group-11",
 		source:
@@ -156,6 +167,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-12",
 		label: "Avatar Cards",
 		anchor: "avatar-cards",
+		part: null,
 		description: "Avatar based card radio group. Best for two person tiles with avatar photo, name and handle, picking a single teammate through a trailing dot.",
 		file: "radio-group-12",
 		source:
@@ -166,6 +178,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-13",
 		label: "Payment Methods",
 		anchor: "payment-methods",
+		part: null,
 		description: "Payment method radio cards. Best for saved Visa and Mastercard tiles with last 4 digits and expiry, plus an add new method tile, each with a corner dot.",
 		file: "radio-group-13",
 		source:
@@ -176,6 +189,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-14",
 		label: "Tooltip Info",
 		anchor: "tooltip-info",
+		part: null,
 		description: "Radio group with tooltip info. Best for public and private visibility choices whose labels end in a help icon that opens a longer explanation in a tooltip.",
 		file: "radio-group-14",
 		source:
@@ -186,6 +200,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-15",
 		label: "Badges",
 		anchor: "badges",
+		part: null,
 		description: "Radio group with badges. Best for release channels where Stable wears a secondary Recommended pill and Beta a default New pill, Canary left bare.",
 		file: "radio-group-15",
 		source:
@@ -196,6 +211,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-16",
 		label: "Inline Horizontal",
 		anchor: "inline-horizontal",
+		part: null,
 		description: "Inline horizontal radio group. Best for admin, Editor and Viewer roles set side by side in one row that wraps on narrow screens, Viewer picked.",
 		file: "radio-group-16",
 		source:
@@ -206,6 +222,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-radio-group-17",
 		label: "Pricing Tiers",
 		anchor: "pricing-tiers",
+		part: null,
 		description: "Pricing plan radio cards. Best for free, Pro and Enterprise tiers mapped from an array, each row pairing the name with a monthly price over a pitch.",
 		file: "radio-group-17",
 		source:
@@ -251,6 +268,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function RadioGroupFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function RadioGroupFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

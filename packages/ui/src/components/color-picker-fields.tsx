@@ -16,6 +16,7 @@ import {
 	wrapHue,
 	type ColorPickerColorSpace,
 	type ColorPickerFormat,
+	ColorPickerFormatSchema,
 } from "@workspace/ui/lib/color/color-space";
 import { mergeRefs } from "@workspace/ui/lib/core/merge-refs";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -23,7 +24,6 @@ import { cva } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { ColorPickerFormatSchema } from "../lib/color/color-space";
 
 /* Arrows step a field, ten with Shift; Page keys always ten. A hue wraps. */
 const STEP_KEYS: ReadonlyMap<string, number> = new Map([

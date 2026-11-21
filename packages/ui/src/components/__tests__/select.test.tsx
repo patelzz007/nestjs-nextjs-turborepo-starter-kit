@@ -19,7 +19,7 @@ import {
 	type SelectOption,
 } from "../select";
 import { describeSelection, resolveSelectOptionLabel } from "../select-context";
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */

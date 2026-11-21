@@ -15,7 +15,7 @@ tags: ["architecture", "ui", "data-table", "spreadsheet", "mobile", "plan"]
 
 | | |
 |---|---|
-| Status | **Plan approved in outline. Implementation has NOT started and must not start until the owner says so** (the owner is waiting for another thread to finish and be pushed). Only documents may be written before then. |
+| Status | **In progress since the owner's go on 2026-11-19.** Part A (web: build, migrate, delete) is built: one `DataTable`, one `Spreadsheet`, a private engine, all 18 pages migrated, the showcase rebuilt. The decision is recorded in [ADR 097](../adr/097-one-data-table.md) (this plan calls it "ADR 095"; that number was taken). Parts B, D1, E, C and D2 are open. The running log, with every step, check result and deviation from this plan, is `docs/history/PROGRESS-2026-11-19-data-table-unification.md`. |
 | Written | 2026-11-19 |
 | Scope | This repo: `packages/ui` (web kit), `packages/ui-native` (mobile kit), `packages/ui-kit-logic`, `apps/admin`, `apps/docs`, `apps/mobile`. Then the same implementation in two other repos: `nextjs-admin-dashboard-layout` (web) and `expo-boilerplate` (mobile). |
 | Outcome | One dumb `DataTable`, one dumb `Spreadsheet` and one private engine on the web, and the same pair on mobile. The old `data-table*` and `data-grid*` files are deleted everywhere. Every pattern of [ShadTable](https://github.com/coros-hq/shadcn-table-library) is rebuilt on the new components. |
@@ -1175,8 +1175,32 @@ Where it sits in the order: with Part D2, **before** the table work is ported to
 
 ## Appendix A — Behaviour inventory
 
-To be filled in phase 0.1.
+The inventory was taken in phase 0.1 and turned straight into tests, so it lives where it is checked, not as a
+second copy here:
+
+| Behaviour of | Checked by |
+|---|---|
+| The engine (was `DataGrid`): every layout flag, keyboard key, ARIA attribute and label | `packages/ui/src/internal/table-engine/__tests__/` (10 files) |
+| Cell selection, clipboard, fill and the cell editor | `packages/ui/src/internal/spreadsheet/__tests__/` |
+| Every `DataTable` prop (was `DataTable` + `DataGrid`) | `packages/ui/src/components/__tests__/data-table.test.tsx` |
+| Every `Spreadsheet` prop | `packages/ui/src/components/__tests__/spreadsheet.test.tsx` |
+| The pure rules (query, preferences, column ids, export text, pagination) | `packages/ui-kit-logic/src/table/__tests__/` |
+| What was dropped on purpose | [ADR 097](../adr/097-one-data-table.md), "What was dropped" |
 
 ## Appendix B — Page × prop usage
 
-To be filled in phase 0.2.
+Phase 0.2 found 17 admin components and 1 docs component that render the table (not 19 files: three of the
+operations files only import it for a child).
+
+| Old prop | Pages that used it |
+|---|---|
+| `pagination` in server mode, with `sorting` and the manual filter props | users, merchants, categories, products, audit, geo, webhooks, email-log, docs-sync, mfa-recovery, support-access |
+| `checkbox` (export, bulk actions) | users, mfa, merchants, categories, products, docs-sync, geo, support-access, webhooks, email-log |
+| `actions` | users, mfa, merchants, categories, products, backups |
+| `mobileCardRender` | every server table |
+| `toolbarContent` (a search the page owns) | users, merchants, categories, products, audit, geo, webhooks, email-log |
+| `onRowClick`, `emptyState`, `labels`, `error`, `isLoading`, `isRefetching`, `enableColumnVisibility` | most |
+| Inline editing, row dragging, virtualised rows, column pinning | none |
+
+The old-to-new prop mapping every page went through is the "Page migration recipe" in
+`docs/history/PROGRESS-2026-11-19-data-table-unification.md`.

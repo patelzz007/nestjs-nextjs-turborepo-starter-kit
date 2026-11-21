@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/collapsible/collapsible-1").then((m) => m.Collapsible1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/collapsible/collapsible-2").then((m) => m.Collapsible2Example), { loading: FeatureLoading });
@@ -40,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic collapsible. Best for an order summary that keeps its status row in view and opens the shipping address and items from an icon button.",
 		file: "collapsible-1",
 		source:
@@ -50,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-2",
 		label: "Checkbox Settings",
 		anchor: "checkbox-settings",
+		part: null,
 		description: "Collapsible with checkbox settings. Best for a full-width outline button that opens a card of 3 notification channel checkboxes, starting open.",
 		file: "collapsible-2",
 		source:
@@ -60,6 +62,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-3",
 		label: "Animated Card",
 		anchor: "animated-card",
+		part: null,
 		description: "Collapsible animated card. Best for a single help question in a small card, where the whole question line opens its answer below.",
 		file: "collapsible-3",
 		source:
@@ -70,6 +73,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-4",
 		label: "Bottom Trigger",
 		anchor: "bottom-trigger",
+		part: null,
 		description:
 			"Collapsible card with bottom trigger. Best for a billing usage card with a progress bar whose round chevron button, centered on the bottom edge, opens a cost breakdown.",
 		file: "collapsible-4",
@@ -81,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-5",
 		label: "Form Fields",
 		anchor: "form-fields",
+		part: null,
 		description:
 			"Collapsible form fields. Best for a price input with a sliders icon button beside it that reveals tax rate and discount fields, its open state held in React state.",
 		file: "collapsible-5",
@@ -92,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-6",
 		label: "In Frame",
 		anchor: "in-frame",
+		part: null,
 		description: "Collapsible frame. Best for a deployment status note in a stacked Frame, open on load, its whole header row toggling the release summary.",
 		file: "collapsible-6",
 		source:
@@ -102,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-7",
 		label: "Nested List",
 		anchor: "nested-list",
+		part: null,
 		description: "Nested collapsible list with actions. Best for a list of 3 API keys under a toggling Frame header, each row's menu copying its key or deleting the row.",
 		file: "collapsible-7",
 		source:
@@ -112,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-8",
 		label: "User Profile",
 		anchor: "user-profile",
+		part: null,
 		description: "Collapsible User profile. Best for a user handle with avatar that opens to last activity, an online since time and a country flag for location.",
 		file: "collapsible-8",
 		source:
@@ -122,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-9",
 		label: "Multi-Level Menu",
 		anchor: "multi-level-menu",
+		part: null,
 		description: "Multi-level collapsible menu. Best for a 3 level navigation menu of icon rows where folders open in place and the chosen leaf row stays highlighted.",
 		file: "collapsible-9",
 		source:
@@ -132,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-collapsible-10",
 		label: "File Tree",
 		anchor: "file-tree",
+		part: null,
 		description:
 			"Tree view with file actions. Best for a code file explorer under Explorer and Outline tabs, file rows showing download and delete buttons on hover or selection.",
 		file: "collapsible-10",
@@ -178,6 +188,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CollapsibleFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CollapsibleFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

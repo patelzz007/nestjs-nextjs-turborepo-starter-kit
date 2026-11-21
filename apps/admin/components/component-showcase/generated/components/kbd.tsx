@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/kbd/kbd-1").then((m) => m.Kbd1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/kbd/kbd-2").then((m) => m.Kbd2Example), { loading: FeatureLoading });
@@ -26,6 +26,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kbd-1",
 		label: "Basic Keys",
 		anchor: "basic-keys",
+		part: null,
 		description: "Basic keyboard keys.. Best for loose single keys with no group, where a chord such as Ctrl + B sits as text inside one key.",
 		file: "kbd-1",
 		source:
@@ -36,6 +37,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kbd-2",
 		label: "Grouped Keys",
 		anchor: "grouped-keys",
+		part: null,
 		description: "Keyboard keys grouped together.. Best for a 3 key chord, Ctrl Shift P, as separate caps in one group with a small gap and no plus signs.",
 		file: "kbd-2",
 		source:
@@ -46,6 +48,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kbd-3",
 		label: "Keys With Icons",
 		anchor: "keys-with-icons",
+		part: null,
 		description: "Keyboard keys combined with icons.. Best for keys that lead with an icon before a word, such as a left arrow before Left, grouped with a Voice Enabled key.",
 		file: "kbd-3",
 		source:
@@ -56,6 +59,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kbd-4",
 		label: "In Input",
 		anchor: "in-input",
+		part: null,
 		description: "Keyboard key within an input.. Best for a Space key hint at the leading edge of a search field, held in an input group addon.",
 		file: "kbd-4",
 		source:
@@ -66,6 +70,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kbd-5",
 		label: "In Tooltip",
 		anchor: "in-tooltip",
+		part: null,
 		description: "Keyboard shortcut in a tooltip.. Best for a single key inside the hover hint of an icon only save button, set after the action name.",
 		file: "kbd-5",
 		source:
@@ -76,6 +81,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-kbd-6",
 		label: "Shortcut List",
 		anchor: "shortcut-list",
+		part: null,
 		description: "Keyboard shortcuts reference list. Best for a titled list of 5 commands from Search to Redo, each row ending in its Mac key chord.",
 		file: "kbd-6",
 		source:
@@ -121,6 +127,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function KbdFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function KbdFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

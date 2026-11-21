@@ -1,13 +1,13 @@
 [
 	{
-		"title": "Track rows by id",
+		"title": "Say what an empty table means",
 		"do": {
-			"text": "Give the table `getRowId`, so a selection or an edit follows its row through a sort, a filter or a page.",
+			"text": "Give the table an `emptyState` that names what is missing and offers the next step.",
 			"file": "data-table-do-1",
 			"export": "DataTableDo1Example"
 		},
 		"dont": {
-			"text": "Don't leave rows tracked by position: after a sort, the tick lands on whichever row moved there.",
+			"text": "Don't leave the stock message on a table people are meant to fill: it says nothing about what to do.",
 			"file": "data-table-dont-1",
 			"export": "DataTableDont1Example"
 		}
@@ -15,7 +15,7 @@
 	{
 		"title": "Keep a narrow table narrow",
 		"do": {
-			"text": "Show the few columns a reader compares; put the rest behind a row action or the columns menu.",
+			"text": "Show the few columns a reader compares; put the rest behind a row action, a detail row or the columns menu.",
 			"file": "data-table-do-2",
 			"export": "DataTableDo2Example"
 		},

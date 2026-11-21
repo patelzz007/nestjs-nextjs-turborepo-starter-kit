@@ -22,7 +22,8 @@ export interface ShowcaseSearchEntry {
 /** How a result's links are built (the showcase's routes in this app). */
 export interface ShowcaseSearchRoutes {
 	readonly component: (slug: string) => string;
-	readonly feature: (slug: string, anchor: string) => string;
+	/** A feature's link; `part` is the page part it sits on, or `null` when the component's page is not split. */
+	readonly feature: (slug: string, anchor: string, part: string | null) => string;
 }
 
 /** The most results the search shows at once, so the list stays short enough to scan. */
@@ -54,7 +55,7 @@ export function buildShowcaseSearchEntries(routes: ShowcaseSearchRoutes, catalog
 			title: feature.label,
 			componentName: entry.name,
 			familyTitle: family.title,
-			href: routes.feature(entry.slug, feature.anchor),
+			href: routes.feature(entry.slug, feature.anchor, feature.part),
 			haystack: foldForSearch(`${feature.label} ${entry.name} ${entry.slug}`),
 		}));
 		return [component, ...features];

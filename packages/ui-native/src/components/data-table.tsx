@@ -44,6 +44,7 @@ import {
 	parseDataTablePersistedPrefs,
 	reconcileDataTablePrefs,
 	resolveDataTableCheckboxConfig,
+	resolveDataTableRowActionTone,
 	isServerPagination,
 	type DataTableBulkSelectionContext,
 	type DataTableCellScalar,
@@ -53,6 +54,7 @@ import {
 	type DataTableExportFormat,
 	type DataTablePagination,
 	type DataTablePersistedPrefsPatch,
+	type DataTableRowActionTone,
 	type DataTableSorting,
 	type DataTableStorageAdapter,
 } from "@workspace/ui-kit-logic";
@@ -151,14 +153,20 @@ export interface DataTableFilter {
 	readonly options: readonly { readonly value: string; readonly label: string }[];
 }
 
-/** A row action, in the row's ⋯ menu and on its card. */
+/** A row action, in the row's ⋯ menu (an icon tile, a title and a subtitle) and on its card. */
 export interface DataTableAction<TData> {
 	readonly key: string;
+	/** The title: what the action is ("Duplicate"). */
 	readonly label: string;
-	readonly description?: string | undefined;
+	/** The subtitle under the title: what it does ("Copy this section as a draft"). Every entry has one. */
+	readonly description: string;
 	readonly icon?: LucideIcon | undefined;
 	readonly onPress: RowHandler<TData>;
-	readonly variant?: "default" | "destructive" | undefined;
+	/**
+	 * The icon tile's colour: a hue of the tone palette, or `destructive` for an action that removes or cannot be
+	 * undone. Left out, each entry takes the next hue in menu order (blue, violet, teal, green, orange).
+	 */
+	readonly tone?: DataTableRowActionTone | undefined;
 }
 
 /** A row action bound to its row, as a card draws it. */
@@ -274,7 +282,11 @@ export const dataTableRowVariants = cva("h-12 flex-row items-center border-b bor
 
 export const dataTableHeaderRowVariants = cva("h-10 flex-row items-center border-b border-border bg-muted/50");
 
-export const dataTableCellVariants = cva("h-full justify-center px-3", {
+/**
+ * A data cell: its `width` is where it starts, and `grow` shares any room the screen has left evenly among the data
+ * cells, so the table always spans its width (the utility cells keep theirs).
+ */
+export const dataTableCellVariants = cva("h-full grow justify-center px-3", {
 	variants: {
 		width: { xs: "w-16", sm: "w-24", md: "w-36", lg: "w-52" },
 		align: { start: "items-start", end: "items-end" },
@@ -535,16 +547,44 @@ interface RowActionsProps {
 	readonly labels: NativeDataTableLabels;
 }
 
+/** Each tone's icon tile: the hue as the glyph's colour on its own soft fill. */
+const ROW_ACTION_TONE_TILE: Readonly<Record<DataTableRowActionTone, { readonly fill: string; readonly glyph: string }>> = {
+	blue: { fill: "bg-tone-blue-soft", glyph: "accent-tone-blue" },
+	violet: { fill: "bg-tone-violet-soft", glyph: "accent-tone-violet" },
+	teal: { fill: "bg-tone-teal-soft", glyph: "accent-tone-teal" },
+	green: { fill: "bg-tone-green-soft", glyph: "accent-tone-green" },
+	orange: { fill: "bg-tone-orange-soft", glyph: "accent-tone-orange" },
+	yellow: { fill: "bg-tone-yellow-soft", glyph: "accent-tone-yellow" },
+	destructive: { fill: "bg-destructive-soft", glyph: "accent-destructive" },
+};
+
+/** A row action's coloured icon tile, in front of its title in the ⋯ menu; decorative (the title names the action). */
+function RowActionTile({ icon, tone }: { readonly icon: LucideIcon; readonly tone: DataTableRowActionTone }): React.JSX.Element {
+	const { fill, glyph } = ROW_ACTION_TONE_TILE[tone];
+	return (
+		<View
+			importantForAccessibility="no-hide-descendants"
+			accessibilityElementsHidden
+			className={cn("size-8 items-center justify-center rounded-full", fill)}
+			testID={`row-action-tile-${tone}`}>
+			<Icon icon={icon} size="sm" colorClassName={glyph} />
+		</View>
+	);
+}
+
 function RowActions({ row, actions, rowName, labels }: RowActionsProps): React.JSX.Element {
 	const items = React.useMemo(
 		(): DropdownMenuItemData<string>[] =>
-			actions.map((action): DropdownMenuItemData<string> => ({
-				value: action.key,
-				label: action.label,
-				icon: action.icon,
-				description: action.description,
-				variant: action.variant ?? "default",
-			})),
+			actions.map((action, position): DropdownMenuItemData<string> => {
+				const tone = resolveDataTableRowActionTone(action.tone, position);
+				return {
+					value: action.key,
+					label: action.label,
+					description: action.description,
+					leading: action.icon === undefined ? undefined : <RowActionTile icon={action.icon} tone={tone} />,
+					variant: tone === "destructive" ? "destructive" : "default",
+				};
+			}),
 		[actions],
 	);
 	const handleSelect = React.useCallback(
@@ -1109,7 +1149,7 @@ const DataTableBase = React.forwardRef<ViewInstance, DataTableProps<RowData>>(fu
 			key: action.key,
 			label: action.label,
 			icon: action.icon,
-			destructive: action.variant === "destructive",
+			destructive: action.tone === "destructive",
 			onPress: (): void => {
 				action.onPress(row.original);
 			},
@@ -1161,8 +1201,8 @@ const DataTableBase = React.forwardRef<ViewInstance, DataTableProps<RowData>>(fu
 		);
 	} else if (virtualizeRows) {
 		body = (
-			<ScrollView horizontal showsHorizontalScrollIndicator={false}>
-				<View className={dataTableBodyVariants({ refetching: isRefetching })}>
+			<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="grow">
+				<View className={cn(dataTableBodyVariants({ refetching: isRefetching }), "grow")}>
 					{headerRow(scrollingColumns, true, false)}
 					<FlatList data={pageRows} renderItem={renderVirtualRow} keyExtractor={rowKey} getItemLayout={rowLayout} style={bodyStyle} nestedScrollEnabled />
 				</View>
@@ -1188,8 +1228,9 @@ const DataTableBase = React.forwardRef<ViewInstance, DataTableProps<RowData>>(fu
 						))}
 					</View>
 				) : null}
-				<ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1">
-					<View>
+				{/* At least as wide as the screen: the data cells grow into any room left, so the rows span it. */}
+				<ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1" contentContainerClassName="grow">
+					<View className="grow">
 						{headerRow(scrollingColumns, !hasPinnedBlock, draggable)}
 						{draggable ? (
 							<Sortable value={pageRowIds} onValueChange={ignoreOrder} onValueCommit={handleReorder} getItemValue={identity}>

@@ -37,6 +37,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-separator-1",
 				label: "Horizontal",
 				anchor: "horizontal",
+				part: null,
 				file: "separator-1",
 				source:
 					'import * as React from "react";\nimport { Separator } from "@workspace/ui/components/separator";\n\nexport function Separator1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto flex w-full max-w-xs flex-col gap-2 text-sm">\n\t\t\t<div className="flex flex-col gap-1">\n\t\t\t\t<div className="text-sm leading-none font-medium">Design System</div>\n\t\t\t\t<div className="text-xs text-muted-foreground">The Foundation for your UI.</div>\n\t\t\t</div>\n\t\t\t<Separator />\n\t\t\t<div className="text-muted-foreground">A set of beautifully designed components that you can customize, extend, and build on.</div>\n\t\t</div>\n\t);\n}\n',
@@ -45,6 +46,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-separator-2",
 				label: "Vertical",
 				anchor: "vertical",
+				part: null,
 				file: "separator-2",
 				source:
 					'import * as React from "react";\nimport { Separator } from "@workspace/ui/components/separator";\n\nexport function Separator2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<div className="flex h-5 items-center gap-4 text-sm">\n\t\t\t\t<div>Blog</div>\n\t\t\t\t<Separator orientation="vertical" />\n\t\t\t\t<div>Docs</div>\n\t\t\t\t<Separator orientation="vertical" />\n\t\t\t\t<div>Source</div>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n',
@@ -53,6 +55,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-separator-5",
 				label: "Centered Label",
 				anchor: "centered-label",
+				part: null,
 				file: "separator-5",
 				source:
 					'import * as React from "react";\nimport { Separator } from "@workspace/ui/components/separator";\n\nexport function Separator5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto flex w-full max-w-xs flex-col gap-6">\n\t\t\t<div className="relative">\n\t\t\t\t<Separator />\n\t\t\t\t<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">or continue with</span>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n',

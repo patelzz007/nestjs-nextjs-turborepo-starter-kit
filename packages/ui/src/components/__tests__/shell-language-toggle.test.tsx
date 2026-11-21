@@ -3,11 +3,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi, beforeAll } from "vitest";
 
-import type { UiKitLanguage } from "../../lib/labels/language-packs";
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLanguage } from "@workspace/ui/lib/labels/language-packs";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { ShellLanguageToggle } from "../shell-language-toggle";
 import { UiKitLabelsProvider, UiKitLanguageProvider, useUiKitLanguage } from "../ui-kit-labels-provider";
-import { UI_KIT_LANGUAGES, loadUiKitLanguagePack } from "../../lib/labels/language-packs";
+import { UI_KIT_LANGUAGES, loadUiKitLanguagePack } from "@workspace/ui/lib/labels/language-packs";
 
 afterEach((): void => {
 	cleanup();

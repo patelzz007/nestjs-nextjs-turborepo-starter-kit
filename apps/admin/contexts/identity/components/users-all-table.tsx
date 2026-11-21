@@ -2,7 +2,7 @@
 
 import { adminUserListQuery, AdminSignupReferralStatusFilterSchema, AdminUserStatusSchema, type AdminUserDetail, type Envelope } from "@workspace/shared";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildReadOnlyTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { ALL_FILTER_OPTION, parseFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
@@ -17,7 +17,14 @@ import { SavedViewsMenu } from "@/contexts/saved-views";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import {
+	DataTable,
+	type DataTableFeatures,
+	type DataTableFilter,
+	type DataTablePaging,
+	type DataTableRowAction,
+	type DataTableToolbar,
+} from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import Link from "next/link";
@@ -91,17 +98,6 @@ export default function UsersAllTable({
 	const rows: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
 	// The server's count of every matching row — not just the rows on this page.
 	const matchingTotal: number = readPaginatedTotal(usersQuery.data?.meta);
-	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: adminUserListQuery,
-		totalCount: matchingTotal,
-		nextCursor: readPaginatedNextCursor(usersQuery.data?.meta),
-		resetKey: USERS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getUserRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-	});
 	const tableError: string | null = usersQuery.isError ? "Could not load users. Clear search or sort and try again." : null;
 
 	const handleViewUser = React.useCallback(
@@ -111,20 +107,20 @@ export default function UsersAllTable({
 		[router],
 	);
 
-	const actions = React.useMemo((): Action<AdminUserDetail>[] => {
+	const actions = React.useMemo((): DataTableRowAction<AdminUserDetail>[] => {
 		return [
 			{
 				key: "manage",
 				label: "Manage access",
 				description: "View roles and direct permissions",
 				icon: <Eye className="size-4" />,
-				onClick: handleViewUser,
+				onSelect: handleViewUser,
 			},
 		];
 	}, [handleViewUser]);
 
 	const mobileCardRender = React.useCallback(
-		(user: AdminUserDetail, cardActions?: Action<AdminUserDetail>[]): React.ReactNode => (
+		(user: AdminUserDetail, cardActions: readonly DataTableRowAction<AdminUserDetail>[]): React.ReactNode => (
 			<DataTableMobileCard
 				item={user}
 				title={user.fullName}
@@ -253,24 +249,36 @@ export default function UsersAllTable({
 		}),
 		[urlState.referralStatus, urlState.status],
 	);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: adminUserListQuery,
+		totalCount: matchingTotal,
+		nextCursor: readPaginatedNextCursor(usersQuery.data?.meta),
+		getRowId: getUserRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		isFiltered,
+		onClearFilters: handleClearFilters,
+	});
 
 	const tableFilters = React.useMemo(
-		(): Filter[] => [
+		(): DataTableFilter[] => [
 			{
-				key: "status",
+				kind: "select",
+				column: "status",
 				label: "Account status",
 				options: enumFilterOptions(AdminUserStatusSchema.options, ADMIN_USER_STATUS_LABELS),
 			},
 			{
-				key: "referralStatus",
+				kind: "select",
+				column: "referralStatus",
 				label: "Referral status",
 				options: enumFilterOptions(AdminSignupReferralStatusFilterSchema.options, SIGNUP_REFERRAL_STATUS_LABELS),
 			},
 		],
 		[],
 	);
-
-	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("users.csv", ["fullName", "email"]), []);
 
 	const toolbarContent = React.useMemo(
 		() => (
@@ -289,6 +297,7 @@ export default function UsersAllTable({
 		),
 		[handleReferrerChange, searchDraft, setSearchDraft, urlState.referrerId],
 	);
+	const toolbar = React.useMemo((): DataTableToolbar => ({ extra: toolbarContent }), [toolbarContent]);
 
 	return (
 		<div className="space-y-6">
@@ -305,28 +314,27 @@ export default function UsersAllTable({
 					<DataTable
 						columns={columns}
 						data={rows}
+						getRowId={getRowId}
+						source={source}
 						labels={USER_TABLE_LABELS}
-						actions={actions}
-						checkbox={checkbox}
-						enableColumnVisibility
+						rowActions={actions}
+						selection={USERS_BULK.selection}
+						exporting={USERS_BULK.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
 						filters={tableFilters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						mobileCardRender={mobileCardRender}
-						pagination={pagination}
-						pageSizeOptions={USERS_PAGE_SIZE_OPTIONS}
-						sorting={sorting}
-						error={tableError}
-						isLoading={usersQuery.isLoading}
-						isRefetching={usersQuery.isFetching && !usersQuery.isLoading ? true : false}
-						onManualSortingChange={handleSortingChange}
-						toolbarContent={toolbarContent}
+						mobileCard={mobileCardRender}
+						paging={USERS_PAGING}
+						status={toTableStatus(usersQuery, tableError)}
+						toolbar={toolbar}
 					/>
 				</CardContent>
 			</Card>
 		</div>
 	);
 }
+
+const USERS_BULK = buildReadOnlyTableBulk<AdminUserDetail>("users.csv", ["fullName", "email"]);
+const USERS_PAGING: DataTablePaging = { pageSizeOptions: USERS_PAGE_SIZE_OPTIONS };
 
 function getUserRowId(user: AdminUserDetail): string {
 	return user.id;

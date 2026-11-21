@@ -1,7 +1,7 @@
 "use client";
 
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
-import { buildResourceTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildResourceTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-table/resolve-manual-bulk-selection";
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
@@ -21,7 +21,16 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { LIST_SLOT_INDEX, productListQuery, type Envelope, type Product } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import {
+	DataTable,
+	type DataTableBulkSelectionContext,
+	type DataTableEmptyState,
+	type DataTableFeatures,
+	type DataTableFilter,
+	type DataTablePaging,
+	type DataTableRowAction,
+	type DataTableToolbar,
+} from "@workspace/ui/components/data-table";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -32,7 +41,6 @@ import { useCallback, useMemo } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/toast";
 
-import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { ROUTES } from "@/lib/routes";
 import { formatCatalogAmount } from "@/lib/format/numbers";
 import { formatDateTime } from "@/lib/format/dates";
@@ -126,18 +134,6 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 	const rows: Product[] = resourceListQuery.data?.data ?? [];
 	// The server's count of every matching row — not just the rows on this page.
 	const matchingTotal: number = readPaginatedTotal(resourceListQuery.data?.meta);
-	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: productListQuery,
-		totalCount: matchingTotal,
-		nextCursor: readPaginatedNextCursor(resourceListQuery.data?.meta),
-		resetKey: PRODUCTS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getProductRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-		onFetchAllMatching: fetchAllMatchingProducts,
-	});
 	const tableError: string | null = resourceListQuery.isError ? "Could not load products. Clear search or filters and try again." : null;
 
 	const handleView = useCallback(
@@ -193,7 +189,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 
 	const handleBulkDelete = useCallback(
 		async (selected: Product[], context: DataTableBulkSelectionContext): Promise<void> => {
-			const count = context.selectAllPages ? context.totalMatchingRows : selected.length;
+			const count = context.scope === "all-matching" ? context.totalMatchingRows : selected.length;
 			await requestDelete({
 				title: `Delete ${String(count)} product${count === 1 ? "" : "s"}?`,
 				description: "This action soft-deletes them.",
@@ -214,15 +210,15 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 		[bulkDeleteMutation, deleteMutation, fetchAllMatchingProducts, requestDelete],
 	);
 
-	const actions = useMemo((): Action<Product>[] => {
-		const base: Action<Product>[] = [];
+	const actions = useMemo((): DataTableRowAction<Product>[] => {
+		const base: DataTableRowAction<Product>[] = [];
 		if (canView) {
 			base.push({
 				key: "view",
 				label: "View",
 				description: "View product details",
 				icon: <Eye className="size-4" />,
-				onClick: handleView,
+				onSelect: handleView,
 			});
 		}
 		if (canUpdate) {
@@ -231,7 +227,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 				label: "Edit",
 				description: "Edit product",
 				icon: <Pencil className="size-4" />,
-				onClick: handleEdit,
+				onSelect: handleEdit,
 			});
 		}
 		if (canDelete) {
@@ -240,27 +236,26 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 				label: "Delete",
 				description: "Remove this product",
 				icon: <Trash2 className="size-4" />,
-				onClick: handleDelete,
-				isDestructive: true,
-				iconBgColor: "bg-destructive-soft",
+				onSelect: handleDelete,
+				tone: "destructive",
 			});
 		}
 		return base;
 	}, [canDelete, canUpdate, canView, handleDelete, handleEdit, handleView]);
 
-	const checkbox = useMemo(
+	const bulk = useMemo(
 		() =>
-			buildResourceTableCheckbox<Product>({
+			buildResourceTableBulk<Product>({
 				canDelete,
 				exportFilename: "product.csv",
-				exportableColumns: ["sku", "name", "price", "stockQuantity", "categoryId", "isActive", "isFeatured", "createdAt"],
-				onDeleteAll: handleBulkDelete,
+				exportKeys: ["sku", "name", "price", "stockQuantity", "categoryId", "isActive", "isFeatured", "createdAt"],
+				onDelete: handleBulkDelete,
 			}),
 		[canDelete, handleBulkDelete],
 	);
 
 	const mobileCardRender = useCallback(
-		(item: Product, cardActions?: Action<Product>[]): React.ReactNode => (
+		(item: Product, cardActions: readonly DataTableRowAction<Product>[]): React.ReactNode => (
 			<DataTableMobileCard
 				item={item}
 				title={item.sku}
@@ -354,11 +349,25 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 		}),
 		[urlState.isActive, urlState.isFeatured],
 	);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: productListQuery,
+		totalCount: matchingTotal,
+		nextCursor: readPaginatedNextCursor(resourceListQuery.data?.meta),
+		getRowId: getProductRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		isFiltered,
+		onClearFilters: handleClearFilters,
+		onFetchAllMatching: fetchAllMatchingProducts,
+	});
 
 	const tableFilters = useMemo(
-		(): Filter[] => [
+		(): DataTableFilter[] => [
 			{
-				key: "isActive",
+				kind: "select",
+				column: "isActive",
 				label: "Is Active",
 				options: [
 					{ value: "true", label: "Active" },
@@ -366,7 +375,8 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 				],
 			},
 			{
-				key: "isFeatured",
+				kind: "select",
+				column: "isFeatured",
 				label: "Is Featured",
 				options: [
 					{ value: "true", label: "Featured" },
@@ -417,6 +427,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 		),
 		[searchDraft, setSearchDraft, textFilterToolbar],
 	);
+	const toolbar = useMemo((): DataTableToolbar => ({ extra: searchToolbar }), [searchToolbar]);
 
 	return (
 		<div className="space-y-6">
@@ -442,28 +453,20 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 					<DataTable
 						data={rows}
 						columns={columns}
+						getRowId={getRowId}
+						source={source}
 						labels={PRODUCT_TABLE_LABELS}
-						actions={actions}
-						checkbox={checkbox}
-						enableColumnVisibility
+						rowActions={actions}
+						selection={bulk.selection}
+						exporting={bulk.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
 						filters={tableFilters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						mobileCardRender={mobileCardRender}
-						{...(canView ? { onRowClick: handleView } : {})}
-						pagination={pagination}
-						pageSizeOptions={PRODUCTS_PAGE_SIZE_OPTIONS}
-						sorting={sorting}
-						onManualSortingChange={handleSortingChange}
-						isLoading={resourceListQuery.isLoading}
-						isRefetching={resourceListQuery.isFetching && !resourceListQuery.isLoading ? true : false}
-						error={tableError}
-						searchKeys={[]}
-						toolbarContent={searchToolbar}
-						emptyState={{
-							title: isFiltered ? "No matching products" : "No products yet",
-							description: isFiltered ? "Clear search or filters to see more results." : "Create your first product to get started.",
-						}}
+						mobileCard={mobileCardRender}
+						onRowClick={canView ? handleView : undefined}
+						paging={PRODUCTS_PAGING}
+						status={toTableStatus(resourceListQuery, tableError)}
+						toolbar={toolbar}
+						emptyState={PRODUCTS_EMPTY}
 					/>
 				</CardContent>
 			</Card>
@@ -471,6 +474,10 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 		</div>
 	);
 }
+
+const PRODUCTS_PAGING: DataTablePaging = { pageSizeOptions: PRODUCTS_PAGE_SIZE_OPTIONS };
+/** Shown when there are no products at all; a search or a filter that matches nothing has the table's own "no results" state. */
+const PRODUCTS_EMPTY: DataTableEmptyState = { title: "No products yet", description: "Create your first product to get started." };
 
 function getProductRowId(product: Product): string {
 	return product.id;

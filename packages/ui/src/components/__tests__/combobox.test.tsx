@@ -17,7 +17,7 @@ import {
 	countSelection,
 	type ComboboxLabels,
 } from "../combobox";
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { accessibilityViolations } from "../../testing/axe";
 

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/code-block/code-block-1").then((m) => m.CodeBlock1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/code-block/code-block-2").then((m) => m.CodeBlock2Example), { loading: FeatureLoading });
@@ -55,6 +55,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic code block. Best for a static TypeScript snippet with line numbers, the resolved language label and a header copy button.",
 		file: "code-block-1",
 		source:
@@ -65,6 +66,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-2",
 		label: "Pinned Copy",
 		anchor: "pinned-copy",
+		part: null,
 		description: "Pinned copy button. Best for a headerless snippet whose outlined copy button floats over the code, with both axes scrolled by a capped Scroll Area.",
 		file: "code-block-2",
 		source:
@@ -75,6 +77,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-3",
 		label: "Streaming Agent",
 		anchor: "streaming-agent",
+		part: null,
 		description:
 			"Streaming agent response. Best for a route handler typed out 3 characters per tick, with a Generating badge, a Replay button and a ScrollArea that follows the caret.",
 		file: "code-block-3",
@@ -86,6 +89,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-4",
 		label: "AI Chat",
 		anchor: "ai-chat",
+		part: null,
 		description:
 			"AI chat with code fences. Best for a 2 turn Frame transcript with avatars, where the streamed reply splits into prose paragraphs and a fenced snippet with copy.",
 		file: "code-block-4",
@@ -97,6 +101,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-5",
 		label: "Diff Summary",
 		anchor: "diff-summary",
+		part: null,
 		description:
 			"Diff with change summary. Best for removed and added lines of a single file marked by number through the diff prop, under a header holding only filename and copy.",
 		file: "code-block-5",
@@ -108,6 +113,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-6",
 		label: "Transformer Diff",
 		anchor: "transformer-diff",
+		part: null,
 		description:
 			"Diff via shiki transformers. Best for a hand written shiki transformer that tags lines 2 and 3 as removed and added, hoisted to module scope so renders skip re-tokenizing.",
 		file: "code-block-6",
@@ -119,6 +125,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-7",
 		label: "Highlights",
 		anchor: "highlights",
+		part: null,
 		description: "Highlighted lines and words. Best for a connection config with lines 2 to 4 tinted from a range string and 2 identifiers marked wherever they appear.",
 		file: "code-block-7",
 		source:
@@ -129,6 +136,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-8",
 		label: "Focus Walkthrough",
 		anchor: "focus-walkthrough",
+		part: null,
 		description:
 			"Focus walkthrough. Best for a 3 step tour of a checkout function, chosen with pressed buttons in the header, with a step counter and the other lines dimmed.",
 		file: "code-block-8",
@@ -140,6 +148,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-9",
 		label: "Terminal Output",
 		anchor: "terminal-output",
+		part: null,
 		description: "Terminal output. Best for build output with highlighting turned off so shiki never loads, under a Terminal header with wrap and copy controls.",
 		file: "code-block-9",
 		source:
@@ -150,6 +159,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-10",
 		label: "Long File",
 		anchor: "long-file",
+		part: null,
 		description: "Long file with expand. Best for a generated file excerpt numbered from 120 and held near 8 rows by a ScrollArea that reads expanded state until Show more.",
 		file: "code-block-10",
 		source:
@@ -160,6 +170,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-11",
 		label: "Diagnostics & Actions",
 		anchor: "diagnostics-actions",
+		part: null,
 		description:
 			"Line actions and diagnostics. Best for a function with an error line and a warning line, tallied in header badges, where a Fix line button appears on hover over either.",
 		file: "code-block-11",
@@ -171,6 +182,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-12",
 		label: "Line Selection",
 		anchor: "line-selection",
+		part: null,
 		description: "Line selection. Best for controlled click and shift click line picking that feeds a selected count badge, an Ask about button and a Clear button.",
 		file: "code-block-12",
 		source:
@@ -181,6 +193,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-13",
 		label: "Search In File",
 		anchor: "search-in-file",
+		part: null,
 		description: "Search in file. Best for a header search field that marks each case sensitive match, a badge counting matches in the source, and a floating copy button.",
 		file: "code-block-13",
 		source:
@@ -191,6 +204,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-14",
 		label: "File Tabs",
 		anchor: "file-tabs",
+		part: null,
 		description: "File tabs in a dense frame. Best for snippets in tsx, Python, SQL and bash behind file tabs in a dense Frame header, each a ghost block with floating copy.",
 		file: "code-block-14",
 		source:
@@ -201,6 +215,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-15",
 		label: "Pre-Highlighted Lines",
 		anchor: "pre-highlighted-lines",
+		part: null,
 		description: "Pre-highlighted lines. Best for hand built tokens that color 4 Python keywords in light and dark, passed as lines so the client loads no highlighter.",
 		file: "code-block-15",
 		source:
@@ -211,6 +226,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-16",
 		label: "Before & After",
 		anchor: "before-after",
+		part: null,
 		description: "Before and after. Best for a loop refactored into a reduce, as 2 ghost blocks with Before and After headers in separate panels of one Frame.",
 		file: "code-block-16",
 		source:
@@ -221,6 +237,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-17",
 		label: "Soft Wrap",
 		anchor: "soft-wrap",
+		part: null,
 		description: "Soft wrap. Best for a single line CSP string that starts wrapped, with wrap state lifted to the page so a badge reads Wrapped or Scrolling.",
 		file: "code-block-17",
 		source:
@@ -231,6 +248,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-18",
 		label: "Unified Patch",
 		anchor: "unified-patch",
+		part: null,
 		description: "Unified patch review. Best for a 2 file patch split into one block per file, each with plus and minus count badges and a download named after that file.",
 		file: "code-block-18",
 		source:
@@ -241,6 +259,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-19",
 		label: "Design Token Theme",
 		anchor: "design-token-theme",
+		part: null,
 		description: "Design-token theme. Best for a rose, violet, emerald, sky and amber palette set as class variables on the block, stepping to lighter shades in dark mode.",
 		file: "code-block-19",
 		source:
@@ -251,6 +270,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-20",
 		label: "Always Dark",
 		anchor: "always-dark",
+		part: null,
 		description: "Always-dark block. Best for a dark scoped hero snippet behind 3 window dots, carrying a highlight, a word mark, a diff pair and all 3 diagnostic levels.",
 		file: "code-block-20",
 		source:
@@ -261,6 +281,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-21",
 		label: "Dark Terminal",
 		anchor: "dark-terminal",
+		part: null,
 		description: "Dark terminal. Best for a forced dark vitest log assembled span by span with light and dark hex colors, pass and fail marks and a summary row.",
 		file: "code-block-21",
 		source:
@@ -271,6 +292,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-22",
 		label: "Accept & Reject",
 		anchor: "accept-reject",
+		part: null,
 		description: "Patch review actions. Best for an agent fix in a ghost block inside a Card, with Reject and Accept in the footer that flip to a status line and Undo.",
 		file: "code-block-22",
 		source:
@@ -281,6 +303,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-23",
 		label: "Code Folding",
 		anchor: "code-folding",
+		part: null,
 		description: "Nested code folding. Best for a sync function with 5 indentation regions, opening with its inner branch folded, plus Fold all and Unfold all in the header.",
 		file: "code-block-23",
 		source:
@@ -291,6 +314,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-24",
 		label: "Fix With AI",
 		anchor: "fix-with-ai",
+		part: null,
 		description:
 			"Fix with AI on the failing line. Best for a reduce missing its initial value flagged on line 3, where a Fix with AI button on that line swaps in patched source with Undo.",
 		file: "code-block-24",
@@ -302,6 +326,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-25",
 		label: "Reference Lines",
 		anchor: "reference-lines",
+		part: null,
 		description:
 			"Reference lines in chat. Best for a gutter plus button that adds the hovered line or the whole selection to a Card composer, where pressing a chip highlights its line.",
 		file: "code-block-25",
@@ -313,6 +338,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-26",
 		label: "External Scroll",
 		anchor: "external-scroll",
+		part: null,
 		description:
 			"Framed by an external ScrollArea. Best for a Card with 3 changed files that size to their content, scrolled together by one fixed height ScrollArea, each with count badges.",
 		file: "code-block-26",
@@ -324,6 +350,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-code-block-27",
 		label: "ANSI Terminal",
 		anchor: "ansi-terminal",
+		part: null,
 		description: "ANSI terminal output. Best for vitest stdout with raw SGR escapes turned into colored tokens by ansiToLines, forced dark, with escape free text for copy.",
 		file: "code-block-27",
 		source:
@@ -369,6 +396,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CodeBlockFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CodeBlockFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

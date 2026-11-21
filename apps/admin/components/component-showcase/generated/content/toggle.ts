@@ -53,6 +53,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "toggle-1",
 				source:
 					'import * as React from "react";\nimport { BoldIcon, ItalicIcon, UnderlineIcon } from "lucide-react";\nimport { Toggle } from "@workspace/ui/components/toggle";\n\nexport function Toggle1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-wrap items-center justify-center gap-2">\n\t\t\t<Toggle aria-label="Toggle bold" defaultPressed>\n\t\t\t\t<BoldIcon />\n\t\t\t</Toggle>\n\t\t\t<Toggle aria-label="Toggle italic">\n\t\t\t\t<ItalicIcon />\n\t\t\t</Toggle>\n\t\t\t<Toggle aria-label="Toggle underline">\n\t\t\t\t<UnderlineIcon />\n\t\t\t</Toggle>\n\t\t</div>\n\t);\n}\n',
@@ -61,6 +62,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-2",
 				label: "Outline",
 				anchor: "outline",
+				part: null,
 				file: "toggle-2",
 				source:
 					'import * as React from "react";\nimport { BoldIcon, ItalicIcon } from "lucide-react";\nimport { Toggle } from "@workspace/ui/components/toggle";\n\nexport function Toggle2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-wrap items-center justify-center gap-2">\n\t\t\t<Toggle variant="outline" aria-label="Toggle italic">\n\t\t\t\t<ItalicIcon />\n\t\t\t\tItalic\n\t\t\t</Toggle>\n\t\t\t<Toggle variant="outline" aria-label="Toggle bold">\n\t\t\t\t<BoldIcon />\n\t\t\t\tBold\n\t\t\t</Toggle>\n\t\t</div>\n\t);\n}\n',
@@ -69,6 +71,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-8",
 				label: "Icon Sizes",
 				anchor: "icon-sizes",
+				part: null,
 				file: "toggle-8",
 				source:
 					'import * as React from "react";\nimport { StarIcon } from "lucide-react";\nimport { Toggle } from "@workspace/ui/components/toggle";\n\nexport function Toggle8Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-col items-center justify-center gap-4">\n\t\t\t<div className="flex items-center gap-3">\n\t\t\t\t<span className="w-16 text-sm text-muted-foreground">Small</span>\n\t\t\t\t<Toggle variant="outline" size="sm" aria-label="Toggle star small">\n\t\t\t\t\t<StarIcon />\n\t\t\t\t</Toggle>\n\t\t\t</div>\n\t\t\t<div className="flex items-center gap-3">\n\t\t\t\t<span className="w-16 text-sm text-muted-foreground">Default</span>\n\t\t\t\t<Toggle variant="outline" size="default" aria-label="Toggle star default">\n\t\t\t\t\t<StarIcon />\n\t\t\t\t</Toggle>\n\t\t\t</div>\n\t\t\t<div className="flex items-center gap-3">\n\t\t\t\t<span className="w-16 text-sm text-muted-foreground">Large</span>\n\t\t\t\t<Toggle variant="outline" size="lg" aria-label="Toggle star large">\n\t\t\t\t\t<StarIcon />\n\t\t\t\t</Toggle>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n',
@@ -77,6 +80,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-9",
 				label: "Icon Swap",
 				anchor: "icon-swap",
+				part: null,
 				file: "toggle-9",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { HeartIcon } from "lucide-react";\nimport { useState } from "react";\n\nimport { Toggle } from "@workspace/ui/components/toggle";\n\nexport function Toggle9Example(): React.JSX.Element {\n\tconst [pressed, setPressed] = useState(false);\n\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<Toggle aria-label="Toggle favorite" pressed={pressed} onPressedChange={setPressed}>\n\t\t\t\t{pressed ? <HeartIcon className="fill-current" /> : <HeartIcon />}\n\t\t\t</Toggle>\n\t\t</div>\n\t);\n}\n',
@@ -85,6 +89,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-11",
 				label: "Reactions",
 				anchor: "reactions",
+				part: null,
 				file: "toggle-11",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { BookmarkIcon, HeartIcon, Repeat2Icon, Share2Icon } from "lucide-react";\nimport { useState } from "react";\n\nimport { Toggle } from "@workspace/ui/components/toggle";\n\nexport function Toggle11Example(): React.JSX.Element {\n\tconst [liked, setLiked] = useState(false);\n\tconst [retweeted, setRetweeted] = useState(false);\n\tconst [shared, setShared] = useState(false);\n\tconst [bookmarked, setBookmarked] = useState(false);\n\n\treturn (\n\t\t<div className="flex flex-wrap items-center justify-center gap-2">\n\t\t\t<Toggle variant="outline" aria-label="Like" pressed={liked} onPressedChange={setLiked}>\n\t\t\t\t<HeartIcon />\n\t\t\t\t{liked ? 13 : 12}\n\t\t\t</Toggle>\n\t\t\t<Toggle variant="outline" aria-label="Retweet" pressed={retweeted} onPressedChange={setRetweeted}>\n\t\t\t\t<Repeat2Icon />\n\t\t\t\t{retweeted ? 6 : 5}\n\t\t\t</Toggle>\n\t\t\t<Toggle variant="outline" aria-label="Share" pressed={shared} onPressedChange={setShared}>\n\t\t\t\t<Share2Icon />\n\t\t\t\t{shared ? 4 : 3}\n\t\t\t</Toggle>\n\t\t\t<Toggle variant="outline" aria-label="Bookmark" pressed={bookmarked} onPressedChange={setBookmarked}>\n\t\t\t\t<BookmarkIcon />\n\t\t\t\t{bookmarked ? 9 : 8}\n\t\t\t</Toggle>\n\t\t</div>\n\t);\n}\n',

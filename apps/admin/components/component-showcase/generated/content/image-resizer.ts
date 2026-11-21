@@ -37,6 +37,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-image-resizer-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "image-resizer-1",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { ImageResizer } from "@workspace/ui/components/image-resizer";\nimport type { ImageSize } from "@workspace/shared";\n\nconst PHOTO_URL = "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=800&q=80";\n/** The photo\'s starting size, in CSS pixels (16 : 9). */\nconst START_SIZE: ImageSize = { width: 384, height: 216 };\nconst MAX_WIDTH_PX = 640;\nconst WIDE_RATIO = 16 / 9;\n\nexport function ImageResizer1Example(): React.JSX.Element {\n\tconst [size, setSize] = React.useState<ImageSize>(START_SIZE);\n\n\treturn (\n\t\t<div className="flex flex-col gap-2 p-4">\n\t\t\t<ImageResizer src={PHOTO_URL} alt="A laptop on a desk" value={size} onValueChange={setSize} maxWidth={MAX_WIDTH_PX} aspectRatio={WIDE_RATIO} className="rounded-lg" />\n\t\t\t<p className="text-sm text-muted-foreground">\n\t\t\t\t{size.width} × {size.height} px\n\t\t\t</p>\n\t\t</div>\n\t);\n}\n',

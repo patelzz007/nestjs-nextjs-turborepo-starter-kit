@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/file-upload/file-upload-1").then((m) => m.FileUpload1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/file-upload/file-upload-2").then((m) => m.FileUpload2Example), { loading: FeatureLoading });
@@ -38,6 +38,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic file upload. Best for a button beside a small square avatar slot that fills with the picked image, with its name and a Remove link below.",
 		file: "file-upload-1",
 		source:
@@ -48,6 +49,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-2",
 		label: "Avatar",
 		anchor: "avatar",
+		part: null,
 		description: "Avatar upload. Best for a round dashed avatar that is itself the click and drop target, with a corner X, a size hint and an error alert below.",
 		file: "file-upload-2",
 		source:
@@ -58,6 +60,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-3",
 		label: "Drag & Drop",
 		anchor: "drag-drop",
+		part: null,
 		description: "Basic drag and drop file upload. Best for a single row dashed strip holding an Add files button, 48px thumbnails in line and a count against the limit.",
 		file: "file-upload-3",
 		source:
@@ -68,6 +71,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-4",
 		label: "Gallery",
 		anchor: "gallery",
+		part: null,
 		description:
 			"Gallery file upload. Best for a square image grid under a large drop zone, where a zoom button opens the full picture in a Dialog, with a total size and Clear all.",
 		file: "file-upload-4",
@@ -79,6 +83,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-5",
 		label: "Progress List",
 		anchor: "progress-list",
+		part: null,
 		description:
 			"Progress file upload. Best for a stacked list of cards, each with a thin bar while sending and an inline retry alert, under completed, failed and uploading counts.",
 		file: "file-upload-5",
@@ -90,6 +95,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-6",
 		label: "Table",
 		anchor: "table",
+		part: null,
 		description: "Table file upload. Best for rows in a Table with type and size columns, a ring around each icon while sending, and per row download, delete or retry.",
 		file: "file-upload-6",
 		source:
@@ -100,6 +106,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-7",
 		label: "Product Images",
 		anchor: "product-images",
+		part: null,
 		description: "Image upload. Best for product shots in a 4 column grid above a dashed Card drop area, with a progress card per new image that counts up its percent.",
 		file: "file-upload-7",
 		source:
@@ -110,6 +117,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-8",
 		label: "Sortable Images",
 		anchor: "sortable-images",
+		part: null,
 		description: "Image upload with sorting.. Best for a 5 column grid reordered by a grip handle on hover, where new images join the same order as the sample shots.",
 		file: "file-upload-8",
 		source:
@@ -120,6 +128,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-9",
 		label: "Preview Cards",
 		anchor: "preview-cards",
+		part: null,
 		description: "Card file upload.. Best for square preview cards in a grid of up to 6 columns, a ring over each while sending and a tooltip retry on failure.",
 		file: "file-upload-9",
 		source:
@@ -130,6 +139,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-file-upload-10",
 		label: "Cover Image",
 		anchor: "cover-image",
+		part: null,
 		description: "Cover image upload.. Best for a wide 21:9 banner with Change Cover and Remove on hover, a percent ring while sending and an image guidelines box below.",
 		file: "file-upload-10",
 		source:
@@ -175,6 +185,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function FileUploadFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function FileUploadFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/toast/sonner-1").then((m) => m.Sonner1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/toast/sonner-2").then((m) => m.Sonner2Example), { loading: FeatureLoading });
@@ -41,6 +41,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic toast notification.. Best for a single line message from one bare call with no options, the minimum a toast needs.",
 		file: "sonner-1",
 		source:
@@ -51,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-2",
 		label: "With Description",
 		anchor: "with-description",
+		part: null,
 		description: "Toast notification with description.. Best for a title over a second line passed as description, here an event name with its date and time.",
 		file: "sonner-2",
 		source:
@@ -61,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-3",
 		label: "Positions",
 		anchor: "positions",
+		part: null,
 		description: "Toast positions. Best for a grid of 6 buttons that each send their toast to a different top or bottom corner or center.",
 		file: "sonner-3",
 		source:
@@ -71,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-4",
 		label: "Variant Icons",
 		anchor: "variant-icons",
+		part: null,
 		description:
 			"Toast variants with colored icons. Best for default, success, error, warning, info and loading side by side, with the 4 status icons each tinted its own color.",
 		file: "sonner-4",
@@ -82,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-5",
 		label: "Durations",
 		anchor: "durations",
+		part: null,
 		description: "Toast duration options. Best for timers of 2, 5 and 10 seconds beside a persistent notice that stays until it is closed.",
 		file: "sonner-5",
 		source:
@@ -92,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-6",
 		label: "Action Button",
 		anchor: "action-button",
+		part: null,
 		description: "Toast with action button. Best for an archive notice with an Undo button inside the toast that confirms with a second success toast.",
 		file: "sonner-6",
 		source:
@@ -102,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-7",
 		label: "Promise",
 		anchor: "promise",
+		part: null,
 		description: "Promise toast with loading state. Best for a deploy whose spinner becomes a success or error line when its promise settles, quoting the resolved name.",
 		file: "sonner-7",
 		source:
@@ -112,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-8",
 		label: "Action & Close",
 		anchor: "action-close",
+		part: null,
 		description: "Toast with custom close and cancel buttons. Best for a delete prompt inside the toast with a Delete action and a Cancel button that just closes it.",
 		file: "sonner-8",
 		source:
@@ -122,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-9",
 		label: "Rich Content",
 		anchor: "rich-content",
+		part: null,
 		description: "Toast with custom rich content. Best for a teammate chat message with avatar, sender, time ago and Reply and Dismiss buttons on the popover surface.",
 		file: "sonner-9",
 		source:
@@ -132,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-10",
 		label: "Upload Progress",
 		anchor: "upload-progress",
+		part: null,
 		description: "Toast with upload progress simulation. Best for a file card whose progress bar fills in place under one toast id, closing 3 seconds after it reaches 100.",
 		file: "sonner-10",
 		source:
@@ -142,6 +152,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-11",
 		label: "Status Alert",
 		anchor: "status-alert",
+		part: null,
 		description: "Toast with status alert markup. Best for a deploy result with a green status dot, environment, duration and commit rows, and View Logs and Open Site.",
 		file: "sonner-11",
 		source:
@@ -152,6 +163,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-12",
 		label: "Info with Action",
 		anchor: "info-with-action",
+		part: null,
 		description: "Custom accent border toast. Best for a release notice marked by a thick blue left edge and an info icon, offering Later or Update Now.",
 		file: "sonner-12",
 		source:
@@ -162,6 +174,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-13",
 		label: "Success with Action",
 		anchor: "success-with-action",
+		part: null,
 		description: "Custom invert success toast. Best for a paid invoice confirmation on the inverted surface with a green check badge and one View Receipt button.",
 		file: "sonner-13",
 		source:
@@ -172,6 +185,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-14",
 		label: "Error with Details",
 		anchor: "error-with-details",
+		part: null,
 		description: "Custom invert error toast with details. Best for a failed build listing 2 file and line errors in monospace above View Logs and a red Retry Build.",
 		file: "sonner-14",
 		source:
@@ -182,6 +196,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-15",
 		label: "Avatar Icon",
 		anchor: "avatar-icon",
+		part: null,
 		description:
 			"Custom invert info toast with avatar. Best for a collaboration invite from a named teammate with an avatar, a Decline and a blue Accept on the inverted surface.",
 		file: "sonner-15",
@@ -193,6 +208,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-16",
 		label: "Warning with Action",
 		anchor: "warning-with-action",
+		part: null,
 		description:
 			"Custom invert warning toast with countdown. Best for a session timeout warning held for 10 seconds, whose amber Extend Session button swaps in a success toast.",
 		file: "sonner-16",
@@ -204,6 +220,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-17",
 		label: "Avatar Group",
 		anchor: "avatar-group",
+		part: null,
 		description:
 			"Multi-action invert toast with avatar group. Best for a pull request ready to merge, with an overlapping stack of 3 reviewer avatars and View and green Merge.",
 		file: "sonner-17",
@@ -215,6 +232,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-18",
 		label: "Close Button",
 		anchor: "close-button",
+		part: null,
 		description: "Toast with close button on top-right. Best for an uploaded file notice whose close button is moved from the default top left corner to the top right.",
 		file: "sonner-18",
 		source:
@@ -225,6 +243,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-19",
 		label: "Custom Icon",
 		anchor: "custom-icon",
+		part: null,
 		description: "Toast with custom icon. Best for a row of 3 plain notices that each pass their own leading glyph: send, download and bookmark.",
 		file: "sonner-19",
 		source:
@@ -235,6 +254,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-20",
 		label: "Integration",
 		anchor: "integration",
+		part: null,
 		description:
 			"Custom integration toast. Best for a connected workspace card with a gradient link tile, Active status, a channel sync line and Configure and Open Dashboard.",
 		file: "sonner-20",
@@ -246,6 +266,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sonner-21",
 		label: "Updatable",
 		anchor: "updatable",
+		part: null,
 		description: "Updatable toast with ID. Best for a spinner line rewritten through a stored toast id from preparing to 30 and 70 percent, then a success card.",
 		file: "sonner-21",
 		source:
@@ -291,6 +312,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ToastFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ToastFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

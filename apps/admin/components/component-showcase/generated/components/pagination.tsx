@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/pagination/pagination-1").then((m) => m.Pagination1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/pagination/pagination-2").then((m) => m.Pagination2Example), { loading: FeatureLoading });
@@ -43,6 +43,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic pagination.. Best for the stock pattern: labeled Previous and Next around 3 page links, with page 2 outlined as current.",
 		file: "pagination-1",
 		source:
@@ -53,6 +54,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-2",
 		label: "No Labels",
 		anchor: "no-labels",
+		part: null,
 		description: "Pagination without labels.. Best for chevron only arrows with aria labels and no Previous or Next text, around 3 numbers with page 2 current.",
 		file: "pagination-2",
 		source:
@@ -63,6 +65,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-3",
 		label: "Hover Border",
 		anchor: "hover-border",
+		part: null,
 		description: "Pagination with hover effect.. Best for labeled Previous and Next around 3 pages whose idle numbers draw a border on hover, like the outlined current page.",
 		file: "pagination-3",
 		source:
@@ -73,6 +76,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-4",
 		label: "Circle Buttons",
 		anchor: "circle-buttons",
+		part: null,
 		description: "Pagination with circle buttons.. Best for fully round page buttons and pill shaped Previous and Next, with page 2 outlined as current.",
 		file: "pagination-4",
 		source:
@@ -83,6 +87,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-5",
 		label: "Compact Go-To",
 		anchor: "compact-go-to",
+		part: null,
 		description: "Pagination with go-to-page input. Best for a 320px row fitting chevrons, pages 1 to 3 and an ellipsis beside a small Go to page number field.",
 		file: "pagination-5",
 		source:
@@ -93,6 +98,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-6",
 		label: "In Card",
 		anchor: "in-card",
+		part: null,
 		description: "Numbered pagination in card. Best for a padded Card holding round chevrons, pages 1 to 3, an ellipsis, then 10 to 12, with page 1 filled in primary.",
 		file: "pagination-6",
 		source:
@@ -103,6 +109,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-7",
 		label: "Arrow Links",
 		anchor: "arrow-links",
+		part: null,
 		description: "Pagination with arrows buttons. Best for two text links with straight arrow icons pushed to opposite ends of a narrow row, and no page numbers at all.",
 		file: "pagination-7",
 		source:
@@ -113,6 +120,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-8",
 		label: "Centered Page Info",
 		anchor: "centered-page-info",
+		part: null,
 		description: "Pagination with page info on center. Best for chevron arrows at both ends of a 320px row with a centered Page 1 of 10 count between them.",
 		file: "pagination-8",
 		source:
@@ -123,6 +131,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-9",
 		label: "Left Page Info",
 		anchor: "left-page-info",
+		part: null,
 		description: "Pagination with page info on left. Best for a Page 1 of 10 count on the left, with labeled Previous and Next grouped together on the right.",
 		file: "pagination-9",
 		source:
@@ -133,6 +142,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-10",
 		label: "Trailing Ellipsis",
 		anchor: "trailing-ellipsis",
+		part: null,
 		description: "Pagination with ellipsis indicator. Best for labeled arrows around pages 1 to 4 and a trailing ellipsis, with no last page link after it.",
 		file: "pagination-10",
 		source:
@@ -143,6 +153,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-11",
 		label: "Outline Strip",
 		anchor: "outline-strip",
+		part: null,
 		description: "Pagination with outline style buttons. Best for one bordered strip of joined square cells split by dividers, with a muted fill on the current page.",
 		file: "pagination-11",
 		source:
@@ -153,6 +164,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-12",
 		label: "Rows Per Page",
 		anchor: "rows-per-page",
+		part: null,
 		description:
 			"Rows per page select with range info and first/prev/next/last icons. Best for a footer with no page numbers: a rows per page select on the left, and a 1-25 of 100 range with 4 jump icons on the right.",
 		file: "pagination-12",
@@ -164,6 +176,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-13",
 		label: "Page Select",
 		anchor: "page-select",
+		part: null,
 		description:
 			"Pagination with page select dropdown and first/last navigation. Best for a Page 1 to Page 10 dropdown flanked by first, previous, next and last icon links, with no numbered links.",
 		file: "pagination-13",
@@ -175,6 +188,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-14",
 		label: "Full Width Go-To",
 		anchor: "full-width-go-to",
+		part: null,
 		description: "Numbered pagination with go-to-page input. Best for chevrons and pages 1 to 4 on the left of a full width row, with the page number field at the far right.",
 		file: "pagination-14",
 		source:
@@ -185,6 +199,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pagination-15",
 		label: "Info & Per-Page",
 		anchor: "info-per-page",
+		part: null,
 		description:
 			"Pagination with page info, numbered pages, ellipsis, and per-page select. Best for a 3 part footer: a Page 1 of 10 count, labeled arrows around pages 1 to 4 and a per page select.",
 		file: "pagination-15",
@@ -231,6 +246,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function PaginationFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function PaginationFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

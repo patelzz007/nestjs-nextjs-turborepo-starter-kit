@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/pdf-viewer/pdf-viewer-1").then((m) => m.PdfViewer1Example), { loading: FeatureLoading });
 const Guideline1 = dynamic(() => import("@/components/component-showcase/examples/pdf-viewer/pdf-viewer-do-1").then((m) => m.PdfViewerDo1Example), {
@@ -29,6 +29,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-pdf-viewer-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "A PDF with page navigation, zoom, fullscreen and a file picker to open another one. Best for previewing documents such as invoices or contracts in place.",
 		file: "pdf-viewer-1",
 		source:
@@ -74,6 +75,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function PdfViewerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function PdfViewerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

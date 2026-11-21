@@ -1,7 +1,7 @@
 "use client";
 
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
-import { buildResourceTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildResourceTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-table/resolve-manual-bulk-selection";
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
@@ -21,7 +21,16 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { LIST_SLOT_INDEX, sampleCategoryListQuery, type Envelope, type SampleCategory } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import {
+	DataTable,
+	type DataTableBulkSelectionContext,
+	type DataTableEmptyState,
+	type DataTableFeatures,
+	type DataTableFilter,
+	type DataTablePaging,
+	type DataTableRowAction,
+	type DataTableToolbar,
+} from "@workspace/ui/components/data-table";
 import { buttonVariants } from "@workspace/ui/components/button";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, Pencil, Trash2 } from "lucide-react";
@@ -31,7 +40,6 @@ import { useCallback, useMemo } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/toast";
 
-import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { ROUTES } from "@/lib/routes";
 import { formatDateTime } from "@/lib/format/dates";
 
@@ -97,18 +105,6 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 	const rows: SampleCategory[] = resourceListQuery.data?.data ?? [];
 	// The server's count of every matching row — not just the rows on this page.
 	const matchingTotal: number = readPaginatedTotal(resourceListQuery.data?.meta);
-	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
-		state: urlState,
-		update: updateUrlState,
-		sortSpec: sampleCategoryListQuery,
-		totalCount: matchingTotal,
-		nextCursor: readPaginatedNextCursor(resourceListQuery.data?.meta),
-		resetKey: CATEGORIES_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getCategoryRowId,
-		onClearFilters: handleClearFilters,
-		isFiltered,
-		onFetchAllMatching: fetchAllMatchingCategories,
-	});
 	const tableError: string | null = resourceListQuery.isError ? "Could not load categories. Clear search or filters and try again." : null;
 
 	const handleView = useCallback(
@@ -166,7 +162,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 
 	const handleBulkDelete = useCallback(
 		async (selected: SampleCategory[], context: DataTableBulkSelectionContext): Promise<void> => {
-			const count = context.selectAllPages ? context.totalMatchingRows : selected.length;
+			const count = context.scope === "all-matching" ? context.totalMatchingRows : selected.length;
 			await requestDelete({
 				title: `Delete ${String(count)} ${count === 1 ? "category" : "categories"}?`,
 				description: "This action soft-deletes them.",
@@ -187,15 +183,15 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		[bulkDeleteMutation, deleteMutation, fetchAllMatchingCategories, requestDelete],
 	);
 
-	const actions = useMemo((): Action<SampleCategory>[] => {
-		const base: Action<SampleCategory>[] = [];
+	const actions = useMemo((): DataTableRowAction<SampleCategory>[] => {
+		const base: DataTableRowAction<SampleCategory>[] = [];
 		if (canView) {
 			base.push({
 				key: "view",
 				label: "View",
 				description: "View category details",
 				icon: <Eye className="size-4" />,
-				onClick: handleView,
+				onSelect: handleView,
 			});
 		}
 		if (canUpdate) {
@@ -204,7 +200,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 				label: "Edit",
 				description: "Edit category",
 				icon: <Pencil className="size-4" />,
-				onClick: handleEdit,
+				onSelect: handleEdit,
 			});
 		}
 		if (canDelete) {
@@ -213,27 +209,26 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 				label: "Delete",
 				description: "Remove this category",
 				icon: <Trash2 className="size-4" />,
-				onClick: handleDelete,
-				isDestructive: true,
-				iconBgColor: "bg-destructive-soft",
+				onSelect: handleDelete,
+				tone: "destructive",
 			});
 		}
 		return base;
 	}, [canDelete, canUpdate, canView, handleDelete, handleEdit, handleView]);
 
-	const checkbox = useMemo(
+	const bulk = useMemo(
 		() =>
-			buildResourceTableCheckbox<SampleCategory>({
+			buildResourceTableBulk<SampleCategory>({
 				canDelete,
 				exportFilename: "sample-category.csv",
-				exportableColumns: ["name", "slug", "sortOrder", "isActive", "createdAt"],
-				onDeleteAll: handleBulkDelete,
+				exportKeys: ["name", "slug", "sortOrder", "isActive", "createdAt"],
+				onDelete: handleBulkDelete,
 			}),
 		[canDelete, handleBulkDelete],
 	);
 
 	const mobileCardRender = useCallback(
-		(item: SampleCategory, cardActions?: Action<SampleCategory>[]): React.ReactNode => (
+		(item: SampleCategory, cardActions: readonly DataTableRowAction<SampleCategory>[]): React.ReactNode => (
 			<DataTableMobileCard
 				item={item}
 				title={item.name}
@@ -303,11 +298,25 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		}),
 		[urlState.isActive],
 	);
+	const { source, getRowId } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: sampleCategoryListQuery,
+		totalCount: matchingTotal,
+		nextCursor: readPaginatedNextCursor(resourceListQuery.data?.meta),
+		getRowId: getCategoryRowId,
+		filters: manualColumnFilters,
+		onFilterChange: handleManualColumnFilterChange,
+		isFiltered,
+		onClearFilters: handleClearFilters,
+		onFetchAllMatching: fetchAllMatchingCategories,
+	});
 
 	const tableFilters = useMemo(
-		(): Filter[] => [
+		(): DataTableFilter[] => [
 			{
-				key: "isActive",
+				kind: "select",
+				column: "isActive",
 				label: "Is Active",
 				options: [
 					{ value: "true", label: "Active" },
@@ -326,6 +335,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		),
 		[searchDraft, setSearchDraft],
 	);
+	const toolbar = useMemo((): DataTableToolbar => ({ extra: searchToolbar }), [searchToolbar]);
 
 	return (
 		<div className="space-y-6">
@@ -351,28 +361,20 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 					<DataTable
 						data={rows}
 						columns={columns}
+						getRowId={getRowId}
+						source={source}
 						labels={CATEGORY_TABLE_LABELS}
-						actions={actions}
-						checkbox={checkbox}
-						enableColumnVisibility
+						rowActions={actions}
+						selection={bulk.selection}
+						exporting={bulk.exporting}
+						columnControls={TABLE_COLUMN_CONTROLS}
 						filters={tableFilters}
-						manualColumnFilters={manualColumnFilters}
-						onManualColumnFilterChange={handleManualColumnFilterChange}
-						mobileCardRender={mobileCardRender}
-						{...(canView ? { onRowClick: handleView } : {})}
-						pagination={pagination}
-						pageSizeOptions={CATEGORIES_PAGE_SIZE_OPTIONS}
-						sorting={sorting}
-						onManualSortingChange={handleSortingChange}
-						isLoading={resourceListQuery.isLoading}
-						isRefetching={resourceListQuery.isFetching && !resourceListQuery.isLoading ? true : false}
-						error={tableError}
-						searchKeys={[]}
-						toolbarContent={searchToolbar}
-						emptyState={{
-							title: isFiltered ? "No matching categories" : "No categories yet",
-							description: isFiltered ? "Clear search or filters to see more results." : "Create your first category to get started.",
-						}}
+						mobileCard={mobileCardRender}
+						onRowClick={canView ? handleView : undefined}
+						paging={CATEGORIES_PAGING}
+						status={toTableStatus(resourceListQuery, tableError)}
+						toolbar={toolbar}
+						emptyState={CATEGORIES_EMPTY}
 					/>
 				</CardContent>
 			</Card>
@@ -380,6 +382,10 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		</div>
 	);
 }
+
+const CATEGORIES_PAGING: DataTablePaging = { pageSizeOptions: CATEGORIES_PAGE_SIZE_OPTIONS };
+/** Shown when there are no categories at all; a search or a filter that matches nothing has the table's own "no results" state. */
+const CATEGORIES_EMPTY: DataTableEmptyState = { title: "No categories yet", description: "Create your first category to get started." };
 
 function getCategoryRowId(category: SampleCategory): string {
 	return category.id;

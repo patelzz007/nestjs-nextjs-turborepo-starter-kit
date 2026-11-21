@@ -33,6 +33,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-status-badge-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "status-badge-1",
 				source:
 					'import type * as React from "react";\nimport { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";\n\n/** A feature maps its own statuses to a tone and a label once; the badge never sees the raw enum. */\ntype MemberStatus = "active" | "pending" | "suspended" | "invited" | "draft" | "archived";\n\nconst MEMBER_STATUS_DISPLAY: Readonly<Record<MemberStatus, { readonly tone: StatusTone; readonly label: string }>> = {\n\tactive: { tone: "success", label: "Active" },\n\tpending: { tone: "warning", label: "Pending review" },\n\tsuspended: { tone: "danger", label: "Suspended" },\n\tinvited: { tone: "info", label: "Invited" },\n\tdraft: { tone: "neutral", label: "Draft" },\n\tarchived: { tone: "muted", label: "Archived" },\n};\n\nconst STATUSES: readonly MemberStatus[] = ["active", "pending", "suspended", "invited", "draft", "archived"];\n\nexport function StatusBadge1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-wrap items-center gap-2">\n\t\t\t{STATUSES.map((status: MemberStatus): React.JSX.Element => (\n\t\t\t\t<StatusBadge key={status} tone={MEMBER_STATUS_DISPLAY[status].tone}>\n\t\t\t\t\t{MEMBER_STATUS_DISPLAY[status].label}\n\t\t\t\t</StatusBadge>\n\t\t\t))}\n\t\t</div>\n\t);\n}\n',

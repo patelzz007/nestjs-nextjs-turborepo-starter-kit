@@ -33,6 +33,8 @@ c-data-table-2
 c-data-table-3
 ```
 
+Each entry in the ⋯ menu has an icon tile, a title (`label`) and a subtitle (`description`), and both are required. The icon tile is coloured. Set `tone` to pick a colour (`blue`, `violet`, `teal`, `green`, `orange`, `yellow`), or `destructive` for an action that removes something. If an entry has no tone, it takes the next colour in menu order, so neighbouring entries never share one. The table always spans the screen: when the columns are narrower than the screen, the data columns grow to fill it.
+
 ## Selection and bulk actions
 
 ```showcase-example

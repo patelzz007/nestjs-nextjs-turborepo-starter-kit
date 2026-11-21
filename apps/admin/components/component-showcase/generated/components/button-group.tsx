@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/button-group/button-group-1").then((m) => m.ButtonGroup1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/button-group/button-group-2").then((m) => m.ButtonGroup2Example), { loading: FeatureLoading });
@@ -187,6 +187,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-1",
 		label: "Two Buttons",
 		anchor: "two-buttons",
+		part: null,
 		description: "Basic button group with two buttons. Best for the minimal join: 2 outline text buttons sharing one seam, with no icons, menus or handlers.",
 		file: "button-group-1",
 		source:
@@ -197,6 +198,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-2",
 		label: "Button & Input",
 		anchor: "button-input",
+		part: null,
 		description: "Button group with button followed by input. Best for an outline button fused to the left end of a plain text field, the smallest control and field pair.",
 		file: "button-group-2",
 		source:
@@ -207,6 +209,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-3",
 		label: "Buttons & Badge",
 		anchor: "buttons-badge",
+		part: null,
 		description: "Button group with buttons and badge. Best for mixed content in one strip: a file icon with a Draft badge, an Edit button with text and an icon only upload.",
 		file: "button-group-3",
 		source:
@@ -217,6 +220,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-4",
 		label: "Dropdown Menu",
 		anchor: "dropdown-menu",
+		part: null,
 		description: "Button group with dropdown menu. Best for an Update action beside a chevron menu of Production, Staging and Development deploy targets.",
 		file: "button-group-4",
 		source:
@@ -227,6 +231,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-5",
 		label: "Team Activity",
 		anchor: "team-activity",
+		part: null,
 		description:
 			"Team activity and collaboration group. Best for a team presence strip: Team button, 3 stacked avatars with a 3 Live dot, plus and clock icons and a settings menu.",
 		file: "button-group-5",
@@ -238,6 +243,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-6",
 		label: "Icon Actions",
 		anchor: "icon-actions",
+		part: null,
 		description: "Button group using icons for visual actions. Best for icon only flip horizontal, flip vertical and rotate tools, with no text on any of them.",
 		file: "button-group-6",
 		source:
@@ -248,6 +254,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-7",
 		label: "Status Indicator",
 		anchor: "status-indicator",
+		part: null,
 		description:
 			"Dropdown menu with status indicator. Best for a deploy status strip: a branch menu with main checked, a pulsing Production dot, then refresh and open icons.",
 		file: "button-group-7",
@@ -259,6 +266,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-8",
 		label: "Like Counter",
 		anchor: "like-counter",
+		part: null,
 		description: "Button group styled as a like button with a counter. Best for a Like action with a heart icon fused to a 1.2K count styled as a matching outline cell.",
 		file: "button-group-8",
 		source:
@@ -269,6 +277,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-9",
 		label: "Nested Groups",
 		anchor: "nested-groups",
+		part: null,
 		description:
 			"Nested button groups for complex action sets. Best for nested groups that set an icon only send button apart from a message field with a Voice Mode tooltip addon.",
 		file: "button-group-9",
@@ -280,6 +289,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-10",
 		label: "Basic Pagination",
 		anchor: "basic-pagination",
+		part: null,
 		description: "Button group used for standard pagination. Best for previous and Next text buttons with arrows around small page numbers 1 to 3, none marked as current.",
 		file: "button-group-10",
 		source:
@@ -290,6 +300,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-11",
 		label: "Split Pagination",
 		anchor: "split-pagination",
+		part: null,
 		description:
 			"Pagination split into page numbers and navigation arrows. Best for icon only arrows hugging small page numbers 1 to 3, with all 5 buttons nested in one inner group.",
 		file: "button-group-11",
@@ -301,6 +312,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-12",
 		label: "Text Alignment",
 		anchor: "text-alignment",
+		part: null,
 		description: "Button group for editor text alignment controls. Best for left, center, right and justify alignment as small icon buttons, each named for screen readers.",
 		file: "button-group-12",
 		source:
@@ -311,6 +323,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-13",
 		label: "Vertical Orientation",
 		anchor: "vertical-orientation",
+		part: null,
 		description: "Vertical button group orientation. Best for a vertical pair of named add and subtract icon buttons stacked into one column.",
 		file: "button-group-13",
 		source:
@@ -321,6 +334,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-14",
 		label: "Vertical Tool Palette",
 		anchor: "vertical-tool-palette",
+		part: null,
 		description:
 			"Nested vertical button group for complex tool palettes. Best for a vertical tool palette of search, copy and share icons, with delete held apart in its own group below.",
 		file: "button-group-14",
@@ -332,6 +346,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-15",
 		label: "Star With Dropdown",
 		anchor: "star-with-dropdown",
+		part: null,
 		description: "Star button group with count and dropdown. Best for a repository Star action with a 2.4k badge and a chevron menu from Watch and Fork down to Report.",
 		file: "button-group-15",
 		source:
@@ -342,6 +357,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-16",
 		label: "Search Filter Clear",
 		anchor: "search-filter-clear",
+		part: null,
 		description: "Search input with filter menu and clear button. Best for a record filter bar: a Filter scope menu, a plain search field and an X button at the end.",
 		file: "button-group-16",
 		source:
@@ -352,6 +368,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-17",
 		label: "Conversation Menu",
 		anchor: "conversation-menu",
+		part: null,
 		description: "Button group with comprehensive action menu. Best for a Conversation button with a kebab menu of 6 thread actions above a red Delete Conversation item.",
 		file: "button-group-17",
 		source:
@@ -362,6 +379,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-18",
 		label: "Git Split Button",
 		anchor: "git-split-button",
+		part: null,
 		description:
 			"Advanced git toolbar with branch selection and split commit button. Best for a filled Execute split with a play icon and a chevron menu to commit and push, sync or amend.",
 		file: "button-group-18",
@@ -373,6 +391,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-19",
 		label: "Search With Menu",
 		anchor: "search-with-menu",
+		part: null,
 		description:
 			"Button group with dropdown menu and input group. Best for a search field with a leading magnifier icon and an icon only kebab menu of record scopes at its end.",
 		file: "button-group-19",
@@ -384,6 +403,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-20",
 		label: "Search With Button",
 		anchor: "search-with-button",
+		part: null,
 		description: "Button group with input group and button. Best for a search field ending in a filled primary Search button that opens a menu of record scopes.",
 		file: "button-group-20",
 		source:
@@ -394,6 +414,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-21",
 		label: "File Name Menu",
 		anchor: "file-name-menu",
+		part: null,
 		description: "Button group with dropdown menu and input group. Best for a file name field with a leading file icon and a plus menu to create a file, folder or workspace.",
 		file: "button-group-21",
 		source:
@@ -404,6 +425,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-22",
 		label: "Disabled Button",
 		anchor: "disabled-button",
+		part: null,
 		description: "Basic button group with disabled button. Best for files, Folder and Trash text buttons with icons, where the middle one is disabled and dimmed.",
 		file: "button-group-22",
 		source:
@@ -414,6 +436,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-23",
 		label: "Separated Buttons",
 		anchor: "separated-buttons",
+		part: null,
 		description: "Button group buttons with separators. Best for filled primary Files, Folder and Media buttons with borders stripped, split by tinted separators.",
 		file: "button-group-23",
 		source:
@@ -424,6 +447,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-24",
 		label: "Dashboard Views",
 		anchor: "dashboard-views",
+		part: null,
 		description: "View switcher for dashboard layouts. Best for grid, list and table view icons named for screen readers, with no current view tracked or shaded.",
 		file: "button-group-24",
 		source:
@@ -434,6 +458,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-25",
 		label: "Rating Scale",
 		anchor: "rating-scale",
+		part: null,
 		description: "Rating scale using numerical buttons. Best for a 1 to 10 likelihood scale with Not likely and Very likely end labels, the picked score filled.",
 		file: "button-group-25",
 		source:
@@ -444,6 +469,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-26",
 		label: "User Selection",
 		anchor: "user-selection",
+		part: null,
 		description: "Button group with user selection select. Best for a team member Select with avatar and name in its trigger, joined to add tag and settings icons.",
 		file: "button-group-26",
 		source:
@@ -454,6 +480,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-27",
 		label: "Status Select",
 		anchor: "status-select",
+		part: null,
 		description: "Button group with select status addon. Best for a status Select with colored dots, preset to Completed, joined to a task search field.",
 		file: "button-group-27",
 		source:
@@ -464,6 +491,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-28",
 		label: "Volume Control",
 		anchor: "volume-control",
+		part: null,
 		description: "Volume controller with plus/minus actions. Best for a volume stepper moving in steps of 5 from 0 to 100, whose middle readout toggles mute on click.",
 		file: "button-group-28",
 		source:
@@ -474,6 +502,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-29",
 		label: "Follower Count",
 		anchor: "follower-count",
+		part: null,
 		description: "Button group with follower count. Best for an outline Follow action with a user plus icon and a muted 2.4k followers caption beside it.",
 		file: "button-group-29",
 		source:
@@ -484,6 +513,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-30",
 		label: "Active Count",
 		anchor: "active-count",
+		part: null,
 		description: "Active state button group with count. Best for a filled Star action whose 2.4k count sits in a text cell outlined in the primary color.",
 		file: "button-group-30",
 		source:
@@ -494,6 +524,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-31",
 		label: "Share Caption",
 		anchor: "share-caption",
+		part: null,
 		description:
 			"Horizontal button group with primary and secondary labels. Best for a filled Share action trailed by a 128 Shares caption on a transparent, tightly padded text cell.",
 		file: "button-group-31",
@@ -505,6 +536,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-32",
 		label: "Sort & View",
 		anchor: "sort-view",
+		part: null,
 		description:
 			"Button group with dropdown menu and view toggle. Best for a sort icon menu, a grid or list pair and a filled Add New menu in one row, with only the view pair joined.",
 		file: "button-group-32",
@@ -516,6 +548,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-33",
 		label: "Select Controls",
 		anchor: "select-controls",
+		part: null,
 		description: "Button group with select controls. Best for joined environment and time range Selects, the range list split into recent and Observability Plus groups.",
 		file: "button-group-33",
 		source:
@@ -526,6 +559,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-34",
 		label: "Segmented Control",
 		anchor: "segmented-control",
+		part: null,
 		description:
 			"Segmented control with dropdown inside button group. Best for routes, Paths and Bot Name segments with icons, Paths shaded first, ending in a chevron options menu.",
 		file: "button-group-34",
@@ -537,6 +571,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-35",
 		label: "Numbered Pagination",
 		anchor: "numbered-pagination",
+		part: null,
 		description: "Pagination button group. Best for square page buttons 1 to 5 between chevrons, with page 3 filled to mark the current page.",
 		file: "button-group-35",
 		source:
@@ -547,6 +582,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-36",
 		label: "View Switcher",
 		anchor: "view-switcher",
+		part: null,
 		description: "View switcher button group. Best for list, grid and table view icons with the list view shaded as current by a fixed class.",
 		file: "button-group-36",
 		source:
@@ -557,6 +593,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-37",
 		label: "Zoom Controls",
 		anchor: "zoom-controls",
+		part: null,
 		description: "Zoom controls button group. Best for a zoom stepper of 10 percent steps between 10 and 200, the level shown in a fixed width text cell.",
 		file: "button-group-37",
 		source:
@@ -567,6 +604,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-38",
 		label: "Media Controls",
 		anchor: "media-controls",
+		part: null,
 		description: "Media player controls button group. Best for skip back, play and skip forward transport icons, each named for screen readers, with no playback state.",
 		file: "button-group-38",
 		source:
@@ -577,6 +615,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-39",
 		label: "Split Button",
 		anchor: "split-button",
+		part: null,
 		description: "Split button with dropdown trigger. Best for a filled Save split with a faint separator and a chevron menu to publish, keep a draft or exit.",
 		file: "button-group-39",
 		source:
@@ -587,6 +626,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-40",
 		label: "Vertical List",
 		anchor: "vertical-list",
+		part: null,
 		description: "Vertical button group. Best for a vertical list of 4 left aligned text items with no icons, Dashboard shaded as current.",
 		file: "button-group-40",
 		source:
@@ -597,6 +637,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-41",
 		label: "Model Selector",
 		anchor: "model-selector",
+		part: null,
 		description: "Model selector with tier badges. Best for an AI model picker with icons, Fast, Pro and Preview badges and a context size tooltip per model.",
 		file: "button-group-41",
 		source:
@@ -607,6 +648,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-42",
 		label: "Order Type",
 		anchor: "order-type",
+		part: null,
 		description: "Segmented order type selector. Best for a trading order type picker for Market, Limit, Stop and Stop Limit, each with an explanatory tooltip.",
 		file: "button-group-42",
 		source:
@@ -617,6 +659,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-43",
 		label: "Buy Sell Hold",
 		anchor: "buy-sell-hold",
+		part: null,
 		description: "Buy sell hold toggle group. Best for buy, Hold and Sell stances that fill when picked and clear on a second click, starting with none.",
 		file: "button-group-43",
 		source:
@@ -627,6 +670,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-44",
 		label: "Pipeline Stage",
 		anchor: "pipeline-stage",
+		part: null,
 		description: "Pipeline stage mover with dropdown. Best for a CRM stage stepper whose arrows disable at the ends around a Jump to stage menu with a check.",
 		file: "button-group-44",
 		source:
@@ -637,6 +681,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-45",
 		label: "Environment Switcher",
 		anchor: "environment-switcher",
+		part: null,
 		description: "Environment switcher with indicator. Best for dev, Staging and Production segments with tooltips, where a Live dot appears only while Production is on.",
 		file: "button-group-45",
 		source:
@@ -647,6 +692,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-46",
 		label: "Time Interval",
 		anchor: "time-interval",
+		part: null,
 		description: "Compact time interval selector. Best for compact time intervals from 1m to 1W plus Auto, on 28px tall buttons with small tabular text.",
 		file: "button-group-46",
 		source:
@@ -657,6 +703,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-47",
 		label: "Review Actions",
 		anchor: "review-actions",
+		part: null,
 		description: "Review actions split button. Best for a filled Approve split whose chevron menu offers approve with conditions, request changes or a red Reject.",
 		file: "button-group-47",
 		source:
@@ -667,6 +714,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-48",
 		label: "Export Toolbar",
 		anchor: "export-toolbar",
+		part: null,
 		description:
 			"Toolbar filter with export and view toggle. Best for one joined toolbar: Filter, Export CSV with a chevron for Excel, JSON and PDF, then a grid or list switch.",
 		file: "button-group-48",
@@ -678,6 +726,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-49",
 		label: "Vertical Nav",
 		anchor: "vertical-nav",
+		part: null,
 		description: "Vertical nav links with icons. Best for a vertical nav of 4 icon and text items where a click moves the shaded highlight.",
 		file: "button-group-49",
 		source:
@@ -688,6 +737,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-50",
 		label: "Filter Sort More",
 		anchor: "filter-sort-more",
+		part: null,
 		description: "Toolbar filter sort and more. Best for small icon only Filter and Sort buttons, a default separator, then a More menu for link, share and export.",
 		file: "button-group-50",
 		source:
@@ -698,6 +748,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-51",
 		label: "Create Menu",
 		anchor: "create-menu",
+		part: null,
 		description: "New button with create dropdown. Best for a small New button with a plus joined to a more menu that creates a customer, order or invoice.",
 		file: "button-group-51",
 		source:
@@ -708,6 +759,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-52",
 		label: "Dashboard Actions",
 		anchor: "dashboard-actions",
+		part: null,
 		description: "Refresh share and export dropdown. Best for dashboard header actions: an icon only refresh, a Share button and a More menu to edit or export CSV or PNG.",
 		file: "button-group-52",
 		source:
@@ -718,6 +770,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-53",
 		label: "Publish Controls",
 		anchor: "publish-controls",
+		part: null,
 		description:
 			"Publish controls with split button and overflow. Best for a publishing header row: 2 viewer avatars, a Preview button, a filled Publish split and a ghost overflow menu.",
 		file: "button-group-53",
@@ -729,6 +782,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-54",
 		label: "Service Selectors",
 		anchor: "service-selectors",
+		part: null,
 		description: "API service environment and version selectors. Best for compact API service, environment and version menus joined in a row, the version set in monospace.",
 		file: "button-group-54",
 		source:
@@ -739,6 +793,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-55",
 		label: "Payout Release",
 		anchor: "payout-release",
+		part: null,
 		description:
 			"Payout release controls with amount context. Best for a payout row: a USD 12,480 amount cell joined to Hold, beside a filled Release split with Cancel payout.",
 		file: "button-group-55",
@@ -750,6 +805,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-56",
 		label: "File Attachment",
 		anchor: "file-attachment",
+		part: null,
 		description:
 			"Attachment button group with download action. Best for a file chip: paperclip, file name and size on an extra small button, joined to an icon only download.",
 		file: "button-group-56",
@@ -761,6 +817,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-button-group-57",
 		label: "Agent Mode",
 		anchor: "agent-mode",
+		part: null,
 		description:
 			"Agent mode selector with credit cap dropdown. Best for assist, Review and Auto agent modes, a default separator and a credit cap menu from 2k credits to Unlimited.",
 		file: "button-group-57",
@@ -824,6 +881,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ButtonGroupFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ButtonGroupFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -48,6 +48,8 @@ const MAX_LABEL_LENGTH = 80;
 const MAX_DESCRIPTION_LENGTH = 320;
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const PASCAL_EXPORT = /^[A-Z][A-Za-z0-9]*$/u;
+/** The route segment a page part may not take: the component's docs page lives there. */
+const RESERVED_PART_ID = "docs";
 
 const FeatureManifestSchema = z
 	.array(
@@ -57,11 +59,42 @@ const FeatureManifestSchema = z
 			description: z.string().trim().min(1).max(MAX_DESCRIPTION_LENGTH),
 			file: z.string().regex(KEBAB),
 			export: z.string().regex(PASCAL_EXPORT),
+			/**
+			 * The page part the feature sits on ("Finding rows"). A component with many heavy examples splits its page
+			 * into parts, one route each (`/components/<slug>/<part>`), so a page never runs every example at once. Either
+			 * every feature of a component names its part or none does.
+			 */
+			group: z.string().trim().min(1).max(MAX_LABEL_LENGTH).optional(),
 		}),
 	)
-	.min(1);
+	.min(1)
+	.refine((entries) => entries.every((entry) => entry.group !== undefined) || entries.every((entry) => entry.group === undefined), {
+		message: "either every feature names its group or none does",
+	});
 
 export type FeatureManifest = z.output<typeof FeatureManifestSchema>;
+
+/** One part of a split component page: its route segment and its title. */
+export interface GeneratedPart {
+	readonly id: string;
+	readonly label: string;
+}
+
+/** A component's parts in first-seen order; none for a component on one page. */
+export function partsOf(manifest: FeatureManifest): GeneratedPart[] {
+	const parts: GeneratedPart[] = [];
+	for (const entry of manifest) {
+		if (entry.group !== undefined && !parts.some((part) => part.label === entry.group)) {
+			const id = anchorOf(entry.group);
+			// The docs page owns `/components/<slug>/docs`; a part of that name could never be reached.
+			if (id === RESERVED_PART_ID) {
+				throw new Error(`group "${entry.group}" would take the docs page's route`);
+			}
+			parts.push({ id, label: entry.group });
+		}
+	}
+	return parts;
+}
 
 const GuidelineSideSchema = z.object({
 	text: z.string().trim().min(1).max(MAX_GUIDELINE_TEXT_LENGTH),
@@ -92,12 +125,16 @@ type ManifestEntry = FeatureManifest[number];
 export interface GeneratedFeature extends ManifestEntry {
 	readonly anchor: string;
 	readonly source: string;
+	/** The id of the part the feature sits on, or `null` on a one-page component. */
+	readonly part: string | null;
 }
 
 /** One component's folder and its features, in manifest order. */
 export interface ComponentFeatures {
 	readonly slug: string;
 	readonly features: readonly GeneratedFeature[];
+	/** The page's parts, in order; empty for a component on one page. */
+	readonly parts: readonly GeneratedPart[];
 	/** Its Do / Don't pairs, in manifest order (none while the folder has no guidelines.json). */
 	readonly guidelines: readonly GeneratedGuideline[];
 }
@@ -158,8 +195,9 @@ export function readComponentFeatures(root: string): ComponentFeatures[] {
 			const anchors = uniqueAnchors(manifest.map((entry: ManifestEntry): string => entry.label));
 			const features = manifest.map((entry: ManifestEntry, position: number): GeneratedFeature => {
 				const source = readFileSync(path.join(dir, slug, `${entry.file}${EXAMPLE_FILE_SUFFIX}`), "utf8");
-				return { ...entry, anchor: anchors.at(position) ?? anchorOf(entry.label), source };
+				return { ...entry, anchor: anchors.at(position) ?? anchorOf(entry.label), source, part: entry.group === undefined ? null : anchorOf(entry.group) };
 			});
+			const parts = partsOf(manifest);
 			const guidelinesFile = path.join(dir, slug, GUIDELINES_MANIFEST);
 			const sideOf = (side: GuidelineSideEntry): GeneratedGuidelineSide => ({
 				...side,
@@ -172,26 +210,43 @@ export function readComponentFeatures(root: string): ComponentFeatures[] {
 						dont: sideOf(guideline.dont),
 					}))
 				: [];
-			return { slug, features, guidelines };
+			return { slug, features, parts, guidelines };
 		});
+}
+
+/** A part id as generated source: its quoted id, or `null`. */
+function partLiteral(part: string | null): string {
+	return part === null ? "null" : JSON.stringify(part);
 }
 
 /** The feature index module: every component's feature summaries. */
 export function featureIndexSource(components: readonly ComponentFeatures[]): string {
 	const entries = components.map(({ slug, features }: ComponentFeatures): string => {
 		const rows = features.map(
-			(feature: GeneratedFeature): string => `{ id: ${JSON.stringify(feature.id)}, label: ${JSON.stringify(feature.label)}, anchor: ${JSON.stringify(feature.anchor)} }`,
+			(feature: GeneratedFeature): string =>
+				`{ id: ${JSON.stringify(feature.id)}, label: ${JSON.stringify(feature.label)}, anchor: ${JSON.stringify(feature.anchor)}, part: ${partLiteral(feature.part)} }`,
 		);
 		return `\t[${JSON.stringify(slug)}, [${rows.join(", ")}]],`;
 	});
+	const partEntries = components
+		.filter(({ parts }: ComponentFeatures): boolean => parts.length > 0)
+		.map(({ slug, parts }: ComponentFeatures): string => {
+			const rows = parts.map((part: GeneratedPart): string => `{ id: ${JSON.stringify(part.id)}, label: ${JSON.stringify(part.label)} }`);
+			return `\t[${JSON.stringify(slug)}, [${rows.join(", ")}]],`;
+		});
 	return `// GENERATED by \`pnpm showcase:generate\` — do not edit by hand.
 // Every component's features (${EXAMPLES_DIR}/<component>/${FEATURE_MANIFEST}), in order.
 // Plain data, safe to import on the server.
 
-import type { ShowcaseFeatureSummary } from "${ROOT_ALIAS}/components/component-showcase/showcase-feature";
+import type { ShowcaseFeatureSummary, ShowcasePart } from "${ROOT_ALIAS}/components/component-showcase/showcase-feature";
 
 export const SHOWCASE_FEATURE_INDEX: ReadonlyMap<string, readonly ShowcaseFeatureSummary[]> = new Map<string, readonly ShowcaseFeatureSummary[]>([
 ${entries.join("\n")}
+]);
+
+/** The parts of every component whose page is split, in order: one route each. */
+export const SHOWCASE_FEATURE_PARTS: ReadonlyMap<string, readonly ShowcasePart[]> = new Map<string, readonly ShowcasePart[]>([
+${partEntries.join("\n")}
 ]);
 `;
 }
@@ -215,7 +270,7 @@ export function componentModuleSource({ slug, features, guidelines }: ComponentF
 	);
 	const rows = features.map(
 		(feature: GeneratedFeature, position: number): string =>
-			`\t{ id: ${JSON.stringify(feature.id)}, label: ${JSON.stringify(feature.label)}, anchor: ${JSON.stringify(feature.anchor)}, description: ${JSON.stringify(feature.description)}, file: ${JSON.stringify(feature.file)}, source: ${JSON.stringify(feature.source)}, render: (): React.JSX.Element => <Example${String(position + 1)} /> },`,
+			`\t{ id: ${JSON.stringify(feature.id)}, label: ${JSON.stringify(feature.label)}, anchor: ${JSON.stringify(feature.anchor)}, part: ${partLiteral(feature.part)}, description: ${JSON.stringify(feature.description)}, file: ${JSON.stringify(feature.file)}, source: ${JSON.stringify(feature.source)}, render: (): React.JSX.Element => <Example${String(position + 1)} /> },`,
 	);
 	return `"use client";
 
@@ -227,7 +282,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "${ROOT_ALIAS}/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "${ROOT_ALIAS}/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "${ROOT_ALIAS}/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "${ROOT_ALIAS}/components/component-showcase/showcase-feature-list";
 
 ${[...imports, ...sideImports].join("\n")}
 
@@ -239,8 +294,8 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 ${guidelineRows.join("\n")}
 ];
 
-export function ${component}(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ${component}({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }
 `;
 }
@@ -306,7 +361,9 @@ export function featureSetsSource(slugs: readonly string[]): string {
 		const component = `${pascalCaseOf(slug)}Features`;
 		return `const ${component} = dynamic(() => import("${ROOT_ALIAS}/${COMPONENTS_DIR}/${slug}").then((m) => m.${component}), { loading: FeatureSetLoading });`;
 	});
-	const entries = slugs.map((slug: string): string => `\t[${JSON.stringify(slug)}, (): React.JSX.Element => <${pascalCaseOf(slug)}Features />],`);
+	const entries = slugs.map(
+		(slug: string): string => `\t[${JSON.stringify(slug)}, (part: string | null): React.JSX.Element => <${pascalCaseOf(slug)}Features part={part} />],`,
+	);
 	return `"use client";
 
 // GENERATED by \`pnpm showcase:generate\` — do not edit by hand.
@@ -320,8 +377,11 @@ import { FeatureSetLoading } from "${ROOT_ALIAS}/components/component-showcase/f
 
 ${imports.join("\n")}
 
-/** Renders one component's features (a render function, not a component: picking a component during render would remount it). */
-export type RenderFeatureSet = () => React.JSX.Element;
+/**
+ * Renders one component's features, or one part's on a split page (a render function, not a component: picking a
+ * component during render would remount it).
+ */
+export type RenderFeatureSet = (part: string | null) => React.JSX.Element;
 
 export const SHOWCASE_FEATURE_SETS: ReadonlyMap<string, RenderFeatureSet> = new Map<string, RenderFeatureSet>([
 ${entries.join("\n")}

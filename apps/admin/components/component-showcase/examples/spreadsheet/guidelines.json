@@ -1,0 +1,28 @@
+[
+	{
+		"title": "Keep worked-out cells read-only",
+		"do": {
+			"text": "Leave `cellEdit` off a column that is worked out from others, so it follows every edit and refuses a paste.",
+			"file": "spreadsheet-do-1",
+			"export": "SpreadsheetDo1Example"
+		},
+		"dont": {
+			"text": "Don't store a total and make it writable: change the quantity and the total is wrong.",
+			"file": "spreadsheet-dont-1",
+			"export": "SpreadsheetDont1Example"
+		}
+	},
+	{
+		"title": "Show what is not saved yet",
+		"do": {
+			"text": "Mark unsaved cells with `cellStatus` and their rows with `rowStatus` until the save lands.",
+			"file": "spreadsheet-do-2",
+			"export": "SpreadsheetDo2Example"
+		},
+		"dont": {
+			"text": "Don't keep unsaved edits looking like saved ones: nobody can tell what a save will write.",
+			"file": "spreadsheet-dont-2",
+			"export": "SpreadsheetDont2Example"
+		}
+	}
+]

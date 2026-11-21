@@ -8,7 +8,7 @@ import { canFilterNodeMove } from "../filters-advanced";
 import { filterMoveDestinations } from "../filters-chip";
 import { createFilterGroup, createFilterQuery, createFilterRule, findFilterNode, findFilterRule, flattenFilterRules } from "../filters-query";
 import { FiltersHarness, stubFiltersDom } from "@workspace/ui/testing/filters-test-utils";
-import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import type { FilterChangeDetails, FilterEmptyStateContext, FilterNode, FilterQuery, FilterRule } from "../filters-types";
 
 type ChangeSpy = (query: FilterQuery, details: FilterChangeDetails) => void;

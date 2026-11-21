@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/card/card-1").then((m) => m.Card1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/card/card-2").then((m) => m.Card2Example), { loading: FeatureLoading });
@@ -38,6 +38,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic card. Best for the plain anatomy of title, description, body text and a full width outline button in the footer.",
 		file: "card-1",
 		source:
@@ -48,6 +49,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-2",
 		label: "Bordered Header",
 		anchor: "bordered-header",
+		part: null,
 		description: "Card header with border. Best for a header ruled off from the body by a bottom border, with a description line and no footer.",
 		file: "card-2",
 		source:
@@ -58,6 +60,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-3",
 		label: "Border Separation",
 		anchor: "border-separation",
+		part: null,
 		description: "Card with border separation. Best for tight zero gap sections: a slim header with its own button, a body ruled above and below, and a footer button.",
 		file: "card-3",
 		source:
@@ -68,6 +71,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-4",
 		label: "Header & Footer",
 		anchor: "header-footer",
+		part: null,
 		description: "Card with header and footer. Best for a titled header and a footer button, each split from the body by a rule, with no description line.",
 		file: "card-4",
 		source:
@@ -78,6 +82,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-5",
 		label: "Link Action",
 		anchor: "link-action",
+		part: null,
 		description: "Card with link. Best for a help notice whose only action is a link style button with an external link icon.",
 		file: "card-5",
 		source:
@@ -88,6 +93,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-6",
 		label: "Dropdown Menu",
 		anchor: "dropdown-menu",
+		part: null,
 		description: "Card with dropdown menu. Best for a help notice with an overflow menu of team actions in the header and an avatar chip button in the footer.",
 		file: "card-6",
 		source:
@@ -98,6 +104,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-7",
 		label: "Inset Image",
 		anchor: "inset-image",
+		part: null,
 		description: "Card with image. Best for a rounded photo inset above a Trending badge, a Featured tag, a blurb and a Get Started button.",
 		file: "card-7",
 		source:
@@ -108,6 +115,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-8",
 		label: "Image Hover Zoom",
 		anchor: "image-hover-zoom",
+		part: null,
 		description: "Card with image scale hover effect. Best for a full bleed photo that zooms on hover under a bottom dark gradient holding a white title and line.",
 		file: "card-8",
 		source:
@@ -118,6 +126,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-9",
 		label: "Full Image",
 		anchor: "full-image",
+		part: null,
 		description: "Card with full image. Best for an edge to edge photo flush with the top, then a centered badge, blurb and a fit width call to action.",
 		file: "card-9",
 		source:
@@ -128,6 +137,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-10",
 		label: "Image Shadow Fade",
 		anchor: "image-shadow-fade",
+		part: null,
 		description:
 			"Full card with image and shadow fade effect. Best for a tall photo with dark fades top and bottom and an author row of verified avatar, email and New badge over it.",
 		file: "card-10",
@@ -139,6 +149,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-11",
 		label: "Stacked Depth",
 		anchor: "stacked-depth",
+		part: null,
 		description:
 			"Card with stacked depth effect. Best for a stacked deck look from 2 blank layers peeking out below the bottom edge, behind a standard title, body and footer.",
 		file: "card-11",
@@ -150,6 +161,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-12",
 		label: "Login Form",
 		anchor: "login-form",
+		part: null,
 		description: "Advanced clean login form card. Best for a sign in form with email, a password field that toggles visibility, a forgot link, a GitHub button and terms.",
 		file: "card-12",
 		source:
@@ -160,6 +172,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-13",
 		label: "Billing Usage",
 		anchor: "billing-usage",
+		part: null,
 		description: "Expandable billing usage card. Best for credit used against the plan on a progress bar over 5 cost rows that fade out until a round toggle expands them.",
 		file: "card-13",
 		source:
@@ -170,6 +183,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-14",
 		label: "Deployment Status",
 		anchor: "deployment-status",
+		part: null,
 		description: "Deployment status summary card. Best for a deployment success message under a glowing terminal icon on a fuchsia fade, then 4 striped label and value rows.",
 		file: "card-14",
 		source:
@@ -180,6 +194,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-15",
 		label: "Stat Trend",
 		anchor: "stat-trend",
+		part: null,
 		description:
 			"Stat card with trend and overflow menu. Best for a single KPI with label, large figure, a trend badge that flips color and arrow for a drop, last month value and a 5 item menu.",
 		file: "card-15",
@@ -191,6 +206,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-16",
 		label: "Badge & Actions",
 		anchor: "badge-actions",
+		part: null,
 		description:
 			"Card with header badge and actions. Best for an integration tile: a Live strip with a dots menu, an Installed badge, 3 avatars plus a count, and a full width Open button.",
 		file: "card-16",
@@ -202,6 +218,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-17",
 		label: "Icon & Link",
 		anchor: "icon-link",
+		part: null,
 		description: "Card with icon, title and link. Best for a solid primary icon tile above a linked title, a muted summary and a small View link with a chevron.",
 		file: "card-17",
 		source:
@@ -212,6 +229,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-card-18",
 		label: "Label & Link",
 		anchor: "label-link",
+		part: null,
 		description: "Card with header label and link. Best for a muted icon and label in a bordered top strip, then a summary and a small link with a leading chain icon.",
 		file: "card-18",
 		source:
@@ -257,6 +275,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CardFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CardFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

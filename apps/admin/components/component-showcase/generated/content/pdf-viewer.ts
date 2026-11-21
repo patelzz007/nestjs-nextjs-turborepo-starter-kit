@@ -33,6 +33,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-pdf-viewer-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "pdf-viewer-1",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { PdfViewer, type PdfViewerSource } from "@workspace/ui/components/pdf-viewer";\nimport { buildTextPdf, PDF_MEDIA_TYPE } from "@workspace/shared";\n\n/** A one-page sample statement, written in memory (no file is shipped or fetched). */\nconst SAMPLE_PAGES: Parameters<typeof buildTextPdf>[0] = [\n\t{\n\t\ttitle: "Monthly statement",\n\t\tlines: ["Acme Rewards - October 2026", "", "Opening balance          1,240 pts", "Earned                     380 pts", "Closing balance          1,620 pts"],\n\t},\n];\n\nfunction samplePdf(): PdfViewerSource {\n\treturn { kind: "file", file: new File([buildTextPdf(SAMPLE_PAGES)], "sample-statement.pdf", { type: PDF_MEDIA_TYPE }) };\n}\n\nexport function PdfViewer1Example(): React.JSX.Element {\n\tconst [source, setSource] = React.useState<PdfViewerSource>(samplePdf);\n\treturn <PdfViewer source={source} onSourceChange={setSource} className="h-[480px] w-full" />;\n}\n',

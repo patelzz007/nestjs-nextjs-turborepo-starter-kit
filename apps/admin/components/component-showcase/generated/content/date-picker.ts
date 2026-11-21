@@ -42,6 +42,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-date-picker-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "date-picker-1",
 				source:
 					'"use client";\n\nimport { addMonths } from "date-fns";\nimport * as React from "react";\nimport { DatePicker } from "@workspace/ui/components/date-picker";\nimport { Label } from "@workspace/ui/components/label";\nimport { useSampleNow } from "@/components/component-showcase/examples/sample-clock";\nimport { formatDateInputString } from "@workspace/ui/lib/form/date-input";\n\n/** How far ahead a delivery can be booked. */\nconst BOOKING_WINDOW_MONTHS = 3;\n\nexport function DatePicker1Example(): React.JSX.Element {\n\tconst [date, setDate] = React.useState<string>("");\n\t// One stable "now": the bounds only need to be right for this visit.\n\tconst today = new Date(useSampleNow());\n\n\treturn (\n\t\t<div className="flex w-full max-w-xs flex-col gap-1.5">\n\t\t\t<Label htmlFor="usage-date-picker">Delivery date</Label>\n\t\t\t<DatePicker\n\t\t\t\tid="usage-date-picker"\n\t\t\t\tvalue={date}\n\t\t\t\tonValueChange={setDate}\n\t\t\t\tplaceholder="Pick a date"\n\t\t\t\tfromDate={formatDateInputString(today)}\n\t\t\t\ttoDate={formatDateInputString(addMonths(today, BOOKING_WINDOW_MONTHS))}\n\t\t\t/>\n\t\t</div>\n\t);\n}\n',

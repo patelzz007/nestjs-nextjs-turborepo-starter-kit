@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/event-calendar/event-calendar-1").then((m) => m.EventCalendar1Example), {
 	loading: FeatureLoading,
@@ -43,6 +43,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-event-calendar-1",
 		label: "All Views",
 		anchor: "all-views",
+		part: null,
 		description:
 			"Event calendar with all views and live settings. Best for a feature tour whose tabbed Settings popover drives view options, time grid, drag behavior, 6 languages and 5 time zones.",
 		file: "event-calendar-1",
@@ -54,6 +55,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-event-calendar-2",
 		label: "Room Bookings",
 		anchor: "room-bookings",
+		part: null,
 		description:
 			"Event calendar with resource view for room bookings. Best for hotel rooms as columns from 8:00 to 20:00, holding stays, check-outs and housekeeping colored by a status legend.",
 		file: "event-calendar-2",
@@ -65,6 +67,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-event-calendar-3",
 		label: "Event Form Dialog",
 		anchor: "event-form-dialog",
+		part: null,
 		description:
 			"Event calendar with create and edit dialog. Best for a single form dialog that opens blank on an empty day or the toolbar, and edits or deletes whatever you click.",
 		file: "event-calendar-3",
@@ -76,6 +79,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-event-calendar-4",
 		label: "Custom Event Chips",
 		anchor: "custom-event-chips",
+		part: null,
 		description:
 			"Event calendar with custom event chips. Best for project bars spanning several days in a Monday first month, led by a track icon, with hover tooltips and a legend.",
 		file: "event-calendar-4",
@@ -87,6 +91,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-event-calendar-5",
 		label: "Drag-to-Book",
 		anchor: "drag-to-book",
+		part: null,
 		description:
 			"Event calendar with drag-to-book appointments. Best for a consultant's day from 9:00 to 18:00 where dragging over free time books a slot and overlapping draws are refused.",
 		file: "event-calendar-5",
@@ -133,6 +138,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function EventCalendarFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function EventCalendarFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

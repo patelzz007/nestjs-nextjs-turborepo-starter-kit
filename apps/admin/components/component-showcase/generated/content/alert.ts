@@ -43,6 +43,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-alert-1",
 				label: "Title & Description",
 				anchor: "title-description",
+				part: null,
 				file: "alert-1",
 				source:
 					'import * as React from "react";\nimport { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";\n\nexport function Alert1Example(): React.JSX.Element {\n\treturn (\n\t\t<Alert>\n\t\t\t<AlertTitle>Alert!</AlertTitle>\n\t\t\t<AlertDescription>This is an alert with a title and description.</AlertDescription>\n\t\t</Alert>\n\t);\n}\n',
@@ -51,6 +52,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-alert-3",
 				label: "Icon & Actions",
 				anchor: "icon-actions",
+				part: null,
 				file: "alert-3",
 				source:
 					'import * as React from "react";\nimport { ShieldCheckIcon } from "lucide-react";\nimport { Alert, AlertAction, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";\n\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Alert3Example(): React.JSX.Element {\n\treturn (\n\t\t<Alert>\n\t\t\t<ShieldCheckIcon />\n\t\t\t<AlertTitle>Security Update</AlertTitle>\n\t\t\t<AlertDescription>Update your password and enable 2FA.</AlertDescription>\n\t\t\t<AlertAction>\n\t\t\t\t<Button variant="outline" size="xs">\n\t\t\t\t\tDismiss\n\t\t\t\t</Button>\n\t\t\t\t<Button size="xs">Update</Button>\n\t\t\t</AlertAction>\n\t\t</Alert>\n\t);\n}\n',
@@ -59,6 +61,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-alert-5",
 				label: "Info Variant",
 				anchor: "info-variant",
+				part: null,
 				file: "alert-5",
 				source:
 					'import * as React from "react";\nimport { CircleAlertIcon } from "lucide-react";\nimport { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";\n\nexport function Alert5Example(): React.JSX.Element {\n\treturn (\n\t\t<Alert variant="info">\n\t\t\t<CircleAlertIcon />\n\t\t\t<AlertTitle>Info! Something important</AlertTitle>\n\t\t\t<AlertDescription>This is an important message. Please read it carefully.</AlertDescription>\n\t\t</Alert>\n\t);\n}\n',
@@ -67,6 +70,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-alert-6",
 				label: "Success Variant",
 				anchor: "success-variant",
+				part: null,
 				file: "alert-6",
 				source:
 					'import * as React from "react";\nimport { CircleCheckIcon } from "lucide-react";\nimport { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";\n\nexport function Alert6Example(): React.JSX.Element {\n\treturn (\n\t\t<Alert variant="success">\n\t\t\t<CircleCheckIcon />\n\t\t\t<AlertTitle>Success! All good</AlertTitle>\n\t\t\t<AlertDescription>Everything is working as expected. You can continue with your task.</AlertDescription>\n\t\t</Alert>\n\t);\n}\n',
@@ -75,6 +79,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-alert-7",
 				label: "Warning Variant",
 				anchor: "warning-variant",
+				part: null,
 				file: "alert-7",
 				source:
 					'import * as React from "react";\nimport { AlertTriangleIcon } from "lucide-react";\nimport { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";\n\nexport function Alert7Example(): React.JSX.Element {\n\treturn (\n\t\t<Alert variant="warning">\n\t\t\t<AlertTriangleIcon />\n\t\t\t<AlertTitle>Warning! Something is wrong</AlertTitle>\n\t\t\t<AlertDescription>Please check your settings. If the problem persists, contact support.</AlertDescription>\n\t\t</Alert>\n\t);\n}\n',
@@ -83,6 +88,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-alert-8",
 				label: "Error Variant",
 				anchor: "error-variant",
+				part: null,
 				file: "alert-8",
 				source:
 					'import * as React from "react";\nimport { CircleAlertIcon } from "lucide-react";\nimport { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";\n\nexport function Alert8Example(): React.JSX.Element {\n\treturn (\n\t\t<Alert variant="destructive">\n\t\t\t<CircleAlertIcon />\n\t\t\t<AlertTitle>Error! Something went wrong</AlertTitle>\n\t\t\t<AlertDescription>Please try again. If the problem persists, contact support.</AlertDescription>\n\t\t</Alert>\n\t);\n}\n',
@@ -91,6 +97,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-alert-9",
 				label: "Invert Variant",
 				anchor: "invert-variant",
+				part: null,
 				file: "alert-9",
 				source:
 					'import * as React from "react";\nimport { CircleAlertIcon } from "lucide-react";\nimport { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";\n\nexport function Alert9Example(): React.JSX.Element {\n\treturn (\n\t\t<Alert variant="invert">\n\t\t\t<CircleAlertIcon className="text-success" />\n\t\t\t<AlertTitle>Notification! All good</AlertTitle>\n\t\t\t<AlertDescription>This is a notification alert with a title and description.</AlertDescription>\n\t\t</Alert>\n\t);\n}\n',
@@ -99,6 +106,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-alert-13",
 				label: "Stacked in Frame",
 				anchor: "stacked-in-frame",
+				part: null,
 				file: "alert-13",
 				source:
 					'import * as React from "react";\nimport { AlertTriangleIcon, CircleCheckIcon } from "lucide-react";\nimport { Alert, AlertAction, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";\nimport { Frame, FramePanel } from "@workspace/ui/components/frame";\n\nimport { Button } from "@workspace/ui/components/button";\n\nexport function Alert13Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto mb-auto w-full max-w-lg">\n\t\t\t<Frame stacked>\n\t\t\t\t<FramePanel className="p-0!">\n\t\t\t\t\t<Alert variant="success" className="rounded-none border-0 shadow-none">\n\t\t\t\t\t\t<CircleCheckIcon />\n\t\t\t\t\t\t<AlertTitle>Deployment Successful</AlertTitle>\n\t\t\t\t\t\t<AlertDescription>Your application has been successfully deployed to the production environment.</AlertDescription>\n\t\t\t\t\t</Alert>\n\t\t\t\t</FramePanel>\n\t\t\t\t<FramePanel className="p-0!">\n\t\t\t\t\t<Alert variant="warning" className="rounded-none border-0 shadow-none">\n\t\t\t\t\t\t<AlertTriangleIcon className="text-warning" />\n\t\t\t\t\t\t<AlertTitle>Resource Limit Reached</AlertTitle>\n\t\t\t\t\t\t<AlertAction>\n\t\t\t\t\t\t\t<Button size="xs">Verify</Button>\n\t\t\t\t\t\t</AlertAction>\n\t\t\t\t\t\t<AlertDescription>Your current plan has reached its resource limits. Consider upgrading to a higher tier.</AlertDescription>\n\t\t\t\t\t</Alert>\n\t\t\t\t</FramePanel>\n\t\t\t</Frame>\n\t\t</div>\n\t);\n}\n',

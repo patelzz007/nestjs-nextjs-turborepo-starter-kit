@@ -33,6 +33,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-rich-text-view-1",
 				label: "Broadcast Body",
 				anchor: "broadcast-body",
+				part: null,
 				file: "rich-text-view-1",
 				source:
 					'import { RichTextView } from "@workspace/ui/components/rich-text-view";\nimport type * as React from "react";\n\nimport { SAMPLE_RICH_TEXT } from "@/components/component-showcase/examples/rich-text-sample";\n\n/** A stored broadcast body as the inbox draws it. */\nexport function RichTextView1Example(): React.JSX.Element {\n\treturn <RichTextView document={SAMPLE_RICH_TEXT} className="w-full" />;\n}\n',
@@ -41,6 +42,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-rich-text-view-2",
 				label: "Table, Code And Button",
 				anchor: "table-code-and-button",
+				part: null,
 				file: "rich-text-view-2",
 				source:
 					'import type { RichTextDocument, RichTextTableCell } from "@workspace/shared";\nimport { RichTextView } from "@workspace/ui/components/rich-text-view";\nimport type * as React from "react";\n\nfunction cell(type: RichTextTableCell["type"], text: string): RichTextTableCell {\n\treturn { type, content: [{ type: "paragraph", content: [{ type: "text", text }] }] };\n}\n\n/** A wider body: a table that scrolls sideways, a code to copy, and the one button with its real domain. */\nconst OPENING_HOURS: RichTextDocument = {\n\ttype: "doc",\n\tcontent: [\n\t\t{ type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "Opening hours" }] },\n\t\t{\n\t\t\ttype: "table",\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: "tableRow",\n\t\t\t\t\tcontent: ["Day", "Opens", "Closes", "Kitchen"].map((text) => cell("tableHeader", text)),\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\ttype: "tableRow",\n\t\t\t\t\tcontent: ["Saturday", "8:00", "22:00", "21:30"].map((text) => cell("tableCell", text)),\n\t\t\t\t},\n\t\t\t],\n\t\t},\n\t\t{ type: "codeBlock", attrs: { language: "text" }, content: [{ type: "text", text: "HOURS-SAT-10" }] },\n\t\t{ type: "callToAction", attrs: { label: "Book a table", href: "https://book.acme.example/saturday" } },\n\t],\n};\n\nexport function RichTextView2Example(): React.JSX.Element {\n\treturn <RichTextView document={OPENING_HOURS} className="w-full" />;\n}\n',

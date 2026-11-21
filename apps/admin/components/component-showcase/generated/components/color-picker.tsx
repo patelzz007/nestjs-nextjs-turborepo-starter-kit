@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/color-picker/color-picker-1").then((m) => m.ColorPicker1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/color-picker/color-picker-2").then((m) => m.ColorPicker2Example), { loading: FeatureLoading });
@@ -55,6 +55,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-1",
 		label: "Inline Panel",
 		anchor: "inline-panel",
+		part: null,
 		description: "Inline color panel. Best for the default panel left open in a card, with opacity and 8 presets switched on through 2 root props.",
 		file: "color-picker-1",
 		source:
@@ -65,6 +66,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-2",
 		label: "Popover",
 		anchor: "popover",
+		part: null,
 		description: "Popover picker. Best for a root with no children, so it draws its own trigger and popover, uncontrolled from a default value in a Field.",
 		file: "color-picker-2",
 		source:
@@ -75,6 +77,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-3",
 		label: "Color Input",
 		anchor: "color-input",
+		part: null,
 		description: "Color input. Best for typed color codes in an uncontrolled ColorPickerInput, whose swatch button opens the default popover.",
 		file: "color-picker-3",
 		source:
@@ -85,6 +88,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-4",
 		label: "Opacity",
 		anchor: "opacity",
+		part: null,
 		description: "Opacity. Best for a translucent scrim laid over a gradient banner and previewed live through an inline style.",
 		file: "color-picker-4",
 		source:
@@ -95,6 +99,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-5",
 		label: "Preset Swatches",
 		anchor: "preset-swatches",
+		part: null,
 		description: "Preset swatches. Best for an issue label editor with 9 named preset chips, a custom color fallback and Badge ink chosen for contrast.",
 		file: "color-picker-5",
 		source:
@@ -105,6 +110,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-6",
 		label: "OKLCH Token",
 		anchor: "oklch-token",
+		part: null,
 		description: "OKLCH theme token. Best for a theme token editor in OKLCH that flags colors outside sRGB and prints the CSS line, its copy button taking the bare value.",
 		file: "color-picker-6",
 		source:
@@ -115,6 +121,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-7",
 		label: "Format Converter",
 		anchor: "format-converter",
+		part: null,
 		description: "Format converter. Best for a custom readout built on useColorPicker and formatColor that moves beside the area once its card is wide enough.",
 		file: "color-picker-7",
 		source:
@@ -125,6 +132,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-8",
 		label: "Hue Wheel",
 		anchor: "hue-wheel",
+		part: null,
 		description: "Hue wheel. Best for a ring layout for a brush, with the area filling the wheel's hole and the format menu cut to 3 entries.",
 		file: "color-picker-8",
 		source:
@@ -135,6 +143,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-9",
 		label: "Recent Colors",
 		anchor: "recent-colors",
+		part: null,
 		description: "Recent colors. Best for a hand composed popover whose history row dedupes picks and keeps the latest 8, newest first.",
 		file: "color-picker-9",
 		source:
@@ -145,6 +154,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-10",
 		label: "Text & Highlight",
 		anchor: "text-highlight",
+		part: null,
 		description:
 			"Text and highlight colors. Best for a pair of ghost icon triggers whose underline bar mirrors the choice, each palette closing on a pick via controlled open state.",
 		file: "color-picker-10",
@@ -156,6 +166,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-11",
 		label: "Channel Sliders",
 		anchor: "channel-sliders",
+		part: null,
 		description: "Channel sliders. Best for channel by channel RGB mixing headed by a round preview chip and the live rgb string in monospace.",
 		file: "color-picker-11",
 		source:
@@ -166,6 +177,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-12",
 		label: "Design Inspector",
 		anchor: "design-inspector",
+		part: null,
 		description: "Design inspector. Best for a card of 3 independent, uncontrolled pickers whose triggers print the hex apart from its opacity percent.",
 		file: "color-picker-12",
 		source:
@@ -176,6 +188,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-13",
 		label: "Contrast Checker",
 		anchor: "contrast-checker",
+		part: null,
 		description: "Contrast checker. Best for a swappable pair of default pickers scored by getContrastRatio against 3 WCAG thresholds for body and large text.",
 		file: "color-picker-13",
 		source:
@@ -186,6 +199,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-14",
 		label: "Brand Scale",
 		anchor: "brand-scale",
+		part: null,
 		description: "Brand scale. Best for one typed base color expanded into a palette of standalone ColorPickerSwatch chips, each named for screen readers.",
 		file: "color-picker-14",
 		source:
@@ -196,6 +210,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-color-picker-15",
 		label: "Form Validation",
 		anchor: "form-validation",
+		part: null,
 		description: "Form field with validation. Best for a plain HTML form read through FormData, where the picker posts under name and Field swaps its hint for the error.",
 		file: "color-picker-15",
 		source:
@@ -241,6 +256,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ColorPickerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ColorPickerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../../../testing/ui-kit-test-providers";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { Cascader } from "../cascader";
 import { type CascaderChildrenResult, CascaderLoaderClient, useCascaderLoadState } from "../cascader-async";
 import { buildCascaderIndex, CASCADER_ROOT_KEY } from "../cascader-lib";

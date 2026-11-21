@@ -1,4 +1,5 @@
 import type { PaginationInput } from "@workspace/shared";
+import type { DataTableBulkSelectionContext } from "@workspace/ui/components/data-table";
 
 export interface ListPageResult<TItem> {
 	readonly items: readonly TItem[];
@@ -25,13 +26,16 @@ export async function fetchAllListPages<TItem>(fetchPage: (page: number, limit: 
 	return collected;
 }
 
-/** Resolves the rows a manual-mode bulk action should operate on. */
+/**
+ * The rows a bulk action on a server-paged table should operate on: the ticked rows of the page, or — when the reader
+ * chose "select all matching rows" — every matching row, fetched now.
+ */
 export function resolveManualBulkSelectionRows<TData>(
 	selectedPageRows: readonly TData[],
-	context: import("@workspace/ui/lib/data-table/checkbox").DataTableBulkSelectionContext,
+	context: DataTableBulkSelectionContext,
 	fetchAllMatching: () => Promise<readonly TData[]>,
 ): Promise<readonly TData[]> {
-	if (!context.selectAllPages) {
+	if (context.scope !== "all-matching") {
 		return Promise.resolve(selectedPageRows);
 	}
 	return fetchAllMatching();

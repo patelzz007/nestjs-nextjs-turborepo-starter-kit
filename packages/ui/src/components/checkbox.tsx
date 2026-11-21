@@ -26,6 +26,11 @@ const Checkbox = React.forwardRef<HTMLElement, CheckboxProps>(function Checkbox(
 	return (
 		<CheckboxPrimitive.Root
 			ref={ref}
+			// A native <button>, not Base UI's default <span>: a wrapping <label> or a <Label htmlFor> names a button in the
+			// server-rendered HTML, but not a span (Base UI patches a span's name in only after hydration; until then it is
+			// unnamed, an axe `aria-toggle-field-name` failure).
+			nativeButton
+			render={<button type="button" />}
 			data-slot="checkbox"
 			disabled={disabled === true || locked}
 			aria-invalid={ariaInvalid}

@@ -29,7 +29,6 @@ import { FEATURE_EXAMPLES as Combobox, GUIDELINE_EXAMPLES as ComboboxGuidelines 
 import { FEATURE_EXAMPLES as Command, GUIDELINE_EXAMPLES as CommandGuidelines } from "@/components/component-showcase/generated/examples/command";
 import { FEATURE_EXAMPLES as ContextMenu, GUIDELINE_EXAMPLES as ContextMenuGuidelines } from "@/components/component-showcase/generated/examples/context-menu";
 import { FEATURE_EXAMPLES as CoverImage, GUIDELINE_EXAMPLES as CoverImageGuidelines } from "@/components/component-showcase/generated/examples/cover-image";
-import { FEATURE_EXAMPLES as DataGrid, GUIDELINE_EXAMPLES as DataGridGuidelines } from "@/components/component-showcase/generated/examples/data-grid";
 import { FEATURE_EXAMPLES as DataTable, GUIDELINE_EXAMPLES as DataTableGuidelines } from "@/components/component-showcase/generated/examples/data-table";
 import { FEATURE_EXAMPLES as DatePicker, GUIDELINE_EXAMPLES as DatePickerGuidelines } from "@/components/component-showcase/generated/examples/date-picker";
 import { FEATURE_EXAMPLES as DateSelector, GUIDELINE_EXAMPLES as DateSelectorGuidelines } from "@/components/component-showcase/generated/examples/date-selector";
@@ -97,6 +96,7 @@ import { FEATURE_EXAMPLES as Skeleton, GUIDELINE_EXAMPLES as SkeletonGuidelines 
 import { FEATURE_EXAMPLES as Slider, GUIDELINE_EXAMPLES as SliderGuidelines } from "@/components/component-showcase/generated/examples/slider";
 import { FEATURE_EXAMPLES as Sortable, GUIDELINE_EXAMPLES as SortableGuidelines } from "@/components/component-showcase/generated/examples/sortable";
 import { FEATURE_EXAMPLES as Spinner, GUIDELINE_EXAMPLES as SpinnerGuidelines } from "@/components/component-showcase/generated/examples/spinner";
+import { FEATURE_EXAMPLES as Spreadsheet, GUIDELINE_EXAMPLES as SpreadsheetGuidelines } from "@/components/component-showcase/generated/examples/spreadsheet";
 import { FEATURE_EXAMPLES as StatCard, GUIDELINE_EXAMPLES as StatCardGuidelines } from "@/components/component-showcase/generated/examples/stat-card";
 import { FEATURE_EXAMPLES as StatusBadge, GUIDELINE_EXAMPLES as StatusBadgeGuidelines } from "@/components/component-showcase/generated/examples/status-badge";
 import { FEATURE_EXAMPLES as Stepper, GUIDELINE_EXAMPLES as StepperGuidelines } from "@/components/component-showcase/generated/examples/stepper";
@@ -140,7 +140,6 @@ export const ALL_FEATURE_EXAMPLES: ReadonlyMap<string, readonly ShowcaseFeatureE
 	["command", Command],
 	["context-menu", ContextMenu],
 	["cover-image", CoverImage],
-	["data-grid", DataGrid],
 	["data-table", DataTable],
 	["date-picker", DatePicker],
 	["date-selector", DateSelector],
@@ -205,6 +204,7 @@ export const ALL_FEATURE_EXAMPLES: ReadonlyMap<string, readonly ShowcaseFeatureE
 	["slider", Slider],
 	["sortable", Sortable],
 	["spinner", Spinner],
+	["spreadsheet", Spreadsheet],
 	["stat-card", StatCard],
 	["status-badge", StatusBadge],
 	["stepper", Stepper],
@@ -249,7 +249,6 @@ export const ALL_GUIDELINE_EXAMPLES: ReadonlyMap<string, readonly ShowcaseGuidel
 	["command", CommandGuidelines],
 	["context-menu", ContextMenuGuidelines],
 	["cover-image", CoverImageGuidelines],
-	["data-grid", DataGridGuidelines],
 	["data-table", DataTableGuidelines],
 	["date-picker", DatePickerGuidelines],
 	["date-selector", DateSelectorGuidelines],
@@ -314,6 +313,7 @@ export const ALL_GUIDELINE_EXAMPLES: ReadonlyMap<string, readonly ShowcaseGuidel
 	["slider", SliderGuidelines],
 	["sortable", SortableGuidelines],
 	["spinner", SpinnerGuidelines],
+	["spreadsheet", SpreadsheetGuidelines],
 	["stat-card", StatCardGuidelines],
 	["status-badge", StatusBadgeGuidelines],
 	["stepper", StepperGuidelines],

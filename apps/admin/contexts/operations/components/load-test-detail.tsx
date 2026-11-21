@@ -9,7 +9,8 @@ import { LOAD_TEST_ABORT_CPU_PERCENT, LOAD_TEST_ABORT_ERROR_PERCENT, type LoadTe
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
-import { DataTable, type DataTableFeatures, type EmptyStateConfig } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableEmptyState, type DataTableFeatures } from "@workspace/ui/components/data-table";
+import { TABLE_DEFAULT_PAGING } from "@/lib/data-table/capabilities";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
@@ -130,12 +131,17 @@ const STEP_COLUMNS: ColumnDef<DataTableFeatures, LoadTestStepStat>[] = [
 	{ accessorKey: "p95Ms", header: "p95", cell: ({ row }) => <span className="tabular-nums">{formatMs(row.original.p95Ms)}</span> },
 	{ accessorKey: "p99Ms", header: "p99", cell: ({ row }) => <span className="tabular-nums">{formatMs(row.original.p99Ms)}</span> },
 ];
-const STEPS_EMPTY: EmptyStateConfig = { title: "No steps measured yet" };
+const STEPS_EMPTY: DataTableEmptyState = { title: "No steps measured yet" };
+
+/** A run measures each step once, so the step's name is its id. */
+function getStepId(step: LoadTestStepStat): string {
+	return step.step;
+}
 
 /** The run's steps, slowest (p95) first; sortable by any column. */
 function StepTable({ detail }: { readonly detail: LoadTestRunDetail }): React.JSX.Element {
 	const steps = React.useMemo(() => [...detail.steps].sort((left, right) => (right.p95Ms ?? 0) - (left.p95Ms ?? 0)), [detail.steps]);
-	return <DataTable columns={STEP_COLUMNS} data={steps} emptyState={STEPS_EMPTY} />;
+	return <DataTable columns={STEP_COLUMNS} data={steps} getRowId={getStepId} paging={TABLE_DEFAULT_PAGING} emptyState={STEPS_EMPTY} />;
 }
 
 export function LoadTestDetail({ runId }: { readonly runId: string }): React.JSX.Element {

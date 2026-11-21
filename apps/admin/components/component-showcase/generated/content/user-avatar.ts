@@ -36,6 +36,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-user-avatar-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "user-avatar-1",
 				source:
 					'import type * as React from "react";\nimport { UserAvatar } from "@workspace/ui/components/user-avatar";\n\n/** The size the avatar is drawn at, so it can pick the right photo rendition. */\nconst AVATAR_DRAWN_PX = 40;\nconst PORTRAIT_URL = "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=128&q=80";\n\nexport function UserAvatar1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center gap-3">\n\t\t\t<UserAvatar name="Grace Hopper" image={{ url: PORTRAIT_URL }} drawnSize={AVATAR_DRAWN_PX} className="size-10" />\n\t\t\t<UserAvatar name="Ada Lovelace" image={null} drawnSize={AVATAR_DRAWN_PX} className="size-10" />\n\t\t</div>\n\t);\n}\n',

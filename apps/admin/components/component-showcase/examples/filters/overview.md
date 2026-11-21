@@ -38,7 +38,7 @@ Reports and admin lists grow filter needs over time. Starting from a tree and a 
 
 ## Integrating with other components
 
-Put the bar above a [Data Grid](/components/data-grid) or a [Data Table](/components/data-table) and compile the query into the table's filters or the API request. Attribute pickers drill with the kit's [Cascader](/components/cascader).
+Put the bar above a [Data Table](/components/data-table) and compile the query into the table's filters or the API request. Attribute pickers drill with the kit's [Cascader](/components/cascader).
 
 ## Frequently asked questions
 

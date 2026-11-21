@@ -503,3 +503,21 @@ export function dataGridCellsChange<TData extends RowData>(
 	});
 	return { source, changes, rejected };
 }
+
+/** One column as the spare width is shared: its own width, and whether it takes a share. */
+export interface DataGridSpreadColumn {
+	readonly width: number;
+	readonly grows: boolean;
+}
+
+/**
+ * The columns' widths once the viewport's spare width is shared, so the grid always spans it: each growing column
+ * takes a share in proportion to its own width (they keep their widths relative to each other); the rest keep
+ * theirs. Columns wider than the viewport between them leave nothing to share.
+ */
+export function spreadDataGridSpareWidth(columns: readonly DataGridSpreadColumn[], viewport: number): number[] {
+	const natural = columns.reduce((total: number, column): number => total + column.width, 0);
+	const spare = Math.max(0, viewport - natural);
+	const growingWidth = columns.reduce((total: number, column): number => (column.grows ? total + column.width : total), 0);
+	return columns.map((column): number => (column.grows && growingWidth > 0 ? column.width + (spare * column.width) / growingWidth : column.width));
+}

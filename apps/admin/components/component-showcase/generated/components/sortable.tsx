@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/sortable/sortable-1").then((m) => m.Sortable1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/sortable/sortable-2").then((m) => m.Sortable2Example), { loading: FeatureLoading });
@@ -28,6 +28,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sortable-1",
 		label: "File List",
 		anchor: "file-list",
+		part: null,
 		description:
 			"Sortable list of items with drag-and-drop. Best for product files such as images, specs, video and audio, each row with a type icon, a colored badge and its size.",
 		file: "sortable-1",
@@ -39,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sortable-2",
 		label: "Grid Layout",
 		anchor: "grid-layout",
+		part: null,
 		description:
 			"Sortable list of items with grid layout. Best for asset cards with a title, a one line description and a colored type badge in an equal height 3 column layout, grips shown on hover.",
 		file: "sortable-2",
@@ -50,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sortable-3",
 		label: "Nested Layout",
 		anchor: "nested-layout",
+		part: null,
 		description:
 			"Sortable list of items with nested layout. Best for option groups such as colors, sizes and materials reordered as cards, with each group's values reordered inside it.",
 		file: "sortable-3",
@@ -61,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sortable-4",
 		label: "Playlist",
 		anchor: "playlist",
+		part: null,
 		description: "Sortable playlist with frame. Best for a music queue in a Frame with a track count, a Playing badge on the current song and the length of every track.",
 		file: "sortable-4",
 		source:
@@ -71,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sortable-5",
 		label: "Settings Priority",
 		anchor: "settings-priority",
+		part: null,
 		description:
 			"Sortable settings priority with frame. Best for notification channels ranked by delivery order in a Frame, each row with a Switch that turns the channel on or off.",
 		file: "sortable-5",
@@ -82,6 +87,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sortable-6",
 		label: "Sidebar Navigation",
 		anchor: "sidebar-navigation",
+		part: null,
 		description:
 			"Sortable sidebar navigation with frame. Best for a narrow navigation menu of icon entries, some with a count badge, whose grips stay hidden until a row is hovered.",
 		file: "sortable-6",
@@ -93,6 +99,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sortable-7",
 		label: "Image Gallery",
 		anchor: "image-gallery",
+		part: null,
 		description: "Sortable image gallery grid with frame. Best for tiles for image files labeled with name, pixel dimensions and size, set in a titled Frame panel.",
 		file: "sortable-7",
 		source:
@@ -103,6 +110,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sortable-8",
 		label: "Persisted Order",
 		anchor: "persisted-order",
+		part: null,
 		description:
 			"Sortable list persisted to a backend. Best for numbered release tasks whose new order goes to a mock save on each drop, with the old order restored if it fails.",
 		file: "sortable-8",
@@ -149,6 +157,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SortableFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SortableFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -1,7 +1,11 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
+
+/** The part of the kit's `package.json` the contract reads: its entry points. */
+const UiPackageManifestSchema = z.object({ exports: z.record(z.string(), z.string()) });
 
 const UI_SRC = join(import.meta.dirname, "..");
 /** @workspace/ui-kit-logic's source: the kit's platform-free rules moved there, and are held to the same boundary contract. */
@@ -257,10 +261,9 @@ describe("UI kit CVA state contract (rule 23)", () => {
 describe("UI kit boundary types (rules 1–3)", () => {
 	const boundarySources: readonly string[] = [
 		"lib/form/field-state.ts",
-		"lib/data-table/prefs.ts",
-		"lib/data-table/labels.ts",
-		"lib/data-table/storage.ts",
-		"lib/data-table/export.ts",
+		"lib/table/labels.ts",
+		"lib/table/storage.ts",
+		"lib/table/export.ts",
 		"lib/sidebar/labels.ts",
 		"lib/sidebar/storage.ts",
 		"components/alert-dialog.tsx",
@@ -270,10 +273,11 @@ describe("UI kit boundary types (rules 1–3)", () => {
 		"components/event-calendar/event-calendar-types.tsx",
 		"components/event-calendar/event-calendar-recurrence.tsx",
 		// Moved to @workspace/ui-kit-logic (the web and native kits share them); the files above re-export them.
-		"kit-logic:data-table/prefs.ts",
-		"kit-logic:data-table/labels.ts",
-		"kit-logic:data-table/storage.ts",
-		"kit-logic:data-table/export-text.ts",
+		"kit-logic:table/prefs.ts",
+		"kit-logic:table/labels.ts",
+		"kit-logic:table/storage.ts",
+		"kit-logic:table/export-text.ts",
+		"kit-logic:table/query.ts",
 		"kit-logic:event-calendar/event-calendar-types.ts",
 		"kit-logic:event-calendar/event-calendar-recurrence.ts",
 		"kit-logic:gantt/gantt-types.ts",
@@ -305,7 +309,7 @@ describe("UI kit inline prop contract (rule 16)", () => {
 	it("data-table does not spread conditional inline object props", (): void => {
 		const source = readComponentSource("components/data-table.tsx");
 		expect(source.includes("...(onRowClick"), "data-table must not spread conditional onRowClick props").toBe(false);
-		expect(source.includes("...(draggable"), "data-table must not spread conditional draggable props").toBe(false);
+		expect(source.includes("...(rowReorder"), "data-table must not spread conditional rowReorder props").toBe(false);
 	});
 });
 
@@ -362,34 +366,34 @@ describe("UI kit filters contract (rules 9, 20, 28)", () => {
 	});
 });
 
-describe("UI kit data-grid contract (rules 1–3, 9–11, 20)", () => {
-	const dataGridSources: readonly string[] = [
-		"components/data-grid/data-grid.tsx",
-		"components/data-grid/data-grid-i18n.tsx",
-		"components/data-grid/data-grid-table.tsx",
-		"components/data-grid/data-grid-table-virtual.tsx",
-		"components/data-grid/data-grid-table-dnd.tsx",
-		"components/data-grid/data-grid-table-dnd-rows.tsx",
-		"components/data-grid/data-grid-cell-selection.tsx",
-		"components/data-grid/data-grid-column-header.tsx",
-		"components/data-grid/data-grid-column-filter.tsx",
-		"components/data-grid/data-grid-column-visibility.tsx",
-		"components/data-grid/data-grid-pagination.tsx",
-		"components/data-grid/data-grid-scroll-area.tsx",
+describe("UI kit table engine contract (rules 1–3, 9–11, 20)", () => {
+	const engineSources: readonly string[] = [
+		"internal/table-engine/table-engine.tsx",
+		"internal/table-engine/table-engine-i18n.tsx",
+		"internal/table-engine/table-engine-table.tsx",
+		"internal/table-engine/table-engine-table-virtual.tsx",
+		"internal/table-engine/table-engine-table-dnd.tsx",
+		"internal/table-engine/table-engine-table-dnd-rows.tsx",
+		"internal/table-engine/table-engine-column-header.tsx",
+		"internal/table-engine/table-engine-column-filter.tsx",
+		"internal/table-engine/table-engine-column-visibility.tsx",
+		"internal/table-engine/table-engine-pagination.tsx",
+		"internal/table-engine/table-engine-scroll-area.tsx",
+		"internal/spreadsheet/cell-selection.tsx",
 	];
-	const dataGridDomRoots: readonly string[] = [
-		"components/data-grid/data-grid.tsx",
-		"components/data-grid/data-grid-table.tsx",
-		"components/data-grid/data-grid-table-virtual.tsx",
-		"components/data-grid/data-grid-table-dnd.tsx",
-		"components/data-grid/data-grid-table-dnd-rows.tsx",
-		"components/data-grid/data-grid-cell-selection.tsx",
-		"components/data-grid/data-grid-pagination.tsx",
-		"components/data-grid/data-grid-scroll-area.tsx",
+	const engineDomRoots: readonly string[] = [
+		"internal/table-engine/table-engine.tsx",
+		"internal/table-engine/table-engine-table.tsx",
+		"internal/table-engine/table-engine-table-virtual.tsx",
+		"internal/table-engine/table-engine-table-dnd.tsx",
+		"internal/table-engine/table-engine-table-dnd-rows.tsx",
+		"internal/table-engine/table-engine-pagination.tsx",
+		"internal/table-engine/table-engine-scroll-area.tsx",
+		"internal/spreadsheet/cell-selection.tsx",
 	];
 
-	it("does not use unknown, never, or assumeType in data-grid modules", (): void => {
-		for (const path of dataGridSources) {
+	it("does not use unknown, never, or assumeType in the engine modules", (): void => {
+		for (const path of engineSources) {
 			const source = readComponentSource(path);
 			expect(source.includes("assumeType"), `${path} must not use assumeType`).toBe(false);
 			expect(/\bunknown\b/.test(source), `${path} must not use unknown type`).toBe(false);
@@ -397,17 +401,81 @@ describe("UI kit data-grid contract (rules 1–3, 9–11, 20)", () => {
 		}
 	});
 
-	it("forwards refs on the data-grid DOM roots", (): void => {
-		for (const path of dataGridDomRoots) {
+	it("forwards refs on the engine's DOM roots", (): void => {
+		for (const path of engineDomRoots) {
 			expect(readComponentSource(path).includes("React.forwardRef"), `${path} must use React.forwardRef`).toBe(true);
 		}
 	});
 
-	it("reads its copy from the dataGrid label family, with no second i18n mechanism", (): void => {
-		expect(readComponentSource("components/data-grid/data-grid.tsx").includes('useUiKitLabels("dataGrid", labelsOverride)')).toBe(true);
-		for (const path of dataGridSources) {
-			expect(readComponentSource(path).includes("mergeDataGridI18n"), `${path} must not merge its own i18n`).toBe(false);
+	it("reads its copy from the tableEngine label family, with no second i18n mechanism", (): void => {
+		expect(readComponentSource("internal/table-engine/table-engine.tsx").includes('useUiKitLabels("tableEngine", labelsOverride)')).toBe(true);
+		for (const path of engineSources) {
+			expect(readComponentSource(path).includes("mergeTableEngineI18n"), `${path} must not merge its own i18n`).toBe(false);
 		}
+	});
+});
+
+/**
+ * `src/internal/` holds the table engine and the parts `DataTable` and `Spreadsheet` are built from. It is private to
+ * this package: an app that reached into it would be coupled to parts that move freely.
+ */
+describe("UI kit private internals", () => {
+	const REPO_ROOT = join(UI_SRC, "..", "..", "..");
+	const SKIPPED_DIRECTORIES: ReadonlySet<string> = new Set([
+		"node_modules",
+		".next",
+		".turbo",
+		".expo",
+		"dist",
+		"build",
+		"coverage",
+		"android",
+		"ios",
+		".output",
+		".tanstack",
+	]);
+	const SOURCE_FILE = /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/u;
+	/**
+	 * An import or re-export statement (or the `} from` line closing a wrapped one) of `@workspace/ui/internal/…`, or of
+	 * a relative path that climbs into the kit's `src/internal/`. Anchored at the line's start, so code a lint test
+	 * holds in a string is not read as an import.
+	 */
+	const INTERNAL_IMPORT = /^\s*(?:import|export|\})[^\n]*?\bfrom\s+["'](?:@workspace\/ui\/internal(?:\/|["'])|(?:\.{1,2}\/)+(?:.*\/)?packages\/ui\/src\/internal\/)/mu;
+
+	function collectSourceFiles(directory: string): string[] {
+		const files: string[] = [];
+		for (const entry of readdirSync(directory, { withFileTypes: true })) {
+			if (entry.isDirectory()) {
+				if (!SKIPPED_DIRECTORIES.has(entry.name)) {
+					files.push(...collectSourceFiles(join(directory, entry.name)));
+				}
+			} else if (SOURCE_FILE.test(entry.name)) {
+				files.push(join(directory, entry.name));
+			}
+		}
+		return files;
+	}
+
+	it("is not an entry point of the package", (): void => {
+		const manifest = UiPackageManifestSchema.parse(JSON.parse(readFileSync(join(UI_SRC, "..", "package.json"), "utf8")));
+		const exposed = Object.entries(manifest.exports).filter(([entry, target]) => entry.includes("internal") || target.includes("/internal/"));
+		expect(exposed).toEqual([]);
+	});
+
+	it("is imported by no app and no other package", (): void => {
+		const workspaceRoots = [
+			...readdirSync(join(REPO_ROOT, "apps"), { withFileTypes: true })
+				.filter((entry) => entry.isDirectory())
+				.map((entry) => join(REPO_ROOT, "apps", entry.name)),
+			...readdirSync(join(REPO_ROOT, "packages"), { withFileTypes: true })
+				.filter((entry) => entry.isDirectory() && entry.name !== "ui")
+				.map((entry) => join(REPO_ROOT, "packages", entry.name)),
+		];
+		const offenders = workspaceRoots
+			.flatMap((root) => collectSourceFiles(root))
+			.filter((file) => INTERNAL_IMPORT.test(readFileSync(file, "utf8")))
+			.map((file) => file.slice(REPO_ROOT.length + 1));
+		expect(offenders).toEqual([]);
 	});
 });
 

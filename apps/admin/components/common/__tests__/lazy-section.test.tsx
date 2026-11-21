@@ -55,6 +55,45 @@ describe("LazySection", () => {
 		expect(disconnect).toHaveBeenCalled();
 	});
 
+	it('keeps the content mounted by default, and with retain="near-viewport" unmounts it far away at its last height', () => {
+		const callbacks: ObserverCallback[] = [];
+		const latest = (): ObserverCallback | undefined => callbacks.at(callbacks.length - 1);
+		vi.stubGlobal(
+			"IntersectionObserver",
+			vi.fn(function FakeObserver(callback: ObserverCallback) {
+				callbacks.push(callback);
+				return { observe: vi.fn(), disconnect: vi.fn() };
+			}),
+		);
+		const heldHeightPx = 640;
+		vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(heldHeightPx);
+
+		const { container } = render(
+			<LazySection height="h-10" commit="urgent" retain="near-viewport" placeholder={<div data-testid="static-box" />}>
+				<p>Section body</p>
+			</LazySection>,
+		);
+		act(() => {
+			latest()?.([{ isIntersecting: true }]);
+		});
+		expect(screen.getByText("Section body")).toBeTruthy();
+
+		act(() => {
+			latest()?.([{ isIntersecting: false }]);
+		});
+		expect(screen.queryByText("Section body")).toBeNull();
+		expect(screen.queryByTestId("static-box")).toBeNull();
+		const held = container.querySelector<HTMLElement>("[data-lazy-section-held]");
+		expect(held?.style.height).toBe(`${String(heldHeightPx)}px`);
+		expect(held?.getAttribute("aria-hidden")).toBe("true");
+
+		act(() => {
+			latest()?.([{ isIntersecting: true }]);
+		});
+		expect(screen.getByText("Section body")).toBeTruthy();
+		vi.restoreAllMocks();
+	});
+
 	it("draws a caller's static placeholder instead of the section bones until it mounts", () => {
 		vi.stubGlobal(
 			"IntersectionObserver",

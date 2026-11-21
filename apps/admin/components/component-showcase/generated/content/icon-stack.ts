@@ -38,6 +38,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-stack-1",
 				label: "Isometric",
 				anchor: "isometric",
+				part: null,
 				file: "icon-stack-1",
 				source:
 					'import * as React from "react";\nimport { LayersIcon } from "lucide-react";\nimport { IconStack } from "@workspace/ui/components/icon-stack";\n\nexport function IconStack1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<IconStack aria-hidden="true">\n\t\t\t\t<LayersIcon className="size-4" />\n\t\t\t</IconStack>\n\t\t</div>\n\t);\n}\n',
@@ -46,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-stack-2",
 				label: "Sizes",
 				anchor: "sizes",
+				part: null,
 				file: "icon-stack-2",
 				source:
 					'import * as React from "react";\nimport { ArchiveIcon, LayersIcon, PackageIcon } from "lucide-react";\nimport { IconStack } from "@workspace/ui/components/icon-stack";\n\nconst sizes = [\n\t{\n\t\tlabel: "Small",\n\t\tclassName: "h-16 w-14",\n\t\ticon: <ArchiveIcon className="size-3.5" />,\n\t},\n\t{\n\t\tlabel: "Default",\n\t\tclassName: "h-20 w-18",\n\t\ticon: <PackageIcon className="size-4" />,\n\t},\n\t{\n\t\tlabel: "Large",\n\t\tclassName: "h-28 w-24",\n\t\ticon: <LayersIcon className="size-6" />,\n\t},\n];\n\nexport function IconStack2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-wrap items-end justify-center gap-8">\n\t\t\t{sizes.map((item) => (\n\t\t\t\t<div key={item.label} className="flex flex-col items-center gap-2">\n\t\t\t\t\t<IconStack aria-hidden="true" className={item.className}>\n\t\t\t\t\t\t{item.icon}\n\t\t\t\t\t</IconStack>\n\t\t\t\t\t<span className="text-sm text-muted-foreground">{item.label}</span>\n\t\t\t\t</div>\n\t\t\t))}\n\t\t</div>\n\t);\n}\n',
@@ -54,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-stack-3",
 				label: "Colors",
 				anchor: "colors",
+				part: null,
 				file: "icon-stack-3",
 				source:
 					'import * as React from "react";\nimport { SparklesIcon } from "lucide-react";\nimport { IconStack } from "@workspace/ui/components/icon-stack";\n\nconst stacks = [\n\t{\n\t\tlabel: "Neutral",\n\t\tclassName: "text-foreground",\n\t\ticonClassName: "text-muted-foreground",\n\t},\n\t{\n\t\tlabel: "Primary",\n\t\tclassName: "text-primary",\n\t\ticonClassName: "text-primary",\n\t},\n\t{\n\t\tlabel: "Success",\n\t\tclassName: "text-success",\n\t\ticonClassName: "text-success",\n\t},\n\t{\n\t\tlabel: "Warning",\n\t\tclassName: "text-warning",\n\t\ticonClassName: "text-warning",\n\t},\n];\n\nexport function IconStack3Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-wrap items-end justify-center gap-7">\n\t\t\t{stacks.map((item) => (\n\t\t\t\t<div key={item.label} className="flex flex-col items-center gap-2">\n\t\t\t\t\t<IconStack aria-hidden="true" className={item.className}>\n\t\t\t\t\t\t<SparklesIcon className={`size-4 ${item.iconClassName}`} />\n\t\t\t\t\t</IconStack>\n\t\t\t\t\t<span className="text-sm text-muted-foreground">{item.label}</span>\n\t\t\t\t</div>\n\t\t\t))}\n\t\t</div>\n\t);\n}\n',
@@ -62,6 +65,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-stack-5",
 				label: "Empty State",
 				anchor: "empty-state",
+				part: null,
 				file: "icon-stack-5",
 				source:
 					'import * as React from "react";\nimport { DatabaseIcon, InboxIcon, UserPlusIcon } from "lucide-react";\nimport { IconStack } from "@workspace/ui/components/icon-stack";\n\nimport { Button } from "@workspace/ui/components/button";\nimport { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";\n\nexport function IconStack5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center p-4">\n\t\t\t<Empty className="max-w-md py-10">\n\t\t\t\t<EmptyHeader>\n\t\t\t\t\t<EmptyMedia>\n\t\t\t\t\t\t<IconStack aria-hidden="true" className="h-24 w-22 text-primary">\n\t\t\t\t\t\t\t<InboxIcon className="size-5 text-primary" />\n\t\t\t\t\t\t</IconStack>\n\t\t\t\t\t</EmptyMedia>\n\t\t\t\t\t<EmptyTitle>Workspace is ready</EmptyTitle>\n\t\t\t\t\t<EmptyDescription>Invite teammates or connect a data source to start filling this view.</EmptyDescription>\n\t\t\t\t</EmptyHeader>\n\n\t\t\t\t<EmptyContent className="flex-row justify-center gap-2">\n\t\t\t\t\t<Button size="sm">\n\t\t\t\t\t\t<UserPlusIcon data-icon="inline-start" />\n\t\t\t\t\t\tInvite team\n\t\t\t\t\t</Button>\n\t\t\t\t\t<Button variant="outline" size="sm">\n\t\t\t\t\t\t<DatabaseIcon data-icon="inline-start" />\n\t\t\t\t\t\tConnect source\n\t\t\t\t\t</Button>\n\t\t\t\t</EmptyContent>\n\t\t\t</Empty>\n\t\t</div>\n\t);\n}\n',

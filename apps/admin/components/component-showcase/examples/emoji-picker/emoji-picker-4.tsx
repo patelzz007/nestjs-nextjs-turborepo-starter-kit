@@ -26,6 +26,7 @@ import { PopoverTitle } from "@workspace/ui/components/popover";
 import { Separator } from "@workspace/ui/components/separator";
 import Link from "next/link";
 
+import { SHOWCASE_ROUTES } from "@/components/component-showcase/showcase-routes";
 import { ROUTES } from "@/lib/routes";
 
 const RANDOM_CATEGORIES: ReadonlySet<string> = new Set<string>(["nature", "food", "travel", "activities", "objects"]);
@@ -109,7 +110,7 @@ export function EmojiPicker4Example(): React.JSX.Element {
 							</BreadcrumbItem>
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>
-								<BreadcrumbLink render={<Link href={ROUTES.components.index} />}>Projects</BreadcrumbLink>
+								<BreadcrumbLink render={<Link href={SHOWCASE_ROUTES.index} />}>Projects</BreadcrumbLink>
 							</BreadcrumbItem>
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>

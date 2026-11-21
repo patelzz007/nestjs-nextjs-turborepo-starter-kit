@@ -8,18 +8,12 @@ import { Message, MessageContent } from "@workspace/ui/components/message";
 import { Trace, TraceCollapsible, TraceCollapsibleContent, TraceCollapsibleTrigger, TraceDescription, TraceIcon, TraceLine, TraceTitle } from "@workspace/ui/components/trace";
 
 import { ROUTES } from "@/lib/routes";
-import { appRoute } from "@workspace/client/lib/navigation/app-route";
 
 interface Query {
 	readonly id: string;
 	readonly title: string;
 	readonly description: string;
 	readonly sql: string;
-}
-
-interface Dashboard {
-	readonly title: string;
-	readonly href: string;
 }
 
 const QUERIES: readonly Query[] = [
@@ -43,12 +37,17 @@ group by 1 order by 2 desc limit 12`,
 	},
 ];
 
-// The sources link to this admin's own pages: the analytics dashboard and the
-// email delivery log.
-const DASHBOARDS: readonly Dashboard[] = [
-	{ title: "Activation funnel, weekly", href: ROUTES.analytics.index },
-	{ title: "Email delivery health", href: ROUTES.emails.log },
-];
+/** One cited dashboard's row: its title and an arrow, inside the link to it. */
+function DashboardLine({ title }: { readonly title: string }): React.JSX.Element {
+	return (
+		<TraceLine>
+			<TraceTitle>{title}</TraceTitle>
+			<TraceIcon>
+				<ChevronRightIcon />
+			</TraceIcon>
+		</TraceLine>
+	);
+}
 
 // The work folds into one row above the answer and the sources sit below it.
 // keepMounted keeps an opened query open when the summary folds.
@@ -103,21 +102,18 @@ export function Trace3Example(): React.JSX.Element {
 										<TraceIcon>
 											<ChartLineIcon />
 										</TraceIcon>
-										<TraceTitle>Used {DASHBOARDS.length} dashboards</TraceTitle>
+										<TraceTitle>Used 2 dashboards</TraceTitle>
 									</TraceLine>
 								</TraceCollapsibleTrigger>
 								<TraceCollapsibleContent>
+									{/* The sources link to the app's own pages: its analytics dashboard and its overview. */}
 									<Trace>
-										{DASHBOARDS.map((dashboard: Dashboard): React.JSX.Element => (
-											<Link key={dashboard.title} href={appRoute(dashboard.href)}>
-												<TraceLine>
-													<TraceTitle>{dashboard.title}</TraceTitle>
-													<TraceIcon>
-														<ChevronRightIcon />
-													</TraceIcon>
-												</TraceLine>
-											</Link>
-										))}
+										<Link href={ROUTES.analytics.index}>
+											<DashboardLine title="Activation funnel, weekly" />
+										</Link>
+										<Link href={ROUTES.home}>
+											<DashboardLine title="Platform overview" />
+										</Link>
 									</Trace>
 								</TraceCollapsibleContent>
 							</TraceCollapsible>

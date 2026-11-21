@@ -50,6 +50,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-checkbox-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "checkbox-1",
 				source:
 					'import * as React from "react";\nimport { Checkbox } from "@workspace/ui/components/checkbox";\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\n\nexport function Checkbox1Example(): React.JSX.Element {\n\treturn (\n\t\t<Field orientation="horizontal" className="w-auto">\n\t\t\t<Checkbox id="terms" />\n\t\t\t<FieldLabel htmlFor="terms">Basic checkbox</FieldLabel>\n\t\t</Field>\n\t);\n}\n',
@@ -58,6 +59,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-checkbox-4",
 				label: "Indeterminate",
 				anchor: "indeterminate",
+				part: null,
 				file: "checkbox-4",
 				source:
 					'import * as React from "react";\nimport { Checkbox } from "@workspace/ui/components/checkbox";\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\n\nexport function Checkbox4Example(): React.JSX.Element {\n\treturn (\n\t\t<Field orientation="horizontal" className="w-auto">\n\t\t\t<Checkbox id="indeterminate" indeterminate />\n\t\t\t<FieldLabel htmlFor="indeterminate">Indeterminate state</FieldLabel>\n\t\t</Field>\n\t);\n}\n',
@@ -66,6 +68,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-checkbox-5",
 				label: "Label & Description",
 				anchor: "label-description",
+				part: null,
 				file: "checkbox-5",
 				source:
 					'import * as React from "react";\nimport { Checkbox } from "@workspace/ui/components/checkbox";\nimport { Field, FieldContent, FieldDescription, FieldLabel } from "@workspace/ui/components/field";\n\nexport function Checkbox5Example(): React.JSX.Element {\n\treturn (\n\t\t<Field orientation="horizontal" className="w-auto max-w-xs">\n\t\t\t<Checkbox id="terms-2" defaultChecked />\n\t\t\t<FieldContent>\n\t\t\t\t<FieldLabel htmlFor="terms-2">Accept terms and conditions</FieldLabel>\n\t\t\t\t<FieldDescription>This checkbox is used to accept the terms and conditions.</FieldDescription>\n\t\t\t</FieldContent>\n\t\t</Field>\n\t);\n}\n',
@@ -74,6 +77,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-checkbox-8",
 				label: "Basic Group",
 				anchor: "basic-group",
+				part: null,
 				file: "checkbox-8",
 				source:
 					'import * as React from "react";\nimport { Checkbox } from "@workspace/ui/components/checkbox";\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\n\nexport function Checkbox8Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-auto">\n\t\t\t<FieldLabel>Notification Settings</FieldLabel>\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<Checkbox id="group-1" defaultChecked />\n\t\t\t\t<FieldLabel htmlFor="group-1">Email notifications</FieldLabel>\n\t\t\t</Field>\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<Checkbox id="group-2" />\n\t\t\t\t<FieldLabel htmlFor="group-2">SMS notifications</FieldLabel>\n\t\t\t</Field>\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<Checkbox id="group-3" defaultChecked />\n\t\t\t\t<FieldLabel htmlFor="group-3">Push notifications</FieldLabel>\n\t\t\t</Field>\n\t\t</Field>\n\t);\n}\n',
@@ -82,6 +86,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-checkbox-9",
 				label: "Setting Card",
 				anchor: "setting-card",
+				part: null,
 				file: "checkbox-9",
 				source:
 					'import * as React from "react";\nimport { Checkbox } from "@workspace/ui/components/checkbox";\nimport { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldTitle } from "@workspace/ui/components/field";\n\nexport function Checkbox9Example(): React.JSX.Element {\n\treturn (\n\t\t<FieldGroup className="max-w-xs">\n\t\t\t<FieldLabel>\n\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t<Checkbox defaultChecked />\n\t\t\t\t\t<FieldContent>\n\t\t\t\t\t\t<FieldTitle>Enable notifications</FieldTitle>\n\t\t\t\t\t\t<FieldDescription>You can enable or disable notifications at any time.</FieldDescription>\n\t\t\t\t\t</FieldContent>\n\t\t\t\t</Field>\n\t\t\t</FieldLabel>\n\t\t</FieldGroup>\n\t);\n}\n',
@@ -90,6 +95,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-checkbox-16",
 				label: "Nested Permissions",
 				anchor: "nested-permissions",
+				part: null,
 				file: "checkbox-16",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { useCallback, useState } from "react";\n\nimport { Checkbox } from "@workspace/ui/components/checkbox";\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\n\ninterface Item {\n\treadonly id: string;\n\treadonly label: string;\n\treadonly children?: readonly Item[];\n}\n\nconst data: readonly Item[] = [\n\t{\n\t\tid: "admin",\n\t\tlabel: "Administration",\n\t\tchildren: [\n\t\t\t{\n\t\t\t\tid: "user-management",\n\t\t\t\tlabel: "User Management",\n\t\t\t\tchildren: [\n\t\t\t\t\t{ id: "view-users", label: "View Users" },\n\t\t\t\t\t{ id: "create-users", label: "Create Users" },\n\t\t\t\t\t{ id: "edit-users", label: "Edit Users" },\n\t\t\t\t],\n\t\t\t},\n\t\t\t{\n\t\t\t\tid: "role-management",\n\t\t\t\tlabel: "Role Management",\n\t\t\t\tchildren: [\n\t\t\t\t\t{ id: "view-roles", label: "View Roles" },\n\t\t\t\t\t{ id: "assign-roles", label: "Assign Roles" },\n\t\t\t\t],\n\t\t\t},\n\t\t],\n\t},\n];\n\ntype CheckedMap = Readonly<Record<string, boolean>>;\n\nconst INITIAL_CHECKED: CheckedMap = {\n\t"view-users": true,\n\t"create-users": true,\n\t"view-roles": true,\n};\n\n/** The top level of the tree is emphasised. */\nconst ROOT_LEVEL = 0;\n\n/** Every leaf permission under (or at) a node. */\nfunction getLeafIds(item: Item): string[] {\n\tif (!item.children) {\n\t\treturn [item.id];\n\t}\n\treturn item.children.flatMap(getLeafIds);\n}\n\n/** A node is checked when every leaf below it is. */\nfunction isFullyChecked(item: Item, checked: CheckedMap): boolean {\n\treturn getLeafIds(item).every((id: string): boolean => checked[id] === true);\n}\n\n/** A node is indeterminate when only some of the leaves below it are checked. */\nfunction isPartlyChecked(item: Item, checked: CheckedMap): boolean {\n\tconst leafIds = getLeafIds(item);\n\tconst checkedCount = leafIds.filter((id: string): boolean => checked[id] === true).length;\n\treturn checkedCount > 0 && checkedCount < leafIds.length;\n}\n\ninterface PermissionNodeProps {\n\treadonly item: Item;\n\treadonly level: number;\n\treadonly checked: CheckedMap;\n\treadonly onToggle: (item: Item) => void;\n}\n\nfunction PermissionNode({ item, level, checked, onToggle }: PermissionNodeProps): React.JSX.Element {\n\tconst handleCheckedChange = useCallback((): void => {\n\t\tonToggle(item);\n\t}, [item, onToggle]);\n\n\treturn (\n\t\t<div className="flex flex-col gap-3">\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<Checkbox id={item.id} checked={isFullyChecked(item, checked)} indeterminate={isPartlyChecked(item, checked)} onCheckedChange={handleCheckedChange} />\n\t\t\t\t<FieldLabel htmlFor={item.id} className={level === ROOT_LEVEL ? "font-semibold" : "text-sm"}>\n\t\t\t\t\t{item.label}\n\t\t\t\t</FieldLabel>\n\t\t\t</Field>\n\t\t\t{item.children ? (\n\t\t\t\t<div className="ml-7 flex flex-col gap-3">\n\t\t\t\t\t{item.children.map((child: Item): React.JSX.Element => (\n\t\t\t\t\t\t<PermissionNode key={child.id} item={child} level={level + 1} checked={checked} onToggle={onToggle} />\n\t\t\t\t\t))}\n\t\t\t\t</div>\n\t\t\t) : null}\n\t\t</div>\n\t);\n}\n\nexport function Checkbox16Example(): React.JSX.Element {\n\tconst [checked, setChecked] = useState<CheckedMap>(INITIAL_CHECKED);\n\n\t/** Checks every leaf under the node, or clears them all when it was fully checked. */\n\tconst toggle = useCallback((item: Item): void => {\n\t\tsetChecked((current: CheckedMap): CheckedMap => {\n\t\t\tconst shouldCheck = !isFullyChecked(item, current);\n\t\t\tconst next: Record<string, boolean> = { ...current };\n\t\t\tfor (const id of getLeafIds(item)) {\n\t\t\t\tnext[id] = shouldCheck;\n\t\t\t}\n\t\t\treturn next;\n\t\t});\n\t}, []);\n\n\treturn (\n\t\t<div className="mx-auto flex flex-col gap-3">\n\t\t\t{data.map((item: Item): React.JSX.Element => (\n\t\t\t\t<PermissionNode key={item.id} item={item} level={ROOT_LEVEL} checked={checked} onToggle={toggle} />\n\t\t\t))}\n\t\t</div>\n\t);\n}\n',

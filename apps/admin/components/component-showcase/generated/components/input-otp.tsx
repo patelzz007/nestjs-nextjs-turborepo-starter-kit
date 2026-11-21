@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/input-otp/input-otp-1").then((m) => m.InputOtp1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/input-otp/input-otp-2").then((m) => m.InputOtp2Example), { loading: FeatureLoading });
@@ -30,6 +30,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-otp-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic OTP input.. Best for the minimal markup: 6 slots split 3 and 3 by one separator, accepting any character.",
 		file: "input-otp-1",
 		source:
@@ -40,6 +41,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-otp-2",
 		label: "Digits Only",
 		anchor: "digits-only",
+		part: null,
 		description: "OTP input with numeric digits.. Best for one unbroken row of 6 slots that refuses anything but digits.",
 		file: "input-otp-2",
 		source:
@@ -50,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-otp-3",
 		label: "Multiple Separators",
 		anchor: "multiple-separators",
+		part: null,
 		description: "OTP input with multiple separators.. Best for a controlled value prefilled with 123456, shown as 3 pairs between 2 separators.",
 		file: "input-otp-3",
 		source:
@@ -60,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-otp-4",
 		label: "Letters & Numbers",
 		anchor: "letters-numbers",
+		part: null,
 		description: "OTP input with letters and numbers.. Best for a 6 character code that takes letters and digits but refuses symbols, with a hint between label and slots.",
 		file: "input-otp-4",
 		source:
@@ -70,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-otp-5",
 		label: "PIN Code",
 		anchor: "pin-code",
+		part: null,
 		description: "OTP input for PIN codes.. Best for a 4 slot PIN in one group, digits only, with a short hint above the slots.",
 		file: "input-otp-5",
 		source:
@@ -80,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-input-otp-6",
 		label: "Verification Card",
 		anchor: "verification-card",
+		part: null,
 		description:
 			"OTP input verification code.. Best for a login check Card naming the email the code went to, with wider slots, a Resend Code button and a full width Verify.",
 		file: "input-otp-6",
@@ -126,6 +132,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function InputOtpFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function InputOtpFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

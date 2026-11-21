@@ -11,7 +11,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 		],
 		whenNotToUse: [
 			"A wait whose result has no known shape, such as a file being processed: use [Spinner](/components/spinner)",
-			"A data table: [Data Table](/components/data-table) and [Data Grid](/components/data-grid) draw their own skeleton rows",
+			"A data table: [Data Table](/components/data-table) draws its own skeleton rows",
 		],
 		notes: [
 			"`Skeleton` has no size of its own: size each one to the content it stands in for",
@@ -37,6 +37,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-skeleton-1",
 				label: "Avatar Info",
 				anchor: "avatar-info",
+				part: null,
 				file: "skeleton-1",
 				source:
 					'import * as React from "react";\nimport { Skeleton } from "@workspace/ui/components/skeleton";\n\nexport function Skeleton1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center gap-4">\n\t\t\t<Skeleton className="h-12 w-12 rounded-full" />\n\t\t\t<div className="space-y-2">\n\t\t\t\t<Skeleton className="h-4 w-[200px]" />\n\t\t\t\t<Skeleton className="h-4 w-[140px]" />\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n',
@@ -45,6 +46,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-skeleton-2",
 				label: "Card",
 				anchor: "card",
+				part: null,
 				file: "skeleton-2",
 				source:
 					'import * as React from "react";\nimport { Card, CardContent, CardHeader } from "@workspace/ui/components/card";\nimport { Skeleton } from "@workspace/ui/components/skeleton";\n\nexport function Skeleton2Example(): React.JSX.Element {\n\treturn (\n\t\t<Card className="w-full max-w-xs">\n\t\t\t<CardHeader className="gap-2">\n\t\t\t\t<Skeleton className="h-4 w-2/3" />\n\t\t\t\t<Skeleton className="h-4 w-1/2" />\n\t\t\t</CardHeader>\n\t\t\t<CardContent>\n\t\t\t\t<Skeleton className="aspect-video w-full rounded-md" />\n\t\t\t</CardContent>\n\t\t</Card>\n\t);\n}\n',
@@ -53,6 +55,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-skeleton-5",
 				label: "Data Table",
 				anchor: "data-table",
+				part: null,
 				file: "skeleton-5",
 				source:
 					'import * as React from "react";\nimport { Skeleton } from "@workspace/ui/components/skeleton";\n\n/** How many placeholder rows the example repeats. */\nconst ROW_COUNT = 4;\n/** A stable id per placeholder row, used as its key. */\nconst ROW_IDS: readonly string[] = Array.from({ length: ROW_COUNT }, (_: undefined, position: number): string => `row-${String(position + 1)}`);\n\nexport function Skeleton5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto flex w-full max-w-lg flex-col gap-4">\n\t\t\t<div className="flex gap-4 border-b pb-2">\n\t\t\t\t<Skeleton className="h-4 flex-1" />\n\t\t\t\t<Skeleton className="h-4 w-24" />\n\t\t\t\t<Skeleton className="h-4 w-20" />\n\t\t\t</div>\n\t\t\t{ROW_IDS.map((placeholderId: string): React.JSX.Element => (\n\t\t\t\t<div key={placeholderId} className="flex gap-4">\n\t\t\t\t\t<Skeleton className="h-4 flex-1" />\n\t\t\t\t\t<Skeleton className="h-4 w-24" />\n\t\t\t\t\t<Skeleton className="h-4 w-20" />\n\t\t\t\t</div>\n\t\t\t))}\n\t\t</div>\n\t);\n}\n',
@@ -61,6 +64,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-skeleton-9",
 				label: "Profile Page",
 				anchor: "profile-page",
+				part: null,
 				file: "skeleton-9",
 				source:
 					'import * as React from "react";\nimport { Card, CardContent, CardHeader } from "@workspace/ui/components/card";\nimport { Separator } from "@workspace/ui/components/separator";\nimport { Skeleton } from "@workspace/ui/components/skeleton";\n\n/** How many placeholder stats the profile header repeats. */\nconst STAT_COUNT = 3;\n/** A stable id per placeholder stat, used as its key. */\nconst STAT_IDS: readonly string[] = Array.from({ length: STAT_COUNT }, (_: undefined, position: number): string => `stat-${String(position + 1)}`);\n\n/** How many placeholder rows the example repeats. */\nconst DETAIL_ROW_COUNT = 4;\n/** A stable id per placeholder row, used as its key. */\nconst DETAIL_ROW_IDS: readonly string[] = Array.from({ length: DETAIL_ROW_COUNT }, (_: undefined, position: number): string => `row-${String(position + 1)}`);\n\nexport function Skeleton9Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs space-y-6">\n\t\t\t{/* Profile header */}\n\t\t\t<Card>\n\t\t\t\t<CardHeader className="items-center gap-3">\n\t\t\t\t\t<Skeleton className="size-20 rounded-full" />\n\t\t\t\t\t<Skeleton className="h-5 w-32" />\n\t\t\t\t\t<Skeleton className="h-3 w-48" />\n\t\t\t\t</CardHeader>\n\t\t\t\t<CardContent className="flex justify-center gap-8">\n\t\t\t\t\t{STAT_IDS.map((placeholderId: string): React.JSX.Element => (\n\t\t\t\t\t\t<div key={placeholderId} className="flex flex-col items-center gap-1">\n\t\t\t\t\t\t\t<Skeleton className="h-5 w-10" />\n\t\t\t\t\t\t\t<Skeleton className="h-3 w-14" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t))}\n\t\t\t\t</CardContent>\n\t\t\t</Card>\n\n\t\t\t{/* Details section */}\n\t\t\t<Card>\n\t\t\t\t<CardContent className="space-y-4 pt-4">\n\t\t\t\t\t<Skeleton className="h-4 w-24" />\n\t\t\t\t\t<Separator />\n\t\t\t\t\t{DETAIL_ROW_IDS.map((placeholderId: string): React.JSX.Element => (\n\t\t\t\t\t\t<div key={placeholderId} className="flex items-center justify-between">\n\t\t\t\t\t\t\t<Skeleton className="h-3 w-20" />\n\t\t\t\t\t\t\t<Skeleton className="h-3 w-32" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t))}\n\t\t\t\t</CardContent>\n\t\t\t</Card>\n\t\t</div>\n\t);\n}\n',

@@ -1,7 +1,7 @@
 "use client";
 
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { buildReadOnlyTableBulk, TABLE_COLUMN_CONTROLS, toTableStatus } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { formatCoordinate, formatCoordinatePair, formatCount } from "@/lib/format/numbers";
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
@@ -27,7 +27,7 @@ import { DataTableSearchToolbar } from "@/components/common/data-table-search-to
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { DataTable, type DataTableFeatures } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableFeatures, type DataTablePaging, type DataTableStatus, type DataTableToolbar } from "@workspace/ui/components/data-table";
 import { Input } from "@workspace/ui/components/input";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -317,16 +317,15 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 
 	const items = activeTab === "countries" ? countryItems : activeTab === "states" ? stateItems : cityItems;
 
-	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
+	const { source, getRowId } = useUrlListPaging({
 		state: urlState,
 		update: updateUrlState,
 		...GEO_SORT[activeTab],
 		totalCount: readPaginatedTotal(activeQuery.data?.meta, 0),
 		nextCursor: readPaginatedNextCursor(activeQuery.data?.meta),
-		resetKey: GEO_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
 		getRowId: getGeoRowId,
-		onClearFilters: handleClearFilters,
 		isFiltered,
+		onClearFilters: handleClearFilters,
 	});
 
 	const handleCountryFilterChange = useCallback(
@@ -439,7 +438,9 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 		[activeTab, searchDraft, setSearchDraft, countryCodeDraft, handleCountryFilterChange],
 	);
 
-	const checkbox = useMemo(() => buildReadOnlyTableCheckbox(`geo-${activeTab}.csv`), [activeTab]);
+	const bulk = useMemo(() => buildReadOnlyTableBulk<GeoRow>(`geo-${activeTab}.csv`), [activeTab]);
+	const toolbar = useMemo((): DataTableToolbar => ({ extra: toolbarContent }), [toolbarContent]);
+	const status = useMemo((): DataTableStatus => toTableStatus({ isLoading: activeQuery.isLoading }, tableError), [activeQuery.isLoading, tableError]);
 
 	return (
 		<div className="space-y-6 p-6">
@@ -462,22 +463,23 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 				<DataTable
 					data={items}
 					columns={GEO_COLUMNS[activeTab]}
+					getRowId={getRowId}
+					source={source}
 					labels={GEO_LABELS[activeTab]}
-					checkbox={checkbox}
-					enableColumnVisibility
-					mobileCardRender={mobileCardRender}
-					pagination={pagination}
-					sorting={sorting}
-					pageSizeOptions={GEO_PAGE_SIZE_OPTIONS}
-					onManualSortingChange={handleSortingChange}
-					toolbarContent={toolbarContent}
-					error={tableError}
-					isLoading={activeQuery.isLoading}
+					selection={bulk.selection}
+					exporting={bulk.exporting}
+					columnControls={TABLE_COLUMN_CONTROLS}
+					mobileCard={mobileCardRender}
+					paging={GEO_PAGING}
+					toolbar={toolbar}
+					status={status}
 				/>
 			</div>
 		</div>
 	);
 }
+
+const GEO_PAGING: DataTablePaging = { pageSizeOptions: GEO_PAGE_SIZE_OPTIONS };
 
 function getGeoRowId(row: GeoRow): string {
 	return String(row.id);

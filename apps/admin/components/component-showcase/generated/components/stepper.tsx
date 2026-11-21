@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/stepper/stepper-1").then((m) => m.Stepper1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/stepper/stepper-2").then((m) => m.Stepper2Example), { loading: FeatureLoading });
@@ -64,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic stepper. Best for a row of 4 numbered circles, uncontrolled, whose connector takes the primary color after each passed step.",
 		file: "stepper-1",
 		source:
@@ -74,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-2",
 		label: "Completed State",
 		anchor: "completed-state",
+		part: null,
 		description: "Stepper with completed state. Best for passed steps painted green on both the circle and its connector, with later numbers in gray.",
 		file: "stepper-2",
 		source:
@@ -84,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-3",
 		label: "Loading State",
 		anchor: "loading-state",
+		part: null,
 		description: "Stepper with loading state. Best for number free ring markers: a dot marks the current step, a spinner the loading one and a check each passed step.",
 		file: "stepper-3",
 		source:
@@ -94,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-4",
 		label: "Controlled",
 		anchor: "controlled",
+		part: null,
 		description: "Controlled stepper. Best for the active step kept in React state and moved by Previous and Next buttons that disable at either end.",
 		file: "stepper-4",
 		source:
@@ -104,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-5",
 		label: "Labels Below",
 		anchor: "labels-below",
+		part: null,
 		description: "Stepper with title and indicator. Best for numbered circles that become checks once passed, each with a short label centered below it.",
 		file: "stepper-5",
 		source:
@@ -114,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-6",
 		label: "Left Aligned Titles",
 		anchor: "left-aligned-titles",
+		part: null,
 		description: "Stepper with progress bar indicator. Best for left aligned numbers over bold titles from User Details to Preview Form, with no lines between steps.",
 		file: "stepper-6",
 		source:
@@ -124,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-7",
 		label: "Icons & Badges",
 		anchor: "icons-badges",
+		part: null,
 		description: "Stepper with icons and badges. Best for icon circles above a Step N eyebrow, a bold title and an In Progress, Completed or Pending badge.",
 		file: "stepper-7",
 		source:
@@ -134,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-8",
 		label: "Descriptions",
 		anchor: "descriptions",
+		part: null,
 		description: "Stepper with descriptions. Best for centered steps stacking a number, a title and a one line description, with connectors between them.",
 		file: "stepper-8",
 		source:
@@ -144,6 +152,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-9",
 		label: "Inline Titles",
 		anchor: "inline-titles",
+		part: null,
 		description: "Stepper with inline titles. Best for a number or check beside each title in one row, with a connector that fills once the step is passed.",
 		file: "stepper-9",
 		source:
@@ -154,6 +163,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-10",
 		label: "Title & Caption",
 		anchor: "title-caption",
+		part: null,
 		description: "Stepper with content for each step. Best for a number or check beside a 2 line title and caption per step, joined by muted connectors that never fill.",
 		file: "stepper-10",
 		source:
@@ -164,6 +174,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-11",
 		label: "Bar With Titles",
 		anchor: "bar-with-titles",
+		part: null,
 		description: "Stepper with progress bar and titles. Best for full width bar segments, one per step, filling with the primary color up to the current one, titles below.",
 		file: "stepper-11",
 		source:
@@ -174,6 +185,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-12",
 		label: "Segmented Bar",
 		anchor: "segmented-bar",
+		part: null,
 		description: "Stepper with segmented progress bar. Best for one thick bar of 4 joined segments, a Back link, a current of total counter and a Next button.",
 		file: "stepper-12",
 		source:
@@ -184,6 +196,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-13",
 		label: "Vertical Descriptions",
 		anchor: "vertical-descriptions",
+		part: null,
 		description:
 			"Stepper with vertical orientation and descriptions. Best for a top to bottom column of numbered markers, each with a title and a description beside it, links greening once done.",
 		file: "stepper-13",
@@ -195,6 +208,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-14",
 		label: "Vertical",
 		anchor: "vertical",
+		part: null,
 		description: "Stepper with vertical orientation. Best for a bare column of 3 numbered circles with green links between finished ones and a spinner on the loading step.",
 		file: "stepper-14",
 		source:
@@ -205,6 +219,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-15",
 		label: "Vertical Titles",
 		anchor: "vertical-titles",
+		part: null,
 		description: "Stepper with vertical orientation and titles. Best for vertical numbered steps labelled with one title each and no supporting text, content centered below.",
 		file: "stepper-15",
 		source:
@@ -215,6 +230,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-16",
 		label: "Delivery Stops",
 		anchor: "delivery-stops",
+		part: null,
 		description:
 			"Stepper with delivery stops and ETAs. Best for a route list that moves beside its stop detail in wider containers, a spinner on the current stop, Previous and Next.",
 		file: "stepper-16",
@@ -226,6 +242,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-17",
 		label: "Dotted Progress",
 		anchor: "dotted-progress",
+		part: null,
 		description: "Stepper with dotted progress. Best for tiny ring dots joined by dotted links in a box at most 240px wide, each named only by its aria label.",
 		file: "stepper-17",
 		source:
@@ -236,6 +253,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-18",
 		label: "Stage Details",
 		anchor: "stage-details",
+		part: null,
 		description:
 			"Stepper with key-value stage details. Best for a stage row that turns into a draggable carousel with faded edges when it overflows, each stage listing label and value pairs.",
 		file: "stepper-18",
@@ -247,6 +265,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-19",
 		label: "Frame Icon Tiles",
 		anchor: "frame-icon-tiles",
+		part: null,
 		description: "Stepper with icon tiles in a frame. Best for a muted Frame header strip with arrows between steps above an empty placeholder panel and Previous and Next.",
 		file: "stepper-19",
 		source:
@@ -257,6 +276,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-20",
 		label: "Purchase Orders",
 		anchor: "purchase-orders",
+		part: null,
 		description:
 			"Stepper with purchase order checks. Best for a Tree of orders with Ready or Review badges and an actions menu on the active step row, also opened by Shift+F10.",
 		file: "stepper-20",
@@ -268,6 +288,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-21",
 		label: "Security Checks",
 		anchor: "security-checks",
+		part: null,
 		description: "Stepper with grouped security checks. Best for a 3 level Tree of areas, numbered steps and checks, whose row status follows where the active check sits.",
 		file: "stepper-21",
 		source:
@@ -278,6 +299,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-22",
 		label: "Bottom Color Bars",
 		anchor: "bottom-color-bars",
+		part: null,
 		description:
 			"Stepper with color-coded bottom bars. Best for step tabs pinned under the content as a footer strip, each in its own color, shortening to numbers when narrow.",
 		file: "stepper-22",
@@ -289,6 +311,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-23",
 		label: "Top Color Bars",
 		anchor: "top-color-bars",
+		part: null,
 		description:
 			"Stepper with top color bars and card art. Best for colored tabs across the top of a Frame panel over static card artwork, for a card entry flow with no fields yet.",
 		file: "stepper-23",
@@ -300,6 +323,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-24",
 		label: "Icon Tile Rows",
 		anchor: "icon-tile-rows",
+		part: null,
 		description:
 			"Stepper with icon tile rows. Best for stacked Frame rows clickable edge to edge, each with an IconTile and a status marker at its end, above a Step N of 4 detail.",
 		file: "stepper-24",
@@ -311,6 +335,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-25",
 		label: "Phase Track",
 		anchor: "phase-track",
+		part: null,
 		description: "Stepper with phase track. Best for a pale track where only the current phase's slice fills blue, with a spinning dashed dot and refund case copy below.",
 		file: "stepper-25",
 		source:
@@ -321,6 +346,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-26",
 		label: "Timestamped Checkpoints",
 		anchor: "timestamped-checkpoints",
+		part: null,
 		description:
 			"Stepper with timestamped checkpoints. Best for a muted track whose current slice fills with the foreground color, and times shown only for reached checkpoints.",
 		file: "stepper-26",
@@ -332,6 +358,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-27",
 		label: "Transit Arrow",
 		anchor: "transit-arrow",
+		part: null,
 		description: "Stepper with transit arrow. Best for times on passed stops and estimates for the rest, over tick marks with an arrow drawn into the selected stop.",
 		file: "stepper-27",
 		source:
@@ -342,6 +369,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-28",
 		label: "Breadcrumb Steps",
 		anchor: "breadcrumb-steps",
+		part: null,
 		description: "Stepper with breadcrumb steps. Best for text only step names beside an Onboarding label and a step counter, dropping to a row of their own below 48rem.",
 		file: "stepper-28",
 		source:
@@ -352,6 +380,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-29",
 		label: "Compact Inline",
 		anchor: "compact-inline",
+		part: null,
 		description:
 			"Stepper with compact inline progress. Best for a row of dashed rings and names that keeps only the current name when narrow, the current ring spinning and done ones blue.",
 		file: "stepper-29",
@@ -363,6 +392,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-30",
 		label: "Truck Route",
 		anchor: "truck-route",
+		part: null,
 		description: "Stepper with truck route and rest stops. Best for icon stops in rings with short fixed legs for rest breaks and a green destination once it is selected.",
 		file: "stepper-30",
 		source:
@@ -373,6 +403,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-31",
 		label: "Chevron Icon Tiles",
 		anchor: "chevron-icon-tiles",
+		part: null,
 		description:
 			"Stepper with icon tiles and chevrons. Best for a row of IconTile steps split by chevron icons, with the focus ring drawn on the tile, folding to bare tiles when narrow.",
 		file: "stepper-31",
@@ -384,6 +415,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-32",
 		label: "Numbered Chevrons",
 		anchor: "numbered-chevrons",
+		part: null,
 		description:
 			"Stepper with numbered chevron stages. Best for clip path chevrons that nest notch into arrow, outlined by a drop shadow on focus because the clip hides the ring.",
 		file: "stepper-32",
@@ -395,6 +427,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-33",
 		label: "Filled Chevrons",
 		anchor: "filled-chevrons",
+		part: null,
 		description:
 			"Stepper with filled status chevrons. Best for an inverse Frame strip of chevrons that hug their labels with no done count, folding to icons around the current step.",
 		file: "stepper-33",
@@ -406,6 +439,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-34",
 		label: "Outlined Chevrons",
 		anchor: "outlined-chevrons",
+		part: null,
 		description:
 			"Stepper with outlined chevron plan. Best for full width chevrons whose traced SVG edges outline the done and current steps at low opacity, after a Plan count chip.",
 		file: "stepper-34",
@@ -417,6 +451,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-35",
 		label: "Flat Chevrons",
 		anchor: "flat-chevrons",
+		part: null,
 		description: "Stepper with flat chevron plan. Best for chevrons clipped on the trigger itself, with an inner pill that draws the focus ring, for a contract plan.",
 		file: "stepper-35",
 		source:
@@ -427,6 +462,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-36",
 		label: "Shipping Route",
 		anchor: "shipping-route",
+		part: null,
 		description:
 			"Stepper with shipping route and stop details. Best for a container query route that sheds rows as it narrows, a skewed segment bar on one leg and an arrow past the last port.",
 		file: "stepper-36",
@@ -438,6 +474,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-37",
 		label: "Horizontal Step Cards",
 		anchor: "horizontal-step-cards",
+		part: null,
 		description: "Stepper with horizontal step cards. Best for cards that are the tabs themselves via a FramePanel render, in a 2 or 4 column grid above the detail.",
 		file: "stepper-37",
 		source:
@@ -448,6 +485,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-38",
 		label: "Shipment Progress",
 		anchor: "shipment-progress",
+		part: null,
 		description:
 			"Stepper with shipment progress bar. Best for icon labels under a tick track that turns solid green when passed, folding to evenly spaced bare icons when narrow.",
 		file: "stepper-38",
@@ -459,6 +497,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-39",
 		label: "Vertical Step Cards",
 		anchor: "vertical-step-cards",
+		part: null,
 		description: "Stepper with vertical step cards. Best for stacked tab cards in a 240px column with useId scoped ids, the detail moving under them below 28rem.",
 		file: "stepper-39",
 		source:
@@ -469,6 +508,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-40",
 		label: "Side Rail Icons",
 		anchor: "side-rail-icons",
+		part: null,
 		description:
 			"Stepper with side rail and step icons. Best for a glyph of its own per row that turns blue when selected, and a solid green check only at the end of finished rows.",
 		file: "stepper-40",
@@ -480,6 +520,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-41",
 		label: "Status List",
 		anchor: "status-list",
+		part: null,
 		description: "Stepper with status list. Best for a 180px rail whose current title turns blue, with a spinning ring that follows the selection and useId scoped ids.",
 		file: "stepper-41",
 		source:
@@ -490,6 +531,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-42",
 		label: "Vertical Status Bars",
 		anchor: "vertical-status-bars",
+		part: null,
 		description:
 			"Stepper with vertical status bars. Best for a bar per row that splits into 4 dashes on the current step, with the focus ring moved onto the label clear of it.",
 		file: "stepper-42",
@@ -501,6 +543,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-43",
 		label: "Collapsible Sub-Steps",
 		anchor: "collapsible-sub-steps",
+		part: null,
 		description:
 			"Stepper with sub-steps in a collapsible card. Best for numbered phases with a turning chevron, the open one boxed in a Frame that folds when picked again, its live task on a blue edge bar.",
 		file: "stepper-43",
@@ -512,6 +555,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stepper-44",
 		label: "Right-Aligned Sub-Steps",
 		anchor: "right-aligned-sub-steps",
+		part: null,
 		description: "Stepper with right-aligned sub-steps. Best for end aligned labels on a segmented rail with a nested task rail, and status announced through useStepItem.",
 		file: "stepper-44",
 		source:
@@ -557,6 +601,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function StepperFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function StepperFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

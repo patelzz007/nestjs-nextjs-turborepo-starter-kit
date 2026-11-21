@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/toggle/toggle-1").then((m) => m.Toggle1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/toggle/toggle-2").then((m) => m.Toggle2Example), { loading: FeatureLoading });
@@ -34,6 +34,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic toggle.. Best for bold, italic and underline as 3 separate icon only toggles in the default variant, with bold pressed on load.",
 		file: "toggle-1",
 		source:
@@ -44,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-2",
 		label: "Outline",
 		anchor: "outline",
+		part: null,
 		description: "Toggle buttons with outline variant.. Best for outline toggles that pair an icon with a text label, Italic and Bold, both off on load.",
 		file: "toggle-2",
 		source:
@@ -54,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-3",
 		label: "Text Sizes",
 		anchor: "text-sizes",
+		part: null,
 		description: "Toggle buttons in different sizes.. Best for text only outline toggles at the sm, default and lg sizes side by side, labelled Small, Default and Large.",
 		file: "toggle-3",
 		source:
@@ -64,6 +67,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-4",
 		label: "Button Comparison",
 		anchor: "button-comparison",
+		part: null,
 		description: "Toggle with button and icon.. Best for an outline Button set beside an outline toggle in 2 rows, a text pair at sm and a bold icon pair, to compare them.",
 		file: "toggle-4",
 		source:
@@ -74,6 +78,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-5",
 		label: "Disabled Text",
 		anchor: "disabled-text",
+		part: null,
 		description: "Disabled toggle.. Best for text only toggles locked by the disabled prop in both variants, default and outline, with no enabled control beside them.",
 		file: "toggle-5",
 		source:
@@ -84,6 +89,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-6",
 		label: "Icon & Label",
 		anchor: "icon-label",
+		part: null,
 		description: "Toggle with icon.. Best for a single outline bookmark toggle with an icon and a fixed Bookmark label, left uncontrolled.",
 		file: "toggle-6",
 		source:
@@ -94,6 +100,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-7",
 		label: "Count Badge",
 		anchor: "count-badge",
+		part: null,
 		description:
 			"Toggle with notification count badge. Best for a bell in the default variant with a destructive count badge on its top right corner that hides while pressed.",
 		file: "toggle-7",
@@ -105,6 +112,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-8",
 		label: "Icon Sizes",
 		anchor: "icon-sizes",
+		part: null,
 		description: "Toggle size variants showcase. Best for an icon only star toggle repeated at sm, default and lg, each row captioned in muted text.",
 		file: "toggle-8",
 		source:
@@ -115,6 +123,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-9",
 		label: "Icon Swap",
 		anchor: "icon-swap",
+		part: null,
 		description: "Toggle with icon swap on press. Best for an icon only heart in the default variant that gains a solid fill while pressed, with no label or count.",
 		file: "toggle-9",
 		source:
@@ -125,6 +134,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-10",
 		label: "Label Swap",
 		anchor: "label-swap",
+		part: null,
 		description: "Toggle with text label that changes. Best for an outline bookmark that fills in and relabels itself from Bookmark to Bookmarked once pressed.",
 		file: "toggle-10",
 		source:
@@ -135,6 +145,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-11",
 		label: "Reactions",
 		anchor: "reactions",
+		part: null,
 		description: "Social media reaction toggles. Best for like, retweet, share and bookmark outline toggles in a row, each count rising by 1 while pressed.",
 		file: "toggle-11",
 		source:
@@ -145,6 +156,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-12",
 		label: "Tooltip",
 		anchor: "tooltip",
+		part: null,
 		description: "Toggle with tooltip. Best for an icon only outline pin whose purpose, Pin to sidebar, appears in a tooltip on hover.",
 		file: "toggle-12",
 		source:
@@ -155,6 +167,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-13",
 		label: "Disabled Icons",
 		anchor: "disabled-icons",
+		part: null,
 		description:
 			"Disabled toggle states. Best for formatting icons in 4 toggles, bold and italic enabled, underline and strikethrough disabled, each pair default then outline.",
 		file: "toggle-13",
@@ -166,6 +179,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-toggle-14",
 		label: "Mute Button",
 		anchor: "mute-button",
+		part: null,
 		description: "Toggle as mute/unmute button. Best for a large outline speaker that swaps to a muted speaker icon and from Sound to Muted while pressed.",
 		file: "toggle-14",
 		source:
@@ -211,6 +225,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ToggleFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ToggleFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

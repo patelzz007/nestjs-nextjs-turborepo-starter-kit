@@ -33,6 +33,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-cover-image-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "cover-image-1",
 				source:
 					'import { ImageOff } from "lucide-react";\nimport type * as React from "react";\nimport { CoverImage } from "@workspace/ui/components/cover-image";\n\nconst COVER_URL = "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=800&q=80";\n\nconst FALLBACK: React.ReactNode = (\n\t<div className="flex size-full flex-col items-center justify-center gap-2 bg-muted text-sm text-muted-foreground">\n\t\t<ImageOff className="size-5" aria-hidden="true" />\n\t\tNo image\n\t</div>\n);\n\nexport function CoverImage1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="grid w-full gap-4 sm:grid-cols-2">\n\t\t\t<CoverImage src={COVER_URL} alt="Code on a laptop screen" className="rounded-lg" />\n\t\t\t<CoverImage src={null} alt="No cover" fallback={FALLBACK} className="rounded-lg" />\n\t\t</div>\n\t);\n}\n',

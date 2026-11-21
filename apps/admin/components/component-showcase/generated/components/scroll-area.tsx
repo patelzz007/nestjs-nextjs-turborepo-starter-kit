@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/scroll-area/scroll-area-1").then((m) => m.ScrollArea1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/scroll-area/scroll-area-2").then((m) => m.ScrollArea2Example), { loading: FeatureLoading });
@@ -33,6 +33,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-scroll-area-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic scroll area. Best for a narrow column of 30 version tags under a Releases heading, split by divider lines, that only scrolls up and down.",
 		file: "scroll-area-1",
 		source:
@@ -43,6 +44,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-scroll-area-2",
 		label: "Horizontal",
 		anchor: "horizontal",
+		part: null,
 		description: "Scroll area with horizontal scrollbar. Best for one row of 10 photo cards that pans sideways under a horizontal bar, in a box only as tall as the row.",
 		file: "scroll-area-2",
 		source:
@@ -53,6 +55,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-scroll-area-3",
 		label: "Both Scrollbars",
 		anchor: "both-scrollbars",
+		part: null,
 		description: "Scroll area with both scrollbars. Best for an 8 plan pricing table with a price column and 6 feature columns that pans both across and down.",
 		file: "scroll-area-3",
 		source:
@@ -63,6 +66,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-scroll-area-4",
 		label: "Fade Edges",
 		anchor: "fade-edges",
+		part: null,
 		description: "Scroll area with fade effect. Best for edges that fade only while content is hidden past them, over a photo column with a tinted round thumb.",
 		file: "scroll-area-4",
 		source:
@@ -73,6 +77,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-scroll-area-5",
 		label: "Scrollbar Gutter",
 		anchor: "scrollbar-gutter",
+		part: null,
 		description: "Scroll area with scrollbar gutter. Best for full width photo cards that gain side padding once the column overflows, keeping the bar clear of the images.",
 		file: "scroll-area-5",
 		source:
@@ -118,6 +123,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ScrollAreaFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ScrollAreaFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

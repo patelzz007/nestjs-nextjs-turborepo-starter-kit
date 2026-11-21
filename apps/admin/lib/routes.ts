@@ -152,6 +152,8 @@ export interface ComponentsRoutes {
 	readonly component: RouteBuilder;
 	/** One component's docs: usage, anatomy, accessibility and its API reference (`/components/<slug>/docs`). */
 	readonly docs: RouteBuilder;
+	/** One part of a component page split into several (`/components/<slug>/<part>`). */
+	readonly part: (slug: string, part: string) => Route;
 }
 
 export interface KanbanRoutes {
@@ -385,6 +387,7 @@ export const ROUTES: AdminRoutes = {
 		index: COMPONENTS,
 		component: (slug: string): Route => childPath(COMPONENTS, slug),
 		docs: (slug: string): Route => appRoute(`${childPath(COMPONENTS, slug)}/${DOCS_SEGMENT}`),
+		part: (slug: string, part: string): Route => childPath(childPath(COMPONENTS, slug), part),
 	},
 	kanban: {
 		board: KANBAN,

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/phone-input/phone-input-1").then((m) => m.PhoneInput1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/phone-input/phone-input-2").then((m) => m.PhoneInput2Example), { loading: FeatureLoading });
@@ -36,6 +36,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-phone-input-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic phone input. Best for no preset country, so a globe shows until a typed dial code or a pick from the list sets the flag.",
 		file: "phone-input-1",
 		source:
@@ -46,6 +47,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-phone-input-2",
 		label: "Small",
 		anchor: "small",
+		part: null,
 		description: "Small phone input. Best for the compact sm height for dense rows, prefilled with a Dutch mobile number beside the NL flag.",
 		file: "phone-input-2",
 		source:
@@ -56,6 +58,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-phone-input-3",
 		label: "Large",
 		anchor: "large",
+		part: null,
 		description: "Large phone input. Best for the tall lg height for roomy forms, preset to US and filled with a sample New York number.",
 		file: "phone-input-3",
 		source:
@@ -66,6 +69,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-phone-input-4",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled phone input. Best for an empty field whose country button and number box are both dimmed and closed to focus and clicks.",
 		file: "phone-input-4",
 		source:
@@ -76,6 +80,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-phone-input-5",
 		label: "Preset Value",
 		anchor: "preset-value",
+		part: null,
 		description: "Phone input with preset value. Best for an editable field opened on a stored number, whose US flag comes from the number itself since no country is preset.",
 		file: "phone-input-5",
 		source:
@@ -86,6 +91,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-phone-input-6",
 		label: "Error State",
 		anchor: "error-state",
+		part: null,
 		description: "Phone input with error state. Best for the invalid look on an empty field, with the country button border and the number box both turned red.",
 		file: "phone-input-6",
 		source:
@@ -96,6 +102,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-phone-input-7",
 		label: "Default Country",
 		anchor: "default-country",
+		part: null,
 		description: "Phone input with specific default country. Best for a field preset to France, so the French flag shows and a typed national number formats the French way.",
 		file: "phone-input-7",
 		source:
@@ -106,6 +113,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-phone-input-8",
 		label: "Read-Only",
 		anchor: "read-only",
+		part: null,
 		description: "Read-only phone input. Best for a stored number the user can focus, select and copy but not retype, for summary and confirmation screens.",
 		file: "phone-input-8",
 		source:
@@ -151,6 +159,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function PhoneInputFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function PhoneInputFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

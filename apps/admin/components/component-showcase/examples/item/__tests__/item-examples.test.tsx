@@ -16,7 +16,7 @@ describe("Item gallery interactions", (): void => {
 
 		expect(screen.getByRole("link", { name: /Profile/ }).getAttribute("href")).toBe(ROUTES.account.profile);
 		expect(screen.getByRole("link", { name: /Security/ }).getAttribute("href")).toBe(ROUTES.account.security);
-		expect(screen.getByRole("link", { name: /Activity/ }).getAttribute("href")).toBe(ROUTES.auditLogs.list);
+		expect(screen.getByRole("link", { name: /Activity/ }).getAttribute("href")).toBe(ROUTES.analytics.index);
 	});
 
 	it("opens a member's actions menu from its row", async (): Promise<void> => {

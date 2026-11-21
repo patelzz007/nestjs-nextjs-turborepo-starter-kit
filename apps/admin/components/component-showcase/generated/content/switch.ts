@@ -45,6 +45,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-switch-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "switch-1",
 				source:
 					'import * as React from "react";\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\nimport { Switch } from "@workspace/ui/components/switch";\n\nexport function Switch1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<Switch id="switch-basic" />\n\t\t\t\t<FieldLabel htmlFor="switch-basic">Airplane Mode</FieldLabel>\n\t\t\t</Field>\n\t\t</div>\n\t);\n}\n',
@@ -53,6 +54,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-switch-2",
 				label: "With Description",
 				anchor: "with-description",
+				part: null,
 				file: "switch-2",
 				source:
 					'import * as React from "react";\nimport { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@workspace/ui/components/field";\nimport { Switch } from "@workspace/ui/components/switch";\n\nexport function Switch2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<FieldLabel htmlFor="switch-with-desc" className="w-full max-w-xs">\n\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t<FieldContent>\n\t\t\t\t\t\t<FieldTitle>Share across devices</FieldTitle>\n\t\t\t\t\t\t<FieldDescription>Focus is shared across devices, and turns off when you leave the app.</FieldDescription>\n\t\t\t\t\t</FieldContent>\n\t\t\t\t\t<Switch id="switch-with-desc" />\n\t\t\t\t</Field>\n\t\t\t</FieldLabel>\n\t\t</div>\n\t);\n}\n',
@@ -61,6 +63,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-switch-4",
 				label: "Sizes",
 				anchor: "sizes",
+				part: null,
 				file: "switch-4",
 				source:
 					'import * as React from "react";\nimport { Label } from "@workspace/ui/components/label";\nimport { Switch } from "@workspace/ui/components/switch";\n\nexport function Switch4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex flex-col items-start justify-start gap-3">\n\t\t\t<div className="flex items-center gap-2">\n\t\t\t\t<Switch id="switch-sm" size="sm" />\n\t\t\t\t<Label htmlFor="switch-sm">Small Switch</Label>\n\t\t\t</div>\n\t\t\t<div className="flex items-center gap-2">\n\t\t\t\t<Switch id="switch-default" size="default" />\n\t\t\t\t<Label htmlFor="switch-default">Default Switch</Label>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n',
@@ -69,6 +72,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-switch-6",
 				label: "Card Separators",
 				anchor: "card-separators",
+				part: null,
 				file: "switch-6",
 				source:
 					'import * as React from "react";\nimport { Card } from "@workspace/ui/components/card";\nimport { Field, FieldGroup, FieldLabel, FieldTitle } from "@workspace/ui/components/field";\nimport { Separator } from "@workspace/ui/components/separator";\nimport { Switch } from "@workspace/ui/components/switch";\n\nexport function Switch6Example(): React.JSX.Element {\n\treturn (\n\t\t<Card className="w-full max-w-xs p-0">\n\t\t\t<FieldGroup className="gap-0">\n\t\t\t\t<Field>\n\t\t\t\t\t<FieldLabel className="justify-between px-4 py-3">\n\t\t\t\t\t\t<FieldTitle>Push notifications</FieldTitle>\n\t\t\t\t\t\t<Switch defaultChecked />\n\t\t\t\t\t</FieldLabel>\n\t\t\t\t</Field>\n\t\t\t\t<Separator />\n\t\t\t\t<Field>\n\t\t\t\t\t<FieldLabel className="justify-between px-4 py-3">\n\t\t\t\t\t\t<FieldTitle>Email notifications</FieldTitle>\n\t\t\t\t\t\t<Switch />\n\t\t\t\t\t</FieldLabel>\n\t\t\t\t</Field>\n\t\t\t\t<Separator />\n\t\t\t\t<Field>\n\t\t\t\t\t<FieldLabel className="justify-between px-4 py-3">\n\t\t\t\t\t\t<FieldTitle>SMS notifications</FieldTitle>\n\t\t\t\t\t\t<Switch />\n\t\t\t\t\t</FieldLabel>\n\t\t\t\t</Field>\n\t\t\t</FieldGroup>\n\t\t</Card>\n\t);\n}\n',
@@ -77,6 +81,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-switch-12",
 				label: "Destructive Confirm",
 				anchor: "destructive-confirm",
+				part: null,
 				file: "switch-12",
 				source:
 					'import * as React from "react";\nimport { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@workspace/ui/components/field";\nimport { Switch } from "@workspace/ui/components/switch";\n\nexport function Switch12Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs">\n\t\t\t<FieldLabel htmlFor="sw-danger">\n\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t<FieldContent>\n\t\t\t\t\t\t<FieldTitle className="text-destructive">Delete all data on sign out</FieldTitle>\n\t\t\t\t\t\t<FieldDescription>When enabled, all local data will be permanently removed when you sign out. This action cannot be undone.</FieldDescription>\n\t\t\t\t\t</FieldContent>\n\t\t\t\t\t<Switch id="sw-danger" className="data-checked:bg-destructive" />\n\t\t\t\t</Field>\n\t\t\t</FieldLabel>\n\t\t</div>\n\t);\n}\n',

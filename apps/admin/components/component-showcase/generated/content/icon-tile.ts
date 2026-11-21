@@ -37,6 +37,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-tile-1",
 				label: "Default",
 				anchor: "default",
+				part: null,
 				file: "icon-tile-1",
 				source:
 					'import * as React from "react";\nimport { FolderIcon } from "lucide-react";\nimport { IconTile } from "@workspace/ui/components/icon-tile";\n\nexport function IconTile1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<IconTile variant="outline" tone="brand" aria-hidden="true">\n\t\t\t\t<FolderIcon />\n\t\t\t</IconTile>\n\t\t</div>\n\t);\n}\n',
@@ -45,6 +46,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-tile-4",
 				label: "All Variants",
 				anchor: "all-variants",
+				part: null,
 				file: "icon-tile-4",
 				source:
 					'import * as React from "react";\nimport { PackageIcon } from "lucide-react";\nimport { IconTile, type IconTileVariant } from "@workspace/ui/components/icon-tile";\n\nconst variants: readonly IconTileVariant[] = ["outline", "elevated", "soft", "solid", "frame"];\n\nexport function IconTile4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center gap-4">\n\t\t\t{variants.map((variant) => (\n\t\t\t\t<IconTile tone="brand" key={variant} variant={variant} aria-hidden="true">\n\t\t\t\t\t<PackageIcon />\n\t\t\t\t</IconTile>\n\t\t\t))}\n\t\t</div>\n\t);\n}\n',
@@ -53,6 +55,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-tile-5",
 				label: "Sizes",
 				anchor: "sizes",
+				part: null,
 				file: "icon-tile-5",
 				source:
 					'import * as React from "react";\nimport { PackageIcon } from "lucide-react";\nimport { IconTile, type IconTileSize } from "@workspace/ui/components/icon-tile";\n\nconst sizes: readonly IconTileSize[] = ["xs", "sm", "default", "lg", "xl"];\n\nexport function IconTile5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-end justify-center gap-4">\n\t\t\t{sizes.map((size) => (\n\t\t\t\t<IconTile tone="brand" key={size} variant="elevated" size={size} aria-hidden="true">\n\t\t\t\t\t<PackageIcon />\n\t\t\t\t</IconTile>\n\t\t\t))}\n\t\t</div>\n\t);\n}\n',
@@ -61,6 +64,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-tile-8",
 				label: "Color Tones",
 				anchor: "color-tones",
+				part: null,
 				file: "icon-tile-8",
 				source:
 					'import type * as React from "react";\nimport { CircleAlertIcon, CircleCheckIcon, ClockIcon, StarIcon } from "lucide-react";\nimport { IconTile } from "@workspace/ui/components/icon-tile";\n\n// Status tiles: the kit\'s `tint` variant paints each tone\'s soft fill with its\n// glyph colour, so no per-tile colour classes are needed.\nexport function IconTile8Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center gap-3">\n\t\t\t<IconTile variant="tint" tone="brand" aria-hidden="true">\n\t\t\t\t<StarIcon />\n\t\t\t</IconTile>\n\t\t\t<IconTile variant="tint" tone="green" aria-hidden="true">\n\t\t\t\t<CircleCheckIcon />\n\t\t\t</IconTile>\n\t\t\t<IconTile variant="tint" tone="yellow" aria-hidden="true">\n\t\t\t\t<ClockIcon />\n\t\t\t</IconTile>\n\t\t\t<IconTile variant="tint" tone="red" aria-hidden="true">\n\t\t\t\t<CircleAlertIcon />\n\t\t\t</IconTile>\n\t\t</div>\n\t);\n}\n',
@@ -69,6 +73,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-tile-10",
 				label: "List Row",
 				anchor: "list-row",
+				part: null,
 				file: "icon-tile-10",
 				source:
 					'import * as React from "react";\nimport { FileTextIcon } from "lucide-react";\nimport { IconTile } from "@workspace/ui/components/icon-tile";\n\nimport { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@workspace/ui/components/item";\n\nexport function IconTile10Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex w-full max-w-sm items-center justify-center">\n\t\t\t<Item variant="outline">\n\t\t\t\t<ItemMedia>\n\t\t\t\t\t<IconTile tone="brand" variant="elevated" size="sm" aria-hidden="true">\n\t\t\t\t\t\t<FileTextIcon />\n\t\t\t\t\t</IconTile>\n\t\t\t\t</ItemMedia>\n\t\t\t\t<ItemContent>\n\t\t\t\t\t<ItemTitle>Quarterly report</ItemTitle>\n\t\t\t\t\t<ItemDescription>Updated 2 hours ago by Anna</ItemDescription>\n\t\t\t\t</ItemContent>\n\t\t\t</Item>\n\t\t</div>\n\t);\n}\n',
@@ -77,6 +82,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-icon-tile-14",
 				label: "Status Overlay",
 				anchor: "status-overlay",
+				part: null,
 				file: "icon-tile-14",
 				source:
 					'import * as React from "react";\nimport { GlobeIcon } from "lucide-react";\nimport { IconTile } from "@workspace/ui/components/icon-tile";\n\nexport function IconTile14Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<span className="relative inline-flex" aria-hidden="true">\n\t\t\t\t<IconTile tone="brand" variant="elevated">\n\t\t\t\t\t<GlobeIcon />\n\t\t\t\t</IconTile>\n\t\t\t\t<span className="absolute -end-0.5 -top-0.5 size-3 rounded-full border-2 border-background bg-success" />\n\t\t\t</span>\n\t\t</div>\n\t);\n}\n',

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/diagram/diagram-1").then((m) => m.Diagram1Example), { loading: FeatureLoading });
 const Guideline1 = dynamic(() => import("@/components/component-showcase/examples/diagram/diagram-do-1").then((m) => m.DiagramDo1Example), { loading: FeatureLoading });
@@ -21,6 +21,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-diagram-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "A flowchart drawn from Mermaid style text with a caption. Best for documenting a process, such as a release flow, without an image file.",
 		file: "diagram-1",
 		source:
@@ -66,6 +67,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function DiagramFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function DiagramFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -33,6 +33,7 @@ Tools that only fit this starter's architecture are in `src/starter/`. This repo
 | `deploy/release-cli.ts` | Activates a release on the server. | Deploy | `deploy` |
 | `dev-timing/cli.ts` | Measures how fast `pnpm dev` comes up. | You | `ports`, `workspaces`, `artifacts` |
 | `env-example-secrets/cli.ts` | Fails when a `.env.example` holds a real secret. | GitHub CI, `ci:local` | `envExampleFiles` |
+| `kit-compare/cli.ts` | Lists every web-kit file that differs from its copy in `nextjs-admin-dashboard-layout`, and with `--sync` copies this repository's version across ([Kit compare](./kit-compare.md)). | You (`pnpm kit:compare`) | `kitPairs` |
 | `load-baseline/cli.ts` | Runs the load test and checks it against `budgets/load.json`. | Nightly CI | `budgets`, `ports` |
 | `migration-history/cli.ts` | Fails when committed migration history changes. | GitHub CI, `ci:local` | `migrations` |
 | `playwright-in-docker/cli.ts` | Runs a Playwright suite in Playwright's Linux image. | You, `ci:local`, GitHub CI | — |

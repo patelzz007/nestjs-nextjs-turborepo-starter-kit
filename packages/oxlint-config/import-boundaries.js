@@ -37,6 +37,11 @@ export const UNIVERSAL_RESTRICTED_IMPORT_PATTERNS = [
 			"Do not reach into a package's src/ or dist/ internals. Import through the package's public `exports` entry points; if what you need is not exported, add a deliberate entry point (rules/00-non-negotiables.md, 'Imports and module hygiene').",
 	},
 	{
+		regex: "^@workspace/ui/internal(/|$)",
+		message:
+			"packages/ui/src/internal/ is private to the UI kit: the table engine and the parts DataTable and Spreadsheet are built from. Import the public component instead (`@workspace/ui/components/data-table` or `@workspace/ui/components/spreadsheet`); if it cannot do what you need, add a prop to it.",
+	},
+	{
 		regex: "^\\.{1,2}/(.*/)?(apps|packages)/",
 		message: "Relative imports must not climb into another app or package. Depend on the workspace package and import its public entry point instead.",
 	},

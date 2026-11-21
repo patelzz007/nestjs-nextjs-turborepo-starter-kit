@@ -51,6 +51,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-radio-group-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "radio-group-1",
 				source:
 					'import * as React from "react";\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\nimport { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";\n\nexport function RadioGroup1Example(): React.JSX.Element {\n\treturn (\n\t\t<RadioGroup defaultValue="comfortable" className="w-fit">\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<RadioGroupItem value="default" id="r1" />\n\t\t\t\t<FieldLabel htmlFor="r1">Default</FieldLabel>\n\t\t\t</Field>\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<RadioGroupItem value="comfortable" id="r2" />\n\t\t\t\t<FieldLabel htmlFor="r2">Comfortable</FieldLabel>\n\t\t\t</Field>\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<RadioGroupItem value="compact" id="r3" />\n\t\t\t\t<FieldLabel htmlFor="r3">Compact</FieldLabel>\n\t\t\t</Field>\n\t\t</RadioGroup>\n\t);\n}\n',
@@ -59,6 +60,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-radio-group-3",
 				label: "Descriptions",
 				anchor: "descriptions",
+				part: null,
 				file: "radio-group-3",
 				source:
 					'import * as React from "react";\nimport { Field, FieldContent, FieldDescription, FieldLabel } from "@workspace/ui/components/field";\nimport { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";\n\nexport function RadioGroup3Example(): React.JSX.Element {\n\treturn (\n\t\t<RadioGroup defaultValue="comfortable" className="w-fit">\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<RadioGroupItem value="default" id="desc-r1" />\n\t\t\t\t<FieldContent>\n\t\t\t\t\t<FieldLabel htmlFor="desc-r1">Default</FieldLabel>\n\t\t\t\t\t<FieldDescription>Standard spacing for most use cases.</FieldDescription>\n\t\t\t\t</FieldContent>\n\t\t\t</Field>\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<RadioGroupItem value="comfortable" id="desc-r2" />\n\t\t\t\t<FieldContent>\n\t\t\t\t\t<FieldLabel htmlFor="desc-r2">Comfortable</FieldLabel>\n\t\t\t\t\t<FieldDescription>More space between elements.</FieldDescription>\n\t\t\t\t</FieldContent>\n\t\t\t</Field>\n\t\t\t<Field orientation="horizontal">\n\t\t\t\t<RadioGroupItem value="compact" id="desc-r3" />\n\t\t\t\t<FieldContent>\n\t\t\t\t\t<FieldLabel htmlFor="desc-r3">Compact</FieldLabel>\n\t\t\t\t\t<FieldDescription>Minimal spacing for dense layouts.</FieldDescription>\n\t\t\t\t</FieldContent>\n\t\t\t</Field>\n\t\t</RadioGroup>\n\t);\n}\n',
@@ -67,6 +69,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-radio-group-6",
 				label: "Legend & Description",
 				anchor: "legend-description",
+				part: null,
 				file: "radio-group-6",
 				source:
 					'import * as React from "react";\nimport { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "@workspace/ui/components/field";\nimport { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";\n\nexport function RadioGroup6Example(): React.JSX.Element {\n\treturn (\n\t\t<FieldSet className="w-full max-w-xs">\n\t\t\t<FieldLegend>Battery Level</FieldLegend>\n\t\t\t<FieldDescription>Choose your preferred battery level.</FieldDescription>\n\t\t\t<RadioGroup defaultValue="medium">\n\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t<RadioGroupItem value="high" id="battery-high" />\n\t\t\t\t\t<FieldLabel htmlFor="battery-high">High</FieldLabel>\n\t\t\t\t</Field>\n\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t<RadioGroupItem value="medium" id="battery-medium" />\n\t\t\t\t\t<FieldLabel htmlFor="battery-medium">Medium</FieldLabel>\n\t\t\t\t</Field>\n\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t<RadioGroupItem value="low" id="battery-low" />\n\t\t\t\t\t<FieldLabel htmlFor="battery-low">Low</FieldLabel>\n\t\t\t\t</Field>\n\t\t\t</RadioGroup>\n\t\t</FieldSet>\n\t);\n}\n',
@@ -75,6 +78,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-radio-group-7",
 				label: "Descriptive Cards",
 				anchor: "descriptive-cards",
+				part: null,
 				file: "radio-group-7",
 				source:
 					'import * as React from "react";\nimport { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@workspace/ui/components/field";\nimport { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";\n\nexport function RadioGroup7Example(): React.JSX.Element {\n\treturn (\n\t\t<RadioGroup defaultValue="plus" className="w-full max-w-xs">\n\t\t\t<FieldLabel htmlFor="plus-plan">\n\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t<FieldContent>\n\t\t\t\t\t\t<FieldTitle>Plus</FieldTitle>\n\t\t\t\t\t\t<FieldDescription>For individuals and small teams.</FieldDescription>\n\t\t\t\t\t</FieldContent>\n\t\t\t\t\t<RadioGroupItem value="plus" id="plus-plan" />\n\t\t\t\t</Field>\n\t\t\t</FieldLabel>\n\t\t\t<FieldLabel htmlFor="pro-plan">\n\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t<FieldContent>\n\t\t\t\t\t\t<FieldTitle>Pro</FieldTitle>\n\t\t\t\t\t\t<FieldDescription>For growing businesses.</FieldDescription>\n\t\t\t\t\t</FieldContent>\n\t\t\t\t\t<RadioGroupItem value="pro" id="pro-plan" />\n\t\t\t\t</Field>\n\t\t\t</FieldLabel>\n\t\t</RadioGroup>\n\t);\n}\n',
@@ -83,6 +87,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-radio-group-17",
 				label: "Pricing Tiers",
 				anchor: "pricing-tiers",
+				part: null,
 				file: "radio-group-17",
 				source:
 					'import * as React from "react";\nimport { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@workspace/ui/components/field";\nimport { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";\n\nconst plans = [\n\t{\n\t\tvalue: "free",\n\t\ttitle: "Free",\n\t\tprice: "$0",\n\t\tdescription: "For personal projects and experiments.",\n\t},\n\t{\n\t\tvalue: "pro",\n\t\ttitle: "Pro",\n\t\tprice: "$19",\n\t\tdescription: "For professionals and small teams.",\n\t},\n\t{\n\t\tvalue: "enterprise",\n\t\ttitle: "Enterprise",\n\t\tprice: "$49",\n\t\tdescription: "For tenants with advanced needs.",\n\t},\n];\n\nexport function RadioGroup17Example(): React.JSX.Element {\n\treturn (\n\t\t<RadioGroup defaultValue="pro" className="w-full max-w-xs">\n\t\t\t{plans.map((plan) => (\n\t\t\t\t<FieldLabel key={plan.value} htmlFor={plan.value}>\n\t\t\t\t\t<Field orientation="horizontal">\n\t\t\t\t\t\t<RadioGroupItem value={plan.value} id={plan.value} />\n\t\t\t\t\t\t<FieldContent>\n\t\t\t\t\t\t\t<FieldTitle className="flex items-center justify-between">\n\t\t\t\t\t\t\t\t<span>{plan.title}</span>\n\t\t\t\t\t\t\t\t<span className="text-sm font-semibold">{plan.price}/mo</span>\n\t\t\t\t\t\t\t</FieldTitle>\n\t\t\t\t\t\t\t<FieldDescription>{plan.description}</FieldDescription>\n\t\t\t\t\t\t</FieldContent>\n\t\t\t\t\t</Field>\n\t\t\t\t</FieldLabel>\n\t\t\t))}\n\t\t</RadioGroup>\n\t);\n}\n',

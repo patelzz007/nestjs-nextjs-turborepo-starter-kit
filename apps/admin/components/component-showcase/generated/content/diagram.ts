@@ -33,6 +33,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-diagram-1",
 				label: "Overview",
 				anchor: "overview",
+				part: null,
 				file: "diagram-1",
 				source:
 					'import type * as React from "react";\nimport { Diagram } from "@workspace/ui/components/diagram";\n\n// Mermaid syntax, drawn by Pele and themed from the design tokens. `accTitle` names the diagram for a\n// screen reader and `accDescr` says what a reader who cannot see it needs to know.\nconst RELEASE_FLOW = `flowchart LR\n  accTitle: How a change reaches production\n  accDescr: A pull request is reviewed, then merged, which deploys it to staging; once staging checks pass it is promoted to production.\n  pr[Pull request] --> review{Review}\n  review -->|approved| merge[Merge]\n  review -->|changes requested| pr\n  merge --> staging[Staging]\n  staging --> prod[Production]`;\n\nexport function Diagram1Example(): React.JSX.Element {\n\treturn <Diagram source={RELEASE_FLOW} caption="From pull request to production" className="w-full max-w-2xl" />;\n}\n',

@@ -43,6 +43,7 @@
 		"docker:down": "docker compose --profile \"*\" down",
 		"mailpit": "docker compose up -d mailpit",
 		"check:expo-latest": "pnpm --filter @workspace/mobile check:expo-latest",
+		"kit:compare": "node packages/tooling/src/kit-compare/cli.ts",
 		"load-runner": "docker compose --profile load up -d --build load-runner",
 		"mail:latest": "pnpm --silent --filter @workspace/api mail:latest"
 	},

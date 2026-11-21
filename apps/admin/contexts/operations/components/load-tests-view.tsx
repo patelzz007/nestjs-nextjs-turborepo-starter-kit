@@ -28,7 +28,8 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@workspace/ui/components/native-select";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
-import { DataTable, type DataTableFeatures, type EmptyStateConfig } from "@workspace/ui/components/data-table";
+import { DataTable, type DataTableEmptyState, type DataTableFeatures, type DataTablePreferences, type DataTableSearch } from "@workspace/ui/components/data-table";
+import { TABLE_DEFAULT_PAGING, toTableStatus } from "@/lib/data-table/capabilities";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -353,8 +354,15 @@ function CompareToggle({ run, selected, onToggle }: { readonly run: LoadTestRun;
 	return <input type="checkbox" className="size-4 accent-primary" aria-label={`Compare ${run.name}`} checked={selected} onChange={handleToggle} />;
 }
 
-const RUNS_EMPTY: EmptyStateConfig = { title: "No load tests yet", description: "Start one above: it runs as load-test users of the Load Test tenant only." };
-const RUN_SEARCH_KEYS: string[] = ["name", "requestedByName"];
+const RUNS_EMPTY: DataTableEmptyState = { title: "No load tests yet", description: "Start one above: it runs as load-test users of the Load Test tenant only." };
+const RUN_SEARCH: DataTableSearch<LoadTestRun> = { keys: ["name", "requestedByName"] };
+const RUN_PREFERENCES: DataTablePreferences = { key: "ops-load-tests" };
+/** One stable empty list while the overview loads, so the table does not see new rows on every render. */
+const NO_RUNS: readonly LoadTestRun[] = [];
+
+function getRunId(run: LoadTestRun): string {
+	return run.id;
+}
 
 function runColumns(selected: readonly string[], onToggle: (runId: string) => void): ColumnDef<DataTableFeatures, LoadTestRun>[] {
 	return [
@@ -455,11 +463,13 @@ export function LoadTestsView(): React.JSX.Element {
 				<CardContent>
 					<DataTable
 						columns={columns}
-						data={data?.runs ?? []}
-						searchKeys={RUN_SEARCH_KEYS}
-						isLoading={overview.isLoading}
+						data={data?.runs ?? NO_RUNS}
+						getRowId={getRunId}
+						search={RUN_SEARCH}
+						paging={TABLE_DEFAULT_PAGING}
+						status={toTableStatus({ isLoading: overview.isLoading })}
 						emptyState={RUNS_EMPTY}
-						persistKey="ops-load-tests"
+						preferences={RUN_PREFERENCES}
 					/>
 				</CardContent>
 			</Card>

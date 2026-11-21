@@ -52,6 +52,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-group-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "toggle-group-1",
 				source:
 					'import * as React from "react";\nimport { BoldIcon, ItalicIcon, UnderlineIcon } from "lucide-react";\nimport { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-group";\n\nexport function ToggleGroup1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<ToggleGroup multiple spacing={1}>\n\t\t\t\t<ToggleGroupItem value="bold" aria-label="Toggle bold">\n\t\t\t\t\t<BoldIcon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="italic" aria-label="Toggle italic">\n\t\t\t\t\t<ItalicIcon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="underline" aria-label="Toggle underline">\n\t\t\t\t\t<UnderlineIcon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t</ToggleGroup>\n\t\t</div>\n\t);\n}\n',
@@ -60,6 +61,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-group-4",
 				label: "Custom Spacing",
 				anchor: "custom-spacing",
+				part: null,
 				file: "toggle-group-4",
 				source:
 					'import * as React from "react";\nimport { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-group";\n\nexport function ToggleGroup4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<ToggleGroup variant="outline" spacing={2} defaultValue={["week"]}>\n\t\t\t\t<ToggleGroupItem value="day">Day</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="week">Week</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="month">Month</ToggleGroupItem>\n\t\t\t</ToggleGroup>\n\t\t</div>\n\t);\n}\n',
@@ -68,6 +70,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-group-2",
 				label: "Outline",
 				anchor: "outline",
+				part: null,
 				file: "toggle-group-2",
 				source:
 					'import * as React from "react";\nimport { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-group";\n\nexport function ToggleGroup2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<ToggleGroup variant="outline" defaultValue={["all"]}>\n\t\t\t\t<ToggleGroupItem value="all" aria-label="Toggle all">\n\t\t\t\t\tAll\n\t\t\t\t</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="missed" aria-label="Toggle missed">\n\t\t\t\t\tMissed\n\t\t\t\t</ToggleGroupItem>\n\t\t\t</ToggleGroup>\n\t\t</div>\n\t);\n}\n',
@@ -76,6 +79,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-group-6",
 				label: "Vertical",
 				anchor: "vertical",
+				part: null,
 				file: "toggle-group-6",
 				source:
 					'import * as React from "react";\nimport { BoldIcon, ItalicIcon, UnderlineIcon } from "lucide-react";\nimport { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-group";\n\nexport function ToggleGroup6Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<ToggleGroup multiple orientation="vertical" variant="outline" spacing={1}>\n\t\t\t\t<ToggleGroupItem value="bold" aria-label="Toggle bold">\n\t\t\t\t\t<BoldIcon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="italic" aria-label="Toggle italic">\n\t\t\t\t\t<ItalicIcon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="underline" aria-label="Toggle underline">\n\t\t\t\t\t<UnderlineIcon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t</ToggleGroup>\n\t\t</div>\n\t);\n}\n',
@@ -84,6 +88,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-toggle-group-8",
 				label: "View Mode",
 				anchor: "view-mode",
+				part: null,
 				file: "toggle-group-8",
 				source:
 					'import * as React from "react";\nimport { Columns2Icon, LayoutGridIcon, ListIcon } from "lucide-react";\nimport { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-group";\n\nexport function ToggleGroup8Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<ToggleGroup defaultValue={["list"]} variant="outline">\n\t\t\t\t<ToggleGroupItem value="list" aria-label="List view">\n\t\t\t\t\t<ListIcon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="grid" aria-label="Grid view">\n\t\t\t\t\t<LayoutGridIcon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t\t<ToggleGroupItem value="kanban" aria-label="Kanban view">\n\t\t\t\t\t<Columns2Icon />\n\t\t\t\t</ToggleGroupItem>\n\t\t\t</ToggleGroup>\n\t\t</div>\n\t);\n}\n',

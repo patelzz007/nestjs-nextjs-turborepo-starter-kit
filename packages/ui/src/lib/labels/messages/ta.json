@@ -242,7 +242,7 @@
 		"removeOptionFallback": "விருப்பத்தை அகற்று",
 		"selectedCount": "{count} தேர்ந்தெடுக்கப்பட்டன"
 	},
-	"dataGrid": {
+	"tableEngine": {
 		"sortAscending": "ஏறுவரிசை",
 		"sortDescending": "இறங்குவரிசை",
 		"pinColumnStart": "இடதுபுறம் பொருத்து",
@@ -253,6 +253,7 @@
 		"unpinColumn": "{title} நெடுவரிசையின் பொருத்தலை நீக்கு",
 		"toggleColumns": "நெடுவரிசைகளைக் காட்டு/மறை",
 		"rowCreate": "வரிசையைச் சேர்",
+		"cellAddress": "கலம்",
 		"pinRow": "வரிசையைப் பொருத்து",
 		"unpinRow": "வரிசையின் பொருத்தலை நீக்கு",
 		"selectRow": "வரிசையைத் தேர்ந்தெடு",
@@ -327,7 +328,33 @@
 		"unpinColumnAriaLabel": "நெடுவரிசையின் பொருத்தலை நீக்கு",
 		"exportCurrentPage": "தற்போதைய பக்கம் (CSV)",
 		"exportCurrentPageDescription": "இந்தப் பக்கத்தில் தெரியும் வரிசைகளை மட்டும் ஏற்றுமதி செய்யும்",
-		"loadingTableAriaLabel": "அட்டவணைத் தரவை ஏற்றுகிறது"
+		"loadingTableAriaLabel": "அட்டவணைத் தரவை ஏற்றுகிறது",
+		"filterAll": "அனைத்தும்",
+		"filterOptionCount": "{label} ({count})",
+		"retry": "மீண்டும் முயற்சி செய்",
+		"densityToggle": "அடர்த்தி",
+		"densityCompact": "நெருக்கமான",
+		"densityComfortable": "வசதியான",
+		"densitySpacious": "விசாலமான",
+		"clearDateRange": "தேதிகளை அழி",
+		"rowActionPending": "{label}…",
+		"rowActionFailed": "{label} தோல்வியடைந்தது. மீண்டும் முயற்சி செய்",
+		"exportDialogTitle": "வரிசைகளை ஏற்றுமதி செய்",
+		"exportDialogFormat": "வடிவம்",
+		"exportDialogRows": "வரிசைகள்",
+		"exportDialogColumns": "நெடுவரிசைகள்",
+		"exportScopeSelected": "தேர்ந்தெடுத்த வரிசைகள் ({count})",
+		"exportScopeMatching": "பொருந்தும் வரிசைகள் ({count})",
+		"exportScopeAll": "அனைத்து வரிசைகளும் ({count})",
+		"exportDialogConfirm": "{count} வரிசைகளை ஏற்றுமதி செய்",
+		"exportDialogCancel": "ரத்துசெய்",
+		"editUndo": "செயல்தவிர்",
+		"editRedo": "மீண்டும் செய்",
+		"cellEditFailed": "{column} சேமிக்க முடியவில்லை. பழைய மதிப்பு திரும்ப வைக்கப்பட்டது.",
+		"detailPanelLabel": "வரிசை விவரங்கள்",
+		"detailPanelClose": "விவரங்களை மூடு",
+		"detailPanelPrevious": "முந்தைய வரிசை",
+		"detailPanelNext": "அடுத்த வரிசை"
 	},
 	"datePicker": {
 		"dialog": "தேதியைத் தேர்ந்தெடுக்கவும்"

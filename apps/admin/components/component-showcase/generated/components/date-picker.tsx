@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/date-picker/date-picker-1").then((m) => m.DatePicker1Example), { loading: FeatureLoading });
 const Guideline1 = dynamic(() => import("@/components/component-showcase/examples/date-picker/date-picker-do-1").then((m) => m.DatePickerDo1Example), {
@@ -29,6 +29,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-date-picker-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "A field that opens a calendar popover to pick one date. Best for a single date in a form, such as a due date.",
 		file: "date-picker-1",
 		source:
@@ -74,6 +75,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function DatePickerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function DatePickerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

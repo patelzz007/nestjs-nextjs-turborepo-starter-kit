@@ -1,5 +1,5 @@
 // ============================================
-// lib/command/command-store.ts —one command list's state
+// lib/command/command-store.ts — one command list's state
 // ============================================
 // A tiny external store (read with `useSyncExternalStore`) behind each
 // `CommandPrimitive.Root`: the search text, the highlighted value, the

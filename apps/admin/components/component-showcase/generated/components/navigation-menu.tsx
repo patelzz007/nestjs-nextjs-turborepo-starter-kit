@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/navigation-menu/navigation-menu-1").then((m) => m.NavigationMenu1Example), {
 	loading: FeatureLoading,
@@ -40,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-navigation-menu-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic navigation menu.. Best for a Getting started panel of 2 described links next to a plain Documentation link styled as a trigger.",
 		file: "navigation-menu-1",
 		source:
@@ -50,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-navigation-menu-2",
 		label: "Grid Layout",
 		anchor: "grid-layout",
+		part: null,
 		description: "Navigation menu with grid layout.. Best for a Components trigger whose 4 titled summaries sit in 1 column and split into 2 columns from md up.",
 		file: "navigation-menu-2",
 		source:
@@ -60,6 +62,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-navigation-menu-3",
 		label: "With Icons",
 		anchor: "with-icons",
+		part: null,
 		description: "Navigation menu with icons.. Best for a narrow Status panel of 2 one line links, Backlog and Done, each led by a status glyph.",
 		file: "navigation-menu-3",
 		source:
@@ -70,6 +73,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-navigation-menu-4",
 		label: "Learn More Button",
 		anchor: "learn-more-button",
+		part: null,
 		description:
 			"Navigation menu with grid layout and learn more button.. Best for an Industries panel of 8 segments in a fixed 2 column grid, each with a glyph and summary, above a full width Learn more button.",
 		file: "navigation-menu-4",
@@ -116,6 +120,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function NavigationMenuFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function NavigationMenuFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

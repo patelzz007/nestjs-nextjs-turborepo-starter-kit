@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/timeline/timeline-1").then((m) => m.Timeline1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/timeline/timeline-2").then((m) => m.Timeline2Example), { loading: FeatureLoading });
@@ -32,6 +32,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic timeline.. Best for the minimal composition: 3 items written inline, each a date, title and line of copy, with the first 2 marked done.",
 		file: "timeline-1",
 		source:
@@ -42,6 +43,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-2",
 		label: "Roadmap",
 		anchor: "roadmap",
+		part: null,
 		description: "Timeline with roadmap.. Best for dates set in a right aligned column left of the line from the sm breakpoint, folding above each title on phones.",
 		file: "timeline-2",
 		source:
@@ -52,6 +54,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-3",
 		label: "Order Status",
 		anchor: "order-status",
+		part: null,
 		description: "Timeline with order status.. Best for order stages where every step up to the current one fills its node with a check and later steps stay an empty ring.",
 		file: "timeline-3",
 		source:
@@ -62,6 +65,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-4",
 		label: "Git Activity",
 		anchor: "git-activity",
+		part: null,
 		description:
 			"Timeline with git activity.. Best for a distinct icon inside each filled node, such as fork, pull request and merge, with the relative time under the description.",
 		file: "timeline-4",
@@ -73,6 +77,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-5",
 		label: "Milestones",
 		anchor: "milestones",
+		part: null,
 		description: "Timeline with milestones.. Best for entries that alternate either side of a center line, each just a date and a title with no body copy.",
 		file: "timeline-5",
 		source:
@@ -83,6 +88,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-6",
 		label: "Pipeline Steps",
 		anchor: "pipeline-steps",
+		part: null,
 		description:
 			"Timeline with pipeline steps.. Best for build stages with a check, spinner or circle node, a status colored duration badge and a collapsible Frame per step, open on load.",
 		file: "timeline-6",
@@ -94,6 +100,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-7",
 		label: "Roadmap Items",
 		anchor: "roadmap-items",
+		part: null,
 		description: "Timeline with roadmap items.. Best for newest first entries marked by small colored dots, each a tiny uppercase date over one line led by a muted verb.",
 		file: "timeline-7",
 		source:
@@ -104,6 +111,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-8",
 		label: "Horizontal",
 		anchor: "horizontal",
+		part: null,
 		description: "Vertical timeline. Best for the default dots and line turned to run left to right, with 3 phases side by side below the track.",
 		file: "timeline-8",
 		source:
@@ -114,6 +122,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-9",
 		label: "Leading Labels",
 		anchor: "leading-labels",
+		part: null,
 		description:
 			"Horizontal timeline with leading labels. Best for dates printed above the track and titles with copy below it, so each phase reads as a labeled tick on the line.",
 		file: "timeline-9",
@@ -125,6 +134,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-10",
 		label: "Deployment Log",
 		anchor: "deployment-log",
+		part: null,
 		description: "Deployment log timeline. Best for deploy runs with a green check or red cross node and a status badge, over a mono commit hash, branch and duration row.",
 		file: "timeline-10",
 		source:
@@ -135,6 +145,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-11",
 		label: "Avatar Activity",
 		anchor: "avatar-activity",
+		part: null,
 		description:
 			"Activity feed timeline with user avatars. Best for each event led by the actor's photo as its node, in one sentence that mutes the action between name and target.",
 		file: "timeline-11",
@@ -146,6 +157,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-timeline-12",
 		label: "Compact Milestones",
 		anchor: "compact-milestones",
+		part: null,
 		description:
 			"Compact horizontal milestone timeline. Best for versions across a row with check, play or circle nodes by status and a Current badge on the version in progress.",
 		file: "timeline-12",
@@ -192,6 +204,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function TimelineFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function TimelineFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/hover-card/hover-card-1").then((m) => m.HoverCard1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/hover-card/hover-card-2").then((m) => m.HoverCard2Example), { loading: FeatureLoading });
@@ -36,6 +36,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-hover-card-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic hover card.. Best for the minimal anatomy: an outline Button trigger and a card holding a heading over one muted line.",
 		file: "hover-card-1",
 		source:
@@ -46,6 +47,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-hover-card-2",
 		label: "Positions",
 		anchor: "positions",
+		part: null,
 		description: "Hover card with positions.. Best for a grid of outline triggers, one per placement, each opening its card on the side its label names.",
 		file: "hover-card-2",
 		source:
@@ -56,6 +58,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-hover-card-3",
 		label: "Profile",
 		anchor: "profile",
+		part: null,
 		description: "Hover card with profile information.. Best for a person's avatar, name and handle as the trigger, opening a larger photo with role and join date.",
 		file: "hover-card-3",
 		source:
@@ -66,6 +69,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-hover-card-4",
 		label: "Icon",
 		anchor: "icon",
+		part: null,
 		description: "Hover card with icon. Best for a feature callout on an outline button, an amber bolt icon beside a short title and a muted blurb.",
 		file: "hover-card-4",
 		source:
@@ -76,6 +80,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-hover-card-5",
 		label: "Image & Text",
 		anchor: "image-text",
+		part: null,
 		description: "Hover card with an image and text content.. Best for an edge to edge 16:9 picture across the top of a 320px wide card, captioned by a title and one line.",
 		file: "hover-card-5",
 		source:
@@ -86,6 +91,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-hover-card-6",
 		label: "In Dialog",
 		anchor: "in-dialog",
+		part: null,
 		description: "Hover card inside a dialog.. Best for a trigger set in the body of an open Dialog, below its title and description, for previews inside a modal.",
 		file: "hover-card-6",
 		source:
@@ -96,6 +102,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-hover-card-7",
 		label: "Live Timestamp",
 		anchor: "live-timestamp",
+		part: null,
 		description:
 			"Timestamp hover card with active relative time. Best for a dashed underline relative time inside a sentence, opening the exact deploy time over a live clock that ticks each second.",
 		file: "hover-card-7",
@@ -107,6 +114,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-hover-card-8",
 		label: "Release Notes",
 		anchor: "release-notes",
+		part: null,
 		description: "Hover card with paginated release notes. Best for a dashed What's new link opening release entries stepped through with arrow buttons and a dot per entry.",
 		file: "hover-card-8",
 		source:
@@ -152,6 +160,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function HoverCardFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function HoverCardFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

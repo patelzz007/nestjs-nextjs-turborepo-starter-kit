@@ -28,6 +28,7 @@ export function DataTable10Example(): React.JSX.Element {
 			{
 				key: "open",
 				label: "Open",
+				description: "See the whole section",
 				icon: EyeIcon,
 				onPress: (row: DocumentSection): void => {
 					toast.info(`Opened “${row.header}”`);

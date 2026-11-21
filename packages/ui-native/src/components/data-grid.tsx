@@ -15,7 +15,7 @@
 
 import { flexRender, type CellSelectionBounds, type Header, type RowData, type TableState } from "@tanstack/react-table";
 import { isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
-import { parseDataGridClipboardText, tileDataGridClipboardBlock } from "@workspace/ui-kit-logic";
+import { isDataTableUtilityColumnId, parseDataGridClipboardText, tileDataGridClipboardBlock } from "@workspace/ui-kit-logic";
 import { cva } from "class-variance-authority";
 import GripVerticalIcon from "lucide-react-native/icons/grip-vertical";
 import * as React from "react";
@@ -49,6 +49,7 @@ import {
 	DEFAULT_DATA_GRID_LABELS,
 	isDataGridCellWritable,
 	resolveDataGridLayout,
+	spreadDataGridSpareWidth,
 	usesDefaultDataGridCell,
 	usesDefaultDataGridHeader,
 	type DataGridCellsChangeDetails,
@@ -320,7 +321,12 @@ interface GridGeometry<TData extends RowData> {
 	readonly total: number;
 }
 
-/** Each drawn column's slot; `meta.autoSize` takes the viewport's spare width under a fixed layout. */
+/**
+ * Each drawn column's slot. The viewport's spare width is shared so the grid always spans it: among the
+ * `meta.autoSize` columns when there are any, else among every unpinned data column (never a utility column), each in
+ * proportion to its own width, so the columns spread out evenly and keep the widths they were given relative to each
+ * other. Pinned columns keep their size.
+ */
 function gridGeometry<TData extends RowData>(table: DataGridTableInstance<TData>, viewport: number): GridGeometry<TData> {
 	const slot =
 		(region: ColumnSlot<TData>["region"]) =>
@@ -328,9 +334,16 @@ function gridGeometry<TData extends RowData>(table: DataGridTableInstance<TData>
 	const start = table.getStartVisibleLeafColumns().map(slot("start"));
 	const center = table.getCenterVisibleLeafColumns().map(slot("center"));
 	const end = table.getEndVisibleLeafColumns().map(slot("end"));
-	const natural = [...start, ...center, ...end].reduce((total: number, entry): number => total + entry.width, 0);
-	const spare = Math.max(0, viewport - natural);
-	const grow = (entry: ColumnSlot<TData>): ColumnSlot<TData> => (entry.column.columnDef.meta?.autoSize === true ? { ...entry, width: entry.width + spare } : entry);
+	const hasAutoSize = [...start, ...center, ...end].some((entry): boolean => entry.column.columnDef.meta?.autoSize === true);
+	const grows = (entry: ColumnSlot<TData>): boolean =>
+		hasAutoSize ? entry.column.columnDef.meta?.autoSize === true : entry.region === "center" && !isDataTableUtilityColumnId(entry.column.id);
+	const all = [...start, ...center, ...end];
+	const widths = spreadDataGridSpareWidth(
+		all.map((entry) => ({ width: entry.width, grows: grows(entry) })),
+		viewport,
+	);
+	const grownWidth = new Map(all.map((entry, position): [ColumnSlot<TData>, number] => [entry, widths.at(position) ?? entry.width]));
+	const grow = (entry: ColumnSlot<TData>): ColumnSlot<TData> => ({ ...entry, width: grownWidth.get(entry) ?? entry.width });
 	const grown = { start: start.map(grow), center: center.map(grow), end: end.map(grow) };
 	const total = [...grown.start, ...grown.center, ...grown.end].reduce((sum: number, entry): number => sum + entry.width, 0);
 	return { ...grown, total };

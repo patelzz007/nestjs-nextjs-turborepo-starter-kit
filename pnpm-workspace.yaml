@@ -69,6 +69,8 @@ overrides:
   # packages. Remove each override once a Prisma release ships the patched dep.
   "@prisma/config>deepmerge-ts": "8.0.2" # GHSA: deepmerge-ts <8.0.0
   "prisma>mysql2": "3.24.5" # GHSA: mysql2 <3.23.1 (MySQL driver, unused with Postgres)
+  # @prisma/config 7.10.1 (newest) pins effect 3.20.0 exactly; 3.22.4 is the same major, released 2026-10-22.
+  "@prisma/config>effect": "3.22.4" # GHSA-7589-6fvf-x4pw: effect <=3.22.0 (ReDoS in Schema.TemplateLiteral)
   # @react-native-firebase/app depends on the `firebase` JS SDK, whose @firebase/firestore pins @grpc/grpc-js ~1.9.0.
   # The app never loads it (React Native Firebase uses the native SDKs; Firestore isn't used at all), so this only
   # keeps the vulnerable copy out of the install. Firestore's Node build uses grpc-js's stable 1.x client API, which

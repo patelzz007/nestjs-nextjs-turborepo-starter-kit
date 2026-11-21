@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/separator/separator-1").then((m) => m.Separator1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/separator/separator-2").then((m) => m.Separator2Example), { loading: FeatureLoading });
@@ -30,6 +30,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-separator-1",
 		label: "Horizontal",
 		anchor: "horizontal",
+		part: null,
 		description: "Horizontal separator for content sections.. Best for a heading with a muted subtitle, set off from a muted paragraph of body copy by one full width rule.",
 		file: "separator-1",
 		source:
@@ -40,6 +41,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-separator-2",
 		label: "Vertical",
 		anchor: "vertical",
+		part: null,
 		description: "Vertical separator for inline elements.. Best for a single line of 3 one word labels, Blog, Docs and Source, split by 2 rules as tall as the row.",
 		file: "separator-2",
 		source:
@@ -50,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-separator-3",
 		label: "Grouped Menu Items",
 		anchor: "grouped-menu-items",
+		part: null,
 		description:
 			"Vertical separator groups related menu items.. Best for side by side entries, each a medium weight title over a muted caption, split by short rules centered in the row.",
 		file: "separator-3",
@@ -61,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-separator-4",
 		label: "List Rows",
 		anchor: "list-rows",
+		part: null,
 		description:
 			"Horizontal separator between items in a list.. Best for a stack of 3 label and value rows with a rule between every row, labels on the left and muted values on the right.",
 		file: "separator-4",
@@ -72,6 +76,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-separator-5",
 		label: "Centered Label",
 		anchor: "centered-label",
+		part: null,
 		description: "Separator with centered text label. Best for a lone rule with a small muted caption, or continue with, sitting on a background patch at its middle.",
 		file: "separator-5",
 		source:
@@ -82,6 +87,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-separator-6",
 		label: "Order Summary",
 		anchor: "order-summary",
+		part: null,
 		description:
 			"Order summary with separators. Best for a price breakdown of subtotal, discount and tax, ruled off from its heading above and from a medium weight total below.",
 		file: "separator-6",
@@ -128,6 +134,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SeparatorFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SeparatorFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

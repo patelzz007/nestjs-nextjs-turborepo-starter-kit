@@ -84,7 +84,7 @@ function advance(ms: number): void {
 	});
 }
 
-// This package's test setup does not unmount between tests.
+// Unmount after every test here, whether or not the repository's test setup already does.
 afterEach((): void => {
 	cleanup();
 });

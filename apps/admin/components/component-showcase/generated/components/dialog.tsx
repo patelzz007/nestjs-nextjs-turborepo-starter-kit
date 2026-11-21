@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/dialog/dialog-1").then((m) => m.Dialog1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/dialog/dialog-2").then((m) => m.Dialog2Example), { loading: FeatureLoading });
@@ -30,6 +30,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic dialog. Best for a 2 field profile edit form with Cancel and Save changes in the footer.",
 		file: "dialog-1",
 		source:
@@ -40,6 +41,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-2",
 		label: "Scrollable Content",
 		anchor: "scrollable-content",
+		part: null,
 		description: "Dialog with scrollable content. Best for read only text in a body capped at 70vh that scrolls under the title, with no footer.",
 		file: "dialog-2",
 		source:
@@ -50,6 +52,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-3",
 		label: "Sticky Footer",
 		anchor: "sticky-footer",
+		part: null,
 		description: "Dialog with scrollable content and sticky footer. Best for a 70vh scrolling body above a footer whose Close button stays in view.",
 		file: "dialog-3",
 		source:
@@ -60,6 +63,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-4",
 		label: "No Close Button",
 		anchor: "no-close-button",
+		part: null,
 		description: "Dialog without a close button. Best for a notice whose corner X is removed, leaving a footer Close button as the visible exit.",
 		file: "dialog-4",
 		source:
@@ -70,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-5",
 		label: "Custom Close Button",
 		anchor: "custom-close-button",
+		part: null,
 		description: "Dialog with custom close button. Best for a profile form whose corner close button becomes a round bordered chip floating past the top right edge.",
 		file: "dialog-5",
 		source:
@@ -80,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-6",
 		label: "Full-Screen",
 		anchor: "full-screen",
+		part: null,
 		description: "Full-screen fluid dialog with sticky header and footer. Best for a near full viewport modal with bordered header and footer bars around a scrolling body.",
 		file: "dialog-6",
 		source:
@@ -90,6 +96,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-7",
 		label: "Destructive Confirmation",
 		anchor: "destructive-confirmation",
+		part: null,
 		description: "Confirmation dialog with destructive action. Best for a delete prompt laid out as a dialog with a warning icon and a destructive button.",
 		file: "dialog-7",
 		source:
@@ -100,6 +107,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-8",
 		label: "Cookie Consent",
 		anchor: "cookie-consent",
+		part: null,
 		description: "Cookie consent dialog. Best for cookie category switches with a locked essential row and Save Preferences or Accept All actions.",
 		file: "dialog-8",
 		source:
@@ -110,6 +118,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-9",
 		label: "Keyboard Shortcuts",
 		anchor: "keyboard-shortcuts",
+		part: null,
 		description: "Dialog with keyboard shortcuts list. Best for a read only shortcut reference split into 2 columns of key chords in a wider modal.",
 		file: "dialog-9",
 		source:
@@ -120,6 +129,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-dialog-10",
 		label: "Full Width Button",
 		anchor: "full-width-button",
+		part: null,
 		description: "Dialog with full width button. Best for a session timeout notice with one full width Sign In Again button and no Cancel.",
 		file: "dialog-10",
 		source:
@@ -165,6 +175,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function DialogFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function DialogFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

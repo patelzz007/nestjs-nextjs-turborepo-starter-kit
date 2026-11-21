@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/checkbox/checkbox-1").then((m) => m.Checkbox1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/checkbox/checkbox-2").then((m) => m.Checkbox2Example), { loading: FeatureLoading });
@@ -42,6 +42,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic checkbox with label. Best for a single unchecked box tied to its label through id and htmlFor, with no helper copy below.",
 		file: "checkbox-1",
 		source:
@@ -52,6 +53,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-2",
 		label: "Disabled",
 		anchor: "disabled",
+		part: null,
 		description: "Disabled checkbox. Best for a box that starts ticked and cannot be toggled, with its whole Field flagged disabled.",
 		file: "checkbox-2",
 		source:
@@ -62,6 +64,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-3",
 		label: "Invalid",
 		anchor: "invalid",
+		part: null,
 		description: "Invalid checkbox. Best for an error state driven by aria-invalid on the box and data-invalid on the Field around it.",
 		file: "checkbox-3",
 		source:
@@ -72,6 +75,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-4",
 		label: "Indeterminate",
 		anchor: "indeterminate",
+		part: null,
 		description: "Indeterminate checkbox. Best for a box held in the mixed state that a parent shows when only some of its children are ticked.",
 		file: "checkbox-4",
 		source:
@@ -82,6 +86,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-5",
 		label: "Label & Description",
 		anchor: "label-description",
+		part: null,
 		description: "Checkbox with label and description. Best for a consent line such as accepting terms, ticked by default, with helper copy under the label.",
 		file: "checkbox-5",
 		source:
@@ -92,6 +97,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-6",
 		label: "Colored",
 		anchor: "colored",
+		part: null,
 		description: "Colored checkbox. Best for ticked boxes recolored blue, green and yellow with data-checked fill and border classes in both themes.",
 		file: "checkbox-6",
 		source:
@@ -102,6 +108,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-7",
 		label: "Circle To-Do",
 		anchor: "circle-to-do",
+		part: null,
 		description: "Circle checkbox. Best for a round box whose label dims and gets struck through once ticked, like a done item in a to-do list.",
 		file: "checkbox-7",
 		source:
@@ -112,6 +119,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-8",
 		label: "Basic Group",
 		anchor: "basic-group",
+		part: null,
 		description: "Checkbox group. Best for a titled stack of 3 notification channels, each row its own box and label, 2 of them ticked.",
 		file: "checkbox-8",
 		source:
@@ -122,6 +130,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-9",
 		label: "Setting Card",
 		anchor: "setting-card",
+		part: null,
 		description: "Card checkbox with group. Best for one bordered card, clickable anywhere, that pairs a setting title with a line of helper copy.",
 		file: "checkbox-9",
 		source:
@@ -132,6 +141,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-10",
 		label: "Frame Group",
 		anchor: "frame-group",
+		part: null,
 		description: "Checkbox group in a frame. Best for notification rows inside a Frame, a titled header over a panel split by separators.",
 		file: "checkbox-10",
 		source:
@@ -142,6 +152,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-11",
 		label: "Card Rows",
 		anchor: "card-rows",
+		part: null,
 		description: "Card checkbox group with icons. Best for a plain Card of 3 full width rows split by separators, each whole row toggling its leading box.",
 		file: "checkbox-11",
 		source:
@@ -152,6 +163,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-12",
 		label: "Icon Card Rows",
 		anchor: "icon-card-rows",
+		part: null,
 		description: "Card checkbox group with icons. Best for card rows that lead with a muted channel icon and push the box to the trailing edge.",
 		file: "checkbox-12",
 		source:
@@ -162,6 +174,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-13",
 		label: "Corner Check Tiles",
 		anchor: "corner-check-tiles",
+		part: null,
 		description: "Custom positioned checkbox. Best for a row of 3 compact title tiles, each with a round borderless check overhanging its top right corner.",
 		file: "checkbox-13",
 		source:
@@ -172,6 +185,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-14",
 		label: "Module Tiles",
 		anchor: "module-tiles",
+		part: null,
 		description: "Custom positioned checkbox. Best for a 2 column grid of module tiles with an icon chip, title and description, and a round box inset top right.",
 		file: "checkbox-14",
 		source:
@@ -182,6 +196,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-15",
 		label: "Avatar Card",
 		anchor: "avatar-card",
+		part: null,
 		description: "Avatar based card checkbox. Best for a person card with avatar, name and handle, the box sitting at its trailing edge.",
 		file: "checkbox-15",
 		source:
@@ -192,6 +207,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-16",
 		label: "Nested Permissions",
 		anchor: "nested-permissions",
+		part: null,
 		description: "Nested checkbox group. Best for a 3 level permission tree where a parent ticks or clears every leaf below and shows a mixed state when only some are on.",
 		file: "checkbox-16",
 		source:
@@ -202,6 +218,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-17",
 		label: "Payment Method",
 		anchor: "payment-method",
+		part: null,
 		description: "Payment method card checkbox. Best for a saved card tile with a brand mark, masked number and expiry, ticked by a round box in its corner.",
 		file: "checkbox-17",
 		source:
@@ -212,6 +229,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-18",
 		label: "Help Icon Tooltip",
 		anchor: "help-icon-tooltip",
+		part: null,
 		description: "Checkbox with label and tooltip info. Best for an opt-in whose label ends in a help icon that opens a tooltip on the right with the longer explanation.",
 		file: "checkbox-18",
 		source:
@@ -222,6 +240,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-19",
 		label: "Badge Group",
 		anchor: "badge-group",
+		part: null,
 		description: "Checkbox group with badges. Best for feature opt-ins tagged with a small Badge: a default New pill and a secondary Beta pill.",
 		file: "checkbox-19",
 		source:
@@ -232,6 +251,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-20",
 		label: "Right Side Tooltip",
 		anchor: "right-side-tooltip",
+		part: null,
 		description: "Checkbox with label and tooltip info. Best for an exact duplicate of c-checkbox-18, sharing its tooltip-checkbox id, label text and right side tooltip.",
 		file: "checkbox-20",
 		source:
@@ -242,6 +262,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-21",
 		label: "Inline Group",
 		anchor: "inline-group",
+		part: null,
 		description: "Inline horizontal checkbox group. Best for short options such as Read, Write and Delete set side by side in a row that wraps on narrow screens.",
 		file: "checkbox-21",
 		source:
@@ -252,6 +273,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-checkbox-22",
 		label: "Uppercase Badges",
 		anchor: "uppercase-badges",
+		part: null,
 		description: "Checkbox with feature badge. Best for feature flags tagged with the stock Badge shrunk by hand to an 18px pill of 10px uppercase text with wide tracking.",
 		file: "checkbox-22",
 		source:
@@ -297,6 +319,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function CheckboxFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function CheckboxFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/stat-card/stat-card-1").then((m) => m.StatCard1Example), { loading: FeatureLoading });
 const Guideline1 = dynamic(() => import("@/components/component-showcase/examples/stat-card/stat-card-do-1").then((m) => m.StatCardDo1Example), { loading: FeatureLoading });
@@ -25,6 +25,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-stat-card-1",
 		label: "Overview",
 		anchor: "overview",
+		part: null,
 		description: "Three metric cards, each with a label, a value, a hint and an icon. Best for a compact row of headline numbers on a dashboard.",
 		file: "stat-card-1",
 		source:
@@ -70,6 +71,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function StatCardFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function StatCardFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

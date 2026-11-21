@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/sheet/sheet-1").then((m) => m.Sheet1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/sheet/sheet-2").then((m) => m.Sheet2Example), { loading: FeatureLoading });
@@ -24,6 +24,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sheet-1",
 		label: "Profile Editor",
 		anchor: "profile-editor",
+		part: null,
 		description: "Sheet containing a form for editing profile information. Best for a right side profile editor with 2 fields, Save changes, Cancel and the corner X.",
 		file: "sheet-1",
 		source:
@@ -34,6 +35,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sheet-2",
 		label: "No Close Button",
 		anchor: "no-close-button",
+		part: null,
 		description: "Sheet without a corner close button. Best for the profile editor without the corner X, leaving footer Cancel as the visible way out.",
 		file: "sheet-2",
 		source:
@@ -44,6 +46,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sheet-3",
 		label: "Any Side",
 		anchor: "any-side",
+		part: null,
 		description: "Sheets that open from any side. Best for one trigger per edge, top, right, bottom and left, with top and bottom sheets held to half the screen.",
 		file: "sheet-3",
 		source:
@@ -54,6 +57,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-sheet-4",
 		label: "Scrollable Content",
 		anchor: "scrollable-content",
+		part: null,
 		description: "Sheet with scrollable content. Best for a long body in a ScrollArea between a pinned header and a Save and Cancel footer.",
 		file: "sheet-4",
 		source:
@@ -99,6 +103,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SheetFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SheetFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

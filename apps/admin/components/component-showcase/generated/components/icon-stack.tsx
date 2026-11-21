@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/icon-stack/icon-stack-1").then((m) => m.IconStack1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/icon-stack/icon-stack-2").then((m) => m.IconStack2Example), { loading: FeatureLoading });
@@ -34,6 +34,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-stack-1",
 		label: "Isometric",
 		anchor: "isometric",
+		part: null,
 		description: "Isometric icon stack. Best for the minimal pattern with no classes on the stack: default size, neutral tones and one small layers glyph.",
 		file: "icon-stack-1",
 		source:
@@ -44,6 +45,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-stack-2",
 		label: "Sizes",
 		anchor: "sizes",
+		part: null,
 		description: "Icon stack sizes. Best for small, Default and Large stacks side by side with captions, the glyph growing from size-3.5 to size-6.",
 		file: "icon-stack-2",
 		source:
@@ -54,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-stack-3",
 		label: "Colors",
 		anchor: "colors",
+		part: null,
 		description: "Icon stack colors. Best for neutral, primary, success and warning tints in a captioned row, set on the stack and the glyph separately.",
 		file: "icon-stack-3",
 		source:
@@ -64,6 +67,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-stack-4",
 		label: "Badge Overlay",
 		anchor: "badge-overlay",
+		part: null,
 		description: "Icon badge stack. Best for a round bordered chip with a check mark in place of a bare glyph, on a larger primary stack.",
 		file: "icon-stack-4",
 		source:
@@ -74,6 +78,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-stack-5",
 		label: "Empty State",
 		anchor: "empty-state",
+		part: null,
 		description: "Empty state illustration. Best for a first run workspace screen with the stack above a title, description and Invite team and Connect source buttons.",
 		file: "icon-stack-5",
 		source:
@@ -84,6 +89,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-icon-stack-6",
 		label: "Item Media",
 		anchor: "item-media",
+		part: null,
 		description: "Item media stack. Best for the smallest stack in the set, 44 by 48 pixels, as media in an outlined row with a title and description.",
 		file: "icon-stack-6",
 		source:
@@ -129,6 +135,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function IconStackFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function IconStackFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

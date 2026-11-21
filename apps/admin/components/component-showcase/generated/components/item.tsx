@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/item/item-1").then((m) => m.Item1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/item/item-2").then((m) => m.Item2Example), { loading: FeatureLoading });
@@ -32,6 +32,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-1",
 		label: "Variants",
 		anchor: "variants",
+		part: null,
 		description:
 			"Basic item with title and description. Best for the 3 row variants stacked for comparison, default, outline and muted, as text only rows with no media or actions.",
 		file: "item-1",
@@ -43,6 +44,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-2",
 		label: "Icon & Actions",
 		anchor: "icon-actions",
+		part: null,
 		description:
 			"Items with icon media and action buttons. Best for notification channel rows at the default size, each a leading icon and 1 button, outline Configure or filled Enable.",
 		file: "item-2",
@@ -54,6 +56,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-3",
 		label: "User Follow",
 		anchor: "user-follow",
+		part: null,
 		description:
 			"User item with avatar, info, and follow button. Best for compact people rows with a photo and job title that show the follow button in both states, Follow and Following.",
 		file: "item-3",
@@ -65,17 +68,19 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-4",
 		label: "Navigation Links",
 		anchor: "navigation-links",
+		part: null,
 		description:
 			"Clickable navigation items with icons and chevron. Best for account menu links, Profile, Security and Billing, where each whole row is an anchor and separators divide them.",
 		file: "item-4",
 		source:
-			'import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemSeparator, ItemTitle } from "@workspace/ui/components/item";\nimport { ChevronRightIcon, HistoryIcon, ShieldIcon, UserIcon } from "lucide-react";\nimport Link from "next/link";\nimport type * as React from "react";\n\nimport { ROUTES } from "@/lib/routes";\n\n/** Each row is a real link into the admin app (reui\'s sample used `href="#"`). */\nconst PROFILE_LINK: React.JSX.Element = <Link href={ROUTES.account.profile} />;\nconst SECURITY_LINK: React.JSX.Element = <Link href={ROUTES.account.security} />;\nconst ACTIVITY_LINK: React.JSX.Element = <Link href={ROUTES.auditLogs.list} />;\n\nexport function Item4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto flex w-full max-w-md flex-col">\n\t\t\t<ItemGroup className="gap-0">\n\t\t\t\t<Item render={PROFILE_LINK} size="xs">\n\t\t\t\t\t<ItemMedia variant="icon">\n\t\t\t\t\t\t<UserIcon />\n\t\t\t\t\t</ItemMedia>\n\t\t\t\t\t<ItemContent>\n\t\t\t\t\t\t<ItemTitle>Profile</ItemTitle>\n\t\t\t\t\t\t<ItemDescription>Manage your account details</ItemDescription>\n\t\t\t\t\t</ItemContent>\n\t\t\t\t\t<ItemActions>\n\t\t\t\t\t\t<ChevronRightIcon className="size-4 text-muted-foreground" />\n\t\t\t\t\t</ItemActions>\n\t\t\t\t</Item>\n\t\t\t\t<ItemSeparator />\n\t\t\t\t<Item render={SECURITY_LINK} size="xs">\n\t\t\t\t\t<ItemMedia variant="icon">\n\t\t\t\t\t\t<ShieldIcon />\n\t\t\t\t\t</ItemMedia>\n\t\t\t\t\t<ItemContent>\n\t\t\t\t\t\t<ItemTitle>Security</ItemTitle>\n\t\t\t\t\t\t<ItemDescription>Password and two-factor auth</ItemDescription>\n\t\t\t\t\t</ItemContent>\n\t\t\t\t\t<ItemActions>\n\t\t\t\t\t\t<ChevronRightIcon className="size-4 text-muted-foreground" />\n\t\t\t\t\t</ItemActions>\n\t\t\t\t</Item>\n\t\t\t\t<ItemSeparator />\n\t\t\t\t<Item render={ACTIVITY_LINK} size="xs">\n\t\t\t\t\t<ItemMedia variant="icon">\n\t\t\t\t\t\t<HistoryIcon />\n\t\t\t\t\t</ItemMedia>\n\t\t\t\t\t<ItemContent>\n\t\t\t\t\t\t<ItemTitle>Activity</ItemTitle>\n\t\t\t\t\t\t<ItemDescription>Requests and changes in the audit log</ItemDescription>\n\t\t\t\t\t</ItemContent>\n\t\t\t\t\t<ItemActions>\n\t\t\t\t\t\t<ChevronRightIcon className="size-4 text-muted-foreground" />\n\t\t\t\t\t</ItemActions>\n\t\t\t\t</Item>\n\t\t\t</ItemGroup>\n\t\t</div>\n\t);\n}\n',
+			'import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemSeparator, ItemTitle } from "@workspace/ui/components/item";\nimport { ChevronRightIcon, HistoryIcon, ShieldIcon, UserIcon } from "lucide-react";\nimport Link from "next/link";\nimport type * as React from "react";\n\nimport { ROUTES } from "@/lib/routes";\n\n/** Each row is a real link into the admin app (reui\'s sample used `href="#"`). */\nconst PROFILE_LINK: React.JSX.Element = <Link href={ROUTES.account.profile} />;\nconst SECURITY_LINK: React.JSX.Element = <Link href={ROUTES.account.security} />;\nconst ACTIVITY_LINK: React.JSX.Element = <Link href={ROUTES.analytics.index} />;\n\nexport function Item4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto flex w-full max-w-md flex-col">\n\t\t\t<ItemGroup className="gap-0">\n\t\t\t\t<Item render={PROFILE_LINK} size="xs">\n\t\t\t\t\t<ItemMedia variant="icon">\n\t\t\t\t\t\t<UserIcon />\n\t\t\t\t\t</ItemMedia>\n\t\t\t\t\t<ItemContent>\n\t\t\t\t\t\t<ItemTitle>Profile</ItemTitle>\n\t\t\t\t\t\t<ItemDescription>Manage your account details</ItemDescription>\n\t\t\t\t\t</ItemContent>\n\t\t\t\t\t<ItemActions>\n\t\t\t\t\t\t<ChevronRightIcon className="size-4 text-muted-foreground" />\n\t\t\t\t\t</ItemActions>\n\t\t\t\t</Item>\n\t\t\t\t<ItemSeparator />\n\t\t\t\t<Item render={SECURITY_LINK} size="xs">\n\t\t\t\t\t<ItemMedia variant="icon">\n\t\t\t\t\t\t<ShieldIcon />\n\t\t\t\t\t</ItemMedia>\n\t\t\t\t\t<ItemContent>\n\t\t\t\t\t\t<ItemTitle>Security</ItemTitle>\n\t\t\t\t\t\t<ItemDescription>Password and two-factor auth</ItemDescription>\n\t\t\t\t\t</ItemContent>\n\t\t\t\t\t<ItemActions>\n\t\t\t\t\t\t<ChevronRightIcon className="size-4 text-muted-foreground" />\n\t\t\t\t\t</ItemActions>\n\t\t\t\t</Item>\n\t\t\t\t<ItemSeparator />\n\t\t\t\t<Item render={ACTIVITY_LINK} size="xs">\n\t\t\t\t\t<ItemMedia variant="icon">\n\t\t\t\t\t\t<HistoryIcon />\n\t\t\t\t\t</ItemMedia>\n\t\t\t\t\t<ItemContent>\n\t\t\t\t\t\t<ItemTitle>Activity</ItemTitle>\n\t\t\t\t\t\t<ItemDescription>Requests and changes in the audit log</ItemDescription>\n\t\t\t\t\t</ItemContent>\n\t\t\t\t\t<ItemActions>\n\t\t\t\t\t\t<ChevronRightIcon className="size-4 text-muted-foreground" />\n\t\t\t\t\t</ItemActions>\n\t\t\t\t</Item>\n\t\t\t</ItemGroup>\n\t\t</div>\n\t);\n}\n',
 		render: (): React.JSX.Element => <Example4 />,
 	},
 	{
 		id: "c-item-5",
 		label: "Status Badges",
 		anchor: "status-badges",
+		part: null,
 		description: "Item group with status badges. Best for team presence rows in a spaced group, each with a photo, a role and an Online, Away or Offline badge.",
 		file: "item-5",
 		source:
@@ -86,6 +91,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-6",
 		label: "File Rows",
 		anchor: "file-rows",
+		part: null,
 		description: "File items with icon media, size, and actions. Best for file rows with size and last update, a Final, Draft or Review badge and an Open button on each.",
 		file: "item-6",
 		source:
@@ -96,6 +102,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-7",
 		label: "Keyboard Shortcuts",
 		anchor: "keyboard-shortcuts",
+		part: null,
 		description: "Items with keyboard shortcuts. Best for a narrow command menu of 5 link rows, each an icon and label with its key combination in a Kbd on the right.",
 		file: "item-7",
 		source:
@@ -106,6 +113,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-8",
 		label: "Small Count Badges",
 		anchor: "small-count-badges",
+		part: null,
 		description: "Small-size items with badges. Best for mailbox folder links from Inbox to Trash in a narrow column, with a rounded count badge on Inbox and Drafts only.",
 		file: "item-8",
 		source:
@@ -116,6 +124,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-9",
 		label: "Team Roles",
 		anchor: "team-roles",
+		part: null,
 		description:
 			"Team members with roles and multiple actions. Best for member rows with email under the name, a role badge and a dots menu of Change Role, View Profile and Remove.",
 		file: "item-9",
@@ -127,6 +136,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-10",
 		label: "Header & Footer",
 		anchor: "header-footer",
+		part: null,
 		description: "Item with header and footer sections. Best for a narrow project card: kind label and In Progress badge on top, avatar stack and a 65% progress bar below.",
 		file: "item-10",
 		source:
@@ -137,6 +147,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-11",
 		label: "Integrations",
 		anchor: "integrations",
+		part: null,
 		description: "Integration items with connect actions. Best for data source rows where linked services show a Connected badge and the rest offer a Connect button.",
 		file: "item-11",
 		source:
@@ -147,6 +158,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-item-12",
 		label: "Activity Feed",
 		anchor: "activity-feed",
+		part: null,
 		description:
 			"Activity feed items with avatars and actions. Best for a team log of deploys, merges and issues: a small photo, the person, a colored verb badge, the target and a relative time.",
 		file: "item-12",
@@ -193,6 +205,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ItemFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ItemFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

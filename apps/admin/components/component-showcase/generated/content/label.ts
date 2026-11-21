@@ -47,6 +47,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-label-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "label-1",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\nimport { Label } from "@workspace/ui/components/label";\n\nexport function Label1Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs">\n\t\t\t<Label htmlFor="label-demo-username">Username</Label>\n\t\t\t<Input id="label-demo-username" placeholder="Enter your username…" />\n\t\t</Field>\n\t);\n}\n',
@@ -55,6 +56,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-label-5",
 				label: "Required",
 				anchor: "required",
+				part: null,
 				file: "label-5",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\nimport { Label } from "@workspace/ui/components/label";\n\nexport function Label5Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs">\n\t\t\t<Label htmlFor="label-required">\n\t\t\t\tEmail address\n\t\t\t\t<span className="text-destructive">*</span>\n\t\t\t</Label>\n\t\t\t<Input id="label-required" type="email" placeholder="you@example.com" required />\n\t\t</Field>\n\t);\n}\n',
@@ -63,6 +65,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-label-6",
 				label: "Optional",
 				anchor: "optional",
+				part: null,
 				file: "label-6",
 				source:
 					'import * as React from "react";\nimport { Field } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\nimport { Label } from "@workspace/ui/components/label";\n\nexport function Label6Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs">\n\t\t\t<Label htmlFor="label-optional">\n\t\t\t\tPhone number\n\t\t\t\t<span className="text-muted-foreground">(optional)</span>\n\t\t\t</Label>\n\t\t\t<Input id="label-optional" type="tel" placeholder="+1 (555) 000-0000" />\n\t\t</Field>\n\t);\n}\n',
@@ -71,6 +74,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-label-2",
 				label: "Checkbox",
 				anchor: "checkbox",
+				part: null,
 				file: "label-2",
 				source:
 					'import * as React from "react";\nimport { Checkbox } from "@workspace/ui/components/checkbox";\nimport { Field } from "@workspace/ui/components/field";\nimport { Label } from "@workspace/ui/components/label";\n\nexport function Label2Example(): React.JSX.Element {\n\treturn (\n\t\t<Field orientation="horizontal" className="mx-auto w-auto">\n\t\t\t<Checkbox id="label-demo-terms" />\n\t\t\t<Label htmlFor="label-demo-terms">Accept terms and conditions</Label>\n\t\t</Field>\n\t);\n}\n',
@@ -79,6 +83,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-label-11",
 				label: "Error State",
 				anchor: "error-state",
+				part: null,
 				file: "label-11",
 				source:
 					'import * as React from "react";\nimport { Field, FieldError } from "@workspace/ui/components/field";\nimport { Input } from "@workspace/ui/components/input";\nimport { Label } from "@workspace/ui/components/label";\n\nexport function Label11Example(): React.JSX.Element {\n\treturn (\n\t\t<Field className="w-full max-w-xs" data-invalid="true">\n\t\t\t<Label htmlFor="label-error">Email</Label>\n\t\t\t<Input id="label-error" type="email" defaultValue="invalid-email" aria-invalid="true" />\n\t\t\t<FieldError>Please enter a valid email address</FieldError>\n\t\t</Field>\n\t);\n}\n',

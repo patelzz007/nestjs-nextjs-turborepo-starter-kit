@@ -48,6 +48,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-textarea-1",
 				label: "Basic",
 				anchor: "basic",
+				part: null,
 				file: "textarea-1",
 				source:
 					'import * as React from "react";\nimport { Textarea } from "@workspace/ui/components/textarea";\n\nexport function Textarea1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs">\n\t\t\t<Textarea placeholder="Type your message here…" className="w-full" />\n\t\t</div>\n\t);\n}\n',
@@ -56,6 +57,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-textarea-4",
 				label: "With Description",
 				anchor: "with-description",
+				part: null,
 				file: "textarea-4",
 				source:
 					'import * as React from "react";\nimport { Field, FieldDescription, FieldLabel } from "@workspace/ui/components/field";\nimport { Textarea } from "@workspace/ui/components/textarea";\n\nexport function Textarea4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs">\n\t\t\t<Field className="w-full">\n\t\t\t\t<FieldLabel htmlFor="textarea-with-desc">Feedback</FieldLabel>\n\t\t\t\t<Textarea id="textarea-with-desc" placeholder="Type your message here…" rows={6} />\n\t\t\t\t<FieldDescription>Type your message and press enter to send.</FieldDescription>\n\t\t\t</Field>\n\t\t</div>\n\t);\n}\n',
@@ -64,6 +66,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-textarea-2",
 				label: "Invalid",
 				anchor: "invalid",
+				part: null,
 				file: "textarea-2",
 				source:
 					'import * as React from "react";\nimport { Textarea } from "@workspace/ui/components/textarea";\n\nexport function Textarea2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs">\n\t\t\t<Textarea placeholder="Type your message here…" aria-invalid="true" className="w-full" />\n\t\t</div>\n\t);\n}\n',
@@ -72,6 +75,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-textarea-6",
 				label: "Auto-Resize Counter",
 				anchor: "auto-resize-counter",
+				part: null,
 				file: "textarea-6",
 				source:
 					'"use client";\n\nimport * as React from "react";\nimport { useCallback, useRef, useState } from "react";\n\nimport { Field, FieldLabel } from "@workspace/ui/components/field";\nimport { Textarea } from "@workspace/ui/components/textarea";\n\nconst MAX_CHARS = 280;\n/** The counter turns to a warning once this few characters remain. */\nconst NEAR_LIMIT_REMAINING = 20;\n\nexport function Textarea6Example(): React.JSX.Element {\n\tconst [value, setValue] = useState("");\n\tconst textareaRef = useRef<HTMLTextAreaElement>(null);\n\n\tconst handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {\n\t\tconst newValue = e.target.value;\n\t\tif (newValue.length <= MAX_CHARS) {\n\t\t\tsetValue(newValue);\n\t\t}\n\n\t\tconst textarea = textareaRef.current;\n\t\tif (textarea) {\n\t\t\ttextarea.style.height = "auto";\n\t\t\ttextarea.style.height = `${String(textarea.scrollHeight)}px`;\n\t\t}\n\t}, []);\n\n\tconst remaining = MAX_CHARS - value.length;\n\tconst isNearLimit = remaining <= NEAR_LIMIT_REMAINING;\n\tconst isAtLimit = remaining === 0;\n\n\treturn (\n\t\t<div className="mx-auto w-full max-w-xs">\n\t\t\t<Field className="w-full">\n\t\t\t\t<div className="flex items-center justify-between">\n\t\t\t\t\t<FieldLabel htmlFor="auto-resize-textarea">Bio</FieldLabel>\n\t\t\t\t\t<span className={`text-xs tabular-nums ${isAtLimit ? "font-semibold text-destructive" : isNearLimit ? "text-warning" : "text-muted-foreground"}`}>\n\t\t\t\t\t\t{value.length}/{MAX_CHARS}\n\t\t\t\t\t</span>\n\t\t\t\t</div>\n\t\t\t\t<Textarea\n\t\t\t\t\tref={textareaRef}\n\t\t\t\t\tid="auto-resize-textarea"\n\t\t\t\t\tvalue={value}\n\t\t\t\t\tonChange={handleChange}\n\t\t\t\t\tplaceholder="Tell us about yourself..."\n\t\t\t\t\trows={2}\n\t\t\t\t\tclassName="resize-none overflow-hidden"\n\t\t\t\t/>\n\t\t\t</Field>\n\t\t</div>\n\t);\n}\n',

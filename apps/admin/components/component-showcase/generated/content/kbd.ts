@@ -49,6 +49,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-kbd-1",
 				label: "Basic Keys",
 				anchor: "basic-keys",
+				part: null,
 				file: "kbd-1",
 				source:
 					'import * as React from "react";\nimport { Kbd } from "@workspace/ui/components/kbd";\n\nexport function Kbd1Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center gap-2">\n\t\t\t<Kbd>Ctrl</Kbd>\n\t\t\t<Kbd>⌘K</Kbd>\n\t\t\t<Kbd>Ctrl + B</Kbd>\n\t\t</div>\n\t);\n}\n',
@@ -57,6 +58,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-kbd-2",
 				label: "Grouped Keys",
 				anchor: "grouped-keys",
+				part: null,
 				file: "kbd-2",
 				source:
 					'import * as React from "react";\nimport { Kbd, KbdGroup } from "@workspace/ui/components/kbd";\n\nexport function Kbd2Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<KbdGroup>\n\t\t\t\t<Kbd>Ctrl</Kbd>\n\t\t\t\t<Kbd>Shift</Kbd>\n\t\t\t\t<Kbd>P</Kbd>\n\t\t\t</KbdGroup>\n\t\t</div>\n\t);\n}\n',
@@ -65,6 +67,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-kbd-4",
 				label: "In Input",
 				anchor: "in-input",
+				part: null,
 				file: "kbd-4",
 				source:
 					'import * as React from "react";\nimport { InputGroup, InputGroupAddon, InputGroupInput } from "@workspace/ui/components/input-group";\nimport { Kbd } from "@workspace/ui/components/kbd";\n\nexport function Kbd4Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<InputGroup className="max-w-xs">\n\t\t\t\t<InputGroupInput placeholder="Search…" />\n\t\t\t\t<InputGroupAddon>\n\t\t\t\t\t<Kbd>Space</Kbd>\n\t\t\t\t</InputGroupAddon>\n\t\t\t</InputGroup>\n\t\t</div>\n\t);\n}\n',
@@ -73,6 +76,7 @@ export const SHOWCASE_COMPONENT_CONTENT: ShowcaseContent = {
 				id: "c-kbd-5",
 				label: "In Tooltip",
 				anchor: "in-tooltip",
+				part: null,
 				file: "kbd-5",
 				source:
 					'import * as React from "react";\nimport { SaveIcon } from "lucide-react";\nimport { Button } from "@workspace/ui/components/button";\nimport { Kbd } from "@workspace/ui/components/kbd";\nimport { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";\n\nexport function Kbd5Example(): React.JSX.Element {\n\treturn (\n\t\t<div className="flex items-center justify-center">\n\t\t\t<Tooltip>\n\t\t\t\t<TooltipTrigger render={<Button size="icon-sm" variant="outline" />}>\n\t\t\t\t\t<SaveIcon />\n\t\t\t\t</TooltipTrigger>\n\t\t\t\t<TooltipContent className="pr-1.5">\n\t\t\t\t\t<div className="flex items-center gap-2">\n\t\t\t\t\t\tSave Changes <Kbd>S</Kbd>\n\t\t\t\t\t</div>\n\t\t\t\t</TooltipContent>\n\t\t\t</Tooltip>\n\t\t</div>\n\t);\n}\n',

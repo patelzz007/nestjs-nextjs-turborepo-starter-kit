@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/tabs/tabs-1").then((m) => m.Tabs1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/tabs/tabs-2").then((m) => m.Tabs2Example), { loading: FeatureLoading });
@@ -29,6 +29,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic tabs.. Best for the smallest setup: 2 triggers on a muted track switching between an account card and a password card.",
 		file: "tabs-1",
 		source:
@@ -39,6 +40,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-2",
 		label: "Line Variant",
 		anchor: "line-variant",
+		part: null,
 		description: "Tabs with line variant.. Best for an underlined row stretched full width over 3 cards for account, password and preference forms.",
 		file: "tabs-2",
 		source:
@@ -49,6 +51,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-3",
 		label: "Vertical",
 		anchor: "vertical",
+		part: null,
 		description: "Tabs with vertical orientation.. Best for a muted column of 3 triggers on the left, with the matching form card opening to its right.",
 		file: "tabs-3",
 		source:
@@ -59,6 +62,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-4",
 		label: "Vertical Line",
 		anchor: "vertical-line",
+		part: null,
 		description:
 			"Tabs with vertical orientation and line variant.. Best for a transparent left column where a thin bar on its right edge marks the active section, beside wider cards.",
 		file: "tabs-4",
@@ -70,6 +74,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-5",
 		label: "Icons",
 		anchor: "icons",
+		part: null,
 		description: "Tabs with icons.. Best for user, lock and gear icons ahead of each label on a muted track sized to its content, over 3 form cards.",
 		file: "tabs-5",
 		source:
@@ -80,6 +85,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-6",
 		label: "Full Width Icons",
 		anchor: "full-width-icons",
+		part: null,
 		description: "Tabs with icons. Best for a full width muted track of Overview, Analytics and Settings with icons, over 1 line placeholder cards.",
 		file: "tabs-6",
 		source:
@@ -90,6 +96,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-7",
 		label: "Badge Counts",
 		anchor: "badge-counts",
+		part: null,
 		description: "Tabs with badge counts. Best for mail folders on an underlined row, with tinted count badges on Inbox, Drafts and Spam and none on Sent.",
 		file: "tabs-7",
 		source:
@@ -100,6 +107,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-8",
 		label: "Side List Icons",
 		anchor: "side-list-icons",
+		part: null,
 		description: "Tabs with icons and line variant. Best for a side list of Projects, Tasks, Team and Reports, each led by an icon, 2 ending in a right aligned count badge.",
 		file: "tabs-8",
 		source:
@@ -110,6 +118,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-tabs-9",
 		label: "Segmented Control",
 		anchor: "segmented-control",
+		part: null,
 		description: "Segmented control tabs. Best for a controlled Daily to Yearly switch kept in React state, each panel showing one large visitor total.",
 		file: "tabs-9",
 		source:
@@ -155,6 +164,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function TabsFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function TabsFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

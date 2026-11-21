@@ -20,7 +20,7 @@ export function ShowcaseDocsExampleBlock({ slug, example }: ShowcaseDocsExampleB
 			<figcaption className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
 				<span>{example.label}</span>
 				<Link
-					href={appRoute(SHOWCASE_ROUTES.feature(slug, example.anchor))}
+					href={appRoute(SHOWCASE_ROUTES.feature(slug, example.anchor, example.part))}
 					className="inline-flex items-center gap-1 rounded-sm font-medium text-foreground outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">
 					View it live
 					<ArrowUpRight aria-hidden="true" className="size-3.5" />

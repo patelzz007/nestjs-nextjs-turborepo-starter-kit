@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/spinner/spinner-1").then((m) => m.Spinner1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/spinner/spinner-2").then((m) => m.Spinner2Example), { loading: FeatureLoading });
@@ -32,6 +32,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-1",
 		label: "Basic",
 		anchor: "basic",
+		part: null,
 		description: "Basic spinner.. Best for the bare default at its built-in 16px size, with no props and no text beside it.",
 		file: "spinner-1",
 		source:
@@ -42,6 +43,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-2",
 		label: "In Buttons",
 		anchor: "in-buttons",
+		part: null,
 		description: "Spinners in buttons.. Best for leading spinners in a live primary, a disabled outline and a square icon only button with its own label.",
 		file: "spinner-2",
 		source:
@@ -52,6 +54,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-3",
 		label: "In Badges",
 		anchor: "in-badges",
+		part: null,
 		description: "Spinners in badges.. Best for status labels in primary, secondary and outline plus light destructive, success and info tints, each led by a spinner.",
 		file: "spinner-3",
 		source:
@@ -62,6 +65,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-4",
 		label: "In Input Group",
 		anchor: "in-input-group",
+		part: null,
 		description: "Spinner in input group.. Best for a search field under a Searching label, its spinner shown in a leading addon before the typed text.",
 		file: "spinner-4",
 		source:
@@ -72,6 +76,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-5",
 		label: "In Empty State",
 		anchor: "in-empty-state",
+		part: null,
 		description: "Spinner in empty state.. Best for a centered loading view with the spinner in a muted tile, a Loading projects heading and a Cancel action.",
 		file: "spinner-5",
 		source:
@@ -82,6 +87,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-6",
 		label: "Pending Buttons",
 		anchor: "pending-buttons",
+		part: null,
 		description: "Button loading states. Best for disabled default, outline and secondary buttons, each pairing a spinner with a pending word like Saving.",
 		file: "spinner-6",
 		source:
@@ -92,6 +98,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-7",
 		label: "Overlay With Caption",
 		anchor: "overlay-with-caption",
+		part: null,
 		description: "Overlay loading spinner. Best for a blurred translucent cover with a Refreshing data caption laid over a monthly report card's figures.",
 		file: "spinner-7",
 		source:
@@ -102,6 +109,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-8",
 		label: "Full Page",
 		anchor: "full-page",
+		part: null,
 		description: "Full page loading state. Best for a standalone card with a faded spinner above a setup message and a smaller muted hint.",
 		file: "spinner-8",
 		source:
@@ -112,6 +120,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-9",
 		label: "Inline Text",
 		anchor: "inline-text",
+		part: null,
 		description:
 			"Inline loading text with spinner. Best for stacked status lines with 14px spinners, 2 tinted by the success and warning tokens for connected and reconnecting.",
 		file: "spinner-9",
@@ -123,6 +132,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-10",
 		label: "Loading Dots",
 		anchor: "loading-dots",
+		part: null,
 		description: "Animated loading dots. Best for a row of 3 dots that bounce on staggered delays, drawn as plain spans in the primary color, with no icon.",
 		file: "spinner-10",
 		source:
@@ -133,6 +143,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-11",
 		label: "Card Overlay",
 		anchor: "card-overlay",
+		part: null,
 		description: "Spinner overlay on card. Best for a blurred cover holding only a spinner, nested inside the card it hides, with no caption.",
 		file: "spinner-11",
 		source:
@@ -143,6 +154,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-spinner-12",
 		label: "Color Variants",
 		anchor: "color-variants",
+		part: null,
 		description: "Spinner color variants. Best for a row of 5 spinners at 16px, tinted blue, green, red, yellow and purple through text color classes.",
 		file: "spinner-12",
 		source:
@@ -188,6 +200,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function SpinnerFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function SpinnerFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

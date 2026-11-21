@@ -8,7 +8,7 @@ import type * as React from "react";
 
 import { FeatureLoading } from "@/components/component-showcase/feature-loading";
 import type { ShowcaseFeature, ShowcaseGuideline } from "@/components/component-showcase/showcase-feature";
-import { ShowcaseFeatureList } from "@/components/component-showcase/showcase-feature-list";
+import { ShowcaseFeatureList, type ShowcaseFeatureSetProps } from "@/components/component-showcase/showcase-feature-list";
 
 const Example1 = dynamic(() => import("@/components/component-showcase/examples/scrollspy/scrollspy-1").then((m) => m.Scrollspy1Example), { loading: FeatureLoading });
 const Example2 = dynamic(() => import("@/components/component-showcase/examples/scrollspy/scrollspy-2").then((m) => m.Scrollspy2Example), { loading: FeatureLoading });
@@ -26,6 +26,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-scrollspy-1",
 		label: "Vertical Nav",
 		anchor: "vertical-nav",
+		part: null,
 		description: "Basic scrollspy. Best for a vertical rail of 5 section buttons in a 150px column to the left of a 500px tall panel.",
 		file: "scrollspy-1",
 		source:
@@ -36,6 +37,7 @@ const FEATURES: readonly ShowcaseFeature[] = [
 		id: "c-scrollspy-2",
 		label: "Horizontal Nav",
 		anchor: "horizontal-nav",
+		part: null,
 		description: "Basic scroll area. Best for a horizontal row of 5 section buttons above a full width 400px tall panel.",
 		file: "scrollspy-2",
 		source:
@@ -81,6 +83,6 @@ const GUIDELINES: readonly ShowcaseGuideline[] = [
 	},
 ];
 
-export function ScrollspyFeatures(): React.JSX.Element {
-	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} />;
+export function ScrollspyFeatures({ part }: ShowcaseFeatureSetProps): React.JSX.Element {
+	return <ShowcaseFeatureList features={FEATURES} guidelines={GUIDELINES} part={part} />;
 }

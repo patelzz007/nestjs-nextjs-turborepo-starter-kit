@@ -6,7 +6,7 @@
 
 ## When not to use
 
-- Rows people sort, filter, page or select: use [Data Table](/components/data-table) or [Data Grid](/components/data-grid)
+- Rows people sort, filter, page or select: use [Data Table](/components/data-table); a grid of editable cells: use [Spreadsheet](/components/spreadsheet)
 - A list of rich rows with an avatar, text and an action: use [Item](/components/item)
 
 ## Notes
