@@ -56,6 +56,13 @@ function caseBranch(operation: string, scope: ScopedOperations[string]["scope"])
  * The `CREATE OR REPLACE FUNCTION app_rls_bypass_on(table_name)` statement (and its comment): one CASE
  * branch per operation, in name order. An operation the registry does not list matches no branch and
  * bypasses nothing — a stray `app.system_operation` value can never widen access.
+ *
+ * PL/pgSQL, so the planner never inlines it. Every policy calls it as `(SELECT app_rls_bypass_on('<table>'))`
+ * (`systemBypass`), an InitPlan PostgreSQL runs once per query, so inlining saves nothing at run time. As an
+ * SQL function it was inlined anyway: the whole CASE (one branch per registered operation) was copied into every
+ * policy and re-planned for every table a policy reaches through another (FileVariant → StoredFile →
+ * RewardImage …). Planning one FileVariant read took 85–120 ms (3 ms not inlined), which made a 2 ms reward
+ * list a 400 ms request and failed the load nightly from 2026-11-19.
  */
 export function buildSystemOperationScopesSql(operations: ScopedOperations, knownTables: ReadonlySet<string>): string {
 	const unknown: string[] = findUnknownScopeTables(operations, knownTables);
@@ -67,11 +74,13 @@ export function buildSystemOperationScopesSql(operations: ScopedOperations, know
 		.map(([operation, definition]): string => caseBranch(operation, definition.scope))
 		.join("\n");
 	return `CREATE OR REPLACE FUNCTION app_rls_bypass_on(table_name text) RETURNS boolean
-LANGUAGE sql STABLE AS $$
-  SELECT public.app_rls_bypass() AND CASE public.app_system_operation()
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+  RETURN public.app_rls_bypass() AND CASE public.app_system_operation()
 ${branches}
     ELSE false
   END;
+END;
 $$;
 
 COMMENT ON FUNCTION app_rls_bypass_on(text) IS

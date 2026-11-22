@@ -1,8 +1,9 @@
 // The session primitives (generator/functions/session.ts) and the generated scopes function don't pin a
-// search_path (a SET clause would stop the planner inlining them into the policies that call them per row),
-// so when one calls another it must name it `public.app_…`: an unqualified call resolves through the
-// CALLER's search path and fails inside a function pinned to `pg_catalog` (the DataChangeGroup trigger,
-// 2026-11-02).
+// search_path, so when one calls another it must name it `public.app_…`: an unqualified call resolves through
+// the CALLER's search path and fails inside a function pinned to `pg_catalog` (the DataChangeGroup trigger,
+// 2026-11-02). The primitives stay unpinned so the planner can inline them into the policies that call them per
+// row (a SET clause would stop it). The scopes function is PL/pgSQL and never inlined: every policy calls it once
+// per query, and inlining its CASE made planning slow (system-operation-scopes.ts says why).
 import { describe, expect, it } from "vitest";
 
 import { SESSION_FUNCTIONS } from "../generator/functions/session";
@@ -32,7 +33,7 @@ describe("unpinned RLS helpers", () => {
 		}
 	});
 
-	it("are not pinned with SET search_path, so they stay inlinable", () => {
+	it("are not pinned with SET search_path (the primitives so they stay inlinable)", () => {
 		for (const { sql } of UNPINNED) {
 			expect(withoutComments(sql)).not.toMatch(/SET search_path/u);
 		}

@@ -4,7 +4,9 @@ name: Till scan
 tags: [smoke]
 ---
 - runFlow: subflows/signed-in.yaml
-- tapOn: "Settings"
+# Tabs by their ids, never by label: a label can also be the system's (see sign-in.yaml).
+- tapOn:
+    id: "tab-settings"
 - scrollUntilVisible:
     element: "Till"
 - tapOn: "Till"

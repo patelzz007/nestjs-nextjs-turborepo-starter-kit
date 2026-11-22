@@ -37,8 +37,9 @@ $$;
 
 -- app_rls_bypass_on: The scoped system-operation bypass (ADR 012), rendered from src/prisma/system-operation.registry.ts: true only when the session runs an allowlisted operation whose scope lists the table.
 CREATE OR REPLACE FUNCTION app_rls_bypass_on(table_name text) RETURNS boolean
-LANGUAGE sql STABLE AS $$
-  SELECT public.app_rls_bypass() AND CASE public.app_system_operation()
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+  RETURN public.app_rls_bypass() AND CASE public.app_system_operation()
     WHEN 'audit.data_change.read' THEN table_name IN ('AuditLog', 'DataChangeLog', 'Tenant', 'User')
     WHEN 'audit.http_request.read' THEN table_name IN ('AuditLog', 'Tenant', 'User')
     WHEN 'audit.http_request.record' THEN table_name IN ('AuditLog')
@@ -251,6 +252,7 @@ LANGUAGE sql STABLE AS $$
     WHEN 'webhooks.outbound.sweep' THEN table_name IN ('WebhookDelivery', 'WebhookEndpoint', 'WebhookEvent')
     ELSE false
   END;
+END;
 $$;
 
 COMMENT ON FUNCTION app_rls_bypass_on(text) IS

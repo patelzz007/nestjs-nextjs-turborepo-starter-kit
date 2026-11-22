@@ -34,8 +34,15 @@ describe("system-operation scopes", () => {
 	it("gives an operation the registry does not list no bypass at all", () => {
 		const sql: string = buildSystemOperationScopesSql({ "outbox.publish": { scope: { kind: "tables", tables: ["OutboxEvent"] } } }, KNOWN);
 
-		expect(sql).toMatch(/ELSE false\s+END;/);
-		expect(sql).toContain("SELECT public.app_rls_bypass() AND CASE public.app_system_operation()");
+		expect(sql).toMatch(/ELSE false\s+END;\s+END;\s+\$\$;/);
+		expect(sql).toContain("RETURN public.app_rls_bypass() AND CASE public.app_system_operation()");
+	});
+
+	it("is PL/pgSQL, which the planner never inlines: its CASE is not copied into every policy that calls it", () => {
+		const sql: string = buildSystemOperationScopesSql({ "outbox.publish": { scope: { kind: "tables", tables: ["OutboxEvent"] } } }, KNOWN);
+
+		expect(sql).toContain("LANGUAGE plpgsql STABLE AS $$");
+		expect(sql).not.toContain("LANGUAGE sql");
 	});
 
 	it("refuses a table the RLS manifest does not know, naming the operation", () => {

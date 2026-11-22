@@ -4,6 +4,9 @@ name: Sign in
 tags: [smoke]
 ---
 - runFlow: subflows/signed-in.yaml
-- tapOn: "Home"
+# The tab by its id, never by "Home": Android's own navigation bar has a Home button with that label, and
+# pressing it sends the app to the background (the 2026-11-21 nightly).
+- tapOn:
+    id: "tab-index"
 - assertVisible:
     id: "home-highlights"

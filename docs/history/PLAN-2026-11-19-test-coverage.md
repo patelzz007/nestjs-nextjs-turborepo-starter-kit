@@ -24,7 +24,9 @@ Status: **not started.** Tonight (2026-11-19) the package upgrades and the full 
 | What the tests prove | What the user uses (form validation, button clicks, navigation, keyboard, and so on) **and** the edge cases (§4). When the code does not handle an edge case, the **code is fixed first**, then the test proves it. |
 | Thresholds | Each config's `thresholds` is raised to just below the reached values, and never lowered. |
 | Budget | The owner's quota is limited. Work one part per session, stop at a part boundary, and record where it stopped (§8). |
-| Test speed | Part of this plan (added 2026-11-19): find out why the unit tests, the e2e tests and the pre-push hook each take ~15 minutes, and make them faster without weakening a single check (§5.1). Plan only for now; nothing is implemented until the owner says go. |
+| Test speed | Part of this plan (added 2026-11-19): find out why the unit tests, the e2e tests and the pre-push hook each take ~15 minutes, and make them faster without weakening a single check (§5.1). |
+| Go (owner, 2026-11-22) | The Go migration (`docs/architecture/go-migration-plan.md`) will delete apps/api and port the TypeScript workers. They stay **in scope** anyway: "we'll deal with the migration later". |
+| Order (owner, 2026-11-22) | **Go: part T (speed) first, then the coverage parts.** |
 
 ## 2. Baseline (measured 2026-11-19, this repo, before any work)
 
@@ -137,6 +139,26 @@ Each part is one or more sessions, and each ends with its scoped checks green an
 | T8 | **`ci:local` (31 min).** | Time each step (T1). See which steps could run at the same time without competing for the CPU (for example lint and typecheck are cached already; the build is limited to 3 at a time for memory). The browser suites need the owner's dev servers stopped (ports 8080, 3000, 3001). | Step timings before and after. |
 | T9 | **The same in the sibling repos.** | `nextjs-admin-dashboard-layout` (Vitest, 5,131 tests) and `expo-boilerplate` (Jest, 346 suites): T1, T4 and T6, with the same configs as this repo where the code is mirrored. | Their timings in the T1 table. |
 | T10 | **Keep it fast.** | Write the budget into `rules/11` and `docs/technical/operations/ci.md`: for example "a unit test file over N seconds needs a reason". Optionally add a check that lists the slowest files after each run, so a new slow test is noticed when it lands. | Rule and docs updated. |
+
+**T1 results (2026-11-22, this repo, Mac with 10 cores and 64 GB; `turbo run test --concurrency=1 --summarize`):** 924 s in total.
+
+| Workspace | Seconds | Where the time goes |
+|---|---|---|
+| mobile (Jest) | **546** | 250 s of tests in **one process**, then ~285 s waiting for a leaked timer. Run directly, the same suite takes 92 s with 9 workers. |
+| api | 77 | 46% setup (the real-Postgres specs). |
+| admin | 61 | 55% import. |
+| ui-native (Jest) | 52 | One process, as for mobile. |
+| ui | 51 | 63% import, 20% environment. |
+| merchant | 34 | 75% import. |
+| client | 24 | 63% import. |
+| web | 18 | 58% import. |
+| oxlint-config | 17 | 97% tests. |
+| tooling | 14 | 75% tests. |
+| the other 13 workspaces | about 30 together | — |
+
+**✅ T4, first fix (2026-11-22): jest-expo's one-worker cap.** jest-expo 58's preset (`jest-expo/config/maxWorkers.js`) sets `maxWorkers: 1` whenever `TURBO_HASH` is set. It assumes Turborepo runs several workspaces' tests at once, but `pnpm test` runs them one at a time. So mobile and ui-native ran every test file in one process. In one process, a leaked timer also kept Jest alive for minutes after the last test. With workers, Jest force-closes that worker instead ("A worker process has failed to exit gracefully"). Fix: both Jest configs set `maxWorkers` to Jest's own default (every core but one). Test: `packages/tooling/src/mobile-jest/__tests__/jest-workers.test.ts`. Result through Turborepo: mobile 546 s → 88 s, ui-native 52 s → 12 s, with the same 1,994 and 1,409 tests and the same coverage. expo-boilerplate is not run through Turborepo, so it never had the cap.
+
+**Still open from T1:** the leaked timer in a mobile test (T6). The two slow mobile files: `showcase-examples` (121 s) and `trace-examples-use` (112 s for 22 tests), which step every example's timers one tick at a time (T6). The import-heavy Vitest suites (T4). The API's database setup (T5).
 
 **Decisions the owner makes before T2, T3 and T7 are built:**
 

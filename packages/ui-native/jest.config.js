@@ -2,7 +2,17 @@
 // resolution rules as apps/mobile (ADR 031): React Native's transforms and
 // native-module mocks are built for Jest, not Vitest.
 
+const { availableParallelism } = require("node:os");
+
 const { transformIgnorePatterns: EXPO_TRANSFORM_IGNORE_PATTERNS } = require("jest-expo/jest-preset");
+
+/**
+ * Jest's own default worker count: every core but one. Set explicitly because jest-expo's preset sets `maxWorkers: 1`
+ * whenever `TURBO_HASH` is set, assuming Turborepo runs several workspaces' tests at once. This repo runs them one at
+ * a time (`turbo run test --concurrency=1`, docs/technical/operations/ci.md), so under `pnpm test` that cap ran this
+ * suite in one process (as in apps/mobile/jest.config.js).
+ */
+const MAX_WORKERS = Math.max(availableParallelism() - 1, 1);
 
 /**
  * Packages published as ES modules only (as in apps/mobile/jest.config.js). Metro bundles them as they are;
@@ -30,6 +40,7 @@ module.exports = {
 	coverageReporters: ["text-summary"],
 	coverageThreshold: { global: { lines: 97, statements: 97, functions: 96, branches: 91 } },
 	preset: "jest-expo",
+	maxWorkers: MAX_WORKERS,
 	resolver: "<rootDir>/jest.resolver.cjs",
 	transformIgnorePatterns: withEsModuleOnlyPackages(EXPO_TRANSFORM_IGNORE_PATTERNS),
 	setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],

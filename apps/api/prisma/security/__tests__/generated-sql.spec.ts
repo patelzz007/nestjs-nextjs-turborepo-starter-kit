@@ -31,6 +31,15 @@ describe("the generated security SQL (prisma/rls)", () => {
 		}
 	});
 
+	it("calls the scoped bypass only as `(SELECT app_rls_bypass_on(…))`: once per query, never once per row (it is PL/pgSQL)", () => {
+		const policies = committed("prisma/rls/04-policies.sql");
+		const calls = policies.match(/app_rls_bypass_on\(/gu) ?? [];
+		const wrapped = policies.match(/\(SELECT app_rls_bypass_on\('[A-Za-z]+'\)\)/gu) ?? [];
+
+		expect(calls.length).toBeGreaterThan(0);
+		expect(wrapped).toHaveLength(calls.length);
+	});
+
 	it("is deterministic: the same input renders byte for byte the same files", () => {
 		expect(renderSecurityFiles({ operations: SYSTEM_OPERATIONS, knownTables })).toStrictEqual(renderSecurityFiles({ operations: SYSTEM_OPERATIONS, knownTables }));
 	});
